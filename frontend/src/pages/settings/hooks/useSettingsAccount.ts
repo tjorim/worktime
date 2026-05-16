@@ -26,6 +26,17 @@ interface UseSettingsAccountParams {
   showSuccessToast: (message: string, icon?: string) => void;
 }
 
+const readErrorDetail = async (response: Response): Promise<string | null> => {
+  try {
+    const payload = (await response.json()) as { detail?: unknown };
+    return typeof payload.detail === "string" && payload.detail.trim() !== ""
+      ? payload.detail
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 export function useSettingsAccount({
   isAuthenticated,
   displayName,
@@ -40,6 +51,8 @@ export function useSettingsAccount({
   const [adminUsers, setAdminUsers] = useState<ManagedUser[]>([]);
   const [isAdminUsersLoading, setIsAdminUsersLoading] = useState(false);
   const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
+  const [adminUsersDeleteError, setAdminUsersDeleteError] = useState<string | null>(null);
+  const [deletingAdminUserId, setDeletingAdminUserId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -84,13 +97,16 @@ export function useSettingsAccount({
     if (!isAuthenticated || !accountProfile?.is_admin) {
       setAdminUsers([]);
       setAdminUsersError(null);
+      setAdminUsersDeleteError(null);
       setIsAdminUsersLoading(false);
+      setDeletingAdminUserId(null);
       return;
     }
 
     let isCancelled = false;
     setIsAdminUsersLoading(true);
     setAdminUsersError(null);
+    setAdminUsersDeleteError(null);
 
     fetchFn("/api/users/?limit=100")
       .then(async (response) => {
@@ -170,6 +186,37 @@ export function useSettingsAccount({
     }
   };
 
+  const handleDeleteAdminUser = async (userId: number) => {
+    if (accountProfile?.id === userId) {
+      setAdminUsersDeleteError(m.account_admin_users_delete_self_blocked());
+      return;
+    }
+
+    setDeletingAdminUserId(userId);
+    setAdminUsersDeleteError(null);
+
+    try {
+      const response = await fetchFn(`/api/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error((await readErrorDetail(response)) ?? m.account_admin_users_delete_failed());
+      }
+
+      setAdminUsers((current) => current.filter((user) => user.id !== userId));
+      showSuccessToast(m.account_admin_users_deleted(), "bi-trash");
+    } catch (error) {
+      console.error("Failed to delete admin-managed user:", error);
+      setAdminUsersDeleteError(
+        error instanceof Error && error.message.trim() !== ""
+          ? error.message
+          : m.account_admin_users_delete_failed(),
+      );
+    } finally {
+      setDeletingAdminUserId(null);
+    }
+  };
+
   return {
     accountProfile,
     profileDraft,
@@ -183,5 +230,8 @@ export function useSettingsAccount({
     adminUsers,
     isAdminUsersLoading,
     adminUsersError,
+    adminUsersDeleteError,
+    deletingAdminUserId,
+    handleDeleteAdminUser,
   };
 }

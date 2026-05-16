@@ -5,6 +5,7 @@ import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
 import { SettingsContent } from "@/pages/SettingsPage";
+import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -13,6 +14,7 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { server } from "@/mocks/server";
 import { labelsCollection } from "@/db/collections";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import * as m from "@/paraglide/messages.js";
 
 // Global react-oidc-context mocks come from tests/setup.ts (no-session default).
@@ -83,6 +85,77 @@ function mockAuthenticatedUser(displayName = "Alice") {
   } as any);
 }
 
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+}
+
+function renderSettingsAccountHarness({
+  fetchFn,
+  showSuccessToast = vi.fn(),
+}: {
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+  showSuccessToast?: (message: string, icon?: string) => void;
+}) {
+  function Harness() {
+    const {
+      accountProfile,
+      profileDraft,
+      setProfileDraft,
+      isProfileLoading,
+      isProfileSaving,
+      profileError,
+      hasProfileChanges,
+      resolvedDisplayName,
+      handleSaveProfile,
+      adminUsers,
+      isAdminUsersLoading,
+      adminUsersError,
+      adminUsersDeleteError,
+      deletingAdminUserId,
+      handleDeleteAdminUser,
+    } = useSettingsAccount({
+      isAuthenticated: true,
+      displayName: "Admin User",
+      fetchFn,
+      showSuccessToast,
+    });
+
+    return (
+      <SettingsAccountSection
+        isValidating={false}
+        isAuthenticated={true}
+        resolvedDisplayName={resolvedDisplayName}
+        username={accountProfile?.username ?? null}
+        accountId={accountProfile?.id ?? null}
+        userId={null}
+        isAdmin={accountProfile?.is_admin ?? false}
+        profileError={profileError}
+        isProfileLoading={isProfileLoading}
+        profileDraft={profileDraft}
+        isProfileSaving={isProfileSaving}
+        hasProfileChanges={hasProfileChanges}
+        adminUsers={adminUsers}
+        isAdminUsersLoading={isAdminUsersLoading}
+        adminUsersError={adminUsersError}
+        adminUsersDeleteError={adminUsersDeleteError}
+        deletingAdminUserId={deletingAdminUserId}
+        onProfileDraftChange={setProfileDraft}
+        onSaveProfile={() => void handleSaveProfile()}
+        onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
+        onLogout={vi.fn()}
+        onSignup={vi.fn()}
+        onLogin={vi.fn()}
+      />
+    );
+  }
+
+  render(<Harness />);
+  return { showSuccessToast };
+}
+
 describe("SettingsPage Account Section", () => {
   it("renders connect account and sign in buttons when not authenticated", () => {
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
@@ -150,6 +223,15 @@ describe("SettingsPage Account Section", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the authenticated privacy notice with a link to the privacy policy", async () => {
+    mockAuthenticatedUser("Alice");
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+
+    expect(await screen.findByText(/trusted-server model/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Learn more" })).toHaveAttribute("href", "/privacy");
+  });
+
   it("does not fetch admin users or render user management for non-admin accounts", async () => {
     let adminUsersRequestCount = 0;
     server.use(
@@ -193,6 +275,166 @@ describe("SettingsPage Account Section", () => {
     await waitFor(() => {
       expect(usersCalled).toBe(true);
     });
+  });
+
+  it("deletes another user from the admin user management table after confirmation", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "admin-user",
+          display_name: "Admin User",
+          is_admin: true,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      if (input === "/api/users/?limit=100") {
+        return jsonResponse({
+          items: [
+            {
+              id: 1,
+              username: "admin-user",
+              display_name: "Admin User",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+            },
+            {
+              id: 2,
+              username: "member-user",
+              display_name: "Member User",
+              created_at: "2026-01-03T00:00:00Z",
+              updated_at: "2026-01-04T00:00:00Z",
+            },
+          ],
+          total: 2,
+        });
+      }
+      if (input === "/api/users/2" && init?.method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const showSuccessToast = vi.fn();
+
+    const user = userEvent.setup();
+    renderSettingsAccountHarness({ fetchFn, showSuccessToast });
+
+    const memberRow = (await screen.findByText("member-user")).closest("tr");
+    expect(memberRow).not.toBeNull();
+
+    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Delete account?")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "This permanently deletes the account for Member User (@member-user). This action cannot be undone.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("member-user")).not.toBeInTheDocument();
+    });
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", "bi-trash");
+    expect(fetchFn).toHaveBeenCalledWith("/api/users/2", { method: "DELETE" });
+  });
+
+  it("shows an inline error when deleting a managed user fails", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "admin-user",
+          display_name: "Admin User",
+          is_admin: true,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      if (input === "/api/users/?limit=100") {
+        return jsonResponse({
+          items: [
+            {
+              id: 1,
+              username: "admin-user",
+              display_name: "Admin User",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+            },
+            {
+              id: 2,
+              username: "member-user",
+              display_name: "Member User",
+              created_at: "2026-01-03T00:00:00Z",
+              updated_at: "2026-01-04T00:00:00Z",
+            },
+          ],
+          total: 2,
+        });
+      }
+      if (input === "/api/users/2" && init?.method === "DELETE") {
+        return jsonResponse({ detail: "Could not delete user." }, { status: 500 });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderSettingsAccountHarness({ fetchFn });
+
+    const memberRow = (await screen.findByText("member-user")).closest("tr");
+    expect(memberRow).not.toBeNull();
+
+    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByText("Could not delete user.")).toBeInTheDocument();
+    expect(screen.getByText("member-user")).toBeInTheDocument();
+  });
+
+  it("disables self-delete for the current admin in the user management table", async () => {
+    const fetchFn = vi.fn(async (input: string) => {
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "admin-user",
+          display_name: "Admin User",
+          is_admin: true,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      if (input === "/api/users/?limit=100") {
+        return jsonResponse({
+          items: [
+            {
+              id: 1,
+              username: "admin-user",
+              display_name: "Admin User",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+            },
+            {
+              id: 2,
+              username: "member-user",
+              display_name: "Member User",
+              created_at: "2026-01-03T00:00:00Z",
+              updated_at: "2026-01-04T00:00:00Z",
+            },
+          ],
+          total: 2,
+        });
+      }
+      throw new Error(`Unexpected request: GET ${input}`);
+    });
+
+    renderSettingsAccountHarness({ fetchFn });
+
+    const adminRow = (await screen.findAllByRole("row")).find((row) =>
+      within(row).queryByText("admin-user"),
+    );
+    expect(adminRow).not.toBeNull();
+    expect(within(adminRow!).getByRole("button", { name: "Delete" })).toBeDisabled();
   });
 
   it("saves profile changes for authenticated users", async () => {

@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, date, datetime, time
 
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.models import (
+    GanttTask,
+    TimeOffEntry,
+    TimeTrackingLabel,
+    TimeTrackingTask,
+    TimeTrackingTemplate,
+    UserPreferences,
+    WorkLocation,
+)
 
 
 def _auth_headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
@@ -287,6 +298,134 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
         headers=headers,
     )
     assert missing_body_response.status_code == 422
+
+
+async def test_db_user_export_endpoint(
+    db_client: TestClient,
+    db_session: AsyncSession,
+) -> None:
+    client = db_client
+    admin_headers = _auth_headers(1, is_admin=True)
+
+    owner_id = client.post(
+        "/api/users/",
+        json={"username": "export-owner", "display_name": "Export Owner", "settings": {"theme": "hidden"}},
+        headers=admin_headers,
+    ).json()["id"]
+    other_id = client.post(
+        "/api/users/",
+        json={"username": "export-other", "display_name": "Export Other", "settings": {}},
+        headers=admin_headers,
+    ).json()["id"]
+
+    timestamp = datetime(2026, 1, 1, 9, 0, tzinfo=UTC)
+    label = TimeTrackingLabel(
+        id="label-export",
+        user_id=owner_id,
+        name="Focus",
+        color="#112233",
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    task = TimeTrackingTask(
+        id="task-export",
+        user_id=owner_id,
+        label_id=label.id,
+        text="Deleted task",
+        start_time=timestamp,
+        stop_time=None,
+        includes_break=False,
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+        deleted_at=timestamp,
+    )
+    template = TimeTrackingTemplate(
+        id="template-export",
+        user_id=owner_id,
+        label_id=label.id,
+        text="Morning block",
+        start_time=time(9, 0),
+        stop_time=time(11, 0),
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    work_location = WorkLocation(
+        user_id=owner_id,
+        date=date(2026, 1, 2),
+        country_code="NL",
+        label="Home",
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+        deleted_at=timestamp,
+    )
+    gantt_task = GanttTask(
+        id="gantt-export",
+        user_id=owner_id,
+        name="Roadmap",
+        start_date=date(2026, 1, 3),
+        end_date=date(2026, 1, 10),
+        progress=50,
+        dependencies=None,
+        notes="Quarter plan",
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    time_off_entry = TimeOffEntry(
+        user_id=owner_id,
+        entry_id="timeoff-export",
+        entry_kind="date",
+        date=date(2026, 1, 4),
+        start_date=None,
+        end_date=None,
+        weekday=None,
+        entry_type="vacation",
+        entry_flag="full_day",
+        note="Day off",
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+        deleted_at=timestamp,
+    )
+    preferences = UserPreferences(
+        user_id=owner_id,
+        data={"theme": "dark", "notifications": "off"},
+        client_updated_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    db_session.add_all([label, task, template, work_location, gantt_task, time_off_entry, preferences])
+    await db_session.commit()
+
+    forbidden = client.get(f"/api/users/{owner_id}/export", headers=_auth_headers(other_id))
+    assert forbidden.status_code == 403
+
+    owner_export = client.get(f"/api/users/{owner_id}/export", headers=_auth_headers(owner_id))
+    assert owner_export.status_code == 200
+    assert owner_export.headers["Content-Disposition"] == 'attachment; filename="worktime-export.json"'
+    body = owner_export.json()
+    assert "exported_at" in body
+    assert body["user"] == {
+        "id": owner_id,
+        "username": "export-owner",
+        "display_name": "Export Owner",
+    }
+    assert "settings" not in body["user"]
+    assert "oidc_subject" not in body["user"]
+    assert body["preferences"] == {"theme": "dark", "notifications": "off"}
+    assert body["time_tracking_labels"][0]["id"] == "label-export"
+    assert body["time_tracking_tasks"][0]["deleted_at"] is not None
+    assert body["time_tracking_templates"][0]["id"] == "template-export"
+    assert body["work_locations"][0]["deleted_at"] is not None
+    assert body["gantt_tasks"][0]["id"] == "gantt-export"
+    assert body["time_off_entries"][0]["deleted_at"] is not None
+
+    admin_export = client.get(f"/api/users/{owner_id}/export", headers=_auth_headers(other_id, is_admin=True))
+    assert admin_export.status_code == 200
 
 
 def test_work_location_endpoints_require_auth_and_user_match(db_client: TestClient) -> None:
