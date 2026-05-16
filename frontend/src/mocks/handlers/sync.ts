@@ -8,6 +8,7 @@
  *  GET  /api/preferences
  *  PUT  /api/preferences
  *  GET  /api/me
+ *  GET  /api/users/
  *  PUT  /api/users/:id
  */
 
@@ -67,6 +68,14 @@ export const syncHandlers = [
       display_name: "Dev User",
       is_admin: false,
       capabilities: { backup_enabled: true },
+    });
+  }),
+
+  // GET /api/users/
+  http.get("*/api/users/", () => {
+    return HttpResponse.json({
+      items: [],
+      total: 0,
     });
   }),
 

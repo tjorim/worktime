@@ -2,7 +2,21 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
+import Table from "react-bootstrap/Table";
 import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
+
+const formatTimestamp = (value: string): string => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  const locale = getLocale() === "nl" ? "nl-NL" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+};
 
 interface SettingsAccountSectionProps {
   isValidating: boolean;
@@ -17,6 +31,15 @@ interface SettingsAccountSectionProps {
   profileDraft: string;
   isProfileSaving: boolean;
   hasProfileChanges: boolean;
+  adminUsers: Array<{
+    id: number;
+    username: string;
+    display_name: string;
+    created_at: string;
+    updated_at: string;
+  }>;
+  isAdminUsersLoading: boolean;
+  adminUsersError: string | null;
   onProfileDraftChange: (value: string) => void;
   onSaveProfile: () => void;
   onLogout: () => void;
@@ -37,6 +60,9 @@ export function SettingsAccountSection({
   profileDraft,
   isProfileSaving,
   hasProfileChanges,
+  adminUsers,
+  isAdminUsersLoading,
+  adminUsersError,
   onProfileDraftChange,
   onSaveProfile,
   onLogout,
@@ -132,6 +158,54 @@ export function SettingsAccountSection({
                         {isProfileSaving ? m.account_profile_saving_btn() : m.account_profile_save_btn()}
                       </Button>
                     </div>
+
+                    {isAdmin ? (
+                      <div className="pt-2 border-top">
+                        <h6 className="mb-2">{m.account_admin_users_title()}</h6>
+                        <p className="text-muted small mb-2">{m.account_admin_users_description()}</p>
+                        {isAdminUsersLoading ? (
+                          <div className="d-flex align-items-center gap-2 text-muted small">
+                            <span
+                              className="spinner-border spinner-border-sm"
+                              role="status"
+                              aria-hidden="true"
+                            ></span>
+                            <span>{m.account_admin_users_loading()}</span>
+                          </div>
+                        ) : adminUsersError ? (
+                          <Alert variant="warning" className="mb-0 py-2">
+                            {adminUsersError}
+                          </Alert>
+                        ) : adminUsers.length === 0 ? (
+                          <p className="text-muted small mb-0">{m.account_admin_users_empty()}</p>
+                        ) : (
+                          <div className="table-responsive">
+                            <Table size="sm" striped hover className="mb-0 align-middle">
+                              <thead>
+                                <tr>
+                                  <th>{m.account_admin_users_user_id()}</th>
+                                  <th>{m.account_admin_users_username()}</th>
+                                  <th>{m.account_admin_users_display_name()}</th>
+                                  <th>{m.account_admin_users_created_at()}</th>
+                                  <th>{m.account_admin_users_updated_at()}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {adminUsers.map((user) => (
+                                  <tr key={user.id}>
+                                    <td>{user.id}</td>
+                                    <td>{user.username}</td>
+                                    <td>{user.display_name}</td>
+                                    <td>{formatTimestamp(user.created_at)}</td>
+                                    <td>{formatTimestamp(user.updated_at)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>

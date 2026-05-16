@@ -150,6 +150,51 @@ describe("SettingsPage Account Section", () => {
     ).toBeInTheDocument();
   });
 
+  it("does not fetch admin users or render user management for non-admin accounts", async () => {
+    let adminUsersRequestCount = 0;
+    server.use(
+      http.get("*/api/users/", () => {
+        adminUsersRequestCount += 1;
+        return HttpResponse.json({ items: [], total: 0 });
+      }),
+    );
+
+    mockAuthenticatedUser("Alice");
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+
+    expect(await screen.findByDisplayValue("Dev User")).toBeInTheDocument();
+    expect(screen.queryByText("User management")).not.toBeInTheDocument();
+    expect(adminUsersRequestCount).toBe(0);
+  });
+
+  it("renders admin-only user management list for admin accounts", async () => {
+    let usersCalled = false;
+    server.use(
+      http.get("*/api/me", () =>
+        HttpResponse.json({
+          id: 1,
+          username: "admin-user",
+          display_name: "Admin User",
+          is_admin: true,
+          capabilities: { backup_enabled: true },
+        }),
+      ),
+      http.get(/.*\/api\/users\/?$/, () => {
+        usersCalled = true;
+        return HttpResponse.json({ items: [], total: 0 });
+      }),
+    );
+
+    mockAuthenticatedUser("Alice");
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+
+    expect(await screen.findByText("User management")).toBeInTheDocument();
+    expect(screen.getByText("No users found.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(usersCalled).toBe(true);
+    });
+  });
+
   it("saves profile changes for authenticated users", async () => {
     server.use(
       http.put("*/api/users/:id", async ({ params, request }) => {

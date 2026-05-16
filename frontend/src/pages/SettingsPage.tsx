@@ -185,6 +185,9 @@ export function SettingsContent({
     hasProfileChanges,
     resolvedDisplayName,
     handleSaveProfile,
+    adminUsers,
+    isAdminUsersLoading,
+    adminUsersError,
   } = useSettingsAccount({
     isAuthenticated,
     displayName,
@@ -277,6 +280,9 @@ export function SettingsContent({
         hasProfileChanges={hasProfileChanges}
         onProfileDraftChange={setProfileDraft}
         onSaveProfile={() => void handleSaveProfile()}
+        adminUsers={adminUsers}
+        isAdminUsersLoading={isAdminUsersLoading}
+        adminUsersError={adminUsersError}
         onLogout={logout}
         onSignup={triggerSignup}
         onLogin={triggerLogin}
