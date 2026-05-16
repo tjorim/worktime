@@ -168,6 +168,7 @@ describe("SettingsPage Account Section", () => {
   });
 
   it("renders admin-only user management list for admin accounts", async () => {
+    let usersCalled = false;
     server.use(
       http.get("*/api/me", () =>
         HttpResponse.json({
@@ -178,6 +179,10 @@ describe("SettingsPage Account Section", () => {
           capabilities: { backup_enabled: true },
         }),
       ),
+      http.get(/.*\/api\/users\/?$/, () => {
+        usersCalled = true;
+        return HttpResponse.json({ items: [], total: 0 });
+      }),
     );
 
     mockAuthenticatedUser("Alice");
@@ -185,6 +190,9 @@ describe("SettingsPage Account Section", () => {
 
     expect(await screen.findByText("User management")).toBeInTheDocument();
     expect(screen.getByText("No users found.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(usersCalled).toBe(true);
+    });
   });
 
   it("saves profile changes for authenticated users", async () => {
