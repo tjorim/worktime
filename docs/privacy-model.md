@@ -41,6 +41,15 @@ The following categories should be treated as sensitive:
 3. **Encrypt selected sensitive fields at rest** — evaluate with key-management design; likely protects DB/backups only when key separation is real.
 4. **Client-side/end-to-end encryption** — keep as long-term research due major product and operational cost.
 
+## API Endpoint Compatibility If Encryption Is Added
+
+- **Trusted-server + app isolation:** Existing API endpoints work as-is.
+- **Server-side field encryption (server holds keys):** Existing endpoint paths can stay the same; payload shapes can stay mostly the same; server decrypts/encrypts sensitive fields before/after persistence.
+- **Client-side/end-to-end encryption:** Existing endpoint paths can still be reused for CRUD, but behavior changes:
+  - the server stores ciphertext for protected fields,
+  - server-side search/filter/reporting on protected fields becomes limited or unavailable unless additional metadata/index design is added,
+  - imports/exports, conflict handling, and recovery flows need redesign.
+
 ## Follow-up Implementation Issues (to be tracked)
 
 1. Add explicit privacy notice to frontend and top-level docs.
