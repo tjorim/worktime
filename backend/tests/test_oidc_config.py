@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from app.config import oidc_config
 
 
@@ -83,6 +85,74 @@ async def test_get_or_create_local_user_returns_existing(monkeypatch) -> None:
 
     local_user = await oidc_config.get_or_create_local_user("sub-bob", {}, FakeSession())
     assert local_user is existing_user
+
+
+async def test_decode_token_expired(monkeypatch) -> None:
+    from jwt.exceptions import ExpiredSignatureError
+
+    async def fake_get_jwks(**_):
+        return {"keys": []}
+
+    monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oidc_config.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+    monkeypatch.setattr(oidc_config, "_find_signing_key", lambda jwks, kid: SimpleNamespace(key=object()))
+    monkeypatch.setattr(oidc_config.jwt, "decode", lambda *a, **kw: (_ for _ in ()).throw(ExpiredSignatureError("expired")))
+
+    with pytest.raises(oidc_config.OIDCTokenError, match="expired"):
+        await oidc_config.decode_token("some.token.here")
+
+
+async def test_decode_token_invalid(monkeypatch) -> None:
+    from jwt.exceptions import PyJWTError
+
+    async def fake_get_jwks(**_):
+        return {"keys": []}
+
+    monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oidc_config.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+    monkeypatch.setattr(oidc_config, "_find_signing_key", lambda jwks, kid: SimpleNamespace(key=object()))
+    monkeypatch.setattr(oidc_config.jwt, "decode", lambda *a, **kw: (_ for _ in ()).throw(PyJWTError("bad token")))
+
+    with pytest.raises(oidc_config.OIDCTokenError, match="Token validation failed"):
+        await oidc_config.decode_token("some.token.here")
+
+
+async def test_decode_token_refreshes_jwks_on_missing_key(monkeypatch) -> None:
+    call_count = {"n": 0}
+    find_count = {"n": 0}
+    expected_claims = {"sub": "user123", "preferred_username": "alice"}
+
+    async def fake_get_jwks(*, force_refresh: bool = False) -> dict:
+        call_count["n"] += 1
+        return {"keys": []}
+
+    monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oidc_config.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+
+    def fake_find_key(jwks, kid):
+        find_count["n"] += 1
+        if find_count["n"] < 2:
+            return None  # first attempt: key not in cache yet → triggers refresh
+        return SimpleNamespace(key=object())
+
+    monkeypatch.setattr(oidc_config, "_find_signing_key", fake_find_key)
+    monkeypatch.setattr(oidc_config.jwt, "decode", lambda *a, **kw: expected_claims)
+
+    result = await oidc_config.decode_token("some.token.here")
+    assert result == expected_claims
+    assert call_count["n"] == 2
+
+
+async def test_decode_token_raises_when_key_missing_after_refresh(monkeypatch) -> None:
+    async def fake_get_jwks(*, force_refresh: bool = False) -> dict:
+        return {"keys": []}
+
+    monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oidc_config.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+    monkeypatch.setattr(oidc_config, "_find_signing_key", lambda jwks, kid: None)
+
+    with pytest.raises(oidc_config.OIDCTokenError, match="Signing key not found in JWKS"):
+        await oidc_config.decode_token("some.token.here")
 
 
 async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monkeypatch) -> None:
