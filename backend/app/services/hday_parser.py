@@ -43,11 +43,11 @@ TYPE_FLAGS: tuple[Flag, ...] = (
 
 # Regex patterns for parsing
 RE_RANGE = re.compile(
-    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*))?(?:\s*#\s*(?P<comment>.*))?$",
+    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*))?(?:[^#]*#(?P<comment>.*))?$",
     re.I,
 )
 RE_WEEKLY = re.compile(
-    r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*)(?:\s*#\s*(?P<comment>.*))?$", re.I
+    r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*)(?:[^#]*#(?P<comment>.*))?$", re.I
 )
 
 
