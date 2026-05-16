@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Table from "react-bootstrap/Table";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 
@@ -40,8 +43,11 @@ interface SettingsAccountSectionProps {
   }>;
   isAdminUsersLoading: boolean;
   adminUsersError: string | null;
+  adminUsersDeleteError: string | null;
+  deletingAdminUserId: number | null;
   onProfileDraftChange: (value: string) => void;
   onSaveProfile: () => void;
+  onDeleteAdminUser: (userId: number) => void;
   onLogout: () => void;
   onSignup: () => void;
   onLogin: () => void;
@@ -63,12 +69,18 @@ export function SettingsAccountSection({
   adminUsers,
   isAdminUsersLoading,
   adminUsersError,
+  adminUsersDeleteError,
+  deletingAdminUserId,
   onProfileDraftChange,
   onSaveProfile,
+  onDeleteAdminUser,
   onLogout,
   onSignup,
   onLogin,
 }: SettingsAccountSectionProps) {
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState<number | null>(null);
+  const pendingDeleteUser = adminUsers.find((user) => user.id === pendingDeleteUserId) ?? null;
+
   return (
     <div className="border-bottom">
       <div className="p-3">
@@ -112,9 +124,9 @@ export function SettingsAccountSection({
                 <Alert variant="info" className="mb-0 py-2">
                   <div className="small">
                     {m.account_privacy_notice_body()}{" "}
-                    <a href="/privacy" className="alert-link">
+                    <Link to="/privacy" className="alert-link">
                       {m.account_privacy_notice_link()}
-                    </a>
+                    </Link>
                   </div>
                 </Alert>
 
@@ -185,33 +197,60 @@ export function SettingsAccountSection({
                           <Alert variant="warning" className="mb-0 py-2">
                             {adminUsersError}
                           </Alert>
-                        ) : adminUsers.length === 0 ? (
-                          <p className="text-muted small mb-0">{m.account_admin_users_empty()}</p>
                         ) : (
-                          <div className="table-responsive">
-                            <Table size="sm" striped hover className="mb-0 align-middle">
-                              <thead>
-                                <tr>
-                                  <th>{m.account_admin_users_user_id()}</th>
-                                  <th>{m.account_admin_users_username()}</th>
-                                  <th>{m.account_admin_users_display_name()}</th>
-                                  <th>{m.account_admin_users_created_at()}</th>
-                                  <th>{m.account_admin_users_updated_at()}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {adminUsers.map((user) => (
-                                  <tr key={user.id}>
-                                    <td>{user.id}</td>
-                                    <td>{user.username}</td>
-                                    <td>{user.display_name}</td>
-                                    <td>{formatTimestamp(user.created_at)}</td>
-                                    <td>{formatTimestamp(user.updated_at)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </Table>
-                          </div>
+                          <>
+                            {adminUsersDeleteError ? (
+                              <Alert variant="danger" className="mb-2 py-2">
+                                {adminUsersDeleteError}
+                              </Alert>
+                            ) : null}
+                            {adminUsers.length === 0 ? (
+                              <p className="text-muted small mb-0">{m.account_admin_users_empty()}</p>
+                            ) : (
+                              <div className="table-responsive">
+                                <Table size="sm" striped hover className="mb-0 align-middle">
+                                  <thead>
+                                    <tr>
+                                      <th>{m.account_admin_users_user_id()}</th>
+                                      <th>{m.account_admin_users_username()}</th>
+                                      <th>{m.account_admin_users_display_name()}</th>
+                                      <th>{m.account_admin_users_created_at()}</th>
+                                      <th>{m.account_admin_users_updated_at()}</th>
+                                      <th className="text-end">{m.account_admin_users_actions()}</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {adminUsers.map((user) => (
+                                      <tr key={user.id}>
+                                        <td>{user.id}</td>
+                                        <td>{user.username}</td>
+                                        <td>{user.display_name}</td>
+                                        <td>{formatTimestamp(user.created_at)}</td>
+                                        <td>{formatTimestamp(user.updated_at)}</td>
+                                        <td className="text-end">
+                                          <Button
+                                            variant="outline-danger"
+                                            size="sm"
+                                            disabled={accountId === user.id || deletingAdminUserId !== null}
+                                            title={
+                                              accountId === user.id
+                                                ? m.account_admin_users_delete_self_blocked()
+                                                : undefined
+                                            }
+                                            onClick={() => setPendingDeleteUserId(user.id)}
+                                          >
+                                            {deletingAdminUserId === user.id
+                                              ? m.account_admin_users_delete_busy()
+                                              : m.delete()}
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </Table>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     ) : null}
@@ -252,6 +291,30 @@ export function SettingsAccountSection({
           )}
         </ListGroup>
       </div>
+      <ConfirmationDialog
+        isOpen={pendingDeleteUser !== null}
+        title={m.account_admin_users_delete_confirm_title()}
+        message={
+          pendingDeleteUser
+            ? m.account_admin_users_delete_confirm_message({
+                name: pendingDeleteUser.display_name || pendingDeleteUser.username,
+                username: pendingDeleteUser.username,
+              })
+            : ""
+        }
+        confirmLabel={m.delete()}
+        cancelLabel={m.cancel()}
+        onConfirm={() => {
+          if (!pendingDeleteUser) {
+            return;
+          }
+          onDeleteAdminUser(pendingDeleteUser.id);
+          setPendingDeleteUserId(null);
+        }}
+        onCancel={() => setPendingDeleteUserId(null)}
+        variant="danger"
+        icon="bi-trash"
+      />
     </div>
   );
 }
