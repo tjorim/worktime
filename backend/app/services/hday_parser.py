@@ -47,7 +47,7 @@ RE_RANGE = re.compile(
     re.I,
 )
 RE_WEEKLY = re.compile(
-    r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*?)(?:\s*#\s*(?P<comment>.*))?$", re.I
+    r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*)(?:\s*#\s*(?P<comment>.*))?$", re.I
 )
 
 
