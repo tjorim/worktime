@@ -54,6 +54,11 @@ updates:
       i18n:
         patterns:
           - "@inlang/*"
+      # Group TanStack DB packages (must update together or pipelines fail)
+      tanstack-db:
+        patterns:
+          - "@tanstack/query-db-collection"
+          - "@tanstack/react-db"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
