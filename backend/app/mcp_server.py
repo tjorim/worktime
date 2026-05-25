@@ -1,4 +1,4 @@
-"""FastMCP server exposing read-only Worktime tools."""
+"""FastMCP server exposing Worktime tools (read and personal write)."""
 
 from __future__ import annotations
 
@@ -16,17 +16,45 @@ from fastmcp.server.dependencies import get_access_token
 from mcp.server.auth.provider import TokenVerifier
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.audit import logger as audit
 from app.config import settings
 from app.database.engine import get_session_factory
-from app.schemas import GanttTaskRead, TaskRead, TimeOffEntryRead, WorkLocationRead
+from app.schemas import (
+    GanttTaskCreate,
+    GanttTaskRead,
+    GanttTaskUpdate,
+    TaskCreate,
+    TaskRead,
+    TaskUpdate,
+    TimeOffEntryCreate,
+    TimeOffEntryRead,
+    TimeOffEntryUpdate,
+    WorkLocationCreate,
+    WorkLocationRead,
+)
 from app.services.db_service import (
+    ConflictError,
+    NotFoundError,
+    ValidationError,
+    create_gantt_task,
+    create_or_update_time_off_entry,
+    create_or_update_work_location,
+    create_task,
+    delete_gantt_task,
+    delete_time_off_entry,
+    delete_work_location,
     get_gantt_task,
     get_running_task,
+    get_task,
+    get_time_off_entry,
     get_user,
     list_gantt_tasks,
     list_tasks,
     list_time_off_entries,
     list_work_locations,
+    update_gantt_task,
+    update_task,
+    update_time_off_entry,
 )
 from app.services.hday_parser import parse_text
 from app.services.hday_service import HdayFileNotFoundError, read_hday_file
@@ -158,7 +186,7 @@ def _hday_event_matches_day(event: dict[str, Any], day: date) -> bool:
 
 
 class WorktimeMcpBackend:
-    """Read-only MCP backend wrapper reusing Worktime services."""
+    """MCP backend wrapper reusing Worktime services (read and personal write)."""
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self.session_factory = session_factory
@@ -507,6 +535,384 @@ class WorktimeMcpBackend:
         finally:
             await db.close()
 
+    # ------------------------------------------------------------------
+    # Personal write tools
+    # ------------------------------------------------------------------
+
+    async def start_time_entry(
+        self,
+        ctx: Context,
+        text: str,
+        start_time: datetime | None = None,
+        label_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Start a new running time entry for the authenticated user.
+
+        Side effects: creates a new TimeTrackingTask row with no stop_time.
+        Only one running task per user is allowed; the call will fail if one
+        already exists.  Returns the created task resource.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            effective_start = start_time or datetime.now(UTC)
+            payload = TaskCreate(
+                text=text,
+                label_id=label_id,
+                start_time=effective_start,
+                stop_time=None,
+                includes_break=False,
+            )
+            task = await create_task(db, context.user_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:task:{task.id}",
+                action="start_time_entry",
+                details=f"text={text!r} via MCP",
+            )
+            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def stop_time_entry(
+        self,
+        ctx: Context,
+        stop_time: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Stop the currently running time entry for the authenticated user.
+
+        Side effects: sets stop_time on the active (open) task.
+        Returns the updated task resource, or raises NotFoundError when no
+        running task exists.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            running = await get_running_task(db, context.user_id)
+            if running is None:
+                raise NotFoundError("no running task found")
+            effective_stop = stop_time or datetime.now(UTC)
+            payload = TaskUpdate(stop_time=effective_stop)
+            task = await update_task(db, context.user_id, running.id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:task:{task.id}",
+                action="stop_time_entry",
+                details=f"stop_time={_to_iso_datetime(effective_stop)!r} via MCP",
+            )
+            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def create_time_tracking_task(
+        self,
+        ctx: Context,
+        text: str,
+        start_time: datetime,
+        stop_time: datetime | None = None,
+        includes_break: bool = False,
+        label_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a time-tracking task for the authenticated user.
+
+        Side effects: inserts a new TimeTrackingTask row.  When stop_time is
+        omitted the task is left open (running); only one open task is allowed
+        per user.  Returns the created task resource.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            payload = TaskCreate(
+                text=text,
+                label_id=label_id,
+                start_time=start_time,
+                stop_time=stop_time,
+                includes_break=includes_break,
+            )
+            task = await create_task(db, context.user_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:task:{task.id}",
+                action="create_time_tracking_task",
+                details=f"text={text!r} via MCP",
+            )
+            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def update_time_tracking_task(
+        self,
+        ctx: Context,
+        task_id: str,
+        text: str | None = None,
+        start_time: datetime | None = None,
+        stop_time: datetime | None = None,
+        includes_break: bool | None = None,
+        label_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Update a time-tracking task owned by the authenticated user.
+
+        Side effects: updates the specified TimeTrackingTask row.  Authorization
+        is enforced — the task must belong to the caller.  Returns the updated
+        task resource.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            # Verify ownership before updating
+            await get_task(db, context.user_id, task_id)
+            payload = TaskUpdate(
+                text=text,
+                label_id=label_id,
+                start_time=start_time,
+                stop_time=stop_time,
+                includes_break=includes_break,
+            )
+            task = await update_task(db, context.user_id, task_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:task:{task_id}",
+                action="update_time_tracking_task",
+                details="via MCP",
+            )
+            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def set_work_location(
+        self,
+        ctx: Context,
+        value_date: date,
+        country_code: str,
+        label: str | None = None,
+    ) -> dict[str, Any]:
+        """Set (create or replace) the work location for a given date.
+
+        Side effects: upserts a WorkLocation row for (user_id, date).  Returns
+        the created or updated work-location resource.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            payload = WorkLocationCreate(date=value_date, country_code=country_code, label=label)
+            location = await create_or_update_work_location(db, context.user_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:work_location:{value_date.isoformat()}",
+                action="set_work_location",
+                details=f"country_code={country_code!r} via MCP",
+            )
+            return WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def create_time_off_event(
+        self,
+        ctx: Context,
+        entry_kind: str,
+        entry_type: str,
+        entry_flag: str = "full_day",
+        date: date | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        weekday: int | None = None,
+        note: str | None = None,
+        entry_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create (or upsert) a personal time-off event.
+
+        Side effects: inserts or updates a TimeOffEntry row.  If entry_id is
+        provided the call is idempotent — re-sending the same payload restores
+        a previously deleted entry.  Returns the created or updated entry.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            payload = TimeOffEntryCreate(
+                entry_id=entry_id,
+                entry_kind=entry_kind,  # type: ignore[arg-type]
+                entry_type=entry_type,  # type: ignore[arg-type]
+                entry_flag=entry_flag,  # type: ignore[arg-type]
+                date=date,
+                start_date=start_date,
+                end_date=end_date,
+                weekday=weekday,
+                note=note,
+            )
+            entry, created = await create_or_update_time_off_entry(db, context.user_id, payload)
+            action = "create_time_off_event" if created else "upsert_time_off_event"
+            audit.append(
+                target=f"user:{context.user_id}:time_off:{entry.entry_id}",
+                action=action,
+                details=f"entry_type={entry_type!r} entry_kind={entry_kind!r} via MCP",
+            )
+            return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def update_time_off_event(
+        self,
+        ctx: Context,
+        entry_id: str,
+        entry_kind: str | None = None,
+        entry_type: str | None = None,
+        entry_flag: str | None = None,
+        date: date | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        weekday: int | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        """Update an existing personal time-off event.
+
+        Side effects: updates the specified TimeOffEntry row.  The entry must
+        belong to the authenticated user.  Returns the updated entry.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            # Verify ownership before updating
+            await get_time_off_entry(db, context.user_id, entry_id)
+            payload = TimeOffEntryUpdate(
+                entry_kind=entry_kind,  # type: ignore[arg-type]
+                entry_type=entry_type,  # type: ignore[arg-type]
+                entry_flag=entry_flag,  # type: ignore[arg-type]
+                date=date,
+                start_date=start_date,
+                end_date=end_date,
+                weekday=weekday,
+                note=note,
+            )
+            entry = await update_time_off_entry(db, context.user_id, entry_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:time_off:{entry_id}",
+                action="update_time_off_event",
+                details="via MCP",
+            )
+            return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def delete_time_off_event(
+        self,
+        ctx: Context,
+        entry_id: str,
+    ) -> dict[str, Any]:
+        """Soft-delete a personal time-off event.
+
+        Side effects: sets deleted_at on the TimeOffEntry row so the deletion
+        propagates through the sync layer.  The entry must belong to the
+        authenticated user.  Returns a confirmation payload.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            # Verify ownership before deleting
+            await get_time_off_entry(db, context.user_id, entry_id)
+            await delete_time_off_entry(db, context.user_id, entry_id)
+            audit.append(
+                target=f"user:{context.user_id}:time_off:{entry_id}",
+                action="delete_time_off_event",
+                details="via MCP",
+            )
+            return {"deleted": True, "entry_id": entry_id, "user_id": context.user_id}
+        finally:
+            await db.close()
+
+    async def create_gantt_task(
+        self,
+        ctx: Context,
+        name: str,
+        start_date: date,
+        end_date: date,
+        progress: int = 0,
+        dependencies: str | None = None,
+        notes: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a personal Gantt task.
+
+        Side effects: inserts a new GanttTask row.  Returns the created task.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            payload = GanttTaskCreate(
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                progress=progress,
+                dependencies=dependencies,
+                notes=notes,
+            )
+            task = await create_gantt_task(db, context.user_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:gantt:{task.id}",
+                action="create_gantt_task",
+                details=f"name={name!r} via MCP",
+            )
+            return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def update_gantt_task(
+        self,
+        ctx: Context,
+        task_id: str,
+        name: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        progress: int | None = None,
+        dependencies: str | None = None,
+        notes: str | None = None,
+    ) -> dict[str, Any]:
+        """Update a personal Gantt task.
+
+        Side effects: updates the specified GanttTask row.  The task must
+        belong to the authenticated user.  Returns the updated task.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            # Verify ownership before updating
+            await get_gantt_task(db, context.user_id, task_id)
+            payload = GanttTaskUpdate(
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                progress=progress,
+                dependencies=dependencies,
+                notes=notes,
+            )
+            task = await update_gantt_task(db, context.user_id, task_id, payload)
+            audit.append(
+                target=f"user:{context.user_id}:gantt:{task_id}",
+                action="update_gantt_task",
+                details="via MCP",
+            )
+            return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+        finally:
+            await db.close()
+
+    async def delete_gantt_task(
+        self,
+        ctx: Context,
+        task_id: str,
+    ) -> dict[str, Any]:
+        """Delete a personal Gantt task.
+
+        Side effects: removes the GanttTask row from the database.  The task
+        must belong to the authenticated user.  Returns a confirmation payload.
+        """
+        _ = ctx
+        context, db = await self._resolve_tool_context()
+        try:
+            # Verify ownership before deleting
+            await get_gantt_task(db, context.user_id, task_id)
+            await delete_gantt_task(db, context.user_id, task_id)
+            audit.append(
+                target=f"user:{context.user_id}:gantt:{task_id}",
+                action="delete_gantt_task",
+                details="via MCP",
+            )
+            return {"deleted": True, "task_id": task_id, "user_id": context.user_id}
+        finally:
+            await db.close()
+
 
 def create_mcp_server(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
@@ -515,7 +921,7 @@ def create_mcp_server(
     backend = WorktimeMcpBackend(session_factory or get_session_factory())
     server = FastMCP(
         "worktime",
-        instructions="Read-only Worktime assistant tools",
+        instructions="Worktime assistant tools — read and personal write access",
         auth=_build_auth_provider(),
     )
 
@@ -529,6 +935,17 @@ def create_mcp_server(
     server.tool(name="get_time_tracking_summary")(backend.get_time_tracking_summary)
     server.tool(name="get_gantt_tasks")(backend.get_gantt_tasks)
     server.tool(name="get_sync_status")(backend.get_sync_status)
+    server.tool(name="start_time_entry")(backend.start_time_entry)
+    server.tool(name="stop_time_entry")(backend.stop_time_entry)
+    server.tool(name="create_time_tracking_task")(backend.create_time_tracking_task)
+    server.tool(name="update_time_tracking_task")(backend.update_time_tracking_task)
+    server.tool(name="set_work_location")(backend.set_work_location)
+    server.tool(name="create_time_off_event")(backend.create_time_off_event)
+    server.tool(name="update_time_off_event")(backend.update_time_off_event)
+    server.tool(name="delete_time_off_event")(backend.delete_time_off_event)
+    server.tool(name="create_gantt_task")(backend.create_gantt_task)
+    server.tool(name="update_gantt_task")(backend.update_gantt_task)
+    server.tool(name="delete_gantt_task")(backend.delete_gantt_task)
     return server
 
 
