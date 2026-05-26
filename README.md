@@ -59,3 +59,11 @@ Branch protection should require the scoped workflows that match changed areas:
 - `CodeQL JavaScript`
 - `CodeQL Actions`
 - `CodeQL Android`
+
+### Release and Artifact Workflows
+
+These workflows are intentionally separated from normal CI:
+
+- `Deploy Worktime to GitHub Pages` runs only on release publish or manual dispatch and enforces frontend lint/test/build before deploy.
+- `Build .hday Helper EXE` remains scoped to `hday-helper/**`, `frontend/src/lib/hday/**`, and its workflow file.
+- Android release/manual artifact workflows should be separate from Android CI and scoped to `android/**`. When signing secrets are unavailable, they should skip artifact publishing gracefully instead of failing unrelated checks.
