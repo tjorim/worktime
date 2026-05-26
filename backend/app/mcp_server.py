@@ -535,6 +535,9 @@ class WorktimeMcpBackend:
     ) -> dict[str, Any]:
         """Update a time-tracking task owned by the authenticated user.
 
+        Omit any parameter to leave it unchanged. Tasks always require a label;
+        label_id cannot be cleared.
+
         Side effects: updates the specified TimeTrackingTask row.  Authorization
         is enforced — the task must belong to the caller.  Returns the updated
         task resource.
@@ -666,7 +669,7 @@ class WorktimeMcpBackend:
             if weekday is not None:
                 update_data["weekday"] = weekday
             if note is not None:
-                update_data["note"] = note
+                update_data["note"] = None if note == "" else note
 
             payload = TimeOffEntryUpdate(**update_data)
             entry = await update_time_off_entry(db, context.user_id, entry_id, payload)
@@ -762,9 +765,9 @@ class WorktimeMcpBackend:
             if progress is not None:
                 update_data["progress"] = progress
             if dependencies is not None:
-                update_data["dependencies"] = dependencies
+                update_data["dependencies"] = None if dependencies == "" else dependencies
             if notes is not None:
-                update_data["notes"] = notes
+                update_data["notes"] = None if notes == "" else notes
 
             payload = GanttTaskUpdate(**update_data)
             task = await update_gantt_task(db, context.user_id, task_id, payload)
