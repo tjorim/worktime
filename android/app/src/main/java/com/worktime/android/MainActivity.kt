@@ -19,4 +19,10 @@ class MainActivity : ComponentActivity() {
             WorktimeApp(container = container, initialDestination = destination)
         }
     }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        recreate()
+    }
 }

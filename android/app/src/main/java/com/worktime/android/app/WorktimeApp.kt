@@ -1,7 +1,9 @@
 package com.worktime.android.app
 
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +53,22 @@ fun WorktimeApp(
     val context = LocalContext.current
     val notifications = remember { WorktimeNotifications(context) }
     val sentNotificationKeys = remember { mutableSetOf<String>() }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* permission result handled silently; system manages notification access */ }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val dashboardViewModel: DashboardViewModel = viewModel(
         factory = DashboardViewModel.factory(container.dashboardRepository),
     )

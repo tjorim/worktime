@@ -34,8 +34,8 @@ fun TodayScreen(
     onSetWorkLocation: (LocalDate, String, String?) -> Unit,
 ) {
     ReadModelScreen(title = "Today", uiState = uiState, onRetry = onRetry) { dashboard ->
-        var taskText by remember { mutableStateOf(actionsState.runningTask?.text ?: "") }
-        var taskLabel by remember { mutableStateOf(actionsState.runningTask?.labelId ?: "") }
+        var taskText by remember(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.text ?: "") }
+        var taskLabel by remember(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.labelId ?: "") }
         var workLocationDate by remember { mutableStateOf(LocalDate.now().toString()) }
         var countryCode by remember { mutableStateOf("") }
         var workLocationLabel by remember { mutableStateOf("") }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -71,22 +72,28 @@ class DashboardViewModel(
 
     fun refreshActions() {
         viewModelScope.launch {
-            val runningTask = when (val result = repository.getRunningTask()) {
-                is MutationResult.Success -> result.value
-                else -> null
+            val runningTaskDeferred = async {
+                when (val result = repository.getRunningTask()) {
+                    is MutationResult.Success -> result.value
+                    else -> null
+                }
             }
-            val weeklyLocations = when (val result = repository.loadWeeklyWorkLocations()) {
-                is MutationResult.Success -> result.value
-                else -> emptyList()
+            val weeklyLocationsDeferred = async {
+                when (val result = repository.loadWeeklyWorkLocations()) {
+                    is MutationResult.Success -> result.value
+                    else -> emptyList()
+                }
             }
-            val syncStatus = when (val result = repository.loadSyncStatus()) {
-                is MutationResult.Success -> result.value
-                else -> null
+            val syncStatusDeferred = async {
+                when (val result = repository.loadSyncStatus()) {
+                    is MutationResult.Success -> result.value
+                    else -> null
+                }
             }
             _actionsState.value = _actionsState.value.copy(
-                runningTask = runningTask,
-                weeklyWorkLocations = weeklyLocations,
-                syncStatus = syncStatus,
+                runningTask = runningTaskDeferred.await(),
+                weeklyWorkLocations = weeklyLocationsDeferred.await(),
+                syncStatus = syncStatusDeferred.await(),
             )
         }
     }

@@ -60,7 +60,7 @@ class WorktimeRepository(
         val token = sessionController.getFreshAccessToken() ?: return DashboardLoadResult.LoggedOut
         val timezone = TimeZone.getDefault().id
         return try {
-            val dashboard = api.getDashboard(authorization = "******", timezone = timezone)
+            val dashboard = api.getDashboard(authorization = "Bearer $token", timezone = timezone)
             currentUserId = dashboard.identity.id
             DashboardLoadResult.Success(dashboard)
         } catch (error: HttpException) {
@@ -82,7 +82,7 @@ class WorktimeRepository(
         val now = OffsetDateTime.now(ZoneOffset.UTC).toString()
         return withAuthorizedUser { token, userId ->
             api.createTask(
-                authorization = "******",
+                authorization = "Bearer $token",
                 userId = userId,
                 payload = TaskMutationRequest(
                     text = text,
@@ -98,7 +98,7 @@ class WorktimeRepository(
         val now = OffsetDateTime.now(ZoneOffset.UTC).toString()
         return withAuthorizedUser { token, userId ->
             api.updateTask(
-                authorization = "******",
+                authorization = "Bearer $token",
                 taskId = taskId,
                 userId = userId,
                 payload = TaskMutationRequest(stopTime = now),
@@ -109,7 +109,7 @@ class WorktimeRepository(
     override suspend fun updateTask(taskId: String, text: String?, labelId: String?): MutationResult<TaskRecord> {
         return withAuthorizedUser { token, userId ->
             api.updateTask(
-                authorization = "******",
+                authorization = "Bearer $token",
                 taskId = taskId,
                 userId = userId,
                 payload = TaskMutationRequest(text = text, labelId = labelId),
@@ -120,9 +120,10 @@ class WorktimeRepository(
     override suspend fun getRunningTask(): MutationResult<TaskRecord?> {
         return withAuthorizedUser { token, userId ->
             val response = api.getRunningTask(
-                authorization = "******",
+                authorization = "Bearer $token",
                 userId = userId,
             )
+            if (!response.isSuccessful) throw HttpException(response)
             if (response.code() == 204) null else response.body()
         }
     }
@@ -134,7 +135,7 @@ class WorktimeRepository(
     ): MutationResult<WorkLocationRecord> {
         return withAuthorizedUser { token, userId ->
             api.upsertWorkLocation(
-                authorization = "******",
+                authorization = "Bearer $token",
                 userId = userId,
                 payload = WorkLocationMutationRequest(
                     date = date.toString(),
@@ -148,7 +149,7 @@ class WorktimeRepository(
     override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> {
         return withAuthorizedUser { token, userId ->
             api.listWorkLocations(
-                authorization = "******",
+                authorization = "Bearer $token",
                 userId = userId,
                 startDate = until.minusDays(6).toString(),
                 endDate = until.toString(),
@@ -158,7 +159,7 @@ class WorktimeRepository(
 
     override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> {
         return withAuthorizedUser { token, _ ->
-            api.getSyncStatus(authorization = "******")
+            api.getSyncStatus(authorization = "Bearer $token")
         }
     }
 
