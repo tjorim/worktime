@@ -46,3 +46,16 @@ uv run uvicorn app.main:app --reload
 - [backend/README.md](backend/README.md) for backend architecture, API surface, and deployment
 - `frontend/` for the web app source
 - `examples/` for sample `.hday` and share-style data
+
+## CI Workflows
+
+Branch protection should require the scoped workflows that match changed areas:
+
+- `Backend CI`
+- `Frontend CI`
+- `.hday Helper CI`
+- `Android CI`
+- `CodeQL Python`
+- `CodeQL JavaScript`
+- `CodeQL Actions`
+- `CodeQL Android`
