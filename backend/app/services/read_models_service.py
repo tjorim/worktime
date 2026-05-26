@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC
+from datetime import UTC, timedelta
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
-from datetime import timedelta
 from math import floor
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +31,11 @@ from app.read_models import (
     TimeOffSummaryReadModel,
 )
 from app.routers.auth import AuthenticatedPrincipal
-from app.services.db_service import get_user, get_user_preferences, list_time_off_entries
+from app.services.db_service import (
+    get_user,
+    get_user_preferences,
+    list_time_off_entries,
+)
 from app.utils.datetime import as_utc
 
 

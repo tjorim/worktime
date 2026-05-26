@@ -13,6 +13,7 @@ import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -24,6 +25,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
