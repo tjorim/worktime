@@ -66,7 +66,9 @@ class WorktimeNotifications(private val context: Context) {
         message: String,
         destination: String,
     ) {
-        val intent = Intent(context, MainActivity::class.java)
+        val intent = Intent()
+            .setClass(context, MainActivity::class.java)
+            .setPackage(context.packageName)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .putExtra(EXTRA_DESTINATION, destination)
         val pendingIntent = PendingIntent.getActivity(
