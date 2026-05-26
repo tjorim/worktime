@@ -37,7 +37,7 @@ async def _load_dashboard(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unknown timezone: {timezone!r}",
-        )
+        ) from None
     try:
         return await build_dashboard_read_model(
             session,
