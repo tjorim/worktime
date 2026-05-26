@@ -56,10 +56,7 @@ from app.services.db_service import (
     update_task,
     update_time_off_entry,
 )
-from app.services.hday_parser import parse_text
-from app.services.hday_service import HdayFileNotFoundError, read_hday_file
 from app.services.sync_service import get_sync_status
-from app.services.team_service import read_team_hday_files, read_team_info_with_sections
 
 
 class McpAuthError(RuntimeError):
@@ -164,25 +161,6 @@ def _to_iso_datetime(value: datetime) -> str:
         value = value.replace(tzinfo=UTC)
     return value.astimezone(UTC).isoformat()
 
-
-def _parse_hday_date(value: str) -> date | None:
-    try:
-        return datetime.strptime(value, "%Y/%m/%d").date()
-    except ValueError:
-        return None
-
-
-def _hday_event_matches_day(event: dict[str, Any], day: date) -> bool:
-    if event.get("type") == "weekly":
-        return event.get("weekday") == day.isoweekday()
-    if event.get("type") != "range":
-        return False
-
-    start = _parse_hday_date(str(event.get("start", "")))
-    end = _parse_hday_date(str(event.get("end", "")))
-    if start is None or end is None:
-        return False
-    return start <= day <= end
 
 
 class WorktimeMcpBackend:
@@ -321,35 +299,6 @@ class WorktimeMcpBackend:
         finally:
             await db.close()
 
-    async def get_team_status(self, ctx: Context, team_id: str) -> dict[str, Any]:
-        _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
-            team_name, sections, members = await asyncio.to_thread(read_team_info_with_sections, team_id)
-            if not context.is_admin and context.username not in {member.username for member in members}:
-                raise McpPermissionError("Not authorized for team data")
-
-            member_data = await asyncio.to_thread(read_team_hday_files, members, True)
-            today = date.today()
-            available_files = sum(1 for member in member_data if member.etag is not None)
-            active_today = 0
-            for member in member_data:
-                events = [event.model_dump(mode="json") for event in member.events]
-                if any(_hday_event_matches_day(event, today) for event in events):
-                    active_today += 1
-
-            return {
-                "team_id": team_id,
-                "team_name": team_name,
-                "date": _to_iso_date(today),
-                "member_count": len(members),
-                "available_hday_files": available_files,
-                "members_with_active_events_today": active_today,
-                "sections": [section.model_dump(mode="json") for section in sections],
-            }
-        finally:
-            await db.close()
-
     async def get_time_off_summary(
         self,
         ctx: Context,
@@ -380,38 +329,6 @@ class WorktimeMcpBackend:
                 "counts_by_type": dict(by_type),
                 "counts_by_kind": dict(by_kind),
                 "entries": payload_entries,
-            }
-        finally:
-            await db.close()
-
-    async def get_hday_events(
-        self,
-        ctx: Context,
-        username: str | None = None,
-    ) -> dict[str, Any]:
-        _ = ctx
-        context, db = await self._resolve_tool_context()
-        requested_username = username or context.username
-        try:
-            if not context.is_admin and requested_username != context.username:
-                raise McpPermissionError("Not authorized for requested user")
-
-            try:
-                raw_content, etag = await asyncio.to_thread(read_hday_file, requested_username)
-            except HdayFileNotFoundError:
-                return {
-                    "username": requested_username,
-                    "etag": None,
-                    "events": [],
-                    "raw": "",
-                }
-
-            events = [event.model_dump(mode="json") for event in parse_text(raw_content)]
-            return {
-                "username": requested_username,
-                "etag": etag,
-                "events": events,
-                "raw": raw_content,
             }
         finally:
             await db.close()
@@ -950,9 +867,7 @@ def create_mcp_server(
     server.tool(name="whoami")(backend.whoami)
     server.tool(name="get_current_status")(backend.get_current_status)
     server.tool(name="get_next_shift")(backend.get_next_shift)
-    server.tool(name="get_team_status")(backend.get_team_status)
     server.tool(name="get_time_off_summary")(backend.get_time_off_summary)
-    server.tool(name="get_hday_events")(backend.get_hday_events)
     server.tool(name="get_work_location_summary")(backend.get_work_location_summary)
     server.tool(name="get_time_tracking_summary")(backend.get_time_tracking_summary)
     server.tool(name="get_gantt_tasks")(backend.get_gantt_tasks)
