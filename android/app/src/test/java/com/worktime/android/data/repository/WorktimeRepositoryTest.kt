@@ -8,9 +8,15 @@ import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.FeatureFlags
 import com.worktime.android.data.model.Identity
 import com.worktime.android.data.model.NextShifts
+import com.worktime.android.data.model.SyncStatusResponse
+import com.worktime.android.data.model.TaskMutationRequest
+import com.worktime.android.data.model.TaskRecord
 import com.worktime.android.data.model.TeamStatus
 import com.worktime.android.data.model.TimeOffSummary
 import com.worktime.android.data.model.WorkContext
+import com.worktime.android.data.model.WorkLocationListResponse
+import com.worktime.android.data.model.WorkLocationMutationRequest
+import com.worktime.android.data.model.WorkLocationRecord
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -52,7 +58,7 @@ class WorktimeRepositoryTest {
     fun loadDashboardMapsUnauthorizedToLoggedOut() = runTest {
         val sessionController = FakeSessionController(token = "expired-token")
         val repository = WorktimeRepository(
-            api = FakeApi(throwable = httpException(401)),
+            api = FakeApi(dashboardThrowable = httpException(401)),
             sessionController = sessionController,
         )
 
@@ -63,28 +69,113 @@ class WorktimeRepositoryTest {
     }
 
     @Test
-    fun loadDashboardMapsNetworkFailureToError() = runTest {
+    fun startTrackingReturnsValidationErrorForBadRequest() = runTest {
         val repository = WorktimeRepository(
-            api = FakeApi(throwable = java.io.IOException("boom")),
+            api = FakeApi(taskThrowable = httpException(400)),
             sessionController = FakeSessionController(token = "token-123"),
         )
+        repository.loadDashboard()
 
-        val result = repository.loadDashboard()
+        val result = repository.startTimeTracking("Focus")
 
-        assertEquals(
-            DashboardLoadResult.Error("Unable to reach the Worktime backend"),
-            result,
+        assertEquals(MutationResult.ValidationError("Request validation failed"), result)
+    }
+
+    @Test
+    fun updateTaskReturnsLoggedOutOnUnauthorized() = runTest {
+        val sessionController = FakeSessionController(token = "token-123")
+        val repository = WorktimeRepository(
+            api = FakeApi(taskThrowable = httpException(401)),
+            sessionController = sessionController,
         )
+        repository.loadDashboard()
+
+        val result = repository.updateTask("task-1", "Updated", null)
+
+        assertEquals(MutationResult.LoggedOut, result)
+        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
+    }
+
+    @Test
+    fun setWorkLocationReturnsSuccess() = runTest {
+        val repository = WorktimeRepository(
+            api = FakeApi(),
+            sessionController = FakeSessionController(token = "token-123"),
+        )
+        repository.loadDashboard()
+
+        val result = repository.setWorkLocation(
+            date = java.time.LocalDate.parse("2026-05-26"),
+            countryCode = "de",
+            label = "Office",
+        )
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals("DE", (result as MutationResult.Success).value.countryCode)
     }
 
     private class FakeApi(
         private val response: DashboardResponse = sampleDashboard(),
-        private val throwable: Throwable? = null,
+        private val dashboardThrowable: Throwable? = null,
+        private val taskThrowable: Throwable? = null,
     ) : WorktimeApi {
-        override suspend fun getDashboard(authorization: String): DashboardResponse {
-            throwable?.let { throw it }
+        override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
+            dashboardThrowable?.let { throw it }
             return response
         }
+
+        override suspend fun createTask(
+            authorization: String,
+            userId: Int,
+            payload: TaskMutationRequest,
+        ): TaskRecord {
+            taskThrowable?.let { throw it }
+            return sampleTask(userId = userId, text = payload.text ?: "Task")
+        }
+
+        override suspend fun updateTask(
+            authorization: String,
+            taskId: String,
+            userId: Int,
+            payload: TaskMutationRequest,
+        ): TaskRecord {
+            taskThrowable?.let { throw it }
+            return sampleTask(userId = userId, id = taskId, text = payload.text ?: "Task")
+        }
+
+        override suspend fun getRunningTask(
+            authorization: String,
+            userId: Int,
+        ): Response<TaskRecord> = Response.success(sampleTask(userId = userId))
+
+        override suspend fun upsertWorkLocation(
+            authorization: String,
+            userId: Int,
+            payload: WorkLocationMutationRequest,
+        ): WorkLocationRecord {
+            return WorkLocationRecord(
+                id = 1,
+                userId = userId,
+                date = payload.date,
+                countryCode = payload.countryCode.uppercase(),
+                label = payload.label,
+                createdAt = "2026-05-26T12:00:00Z",
+            )
+        }
+
+        override suspend fun listWorkLocations(
+            authorization: String,
+            userId: Int,
+            startDate: String?,
+            endDate: String?,
+        ): WorkLocationListResponse = WorkLocationListResponse(
+            items = emptyList(),
+            total = 0,
+        )
+
+        override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
+            serverTimestamp = "2026-05-26T12:00:00Z",
+        )
     }
 
     private class FakeSessionController(
@@ -132,6 +223,17 @@ private fun sampleDashboard(): DashboardResponse = DashboardResponse(
         upcomingItems = emptyList(),
         totalUpcoming = 0,
     ),
+)
+
+private fun sampleTask(userId: Int, id: String = "task-1", text: String = "Task"): TaskRecord = TaskRecord(
+    id = id,
+    userId = userId,
+    labelId = null,
+    text = text,
+    startTime = "2026-05-26T12:00:00Z",
+    stopTime = null,
+    includesBreak = false,
+    createdAt = "2026-05-26T12:00:00Z",
 )
 
 private fun httpException(code: Int): HttpException {

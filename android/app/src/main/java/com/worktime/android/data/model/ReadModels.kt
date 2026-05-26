@@ -110,3 +110,59 @@ data class TimeOffSummary(
     @SerialName("upcoming_items") val upcomingItems: List<TimeOffSummaryItem>,
     @SerialName("total_upcoming") val totalUpcoming: Int,
 )
+
+@Serializable
+data class TaskMutationRequest(
+    val text: String? = null,
+    @SerialName("label_id") val labelId: String? = null,
+    @SerialName("start_time") val startTime: String? = null,
+    @SerialName("stop_time") val stopTime: String? = null,
+    @SerialName("includes_break") val includesBreak: Boolean? = null,
+)
+
+@Serializable
+data class TaskRecord(
+    val id: String,
+    @SerialName("user_id") val userId: Int,
+    @SerialName("label_id") val labelId: String? = null,
+    val text: String,
+    @SerialName("start_time") val startTime: String,
+    @SerialName("stop_time") val stopTime: String? = null,
+    @SerialName("includes_break") val includesBreak: Boolean,
+    @SerialName("created_at") val createdAt: String,
+)
+
+@Serializable
+data class WorkLocationMutationRequest(
+    val date: String,
+    @SerialName("country_code") val countryCode: String,
+    val label: String? = null,
+)
+
+@Serializable
+data class WorkLocationRecord(
+    val id: Int,
+    @SerialName("user_id") val userId: Int,
+    val date: String,
+    @SerialName("country_code") val countryCode: String,
+    val label: String? = null,
+    @SerialName("created_at") val createdAt: String,
+)
+
+@Serializable
+data class WorkLocationListResponse(
+    val items: List<WorkLocationRecord>,
+    val total: Int,
+)
+
+@Serializable
+data class SyncStatusResponse(
+    @SerialName("labels_updated_at") val labelsUpdatedAt: String? = null,
+    @SerialName("tasks_updated_at") val tasksUpdatedAt: String? = null,
+    @SerialName("templates_updated_at") val templatesUpdatedAt: String? = null,
+    @SerialName("work_locations_updated_at") val workLocationsUpdatedAt: String? = null,
+    @SerialName("time_off_entries_updated_at") val timeOffEntriesUpdatedAt: String? = null,
+    @SerialName("gantt_tasks_updated_at") val ganttTasksUpdatedAt: String? = null,
+    @SerialName("preferences_updated_at") val preferencesUpdatedAt: String? = null,
+    @SerialName("server_timestamp") val serverTimestamp: String,
+)
