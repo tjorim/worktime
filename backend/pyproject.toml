@@ -9,6 +9,7 @@ description = "FastAPI backend for the Worktime shift tracker and time-off manag
 requires-python = ">=3.12"
 dependencies = [
   "fastapi==0.136.1",
+  "fastmcp==3.3.1",
   "uvicorn[standard]==0.47.0",
   "sqlalchemy==2.0.49",
   "asyncpg==0.31.0",
