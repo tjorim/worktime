@@ -9,7 +9,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.worktime.android.MainActivity
-import com.worktime.android.R
 
 const val CHANNEL_SHIFTS = "shifts"
 const val CHANNEL_TIME_TRACKING = "time_tracking"
@@ -75,7 +74,7 @@ class WorktimeNotifications(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(message)
             .setContentIntent(pendingIntent)
