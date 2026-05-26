@@ -178,6 +178,7 @@ if settings.DATABASE_ENABLED:
     from .routers.account_router import router as account_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_preferences import router as db_preferences_router
+   from .routers.read_models import router as read_models_router
     from .routers.db_sync import router as db_sync_router
     from .routers.db_time_off import router as db_time_off_router
     from .routers.db_time_tracking import router as db_time_tracking_router
@@ -193,6 +194,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(db_gantt_router, prefix="/api")
     app.include_router(db_sync_router, prefix="/api")
     app.include_router(db_preferences_router, prefix="/api")
+    app.include_router(read_models_router, prefix="/api")
     app.include_router(db_time_off_router, prefix="/api")
     logger.info("✓ Database API endpoints enabled")
 else:
