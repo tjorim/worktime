@@ -31,6 +31,13 @@ The following remain non-collection by design:
   - allows `queryKey: ["sync", ...]` only in `src/db/collections.ts`
 - Existing collection-backed hook tests cover load/update/delete/reset flows.
 
+## TanStack Form/Table adoption
+
+- Use **TanStack Form** for multi-step or modal forms with cross-field validation and submit-state handling (for example template editing in time tracking).
+- Use **TanStack Table** for dense operational summaries that benefit from reusable sorting/filtering/column visibility (for example yearly work-location summaries).
+- Keep simple forms/lists on local component state when they do not need richer table/form state features.
+- TanStack Form/Table adoption must stay aligned with this data standard: mutation/fetch paths still go through existing TanStack Query + QueryCollection flows.
+
 ## Where to add a new server-state domain
 
 1. If the domain is sync-managed or shared mutable app state, add a QueryCollection in `collections.ts` and consume it via `useLiveQuery`.

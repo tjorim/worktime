@@ -1,6 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+  useReactTable,
+} from "@tanstack/react-table";
 import { useToast } from "@/contexts/ToastContext";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
 import type { WorkLocationMap } from "@/types/workLocation";
@@ -12,6 +23,14 @@ interface LocationYearSummaryProps {
   year: number;
   workLocationMap: WorkLocationMap;
 }
+
+type LocationSummaryRow = {
+  location: "home" | "office" | "other";
+  locationLabel: string;
+  countryCode: string;
+  days: number;
+  percentage: number;
+};
 
 /**
  * Renders an annual work location summary grouped by (location, country, label).
@@ -34,8 +53,87 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     return filtered;
   }, [workLocationMap, year]);
 
-  const rows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
-  const totalDays = useMemo(() => rows.reduce((sum, r) => sum + r.days, 0), [rows]);
+  const summaryRows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
+  const totalDays = useMemo(() => summaryRows.reduce((sum, r) => sum + r.days, 0), [summaryRows]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "days", desc: true }]);
+  const [countryFilter, setCountryFilter] = useState("");
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+
+  const rows = useMemo<LocationSummaryRow[]>(
+    () =>
+      summaryRows.map((row) => ({
+        ...row,
+        locationLabel:
+          row.location === "home"
+            ? m.work_location_home()
+            : row.location === "office"
+              ? m.work_location_office()
+              : m.work_location_other(),
+        percentage: totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0,
+      })),
+    [summaryRows, totalDays],
+  );
+
+  const columns = useMemo<ColumnDef<LocationSummaryRow>[]>(
+    () => [
+      {
+        accessorKey: "locationLabel",
+        header: m.location_col_location(),
+        cell: (context) => (
+          <>
+            <i
+              className={`bi ${WORK_LOCATION_ICON_CLASS[context.row.original.location]} me-1`}
+              aria-hidden="true"
+            ></i>
+            {context.getValue<string>()}
+          </>
+        ),
+      },
+      {
+        accessorKey: "countryCode",
+        header: m.location_col_country(),
+      },
+      {
+        accessorKey: "days",
+        header: m.location_col_days(),
+        cell: (context) => <span className="text-end d-block">{context.getValue<number>()}</span>,
+      },
+      {
+        accessorKey: "percentage",
+        header: "%",
+        cell: (context) => (
+          <span className="text-end text-muted d-block">{context.getValue<number>()}%</span>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      globalFilter: countryFilter,
+    },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setCountryFilter,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const normalizedFilter = String(filterValue).trim().toLowerCase();
+      if (!normalizedFilter) {
+        return true;
+      }
+      return (
+        row.original.countryCode.toLowerCase().includes(normalizedFilter) ||
+        row.original.locationLabel.toLowerCase().includes(normalizedFilter)
+      );
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   const handleCopy = () => {
     if (!navigator?.clipboard) {
@@ -48,15 +146,15 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     const lines = [
       header,
       divider,
-      ...rows.map((row) => {
+      ...table.getRowModel().rows.map((tableRow) => {
+        const row = tableRow.original;
         const locationLabel = WORK_LOCATION_LABEL[row.location];
-        const pct = totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0;
         const pluralCategory = new Intl.PluralRules(getLocale()).select(row.days);
         const dayLabel =
           pluralCategory === "one"
             ? m.location_days_count({ count: row.days })
             : m.location_days_count_plural({ count: row.days });
-        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${dayLabel} (${pct}%)`;
+        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${dayLabel} (${row.percentage}%)`;
       }),
     ];
 
@@ -87,37 +185,71 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           {m.location_copy_btn()}
         </Button>
       </div>
+      <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <Form.Control
+          size="sm"
+          style={{ maxWidth: "240px" }}
+          placeholder={`${m.location_col_country()} / ${m.location_col_location()}`}
+          value={countryFilter}
+          onChange={(event) => setCountryFilter(event.target.value)}
+          aria-label={`${m.location_col_country()} / ${m.location_col_location()}`}
+        />
+        {(["countryCode", "days", "percentage"] as const).map((columnId) => {
+          const column = table.getColumn(columnId);
+          if (!column) {
+            return null;
+          }
+          const labelByColumn = {
+            countryCode: m.location_col_country(),
+            days: m.location_col_days(),
+            percentage: "%",
+          } as const;
+          return (
+            <Form.Check
+              key={columnId}
+              type="switch"
+              id={`location-column-${columnId}`}
+              label={labelByColumn[columnId]}
+              checked={column.getIsVisible()}
+              onChange={column.getToggleVisibilityHandler()}
+            />
+          );
+        })}
+      </div>
       <Table size="sm" bordered hover className="mb-0">
         <thead>
-          <tr>
-            <th>{m.location_col_location()}</th>
-            <th>{m.location_col_country()}</th>
-            <th className="text-end">{m.location_col_days()}</th>
-            <th className="text-end">%</th>
-          </tr>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                const sorted = header.column.getIsSorted();
+                return (
+                  <th
+                    key={header.id}
+                    className={header.id.endsWith("days") || header.id.endsWith("percentage") ? "text-end" : undefined}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {sorted === "asc" ? " ↑" : sorted === "desc" ? " ↓" : ""}
+                      </button>
+                    )}
+                  </th>
+                );
+              })}
+            </tr>
+          ))}
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const locationLabelMap = {
-              home: m.work_location_home(),
-              office: m.work_location_office(),
-              other: m.work_location_other(),
-            } as const;
-            const locationLabel = locationLabelMap[row.location] ?? row.location;
+          {table.getRowModel().rows.map((tableRow) => {
             return (
-              <tr key={`${row.location}-${row.countryCode}`}>
-                <td>
-                  <i
-                    className={`bi ${WORK_LOCATION_ICON_CLASS[row.location]} me-1`}
-                    aria-hidden="true"
-                  ></i>
-                  {locationLabel}
-                </td>
-                <td>{row.countryCode}</td>
-                <td className="text-end">{row.days}</td>
-                <td className="text-end text-muted">
-                  {totalDays > 0 ? `${Math.round((row.days / totalDays) * 100)}%` : "—"}
-                </td>
+              <tr key={tableRow.id}>
+                {tableRow.getVisibleCells().map((cell) => (
+                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                ))}
               </tr>
             );
           })}

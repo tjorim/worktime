@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TemplatesPanel } from "@/components/timeTracking/TemplatesPanel";
@@ -149,7 +149,7 @@ describe("TemplatesPanel", () => {
       const form = document.getElementById("templateForm")!;
       fireEvent.submit(form);
 
-      expect(screen.getByText(/Fill all template fields/i)).toBeInTheDocument();
+      expect(await screen.findByText(/Fill all template fields/i)).toBeInTheDocument();
       expect(onAddTemplate).not.toHaveBeenCalled();
     });
 
@@ -172,7 +172,7 @@ describe("TemplatesPanel", () => {
 
       await user.click(within(dialog).getByRole("button", { name: /Save Template/i }));
 
-      expect(screen.getByText(/stop time must be after start time/i)).toBeInTheDocument();
+      expect(await screen.findByText(/stop time must be after start time/i)).toBeInTheDocument();
       expect(onAddTemplate).not.toHaveBeenCalled();
     });
 
@@ -187,7 +187,7 @@ describe("TemplatesPanel", () => {
 
       const dialog = screen.getByRole("dialog");
       const submitButton = within(dialog).getByRole("button", { name: /Save Changes/i });
-      expect(submitButton).toBeDisabled();
+      await waitFor(() => expect(submitButton).toBeDisabled());
     });
 
     it("disables submit when no labels are available", () => {

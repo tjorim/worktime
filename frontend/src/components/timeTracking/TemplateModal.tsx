@@ -1,13 +1,15 @@
+import { useEffect } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
+import { useForm } from "@tanstack/react-form";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
 
-type TemplateForm = {
+export type TemplateForm = {
   text: string;
   label: string;
   start: string;
@@ -19,10 +21,9 @@ type TemplateModalProps = {
   title: string;
   submitLabel: string;
   labels: TimeTrackingLabel[];
-  value: TemplateForm;
-  onChange: (value: TemplateForm) => void;
+  initialValue: TemplateForm;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (value: TemplateForm) => void;
 };
 
 export function TemplateModal({
@@ -30,14 +31,25 @@ export function TemplateModal({
   title,
   submitLabel,
   labels,
-  value,
-  onChange,
+  initialValue,
   onClose,
   onSubmit,
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
-  const selectedLabelOption = useSelectedLabelOption(labels, value.label);
-  const isSubmitDisabled = isLabelSelectionDisabled || !value.label || selectedLabelOption === null;
+  const form = useForm({
+    defaultValues: initialValue,
+    onSubmit: ({ value }) => onSubmit(value),
+  });
+
+  useEffect(() => {
+    if (show) {
+      form.reset(initialValue);
+    }
+  }, [show, initialValue, form]);
+
+  const selectedLabelOption = useSelectedLabelOption(labels, form.state.values.label);
+  const isSubmitDisabled =
+    isLabelSelectionDisabled || !form.state.values.label || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -49,64 +61,77 @@ export function TemplateModal({
           id="templateForm"
           onSubmit={(event) => {
             event.preventDefault();
-            if (isSubmitDisabled) {
-              return;
-            }
-            onSubmit();
+            void form.handleSubmit();
           }}
         >
-          <Form.Group controlId="templateName" className="mb-3">
-            <Form.Label>{m.form_task_name()}</Form.Label>
-            <Form.Control
-              value={value.text}
-              onChange={(event) => onChange({ ...value, text: event.target.value })}
-              placeholder={m.form_task_name_placeholder()}
-              aria-required="true"
-              required
-            />
-          </Form.Group>
-          <Form.Group controlId="templateLabel" className="mb-3">
-            <Form.Label>{m.form_label()}</Form.Label>
-            <ReactSelect<LabelOption>
-              unstyled
-              isClearable
-              isSearchable
-              inputId="templateLabel"
-              isDisabled={isLabelSelectionDisabled}
-              placeholder={isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()}
-              aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
-              options={labels.map((l) => ({ value: l.id, label: l.name }))}
-              value={selectedLabelOption}
-              onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
-              classNames={bootstrapSelectClassNames}
-            />
-            {isLabelSelectionDisabled ? (
-              <Form.Text id="templateLabelHelp" muted>
-                {m.tt_add_labels_first_help()}
-              </Form.Text>
-            ) : null}
-          </Form.Group>
+          <form.Field name="text">
+            {(field) => (
+              <Form.Group controlId="templateName" className="mb-3">
+                <Form.Label>{m.form_task_name()}</Form.Label>
+                <Form.Control
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder={m.form_task_name_placeholder()}
+                  aria-required="true"
+                  required
+                />
+              </Form.Group>
+            )}
+          </form.Field>
+          <form.Field name="label">
+            {(field) => (
+              <Form.Group controlId="templateLabel" className="mb-3">
+                <Form.Label>{m.form_label()}</Form.Label>
+                <ReactSelect<LabelOption>
+                  unstyled
+                  isClearable
+                  isSearchable
+                  inputId="templateLabel"
+                  isDisabled={isLabelSelectionDisabled}
+                  placeholder={isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()}
+                  aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
+                  options={labels.map((l) => ({ value: l.id, label: l.name }))}
+                  value={selectedLabelOption}
+                  onChange={(selected) => field.handleChange(selected?.value ?? "")}
+                  classNames={bootstrapSelectClassNames}
+                />
+                {isLabelSelectionDisabled ? (
+                  <Form.Text id="templateLabelHelp" muted>
+                    {m.tt_add_labels_first_help()}
+                  </Form.Text>
+                ) : null}
+              </Form.Group>
+            )}
+          </form.Field>
           <div className="d-flex gap-3">
-            <Form.Group controlId="templateStart" className="flex-fill">
-              <Form.Label>{m.form_start()}</Form.Label>
-              <Form.Control
-                type="time"
-                value={value.start}
-                onChange={(event) => onChange({ ...value, start: event.target.value })}
-                aria-required="true"
-                required
-              />
-            </Form.Group>
-            <Form.Group controlId="templateStop" className="flex-fill">
-              <Form.Label>{m.form_stop()}</Form.Label>
-              <Form.Control
-                type="time"
-                value={value.stop}
-                onChange={(event) => onChange({ ...value, stop: event.target.value })}
-                aria-required="true"
-                required
-              />
-            </Form.Group>
+            <form.Field name="start">
+              {(field) => (
+                <Form.Group controlId="templateStart" className="flex-fill">
+                  <Form.Label>{m.form_start()}</Form.Label>
+                  <Form.Control
+                    type="time"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-required="true"
+                    required
+                  />
+                </Form.Group>
+              )}
+            </form.Field>
+            <form.Field name="stop">
+              {(field) => (
+                <Form.Group controlId="templateStop" className="flex-fill">
+                  <Form.Label>{m.form_stop()}</Form.Label>
+                  <Form.Control
+                    type="time"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-required="true"
+                    required
+                  />
+                </Form.Group>
+              )}
+            </form.Field>
           </div>
         </Form>
       </Modal.Body>
