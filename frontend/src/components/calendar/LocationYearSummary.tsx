@@ -32,6 +32,10 @@ type LocationSummaryRow = {
   percentage: number;
 };
 
+type LocationSummaryColumnMeta = {
+  align?: "end";
+};
+
 /**
  * Renders an annual work location summary grouped by (location, country, label).
  * Intended for tax return submission — includes a "Copy to clipboard" button.
@@ -96,11 +100,13 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       {
         accessorKey: "days",
         header: m.location_col_days(),
+        meta: { align: "end" } satisfies LocationSummaryColumnMeta,
         cell: (context) => <span className="text-end d-block">{context.getValue<number>()}</span>,
       },
       {
         accessorKey: "percentage",
         header: "%",
+        meta: { align: "end" } satisfies LocationSummaryColumnMeta,
         cell: (context) => (
           <span className="text-end text-muted d-block">{context.getValue<number>()}%</span>
         ),
@@ -194,27 +200,30 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           onChange={(event) => setCountryFilter(event.target.value)}
           aria-label={`${m.location_col_country()} / ${m.location_col_location()}`}
         />
-        {(["countryCode", "days", "percentage"] as const).map((columnId) => {
-          const column = table.getColumn(columnId);
-          if (!column) {
-            return null;
-          }
-          const labelByColumn = {
-            countryCode: m.location_col_country(),
-            days: m.location_col_days(),
-            percentage: "%",
-          } as const;
+        {table
+          .getAllLeafColumns()
+          .filter((column) => column.id !== "locationLabel")
+          .map((column) => {
+            const labelByColumn: Record<string, string> = {
+              countryCode: m.location_col_country(),
+              days: m.location_col_days(),
+              percentage: "%",
+            };
+            const label = labelByColumn[column.id];
+            if (label === undefined) {
+              return null;
+            }
           return (
             <Form.Check
-              key={columnId}
+              key={column.id}
               type="switch"
-              id={`location-column-${columnId}`}
-              label={labelByColumn[columnId]}
+              id={`location-column-${column.id}`}
+              label={label}
               checked={column.getIsVisible()}
               onChange={column.getToggleVisibilityHandler()}
             />
           );
-        })}
+          })}
       </div>
       <Table size="sm" bordered hover className="mb-0">
         <thead>
@@ -222,10 +231,11 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 const sorted = header.column.getIsSorted();
+                const meta = header.column.columnDef.meta as LocationSummaryColumnMeta | undefined;
                 return (
                   <th
                     key={header.id}
-                    className={header.id.endsWith("days") || header.id.endsWith("percentage") ? "text-end" : undefined}
+                    className={meta?.align === "end" ? "text-end" : undefined}
                   >
                     {header.isPlaceholder ? null : (
                       <button

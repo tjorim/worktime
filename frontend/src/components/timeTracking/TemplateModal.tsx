@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -40,12 +39,6 @@ export function TemplateModal({
     defaultValues: initialValue,
     onSubmit: ({ value }) => onSubmit(value),
   });
-
-  useEffect(() => {
-    if (show) {
-      form.reset(initialValue);
-    }
-  }, [show, initialValue, form]);
 
   const selectedLabelOption = useSelectedLabelOption(labels, form.state.values.label);
   const isSubmitDisabled =
