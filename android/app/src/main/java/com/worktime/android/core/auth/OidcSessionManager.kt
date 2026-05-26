@@ -18,23 +18,30 @@ import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
 import kotlin.coroutines.resume
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class OidcSessionManager(
     private val context: Context,
     private val appConfig: AppConfig,
     private val sessionStore: SecureSessionStore,
 ) : SessionController {
+    private val tokenMutex = Mutex()
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
 
-    private var authState: AuthState? = sessionStore.readAuthStateJson()
-        ?.takeIf { it.isNotBlank() }
-        ?.let(AuthState::jsonDeserialize)
-        ?.also(::publishState)
-        ?: run {
-            _sessionState.value = SessionState.LoggedOut
-            null
-        }
+    private var authState: AuthState? = try {
+        sessionStore.readAuthStateJson()
+            ?.takeIf { it.isNotBlank() }
+            ?.let(AuthState::jsonDeserialize)
+            ?.also(::publishState)
+    } catch (e: Exception) {
+        sessionStore.clear()
+        null
+    } ?: run {
+        _sessionState.value = SessionState.LoggedOut
+        null
+    }
 
     override suspend fun createAuthorizationIntent(): Intent {
         val configuration = fetchAuthorizationServiceConfiguration()
@@ -72,11 +79,12 @@ class OidcSessionManager(
         persistAuthState(newState)
     }
 
-    override suspend fun getFreshAccessToken(): String? {
+    override suspend fun getFreshAccessToken(): String? = tokenMutex.withLock {
         val currentState = authState ?: return null
         return suspendCancellableCoroutine { continuation ->
             val service = AuthorizationService(context)
             currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
+                service.dispose()
                 if (exception != null || accessToken.isNullOrBlank()) {
                     logout()
                     continuation.resume(null)
@@ -109,7 +117,9 @@ class OidcSessionManager(
         request: TokenRequest,
     ): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> {
         return suspendCancellableCoroutine { continuation ->
-            AuthorizationService(context).performTokenRequest(request) { response, ex ->
+            val service = AuthorizationService(context)
+            service.performTokenRequest(request) { response, ex ->
+                service.dispose()
                 continuation.resume(response to ex)
             }
         }

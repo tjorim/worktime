@@ -53,7 +53,7 @@ fun formatInstant(value: String): String = runCatching {
 }.getOrDefault(value)
 
 fun formatDate(value: String): String = runCatching {
-    value
+    java.time.LocalDate.parse(value).format(DateTimeFormatter.ofPattern("EEE, MMM d"))
 }.getOrDefault(value)
 
 fun formatShift(shift: ShiftSummary): String {

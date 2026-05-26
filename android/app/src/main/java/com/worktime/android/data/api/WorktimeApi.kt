@@ -9,10 +9,14 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Query
 
 interface WorktimeApi {
     @GET("api/read-models/dashboard")
-    suspend fun getDashboard(@Header("Authorization") authorization: String): DashboardResponse
+    suspend fun getDashboard(
+        @Header("Authorization") authorization: String,
+        @Query("timezone") timezone: String,
+    ): DashboardResponse
 
     companion object {
         fun create(baseUrl: String, enableNetworkLogging: Boolean): WorktimeApi {

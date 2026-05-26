@@ -11,6 +11,7 @@ import com.worktime.android.data.repository.DashboardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed interface DashboardUiState {
@@ -25,6 +26,7 @@ class DashboardViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private var refreshJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -38,7 +40,8 @@ class DashboardViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _uiState.value = DashboardUiState.Loading
             _uiState.value = when (val result = repository.loadDashboard()) {
                 is DashboardLoadResult.Success -> DashboardUiState.Success(result.dashboard)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, timedelta
+from zoneinfo import ZoneInfo
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from math import floor
@@ -458,9 +459,11 @@ async def build_dashboard_read_model(
     principal: AuthenticatedPrincipal,
     *,
     as_of: dt_datetime | None = None,
+    timezone: str = "UTC",
     next_shift_limit: int = 3,
 ) -> DashboardReadModel:
     resolved_as_of = as_utc(as_of or dt_datetime.now(UTC))
+    local_as_of = resolved_as_of.astimezone(ZoneInfo(timezone))
     user = await get_user(session, principal.user_id)
     preferences = await get_user_preferences(session, principal.user_id)
     preferences_data = preferences.data if preferences is not None else {}
@@ -479,7 +482,7 @@ async def build_dashboard_read_model(
         schedule_type = work_context.schedule_type
         effective_team_number = work_context.effective_team_number
         if effective_team_number is not None:
-            shift_day = _get_current_shift_day(resolved_as_of, schedule_type)
+            shift_day = _get_current_shift_day(local_as_of, schedule_type)
             current_status = CurrentStatusReadModel(
                 as_of=resolved_as_of,
                 current_shift=_build_team_status_item(
@@ -487,13 +490,13 @@ async def build_dashboard_read_model(
                     team_number=effective_team_number,
                     target_date=shift_day,
                     shift_day=shift_day,
-                    as_of=resolved_as_of,
+                    as_of=local_as_of,
                 ),
-                currently_working_team=_get_current_working_team(schedule_type, resolved_as_of),
+                currently_working_team=_get_current_working_team(schedule_type, local_as_of),
                 off_day_progress=_get_off_day_progress(
                     schedule_type=schedule_type,
                     team_number=effective_team_number,
-                    as_of=resolved_as_of,
+                    as_of=local_as_of,
                 ),
             )
             next_shifts = NextShiftsReadModel(
@@ -501,11 +504,11 @@ async def build_dashboard_read_model(
                 items=_get_next_shifts(
                     schedule_type=schedule_type,
                     team_number=effective_team_number,
-                    as_of=resolved_as_of,
+                    as_of=local_as_of,
                     limit=next_shift_limit,
                 ),
             )
-            shift_day = _get_current_shift_day(resolved_as_of, schedule_type)
+            shift_day = _get_current_shift_day(local_as_of, schedule_type)
             team_status = TeamStatusReadModel(
                 as_of=resolved_as_of,
                 items=[
@@ -514,7 +517,7 @@ async def build_dashboard_read_model(
                         team_number=team_number,
                         target_date=shift_day,
                         shift_day=shift_day,
-                        as_of=resolved_as_of,
+                        as_of=local_as_of,
                     )
                     for team_number in range(1, _SCHEDULES[schedule_type].team_count + 1)
                 ],
@@ -523,7 +526,7 @@ async def build_dashboard_read_model(
     time_off_entries = await list_time_off_entries(
         session,
         user_id=principal.user_id,
-        start_date=resolved_as_of.date(),
+        start_date=local_as_of.date(),
     )
 
     return DashboardReadModel(
@@ -538,5 +541,5 @@ async def build_dashboard_read_model(
         current_status=current_status,
         next_shifts=next_shifts,
         team_status=team_status,
-        time_off_summary=_build_time_off_summary(as_of=resolved_as_of, entries=time_off_entries),
+        time_off_summary=_build_time_off_summary(as_of=local_as_of, entries=time_off_entries),
     )

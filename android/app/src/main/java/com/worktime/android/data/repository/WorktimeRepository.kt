@@ -4,9 +4,11 @@ import com.worktime.android.core.auth.SessionController
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.data.api.WorktimeApi
 import com.worktime.android.data.model.DashboardResponse
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
 import retrofit2.HttpException
 import java.io.IOException
+import java.util.TimeZone
 
 sealed interface DashboardLoadResult {
     data class Success(val dashboard: DashboardResponse) : DashboardLoadResult
@@ -28,8 +30,9 @@ class WorktimeRepository(
 
     override suspend fun loadDashboard(): DashboardLoadResult {
         val token = sessionController.getFreshAccessToken() ?: return DashboardLoadResult.LoggedOut
+        val timezone = TimeZone.getDefault().id
         return try {
-            DashboardLoadResult.Success(api.getDashboard(authorization = "Bearer $token"))
+            DashboardLoadResult.Success(api.getDashboard(authorization = "Bearer $token", timezone = timezone))
         } catch (error: HttpException) {
             if (error.code() == 401) {
                 sessionController.logout()
@@ -39,7 +42,8 @@ class WorktimeRepository(
             }
         } catch (_: IOException) {
             DashboardLoadResult.Error("Unable to reach the Worktime backend")
-        } catch (error: IllegalStateException) {
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
             DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
         }
     }
