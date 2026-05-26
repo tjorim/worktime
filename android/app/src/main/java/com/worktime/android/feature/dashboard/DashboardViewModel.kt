@@ -6,13 +6,18 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.worktime.android.data.model.DashboardResponse
+import com.worktime.android.data.model.SyncStatusResponse
+import com.worktime.android.data.model.TaskRecord
+import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
+import com.worktime.android.data.repository.MutationResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 sealed interface DashboardUiState {
     data object Loading : DashboardUiState
@@ -21,11 +26,21 @@ sealed interface DashboardUiState {
     data class Success(val dashboard: DashboardResponse) : DashboardUiState
 }
 
+data class MobileActionsUiState(
+    val runningTask: TaskRecord? = null,
+    val weeklyWorkLocations: List<WorkLocationRecord> = emptyList(),
+    val syncStatus: SyncStatusResponse? = null,
+    val isSubmitting: Boolean = false,
+    val message: String? = null,
+)
+
 class DashboardViewModel(
     private val repository: DashboardRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val _actionsState = MutableStateFlow(MobileActionsUiState())
+    val actionsState: StateFlow<MobileActionsUiState> = _actionsState.asStateFlow()
     private var refreshJob: Job? = null
 
     init {
@@ -44,16 +59,79 @@ class DashboardViewModel(
         refreshJob = viewModelScope.launch {
             _uiState.value = DashboardUiState.Loading
             _uiState.value = when (val result = repository.loadDashboard()) {
-                is DashboardLoadResult.Success -> DashboardUiState.Success(result.dashboard)
+                is DashboardLoadResult.Success -> {
+                    refreshActions()
+                    DashboardUiState.Success(result.dashboard)
+                }
                 DashboardLoadResult.LoggedOut -> DashboardUiState.LoggedOut
                 is DashboardLoadResult.Error -> DashboardUiState.Error(result.message)
             }
         }
     }
 
+    fun refreshActions() {
+        viewModelScope.launch {
+            val runningTask = when (val result = repository.getRunningTask()) {
+                is MutationResult.Success -> result.value
+                else -> null
+            }
+            val weeklyLocations = when (val result = repository.loadWeeklyWorkLocations()) {
+                is MutationResult.Success -> result.value
+                else -> emptyList()
+            }
+            val syncStatus = when (val result = repository.loadSyncStatus()) {
+                is MutationResult.Success -> result.value
+                else -> null
+            }
+            _actionsState.value = _actionsState.value.copy(
+                runningTask = runningTask,
+                weeklyWorkLocations = weeklyLocations,
+                syncStatus = syncStatus,
+            )
+        }
+    }
+
+    fun startTimeTracking(text: String, labelId: String? = null) {
+        submitMutation { repository.startTimeTracking(text, labelId) }
+    }
+
+    fun stopTimeTracking(taskId: String) {
+        submitMutation { repository.stopTimeTracking(taskId) }
+    }
+
+    fun updateTask(taskId: String, text: String?, labelId: String?) {
+        submitMutation { repository.updateTask(taskId = taskId, text = text, labelId = labelId) }
+    }
+
+    fun setWorkLocation(date: LocalDate, countryCode: String, label: String?) {
+        submitMutation { repository.setWorkLocation(date = date, countryCode = countryCode, label = label) }
+    }
+
     fun logout() {
         repository.logout()
         _uiState.value = DashboardUiState.LoggedOut
+    }
+
+    private fun submitMutation(block: suspend () -> MutationResult<*>) {
+        viewModelScope.launch {
+            _actionsState.value = _actionsState.value.copy(isSubmitting = true, message = null)
+            _actionsState.value = when (val result = block()) {
+                is MutationResult.Success -> {
+                    refreshActions()
+                    _actionsState.value.copy(isSubmitting = false, message = "Saved")
+                }
+                MutationResult.LoggedOut -> {
+                    _uiState.value = DashboardUiState.LoggedOut
+                    _actionsState.value.copy(isSubmitting = false, message = "Session expired. Sign in again.")
+                }
+                is MutationResult.ValidationError -> {
+                    _actionsState.value.copy(isSubmitting = false, message = result.message)
+                }
+                is MutationResult.Error -> {
+                    _actionsState.value.copy(isSubmitting = false, message = result.message)
+                }
+            }
+        }
     }
 
     companion object {

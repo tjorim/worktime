@@ -3,14 +3,17 @@ package com.worktime.android.feature.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.worktime.android.core.config.AppConfig
+import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
@@ -19,6 +22,10 @@ import com.worktime.android.ui.components.SummaryCard
 fun SettingsScreen(
     uiState: DashboardUiState,
     appConfig: AppConfig,
+    notificationPreferences: NotificationPreferences,
+    onShiftNotificationsChanged: (Boolean) -> Unit,
+    onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
+    onSyncNotificationsChanged: (Boolean) -> Unit,
     onLogout: () -> Unit,
 ) {
     ScreenList(title = "Settings") {
@@ -37,6 +44,38 @@ fun SettingsScreen(
                     text("Display name", uiState.dashboard.identity.displayName)
                     text("Username", uiState.dashboard.identity.username)
                     text("Admin", if (uiState.dashboard.identity.isAdmin) "Yes" else "No")
+                }
+            }
+        }
+        item {
+            SummaryCard(title = "Notifications") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("Shifts channel", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = notificationPreferences.shiftsEnabled,
+                            onCheckedChange = onShiftNotificationsChanged,
+                        )
+                    }
+                    androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("Time tracking channel", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = notificationPreferences.timeTrackingEnabled,
+                            onCheckedChange = onTimeTrackingNotificationsChanged,
+                        )
+                    }
+                    androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("Sync/conflicts channel", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = notificationPreferences.syncConflictsEnabled,
+                            onCheckedChange = onSyncNotificationsChanged,
+                        )
+                    }
                 }
             }
         }
