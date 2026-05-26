@@ -49,16 +49,16 @@ uv run uvicorn app.main:app --reload
 
 ## CI Workflows
 
-Branch protection should require the scoped workflows that match changed areas:
+Each workflow is scoped to the paths it validates:
 
-- `Backend CI`
-- `Frontend CI`
-- `.hday Helper CI`
-- `Android CI`
-- `CodeQL Python`
-- `CodeQL JavaScript`
-- `CodeQL Actions`
-- `CodeQL Android`
+- `Backend CI` — `backend/**`
+- `Frontend CI` — `frontend/**`
+- `.hday Helper CI` — `hday-helper/**`, `frontend/src/lib/hday/**`
+- `Android CI` — `android/**`
+- `CodeQL Python` — `backend/**`
+- `CodeQL JavaScript` — `frontend/**`
+- `CodeQL Actions` — `.github/workflows/**`
+- `CodeQL Android` — `android/**`
 
 ### Release and Artifact Workflows
 
