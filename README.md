@@ -46,3 +46,24 @@ uv run uvicorn app.main:app --reload
 - [backend/README.md](backend/README.md) for backend architecture, API surface, and deployment
 - `frontend/` for the web app source
 - `examples/` for sample `.hday` and share-style data
+
+## CI Workflows
+
+Each workflow is scoped to the paths it validates:
+
+- `Backend CI` — `backend/**`
+- `Frontend CI` — `frontend/**`
+- `.hday Helper CI` — `hday-helper/**`, `frontend/src/lib/hday/**`
+- `Android CI` — `android/**`
+- `CodeQL Python` — `backend/**`
+- `CodeQL JavaScript` — `frontend/**`
+- `CodeQL Actions` — `.github/workflows/**`
+- `CodeQL Android` — `android/**`
+
+### Release and Artifact Workflows
+
+These workflows are intentionally separated from normal CI:
+
+- `Deploy Worktime to GitHub Pages` runs only on release publish or manual dispatch and enforces frontend lint/test/build before deploy.
+- `Build .hday Helper EXE` remains scoped to `hday-helper/**`, `frontend/src/lib/hday/**`, and its workflow file.
+- Android release/manual artifact workflows should be separate from Android CI and scoped to `android/**`. When signing secrets are unavailable, they should skip artifact publishing gracefully instead of failing unrelated checks.

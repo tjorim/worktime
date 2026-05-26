@@ -1,13 +1,16 @@
 package com.worktime.android.core.notifications
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.worktime.android.MainActivity
 
 const val CHANNEL_SHIFTS = "shifts"
@@ -63,10 +66,11 @@ class WorktimeNotifications(private val context: Context) {
         message: String,
         destination: String,
     ) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra(EXTRA_DESTINATION, destination)
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+        val intent = Intent()
+            .setClass(context, MainActivity::class.java)
+            .setPackage(context.packageName)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(EXTRA_DESTINATION, destination)
         val pendingIntent = PendingIntent.getActivity(
             context,
             id,
@@ -80,7 +84,11 @@ class WorktimeNotifications(private val context: Context) {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-        NotificationManagerCompat.from(context).notify(id, notification)
+        val canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (canNotify) {
+            NotificationManagerCompat.from(context).notify(id, notification)
+        }
     }
 
     companion object {
