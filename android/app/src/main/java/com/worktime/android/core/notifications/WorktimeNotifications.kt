@@ -66,10 +66,9 @@ class WorktimeNotifications(private val context: Context) {
         message: String,
         destination: String,
     ) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra(EXTRA_DESTINATION, destination)
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+        val intent = Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(EXTRA_DESTINATION, destination)
         val pendingIntent = PendingIntent.getActivity(
             context,
             id,
