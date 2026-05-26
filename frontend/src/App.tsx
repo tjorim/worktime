@@ -319,7 +319,7 @@ function AppContent() {
  * offline write requirements (e.g. public holidays via useOpenHolidays).
  *
  * Sync-managed domains (labels, tasks, templates, work locations, time-off entries,
- * gantt tasks, user preferences) use QueryCollection from @tanstack/query-db-collection,
+ * gantt tasks) use QueryCollection from @tanstack/query-db-collection,
  * which feeds TanStack Query's fetch lifecycle into a TanStack DB collection. Do NOT add
  * a standalone useQuery alongside a QueryCollection for the same domain.
  */

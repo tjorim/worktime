@@ -214,4 +214,33 @@ describe("useGanttTasks", () => {
       expect(remountedResult.current.tasks.some((task) => task.id === persistentId)).toBe(true);
     });
   });
+
+  it("resets tasks when collection contents are replaced with an empty list", async () => {
+    const taskId = nextId("reset-task");
+    vi.stubGlobal("crypto", {
+      randomUUID: vi.fn(() => taskId),
+    });
+
+    const { result } = renderHook(() => useGanttTasks());
+
+    act(() => {
+      result.current.addTask({
+        name: "Temporary task",
+        start: "2026-04-03",
+        end: "2026-04-04",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.id === taskId)).toBe(true);
+    });
+
+    act(() => {
+      replaceCollectionContents(ganttTasksCollection, [], (task) => task.id);
+    });
+
+    await waitFor(() => {
+      expect(result.current.tasks).toEqual([]);
+    });
+  });
 });

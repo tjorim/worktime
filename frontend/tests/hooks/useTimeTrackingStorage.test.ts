@@ -650,6 +650,21 @@ describe("useTimeTrackingStorage", () => {
       expect(result.current.labels).toHaveLength(1);
       expect(result.current.labels[0].name).toBe("Support");
     });
+
+    it("resets labels when updateLabels is called with an empty list", () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateLabels([{ id: "lbl-1", name: "Support", color: "#3B82F6" }]);
+      });
+      expect(result.current.labels).toHaveLength(1);
+
+      act(() => {
+        result.current.updateLabels([]);
+      });
+
+      expect(result.current.labels).toEqual([]);
+    });
   });
 
   describe("updateTemplates", () => {
@@ -692,6 +707,30 @@ describe("useTimeTrackingStorage", () => {
       await waitFor(() => {
         expect(result.current.templates.some((template) => template.id === oldId)).toBe(false);
         expect(result.current.templates.some((template) => template.id === newId)).toBe(true);
+      });
+    });
+
+    it("resets templates when updateTemplates is called with an empty list", async () => {
+      const existingId = nextId("tpl-existing");
+      templatesCollection.insert({
+        id: existingId,
+        text: "Existing",
+        label: "Support",
+        start: "08:00",
+        stop: "09:00",
+      });
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+      await waitFor(() => {
+        expect(result.current.templates.some((template) => template.id === existingId)).toBe(true);
+      });
+
+      act(() => {
+        result.current.updateTemplates([]);
+      });
+
+      await waitFor(() => {
+        expect(result.current.templates).toEqual([]);
       });
     });
   });
