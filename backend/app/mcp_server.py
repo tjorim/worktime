@@ -11,15 +11,18 @@ from typing import Any
 
 from fastmcp import Context, FastMCP
 from fastmcp.server.auth import AccessToken, MultiAuth
+from fastmcp.server.auth.auth import TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
-from mcp.server.auth.provider import TokenVerifier
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.audit import logger as audit
 from app.config import settings
 from app.database.engine import get_session_factory
 from app.schemas import (
+    EntryFlag,
+    EntryKind,
+    EntryType,
     GanttTaskCreate,
     GanttTaskRead,
     GanttTaskUpdate,
@@ -33,16 +36,13 @@ from app.schemas import (
     WorkLocationRead,
 )
 from app.services.db_service import (
-    ConflictError,
     NotFoundError,
-    ValidationError,
     create_gantt_task,
     create_or_update_time_off_entry,
     create_or_update_work_location,
     create_task,
     delete_gantt_task,
     delete_time_off_entry,
-    delete_work_location,
     get_gantt_task,
     get_running_task,
     get_task,
@@ -658,13 +658,19 @@ class WorktimeMcpBackend:
         try:
             # Verify ownership before updating
             await get_task(db, context.user_id, task_id)
-            payload = TaskUpdate(
-                text=text,
-                label_id=label_id,
-                start_time=start_time,
-                stop_time=stop_time,
-                includes_break=includes_break,
-            )
+            update_data: dict[str, Any] = {}
+            if text is not None:
+                update_data["text"] = text
+            if label_id is not None:
+                update_data["label_id"] = label_id
+            if start_time is not None:
+                update_data["start_time"] = start_time
+            if stop_time is not None:
+                update_data["stop_time"] = stop_time
+            if includes_break is not None:
+                update_data["includes_break"] = includes_break
+
+            payload = TaskUpdate(**update_data)
             task = await update_task(db, context.user_id, task_id, payload)
             audit.append(
                 target=f"user:{context.user_id}:task:{task_id}",
@@ -704,9 +710,9 @@ class WorktimeMcpBackend:
     async def create_time_off_event(
         self,
         ctx: Context,
-        entry_kind: str,
-        entry_type: str,
-        entry_flag: str = "full_day",
+        entry_kind: EntryKind,
+        entry_type: EntryType,
+        entry_flag: EntryFlag = "full_day",
         date: date | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -725,9 +731,9 @@ class WorktimeMcpBackend:
         try:
             payload = TimeOffEntryCreate(
                 entry_id=entry_id,
-                entry_kind=entry_kind,  # type: ignore[arg-type]
-                entry_type=entry_type,  # type: ignore[arg-type]
-                entry_flag=entry_flag,  # type: ignore[arg-type]
+                entry_kind=entry_kind,
+                entry_type=entry_type,
+                entry_flag=entry_flag,
                 date=date,
                 start_date=start_date,
                 end_date=end_date,
@@ -749,9 +755,9 @@ class WorktimeMcpBackend:
         self,
         ctx: Context,
         entry_id: str,
-        entry_kind: str | None = None,
-        entry_type: str | None = None,
-        entry_flag: str | None = None,
+        entry_kind: EntryKind | None = None,
+        entry_type: EntryType | None = None,
+        entry_flag: EntryFlag | None = None,
         date: date | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -768,16 +774,25 @@ class WorktimeMcpBackend:
         try:
             # Verify ownership before updating
             await get_time_off_entry(db, context.user_id, entry_id)
-            payload = TimeOffEntryUpdate(
-                entry_kind=entry_kind,  # type: ignore[arg-type]
-                entry_type=entry_type,  # type: ignore[arg-type]
-                entry_flag=entry_flag,  # type: ignore[arg-type]
-                date=date,
-                start_date=start_date,
-                end_date=end_date,
-                weekday=weekday,
-                note=note,
-            )
+            update_data: dict[str, Any] = {}
+            if entry_kind is not None:
+                update_data["entry_kind"] = entry_kind
+            if entry_type is not None:
+                update_data["entry_type"] = entry_type
+            if entry_flag is not None:
+                update_data["entry_flag"] = entry_flag
+            if date is not None:
+                update_data["date"] = date
+            if start_date is not None:
+                update_data["start_date"] = start_date
+            if end_date is not None:
+                update_data["end_date"] = end_date
+            if weekday is not None:
+                update_data["weekday"] = weekday
+            if note is not None:
+                update_data["note"] = note
+
+            payload = TimeOffEntryUpdate(**update_data)
             entry = await update_time_off_entry(db, context.user_id, entry_id, payload)
             audit.append(
                 target=f"user:{context.user_id}:time_off:{entry_id}",
@@ -870,14 +885,21 @@ class WorktimeMcpBackend:
         try:
             # Verify ownership before updating
             await get_gantt_task(db, context.user_id, task_id)
-            payload = GanttTaskUpdate(
-                name=name,
-                start_date=start_date,
-                end_date=end_date,
-                progress=progress,
-                dependencies=dependencies,
-                notes=notes,
-            )
+            update_data: dict[str, Any] = {}
+            if name is not None:
+                update_data["name"] = name
+            if start_date is not None:
+                update_data["start_date"] = start_date
+            if end_date is not None:
+                update_data["end_date"] = end_date
+            if progress is not None:
+                update_data["progress"] = progress
+            if dependencies is not None:
+                update_data["dependencies"] = dependencies
+            if notes is not None:
+                update_data["notes"] = notes
+
+            payload = GanttTaskUpdate(**update_data)
             task = await update_gantt_task(db, context.user_id, task_id, payload)
             audit.append(
                 target=f"user:{context.user_id}:gantt:{task_id}",
