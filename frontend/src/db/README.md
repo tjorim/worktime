@@ -8,25 +8,27 @@ This repository uses a single frontend server-state pattern:
 
 ## Collection-backed domains (sync-managed)
 
-These domains must be read/written through collections in `/tmp/workspace/tjorim/worktime/frontend/src/db/collections.ts`:
+These domains must be read/written through collections in `src/db/collections.ts`:
 
 - Time tracking: `tasks`, `templates`, `labels`
+- Event store / synced events: `timeOffCollection` (consumed via `EventStoreContext`)
 - Work locations
 - Gantt tasks
-- Time-off entries
+- Time-off entries (same underlying collection used by the event store)
 
 ## Non-collection domains
 
 The following remain non-collection by design:
 
 - **Preferences/settings sync metadata**: synchronized via `/api/preferences` helpers in `syncClient.ts` and `SettingsContext`, not QueryCollection-backed.
-- **Read-only external/computed lookups**: `useOpenHolidays`, `useLongWeekend`, `usePaydates` (plain `useQuery` is allowed).
+- **Read-only external/computed lookups**: `useOpenHolidays` (and wrappers like `useLongWeekend` and `usePaydates`) may use plain `useQuery`.
 
 ## Guardrails
 
-- Static architecture test: `/tmp/workspace/tjorim/worktime/frontend/tests/architecture/frontendDataStandard.test.ts`
+- Static architecture test: `tests/architecture/frontendDataStandard.test.ts`
   - allows plain `useQuery` only in approved read-only hooks
-  - forbids `useQuery` calls using `["sync", ...]` query keys
+  - forbids standalone `useQuery` calls using `["sync", ...]` query keys
+  - allows `queryKey: ["sync", ...]` only in `src/db/collections.ts`
 - Existing collection-backed hook tests cover load/update/delete/reset flows.
 
 ## Where to add a new server-state domain

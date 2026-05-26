@@ -8,6 +8,7 @@ const ALLOWED_PLAIN_USE_QUERY = new Set([
   "hooks/useOpenHolidays.ts",
   "hooks/usePaydates.ts",
 ]);
+const SYNC_QUERY_KEY_ALLOWED_FILES = new Set(["db/collections.ts"]);
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -48,6 +49,19 @@ describe("frontend data standard guardrails", () => {
       if (!/\buseQuery\s*(<[^>]+>)?\s*\(/.test(source)) continue;
       if (!/queryKey\s*:\s*\[\s*["']sync["']/.test(source)) continue;
       offenders.push(relative(SRC_DIR, file).replaceAll("\\", "/"));
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("allows sync query keys only in db collections", () => {
+    const files = walkFiles(SRC_DIR);
+    const offenders: string[] = [];
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      if (!/queryKey\s*:\s*\[\s*["']sync["']/.test(source)) continue;
+      const rel = relative(SRC_DIR, file).replaceAll("\\", "/");
+      if (!SYNC_QUERY_KEY_ALLOWED_FILES.has(rel)) offenders.push(rel);
     }
 
     expect(offenders).toEqual([]);
