@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import os
 from collections import Counter
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any
@@ -210,19 +212,18 @@ class WorktimeMcpBackend:
             auth_type=auth_type,
         )
 
-    async def _resolve_tool_context(self) -> tuple[WorktimeMcpContext, AsyncSession]:
+    @asynccontextmanager
+    async def _tool_context(self) -> AsyncGenerator[tuple[WorktimeMcpContext, AsyncSession], None]:
         db = self.session_factory()
         try:
             context = await self.resolve_context(db)
-            return context, db
-        except Exception:
+            yield context, db
+        finally:
             await db.close()
-            raise
 
     async def whoami(self, ctx: Context) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, _db):
             return {
                 "user_id": context.user_id,
                 "username": context.username,
@@ -232,15 +233,12 @@ class WorktimeMcpBackend:
                 "auth_type": context.auth_type,
                 "scopes": context.scopes,
             }
-        finally:
-            await db.close()
 
     async def get_current_status(self, ctx: Context) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        today = date.today()
+        today = datetime.now(UTC).date()
         now_utc = datetime.now(UTC)
-        try:
+        async with self._tool_context() as (context, db):
             running_task = await get_running_task(db, context.user_id)
             running_task_payload = (
                 TaskRead.model_validate(running_task, from_attributes=True).model_dump(mode="json")
@@ -281,14 +279,11 @@ class WorktimeMcpBackend:
                 "work_location": work_location,
                 "active_time_off": active_time_off,
             }
-        finally:
-            await db.close()
 
     async def get_next_shift(self, ctx: Context) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        today = date.today()
-        try:
+        today = datetime.now(UTC).date()
+        async with self._tool_context() as (context, db):
             tasks = await list_gantt_tasks(db, user_id=context.user_id)
             upcoming = next((task for task in tasks if task.end_date >= today), None)
             if upcoming is None:
@@ -296,8 +291,6 @@ class WorktimeMcpBackend:
 
             task_payload = GanttTaskRead.model_validate(upcoming, from_attributes=True).model_dump(mode="json")
             return {"date": _to_iso_date(today), "next_shift": task_payload}
-        finally:
-            await db.close()
 
     async def get_time_off_summary(
         self,
@@ -306,10 +299,9 @@ class WorktimeMcpBackend:
         end_date: date | None = None,
     ) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        start = start_date or date.today()
+        start = start_date or datetime.now(UTC).date()
         end = end_date or start
-        try:
+        async with self._tool_context() as (context, db):
             entries = await list_time_off_entries(
                 db, user_id=context.user_id, start_date=start, end_date=end
             )
@@ -330,8 +322,6 @@ class WorktimeMcpBackend:
                 "counts_by_kind": dict(by_kind),
                 "entries": payload_entries,
             }
-        finally:
-            await db.close()
 
     async def get_work_location_summary(
         self,
@@ -340,10 +330,9 @@ class WorktimeMcpBackend:
         end_date: date | None = None,
     ) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        start = start_date or date.today()
+        start = start_date or datetime.now(UTC).date()
         end = end_date or start
-        try:
+        async with self._tool_context() as (context, db):
             locations = await list_work_locations(db, user_id=context.user_id, start_date=start, end_date=end)
             payload_locations = [
                 WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
@@ -359,8 +348,6 @@ class WorktimeMcpBackend:
                 "counts_by_country": dict(by_country),
                 "locations": payload_locations,
             }
-        finally:
-            await db.close()
 
     async def get_time_tracking_summary(
         self,
@@ -369,9 +356,8 @@ class WorktimeMcpBackend:
         end_at: datetime | None = None,
     ) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
         now_utc = datetime.now(UTC)
-        try:
+        async with self._tool_context() as (context, db):
             tasks = await list_tasks(
                 db,
                 user_id=context.user_id,
@@ -405,8 +391,6 @@ class WorktimeMcpBackend:
                 "running_task": running_payload,
                 "tasks": payload_tasks,
             }
-        finally:
-            await db.close()
 
     async def get_gantt_tasks(
         self,
@@ -415,8 +399,7 @@ class WorktimeMcpBackend:
         task_id: str | None = None,
     ) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             if task_id:
                 task = await get_gantt_task(db, context.user_id, task_id)
                 payload_tasks = [GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")]
@@ -440,17 +423,12 @@ class WorktimeMcpBackend:
                 "total_tasks": len(payload_tasks),
                 "tasks": payload_tasks,
             }
-        finally:
-            await db.close()
 
     async def get_sync_status(self, ctx: Context) -> dict[str, Any]:
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             payload = await get_sync_status(db, context.user_id)
             return payload.model_dump(mode="json")
-        finally:
-            await db.close()
 
     # ------------------------------------------------------------------
     # Personal write tools
@@ -470,8 +448,7 @@ class WorktimeMcpBackend:
         already exists.  Returns the created task resource.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             effective_start = start_time or datetime.now(UTC)
             payload = TaskCreate(
                 text=text,
@@ -487,8 +464,6 @@ class WorktimeMcpBackend:
                 details=f"text={text!r} via MCP",
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def stop_time_entry(
         self,
@@ -502,8 +477,7 @@ class WorktimeMcpBackend:
         running task exists.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             running = await get_running_task(db, context.user_id)
             if running is None:
                 raise NotFoundError("no running task found")
@@ -516,8 +490,6 @@ class WorktimeMcpBackend:
                 details=f"stop_time={_to_iso_datetime(effective_stop)!r} via MCP",
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def create_time_tracking_task(
         self,
@@ -535,8 +507,7 @@ class WorktimeMcpBackend:
         per user.  Returns the created task resource.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             payload = TaskCreate(
                 text=text,
                 label_id=label_id,
@@ -551,8 +522,6 @@ class WorktimeMcpBackend:
                 details=f"text={text!r} via MCP",
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def update_time_tracking_task(
         self,
@@ -571,8 +540,7 @@ class WorktimeMcpBackend:
         task resource.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             # Verify ownership before updating
             await get_task(db, context.user_id, task_id)
             update_data: dict[str, Any] = {}
@@ -595,8 +563,6 @@ class WorktimeMcpBackend:
                 details="via MCP",
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def set_work_location(
         self,
@@ -611,8 +577,7 @@ class WorktimeMcpBackend:
         the created or updated work-location resource.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             payload = WorkLocationCreate(date=value_date, country_code=country_code, label=label)
             location = await create_or_update_work_location(db, context.user_id, payload)
             audit.append(
@@ -621,8 +586,6 @@ class WorktimeMcpBackend:
                 details=f"country_code={country_code!r} via MCP",
             )
             return WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def create_time_off_event(
         self,
@@ -644,8 +607,7 @@ class WorktimeMcpBackend:
         a previously deleted entry.  Returns the created or updated entry.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             payload = TimeOffEntryCreate(
                 entry_id=entry_id,
                 entry_kind=entry_kind,
@@ -665,8 +627,6 @@ class WorktimeMcpBackend:
                 details=f"entry_type={entry_type!r} entry_kind={entry_kind!r} via MCP",
             )
             return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def update_time_off_event(
         self,
@@ -687,8 +647,7 @@ class WorktimeMcpBackend:
         belong to the authenticated user.  Returns the updated entry.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             # Verify ownership before updating
             await get_time_off_entry(db, context.user_id, entry_id)
             update_data: dict[str, Any] = {}
@@ -717,8 +676,6 @@ class WorktimeMcpBackend:
                 details="via MCP",
             )
             return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def delete_time_off_event(
         self,
@@ -732,8 +689,7 @@ class WorktimeMcpBackend:
         authenticated user.  Returns a confirmation payload.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             # Verify ownership before deleting
             await get_time_off_entry(db, context.user_id, entry_id)
             await delete_time_off_entry(db, context.user_id, entry_id)
@@ -743,8 +699,6 @@ class WorktimeMcpBackend:
                 details="via MCP",
             )
             return {"deleted": True, "entry_id": entry_id, "user_id": context.user_id}
-        finally:
-            await db.close()
 
     async def create_gantt_task(
         self,
@@ -761,8 +715,7 @@ class WorktimeMcpBackend:
         Side effects: inserts a new GanttTask row.  Returns the created task.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             payload = GanttTaskCreate(
                 name=name,
                 start_date=start_date,
@@ -778,8 +731,6 @@ class WorktimeMcpBackend:
                 details=f"name={name!r} via MCP",
             )
             return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def update_gantt_task(
         self,
@@ -798,8 +749,7 @@ class WorktimeMcpBackend:
         belong to the authenticated user.  Returns the updated task.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             # Verify ownership before updating
             await get_gantt_task(db, context.user_id, task_id)
             update_data: dict[str, Any] = {}
@@ -824,8 +774,6 @@ class WorktimeMcpBackend:
                 details="via MCP",
             )
             return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-        finally:
-            await db.close()
 
     async def delete_gantt_task(
         self,
@@ -838,8 +786,7 @@ class WorktimeMcpBackend:
         must belong to the authenticated user.  Returns a confirmation payload.
         """
         _ = ctx
-        context, db = await self._resolve_tool_context()
-        try:
+        async with self._tool_context() as (context, db):
             # Verify ownership before deleting
             await get_gantt_task(db, context.user_id, task_id)
             await delete_gantt_task(db, context.user_id, task_id)
@@ -849,8 +796,6 @@ class WorktimeMcpBackend:
                 details="via MCP",
             )
             return {"deleted": True, "task_id": task_id, "user_id": context.user_id}
-        finally:
-            await db.close()
 
 
 def create_mcp_server(
