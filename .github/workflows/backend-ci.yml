@@ -61,7 +61,10 @@ jobs:
         run: uv run ty check app
 
       - name: Test
-        run: uv run pytest
+        env:
+          DB_USER: worktime
+          DB_PASSWORD: worktime
+        run: TEST_DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@localhost/worktime_test" uv run pytest
 
       - name: Migration upgrade check
         env:
