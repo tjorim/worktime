@@ -5,7 +5,7 @@
 Worktime can run in demo/test fixture mode without a backend:
 
 ```bash
-cd /tmp/workspace/tjorim/worktime/frontend
+cd frontend
 VITE_MSW=true pnpm dev
 ```
 
