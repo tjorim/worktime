@@ -149,7 +149,7 @@ describe("TemplatesPanel", () => {
       const form = document.getElementById("templateForm")!;
       fireEvent.submit(form);
 
-      expect(await screen.findByText(/Fill all template fields/i)).toBeInTheDocument();
+      expect(await within(dialog).findByText(/Fill all template fields/i)).toBeInTheDocument();
       expect(onAddTemplate).not.toHaveBeenCalled();
     });
 
@@ -172,7 +172,7 @@ describe("TemplatesPanel", () => {
 
       await user.click(within(dialog).getByRole("button", { name: /Save Template/i }));
 
-      expect(await screen.findByText(/stop time must be after start time/i)).toBeInTheDocument();
+      expect(await within(dialog).findByText(/stop time must be after start time/i)).toBeInTheDocument();
       expect(onAddTemplate).not.toHaveBeenCalled();
     });
 
