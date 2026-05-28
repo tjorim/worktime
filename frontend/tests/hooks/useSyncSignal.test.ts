@@ -414,18 +414,24 @@ describe("useSyncSignal", () => {
 
 function makeEventSourceStub() {
   const listeners: Map<string, EventListener> = new Map();
+  let activeInstance: { onerror: ((event: Event) => void) | null } | null = null;
 
   const addEventListenerSpy = vi.fn((type: string, listener: EventListener) => {
     listeners.set(type, listener);
   });
-  const removeEventListenerSpy = vi.fn((type: string) => {
-    listeners.delete(type);
+  const removeEventListenerSpy = vi.fn((type: string, listener: EventListener) => {
+    if (listeners.get(type) === listener) {
+      listeners.delete(type);
+    }
   });
   const closeSpy = vi.fn();
 
   // Vitest requires mockImplementation with class syntax for constructor mocks.
   const MockConstructor = vi.fn().mockImplementation(
     class {
+      constructor() {
+        activeInstance = this as unknown as { onerror: ((event: Event) => void) | null };
+      }
       onerror: ((event: Event) => void) | null = null;
       addEventListener = addEventListenerSpy;
       removeEventListener = removeEventListenerSpy;
@@ -446,10 +452,7 @@ function makeEventSourceStub() {
     closeSpy,
     /** Simulate an SSE connection error on the most-recently created instance. */
     fireError() {
-      const instance = MockConstructor.mock.instances.at(-1) as {
-        onerror: ((e: Event) => void) | null;
-      } | undefined;
-      instance?.onerror?.(new Event("error"));
+      activeInstance?.onerror?.(new Event("error"));
     },
   };
 }
