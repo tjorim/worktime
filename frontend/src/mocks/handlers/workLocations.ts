@@ -20,10 +20,19 @@ export const workLocationHandlers = [
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
-    const body = (await request.json()) as Record<string, unknown>;
-    if (typeof body?.date !== "string" || typeof body?.country_code !== "string") {
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ detail: "Invalid JSON body" }, { status: 400 });
+    }
+    if (
+      typeof body?.date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(body.date) ||
+      typeof body?.country_code !== "string"
+    ) {
       return HttpResponse.json(
-        { detail: "Invalid or missing required fields: date and country_code must be strings." },
+        { detail: "Invalid or missing required fields: date (YYYY-MM-DD) and country_code must be strings." },
         { status: 400 },
       );
     }

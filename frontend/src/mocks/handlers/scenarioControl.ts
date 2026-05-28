@@ -16,8 +16,13 @@ export const scenarioControlHandlers = [
   }),
 
   http.post("*/api/mock/scenario", async ({ request }) => {
-    const body = (await request.json()) as { id?: string };
-    const requested = body.id;
+    let requested: string | undefined;
+    try {
+      const body = (await request.json()) as { id?: string };
+      requested = body.id;
+    } catch {
+      return HttpResponse.json({ detail: "Invalid or missing JSON body" }, { status: 400 });
+    }
     if (!requested || !listMockScenarioIds().includes(requested as MockScenarioId)) {
       return HttpResponse.json(
         {
