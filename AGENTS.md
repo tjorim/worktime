@@ -44,6 +44,34 @@ uv run alembic upgrade head
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
 
+## Live Updates
+
+Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that fresh data is available; the client fetches it via the existing incremental pull path.
+
+### SSE contract
+
+| Field | Value |
+|-------|-------|
+| Endpoint | `GET /api/sync/events` |
+| Auth | Session cookie required (`withCredentials: true`) |
+| Event name | `sync_changed` |
+| Payload | `{ "type": "sync_changed", "server_timestamp": "<ISO-8601>" }` |
+| Keepalive | `: keepalive` comment every 15 s |
+| Client behaviour | Compare `server_timestamp` against stored sync cursor; skip pull if cursor is already at or ahead of the signal |
+
+### Deployment notes
+
+- **Proxy buffering** — set `X-Accel-Buffering: no` (already sent by the endpoint) so Nginx/Caddy does not buffer the stream.
+- **Timeouts** — ensure the proxy does not close idle SSE connections before the 15 s keepalive fires. Caddy's default idle timeout is fine; Nginx needs `proxy_read_timeout` ≥ 60 s.
+- **CORS / cookies** — the frontend uses `withCredentials: true`; the backend must echo `Access-Control-Allow-Credentials: true` and a non-wildcard `Access-Control-Allow-Origin`.
+- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the asyncpg LISTEN connection is unavailable (e.g. during startup or a Postgres restart), the manager falls back to in-process delivery automatically; no operator action is required.
+
+### Adding new live-update behaviour
+
+- **Reuse `SyncSignalTransport`** when the update follows the same notify-then-pull shape: the live signal is just a freshness hint and the data arrives via a normal fetch. Implement a new `SyncSignalTransport` adapter (or reuse `createSseTransport`) and pass it to `useSyncSignal`.
+- **Stay request/poll-based** for user-triggered actions, infrequent state changes, or anything that needs the full response payload inline (not a separate fetch). Adding SSE complexity for those cases is not worth it.
+- The transport abstraction also decouples the wire protocol: replacing SSE with WebSockets later only requires a new adapter — no changes to `useSyncSignal` or its callers.
+
 ## Conventions
 
 - Use American English in code, comments, and UI text
