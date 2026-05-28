@@ -53,12 +53,16 @@ export const readModelHandlers = [
       current_status: scenario.readModels.currentStatus,
       next_shifts: {
         as_of: scenario.readModels.currentStatus.as_of,
-        items: scenario.readModels.teamStatus.items.slice(0, 3).map((item) => ({
-          team_number: item.team_number,
-          date: item.date,
-          shift_code: item.shift_code,
-          shift: item.shift,
-        })),
+        items: scenario.readModels.teamStatus.items.slice(0, 3).map((item, index) => {
+          const baseDate = new Date(scenario.readModels.currentStatus.as_of);
+          baseDate.setDate(baseDate.getDate() + index);
+          return {
+            team_number: 1,
+            date: baseDate.toISOString().split("T")[0],
+            shift_code: item.shift_code,
+            shift: item.shift,
+          };
+        }),
       },
       team_status: scenario.readModels.teamStatus,
       time_off_summary: scenario.readModels.timeOffSummary,

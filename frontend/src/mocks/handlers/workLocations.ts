@@ -20,14 +20,20 @@ export const workLocationHandlers = [
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
-    const body = (await request.json()) as { date: string; country_code: string; label?: string | null };
+    const body = (await request.json()) as Record<string, unknown>;
+    if (typeof body?.date !== "string" || typeof body?.country_code !== "string") {
+      return HttpResponse.json(
+        { detail: "Invalid or missing required fields: date and country_code must be strings." },
+        { status: 400 },
+      );
+    }
     const userId = scenario.auth.profile.id;
     const item = {
       id: Number(body.date.replaceAll("-", "")),
       user_id: userId,
       date: body.date,
       country_code: body.country_code,
-      label: body.label ?? null,
+      label: typeof body.label === "string" ? body.label : null,
       created_at: new Date("2026-01-01T00:00:00.000Z").toISOString(),
     };
     const existing = scenario.workLocations.items.findIndex((entry) => entry.date === body.date);
