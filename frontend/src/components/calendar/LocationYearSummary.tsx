@@ -233,10 +233,12 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
               {headerGroup.headers.map((header) => {
                 const sorted = header.column.getIsSorted();
                 const meta = header.column.columnDef.meta as LocationSummaryColumnMeta | undefined;
+                const ariaSort = sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none";
                 return (
                   <th
                     key={header.id}
                     className={meta?.align === "end" ? "text-end" : undefined}
+                    aria-sort={header.column.getCanSort() ? ariaSort : undefined}
                   >
                     {header.isPlaceholder ? null : (
                       <button

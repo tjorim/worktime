@@ -40,10 +40,10 @@ export function TemplateModal({
     onSubmit: ({ value }) => onSubmit(value),
   });
 
-  const formValues = useStore(form.store, (state) => state.values);
-  const selectedLabelOption = useSelectedLabelOption(labels, formValues.label);
+  const labelValue = useStore(form.store, (state) => state.values.label);
+  const selectedLabelOption = useSelectedLabelOption(labels, labelValue);
   const isSubmitDisabled =
-    isLabelSelectionDisabled || !formValues.label || selectedLabelOption === null;
+    isLabelSelectionDisabled || !labelValue || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>

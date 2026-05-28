@@ -55,7 +55,7 @@ export const readModelHandlers = [
         as_of: scenario.readModels.currentStatus.as_of,
         items: scenario.readModels.teamStatus.items.slice(0, 3).map((item, index) => {
           const baseDate = new Date(scenario.readModels.currentStatus.as_of);
-          baseDate.setDate(baseDate.getDate() + index);
+          baseDate.setUTCDate(baseDate.getUTCDate() + index);
           return {
             team_number: 1,
             date: baseDate.toISOString().split("T")[0],
