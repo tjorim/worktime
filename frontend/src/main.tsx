@@ -17,6 +17,12 @@ async function enableMocking(): Promise<void> {
   if (import.meta.env.VITE_MSW !== "true") return;
 
   const { worker } = await import("./mocks/browser");
+  const { configureMockScenario } = await import("./mocks/scenarios/state");
+  configureMockScenario({
+    pathname: window.location.pathname,
+    search: window.location.search,
+    envScenarioId: import.meta.env.VITE_MSW_SCENARIO,
+  });
   await worker.start({ onUnhandledRequest: "warn" });
 }
 

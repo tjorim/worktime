@@ -57,6 +57,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     return filtered;
   }, [workLocationMap, year]);
 
+  const locale = getLocale();
   const summaryRows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
   const totalDays = useMemo(() => summaryRows.reduce((sum, r) => sum + r.days, 0), [summaryRows]);
   const [sorting, setSorting] = useState<SortingState>([{ id: "days", desc: true }]);
@@ -75,7 +76,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
               : m.work_location_other(),
         percentage: totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0,
       })),
-    [summaryRows, totalDays],
+    [summaryRows, totalDays, locale],
   );
 
   const columns = useMemo<ColumnDef<LocationSummaryRow>[]>(
@@ -112,7 +113,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
         ),
       },
     ],
-    [],
+    [locale],
   );
 
   const table = useReactTable({
