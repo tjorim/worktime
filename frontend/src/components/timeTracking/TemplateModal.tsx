@@ -2,7 +2,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
@@ -40,9 +40,10 @@ export function TemplateModal({
     onSubmit: ({ value }) => onSubmit(value),
   });
 
-  const selectedLabelOption = useSelectedLabelOption(labels, form.state.values.label);
+  const formValues = useStore(form.store, (state) => state.values);
+  const selectedLabelOption = useSelectedLabelOption(labels, formValues.label);
   const isSubmitDisabled =
-    isLabelSelectionDisabled || !form.state.values.label || selectedLabelOption === null;
+    isLabelSelectionDisabled || !formValues.label || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -54,6 +55,9 @@ export function TemplateModal({
           id="templateForm"
           onSubmit={(event) => {
             event.preventDefault();
+            if (isSubmitDisabled) {
+              return;
+            }
             void form.handleSubmit();
           }}
         >
