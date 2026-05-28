@@ -1,3 +1,4 @@
+import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -21,6 +22,7 @@ type TemplateModalProps = {
   submitLabel: string;
   labels: TimeTrackingLabel[];
   initialValue: TemplateForm;
+  error?: string;
   onClose: () => void;
   onSubmit: (value: TemplateForm) => void;
 };
@@ -31,6 +33,7 @@ export function TemplateModal({
   submitLabel,
   labels,
   initialValue,
+  error,
   onClose,
   onSubmit,
 }: TemplateModalProps) {
@@ -61,6 +64,11 @@ export function TemplateModal({
             void form.handleSubmit();
           }}
         >
+          {error && (
+            <Alert variant="danger" aria-live="polite" className="mb-3">
+              {error}
+            </Alert>
+          )}
           <form.Field name="text">
             {(field) => (
               <Form.Group controlId="templateName" className="mb-3">

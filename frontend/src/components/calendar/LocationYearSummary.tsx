@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/contexts/ToastContext";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
 import type { WorkLocationMap } from "@/types/workLocation";
-import { WORK_LOCATION_ICON_CLASS, WORK_LOCATION_LABEL } from "./workLocationConstants";
+import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 
@@ -155,7 +155,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       divider,
       ...table.getRowModel().rows.map((tableRow) => {
         const row = tableRow.original;
-        const locationLabel = WORK_LOCATION_LABEL[row.location];
+        const locationLabel = row.locationLabel;
         const pluralCategory = new Intl.PluralRules(getLocale()).select(row.days);
         const dayLabel =
           pluralCategory === "one"

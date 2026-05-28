@@ -32,7 +32,8 @@ describe("frontend data standard guardrails", () => {
     const files = walkFiles(SRC_DIR);
     const offenders: string[] = [];
     for (const file of files) {
-      const source = readFileSync(file, "utf8");
+      const rawSource = readFileSync(file, "utf8");
+      const source = rawSource.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
       if (
         !/\buse(?:Suspense)?(?:Infinite)?Queries?\s*[<(]/.test(source)
       )
@@ -48,7 +49,8 @@ describe("frontend data standard guardrails", () => {
     const files = walkFiles(SRC_DIR);
     const offenders: string[] = [];
     for (const file of files) {
-      const source = readFileSync(file, "utf8");
+      const rawSource = readFileSync(file, "utf8");
+      const source = rawSource.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
       if (!/queryKey\s*:\s*\[\s*["']sync["']/.test(source)) continue;
       const rel = relative(SRC_DIR, file).replaceAll("\\", "/");
       if (!SYNC_QUERY_KEY_ALLOWED_FILES.has(rel)) offenders.push(rel);

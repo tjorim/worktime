@@ -297,7 +297,9 @@ export function TemplatesPanel({
         submitLabel={modalMode === "edit" ? m.tt_save_changes() : m.tt_save_template()}
         labels={labels}
         initialValue={modalInitialValue}
+        error={error}
         onClose={() => {
+          setError("");
           resetModalInitialValue();
           setEditTemplateId(null);
           setModalMode(null);
