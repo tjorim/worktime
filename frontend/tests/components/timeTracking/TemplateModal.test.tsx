@@ -8,13 +8,12 @@ describe("TemplateModal", () => {
     show: true,
     title: "Add Template",
     submitLabel: "Save",
-    value: {
+    initialValue: {
       text: "",
       label: "",
       start: "",
       stop: "",
     },
-    onChange: vi.fn(),
     onClose: vi.fn(),
     onSubmit: vi.fn(),
   };

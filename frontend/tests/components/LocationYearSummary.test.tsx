@@ -95,6 +95,48 @@ describe("LocationYearSummary", () => {
     expect(screen.getByRole("button", { name: /Copy/i })).toBeInTheDocument();
   });
 
+  it("sorts rows by country when the country header is clicked", async () => {
+    const user = userEvent.setup();
+    const map: WorkLocationMap = new Map([
+      ["2026-01-05", { location: "home", countryCode: cc("US") }],
+      ["2026-01-06", { location: "office", countryCode: cc("BE") }],
+      ["2026-01-07", { location: "other", countryCode: cc("NL") }],
+    ]);
+    renderSummary(2026, map);
+
+    await user.click(screen.getByRole("button", { name: /^Country$/i }));
+
+    const bodyRows = screen.getAllByRole("row").slice(1);
+    expect(bodyRows[0]).toHaveTextContent("BE");
+    expect(bodyRows[1]).toHaveTextContent("NL");
+    expect(bodyRows[2]).toHaveTextContent("US");
+  });
+
+  it("filters rows by country/location text", async () => {
+    const user = userEvent.setup();
+    const map: WorkLocationMap = new Map([
+      ["2026-01-05", HOME_NL],
+      ["2026-01-06", OFFICE_BE],
+    ]);
+    renderSummary(2026, map);
+
+    await user.type(screen.getByLabelText(/Country \/ Location/i), "be");
+
+    expect(screen.getByText("BE")).toBeInTheDocument();
+    expect(screen.queryByText("NL")).not.toBeInTheDocument();
+  });
+
+  it("toggles table columns using visibility switches", async () => {
+    const user = userEvent.setup();
+    const map: WorkLocationMap = new Map([["2026-01-05", HOME_NL]]);
+    renderSummary(2026, map);
+
+    await user.click(screen.getByRole("checkbox", { name: /^Country$/i }));
+
+    expect(screen.queryByRole("button", { name: /^Country/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("NL")).not.toBeInTheDocument();
+  });
+
   describe("Copy to clipboard", () => {
     let originalClipboard: typeof navigator.clipboard;
     beforeEach(() => {

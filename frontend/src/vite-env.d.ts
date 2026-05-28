@@ -6,6 +6,8 @@ declare const __APP_VERSION__: string;
 interface ImportMetaEnv {
   /** Set to "true" to activate the MSW browser worker in dev mode. */
   readonly VITE_MSW?: string;
+  /** Optional default MSW scenario id for mock mode. */
+  readonly VITE_MSW_SCENARIO?: string;
 }
 
 interface ImportMeta {

@@ -15,10 +15,14 @@
 
 import { http, HttpResponse } from "msw";
 import { syncStore } from "@/mocks/data/syncStore";
+import { buildAuthFailureResponse } from "./auth";
+import { getMockScenario } from "@/mocks/scenarios/state";
 
 export const syncHandlers = [
   // GET /api/sync/status
   http.get("*/api/sync/status", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     if (syncStore.statusError !== null) {
       return new HttpResponse(null, { status: syncStore.statusError });
     }
@@ -27,6 +31,8 @@ export const syncHandlers = [
 
   // POST /api/sync/push
   http.post("*/api/sync/push", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     if (syncStore.pushError !== null) {
       return new HttpResponse(null, { status: syncStore.pushError });
     }
@@ -35,6 +41,8 @@ export const syncHandlers = [
 
   // POST /api/sync/pull
   http.post("*/api/sync/pull", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     if (syncStore.pullError !== null) {
       return new HttpResponse(null, { status: syncStore.pullError });
     }
@@ -43,11 +51,15 @@ export const syncHandlers = [
 
   // GET /api/preferences
   http.get("*/api/preferences", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     return HttpResponse.json(syncStore.preferences);
   }),
 
   // PUT /api/preferences
   http.put("*/api/preferences", async ({ request }) => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     const body = await request.json();
     const now = new Date().toISOString();
     syncStore.preferences = {
@@ -63,17 +75,15 @@ export const syncHandlers = [
 
   // GET /api/me
   http.get("*/api/me", () => {
-    return HttpResponse.json({
-      id: 1,
-      username: "dev-user",
-      display_name: "Dev User",
-      is_admin: false,
-      capabilities: { backup_enabled: true },
-    });
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
+    return HttpResponse.json(getMockScenario().auth.profile);
   }),
 
   // GET /api/users/
   http.get("*/api/users/", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     return HttpResponse.json({
       items: [],
       total: 0,
@@ -82,6 +92,8 @@ export const syncHandlers = [
 
   // PUT /api/users/:id
   http.put("*/api/users/:id", async ({ params, request }) => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     const body = (await request.json()) as { display_name?: string };
     return HttpResponse.json({
       id: Number(params.id),
@@ -95,6 +107,8 @@ export const syncHandlers = [
 
   // DELETE /api/users/:id
   http.delete("*/api/users/:id", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     return new HttpResponse(null, { status: 204 });
   }),
 ];
