@@ -11,7 +11,7 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import { server } from "@/mocks/server";
-import { resetSyncStore } from "@/mocks/data/syncStore";
+import { resetMockScenario } from "@/mocks/scenarios/state";
 
 // Make React available globally for JSX in tests
 globalThis.React = React;
@@ -120,7 +120,7 @@ beforeAll(() => {
 // Set up DOM environment
 beforeEach(async () => {
   await resetTestState();
-  resetSyncStore();
+  resetMockScenario();
 });
 
 afterEach(async () => {

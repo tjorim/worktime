@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import { useToast } from "@/contexts/ToastContext";
@@ -7,17 +7,10 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
-import { TemplateModal } from "./TemplateModal";
+import { TemplateModal, type TemplateForm } from "./TemplateModal";
 import { isValidRange, isValidTimeString } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
 import * as m from "@/paraglide/messages.js";
-
-type TemplateFormState = {
-  text: string;
-  label: string;
-  start: string;
-  stop: string;
-};
 
 type TemplatesPanelProps = {
   labels: TimeTrackingLabel[];
@@ -90,26 +83,35 @@ export function TemplatesPanel({
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TimeTrackingTemplate | null>(
     null,
   );
-  const [templateForm, setTemplateForm] = useState<TemplateFormState>({
+  const [modalInitialValue, setModalInitialValue] = useState<TemplateForm>({
     text: "",
     label: labels[0]?.id ?? "",
     start: "",
     stop: "",
   });
 
-  const resetForm = () =>
-    setTemplateForm({
+  const resetModalInitialValue = useCallback(
+    () =>
+    setModalInitialValue({
       text: "",
       label: labels[0]?.id ?? "",
       start: "",
       stop: "",
-    });
+    }),
+    [labels],
+  );
 
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   useEffect(() => {
     setTemplatesJson(JSON.stringify({ templates }, null, 2));
   }, [templates]);
+
+  useEffect(() => {
+    if (modalMode === null) {
+      resetModalInitialValue();
+    }
+  }, [modalMode, resetModalInitialValue]);
 
   const handleCopy = async () => {
     setError("");
@@ -141,7 +143,7 @@ export function TemplatesPanel({
   const handleEdit = (template: TimeTrackingTemplate) => {
     setError("");
     setEditTemplateId(template.id);
-    setTemplateForm({
+    setModalInitialValue({
       text: template.text,
       label: template.label,
       start: template.start,
@@ -150,7 +152,7 @@ export function TemplatesPanel({
     setModalMode("edit");
   };
 
-  const handleSave = () => {
+  const handleSave = (templateForm: TemplateForm) => {
     setError("");
     if (!templateForm.text || !templateForm.start || !templateForm.stop) {
       setError(m.tt_fill_template_fields());
@@ -181,7 +183,7 @@ export function TemplatesPanel({
       onAddTemplate(templatePayload);
       toast.showSuccess(m.tt_template_added());
     }
-    resetForm();
+    resetModalInitialValue();
     setEditTemplateId(null);
     setModalMode(null);
   };
@@ -211,7 +213,7 @@ export function TemplatesPanel({
           size="sm"
           onClick={() => {
             setError("");
-            resetForm();
+            resetModalInitialValue();
             setEditTemplateId(null);
             setModalMode("create");
           }}
@@ -230,7 +232,7 @@ export function TemplatesPanel({
                 label: m.tt_add_first_template(),
                 onClick: () => {
                   setError("");
-                  resetForm();
+                  resetModalInitialValue();
                   setEditTemplateId(null);
                   setModalMode("create");
                 },
@@ -289,14 +291,14 @@ export function TemplatesPanel({
       </div>
 
       <TemplateModal
+        key={`${modalMode ?? "closed"}-${editTemplateId ?? "new"}`}
         show={modalMode !== null}
         title={modalMode === "edit" ? m.tt_edit_template_title() : m.tt_add_template_title()}
         submitLabel={modalMode === "edit" ? m.tt_save_changes() : m.tt_save_template()}
         labels={labels}
-        value={templateForm}
-        onChange={setTemplateForm}
+        initialValue={modalInitialValue}
         onClose={() => {
-          resetForm();
+          resetModalInitialValue();
           setEditTemplateId(null);
           setModalMode(null);
         }}

@@ -33,22 +33,12 @@ describe("frontend data standard guardrails", () => {
     const offenders: string[] = [];
     for (const file of files) {
       const source = readFileSync(file, "utf8");
-      if (!/\buseQuery\s*(<[^>]+>)?\s*\(/.test(source)) continue;
+      if (
+        !/\buse(?:Suspense)?(?:Infinite)?Queries?\s*[<(]/.test(source)
+      )
+        continue;
       const rel = relative(SRC_DIR, file).replaceAll("\\", "/");
       if (!ALLOWED_PLAIN_USE_QUERY.has(rel)) offenders.push(rel);
-    }
-
-    expect(offenders).toEqual([]);
-  });
-
-  it("forbids standalone useQuery with sync query keys", () => {
-    const files = walkFiles(SRC_DIR);
-    const offenders: string[] = [];
-    for (const file of files) {
-      const source = readFileSync(file, "utf8");
-      if (!/\buseQuery\s*(<[^>]+>)?\s*\(/.test(source)) continue;
-      if (!/queryKey\s*:\s*\[\s*["']sync["']/.test(source)) continue;
-      offenders.push(relative(SRC_DIR, file).replaceAll("\\", "/"));
     }
 
     expect(offenders).toEqual([]);
