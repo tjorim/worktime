@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,7 @@ class AuthenticatedPrincipal:
 
 
 async def get_authenticated_principal(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     session: AsyncSession = Depends(get_session),
 ) -> AuthenticatedPrincipal:
@@ -65,6 +66,9 @@ async def get_authenticated_principal(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication service error",
         ) from exc
+
+    # Make the resolved user ID available to middleware for access logging.
+    request.state.user_id = local_user.id
 
     realm_access = claims.get("realm_access")
     roles = realm_access.get("roles", []) if isinstance(realm_access, dict) else []

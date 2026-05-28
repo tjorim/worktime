@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     # Generate a suitable value with: python -c "import secrets; print(secrets.token_hex(32))"
     METRICS_HMAC_SECRET: str = ""
 
+    # Sentry error tracking.
+    # Leave SENTRY_DSN empty (the default) to disable Sentry entirely.
+    # When set, sentry-sdk[fastapi] must be installed: uv add sentry-sdk[fastapi]
+    SENTRY_DSN: str = ""
+    # Fraction of transactions to send for performance monitoring (0.0 disables it).
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
+
     # OIDC authentication configuration
     # OIDC_ISSUER_URL: Base URL of the OIDC provider (e.g. https://auth.example.com/application/o/worktime)
     OIDC_ISSUER_URL: str = "http://localhost:9000/application/o/worktime"
@@ -189,6 +196,8 @@ class Settings(BaseSettings):
             safe_url = "<unparseable>"
         logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {safe_url})")
         logger.info(f"OIDC Issuer:     {self.OIDC_ISSUER_URL}")
+        sentry_status = f"enabled (traces_sample_rate={self.SENTRY_TRACES_SAMPLE_RATE})" if self.SENTRY_DSN else "disabled"
+        logger.info(f"Sentry:          {sentry_status}")
         logger.info("=" * 60)
 
 
