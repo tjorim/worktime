@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useSyncSignal, type SyncSignalTransport } from "@/hooks/useSyncSignal";
+import { createSseTransport, useSyncSignal, type SyncSignalTransport } from "@/hooks/useSyncSignal";
 import { storeSyncCursor } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 
@@ -360,7 +360,7 @@ describe("useSyncSignal", () => {
     });
   });
 
-  describe("invalid timestamp handling", () => {
+  describe("invalid timestamp handling — hook layer", () => {
     it("does NOT call triggerPull when server_timestamp is not a parseable date", () => {
       const triggerPull = vi.fn();
       const { transport, emit } = createMockTransport();
@@ -402,5 +402,157 @@ describe("useSyncSignal", () => {
       );
       expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBeNull();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSseTransport — SSE adapter unit tests
+//
+// EventSource is not available in happy-dom, so we stub it globally and verify
+// the adapter's construction, message parsing, and cleanup behaviour.
+// ---------------------------------------------------------------------------
+
+function makeEventSourceStub() {
+  const listeners: Map<string, EventListener> = new Map();
+
+  const addEventListenerSpy = vi.fn((type: string, listener: EventListener) => {
+    listeners.set(type, listener);
+  });
+  const removeEventListenerSpy = vi.fn((type: string) => {
+    listeners.delete(type);
+  });
+  const closeSpy = vi.fn();
+
+  // Vitest requires mockImplementation with class syntax for constructor mocks.
+  const MockConstructor = vi.fn().mockImplementation(
+    class {
+      onerror: ((event: Event) => void) | null = null;
+      addEventListener = addEventListenerSpy;
+      removeEventListener = removeEventListenerSpy;
+      close = closeSpy;
+    },
+  );
+
+  const dispatch = (type: string, data: string) => {
+    const listener = listeners.get(type);
+    if (listener) listener(new MessageEvent(type, { data }));
+  };
+
+  return {
+    MockConstructor,
+    dispatch,
+    addEventListenerSpy,
+    removeEventListenerSpy,
+    closeSpy,
+    /** Simulate an SSE connection error on the most-recently created instance. */
+    fireError() {
+      const instance = MockConstructor.mock.instances.at(-1) as {
+        onerror: ((e: Event) => void) | null;
+      } | undefined;
+      instance?.onerror?.(new Event("error"));
+    },
+  };
+}
+
+describe("createSseTransport", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("opens an EventSource with the given URL and withCredentials: true", () => {
+    const { MockConstructor } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    createSseTransport("https://api.example.com/sync/events").subscribe(vi.fn());
+
+    expect(MockConstructor).toHaveBeenCalledWith("https://api.example.com/sync/events", {
+      withCredentials: true,
+    });
+  });
+
+  it("calls onSignal with server_timestamp when a sync_changed event arrives", () => {
+    const { MockConstructor, dispatch } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    const onSignal = vi.fn();
+    createSseTransport("/api/sync/events").subscribe(onSignal);
+
+    dispatch(
+      "sync_changed",
+      JSON.stringify({ type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" }),
+    );
+
+    expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z");
+  });
+
+  it("does not call onSignal when event data is missing server_timestamp", () => {
+    const { MockConstructor, dispatch } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    const onSignal = vi.fn();
+    createSseTransport("/api/sync/events").subscribe(onSignal);
+
+    dispatch("sync_changed", JSON.stringify({ type: "sync_changed" }));
+
+    expect(onSignal).not.toHaveBeenCalled();
+  });
+
+  it("does not throw and does not call onSignal when event data is malformed JSON", () => {
+    const { MockConstructor, dispatch } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    const onSignal = vi.fn();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    createSseTransport("/api/sync/events").subscribe(onSignal);
+    dispatch("sync_changed", "not-json{{{");
+
+    expect(onSignal).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("failed to parse SSE event data"),
+      "not-json{{{",
+    );
+  });
+
+  it("logs a debug message when the connection errors (EventSource auto-reconnects)", () => {
+    const { MockConstructor, fireError } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    createSseTransport("/api/sync/events").subscribe(vi.fn());
+    fireError();
+
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining("SSE connection error"));
+  });
+
+  it("cleanup removes the sync_changed listener and closes the EventSource", () => {
+    const { MockConstructor, removeEventListenerSpy, closeSpy } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    const cleanup = createSseTransport("/api/sync/events").subscribe(vi.fn());
+
+    cleanup();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith("sync_changed", expect.any(Function));
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call onSignal after cleanup", () => {
+    const { MockConstructor, dispatch } = makeEventSourceStub();
+    vi.stubGlobal("EventSource", MockConstructor);
+
+    const onSignal = vi.fn();
+    const cleanup = createSseTransport("/api/sync/events").subscribe(onSignal);
+
+    cleanup();
+
+    dispatch(
+      "sync_changed",
+      JSON.stringify({ type: "sync_changed", server_timestamp: "2026-05-01T00:00:00.000Z" }),
+    );
+
+    expect(onSignal).not.toHaveBeenCalled();
   });
 });

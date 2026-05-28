@@ -2,6 +2,7 @@
  * MSW handlers for sync and preferences endpoints.
  *
  * Covers:
+ *  GET  /api/sync/events  (SSE — controllable via sseEmitter)
  *  GET  /api/sync/status
  *  POST /api/sync/push
  *  POST /api/sync/pull
@@ -14,11 +15,37 @@
  */
 
 import { http, HttpResponse } from "msw";
+import { sseEmitter } from "@/mocks/data/sseEmitter";
 import { syncStore } from "@/mocks/data/syncStore";
 import { buildAuthFailureResponse } from "./auth";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export const syncHandlers = [
+  // GET /api/sync/events — SSE stream; push events via sseEmitter.emit(timestamp)
+  http.get("*/api/sync/events", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
+
+    let ctrl: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        ctrl = c;
+        sseEmitter._add(c);
+      },
+      cancel() {
+        if (ctrl) sseEmitter._remove(ctrl);
+      },
+    });
+
+    return new HttpResponse(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }),
+
   // GET /api/sync/status
   http.get("*/api/sync/status", () => {
     const authFailure = buildAuthFailureResponse();

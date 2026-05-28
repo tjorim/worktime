@@ -11,6 +11,7 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import { server } from "@/mocks/server";
+import { sseEmitter } from "@/mocks/data/sseEmitter";
 import { resetMockScenario } from "@/mocks/scenarios/state";
 
 // Make React available globally for JSX in tests
@@ -126,6 +127,7 @@ beforeEach(async () => {
 afterEach(async () => {
   cleanup();
   server.resetHandlers();
+  sseEmitter.reset();
   await resetTestState();
 });
 
