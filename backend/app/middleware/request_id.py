@@ -19,48 +19,69 @@ import logging
 import time
 import uuid
 
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import Headers, MutableHeaders, State
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 REQUEST_ID_HEADER = "X-Request-ID"
 
 logger = logging.getLogger("worktime.access")
 
 
-class RequestIdMiddleware(BaseHTTPMiddleware):
-    """Accept or generate a correlation ID; echo it; emit a structured access log."""
+class RequestIdMiddleware:
+    """Accept or generate a correlation ID; echo it; emit a structured access log.
 
-    async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
-        request.state.request_id = request_id
+    Pure ASGI middleware — avoids BaseHTTPMiddleware overhead, contextvars
+    isolation (which breaks Sentry), and streaming response (SSE) buffering.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = Headers(scope=scope)
+        request_id = headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
+
+        if "state" not in scope:
+            scope["state"] = State()
+        scope["state"].request_id = request_id
 
         start = time.perf_counter()
+        status_code = 500
+
+        async def send_wrapper(message):
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                MutableHeaders(scope=message)[REQUEST_ID_HEADER] = request_id
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_wrapper)
         except Exception:
             elapsed_ms = (time.perf_counter() - start) * 1000
-            user_id = getattr(request.state, "user_id", None)
+            user_id = getattr(scope["state"], "user_id", None)
             logger.info(
                 "%s %s 500 %.3fms req_id=%s user=%s",
-                request.method,
-                request.url.path,
+                scope["method"],
+                scope["path"],
                 elapsed_ms,
                 request_id,
                 user_id if user_id is not None else "-",
             )
             raise
-
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        response.headers[REQUEST_ID_HEADER] = request_id
-
-        user_id = getattr(request.state, "user_id", None)
-        logger.info(
-            "%s %s %d %.3fms req_id=%s user=%s",
-            request.method,
-            request.url.path,
-            response.status_code,
-            elapsed_ms,
-            request_id,
-            user_id if user_id is not None else "-",
-        )
-        return response
+        else:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            user_id = getattr(scope["state"], "user_id", None)
+            logger.info(
+                "%s %s %d %.3fms req_id=%s user=%s",
+                scope["method"],
+                scope["path"],
+                status_code,
+                elapsed_ms,
+                request_id,
+                user_id if user_id is not None else "-",
+            )
