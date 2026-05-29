@@ -19,7 +19,7 @@ import logging
 import time
 import uuid
 
-from starlette.datastructures import Headers, MutableHeaders, State
+from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -45,9 +45,8 @@ class RequestIdMiddleware:
         headers = Headers(scope=scope)
         request_id = headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
 
-        if "state" not in scope:
-            scope["state"] = State()
-        scope["state"].request_id = request_id
+        scope.setdefault("state", {})
+        scope["state"]["request_id"] = request_id
 
         start = time.perf_counter()
         status_code = 500
@@ -63,7 +62,7 @@ class RequestIdMiddleware:
             await self.app(scope, receive, send_wrapper)
         except Exception:
             elapsed_ms = (time.perf_counter() - start) * 1000
-            user_id = getattr(scope["state"], "user_id", None)
+            user_id = scope["state"].get("user_id")
             logger.info(
                 "%s %s 500 %.3fms req_id=%s user=%s",
                 scope["method"],
@@ -75,7 +74,7 @@ class RequestIdMiddleware:
             raise
         else:
             elapsed_ms = (time.perf_counter() - start) * 1000
-            user_id = getattr(scope["state"], "user_id", None)
+            user_id = scope["state"].get("user_id")
             logger.info(
                 "%s %s %d %.3fms req_id=%s user=%s",
                 scope["method"],
