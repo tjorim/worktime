@@ -61,18 +61,9 @@ class RequestIdMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         except Exception:
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            user_id = scope["state"].get("user_id")
-            logger.info(
-                "%s %s 500 %.3fms req_id=%s user=%s",
-                scope["method"],
-                scope["path"],
-                elapsed_ms,
-                request_id,
-                user_id if user_id is not None else "-",
-            )
+            status_code = 500
             raise
-        else:
+        finally:
             elapsed_ms = (time.perf_counter() - start) * 1000
             user_id = scope["state"].get("user_id")
             logger.info(
