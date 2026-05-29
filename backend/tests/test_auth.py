@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
@@ -128,6 +128,7 @@ async def _call_principal(claims: dict) -> bool:
         patch("app.routers.auth.get_or_create_local_user", new=AsyncMock(return_value=_FAKE_USER)),
     ):
         principal = await get_authenticated_principal(
+            request=MagicMock(),
             credentials=_FAKE_CREDENTIALS,
             session=AsyncMock(),
         )
