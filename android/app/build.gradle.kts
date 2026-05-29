@@ -23,7 +23,8 @@ android {
         applicationId = "com.worktime.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
+        // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
+        versionCode = 1000
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
