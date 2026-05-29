@@ -87,3 +87,16 @@ class TestAccessLog:
             client.get("/api/health")
         lines = [r.getMessage() for r in caplog.records if r.name == "worktime.access"]
         assert any("ms" in line for line in lines)
+
+    def test_access_log_contains_auth_field(self, client, caplog):
+        with caplog.at_level(logging.INFO, logger="worktime.access"):
+            client.get("/api/health")
+        lines = [r.getMessage() for r in caplog.records if r.name == "worktime.access"]
+        assert any("auth=" in line for line in lines)
+
+    def test_access_log_does_not_include_query_params(self, client, caplog):
+        with caplog.at_level(logging.INFO, logger="worktime.access"):
+            client.get("/api/health?sensitive=secret-token")
+        lines = [r.getMessage() for r in caplog.records if r.name == "worktime.access"]
+        assert lines
+        assert not any("sensitive" in line or "secret-token" in line for line in lines)
