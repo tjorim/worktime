@@ -77,6 +77,58 @@ updates:
       - "dependencies"
       - "backend"
       - "python"
+    versioning-strategy: "increase"
+
+  # Monitor Android Gradle dependencies and wrapper versions
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "18:00"
+      timezone: "Etc/UTC"
+    assignees:
+      - "tjorim"
+    commit-message:
+      prefix: "deps(android)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "android"
+
+  # Monitor Docker images
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "18:00"
+      timezone: "Etc/UTC"
+    assignees:
+      - "tjorim"
+    commit-message:
+      prefix: "deps(docker)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Monitor Docker Compose files
+  - package-ecosystem: "docker-compose"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "18:00"
+      timezone: "Etc/UTC"
+    assignees:
+      - "tjorim"
+    commit-message:
+      prefix: "deps(compose)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
 
   # Monitor GitHub Actions
   - package-ecosystem: "github-actions"
