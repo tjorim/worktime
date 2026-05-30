@@ -55,7 +55,7 @@ class RequestIdMiddleware:
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message["status"]
-                MutableHeaders(scope=message)[REQUEST_ID_HEADER] = request_id
+                MutableHeaders(raw=message["headers"])[REQUEST_ID_HEADER] = request_id
             await send(message)
 
         try:
