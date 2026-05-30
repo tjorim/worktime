@@ -40,8 +40,8 @@
     "check-version-consistency": "tsx scripts/check-version-consistency.ts"
   },
   "dependencies": {
-    "@tanstack/query-db-collection": "^1.0.37",
-    "@tanstack/react-db": "^0.1.84",
+    "@tanstack/query-db-collection": "^1.0.38",
+    "@tanstack/react-db": "^0.1.85",
     "@tanstack/react-form": "^1.32.1",
     "@tanstack/react-query": "^5.100.13",
     "@tanstack/react-router": "^1.170.7",
