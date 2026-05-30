@@ -92,9 +92,10 @@ android {
     }
 
     lint {
-        // FrequentlyChangingValueDetector crashes with an IncompatibleClassChangeError when
+        // Both detectors crash with IncompatibleClassChangeError in
+        // RememberInCompositionDetectorKt.getterOrSuperDeclarationsHaveAnnotation when
         // lifecycle-viewmodel-compose 2.10.0 lint rules run against this Compose lint version.
-        disable += "FrequentlyChangingValue"
+        disable += setOf("FrequentlyChangingValue", "RememberInComposition")
     }
 
     testOptions {
