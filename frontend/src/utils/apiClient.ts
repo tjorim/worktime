@@ -5,6 +5,9 @@
  * for auth failures. Authentication is performed using a Bearer JWT from
  * the OIDC provider — pass the token via the `Authorization` header in
  * the `init.headers` argument.
+ *
+ * Every backend response includes an `X-Request-ID` header.  Use
+ * {@link getRequestId} to extract it from any Response for support/debugging.
  */
 
 export interface ApiClientOptions {
@@ -12,6 +15,16 @@ export interface ApiClientOptions {
   onUnauthorized: () => void;
   /** Called when a 403 Forbidden response is received. */
   onForbidden: () => void;
+}
+
+/**
+ * Return the backend-assigned request ID from a Response, or null if absent.
+ *
+ * Use this to surface a reference ID to the user or include it in error logs
+ * so failed requests can be correlated with backend access logs.
+ */
+export function getRequestId(response: Response): string | null {
+  return response.headers.get("X-Request-ID");
 }
 
 /**
@@ -61,13 +74,15 @@ export async function apiFetch(
   });
 
   if (response.status === 401) {
+    const requestId = getRequestId(response);
     clientOptions.onUnauthorized();
-    throw new Error("Unauthorized");
+    throw new Error(requestId ? `Unauthorized (request-id: ${requestId})` : "Unauthorized");
   }
 
   if (response.status === 403) {
+    const requestId = getRequestId(response);
     clientOptions.onForbidden();
-    throw new Error("Forbidden");
+    throw new Error(requestId ? `Forbidden (request-id: ${requestId})` : "Forbidden");
   }
 
   return response;

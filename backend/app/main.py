@@ -18,6 +18,7 @@ from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .database import init_db
+from .middleware.request_id import RequestIdMiddleware
 from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
 from .routers.health import router as health_router
@@ -32,6 +33,24 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Initialize Sentry error tracking when SENTRY_DSN is configured.
+# sentry-sdk[fastapi] must be installed separately: uv add sentry-sdk[fastapi]
+if settings.SENTRY_DSN:
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+            send_default_pii=False,
+        )
+        logger.info("✓ Sentry error tracking initialized")
+    except ImportError:
+        logger.warning(
+            "⚠️  SENTRY_DSN is configured but sentry-sdk is not installed. "
+            "Install it with: uv add sentry-sdk[fastapi]"
+        )
 
 
 async def _warm_cache_async():
@@ -159,11 +178,15 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials="*" not in cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
+    expose_headers=["X-Request-ID", "X-Total-Ms"],
 )
 
-# TimingMiddleware is outermost, timing the full request including CORS processing.
+# TimingMiddleware records metrics and sets X-Total-Ms.
 app.add_middleware(TimingMiddleware)
+# RequestIdMiddleware is outermost: it sets/echoes X-Request-ID and emits structured
+# access logs after every response, with user_id included for authenticated requests.
+app.add_middleware(RequestIdMiddleware)
 
 
 # Register API routers — all backend routes are served under /api

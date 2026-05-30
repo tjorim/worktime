@@ -11,10 +11,11 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
 from app.database.engine import get_session
 
@@ -30,6 +31,7 @@ class AuthenticatedPrincipal:
 
 
 async def get_authenticated_principal(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     session: AsyncSession = Depends(get_session),
 ) -> AuthenticatedPrincipal:
@@ -65,6 +67,17 @@ async def get_authenticated_principal(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication service error",
         ) from exc
+
+    # Make the resolved user ID and auth type available to middleware for access logging.
+    request.state.user_id = local_user.id
+    request.state.auth_type = "oidc"
+
+    if settings.SENTRY_DSN:
+        try:
+            import sentry_sdk
+            sentry_sdk.set_user({"id": str(local_user.id)})
+        except ImportError:
+            pass
 
     realm_access = claims.get("realm_access")
     roles = realm_access.get("roles", []) if isinstance(realm_access, dict) else []

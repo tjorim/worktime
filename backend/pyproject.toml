@@ -30,6 +30,7 @@ dev = [
   "pytest==9.0.3",
   "pytest-asyncio==1.4.0",
   "ruff==0.15.15",
+  "sentry-sdk[fastapi]==2.61.0",
   "ty==0.0.40",
 ]
 
