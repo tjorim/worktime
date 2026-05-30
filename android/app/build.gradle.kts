@@ -17,7 +17,7 @@ val oidcScope = providers.gradleProperty("WORKTIME_ANDROID_OIDC_SCOPE").orElse("
 
 android {
     namespace = "com.worktime.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.worktime.android"
@@ -89,13 +89,6 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
-    }
-
-    lint {
-        // Both detectors crash with IncompatibleClassChangeError in
-        // RememberInCompositionDetectorKt.getterOrSuperDeclarationsHaveAnnotation when
-        // lifecycle-viewmodel-compose 2.10.0 lint rules run against this Compose lint version.
-        disable += setOf("FrequentlyChangingValue", "RememberInComposition", "NullSafeMutableLiveData")
     }
 
     testOptions {
