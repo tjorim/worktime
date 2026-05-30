@@ -17,7 +17,7 @@ val oidcScope = providers.gradleProperty("WORKTIME_ANDROID_OIDC_SCOPE").orElse("
 
 android {
     namespace = "com.worktime.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.worktime.android"
@@ -99,11 +99,11 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("androidx.compose.ui:ui:1.7.6")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
+    implementation("androidx.compose.ui:ui:1.11.2")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.11.2")
     implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -116,7 +116,7 @@ dependencies {
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
     implementation("net.openid:appauth:0.11.1")
 
-    debugImplementation("androidx.compose.ui:ui-tooling:1.7.6")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.11.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
