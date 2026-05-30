@@ -68,8 +68,9 @@ async def get_authenticated_principal(
             detail="Authentication service error",
         ) from exc
 
-    # Make the resolved user ID available to middleware for access logging.
+    # Make the resolved user ID and auth type available to middleware for access logging.
     request.state.user_id = local_user.id
+    request.state.auth_type = "oidc"
 
     if settings.SENTRY_DSN:
         try:

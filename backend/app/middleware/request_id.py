@@ -55,7 +55,7 @@ class RequestIdMiddleware:
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message["status"]
-                MutableHeaders(scope=message)[REQUEST_ID_HEADER] = request_id
+                MutableHeaders(raw=message["headers"])[REQUEST_ID_HEADER] = request_id
             await send(message)
 
         try:
@@ -66,12 +66,14 @@ class RequestIdMiddleware:
         finally:
             elapsed_ms = (time.perf_counter() - start) * 1000
             user_id = scope["state"].get("user_id")
+            auth_type = scope["state"].get("auth_type")
             logger.info(
-                "%s %s %d %.3fms req_id=%s user=%s",
+                "%s %s %d %.3fms req_id=%s user=%s auth=%s",
                 scope["method"],
                 scope["path"],
                 status_code,
                 elapsed_ms,
                 request_id,
                 user_id if user_id is not None else "-",
+                auth_type if auth_type is not None else "-",
             )
