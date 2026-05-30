@@ -91,6 +91,12 @@ android {
         }
     }
 
+    lint {
+        // FrequentlyChangingValueDetector crashes with an IncompatibleClassChangeError when
+        // lifecycle-viewmodel-compose 2.10.0 lint rules run against this Compose lint version.
+        disable += "FrequentlyChangingValue"
+    }
+
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
