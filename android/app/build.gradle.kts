@@ -95,7 +95,7 @@ android {
         // Both detectors crash with IncompatibleClassChangeError in
         // RememberInCompositionDetectorKt.getterOrSuperDeclarationsHaveAnnotation when
         // lifecycle-viewmodel-compose 2.10.0 lint rules run against this Compose lint version.
-        disable += setOf("FrequentlyChangingValue", "RememberInComposition")
+        disable += setOf("FrequentlyChangingValue", "RememberInComposition", "NullSafeMutableLiveData")
     }
 
     testOptions {
