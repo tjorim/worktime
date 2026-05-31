@@ -137,13 +137,13 @@ def _build_auth_provider() -> KeycloakAuthProvider | MultiAuth:
     base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "http://localhost:8000/mcp")
     realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL)
     required_scopes_env = os.environ.get("WORKTIME_MCP_REQUIRED_SCOPES", "").strip()
-    required_scopes = [scope.strip() for scope in required_scopes_env.split(",") if scope.strip()] or None
+    required_scopes = [scope.strip() for scope in required_scopes_env.split(",") if scope.strip()] or ["openid", "offline_access"]
     audience = settings.OIDC_AUDIENCE or None
 
     keycloak = KeycloakAuthProvider(
         realm_url=realm_url,
         base_url=base_url,
-        required_scopes=required_scopes or [],
+        required_scopes=required_scopes,
         audience=audience,
     )
 
