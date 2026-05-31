@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 
 
-def test_label_crud_and_cascade_delete(
+def test_label_crud_and_delete(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
@@ -46,16 +46,24 @@ def test_label_crud_and_cascade_delete(
     assert task_response.status_code == 201
     task_id = task_response.json()["id"]
 
+    # Cannot delete a label that is in use
+    delete_label_response = db_client.delete(
+        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
+        headers=headers,
+    )
+    assert delete_label_response.status_code == 409
+
+    # Remove the label from the task, then deletion succeeds
+    db_client.put(
+        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
+        json={"label_id": None},
+        headers=headers,
+    )
     delete_label_response = db_client.delete(
         f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_label_response.status_code == 204
-
-    list_tasks_response = db_client.get(f"/api/time-tracking/tasks?user_id={user_id}", headers=headers)
-    assert list_tasks_response.status_code == 200
-    assert list_tasks_response.json()["items"][0]["id"] == task_id
-    assert list_tasks_response.json()["items"][0]["label_id"] is None
 
 
 def test_task_constraints_and_filtering(
