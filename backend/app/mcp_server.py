@@ -143,7 +143,7 @@ def _build_auth_provider() -> KeycloakAuthProvider | MultiAuth:
     keycloak = KeycloakAuthProvider(
         realm_url=realm_url,
         base_url=base_url,
-        required_scopes=required_scopes,
+        required_scopes=required_scopes or [],
         audience=audience,
     )
 
