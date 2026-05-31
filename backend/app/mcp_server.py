@@ -37,6 +37,7 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationRead,
 )
+from app.routers.auth import AuthenticatedPrincipal
 from app.services.db_service import (
     NotFoundError,
     create_gantt_task,
@@ -61,6 +62,7 @@ from app.services.db_service import (
     update_task,
     update_time_off_entry,
 )
+from app.services.read_models_service import build_dashboard_read_model, compute_next_shifts_for_team
 from app.services.sync_service import get_sync_status
 
 
@@ -285,15 +287,83 @@ class WorktimeMcpBackend:
 
     async def get_next_shift(self, ctx: Context) -> dict[str, Any]:
         _ = ctx
-        today = datetime.now(UTC).date()
         async with self._tool_context() as (context, db):
-            tasks = await list_gantt_tasks(db, user_id=context.user_id)
-            upcoming = next((task for task in tasks if task.end_date >= today), None)
-            if upcoming is None:
-                return {"date": _to_iso_date(today), "next_shift": None}
+            principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
+            dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
+            as_of = dashboard.next_shifts.as_of
+            items = dashboard.next_shifts.items
+            if not items:
+                return {"as_of": _to_iso_datetime(as_of), "next_shift": None}
+            item = items[0]
+            return {
+                "as_of": _to_iso_datetime(as_of),
+                "next_shift": {
+                    "team_number": item.team_number,
+                    "date": _to_iso_date(item.date),
+                    "shift_code": item.shift_code,
+                    "shift": item.shift.model_dump(mode="json"),
+                },
+            }
 
-            task_payload = GanttTaskRead.model_validate(upcoming, from_attributes=True).model_dump(mode="json")
-            return {"date": _to_iso_date(today), "next_shift": task_payload}
+    async def get_team_status(self, ctx: Context) -> dict[str, Any]:
+        _ = ctx
+        async with self._tool_context() as (context, db):
+            principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
+            dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
+            return {
+                "as_of": _to_iso_datetime(dashboard.team_status.as_of),
+                "schedule_type": dashboard.work_context.schedule_type,
+                "items": [
+                    {
+                        "team_number": item.team_number,
+                        "date": _to_iso_date(item.date),
+                        "shift_day": _to_iso_date(item.shift_day),
+                        "shift_code": item.shift_code,
+                        "shift": item.shift.model_dump(mode="json"),
+                        "is_currently_working": item.is_currently_working,
+                    }
+                    for item in dashboard.team_status.items
+                ],
+            }
+
+    async def get_next_shifts_for_team(
+        self,
+        ctx: Context,
+        team_number: int,
+        limit: int = 5,
+    ) -> dict[str, Any]:
+        _ = ctx
+        async with self._tool_context() as (context, db):
+            principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
+            dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
+            schedule_type = dashboard.work_context.schedule_type
+            if schedule_type is None:
+                return {
+                    "as_of": _to_iso_datetime(dashboard.as_of),
+                    "schedule_type": None,
+                    "team_number": team_number,
+                    "items": [],
+                }
+            items = compute_next_shifts_for_team(
+                schedule_type,
+                team_number,
+                as_of=dashboard.as_of,
+                limit=limit,
+            )
+            return {
+                "as_of": _to_iso_datetime(dashboard.as_of),
+                "schedule_type": schedule_type,
+                "team_number": team_number,
+                "items": [
+                    {
+                        "team_number": item.team_number,
+                        "date": _to_iso_date(item.date),
+                        "shift_code": item.shift_code,
+                        "shift": item.shift.model_dump(mode="json"),
+                    }
+                    for item in items
+                ],
+            }
 
     async def get_time_off_summary(
         self,
@@ -874,6 +944,8 @@ def create_mcp_server(
     server.tool(name="whoami")(backend.whoami)
     server.tool(name="get_current_status")(backend.get_current_status)
     server.tool(name="get_next_shift")(backend.get_next_shift)
+    server.tool(name="get_team_status")(backend.get_team_status)
+    server.tool(name="get_next_shifts_for_team")(backend.get_next_shifts_for_team)
     server.tool(name="get_time_off_summary")(backend.get_time_off_summary)
     server.tool(name="get_work_location_summary")(backend.get_work_location_summary)
     server.tool(name="get_time_tracking_summary")(backend.get_time_tracking_summary)
