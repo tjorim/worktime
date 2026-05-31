@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.audit import logger as audit
 from app.config import settings
 from app.database.engine import get_session_factory
+from app.routers.auth import AuthenticatedPrincipal
 from app.schemas import (
     EntryFlag,
     EntryKind,
@@ -37,7 +38,6 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationRead,
 )
-from app.routers.auth import AuthenticatedPrincipal
 from app.services.db_service import (
     NotFoundError,
     create_gantt_task,
