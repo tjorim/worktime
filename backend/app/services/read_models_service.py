@@ -273,6 +273,17 @@ def _get_current_working_team(
     return None
 
 
+def compute_next_shifts_for_team(
+    schedule_type: ScheduleType,
+    team_number: int,
+    *,
+    as_of: dt_datetime,
+    limit: int,
+) -> list[NextShiftItemReadModel]:
+    """Return upcoming working shifts for any team in the given schedule."""
+    return _get_next_shifts(schedule_type, team_number, as_of=as_of, limit=limit)
+
+
 def _get_next_shifts(
     schedule_type: ScheduleType,
     team_number: int,

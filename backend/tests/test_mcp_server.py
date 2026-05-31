@@ -47,6 +47,8 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "whoami",
         "get_current_status",
         "get_next_shift",
+        "get_team_status",
+        "get_next_shifts_for_team",
         "get_time_off_summary",
         "get_work_location_summary",
         "get_time_tracking_summary",
