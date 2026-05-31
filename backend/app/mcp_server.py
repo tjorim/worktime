@@ -333,6 +333,9 @@ class WorktimeMcpBackend:
         limit: int = 5,
     ) -> dict[str, Any]:
         _ = ctx
+        if limit < 1:
+            raise ValueError("limit must be at least 1")
+        limit = min(limit, 50)
         async with self._tool_context() as (context, db):
             principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
             dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
