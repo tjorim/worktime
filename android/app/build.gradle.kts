@@ -106,7 +106,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview:1.11.2")
     implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
