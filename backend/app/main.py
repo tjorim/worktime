@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from fastmcp.utilities.lifespan import combine_lifespans
 
 from .cache.warm_cache import warm_cache
 from .config import settings
@@ -33,6 +34,15 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+_worktime_mcp_base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "")
+if _worktime_mcp_base_url:
+    from .mcp_server import create_mcp_server as _create_mcp_server
+    _mcp = _create_mcp_server()
+    _mcp_app = _mcp.http_app(path="/")
+else:
+    _mcp = None
+    _mcp_app = None
 
 # Initialize Sentry error tracking when SENTRY_DSN is configured.
 # sentry-sdk[fastapi] must be installed separately: uv add sentry-sdk[fastapi]
@@ -76,7 +86,7 @@ async def _warm_cache_async():
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def _app_lifespan(app: FastAPI):
     """Application lifespan handler for startup and shutdown events."""
     # Startup
     logger.info("=" * 60)
@@ -154,12 +164,14 @@ async def lifespan(app: FastAPI):
         await sync_event_manager.stop_pg_listener()
 
 
+_lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
+
 # Create FastAPI application
 app = FastAPI(
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=_lifespan
 )
 
 # Configure CORS middleware with production safety
@@ -173,14 +185,28 @@ if not cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {cors_origins}")
 
-app.add_middleware(
-    CORSMiddleware,
+_cors_kwargs = dict(
     allow_origins=cors_origins,
     allow_credentials="*" not in cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
     expose_headers=["X-Request-ID", "X-Total-Ms"],
 )
+if _mcp_app is not None:
+    class _MCPAwareCORSMiddleware:
+        def __init__(self, app, **kwargs) -> None:
+            self._app = app
+            self._cors = CORSMiddleware(app, **kwargs)
+
+        async def __call__(self, scope, receive, send) -> None:
+            if scope.get("type") == "http" and scope.get("path", "").startswith("/mcp"):
+                await self._app(scope, receive, send)
+            else:
+                await self._cors(scope, receive, send)
+
+    app.add_middleware(_MCPAwareCORSMiddleware, **_cors_kwargs)
+else:
+    app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
 # TimingMiddleware records metrics and sets X-Total-Ms.
 app.add_middleware(TimingMiddleware)
@@ -228,6 +254,10 @@ if settings.ENVIRONMENT != "production":
     from .routers.debug import router as debug_router
     app.include_router(debug_router, prefix="/api")
     logger.info("✓ Debug endpoints enabled (development mode only)")
+
+if _mcp_app is not None:
+    app.mount("/mcp", _mcp_app)
+    logger.info("✓ MCP server mounted at /mcp")
 
 
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])
