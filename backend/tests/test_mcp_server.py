@@ -112,7 +112,9 @@ async def test_list_labels_returns_active_labels_for_authenticated_user(
         active = await db_service.create_label(session, user.id, LabelCreate(name="Client", color="#112233"))
         deleted = await db_service.create_label(session, user.id, LabelCreate(name="Deleted", color="#445566"))
         await db_service.create_label(session, other.id, LabelCreate(name="Private", color="#778899"))
-        await db_service.delete_label(session, user.id, deleted.id)
+        deleted.deleted_at = datetime.now(UTC)
+        session.add(deleted)
+        await session.commit()
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 

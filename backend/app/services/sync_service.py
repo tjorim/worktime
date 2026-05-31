@@ -114,6 +114,19 @@ async def _push_label(
                 server_updated_at=label.updated_at,
                 conflict_reason="server version is newer",
             )
+        task_count = await session.scalar(
+            select(sql_func.count()).select_from(TimeTrackingTask).where(TimeTrackingTask.label_id == item.id)
+        )
+        template_count = await session.scalar(
+            select(sql_func.count()).select_from(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == item.id)
+        )
+        if task_count or template_count:
+            return SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                server_updated_at=label.updated_at,
+                conflict_reason="label is in use by tasks or templates and cannot be deleted",
+            )
         label.client_updated_at = as_utc(item.client_updated_at)
         label.deleted_at = now
         label.updated_at = now

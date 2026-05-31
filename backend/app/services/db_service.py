@@ -229,6 +229,7 @@ async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate
         select(TimeTrackingLabel).where(
             TimeTrackingLabel.user_id == user_id,
             TimeTrackingLabel.name == payload.name,
+            TimeTrackingLabel.deleted_at.is_(None),
         )
     )
     if result.scalar_one_or_none() is not None:
@@ -270,6 +271,7 @@ async def update_label(
                 TimeTrackingLabel.user_id == user_id,
                 TimeTrackingLabel.name == data["name"],
                 TimeTrackingLabel.id != label_id,
+                TimeTrackingLabel.deleted_at.is_(None),
             )
         )
         if dup_result.scalar_one_or_none() is not None:
@@ -286,16 +288,15 @@ async def update_label(
 async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> None:
     label = await _ensure_label_for_user(session, user_id, label_id)
 
-    await session.execute(
-        update(TimeTrackingTask)
-        .where(TimeTrackingTask.label_id == label_id)
-        .values(label_id=None)
+    task_count = await session.scalar(
+        select(sql_func.count()).select_from(TimeTrackingTask).where(TimeTrackingTask.label_id == label_id)
     )
-    await session.execute(
-        update(TimeTrackingTemplate)
-        .where(TimeTrackingTemplate.label_id == label_id)
-        .values(label_id=None)
+    template_count = await session.scalar(
+        select(sql_func.count()).select_from(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == label_id)
     )
+    if task_count or template_count:
+        raise ConflictError("label is in use by tasks or templates and cannot be deleted")
+
     await session.delete(label)
     await session.commit()
 
