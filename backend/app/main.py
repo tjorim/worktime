@@ -185,13 +185,13 @@ if not cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {cors_origins}")
 
-_cors_kwargs = dict(
-    allow_origins=cors_origins,
-    allow_credentials="*" not in cors_origins,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
-    expose_headers=["X-Request-ID", "X-Total-Ms"],
-)
+_cors_kwargs = {
+    "allow_origins": cors_origins,
+    "allow_credentials": "*" not in cors_origins,
+    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Request-ID"],
+    "expose_headers": ["X-Request-ID", "X-Total-Ms"],
+}
 if _mcp_app is not None:
     class _MCPAwareCORSMiddleware:
         def __init__(self, app, **kwargs) -> None:
