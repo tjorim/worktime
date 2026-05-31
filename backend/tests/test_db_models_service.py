@@ -47,6 +47,7 @@ from app.services.db_service import (
     get_running_task,
     get_task,
     get_template,
+    list_labels_for_user,
     list_tasks,
     list_users,
     update_gantt_task,
@@ -190,11 +191,11 @@ async def test_update_user_rejects_null_for_non_nullable_fields(db_session: Asyn
         await update_user(db_session, user.id, UserUpdate.model_construct(display_name=None))
 
 
-async def test_delete_label_unlabels_tasks_and_templates(db_session: AsyncSession) -> None:
+async def test_delete_label_blocked_when_in_use(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="bob", display_name="Bob"))
     label = await create_label(db_session, user.id, LabelCreate(name="Ops", color="#445566"))
 
-    task = await create_task(
+    await create_task(
         db_session,
         user.id,
         TaskCreate(
@@ -205,7 +206,7 @@ async def test_delete_label_unlabels_tasks_and_templates(db_session: AsyncSessio
             includes_break=False,
         ),
     )
-    template = await create_template(
+    await create_template(
         db_session,
         user.id,
         TemplateCreate(
@@ -216,16 +217,18 @@ async def test_delete_label_unlabels_tasks_and_templates(db_session: AsyncSessio
         ),
     )
 
+    with pytest.raises(ConflictError, match="label is in use"):
+        await delete_label(db_session, user.id, label.id)
+
+
+async def test_delete_label_succeeds_when_unused(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="bob2", display_name="Bob2"))
+    label = await create_label(db_session, user.id, LabelCreate(name="Unused", color="#aabbcc"))
+
     await delete_label(db_session, user.id, label.id)
 
-    tasks = await list_tasks(db_session, user_id=user.id)
-    assert len(tasks) == 1
-    assert tasks[0].id == task.id
-    assert tasks[0].label_id is None
-    assert await get_running_task(db_session, user.id) is None
-
-    persisted_template = await get_template(db_session, user.id, template.id)
-    assert persisted_template.label_id is None
+    labels = await list_labels_for_user(db_session, user.id)
+    assert not any(l.id == label.id for l in labels)
 
 
 async def test_work_location_upsert(db_session: AsyncSession) -> None:

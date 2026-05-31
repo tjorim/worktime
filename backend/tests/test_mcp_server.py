@@ -15,7 +15,7 @@ from app.mcp_server import (
     WorktimeMcpBackend,
     create_mcp_server,
 )
-from app.schemas import GanttTaskCreate, TaskCreate, TimeOffEntryCreate, UserCreate
+from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
 from app.services import db_service
 
 
@@ -50,6 +50,7 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "get_time_off_summary",
         "get_work_location_summary",
         "get_time_tracking_summary",
+        "list_labels",
         "get_gantt_tasks",
         "get_sync_status",
         "start_time_entry",
@@ -96,6 +97,30 @@ async def test_whoami_and_time_tracking_summary_happy_path(
     assert summary_payload["task_count"] == 1
     assert summary_payload["tracked_seconds"] == 5400
     assert summary_payload["tasks"][0]["text"] == "Task from MCP"
+
+
+async def test_list_labels_returns_active_labels_for_authenticated_user(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="label-user", display_name="Label User"))
+        other = await db_service.create_user(session, UserCreate(username="other-label-user", display_name="Other"))
+        active = await db_service.create_label(session, user.id, LabelCreate(name="Client", color="#112233"))
+        deleted = await db_service.create_label(session, user.id, LabelCreate(name="Deleted", color="#445566"))
+        await db_service.create_label(session, other.id, LabelCreate(name="Private", color="#778899"))
+        deleted.deleted_at = datetime.now(UTC)
+        session.add(deleted)
+        await session.commit()
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    payload = await backend.list_labels(ctx=None)  # type: ignore[arg-type]
+
+    assert payload == {"labels": [{"id": active.id, "name": "Client", "color": "#112233"}]}
 
 
 async def test_resolve_context_requires_authenticated_token(

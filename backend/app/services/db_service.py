@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, or_, select
 from sqlalchemy import func as sql_func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
@@ -229,6 +229,7 @@ async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate
         select(TimeTrackingLabel).where(
             TimeTrackingLabel.user_id == user_id,
             TimeTrackingLabel.name == payload.name,
+            TimeTrackingLabel.deleted_at.is_(None),
         )
     )
     if result.scalar_one_or_none() is not None:
@@ -249,7 +250,10 @@ async def get_label(session: AsyncSession, user_id: int, label_id: str) -> TimeT
 async def list_labels_for_user(session: AsyncSession, user_id: int) -> list[TimeTrackingLabel]:
     result = await session.execute(
         select(TimeTrackingLabel)
-        .where(TimeTrackingLabel.user_id == user_id)
+        .where(
+            TimeTrackingLabel.user_id == user_id,
+            TimeTrackingLabel.deleted_at.is_(None),
+        )
         .order_by(TimeTrackingLabel.created_at.desc())
     )
     return list(result.scalars().all())
@@ -267,6 +271,7 @@ async def update_label(
                 TimeTrackingLabel.user_id == user_id,
                 TimeTrackingLabel.name == data["name"],
                 TimeTrackingLabel.id != label_id,
+                TimeTrackingLabel.deleted_at.is_(None),
             )
         )
         if dup_result.scalar_one_or_none() is not None:
@@ -283,16 +288,15 @@ async def update_label(
 async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> None:
     label = await _ensure_label_for_user(session, user_id, label_id)
 
-    await session.execute(
-        update(TimeTrackingTask)
-        .where(TimeTrackingTask.label_id == label_id)
-        .values(label_id=None)
+    task_count = await session.scalar(
+        select(sql_func.count()).select_from(TimeTrackingTask).where(TimeTrackingTask.label_id == label_id)
     )
-    await session.execute(
-        update(TimeTrackingTemplate)
-        .where(TimeTrackingTemplate.label_id == label_id)
-        .values(label_id=None)
+    template_count = await session.scalar(
+        select(sql_func.count()).select_from(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == label_id)
     )
+    if task_count or template_count:
+        raise ConflictError("label is in use by tasks or templates and cannot be deleted")
+
     await session.delete(label)
     await session.commit()
 
