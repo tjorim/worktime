@@ -8,7 +8,8 @@ import type { TabKey } from "@/contexts/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
-import { CalendarView } from "./CalendarView";
+import { CalendarView as LegacyCalendarView } from "./CalendarView";
+import { CalendarView } from "@/features/calendar/CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
@@ -99,6 +100,7 @@ export function MainTabs({
   const availableTabs = useMemo<TabKey[]>(
     () => [
       "calendar",
+      "unified-calendar",
       "schedule",
       ...(timeOffEnabled ? (["timeoff"] as TabKey[]) : []),
       ...(timeTrackingEnabled ? (["timetracking"] as TabKey[]) : []),
@@ -136,12 +138,24 @@ export function MainTabs({
               </>
             }
           >
-            <CalendarView
+            <LegacyCalendarView
               myTeam={myTeam}
               onChangeSchedule={onChangeSchedule}
               onChangeTeam={onChangeTeam}
               onOpenScheduleTab={() => setActiveTab("schedule")}
             />
+          </Tab>
+
+          <Tab
+            eventKey="unified-calendar"
+            title={
+              <>
+                <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
+                {m.tab_unified_calendar()}
+              </>
+            }
+          >
+            {activeKey === "unified-calendar" && <CalendarView />}
           </Tab>
 
           <Tab

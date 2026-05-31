@@ -10,7 +10,13 @@ import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
-export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking" | "gantt";
+export type TabKey =
+  | "calendar"
+  | "unified-calendar"
+  | "schedule"
+  | "timeoff"
+  | "timetracking"
+  | "gantt";
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
 export type TimeTrackingViewKey = "daily" | "weekly" | "config";
@@ -117,7 +123,14 @@ export const defaultLastUsed: LastUsed = {
   ganttViewMode: "Day",
 };
 
-const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking", "gantt"]);
+const validTabKeys = new Set<TabKey>([
+  "calendar",
+  "unified-calendar",
+  "schedule",
+  "timeoff",
+  "timetracking",
+  "gantt",
+]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
