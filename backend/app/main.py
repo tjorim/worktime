@@ -87,7 +87,7 @@ async def _warm_cache_async():
 
 
 @asynccontextmanager
-async def _app_lifespan(app: FastAPI):
+async def lifespan(app: FastAPI):
     """Application lifespan handler for startup and shutdown events."""
     # Startup
     logger.info("=" * 60)
@@ -165,7 +165,7 @@ async def _app_lifespan(app: FastAPI):
         await sync_event_manager.stop_pg_listener()
 
 
-_lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
+_lifespan = combine_lifespans(lifespan, _mcp_app.lifespan) if _mcp_app is not None else lifespan
 
 # Create FastAPI application
 app = FastAPI(
