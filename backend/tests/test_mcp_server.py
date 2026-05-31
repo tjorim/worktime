@@ -57,7 +57,9 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "stop_time_entry",
         "create_time_tracking_task",
         "update_time_tracking_task",
+        "delete_time_tracking_task",
         "set_work_location",
+        "delete_work_location",
         "create_time_off_event",
         "update_time_off_event",
         "delete_time_off_event",
@@ -354,6 +356,89 @@ async def test_update_time_tracking_task_unauthorized(
         )
 
 
+async def test_create_update_delete_time_tracking_task(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Any,
+) -> None:
+    """Full lifecycle: create, update, delete a time-tracking task."""
+    import app.audit.logger as audit_module
+
+    monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
+    monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
+
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="lifecycle-task", display_name="Lifecycle Task")
+        )
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    created = await backend.create_time_tracking_task(
+        ctx=None,  # type: ignore[arg-type]
+        text="Task to delete",
+        start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
+        stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
+    )
+    assert created["text"] == "Task to delete"
+    task_id = created["id"]
+
+    updated = await backend.update_time_tracking_task(
+        ctx=None,  # type: ignore[arg-type]
+        task_id=task_id,
+        text="Updated before delete",
+    )
+    assert updated["text"] == "Updated before delete"
+
+    deleted = await backend.delete_time_tracking_task(
+        ctx=None,  # type: ignore[arg-type]
+        task_id=task_id,
+    )
+    assert deleted["deleted"] is True
+    assert deleted["task_id"] == task_id
+    assert deleted["user_id"] == user.id
+
+
+async def test_delete_time_tracking_task_unauthorized(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Any,
+) -> None:
+    """delete_time_tracking_task raises NotFoundError for another user's task."""
+    import app.audit.logger as audit_module
+
+    monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
+    monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
+
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        owner = await db_service.create_user(
+            session, UserCreate(username="task-owner", display_name="Task Owner")
+        )
+        attacker = await db_service.create_user(
+            session, UserCreate(username="task-attacker", display_name="Task Attacker")
+        )
+        task = await db_service.create_task(
+            session,
+            owner.id,
+            TaskCreate(
+                text="Owner's task",
+                start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
+                stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
+            ),
+        )
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
+
+    with pytest.raises(db_service.NotFoundError):
+        await backend.delete_time_tracking_task(ctx=None, task_id=task.id)  # type: ignore[arg-type]
+
+
 async def test_set_work_location(
     test_db: AsyncEngine,
     monkeypatch: pytest.MonkeyPatch,
@@ -390,6 +475,46 @@ async def test_set_work_location(
         country_code="NL",
     )
     assert payload2["country_code"] == "NL"
+
+
+async def test_delete_work_location(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Any,
+) -> None:
+    """delete_work_location removes the entry and returns a confirmation."""
+    import app.audit.logger as audit_module
+
+    monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
+    monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
+
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="del-loc-user", display_name="Del Loc User"))
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    await backend.set_work_location(
+        ctx=None,  # type: ignore[arg-type]
+        value_date=date(2026, 5, 1),
+        country_code="BE",
+    )
+
+    deleted = await backend.delete_work_location(
+        ctx=None,  # type: ignore[arg-type]
+        value_date=date(2026, 5, 1),
+    )
+    assert deleted["deleted"] is True
+    assert deleted["date"] == "2026-05-01"
+    assert deleted["user_id"] == user.id
+
+    with pytest.raises(db_service.NotFoundError):
+        await backend.delete_work_location(
+            ctx=None,  # type: ignore[arg-type]
+            value_date=date(2026, 5, 1),
+        )
 
 
 async def test_set_work_location_invalid_country(

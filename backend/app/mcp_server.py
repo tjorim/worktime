@@ -44,7 +44,9 @@ from app.services.db_service import (
     create_or_update_work_location,
     create_task,
     delete_gantt_task,
+    delete_task,
     delete_time_off_entry,
+    delete_work_location,
     get_gantt_task,
     get_running_task,
     get_task,
@@ -584,6 +586,26 @@ class WorktimeMcpBackend:
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    async def delete_time_tracking_task(
+        self,
+        ctx: Context,
+        task_id: str,
+    ) -> dict[str, Any]:
+        """Delete a time-tracking task owned by the authenticated user.
+
+        Side effects: removes the TimeTrackingTask row from the database.  The
+        task must belong to the caller.  Returns a confirmation payload.
+        """
+        _ = ctx
+        async with self._tool_context() as (context, db):
+            await delete_task(db, context.user_id, task_id)
+            audit.append(
+                target=f"user:{context.user_id}:task:{task_id}",
+                action="delete_time_tracking_task",
+                details="via MCP",
+            )
+            return {"deleted": True, "task_id": task_id, "user_id": context.user_id}
+
     async def set_work_location(
         self,
         ctx: Context,
@@ -606,6 +628,26 @@ class WorktimeMcpBackend:
                 details=f"country_code={country_code!r} via MCP",
             )
             return WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
+
+    async def delete_work_location(
+        self,
+        ctx: Context,
+        value_date: date,
+    ) -> dict[str, Any]:
+        """Delete the work location entry for a given date.
+
+        Side effects: removes the WorkLocation row for (user_id, date).  Returns
+        a confirmation payload.
+        """
+        _ = ctx
+        async with self._tool_context() as (context, db):
+            await delete_work_location(db, context.user_id, value_date)
+            audit.append(
+                target=f"user:{context.user_id}:work_location:{value_date.isoformat()}",
+                action="delete_work_location",
+                details="via MCP",
+            )
+            return {"deleted": True, "date": value_date.isoformat(), "user_id": context.user_id}
 
     async def create_time_off_event(
         self,
@@ -842,7 +884,9 @@ def create_mcp_server(
     server.tool(name="stop_time_entry")(backend.stop_time_entry)
     server.tool(name="create_time_tracking_task")(backend.create_time_tracking_task)
     server.tool(name="update_time_tracking_task")(backend.update_time_tracking_task)
+    server.tool(name="delete_time_tracking_task")(backend.delete_time_tracking_task)
     server.tool(name="set_work_location")(backend.set_work_location)
+    server.tool(name="delete_work_location")(backend.delete_work_location)
     server.tool(name="create_time_off_event")(backend.create_time_off_event)
     server.tool(name="update_time_off_event")(backend.update_time_off_event)
     server.tool(name="delete_time_off_event")(backend.delete_time_off_event)
