@@ -9,6 +9,7 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -185,7 +186,7 @@ if not cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {cors_origins}")
 
-_cors_kwargs = {
+_cors_kwargs: dict[str, Any] = {
     "allow_origins": cors_origins,
     "allow_credentials": "*" not in cors_origins,
     "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
