@@ -71,7 +71,7 @@ interface WorktimeApi {
         @Header("Authorization") authorization: String,
         @Path("labelId") labelId: String,
         @Query("user_id") userId: Int,
-    ): Response<Unit>
+    )
 
     @GET("api/sync/status")
     suspend fun getSyncStatus(

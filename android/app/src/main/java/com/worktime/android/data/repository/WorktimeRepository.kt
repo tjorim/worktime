@@ -162,8 +162,7 @@ class WorktimeRepository(
         val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
         val userId = currentUserId ?: return MutationResult.Error("Reload your dashboard before making changes")
         return try {
-            val response = api.deleteLabel(authorization = "Bearer $token", labelId = labelId, userId = userId)
-            if (!response.isSuccessful) throw HttpException(response)
+            api.deleteLabel(authorization = "Bearer $token", labelId = labelId, userId = userId)
             MutationResult.Success(Unit)
         } catch (error: HttpException) {
             when (error.code()) {

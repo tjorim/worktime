@@ -177,7 +177,7 @@ class WorktimeRepositoryTest {
             authorization: String,
             labelId: String,
             userId: Int,
-        ): Response<Unit> = Response.success(null)
+        ) {}
 
         override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
             serverTimestamp = "2026-05-26T12:00:00Z",
