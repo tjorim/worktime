@@ -6,400 +6,159 @@
 
 ## Overview
 
-This document serves as a general to-do list and development roadmap for Worktime improvements, covering shift tracking, time-off management, UI enhancements, and user experience improvements.
-
-## Development To-dos
-
-### 🎯 Medium-Priority Items
-
-Features that enhance functionality with moderate development effort.
-
-#### 1. Cross-Schedule Transfer View Enhancement
-
-- **Component**: TransferView with cross-schedule coordination
-- **Use Cases**:
-  - View when user's schedule overlaps with teams on different schedules
-  - 9-5 user can see when their working hours overlap with 5-shift teams
-  - Cross-schedule coordination and handover visibility
-  - Enables meeting scheduling across different roster patterns
-- **Implementation**:
-  - Add schedule selector to TransferView (similar to ScheduleView/TodayView)
-  - Calculate overlapping work periods between different schedules
-  - Define what "transfer" means across different schedule types
-  - Show overlap hours/periods instead of traditional handover moments
-- **Files to Modify**:
-  - `src/components/TransferView.tsx` - Add cross-schedule viewing and overlap calculation
-  - `src/utils/shiftCalculations.ts` - Add cross-schedule overlap detection utilities
-- **Estimated Effort**: 4-5 hours
-- **Status**: 🔲 Planned (enables cross-roster coordination)
-
-#### 2. Reusable TeamSelector Component
-
-- **Component**: Extract common team selection logic
-- **Use Cases**:
-  - Reduce code duplication across TransferView, ScheduleDetailModal, etc.
-  - Consistent team selection UI/UX
-  - Easier maintenance and updates
-- **Implementation**: Create `components/common/TeamSelector.tsx` with standardized props
-- **Files to Modify**:
-  - `src/components/TransferView.tsx` - Replace dropdown with TeamSelector
-  - `src/components/ScheduleDetailModal.tsx` - Use common component
-  - Create `src/components/common/TeamSelector.tsx`
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Planned
-
-#### 3. ScheduleDetailModal Enhancement
-
-- **Component**: Improve existing schedule detail modal
-- **Use Cases**:
-  - Enable export functionality in modal
-  - Enhanced schedule view for all schedule types
-  - Better schedule information display
-- **Implementation**: Activate disabled features and improve UX
-- **Estimated Effort**: 1–2 hours
-- **Status**: 🔲 Future
-
-#### 4. Enhanced Error Boundaries
-
-- **Component**: More granular error handling
-- **Use Cases**:
-  - Component-specific error recovery
-  - Better error messages for users
-  - Graceful degradation
-- **Implementation**: Add specific error boundaries for complex components
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Future
-
-#### 5. Time-Off TransferView Overlays
-
-- **Component**: Time-off event visualization on TransferView
-- **Use Cases**:
-  - Time-off overlay indicators on TransferView
-  - At-a-glance visibility of vacation/business trips alongside transfer points
-  - Visual hierarchy showing both transfers and time-off events
-- **Implementation**: Add event indicator overlays to TransferView
-- **Note**: TimeOffView calendar enhancements (color-coded events, today indicator, month navigation, weekly recurring events) and ScheduleView overlay dots are already complete
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Future
-
-#### 6. iCal Subscription Link (Backend Required)
-
-- **Component**: Server-side iCal feed for calendar app integration
-- **Use Cases**:
-  - Subscribe to shift schedule in Google Calendar, Outlook, Apple Calendar, etc.
-  - Auto-refreshing feed — calendar app polls the URL periodically
-  - Combined feed with shifts and time-off events
-  - Per-user personalized feed (user's team, schedule type, time-off)
-- **Implementation**: Backend endpoint serving RFC 5545 iCalendar (.ics) format
-- **Prerequisite**: Backend sync (item 11) must be in place first
-- **Note**: Replaces the previous client-side .ics file export approach — a subscription link is more useful than a one-time download
-- **Status**: 🔲 Future (blocked on backend)
-- **See also**: `backend/README.md` for endpoint specification
-
-### 🎨 Future Enhancements
-
-Advanced features for future development phases.
-
-#### 7. Carousel for Mobile Team View
-
-- **Component**: `react-bootstrap/Carousel`
-- **Use Cases**:
-  - Swipe through teams on mobile
-  - Better mobile navigation
-- **Implementation**: Responsive team display
-- **Estimated Effort**: 5–6 hours
-- **Status**: 🔲 Future
-
-#### 8. Notification System Implementation
-
-- **Component**: Browser notification functionality
-- **Use Cases**:
-  - Shift reminders and countdown alerts
-  - Time-off event reminders
-  - Customizable notification preferences
-- **Implementation**: Build on existing notification settings in SettingsContext
-- **Estimated Effort**: 4–5 hours
-- **Status**: 🔲 Future
-
-#### 9. Advanced Accessibility Features
-
-- **Component**: Enhanced accessibility support
-- **Use Cases**:
-  - Screen reader improvements
-  - High contrast mode
-  - Font size preferences
-  - Motion reduction settings
-- **Implementation**: Accessibility context and enhanced ARIA support
-- **Estimated Effort**: 3–4 hours
-- **Status**: 🔲 Future
-
-#### 10. Floating Action Button
-
-- **Component**: Custom positioned `react-bootstrap/Button`
-- **Use Cases**:
-  - Quick team switch
-  - Quick add time-off event
-  - Add to calendar
-  - Quick actions overlay
-- **Implementation**: Fixed positioned button system
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Future
-
-#### 11. Backend with Shared .hday Files (Team Collaboration)
-
-- **Component**: Backend API + shared network storage for multi-user .hday time-off collaboration
-- **Current State**: Offline-first localStorage, single-user only
-- **Scope**: Backend manages **only .hday time-off events**, not shifts (shifts remain client-computed from roster config)
-- **Use Cases**:
-  - **Team Visibility**: Everyone sees team members' time-off events
-  - **Shared Schedule**: Central source of truth for team availability
-  - **Real-Time Sync**: Updates from other users appear immediately
-  - **Cross-Team Coordination**: "Who's available for Friday meeting?"
-  - **Conflict Resolution**: Handle simultaneous edits gracefully
-  - **Manager Workflows**: Approval process for vacation requests
-- **Architecture Options**:
-  - **Option A: UNC Path (Windows Network Share)**
-    - Backend reads/writes `\\server\share\team1_timeoff.hday`
-    - Corporate infrastructure, Windows-specific
-    - Simple file I/O, no database needed
-  - **Option B: Cloud Storage (Firebase/Supabase)**
-    - Cross-platform, no corporate infrastructure needed
-    - Built-in real-time sync and auth
-    - Easier development, hosted solution
-  - **Option C: Custom Backend + Database**
-    - Full control, can use PostgreSQL/MongoDB
-    - Most flexible for custom workflows
-    - Most development effort
-- **Technical Components**:
-  1. **REST API** (Phase 1 - Basic CRUD)
-     ```http
-     GET  /api/teams/:teamId/events?start=X&end=Y
-     POST /api/teams/:teamId/events
-     PUT  /api/teams/:teamId/events/:id
-     DEL  /api/teams/:teamId/events/:id
-     ```
-  2. **WebSocket** (Phase 2 - Real-Time)
-     ```typescript
-     socket.on("events:updated", ({ teamId, events }) => {
-       unifiedStore.updateTeamEvents(teamId, events);
-     });
-     ```
-  3. **Authentication** (Phase 3 - Permissions)
-     - Which teams can user view/edit?
-     - Role-based access (member, manager, admin)
-     - Network auth integration (AD/LDAP) or OAuth
-  4. **File Format Extension** (User Attribution)
-
-     ```text
-     # Option A: Comments (backward compatible)
-     2025/01/15-2025/01/20 # John's vacation
-
-     # Option B: Extended format (breaking change)
-     2025/01/15-2025/01/20 @john # John's vacation
-
-     # Option C: Separate files per user
-     \\server\share\team1\john.hday
-     ```
-
-- **Migration Path**:
-  - **Phase 1**: Backend + manual sync (keep localStorage, add "Sync to team" button)
-  - **Phase 2**: Real-time sync (WebSocket, auto-sync, read-only team events)
-  - **Phase 3**: Multi-user editing (write access, conflict resolution)
-  - **Phase 4**: Collaboration features (conflict UI, approval workflows, "who's editing")
-- **Frontend Architecture Options**:
-  - **Option A: Extend EventStoreContext** (simpler, recommended)
-    - Add `syncWithBackend()` and `subscribeToUpdates()` methods to existing EventStoreContext
-    - Shifts remain separate (computed on-demand as today)
-    - Components use both `useEventStore()` and shift calculations (minimal changes)
-  - **Option B: Unified Event Store** (optional convenience layer)
-    - Create wrapper merging shifts + time-off in single API
-    - One call to get all events: `getEventsForDate(date, team)`
-    - More abstraction, but components still need to differentiate types in UI
-    - Additional 6-8 hours of effort, questionable benefit
-- **Implementation Requirements**:
-  - Backend: Node.js/Express or Python/FastAPI
-  - File watching: chokidar (Node) or watchdog (Python)
-  - WebSocket: Socket.io or native WebSocket API
-  - Frontend: Extend EventStoreContext with backend sync (Option A recommended)
-  - Security: Authentication, authorization, audit logs
-  - Error handling: Offline mode, conflict resolution, retry logic
-- **Files to Create**:
-  - `backend/` - New backend service (separate repo or monorepo)
-  - `backend/api/events.js` - Event CRUD endpoints
-  - `backend/services/fileSync.js` - UNC path file operations
-  - `backend/websocket.js` - Real-time event broadcasting
-  - `src/services/api.ts` - Frontend API client
-  - `src/hooks/useRealtimeSync.ts` - WebSocket hook
-- **Files to Modify**:
-  - `src/contexts/UnifiedEventStore.tsx` - Add backend sync
-  - `src/components/TimeOffView.tsx` - Show who created each event
-  - `src/components/SettingsPanel.tsx` - Add server connection settings
-  - All view components - Handle multi-user events
-- **Challenges**:
-  - Conflict resolution (simultaneous edits)
-  - Offline capability becomes much harder
-  - UNC paths are Windows-specific (not cross-platform)
-  - Security concerns (network share access, auth)
-  - Increased infrastructure requirements
-- **Alternative (Simpler)**:
-  - Manual export to shared folder (no backend)
-  - "Import team file" button for read-only viewing
-  - Gets 80% of benefit with 20% of complexity
-- **Estimated Effort**: 40–60 hours (Major feature, requires backend development)
-- **Status**: 🔲 Aspirational (future team collaboration feature)
-- **Prerequisites**: None (EventStoreContext already exists, just needs backend sync methods)
-
-## Current To-do Status
-
-### 🔲 Next Up
-
-1. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
-
-### 📋 Backlog (Code Quality)
-
-2. **Reusable TeamSelector Component** - Reduce code duplication
-
-### 📋 Backlog (Features)
-
-3. **ScheduleDetailModal Enhancement** - Activate disabled features
-4. **Enhanced Error Boundaries** - Better error handling
-
-### 📋 Backlog (Time-Off Management)
-
-5. **Time-Off TransferView Overlays** - Event indicators on transfer view
-6. **iCal Subscription Link** - Server-side calendar feed (blocked on backend)
-
-### 📋 Backlog (UI/UX)
-
-7. **Mobile Carousel** - Improved mobile navigation
-8. **Notification System** - Browser notifications for shifts and time-off
-9. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
-10. **Floating Action Button** - Quick actions overlay
-
-### 📋 Aspirational (Long-Term Vision)
-
-11. **Backend with Shared Files** - Team collaboration with real-time .hday sync (40-60 hours, major undertaking, includes optional unified store)
-
-## Technical Requirements
-
-### Dependencies
-
-- All components use existing `react-bootstrap` - no new dependencies
-- Maintain existing responsive design
-- Preserve accessibility standards
-- Keep bundle size minimal
-
-### Testing Strategy
-
-- Unit tests for all new components
-- Integration tests for complex interactions
-- Visual regression testing for UI changes
-- Accessibility testing with screen readers
-
-### Performance Considerations
-
-- Lazy load modals and heavy components
-- Optimize carousel for smooth animations
-- Minimize re-renders with proper memoization
-- Keep bundle size impact minimal
-
-## Success Metrics
-
-### User Experience
-
-- Reduced cognitive load with visual progress indicators
-- Improved discoverability with tooltips
-- Enhanced mobile usability with touch-friendly components
-- Better feedback with toast notifications
-
-### Technical Quality
-
-- Maintain 100% test coverage
-- Zero accessibility regressions
-- No performance degradation
-- Clean, maintainable code architecture
-
-## Changelog Integration
-
-### In-App Changelog Viewer
-
-- Accessible via settings panel
-- Formatted changelog display
-- Version history with dates
-- Feature highlights with screenshots
-
-### Version Tracking
-
-- Semantic versioning (4.x.x)
-- Git tags for releases
-- Automated changelog generation
-- Release notes in GitHub
-
-## Risk Assessment
-
-### Low-Risk
-
-- Toast notifications (isolated feature)
-- Progress bars (simple UI update)
-- Tooltips (non-intrusive enhancement)
-
-### Medium Risk
-
-- Offcanvas settings (new navigation pattern)
-- Modal components (focus management)
-
-### High-Risk
-
-- Carousel implementation (complex touch handling)
-- Major layout changes (potential responsive issues)
-
-## Future Considerations
-
-### Potential Extensions
-
-- Advanced notification preferences
-- Export/import settings
-
-### User Account System (Future Phase)
-
-- **Current**: localStorage-based preferences (device-bound, privacy-first)
-- **Migration Path**: Hybrid localStorage + cloud sync approach
-- **Benefits**: Multi-device sync, backup/restore, team sharing
-- **Implementation Strategy**:
-  - Phase 1: Keep current localStorage foundation ✅
-  - Phase 2: Add optional account sync (hybrid approach)
-  - Phase 3: Full multi-device real-time sync
-- **Considerations**:
-  - Maintain offline-first PWA capabilities
-  - Preserve zero-infrastructure-cost option
-  - Smooth migration without breaking changes
-
-### State Management Optimization
-
-**Zustand Migration** (Low Priority)
-
-- **Component**: Replace Context API with Zustand for state management
-- **Current State**: EventStoreContext uses Context API + useReducer pattern
-- **Potential Benefits**:
-  - 95% memory reduction with Immer middleware (structural sharing)
-  - Zero-code undo/redo via Temporal middleware (eliminates 200+ lines of manual history logic)
-  - Granular subscriptions (better performance - components only re-render when their data slice changes)
-  - Built-in localStorage persistence
-  - Redux DevTools integration
-- **Trade-offs**:
-  - +15 KB bundle size (Zustand 1 KB + Immer 14 KB)
-  - Learning curve for team
-  - Migration effort: ~4-5 hours
-- **Recommendation**: Consider when adding second store (SettingsStore migration candidate)
-- **Status**: 🔲 Future (nice-to-have optimization, not blocking)
-
-### Accessibility Enhancements
-
-- High contrast mode
-- Font size preferences
-- Motion reduction settings
+To-do list and development roadmap for Worktime. Audited against the codebase on 2026-05-31.
 
 ---
 
-**Last Updated**: 2026-02-22
-**Next Review**: After v4.8.0
+## Next Up
+
+### 1. Cross-Schedule Overlap Detection in TransferView
+
+- **What exists**: TransferView already has a schedule selector (`onChangeSchedule` prop), date range filtering, and grouped accordion layout.
+- **What's missing**: Overlap calculation logic — computing which working hours a user on schedule A shares with a team on schedule B, and surfacing those as a timeline.
+- **Files to modify**:
+  - `src/components/TransferView.tsx` — render overlap periods alongside handover moments
+  - `src/utils/shiftCalculations.ts` — add cross-schedule overlap detection utilities
+- **Estimated effort**: 2–3 hours
+- **Status**: 🔲 Planned
+
+---
+
+## Backlog — Code Quality
+
+### 2. Reusable TeamSelector Component
+
+- **What exists**: Team selection is implemented inline in at least `TransferView.tsx` and `ScheduleDetailModal.tsx` using `Form.Select`.
+- **What's missing**: `src/components/common/TeamSelector.tsx` — a shared component with standard props (`selectedTeam`, `availableTeams`, `onChange`, `label`).
+- **Files to modify**:
+  - Create `src/components/common/TeamSelector.tsx`
+  - `src/components/TransferView.tsx` — replace inline select
+  - `src/components/schedule/ScheduleDetailModal.tsx` — replace inline select
+- **Estimated effort**: 2–3 hours
+- **Status**: 🔲 Planned
+
+---
+
+## Backlog — Features
+
+### 3. ScheduleDetailModal — Export Button
+
+- **What exists**: The modal is complete — 7-day view, shift distribution, weekly statistics, responsive desktop table and mobile cards.
+- **What's missing**: An export action in `Modal.Footer` (currently only a Close button). Export format TBD — `.ics` one-time download or PDF.
+- **GitHub issue**: #274
+- **Files to modify**: `src/components/schedule/ScheduleDetailModal.tsx`
+- **Estimated effort**: 1–2 hours
+- **Status**: 🔲 Planned
+
+### 4. Time-Off Overlays on TransferView
+
+- **What exists**: `TimeOffView` shows events separately. `ScheduleView` already has overlay dots (shipped in v4.7.0).
+- **What's missing**: Time-off event indicators (vacation, business trips) overlaid on TransferView items so absence is visible alongside transfer points.
+- **Files to modify**: `src/components/TransferView.tsx`
+- **Estimated effort**: 2–3 hours
+- **Status**: 🔲 Planned
+
+### 5. iCal Subscription Link
+
+- **What exists**: Backend REST API for time-off CRUD is complete (auth, DB models, GET/POST/PATCH/DELETE). The previous blocker ("backend must be in place first") is resolved.
+- **What's missing**: A `/api/ical/subscribe` endpoint returning an RFC 5545 `.ics` feed combining shifts and time-off, plus a frontend UI to surface the subscription URL.
+- **Notes**: Shifts are currently client-computed, so the backend feed must replicate the shift calculation logic for the user's team and schedule type. A subscription link auto-refreshes in calendar apps; prefer it over a one-time download.
+- **Files to modify/create**:
+  - `backend/app/routers/ical.py` — new endpoint
+  - Frontend settings panel — show subscription URL
+- **Estimated effort**: 4–6 hours
+- **Status**: 🔲 Planned
+
+---
+
+## Backlog — UI / UX
+
+### 6. Advanced Accessibility
+
+- **What exists**: Extensive ARIA coverage (aria-label, aria-hidden, aria-describedby throughout), screen reader enhancements and focus management shipped in v4.6–4.7.
+- **What's missing**: High-contrast mode, font size scaling (75–150%), and `prefers-reduced-motion` support. Needs an `AccessibilityContext` and a settings panel section.
+- **GitHub issue**: #270
+- **Estimated effort**: 3–4 hours
+- **Status**: 🔲 Planned
+
+### 7. Notification System
+
+- **What exists**: `ToastContext` (success/error/warning/info with auto-dismiss), a notifications on/off toggle in SettingsContext, and the toggle UI in SettingsGeneralSection.
+- **What's missing**: Browser Notification API integration and shift reminder scheduling (e.g. 15 min before shift start).
+- **Constraint**: PWA service workers were intentionally removed in v4.6.0 to avoid cache-related issues. Push notifications via a service worker would require re-enabling PWA infrastructure. Browser Notification API (foreground-only) can be done without a service worker.
+- **GitHub issue**: #271
+- **Estimated effort**: 4–5 hours (foreground-only); more if push/background is required
+- **Status**: 🔲 Planned
+
+### 8. PWA Installation Prompts
+
+- **What exists**: Nothing — PWA functionality was removed in v4.6.0.
+- **What's needed**: Smart install prompts triggered by user engagement signals (`beforeinstallprompt` event), with dismissal memory.
+- **Constraint**: Requires re-enabling the service worker removed in v4.6.0. Evaluate whether the original cache issues can be avoided with a minimal service worker scope.
+- **GitHub issue**: #273
+- **Estimated effort**: 3–4 hours
+- **Status**: 🔲 Planned
+
+### 9. Mobile Carousel for Team View
+
+- **What exists**: Nothing.
+- **What's needed**: Swipe-through team browsing on mobile using `react-bootstrap/Carousel`, with desktop fallback (buttons or tabs).
+- **Estimated effort**: 5–6 hours
+- **Status**: 🔲 Future
+
+### 10. Floating Action Button
+
+- **What exists**: Nothing.
+- **What's needed**: Fixed-position button with a quick-action menu (team switch, add time-off, add to calendar). Needs keyboard navigation and mobile-safe positioning.
+- **Estimated effort**: 2–3 hours
+- **Status**: 🔲 Future
+
+---
+
+## Aspirational — Long-Term
+
+### 11. Real-Time Team Collaboration (shared time-off)
+
+- **What exists**: Backend REST API for time-off CRUD is complete (auth, DB, GET/POST/PATCH/DELETE). `EventStoreContext` is ready to receive `syncWithBackend()` and `subscribeToUpdates()` methods.
+- **What's missing**: The sync layer — frontend calling the backend API — and then real-time broadcast.
+
+**Phase 1 — Manual sync** (6–8 hours)
+- "Sync to team" button in settings
+- Pull team members' time-off from the API
+- Show team events read-only alongside personal events
+
+**Phase 2 — Real-time sync** (8–12 hours)
+- SSE or WebSocket for live updates (SSE already used for `sync_changed` events — reuse `SyncSignalTransport`)
+- Auto-sync on changes; read-only team events update instantly
+
+**Phase 3 — Multi-user editing** (12–16 hours)
+- Write access for other users' team events
+- Conflict resolution
+- Approval workflow for vacation requests
+
+**Architecture**: Extend `EventStoreContext` with backend sync methods (Option A from original design). Shifts remain client-computed.
+
+- **Total estimated effort**: 40–60 hours
+- **Status**: 🔲 Aspirational
+
+---
+
+## Dropped / Resolved
+
+| Item | Reason |
+|------|--------|
+| Enhanced Error Boundaries | `ErrorBoundary.tsx` with HOC wrapper already exists and is in use. Expand usage on a case-by-case basis rather than as a planned initiative. |
+| ScheduleDetailModal display improvements | Fully shipped in v4.7.0 (shift distribution, weekly stats, responsive views). Only export remains — see item 3. |
+| State management migration (Zustand) | Moved to future considerations only; not a planned initiative. |
+
+---
+
+## Future Considerations (not planned)
+
+- **Zustand migration** — Replace Context API + useReducer with Zustand for structural sharing, undo/redo middleware, and granular subscriptions. +15 KB bundle (Zustand + Immer). Consider when adding a second store.
+- **User account system** — Optional cloud sync on top of the current localStorage-first approach; hybrid model preserving offline capability.
+
+---
+
+**Last updated**: 2026-05-31
+**Next review**: After v4.8.0
