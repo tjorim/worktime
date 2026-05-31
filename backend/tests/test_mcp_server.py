@@ -53,6 +53,7 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "get_work_location_summary",
         "get_time_tracking_summary",
         "list_labels",
+        "delete_label",
         "get_gantt_tasks",
         "get_sync_status",
         "start_time_entry",
@@ -93,8 +94,8 @@ async def test_whoami_and_time_tracking_summary_happy_path(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    whoami_payload = await backend.whoami(ctx=None)  # type: ignore[arg-type]
-    summary_payload = await backend.get_time_tracking_summary(ctx=None)  # type: ignore[arg-type]
+    whoami_payload = await backend.whoami()
+    summary_payload = await backend.get_time_tracking_summary()
 
     assert whoami_payload["user_id"] == user.id
     assert whoami_payload["username"] == "mcp-user"
@@ -122,9 +123,51 @@ async def test_list_labels_returns_active_labels_for_authenticated_user(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    payload = await backend.list_labels(ctx=None)  # type: ignore[arg-type]
+    payload = await backend.list_labels()
 
     assert payload == {"labels": [{"id": active.id, "name": "Client", "color": "#112233"}]}
+
+
+async def test_delete_label_removes_label(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="del-label-user", display_name="Del"))
+        label = await db_service.create_label(session, user.id, LabelCreate(name="ToDelete", color="#aabbcc"))
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    payload = await backend.delete_label(label_id=label.id)
+
+    assert payload == {"deleted": True, "label_id": label.id, "user_id": user.id}
+
+    async with session_factory() as session:
+        labels = await db_service.list_labels_for_user(session, user.id)
+    assert not any(lb.id == label.id for lb in labels)
+
+
+async def test_delete_label_raises_when_label_in_use(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="inuse-label-user", display_name="InUse"))
+        label = await db_service.create_label(session, user.id, LabelCreate(name="InUse", color="#112233"))
+        await db_service.create_task(
+            session, user.id, TaskCreate(text="task", label_id=label.id, start_time=datetime.now(UTC))
+        )
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    with pytest.raises(ValueError, match="in use"):
+        await backend.delete_label(label_id=label.id)
 
 
 async def test_resolve_context_requires_authenticated_token(
@@ -179,8 +222,7 @@ async def test_start_and_stop_time_entry(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     start_payload = await backend.start_time_entry(
-        ctx=None,  # type: ignore[arg-type]
-        text="Working on feature",
+text="Working on feature",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
     assert start_payload["text"] == "Working on feature"
@@ -188,8 +230,7 @@ async def test_start_and_stop_time_entry(
     assert start_payload["user_id"] == user.id
 
     stop_payload = await backend.stop_time_entry(
-        ctx=None,  # type: ignore[arg-type]
-        stop_time=datetime(2026, 5, 1, 10, 30, tzinfo=UTC),
+stop_time=datetime(2026, 5, 1, 10, 30, tzinfo=UTC),
     )
     assert stop_payload["id"] == start_payload["id"]
     assert stop_payload["stop_time"] is not None
@@ -215,15 +256,13 @@ async def test_start_time_entry_blocks_second_running_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.start_time_entry(
-        ctx=None,  # type: ignore[arg-type]
-        text="First task",
+text="First task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
 
     with pytest.raises(db_service.ConflictError):
         await backend.start_time_entry(
-            ctx=None,  # type: ignore[arg-type]
-            text="Second task",
+        text="Second task",
             start_time=datetime(2026, 5, 1, 9, 30, tzinfo=UTC),
         )
 
@@ -248,7 +287,7 @@ async def test_stop_time_entry_no_running_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(db_service.NotFoundError, match="no running task"):
-        await backend.stop_time_entry(ctx=None)  # type: ignore[arg-type]
+        await backend.stop_time_entry()
 
 
 async def test_create_time_tracking_task(
@@ -271,8 +310,7 @@ async def test_create_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.create_time_tracking_task(
-        ctx=None,  # type: ignore[arg-type]
-        text="Completed task",
+text="Completed task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
         stop_time=datetime(2026, 5, 1, 11, 0, tzinfo=UTC),
         includes_break=True,
@@ -313,8 +351,7 @@ async def test_update_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     updated = await backend.update_time_tracking_task(
-        ctx=None,  # type: ignore[arg-type]
-        task_id=task.id,
+task_id=task.id,
         text="Updated text",
     )
     assert updated["text"] == "Updated text"
@@ -352,8 +389,7 @@ async def test_update_time_tracking_task_unauthorized(
 
     with pytest.raises(db_service.NotFoundError):
         await backend.update_time_tracking_task(
-            ctx=None,  # type: ignore[arg-type]
-            task_id=task.id,
+        task_id=task.id,
             text="Hacked",
         )
 
@@ -380,8 +416,7 @@ async def test_create_update_delete_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_tracking_task(
-        ctx=None,  # type: ignore[arg-type]
-        text="Task to delete",
+text="Task to delete",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
         stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
     )
@@ -389,15 +424,13 @@ async def test_create_update_delete_time_tracking_task(
     task_id = created["id"]
 
     updated = await backend.update_time_tracking_task(
-        ctx=None,  # type: ignore[arg-type]
-        task_id=task_id,
+task_id=task_id,
         text="Updated before delete",
     )
     assert updated["text"] == "Updated before delete"
 
     deleted = await backend.delete_time_tracking_task(
-        ctx=None,  # type: ignore[arg-type]
-        task_id=task_id,
+task_id=task_id,
     )
     assert deleted["deleted"] is True
     assert deleted["task_id"] == task_id
@@ -438,7 +471,7 @@ async def test_delete_time_tracking_task_unauthorized(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(db_service.NotFoundError):
-        await backend.delete_time_tracking_task(ctx=None, task_id=task.id)  # type: ignore[arg-type]
+        await backend.delete_time_tracking_task(task_id=task.id)
 
 
 async def test_set_work_location(
@@ -461,8 +494,7 @@ async def test_set_work_location(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.set_work_location(
-        ctx=None,  # type: ignore[arg-type]
-        value_date=date(2026, 5, 1),
+value_date=date(2026, 5, 1),
         country_code="BE",
         label="HQ",
     )
@@ -472,8 +504,7 @@ async def test_set_work_location(
 
     # Idempotent: calling again overwrites
     payload2 = await backend.set_work_location(
-        ctx=None,  # type: ignore[arg-type]
-        value_date=date(2026, 5, 1),
+value_date=date(2026, 5, 1),
         country_code="NL",
     )
     assert payload2["country_code"] == "NL"
@@ -499,14 +530,12 @@ async def test_delete_work_location(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.set_work_location(
-        ctx=None,  # type: ignore[arg-type]
-        value_date=date(2026, 5, 1),
+value_date=date(2026, 5, 1),
         country_code="BE",
     )
 
     deleted = await backend.delete_work_location(
-        ctx=None,  # type: ignore[arg-type]
-        value_date=date(2026, 5, 1),
+value_date=date(2026, 5, 1),
     )
     assert deleted["deleted"] is True
     assert deleted["date"] == "2026-05-01"
@@ -514,8 +543,7 @@ async def test_delete_work_location(
 
     with pytest.raises(db_service.NotFoundError):
         await backend.delete_work_location(
-            ctx=None,  # type: ignore[arg-type]
-            value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
         )
 
 
@@ -540,8 +568,7 @@ async def test_set_work_location_invalid_country(
 
     with pytest.raises(ValidationError):
         await backend.set_work_location(
-            ctx=None,  # type: ignore[arg-type]
-            value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
             country_code="ZZ",
         )
 
@@ -566,8 +593,7 @@ async def test_create_update_delete_time_off_event(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_off_event(
-        ctx=None,  # type: ignore[arg-type]
-        entry_kind="date",
+entry_kind="date",
         entry_type="vacation",
         date=date(2026, 8, 1),
         note="Summer holiday",
@@ -577,15 +603,13 @@ async def test_create_update_delete_time_off_event(
     entry_id = created["entry_id"]
 
     updated = await backend.update_time_off_event(
-        ctx=None,  # type: ignore[arg-type]
-        entry_id=entry_id,
+entry_id=entry_id,
         note="Summer holiday (updated)",
     )
     assert updated["note"] == "Summer holiday (updated)"
 
     deleted = await backend.delete_time_off_event(
-        ctx=None,  # type: ignore[arg-type]
-        entry_id=entry_id,
+entry_id=entry_id,
     )
     assert deleted["deleted"] is True
     assert deleted["entry_id"] == entry_id
@@ -613,15 +637,13 @@ async def test_create_time_off_event_idempotent_with_entry_id(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     first = await backend.create_time_off_event(
-        ctx=None,  # type: ignore[arg-type]
-        entry_kind="date",
+entry_kind="date",
         entry_type="vacation",
         date=date(2026, 9, 1),
         entry_id="fixed-entry-id",
     )
     second = await backend.create_time_off_event(
-        ctx=None,  # type: ignore[arg-type]
-        entry_kind="date",
+entry_kind="date",
         entry_type="ill",
         date=date(2026, 9, 1),
         entry_id="fixed-entry-id",
@@ -660,7 +682,7 @@ async def test_delete_time_off_event_unauthorized(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(db_service.NotFoundError):
-        await backend.delete_time_off_event(ctx=None, entry_id=entry.entry_id)  # type: ignore[arg-type]
+        await backend.delete_time_off_event(entry_id=entry.entry_id)
 
 
 async def test_create_update_delete_gantt_task(
@@ -685,8 +707,7 @@ async def test_create_update_delete_gantt_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_gantt_task(
-        ctx=None,  # type: ignore[arg-type]
-        name="Sprint 1",
+name="Sprint 1",
         start_date=date(2026, 6, 1),
         end_date=date(2026, 6, 14),
         progress=0,
@@ -696,8 +717,7 @@ async def test_create_update_delete_gantt_task(
     task_id = created["id"]
 
     updated = await backend.update_gantt_task(
-        ctx=None,  # type: ignore[arg-type]
-        task_id=task_id,
+task_id=task_id,
         progress=50,
         notes="Halfway done",
     )
@@ -705,8 +725,7 @@ async def test_create_update_delete_gantt_task(
     assert updated["notes"] == "Halfway done"
 
     deleted = await backend.delete_gantt_task(
-        ctx=None,  # type: ignore[arg-type]
-        task_id=task_id,
+task_id=task_id,
     )
     assert deleted["deleted"] is True
     assert deleted["task_id"] == task_id
@@ -735,8 +754,7 @@ async def test_create_gantt_task_invalid_date_range(
 
     with pytest.raises(ValidationError):
         await backend.create_gantt_task(
-            ctx=None,  # type: ignore[arg-type]
-            name="Bad range",
+        name="Bad range",
             start_date=date(2026, 6, 14),
             end_date=date(2026, 6, 1),
         )
@@ -772,7 +790,7 @@ async def test_delete_gantt_task_unauthorized(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(db_service.NotFoundError):
-        await backend.delete_gantt_task(ctx=None, task_id=gantt.id)  # type: ignore[arg-type]
+        await backend.delete_gantt_task(task_id=gantt.id)
 
 
 async def test_write_tools_produce_audit_log_entries(
@@ -800,8 +818,7 @@ async def test_write_tools_produce_audit_log_entries(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.set_work_location(
-        ctx=None,  # type: ignore[arg-type]
-        value_date=date(2026, 5, 1),
+value_date=date(2026, 5, 1),
         country_code="DE",
     )
 

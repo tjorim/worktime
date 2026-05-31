@@ -45,6 +45,7 @@ interface DashboardRepository {
     ): MutationResult<WorkLocationRecord>
 
     suspend fun loadWeeklyWorkLocations(until: LocalDate = LocalDate.now()): MutationResult<List<WorkLocationRecord>>
+    suspend fun deleteLabel(labelId: String): MutationResult<Unit>
     suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse>
     fun logout()
 }
@@ -154,6 +155,27 @@ class WorktimeRepository(
                 startDate = until.minusDays(6).toString(),
                 endDate = until.toString(),
             ).items
+        }
+    }
+
+    override suspend fun deleteLabel(labelId: String): MutationResult<Unit> {
+        val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
+        val userId = currentUserId ?: return MutationResult.Error("Reload your dashboard before making changes")
+        return try {
+            val response = api.deleteLabel(authorization = "Bearer $token", labelId = labelId, userId = userId)
+            if (!response.isSuccessful) throw HttpException(response)
+            MutationResult.Success(Unit)
+        } catch (error: HttpException) {
+            when (error.code()) {
+                401 -> { sessionController.logout(); MutationResult.LoggedOut }
+                409 -> MutationResult.ValidationError("Label is in use by tasks or templates and cannot be deleted")
+                else -> MutationResult.Error("Request failed (${error.code()})")
+            }
+        } catch (_: IOException) {
+            MutationResult.Error("Unable to reach the Worktime backend")
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            MutationResult.Error(error.message ?: "Request failed")
         }
     }
 

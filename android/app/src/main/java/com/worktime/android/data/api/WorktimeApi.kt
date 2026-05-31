@@ -14,6 +14,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.Response
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -64,6 +65,13 @@ interface WorktimeApi {
         @Query("start_date") startDate: String? = null,
         @Query("end_date") endDate: String? = null,
     ): WorkLocationListResponse
+
+    @DELETE("api/time-tracking/labels/{labelId}")
+    suspend fun deleteLabel(
+        @Header("Authorization") authorization: String,
+        @Path("labelId") labelId: String,
+        @Query("user_id") userId: Int,
+    ): Response<Unit>
 
     @GET("api/sync/status")
     suspend fun getSyncStatus(
