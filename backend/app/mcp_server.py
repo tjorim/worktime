@@ -598,7 +598,6 @@ class WorktimeMcpBackend:
         """
         _ = ctx
         async with self._tool_context() as (context, db):
-            await get_task(db, context.user_id, task_id)
             await delete_task(db, context.user_id, task_id)
             audit.append(
                 target=f"user:{context.user_id}:task:{task_id}",
