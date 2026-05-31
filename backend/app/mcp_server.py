@@ -51,6 +51,7 @@ from app.services.db_service import (
     get_time_off_entry,
     get_user,
     list_gantt_tasks,
+    list_labels_for_user,
     list_tasks,
     list_time_off_entries,
     list_work_locations,
@@ -390,6 +391,22 @@ class WorktimeMcpBackend:
                 "tracked_seconds": total_seconds,
                 "running_task": running_payload,
                 "tasks": payload_tasks,
+            }
+
+    async def list_labels(self, ctx: Context) -> dict[str, Any]:
+        """List the authenticated user's active time-tracking labels."""
+        _ = ctx
+        async with self._tool_context() as (context, db):
+            labels = await list_labels_for_user(db, context.user_id)
+            return {
+                "labels": [
+                    {
+                        "id": label.id,
+                        "name": label.name,
+                        "color": label.color,
+                    }
+                    for label in labels
+                ]
             }
 
     async def get_gantt_tasks(
@@ -818,6 +835,7 @@ def create_mcp_server(
     server.tool(name="get_time_off_summary")(backend.get_time_off_summary)
     server.tool(name="get_work_location_summary")(backend.get_work_location_summary)
     server.tool(name="get_time_tracking_summary")(backend.get_time_tracking_summary)
+    server.tool(name="list_labels")(backend.list_labels)
     server.tool(name="get_gantt_tasks")(backend.get_gantt_tasks)
     server.tool(name="get_sync_status")(backend.get_sync_status)
     server.tool(name="start_time_entry")(backend.start_time_entry)

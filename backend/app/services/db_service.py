@@ -249,7 +249,10 @@ async def get_label(session: AsyncSession, user_id: int, label_id: str) -> TimeT
 async def list_labels_for_user(session: AsyncSession, user_id: int) -> list[TimeTrackingLabel]:
     result = await session.execute(
         select(TimeTrackingLabel)
-        .where(TimeTrackingLabel.user_id == user_id)
+        .where(
+            TimeTrackingLabel.user_id == user_id,
+            TimeTrackingLabel.deleted_at.is_(None),
+        )
         .order_by(TimeTrackingLabel.created_at.desc())
     )
     return list(result.scalars().all())
