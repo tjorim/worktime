@@ -160,6 +160,8 @@ class DashboardViewModelTest {
         override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> =
             MutationResult.Success(emptyList())
 
+        override suspend fun deleteLabel(labelId: String): MutationResult<Unit> = MutationResult.Success(Unit)
+
         override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> =
             MutationResult.Success(SyncStatusResponse(serverTimestamp = "2026-05-26T12:00:00Z"))
     }
