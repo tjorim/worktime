@@ -1,13 +1,15 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import type { GanttTask } from "@/types/gantt";
 import { useSettings } from "@/contexts/SettingsContext";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { GanttChart } from "./GanttChart";
-import { GanttTaskModal, type GanttTaskFormInput } from "./GanttTaskModal";
+import { GanttChart } from "@/components/gantt/GanttChart";
+import { GanttTableView } from "@/components/gantt/GanttTableView";
+import { GanttTaskModal, type GanttTaskFormInput } from "@/components/gantt/GanttTaskModal";
 import * as m from "@/paraglide/messages.js";
 
 export function GanttView() {
@@ -18,7 +20,12 @@ export function GanttView() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { lastUsed, updateLastGanttViewMode } = useSettings();
+  const { lastUsed, updateLastGanttView, updateLastGanttViewMode } = useSettings();
+  const [view, setView] = useState(lastUsed.ganttView);
+
+  useEffect(() => {
+    updateLastGanttView(view);
+  }, [updateLastGanttView, view]);
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -68,12 +75,19 @@ export function GanttView() {
     [updateTask],
   );
 
+  const handleRemoveTask = useCallback(
+    (taskId: string) => {
+      removeTask(taskId);
+    },
+    [removeTask],
+  );
+
   const handleDeleteTask = () => {
     if (!editingTask) {
       return;
     }
 
-    removeTask(editingTask.id);
+    handleRemoveTask(editingTask.id);
     setShowDeleteConfirm(false);
     setShowModal(false);
     setEditingTask(null);
@@ -81,22 +95,50 @@ export function GanttView() {
 
   return (
     <div className="gantt-view py-3 d-flex flex-column gap-3">
-      <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+      <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <ButtonGroup aria-label={m.gantt_toggle_view_aria()}>
+          <Button
+            variant={view === "chart" ? "primary" : "outline-primary"}
+            size="sm"
+            aria-pressed={view === "chart"}
+            onClick={() => setView("chart")}
+          >
+            <i className="bi bi-bar-chart me-1" aria-hidden="true"></i>
+            {m.gantt_chart_view()}
+          </Button>
+          <Button
+            variant={view === "table" ? "primary" : "outline-primary"}
+            size="sm"
+            aria-pressed={view === "table"}
+            onClick={() => setView("table")}
+          >
+            <i className="bi bi-table me-1" aria-hidden="true"></i>
+            {m.gantt_table_view()}
+          </Button>
+        </ButtonGroup>
         <Button size="sm" onClick={handleAddTask}>
           <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
           {m.gantt_task_modal_add()}
         </Button>
       </div>
 
-      <GanttChart
-        tasks={tasks}
-        initialViewMode={lastUsed.ganttViewMode}
-        holidays={holidayDates}
-        onTaskClick={handleTaskClick}
-        onDateChange={handleDateChange}
-        onProgressChange={handleProgressChange}
-        onViewModeChange={updateLastGanttViewMode}
-      />
+      {view === "chart" ? (
+        <GanttChart
+          tasks={tasks}
+          initialViewMode={lastUsed.ganttViewMode}
+          holidays={holidayDates}
+          onTaskClick={handleTaskClick}
+          onDateChange={handleDateChange}
+          onProgressChange={handleProgressChange}
+          onViewModeChange={updateLastGanttViewMode}
+        />
+      ) : (
+        <GanttTableView
+          tasks={tasks}
+          onTaskClick={handleTaskClick}
+          onDeleteTask={handleRemoveTask}
+        />
+      )}
 
       <GanttTaskModal
         show={showModal}

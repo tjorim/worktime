@@ -209,6 +209,21 @@ describe("GanttView", () => {
     expect(screen.queryByRole("button", { name: "Year" })).not.toBeInTheDocument();
   });
 
+  it("switches to the table view and persists the selection", async () => {
+    const user = userEvent.setup();
+    renderWithSettings(<GanttView />);
+
+    await user.click(screen.getByRole("button", { name: "Table" }));
+
+    expect(screen.getByRole("table", { name: "Gantt tasks" })).toBeInTheDocument();
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem("worktime_user_state") ?? "{}") as {
+        lastUsed?: { ganttView?: string };
+      };
+      expect(stored.lastUsed?.ganttView).toBe("table");
+    });
+  });
+
   it("passes public holiday dates to GanttChart", () => {
     // Map preserves insertion order, so the joined string is deterministic given the mock above.
     renderWithSettings(<GanttView />);
