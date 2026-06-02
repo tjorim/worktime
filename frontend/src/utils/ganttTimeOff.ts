@@ -47,10 +47,9 @@ export function getGanttTimeOffDates(entries: TimeOffEntry[], year: number): str
         continue;
       }
 
-      let current = yearStart;
-      while (current.isoWeekday() !== entry.weekday) {
-        current = current.add(1, "day");
-      }
+      const startWeekday = yearStart.isoWeekday();
+      const daysToAdd = (entry.weekday - startWeekday + 7) % 7;
+      let current = yearStart.add(daysToAdd, "day");
       while (!current.isAfter(yearEnd, "day")) {
         addDate(current);
         current = current.add(1, "week");

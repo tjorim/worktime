@@ -14,6 +14,8 @@ import { GanttTableView } from "@/components/gantt/GanttTableView";
 import { GanttTaskModal, type GanttTaskFormInput } from "@/components/gantt/GanttTaskModal";
 import * as m from "@/paraglide/messages.js";
 
+const EMPTY_ARRAY: string[] = [];
+
 export function GanttView() {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();
   const currentYear = dayjs().year();
@@ -25,7 +27,7 @@ export function GanttView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { settings, lastUsed, updateLastGanttView, updateLastGanttViewMode } = useSettings();
   const timeOffDates = useMemo(
-    () => (settings.enableTimeOff ? getGanttTimeOffDates(timeOffEntries, currentYear) : []),
+    () => (settings.enableTimeOff ? getGanttTimeOffDates(timeOffEntries, currentYear) : EMPTY_ARRAY),
     [currentYear, settings.enableTimeOff, timeOffEntries],
   );
   const [view, setView] = useState(lastUsed.ganttView);

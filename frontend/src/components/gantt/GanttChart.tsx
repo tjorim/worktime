@@ -6,6 +6,7 @@ import type { GanttViewMode } from "@/contexts/SettingsContext";
 import { getLocale } from "@/paraglide/runtime.js";
 
 const POPUP_DATE_FORMAT = "MMM D";
+const EMPTY_ARRAY: string[] = [];
 
 const htmlEscapeMap: Record<string, string> = {
   "&": "&amp;",
@@ -47,8 +48,8 @@ function getTaskId(task: unknown): string | null {
 export function GanttChart({
   tasks,
   initialViewMode = "Day",
-  holidays = [],
-  timeOffDates = [],
+  holidays = EMPTY_ARRAY,
+  timeOffDates = EMPTY_ARRAY,
   onTaskClick,
   onDateChange,
   onProgressChange,
