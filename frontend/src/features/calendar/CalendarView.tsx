@@ -7,7 +7,7 @@ import {
   createViewMonthGrid,
   createViewWeek,
 } from "@schedule-x/calendar";
-import { createDragAndDropPlugin } from "@schedule-x/drag-and-drop";
+import { createDragAndDropPlugin } from "@/features/calendar/dragAndDropAdapter";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
 import Alert from "react-bootstrap/Alert";

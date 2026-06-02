@@ -8,7 +8,7 @@ import type { TabKey } from "@/contexts/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
-import { CalendarView as LegacyCalendarView } from "./CalendarView";
+import { CalendarView as LegacyCalendarView } from "@/components/CalendarView";
 import { CalendarView } from "@/features/calendar/CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";

@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@schedule-x/calendar':
         specifier: ^4.6.0
-        version: 4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.0)
+        version: 4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.2)
       '@schedule-x/drag-and-drop':
         specifier: ^3.7.3
         version: 3.7.3
@@ -19,7 +19,7 @@ importers:
         version: 4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)
       '@schedule-x/react':
         specifier: ^4.1.0
-        version: 4.1.0(@schedule-x/calendar@4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 4.1.0(@schedule-x/calendar@4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.2))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@schedule-x/theme-default':
         specifier: ^4.6.0
         version: 4.6.0
@@ -75,8 +75,8 @@ importers:
         specifier: ^5.10.2
         version: 5.10.2(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       temporal-polyfill:
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.3.2
+        version: 0.3.2
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -2055,11 +2055,11 @@ packages:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
     engines: {node: '>=6'}
 
-  temporal-polyfill@0.3.0:
-    resolution: {integrity: sha512-qNsTkX9K8hi+FHDfHmf22e/OGuXmfBm9RqNismxBrnSmZVJKegQ+HYYXT+R7Ha8F/YSm2Y34vmzD4cxMu2u95g==}
+  temporal-polyfill@0.3.2:
+    resolution: {integrity: sha512-TzHthD/heRK947GNiSu3Y5gSPpeUDH34+LESnfsq8bqpFhsB79HFBX8+Z834IVX68P3EUyRPZK5bL/1fh437Eg==}
 
-  temporal-spec@0.3.0:
-    resolution: {integrity: sha512-n+noVpIqz4hYgFSMOSiINNOUOMFtV5cZQNCmmszA6GiVFVRt3G7AqVyhXjhCSmowvQn+NsGn+jMDMKJYHd3bSQ==}
+  temporal-spec@0.3.1:
+    resolution: {integrity: sha512-B4TUhezh9knfSIMwt7RVggApDRJZo73uZdj8AacL2mZ8RP5KtLianh2MXxL06GN9ESYiIsiuoLQhgVfwe55Yhw==}
 
   terser@5.48.0:
     resolution: {integrity: sha512-J/9An6vs9Us6wKRriSFXBWdRZapREHqFzdNUKk0pmu804EMR6dr6winwo7e5JDxN4xahxQsuysyYFwlwj4XN/Q==}
@@ -2914,11 +2914,11 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@schedule-x/calendar@4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.0)':
+  '@schedule-x/calendar@4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.2)':
     dependencies:
       '@preact/signals': 2.9.1(preact@10.29.2)
       preact: 10.29.2
-      temporal-polyfill: 0.3.0
+      temporal-polyfill: 0.3.2
 
   '@schedule-x/drag-and-drop@3.7.3': {}
 
@@ -2927,9 +2927,9 @@ snapshots:
       '@preact/signals': 2.9.1(preact@10.29.2)
       preact: 10.29.2
 
-  '@schedule-x/react@4.1.0(@schedule-x/calendar@4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@schedule-x/react@4.1.0(@schedule-x/calendar@4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.2))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@schedule-x/calendar': 4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.0)
+      '@schedule-x/calendar': 4.6.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@0.3.2)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
@@ -3953,11 +3953,11 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
-  temporal-polyfill@0.3.0:
+  temporal-polyfill@0.3.2:
     dependencies:
-      temporal-spec: 0.3.0
+      temporal-spec: 0.3.1
 
-  temporal-spec@0.3.0: {}
+  temporal-spec@0.3.1: {}
 
   terser@5.48.0:
     dependencies:

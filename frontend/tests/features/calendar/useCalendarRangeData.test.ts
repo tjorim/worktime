@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { tasksCollection, timeOffCollection } from "@/db/collections";
 import { useCalendarRangeData } from "@/features/calendar/useCalendarRangeData";
 
@@ -11,6 +11,16 @@ describe("useCalendarRangeData", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime("2026-05-31T12:00:00Z");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    for (const entry of timeOffCollection.toArray as { id: string }[]) {
+      timeOffCollection.delete(entry.id);
+    }
+    for (const task of tasksCollection.toArray as { id: string }[]) {
+      tasksCollection.delete(task.id);
+    }
   });
 
   it("merges range-filtered shifts, time-off entries, and tasks", async () => {

@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -492,6 +492,11 @@ async def _push_gantt_task(
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
+        await session.execute(
+            update(TimeTrackingTask)
+            .where(TimeTrackingTask.gantt_task_id == task.id)
+            .values(gantt_task_id=None)
+        )
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task is None:
