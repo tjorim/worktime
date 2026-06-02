@@ -147,6 +147,7 @@ describe("SettingsContext unified user state", () => {
         timeTrackingView: "daily",
         otherTeam: null,
         ganttViewMode: "Day",
+        ganttView: "chart",
       },
     });
   });
@@ -294,6 +295,14 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.lastUsed.ganttViewMode).toBe("Month");
     });
 
+    it("updates lastUsed.ganttView via updateLastGanttView", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastGanttView("table");
+      });
+      expect(result.current.lastUsed.ganttView).toBe("table");
+    });
+
     it("provides default lastUsed on fresh state", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       expect(result.current.lastUsed).toEqual({
@@ -304,6 +313,7 @@ describe("SettingsContext unified user state", () => {
         timeTrackingView: "daily",
         otherTeam: null,
         ganttViewMode: "Day",
+        ganttView: "chart",
       });
     });
   });
@@ -388,5 +398,4 @@ describe("SettingsContext unified user state", () => {
       expect(parsed.settings.officeCountry).toBe("NL");
     });
   });
-
 });

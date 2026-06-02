@@ -418,11 +418,11 @@ async def test_db_user_export_endpoint(
     assert "oidc_subject" not in body["user"]
     assert body["preferences"] == {"theme": "dark", "notifications": "off"}
     assert body["time_tracking_labels"][0]["id"] == "label-export"
-    assert body["time_tracking_tasks"][0]["deleted_at"] is not None
+    assert body["time_tracking_tasks"] == []
     assert body["time_tracking_templates"][0]["id"] == "template-export"
-    assert body["work_locations"][0]["deleted_at"] is not None
+    assert body["work_locations"] == []
     assert body["gantt_tasks"][0]["id"] == "gantt-export"
-    assert body["time_off_entries"][0]["deleted_at"] is not None
+    assert body["time_off_entries"] == []
 
     admin_export = client.get(f"/api/users/{owner_id}/export", headers=_auth_headers(other_id, is_admin=True))
     assert admin_export.status_code == 200

@@ -41,15 +41,24 @@ from app.services.db_service import (
     create_task,
     create_template,
     create_user,
+    delete_gantt_task,
     delete_label,
+    delete_task,
+    delete_template,
     delete_user,
+    delete_work_location,
+    get_gantt_task,
     get_label,
     get_running_task,
     get_task,
     get_template,
+    get_work_location,
+    list_gantt_tasks,
     list_labels_for_user,
     list_tasks,
+    list_templates_for_user,
     list_users,
+    list_work_locations,
     update_gantt_task,
     update_task,
     update_user,
@@ -228,7 +237,7 @@ async def test_delete_label_succeeds_when_unused(db_session: AsyncSession) -> No
     await delete_label(db_session, user.id, label.id)
 
     labels = await list_labels_for_user(db_session, user.id)
-    assert not any(l.id == label.id for l in labels)
+    assert not any(item.id == label.id for item in labels)
 
 
 async def test_work_location_upsert(db_session: AsyncSession) -> None:
@@ -451,3 +460,83 @@ async def test_get_template_is_scoped_to_user(db_session: AsyncSession) -> None:
 
     with pytest.raises(NotFoundError):
         await get_template(db_session, other.id, template.id)
+
+
+async def test_soft_deleted_entities_are_tombstoned_and_hidden(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="soft-delete", display_name="Soft Delete"))
+    label = await create_label(db_session, user.id, LabelCreate(name="Unused", color="#123456"))
+    task = await create_task(
+        db_session,
+        user.id,
+        TaskCreate(
+            text="Completed",
+            start_time=datetime(2026, 6, 1, 9, 0),
+            stop_time=datetime(2026, 6, 1, 10, 0),
+            includes_break=False,
+        ),
+    )
+    template = await create_template(
+        db_session,
+        user.id,
+        TemplateCreate(text="Template", start_time=time(9, 0), stop_time=time(10, 0)),
+    )
+    location = await create_or_update_work_location(
+        db_session,
+        user.id,
+        WorkLocationCreate(date=date(2026, 6, 1), country_code="NL", label="Home"),
+    )
+    gantt_task = await create_gantt_task(
+        db_session,
+        user.id,
+        GanttTaskCreate(
+            name="Milestone",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 2),
+            progress=0,
+        ),
+    )
+
+    await delete_label(db_session, user.id, label.id)
+    await delete_task(db_session, user.id, task.id)
+    await delete_template(db_session, user.id, template.id)
+    await delete_work_location(db_session, user.id, location.date)
+    await delete_gantt_task(db_session, user.id, gantt_task.id)
+
+    for model, entity_id in (
+        (TimeTrackingLabel, label.id),
+        (TimeTrackingTask, task.id),
+        (TimeTrackingTemplate, template.id),
+        (WorkLocation, location.id),
+        (GanttTask, gantt_task.id),
+    ):
+        tombstone = await db_session.get(model, entity_id)
+        assert tombstone is not None
+        assert tombstone.deleted_at is not None
+
+    with pytest.raises(NotFoundError):
+        await get_label(db_session, user.id, label.id)
+    with pytest.raises(NotFoundError):
+        await get_task(db_session, user.id, task.id)
+    with pytest.raises(NotFoundError):
+        await get_template(db_session, user.id, template.id)
+    with pytest.raises(NotFoundError):
+        await get_work_location(db_session, user.id, location.date)
+    with pytest.raises(NotFoundError):
+        await get_gantt_task(db_session, user.id, gantt_task.id)
+
+    assert await get_running_task(db_session, user.id) is None
+    assert await list_labels_for_user(db_session, user.id) == []
+    assert await list_tasks(db_session, user_id=user.id) == []
+    assert await list_templates_for_user(db_session, user.id) == []
+    assert await list_work_locations(db_session, user_id=user.id) == []
+    assert await list_gantt_tasks(db_session, user_id=user.id) == []
+
+    restored = await create_or_update_work_location(
+        db_session,
+        user.id,
+        WorkLocationCreate(date=location.date, country_code="BE", label="Office"),
+    )
+    assert restored.id == location.id
+    assert restored.deleted_at is None
+    assert restored.country_code == "BE"
+    assert [item.id for item in await list_work_locations(db_session, user_id=user.id)] == [location.id]

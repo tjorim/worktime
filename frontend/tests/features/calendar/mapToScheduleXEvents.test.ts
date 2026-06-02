@@ -32,6 +32,7 @@ describe("mapToScheduleXEvents", () => {
       calendarId: "shift",
       shiftCode: "M",
       team: 2,
+      _options: { disableDND: true, disableResize: true },
     });
     expect(event.start.toString()).toBe("2026-05-31T07:00:00+00:00[UTC]");
     expect(event.end.toString()).toBe("2026-05-31T15:00:00+00:00[UTC]");
@@ -52,6 +53,7 @@ describe("mapToScheduleXEvents", () => {
       title: "Beach day",
       calendarId: "time-off",
       entryId: "leave-1",
+      _options: { disableDND: true, disableResize: true },
     });
     expect(event.start.toString()).toBe("2026-06-01");
     expect(event.end.toString()).toBe("2026-06-01");
@@ -98,7 +100,7 @@ describe("mapToScheduleXEvents", () => {
     ).toMatchObject({
       shift: { lightColors: { main: "#0d6efd" } },
       "time-off": { lightColors: { main: "#198754" } },
-      Development: { lightColors: { main: "#abcdef" } },
+      "label-1": { lightColors: { main: "#abcdef" } },
     });
   });
 });

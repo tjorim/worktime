@@ -26,7 +26,7 @@ export function buildCalendarConfig(labels: TimeTrackingLabel[]): Record<string,
   return {
     shift: createCalendarColors(CALENDAR_COLORS.shift),
     "time-off": createCalendarColors(CALENDAR_COLORS["time-off"]),
-    ...Object.fromEntries(labels.map((label) => [label.name, createCalendarColors(label.color)])),
+    ...Object.fromEntries(labels.map((label) => [label.id, createCalendarColors(label.color)])),
   };
 }
 
@@ -72,6 +72,7 @@ export function shiftToEvent(datedShift: DatedShift, team: number): CalendarEven
     calendarId: "shift",
     shiftCode: shift.code,
     team,
+    _options: { disableDND: true, disableResize: true },
   };
 }
 
@@ -89,6 +90,7 @@ export function timeOffToEvent(entry: MappableTimeOffEntry): CalendarEvent {
     entryId: entry.id,
     entryFlag: entry.entryFlag,
     entryType: entry.entryType,
+    _options: { disableDND: true, disableResize: true },
   };
 }
 
