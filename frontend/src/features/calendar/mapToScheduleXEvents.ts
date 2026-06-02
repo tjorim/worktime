@@ -85,7 +85,7 @@ export function timeOffToEvent(entry: MappableTimeOffEntry): CalendarEvent {
     id: `time-off:${entry.id}`,
     title: entry.note ?? entry.entryType,
     start: Temporal.PlainDate.from(start),
-    end: Temporal.PlainDate.from(end),
+    end: Temporal.PlainDate.from(end).add({ days: 1 }),
     calendarId: "time-off",
     entryId: entry.id,
     entryFlag: entry.entryFlag,

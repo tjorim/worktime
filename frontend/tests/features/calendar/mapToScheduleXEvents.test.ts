@@ -56,7 +56,7 @@ describe("mapToScheduleXEvents", () => {
       _options: { disableDND: true, disableResize: true },
     });
     expect(event.start.toString()).toBe("2026-06-01");
-    expect(event.end.toString()).toBe("2026-06-01");
+    expect(event.end.toString()).toBe("2026-06-02");
   });
 
   it("maps a completed task", () => {
