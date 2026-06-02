@@ -16,6 +16,21 @@ vi.mock(
   { virtual: true },
 );
 
+vi.mock("@/contexts/EventStoreContext", () => ({
+  useEventStore: () => ({
+    entries: [
+      {
+        id: "time-off-1",
+        entryKind: "date",
+        date: "2026-03-03",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: null,
+      },
+    ],
+  }),
+}));
+
 vi.mock("@/hooks/usePublicHolidays", () => ({
   usePublicHolidays: () => ({
     publicHolidayMap: new Map([
@@ -32,18 +47,21 @@ vi.mock("@/components/gantt/GanttChart.tsx", () => ({
     tasks,
     initialViewMode,
     holidays,
+    timeOffDates,
     onTaskClick,
     onViewModeChange,
   }: {
     tasks: Array<{ id: string; name: string }>;
     initialViewMode?: "Day" | "Week" | "Month" | "Year";
     holidays?: string[];
+    timeOffDates?: string[];
     onTaskClick: (taskId: string) => void;
     onViewModeChange?: (mode: "Day" | "Week" | "Month" | "Year") => void;
   }) => (
     <div>
       <div data-testid="mock-view-mode">{initialViewMode}</div>
       <div data-testid="mock-holidays">{(holidays ?? []).join(",")}</div>
+      <div data-testid="mock-time-off-dates">{(timeOffDates ?? []).join(",")}</div>
       <button
         type="button"
         data-testid="mock-change-view"
@@ -229,6 +247,18 @@ describe("GanttView", () => {
     renderWithSettings(<GanttView />);
 
     expect(screen.getByTestId("mock-holidays")).toHaveTextContent("2026-01-01,2026-04-17");
+  });
+
+  it("passes enabled time-off dates to GanttChart", () => {
+    renderWithSettings(<GanttView />, { settings: { enableTimeOff: true } });
+
+    expect(screen.getByTestId("mock-time-off-dates")).toHaveTextContent("2026-03-03");
+  });
+
+  it("does not pass time-off dates to GanttChart when time off is disabled", () => {
+    renderWithSettings(<GanttView />);
+
+    expect(screen.getByTestId("mock-time-off-dates")).toBeEmptyDOMElement();
   });
 
   it("restores a saved view mode from settings", () => {

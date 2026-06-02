@@ -23,6 +23,7 @@ interface GanttChartProps {
   tasks: GanttTask[];
   initialViewMode?: GanttViewMode;
   holidays?: string[];
+  timeOffDates?: string[];
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
@@ -47,6 +48,7 @@ export function GanttChart({
   tasks,
   initialViewMode = "Day",
   holidays = [],
+  timeOffDates = [],
   onTaskClick,
   onDateChange,
   onProgressChange,
@@ -70,7 +72,10 @@ export function GanttChart({
   onViewModeChangeRef.current = onViewModeChange;
 
   const hasAnyTasks = tasks.length > 0;
-  const holidaysKey = useMemo(() => [...holidays].sort().join(","), [holidays]);
+  const holidaysKey = useMemo(
+    () => [holidays, timeOffDates].map((dates) => [...dates].sort().join(",")).join("|"),
+    [holidays, timeOffDates],
+  );
 
   // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks, holidaysKey]
   useEffect(() => {
@@ -101,6 +106,9 @@ export function GanttChart({
       };
       if (currentHolidays.length > 0) {
         holidaysObj["var(--bs-warning-bg-subtle)"] = currentHolidays;
+      }
+      if (timeOffDates.length > 0) {
+        holidaysObj["var(--wt-gantt-time-off-bg)"] = timeOffDates;
       }
 
       ganttRef.current = new Gantt(container, tasksRef.current, {
@@ -168,7 +176,7 @@ export function GanttChart({
       container.innerHTML = "";
       ganttRef.current = null;
     };
-  }, [hasAnyTasks, holidaysKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- holidays is intentionally omitted; holidaysKey is its stable, content-derived key and is sufficient to trigger re-initialization
+  }, [hasAnyTasks, holidaysKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- date arrays are intentionally omitted; holidaysKey is their stable, content-derived key and is sufficient to trigger re-initialization
 
   // Effect 2 — refresh on task changes, deps: [tasks]
   useEffect(() => {
