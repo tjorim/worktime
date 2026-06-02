@@ -59,7 +59,7 @@ describe("GanttTableView", () => {
     expect(rows[2]).toHaveTextContent("Build release");
   });
 
-  it("opens a task for editing from the row and edit action", async () => {
+  it("opens a task for editing from the name button and edit action", async () => {
     const user = userEvent.setup();
     const onTaskClick = vi.fn();
     render(<GanttTableView tasks={tasks} onTaskClick={onTaskClick} onDeleteTask={vi.fn()} />);
@@ -67,8 +67,7 @@ describe("GanttTableView", () => {
     await user.click(screen.getByRole("button", { name: "Edit Build release" }));
     expect(onTaskClick).toHaveBeenCalledWith("task-earlier");
 
-    const rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
-    await user.click(rows[2]);
+    await user.click(screen.getByRole("button", { name: "Write release notes" }));
     expect(onTaskClick).toHaveBeenCalledWith("task-later");
   });
 

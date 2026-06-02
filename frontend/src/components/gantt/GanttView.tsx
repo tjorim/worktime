@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { dayjs } from "@/utils/dateTimeUtils";
@@ -30,11 +30,7 @@ export function GanttView() {
     () => (settings.enableTimeOff ? getGanttTimeOffDates(timeOffEntries, currentYear) : EMPTY_ARRAY),
     [currentYear, settings.enableTimeOff, timeOffEntries],
   );
-  const [view, setView] = useState(lastUsed.ganttView);
-
-  useEffect(() => {
-    updateLastGanttView(view);
-  }, [updateLastGanttView, view]);
+  const view = lastUsed.ganttView;
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -110,7 +106,7 @@ export function GanttView() {
             variant={view === "chart" ? "primary" : "outline-primary"}
             size="sm"
             aria-pressed={view === "chart"}
-            onClick={() => setView("chart")}
+            onClick={() => updateLastGanttView("chart")}
           >
             <i className="bi bi-bar-chart me-1" aria-hidden="true"></i>
             {m.gantt_chart_view()}
@@ -119,7 +115,7 @@ export function GanttView() {
             variant={view === "table" ? "primary" : "outline-primary"}
             size="sm"
             aria-pressed={view === "table"}
-            onClick={() => setView("table")}
+            onClick={() => updateLastGanttView("table")}
           >
             <i className="bi bi-table me-1" aria-hidden="true"></i>
             {m.gantt_table_view()}

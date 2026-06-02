@@ -109,8 +109,16 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
             </tr>
           ) : (
             sortedTasks.map((task) => (
-              <tr key={task.id} onClick={() => onTaskClick(task.id)}>
-                <td className="fw-semibold">{task.name}</td>
+              <tr key={task.id}>
+                <td>
+                  <Button
+                    variant="link"
+                    className="p-0 text-start fw-semibold text-decoration-none text-body"
+                    onClick={() => onTaskClick(task.id)}
+                  >
+                    {task.name}
+                  </Button>
+                </td>
                 <td>{task.start}</td>
                 <td>{task.end}</td>
                 <td style={{ minWidth: "8rem" }}>
@@ -124,10 +132,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     size="sm"
                     className="text-body"
                     aria-label={m.gantt_table_edit_aria({ name: task.name })}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onTaskClick(task.id);
-                    }}
+                    onClick={() => onTaskClick(task.id)}
                   >
                     <i className="bi bi-pencil" aria-hidden="true"></i>
                   </Button>
