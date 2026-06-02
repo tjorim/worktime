@@ -1,0 +1,31 @@
+.unified-calendar {
+  --sx-color-primary: var(--bs-primary);
+  --sx-color-on-primary: var(--bs-white);
+  --sx-color-primary-container: var(--bs-primary-bg-subtle);
+  --sx-color-on-primary-container: var(--bs-primary-text-emphasis);
+  --sx-color-secondary: var(--bs-secondary);
+  --sx-color-on-secondary: var(--bs-white);
+  --sx-color-secondary-container: var(--bs-secondary-bg-subtle);
+  --sx-color-on-secondary-container: var(--bs-secondary-text-emphasis);
+  --sx-color-tertiary: var(--bs-info);
+  --sx-color-on-tertiary: var(--bs-dark);
+  --sx-color-tertiary-container: var(--bs-info-bg-subtle);
+  --sx-color-on-tertiary-container: var(--bs-info-text-emphasis);
+  --sx-color-surface: var(--bs-body-bg);
+  --sx-color-surface-dim: var(--bs-tertiary-bg);
+  --sx-color-surface-bright: var(--bs-body-bg);
+  --sx-color-on-surface: var(--bs-body-color);
+  --sx-color-surface-container: var(--bs-secondary-bg);
+  --sx-color-surface-container-low: var(--bs-tertiary-bg);
+  --sx-color-surface-container-high: var(--bs-secondary-bg);
+  --sx-color-background: var(--bs-body-bg);
+  --sx-color-on-background: var(--bs-body-color);
+  --sx-color-outline: var(--bs-border-color);
+  --sx-color-outline-variant: var(--bs-border-color-translucent);
+  --sx-color-shadow: var(--bs-dark);
+  --sx-color-surface-tint: var(--bs-primary);
+}
+
+.unified-calendar .sx-react-calendar-wrapper {
+  min-height: 42rem;
+}

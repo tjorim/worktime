@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState, type SubmitEventHandler } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import ListGroup from "react-bootstrap/ListGroup";
 import ReactSelect from "react-select";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import { BREAK_DURATION_MINUTES } from "@/components/timeTracking/timeUtils";
 import * as m from "@/paraglide/messages.js";
 
 type DepOption = { value: string; label: string };
@@ -46,6 +49,21 @@ function createInitialValue(task?: GanttTask): FormState {
   };
 }
 
+
+function getLoggedMinutes(startTime: string, stopTime: string | null | undefined, includesBreak?: boolean): number {
+  const stop = stopTime ? dayjs(stopTime) : dayjs();
+  const rawMinutes = Math.max(0, stop.diff(dayjs(startTime), "minute"));
+  return Math.max(0, rawMinutes - (includesBreak ? BREAK_DURATION_MINUTES : 0));
+}
+
+function formatLoggedDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) return m.gantt_logged_minutes({ minutes: remainingMinutes });
+  if (remainingMinutes === 0) return m.gantt_logged_hours({ hours });
+  return m.gantt_logged_hours_minutes({ hours, minutes: remainingMinutes });
+}
+
 function parseDeps(dependencies?: unknown): string[] {
   if (typeof dependencies === "string") {
     return dependencies
@@ -75,6 +93,7 @@ export function GanttTaskModal({
   const [form, setForm] = useState<FormState>(() => createInitialValue(task));
   const [selectedDeps, setSelectedDeps] = useState<string[]>(() => parseDeps(task?.dependencies));
   const [wasValidated, setWasValidated] = useState(false);
+  const { tasks: timeTrackingTasks, labels: timeTrackingLabels } = useTimeTrackingStorage();
 
   useEffect(() => {
     setForm(createInitialValue(task));
@@ -114,6 +133,28 @@ export function GanttTaskModal({
           m.gantt_task_unknown_dependency({ id: id.slice(0, 8) }),
       })),
     [selectedDeps, depOptions],
+  );
+
+  const loggedEntries = useMemo(
+    () =>
+      task
+        ? timeTrackingTasks
+            .filter((entry) => entry.ganttTaskId === task.id)
+            .map((entry) => ({
+              ...entry,
+              loggedMinutes: getLoggedMinutes(entry.startTime, entry.stopTime, entry.includesBreak),
+            }))
+            .sort((a, b) => dayjs(b.startTime).valueOf() - dayjs(a.startTime).valueOf())
+        : [],
+    [task, timeTrackingTasks],
+  );
+  const timeTrackingLabelNames = useMemo(
+    () => new Map(timeTrackingLabels.map((label) => [label.id, label.name])),
+    [timeTrackingLabels],
+  );
+  const totalLoggedMinutes = useMemo(
+    () => loggedEntries.reduce((total, entry) => total + entry.loggedMinutes, 0),
+    [loggedEntries],
   );
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
@@ -225,6 +266,35 @@ export function GanttTaskModal({
             />
           </Form.Group>
         </Form>
+        {task && (
+          <section className="border-top mt-3 pt-3" aria-labelledby="ganttLoggedTimeHeading">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h6 id="ganttLoggedTimeHeading" className="mb-0">
+                {m.gantt_logged_time_heading()}
+              </h6>
+              <span className="text-muted small">
+                {m.gantt_logged_total({ duration: formatLoggedDuration(totalLoggedMinutes) })}
+              </span>
+            </div>
+            {loggedEntries.length === 0 ? (
+              <p className="text-muted small mb-0">{m.gantt_logged_empty()}</p>
+            ) : (
+              <ListGroup variant="flush">
+                {loggedEntries.map((entry) => (
+                  <ListGroup.Item key={entry.id} className="px-0 py-2 d-flex justify-content-between gap-3">
+                    <span>
+                      <span className="d-block">{entry.text}</span>
+                      <span className="text-muted small">
+                        {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} · {dayjs(entry.startTime).format("YYYY-MM-DD")}
+                      </span>
+                    </span>
+                    <span className="text-nowrap">{formatLoggedDuration(entry.loggedMinutes)}</span>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            )}
+          </section>
+        )}
       </Modal.Body>
       <Modal.Footer>
         {task && onDelete && (

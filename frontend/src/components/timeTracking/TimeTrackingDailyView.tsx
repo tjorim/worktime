@@ -12,6 +12,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
+import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
@@ -46,6 +47,7 @@ type TimeTrackingDailyViewProps = {
     newStopTime: string | null | undefined;
     newText?: string;
     newLabel?: string;
+    ganttTaskId?: string;
   }) => void;
   onRemoveTask: (id: string) => void;
   onToggleBreak: (taskId: string, includesBreak: boolean) => void;
@@ -183,11 +185,13 @@ export function TimeTrackingDailyView({
   const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
   const [text, setText] = useState("");
   const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const [selectedGanttTaskId, setSelectedGanttTaskId] = useState("");
   const [start, setStart] = useState("");
   const [stop, setStop] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [error, setError] = useState("");
   const { settings } = useSettings();
+  const { tasks: ganttTasks } = useGanttTasks();
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
@@ -302,6 +306,7 @@ export function TimeTrackingDailyView({
       id: crypto.randomUUID(),
       text,
       label: selectedLabel,
+      ganttTaskId: selectedGanttTaskId || undefined,
       startTime: `${date}T${start}`,
       stopTime: `${date}T${stop}`,
     });
@@ -310,6 +315,7 @@ export function TimeTrackingDailyView({
       return;
     }
     setText("");
+    setSelectedGanttTaskId("");
     setStart("");
     setStop("");
   };
@@ -335,6 +341,7 @@ export function TimeTrackingDailyView({
       id: crypto.randomUUID(),
       text: text.trim(),
       label: selectedLabel,
+      ganttTaskId: selectedGanttTaskId || undefined,
       startTime,
     });
     if (!added) {
@@ -343,6 +350,7 @@ export function TimeTrackingDailyView({
     }
     onSelectedDateChange(startDate);
     setText("");
+    setSelectedGanttTaskId("");
   };
 
   const handleStopNow = () => {
@@ -382,6 +390,7 @@ export function TimeTrackingDailyView({
     label: string;
     start: string;
     stop?: string | null;
+    ganttTaskId: string;
   }): Promise<boolean> => {
     setError("");
     if (!payload.text.trim() || !payload.label || !payload.start) {
@@ -430,10 +439,12 @@ export function TimeTrackingDailyView({
       }
     }
 
+    const currentGanttTaskId = tasks.find((item) => item.id === payload.id)?.ganttTaskId ?? "";
     onUpdateTaskTimes({
       id: payload.id,
       newText: payload.text.trim(),
       newLabel: payload.label,
+      ...(payload.ganttTaskId !== currentGanttTaskId ? { ganttTaskId: payload.ganttTaskId } : {}),
       newStartTime,
       newStopTime,
     });
@@ -584,6 +595,10 @@ export function TimeTrackingDailyView({
           onTextChange={setText}
           label={selectedLabel}
           onLabelChange={setSelectedLabel}
+          ganttTasks={ganttTasks}
+          ganttTaskId={selectedGanttTaskId}
+          onGanttTaskChange={setSelectedGanttTaskId}
+          showGanttPicker={settings.enableGantt}
           start={start}
           onStartChange={setStart}
           stop={stop}
@@ -606,6 +621,8 @@ export function TimeTrackingDailyView({
         <DailyTaskList
           tasks={dailyTasks}
           labels={labels}
+          ganttTasks={ganttTasks}
+          showGanttPicker={settings.enableGantt}
           editRequest={editRequest}
           onEditRequestHandled={() => setEditRequest(null)}
           onUpdateTask={handleUpdateTask}

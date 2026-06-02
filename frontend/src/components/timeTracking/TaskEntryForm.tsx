@@ -7,6 +7,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import type { ReactElement } from "react";
 import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
+import type { GanttTask } from "@/types/gantt";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
@@ -17,6 +18,10 @@ type TaskEntryFormProps = {
   onTextChange: (text: string) => void;
   label: string;
   onLabelChange: (label: string) => void;
+  ganttTasks?: GanttTask[];
+  ganttTaskId?: string;
+  onGanttTaskChange?: (ganttTaskId: string) => void;
+  showGanttPicker?: boolean;
   start: string;
   onStartChange: (start: string) => void;
   stop: string;
@@ -35,6 +40,10 @@ export function TaskEntryForm({
   onTextChange,
   label,
   onLabelChange,
+  ganttTasks = [],
+  ganttTaskId = "",
+  onGanttTaskChange = () => undefined,
+  showGanttPicker = false,
   start,
   onStartChange,
   stop,
@@ -99,6 +108,21 @@ export function TaskEntryForm({
           />
         </Form.Group>
       </Col>
+      {showGanttPicker && (
+        <Col md={3}>
+          <Form.Group controlId="timeTrackerGanttTask">
+            <Form.Label>{m.tt_gantt_task()}</Form.Label>
+            <Form.Select value={ganttTaskId} onChange={(event) => onGanttTaskChange(event.target.value)}>
+              <option value="">{m.tt_no_gantt_task()}</option>
+              {ganttTasks.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.name}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      )}
       <Col md={2}>
         <Form.Group controlId="timeTrackerStart">
           <Form.Label>{m.form_start()}</Form.Label>

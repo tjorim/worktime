@@ -40,6 +40,11 @@
     "check-version-consistency": "tsx scripts/check-version-consistency.ts"
   },
   "dependencies": {
+    "@schedule-x/calendar": "^4.6.0",
+    "@schedule-x/drag-and-drop": "^3.7.3",
+    "@schedule-x/event-modal": "^4.6.0",
+    "@schedule-x/react": "^4.1.0",
+    "@schedule-x/theme-default": "^4.6.0",
     "@tanstack/query-db-collection": "^1.0.38",
     "@tanstack/react-db": "^0.1.85",
     "@tanstack/react-form": "^1.33.0",
@@ -57,6 +62,7 @@
     "react-dom": "^19.2.6",
     "react-oidc-context": "^3.3.1",
     "react-select": "^5.10.2",
+    "temporal-polyfill": "^0.3.2",
     "uuid": "^14.0.0"
   },
   "devDependencies": {

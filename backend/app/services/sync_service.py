@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -63,7 +63,7 @@ from app.schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
-from app.services.db_service import apply_time_off_shape
+from app.services.db_service import _validate_task_gantt_reference, apply_time_off_shape
 from app.utils.datetime import as_utc
 
 
@@ -198,10 +198,12 @@ async def _push_task(
             from app.services.db_service import ValidationError
             raise ValidationError("text and start_time are required for task create")
         await _validate_task_label_reference(session, user_id, item.label_id)
+        await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
         task = TimeTrackingTask(
             id=item.id,
             user_id=user_id,
             label_id=item.label_id,
+            gantt_task_id=item.gantt_task_id,
             text=item.text,
             start_time=item.start_time,
             stop_time=item.stop_time,
@@ -228,6 +230,9 @@ async def _push_task(
     if "label_id" in provided_fields:
         await _validate_task_label_reference(session, user_id, item.label_id)
         task.label_id = item.label_id
+    if "gantt_task_id" in provided_fields:
+        await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
+        task.gantt_task_id = item.gantt_task_id
     if "start_time" in provided_fields and item.start_time is not None:
         task.start_time = item.start_time
     if "stop_time" in provided_fields:
@@ -487,6 +492,11 @@ async def _push_gantt_task(
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
+        await session.execute(
+            update(TimeTrackingTask)
+            .where(TimeTrackingTask.gantt_task_id == task.id)
+            .values(gantt_task_id=None, client_updated_at=now, updated_at=now)
+        )
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task is None:

@@ -102,6 +102,9 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
     label_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("time_tracking_labels.id"), nullable=True, index=True
     )
+    gantt_task_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("gantt_tasks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     text: Mapped[str] = mapped_column(String)
     start_time: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now

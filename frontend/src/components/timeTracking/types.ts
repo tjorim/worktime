@@ -5,6 +5,7 @@ export type StoredTimeTrackingTask = {
   startTime: string;
   stopTime?: string | null;
   includesBreak?: boolean;
+  ganttTaskId?: string;
 };
 
 export type TimeTrackingTemplate = {

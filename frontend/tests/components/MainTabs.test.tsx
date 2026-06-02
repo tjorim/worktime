@@ -62,6 +62,7 @@ describe("MainTabs", () => {
     it("renders all tab buttons", () => {
       renderWithProviders(<MainTabs {...defaultProps} />);
 
+      expect(screen.getByRole("tab", { name: "Unified" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Schedule" })).toBeInTheDocument();
       expect(screen.queryByRole("tab", { name: "Transfers" })).not.toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Time Off" })).toBeInTheDocument();
