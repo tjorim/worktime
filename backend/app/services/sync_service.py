@@ -495,7 +495,7 @@ async def _push_gantt_task(
         await session.execute(
             update(TimeTrackingTask)
             .where(TimeTrackingTask.gantt_task_id == task.id)
-            .values(gantt_task_id=None)
+            .values(gantt_task_id=None, client_updated_at=now, updated_at=now)
         )
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 

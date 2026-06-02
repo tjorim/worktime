@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy import func as sql_func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
@@ -647,6 +647,11 @@ async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -
     task.deleted_at = now
     task.client_updated_at = now
     session.add(task)
+    await session.execute(
+        update(TimeTrackingTask)
+        .where(TimeTrackingTask.gantt_task_id == task.id)
+        .values(gantt_task_id=None, client_updated_at=now, updated_at=now)
+    )
     await session.commit()
 
 

@@ -189,7 +189,7 @@ export function CalendarView() {
         },
       },
     },
-    [dragAndDropPlugin, labels],
+    [dragAndDropPlugin],
   );
 
   useEffect(() => {
