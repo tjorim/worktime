@@ -175,6 +175,7 @@ async def list_tasks_endpoint(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     label_id: str | None = None,
+    gantt_task_id: str | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
@@ -186,6 +187,7 @@ async def list_tasks_endpoint(
             start_date=start_date,
             end_date=end_date,
             label_id=label_id,
+            gantt_task_id=gantt_task_id,
         )
 
     response = TaskListResponse(

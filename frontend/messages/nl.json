@@ -1063,5 +1063,13 @@
   "dev_hday_helper_url_help": "Basis-URL van de actieve worktime-hday-helper (bijv. http://localhost:8080)",
   "dev_hday_helper_test": "Testen",
   "dev_hday_helper_connected": "✓ Verbonden met .hday-helper",
-  "dev_hday_helper_failed": "✗ Kan geen verbinding maken met .hday-helper — controleer de URL en zorg dat deze actief is"
+  "dev_hday_helper_failed": "✗ Kan geen verbinding maken met .hday-helper — controleer de URL en zorg dat deze actief is",
+  "tt_gantt_task": "Gantt-taak",
+  "tt_no_gantt_task": "Geen Gantt-taak",
+  "gantt_logged_time_heading": "Gelogde tijd",
+  "gantt_logged_total": "{duration} gelogd",
+  "gantt_logged_empty": "Er is nog geen tijd gelogd voor deze taak.",
+  "gantt_logged_minutes": "{minutes} min",
+  "gantt_logged_hours": "{hours} u",
+  "gantt_logged_hours_minutes": "{hours} u {minutes} min"
 }

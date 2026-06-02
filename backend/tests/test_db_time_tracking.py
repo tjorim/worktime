@@ -86,6 +86,31 @@ def test_task_constraints_and_filtering(
     assert label_response.status_code == 201
     label_id = label_response.json()["id"]
 
+    gantt_response = db_client.post(
+        f"/api/gantt-tasks?user_id={user_id}",
+        json={
+            "name": "Tracked project",
+            "start_date": "2026-02-01",
+            "end_date": "2026-02-28",
+        },
+        headers=headers,
+    )
+    assert gantt_response.status_code == 201
+    gantt_task_id = gantt_response.json()["id"]
+
+    invalid_gantt_task = db_client.post(
+        f"/api/time-tracking/tasks?user_id={user_id}",
+        json={
+            "text": "Invalid Gantt task",
+            "label_id": label_id,
+            "gantt_task_id": "not-a-real-gantt-task",
+            "start_time": datetime(2026, 2, 1, 8, 0).isoformat(),
+            "stop_time": datetime(2026, 2, 1, 9, 0).isoformat(),
+        },
+        headers=headers,
+    )
+    assert invalid_gantt_task.status_code == 404
+
     invalid_label_task = db_client.post(
         f"/api/time-tracking/tasks?user_id={user_id}",
         json={
@@ -138,6 +163,7 @@ def test_task_constraints_and_filtering(
         json={
             "text": "Filtered task",
             "label_id": label_id,
+            "gantt_task_id": gantt_task_id,
             "start_time": datetime(2026, 2, 3, 12, 0).isoformat(),
             "stop_time": datetime(2026, 2, 3, 13, 0).isoformat(),
             "includes_break": False,
@@ -178,6 +204,15 @@ def test_task_constraints_and_filtering(
     items = filtered_by_date_and_label.json()["items"]
     assert len(items) == 1
     assert items[0]["text"] == "Filtered task"
+    assert items[0]["gantt_task_id"] == gantt_task_id
+
+    filtered_by_gantt_task = db_client.get(
+        f"/api/time-tracking/tasks?user_id={user_id}&gantt_task_id={gantt_task_id}",
+        headers=headers,
+    )
+    assert filtered_by_gantt_task.status_code == 200
+    assert filtered_by_gantt_task.json()["total"] == 1
+    assert filtered_by_gantt_task.json()["items"][0]["id"] == second_task.json()["id"]
 
 
 def test_get_single_resources(

@@ -311,9 +311,20 @@ async def _validate_task_label_reference(
     await _ensure_label_for_user(session, user_id, label_id)
 
 
+async def _validate_task_gantt_reference(
+    session: AsyncSession, user_id: int, gantt_task_id: str | None
+) -> None:
+    if gantt_task_id is None:
+        return
+    gantt_task = await session.get(GanttTask, gantt_task_id)
+    if gantt_task is None or gantt_task.user_id != user_id or gantt_task.deleted_at is not None:
+        raise ValidationError("gantt task not found")
+
+
 async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) -> TimeTrackingTask:
     await _ensure_user_exists(session, user_id)
     await _validate_task_label_reference(session, user_id, payload.label_id)
+    await _validate_task_gantt_reference(session, user_id, payload.gantt_task_id)
 
     if payload.stop_time is None and await get_running_task(session, user_id) is not None:
         raise ConflictError("only one running task is allowed per user")
@@ -342,6 +353,7 @@ async def list_tasks(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     label_id: str | None = None,
+    gantt_task_id: str | None = None,
 ) -> list[TimeTrackingTask]:
     statement = select(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id)
     if start_date is not None:
@@ -350,6 +362,8 @@ async def list_tasks(
         statement = statement.where(TimeTrackingTask.start_time <= end_date)
     if label_id is not None:
         statement = statement.where(TimeTrackingTask.label_id == label_id)
+    if gantt_task_id is not None:
+        statement = statement.where(TimeTrackingTask.gantt_task_id == gantt_task_id)
 
     result = await session.execute(statement.order_by(TimeTrackingTask.start_time.desc()))
     return list(result.scalars().all())
@@ -373,6 +387,8 @@ async def update_task(
     data = payload.model_dump(exclude_unset=True)
     if "label_id" in data:
         await _validate_task_label_reference(session, user_id, data["label_id"])
+    if "gantt_task_id" in data:
+        await _validate_task_gantt_reference(session, user_id, data["gantt_task_id"])
 
     candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)

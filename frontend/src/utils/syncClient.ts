@@ -49,6 +49,7 @@ export interface TaskSyncItem {
   action: SyncAction;
   client_updated_at: string;
   label_id?: string | null;
+  gantt_task_id?: string | null;
   text?: string | null;
   start_time?: string | null;
   stop_time?: string | null;
@@ -133,6 +134,7 @@ export interface TaskSyncRead {
   id: string;
   user_id: number;
   label_id: string | null;
+  gantt_task_id: string | null;
   text: string;
   start_time: string;
   stop_time: string | null;
@@ -584,6 +586,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       action: "create" as const,
       client_updated_at: now,
       label_id: t.label || null,
+      gantt_task_id: t.ganttTaskId || null,
       text: t.text,
       start_time: localTimeToUtcIso(t.startTime)!,
       stop_time: t.stopTime ? localTimeToUtcIso(t.stopTime) : null,
