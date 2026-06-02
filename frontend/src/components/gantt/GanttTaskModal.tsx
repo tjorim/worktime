@@ -285,7 +285,7 @@ export function GanttTaskModal({
                     <span>
                       <span className="d-block">{entry.text}</span>
                       <span className="text-muted small">
-                        {timeTrackingLabelNames.get(entry.label) ?? entry.label} · {dayjs(entry.startTime).format("YYYY-MM-DD")}
+                        {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} · {dayjs(entry.startTime).format("YYYY-MM-DD")}
                       </span>
                     </span>
                     <span className="text-nowrap">{formatLoggedDuration(entry.loggedMinutes)}</span>
