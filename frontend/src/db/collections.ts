@@ -346,6 +346,7 @@ function syncTaskToStoredTask(t: TaskSyncRead): StoredTimeTrackingTask {
     id: t.id,
     text: t.text,
     label: t.label_id ?? "",
+    ganttTaskId: t.gantt_task_id ?? undefined,
     startTime: utcIsoToLocalTime(t.start_time),
     stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
   };
@@ -528,6 +529,7 @@ export const tasksCollection = createCollection(
           action: "create",
           client_updated_at: now,
           label_id: m.modified.label || null,
+          gantt_task_id: m.modified.ganttTaskId || null,
           text: m.modified.text,
           start_time: dayjs(m.modified.startTime).toISOString(),
           stop_time: m.modified.stopTime ? dayjs(m.modified.stopTime).toISOString() : null,
@@ -549,6 +551,7 @@ export const tasksCollection = createCollection(
           action: "update",
           client_updated_at: now,
           label_id: m.modified.label || null,
+          gantt_task_id: m.modified.ganttTaskId || null,
           text: m.modified.text,
           start_time: dayjs(m.modified.startTime).toISOString(),
           stop_time: m.modified.stopTime ? dayjs(m.modified.stopTime).toISOString() : null,

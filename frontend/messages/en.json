@@ -1083,5 +1083,13 @@
   "dev_hday_helper_url_help": "Base URL of the running worktime-hday-helper (e.g. http://localhost:8080)",
   "dev_hday_helper_test": "Test",
   "dev_hday_helper_connected": "✓ Connected to .hday helper",
-  "dev_hday_helper_failed": "✗ Could not connect to .hday helper — check URL and ensure it is running"
+  "dev_hday_helper_failed": "✗ Could not connect to .hday helper — check URL and ensure it is running",
+  "tt_gantt_task": "Gantt task",
+  "tt_no_gantt_task": "No Gantt task",
+  "gantt_logged_time_heading": "Logged time",
+  "gantt_logged_total": "{duration} logged",
+  "gantt_logged_empty": "No time has been logged for this task yet.",
+  "gantt_logged_minutes": "{minutes} min",
+  "gantt_logged_hours": "{hours} h",
+  "gantt_logged_hours_minutes": "{hours} h {minutes} min"
 }

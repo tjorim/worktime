@@ -17,6 +17,7 @@ import {
 } from "./constants";
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
+import type { GanttTask } from "@/types/gantt";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import * as m from "@/paraglide/messages.js";
 
@@ -33,6 +34,8 @@ type NowPosition =
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
   labels: TimeTrackingLabel[];
+  ganttTasks: GanttTask[];
+  showGanttPicker: boolean;
   editRequest?: EditRequest | null;
   onEditRequestHandled?: () => void;
   onUpdateTask: (payload: {
@@ -41,6 +44,7 @@ type DailyTaskListProps = {
     label: string;
     start: string;
     stop?: string | null;
+    ganttTaskId: string;
   }) => Promise<boolean> | boolean;
   onRemoveTask: (id: string) => void;
   onToggleBreak: (taskId: string, includesBreak: boolean) => void;
@@ -101,6 +105,8 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
 export function DailyTaskList({
   tasks,
   labels,
+  ganttTasks,
+  showGanttPicker,
   editRequest,
   onEditRequestHandled,
   onUpdateTask,
@@ -119,6 +125,7 @@ export function DailyTaskList({
     start: "",
     stop: "",
     includesBreak: false,
+    ganttTaskId: "",
   });
   const [editError, setEditError] = useState("");
   const [editInfo, setEditInfo] = useState("");
@@ -200,7 +207,7 @@ export function DailyTaskList({
   const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
     setExternalEditingTask(null);
-    setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false });
+    setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false, ganttTaskId: "" });
     setEditError("");
     setEditInfo("");
   }, []);
@@ -216,6 +223,7 @@ export function DailyTaskList({
         start: dayjs(task.startTime).format("HH:mm"),
         stop: task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "",
         includesBreak: task.includesBreak ?? false,
+        ganttTaskId: task.ganttTaskId ?? "",
       });
       setEditInfo(info ?? "");
     },
@@ -241,11 +249,13 @@ export function DailyTaskList({
       label: string;
       start: string;
       stop?: string | null;
+      ganttTaskId: string;
     } = {
       id: editingTask.id,
       text: editForm.text,
       label: editForm.label,
       start: editForm.start,
+      ganttTaskId: editForm.ganttTaskId ?? "",
     };
     // Include stop if user provided a value (stopped task) or if task was originally stopped
     if (editForm.stop || editingTask.stopTime) {
@@ -509,6 +519,8 @@ export function DailyTaskList({
       <TaskEditModal
         show={editingTask !== null}
         labels={labels}
+        ganttTasks={ganttTasks}
+        showGanttPicker={showGanttPicker}
         value={editForm}
         onChange={setEditForm}
         onClose={closeEditModal}

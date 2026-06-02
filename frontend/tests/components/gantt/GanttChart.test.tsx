@@ -14,6 +14,7 @@ class MockFrappeGantt {
     view_mode?: "Day" | "Week" | "Month" | "Year";
     view_mode_select?: boolean;
     today_button?: boolean;
+    holidays?: Record<string, string | string[]>;
     popup?: (ctx: unknown) => void;
     popup_on?: string;
     on_click?: (task: unknown) => void;
@@ -28,6 +29,7 @@ class MockFrappeGantt {
       view_mode?: "Day" | "Week" | "Month" | "Year";
       view_mode_select?: boolean;
       today_button?: boolean;
+      holidays?: Record<string, string | string[]>;
       popup?: (ctx: unknown) => void;
       popup_on?: string;
       on_click?: (task: unknown) => void;
@@ -51,6 +53,31 @@ vi.mock("frappe-gantt", () => ({ default: MockFrappeGantt }), { virtual: true })
 describe("GanttChart", () => {
   afterEach(() => {
     MockFrappeGantt.reset();
+  });
+
+  it("passes time-off dates to frappe-gantt as a separate holiday color", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 },
+        ]}
+        holidays={["2026-01-01"]}
+        timeOffDates={["2026-03-03"]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    expect(mockInstances[0].options.holidays).toEqual({
+      "var(--bs-secondary-bg)": "weekend",
+      "var(--bs-warning-bg-subtle)": ["2026-01-01"],
+      "var(--wt-gantt-time-off-bg)": ["2026-03-03"],
+    });
   });
 
   it("ignores malformed task payloads from frappe callbacks", async () => {

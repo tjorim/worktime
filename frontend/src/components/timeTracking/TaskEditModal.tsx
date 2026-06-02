@@ -10,6 +10,7 @@ import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
+import type { GanttTask } from "@/types/gantt";
 
 export type TaskEditForm = {
   text: string;
@@ -17,11 +18,14 @@ export type TaskEditForm = {
   start: string;
   stop: string;
   includesBreak: boolean;
+  ganttTaskId?: string;
 };
 
 type TaskEditModalProps = {
   show: boolean;
   labels: TimeTrackingLabel[];
+  ganttTasks?: GanttTask[];
+  showGanttPicker?: boolean;
   value: TaskEditForm;
   onChange: (value: TaskEditForm) => void;
   onClose: () => void;
@@ -33,6 +37,8 @@ type TaskEditModalProps = {
 export function TaskEditModal({
   show,
   labels,
+  ganttTasks = [],
+  showGanttPicker = false,
   value,
   onChange,
   onClose,
@@ -98,6 +104,22 @@ export function TaskEditModal({
               classNames={bootstrapSelectClassNames}
             />
           </Form.Group>
+          {showGanttPicker && (
+            <Form.Group controlId="editTaskGanttTask" className="mb-3">
+              <Form.Label>{m.tt_gantt_task()}</Form.Label>
+              <Form.Select
+                value={value.ganttTaskId ?? ""}
+                onChange={(event) => onChange({ ...value, ganttTaskId: event.target.value })}
+              >
+                <option value="">{m.tt_no_gantt_task()}</option>
+                {ganttTasks.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          )}
           <div className="d-flex gap-3 mb-3">
             <Form.Group controlId="editTaskStart" className="flex-fill">
               <Form.Label>{m.form_start()}</Form.Label>

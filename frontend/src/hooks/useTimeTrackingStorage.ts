@@ -19,6 +19,7 @@ type RawTask = {
   startTime: string;
   stopTime?: string | null;
   includesBreak?: boolean;
+  ganttTaskId?: string;
 };
 
 const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -57,6 +58,9 @@ function isValidRawTask(value: unknown): value is RawTask {
   if (v.includesBreak !== undefined && typeof v.includesBreak !== "boolean") {
     return false;
   }
+  if (v.ganttTaskId !== undefined && typeof v.ganttTaskId !== "string") {
+    return false;
+  }
 
   const startTime = typeof v.startTime === "string" ? v.startTime : "";
   const stopTime = typeof v.stopTime === "string" ? v.stopTime : null;
@@ -80,6 +84,7 @@ function convertToTask(raw: StoredTimeTrackingTask): StoredTimeTrackingTask {
     startTime: raw.startTime,
     stopTime: raw.stopTime,
     ...(raw.includesBreak === true ? { includesBreak: true } : {}),
+    ...(raw.ganttTaskId ? { ganttTaskId: raw.ganttTaskId } : {}),
   };
 }
 
@@ -118,6 +123,7 @@ export function useTimeTrackingStorage() {
         label: payload.label,
         startTime: payload.startTime,
         stopTime: payload.stopTime ?? undefined,
+        ganttTaskId: payload.ganttTaskId || undefined,
       };
       if (payload.includesBreak === true) {
         newTask.includesBreak = true;
@@ -136,6 +142,7 @@ export function useTimeTrackingStorage() {
       newText?: string;
       newLabel?: string;
       includesBreak?: boolean;
+      ganttTaskId?: string;
     }) => {
       if (!tasks.some((task) => task.id === payload.id)) return;
       tasksCollection.update(payload.id, (d) => {
@@ -143,6 +150,7 @@ export function useTimeTrackingStorage() {
         if (payload.newLabel !== undefined) d.label = payload.newLabel;
         d.startTime = payload.newStartTime;
         d.stopTime = payload.newStopTime ?? undefined;
+        if (payload.ganttTaskId !== undefined) d.ganttTaskId = payload.ganttTaskId || undefined;
         if (typeof payload.includesBreak === "boolean") {
           d.includesBreak = payload.includesBreak || undefined;
         }

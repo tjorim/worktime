@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { GanttTaskModal } from "@/components/gantt/GanttTaskModal";
+import { labelsCollection, tasksCollection } from "@/db/collections";
 
 describe("GanttTaskModal", () => {
   it("shows validation feedback for required fields", async () => {
@@ -56,6 +57,39 @@ describe("GanttTaskModal", () => {
         notes: "Keep this note",
       }),
     );
+  });
+
+  it("shows linked time tracking entries and their total logged duration", () => {
+    labelsCollection.insert({ id: "client", name: "Client", color: "#123456" });
+    tasksCollection.insert({
+      id: "logged-task",
+      text: "Document API",
+      label: "client",
+      ganttTaskId: "task-1",
+      startTime: "2026-03-01T09:00",
+      stopTime: "2026-03-01T13:30",
+    });
+
+    render(
+      <GanttTaskModal
+        show
+        onHide={vi.fn()}
+        onSave={vi.fn()}
+        existingTasks={[{ id: "task-1", name: "Task One" }]}
+        task={{
+          id: "task-1",
+          name: "Existing",
+          start: "2026-03-01",
+          end: "2026-03-03",
+          progress: 50,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Logged time")).toBeInTheDocument();
+    expect(screen.getByText("4 h 30 min logged")).toBeInTheDocument();
+    expect(screen.getByText("Document API")).toBeInTheDocument();
+    expect(screen.getByText("Client · 2026-03-01")).toBeInTheDocument();
   });
 
   it("shows edit mode title and delete action", () => {
