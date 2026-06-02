@@ -171,12 +171,14 @@ export function CalendarView() {
               datePart = Temporal.PlainDate.from(normalized).toString();
             }
           } catch {
-            const parts = normalized.split("T");
-            datePart = parts[0];
-            if (parts[1]) {
-              startPart = parts[1].slice(0, 5);
-              const [h, m] = startPart.split(":").map(Number);
-              stopPart = `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            const [dateFallback, timeFallback] = normalized.split("T");
+            datePart = dateFallback ?? normalized.slice(0, 10);
+            if (timeFallback) {
+              startPart = timeFallback.slice(0, 5);
+              const colonIdx = startPart.indexOf(":");
+              const h = colonIdx >= 0 ? parseInt(startPart.slice(0, colonIdx), 10) : 0;
+              const m = colonIdx >= 0 ? startPart.slice(colonIdx + 1) : "00";
+              stopPart = `${String((h + 1) % 24).padStart(2, "0")}:${m}`;
             }
           }
 
