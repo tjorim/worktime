@@ -304,7 +304,9 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> No
     if task_count or template_count:
         raise ConflictError("label is in use by tasks or templates and cannot be deleted")
 
-    label.deleted_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    label.deleted_at = now
+    label.client_updated_at = now
     session.add(label)
     await session.commit()
 
@@ -326,7 +328,7 @@ async def _validate_task_gantt_reference(
         return
     gantt_task = await session.get(GanttTask, gantt_task_id)
     if gantt_task is None or gantt_task.user_id != user_id or gantt_task.deleted_at is not None:
-        raise ValidationError("gantt task not found")
+        raise NotFoundError("gantt task not found")
 
 
 async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) -> TimeTrackingTask:
@@ -425,7 +427,9 @@ async def update_task(
 
 async def delete_task(session: AsyncSession, user_id: int, task_id: str) -> None:
     task = await get_task(session, user_id, task_id)
-    task.deleted_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    task.deleted_at = now
+    task.client_updated_at = now
     session.add(task)
     await session.commit()
 
@@ -488,7 +492,9 @@ async def update_template(
 
 async def delete_template(session: AsyncSession, user_id: int, template_id: str) -> None:
     template = await get_template(session, user_id, template_id)
-    template.deleted_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    template.deleted_at = now
+    template.client_updated_at = now
     session.add(template)
     await session.commit()
 
@@ -514,6 +520,7 @@ async def create_or_update_work_location(
         for field, value in payload.model_dump().items():
             setattr(location, field, value)
         location.deleted_at = None
+        location.client_updated_at = datetime.now(UTC)
 
     session.add(location)
     await session.commit()
@@ -575,7 +582,9 @@ async def update_work_location(
 
 async def delete_work_location(session: AsyncSession, user_id: int, value_date: date) -> None:
     location = await get_work_location(session, user_id, value_date)
-    location.deleted_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    location.deleted_at = now
+    location.client_updated_at = now
     session.add(location)
     await session.commit()
 
@@ -634,7 +643,9 @@ async def update_gantt_task(
 
 async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> None:
     task = await get_gantt_task(session, user_id, task_id)
-    task.deleted_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    task.deleted_at = now
+    task.client_updated_at = now
     session.add(task)
     await session.commit()
 
