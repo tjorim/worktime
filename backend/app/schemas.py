@@ -118,6 +118,7 @@ class LabelUpdate(BaseModel):
 class TaskCreate(BaseModel):
     text: str
     label_id: str | None = None
+    gantt_task_id: str | None = None
     start_time: dt_datetime
     stop_time: dt_datetime | None = None
     includes_break: bool = False
@@ -132,6 +133,7 @@ class TaskRead(BaseModel):
     id: str
     user_id: int
     label_id: str | None
+    gantt_task_id: str | None
     text: str
     start_time: dt_datetime
     stop_time: dt_datetime | None
@@ -141,6 +143,7 @@ class TaskRead(BaseModel):
 
 class TaskUpdate(BaseModel):
     label_id: str | None = None
+    gantt_task_id: str | None = None
     text: str | None = None
     start_time: dt_datetime | None = None
     stop_time: dt_datetime | None = None
@@ -456,6 +459,7 @@ class TaskSyncRead(BaseModel):
     id: str
     user_id: int
     label_id: str | None
+    gantt_task_id: str | None
     text: str
     start_time: dt_datetime
     stop_time: dt_datetime | None
@@ -529,6 +533,7 @@ class TaskSyncItem(BaseModel):
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     label_id: str | None = None
+    gantt_task_id: str | None = None
     text: str | None = None
     start_time: dt_datetime | None = None
     stop_time: dt_datetime | None = None
