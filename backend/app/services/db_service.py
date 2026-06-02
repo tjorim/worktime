@@ -112,8 +112,11 @@ async def get_user_export_data(
     user = await get_user(session, user_id)
 
     async def _list_rows(model: type[Base], *order_by: Any) -> list[Any]:
+        typed_model: Any = model
         result = await session.execute(
-            select(model).where(model.user_id == user_id).order_by(*order_by)
+            select(model)
+            .where(typed_model.user_id == user_id, typed_model.deleted_at.is_(None))
+            .order_by(*order_by)
         )
         return list(result.scalars().all())
 
@@ -218,7 +221,7 @@ async def _ensure_user_exists(session: AsyncSession, user_id: int) -> User:
 
 async def _ensure_label_for_user(session: AsyncSession, user_id: int, label_id: str) -> TimeTrackingLabel:
     label = await session.get(TimeTrackingLabel, label_id)
-    if label is None or label.user_id != user_id:
+    if label is None or label.user_id != user_id or label.deleted_at is not None:
         raise NotFoundError("label not found")
     return label
 
@@ -289,15 +292,20 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> No
     label = await _ensure_label_for_user(session, user_id, label_id)
 
     task_count = await session.scalar(
-        select(sql_func.count()).select_from(TimeTrackingTask).where(TimeTrackingTask.label_id == label_id)
+        select(sql_func.count())
+        .select_from(TimeTrackingTask)
+        .where(TimeTrackingTask.label_id == label_id, TimeTrackingTask.deleted_at.is_(None))
     )
     template_count = await session.scalar(
-        select(sql_func.count()).select_from(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == label_id)
+        select(sql_func.count())
+        .select_from(TimeTrackingTemplate)
+        .where(TimeTrackingTemplate.label_id == label_id, TimeTrackingTemplate.deleted_at.is_(None))
     )
     if task_count or template_count:
         raise ConflictError("label is in use by tasks or templates and cannot be deleted")
 
-    await session.delete(label)
+    label.deleted_at = datetime.now(UTC)
+    session.add(label)
     await session.commit()
 
 
@@ -341,7 +349,7 @@ async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) 
 async def get_task(session: AsyncSession, user_id: int, task_id: str) -> TimeTrackingTask:
     """Get a task scoped to a specific user to prevent cross-user access."""
     task = await session.get(TimeTrackingTask, task_id)
-    if task is None or task.user_id != user_id:
+    if task is None or task.user_id != user_id or task.deleted_at is not None:
         raise NotFoundError("task not found")
     return task
 
@@ -355,7 +363,10 @@ async def list_tasks(
     label_id: str | None = None,
     gantt_task_id: str | None = None,
 ) -> list[TimeTrackingTask]:
-    statement = select(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id)
+    statement = select(TimeTrackingTask).where(
+        TimeTrackingTask.user_id == user_id,
+        TimeTrackingTask.deleted_at.is_(None),
+    )
     if start_date is not None:
         statement = statement.where(TimeTrackingTask.start_time >= start_date)
     if end_date is not None:
@@ -374,6 +385,7 @@ async def get_running_task(session: AsyncSession, user_id: int) -> TimeTrackingT
         select(TimeTrackingTask).where(
             TimeTrackingTask.user_id == user_id,
             TimeTrackingTask.stop_time.is_(None),
+            TimeTrackingTask.deleted_at.is_(None),
         )
     )
     return result.scalar_one_or_none()
@@ -413,7 +425,8 @@ async def update_task(
 
 async def delete_task(session: AsyncSession, user_id: int, task_id: str) -> None:
     task = await get_task(session, user_id, task_id)
-    await session.delete(task)
+    task.deleted_at = datetime.now(UTC)
+    session.add(task)
     await session.commit()
 
 
@@ -437,7 +450,7 @@ async def get_template(
 ) -> TimeTrackingTemplate:
     """Get a template scoped to a specific user to prevent cross-user access."""
     template = await session.get(TimeTrackingTemplate, template_id)
-    if template is None or template.user_id != user_id:
+    if template is None or template.user_id != user_id or template.deleted_at is not None:
         raise NotFoundError("template not found")
     return template
 
@@ -447,7 +460,10 @@ async def list_templates_for_user(
 ) -> list[TimeTrackingTemplate]:
     result = await session.execute(
         select(TimeTrackingTemplate)
-        .where(TimeTrackingTemplate.user_id == user_id)
+        .where(
+            TimeTrackingTemplate.user_id == user_id,
+            TimeTrackingTemplate.deleted_at.is_(None),
+        )
         .order_by(TimeTrackingTemplate.created_at.desc())
     )
     return list(result.scalars().all())
@@ -472,7 +488,8 @@ async def update_template(
 
 async def delete_template(session: AsyncSession, user_id: int, template_id: str) -> None:
     template = await get_template(session, user_id, template_id)
-    await session.delete(template)
+    template.deleted_at = datetime.now(UTC)
+    session.add(template)
     await session.commit()
 
 
@@ -496,6 +513,7 @@ async def create_or_update_work_location(
     else:
         for field, value in payload.model_dump().items():
             setattr(location, field, value)
+        location.deleted_at = None
 
     session.add(location)
     await session.commit()
@@ -508,7 +526,9 @@ async def get_work_location(
 ) -> WorkLocation:
     result = await session.execute(
         select(WorkLocation).where(
-            WorkLocation.user_id == user_id, WorkLocation.date == value_date
+            WorkLocation.user_id == user_id,
+            WorkLocation.date == value_date,
+            WorkLocation.deleted_at.is_(None),
         )
     )
     location = result.scalar_one_or_none()
@@ -524,7 +544,10 @@ async def list_work_locations(
     start_date: date | None = None,
     end_date: date | None = None,
 ) -> list[WorkLocation]:
-    statement = select(WorkLocation).where(WorkLocation.user_id == user_id)
+    statement = select(WorkLocation).where(
+        WorkLocation.user_id == user_id,
+        WorkLocation.deleted_at.is_(None),
+    )
     if start_date is not None:
         statement = statement.where(WorkLocation.date >= start_date)
     if end_date is not None:
@@ -552,7 +575,8 @@ async def update_work_location(
 
 async def delete_work_location(session: AsyncSession, user_id: int, value_date: date) -> None:
     location = await get_work_location(session, user_id, value_date)
-    await session.delete(location)
+    location.deleted_at = datetime.now(UTC)
+    session.add(location)
     await session.commit()
 
 
@@ -610,7 +634,8 @@ async def update_gantt_task(
 
 async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> None:
     task = await get_gantt_task(session, user_id, task_id)
-    await session.delete(task)
+    task.deleted_at = datetime.now(UTC)
+    session.add(task)
     await session.commit()
 
 
