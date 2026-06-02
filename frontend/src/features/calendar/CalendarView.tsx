@@ -41,17 +41,18 @@ function currentMonthRange(): CalendarRange {
   };
 }
 
-function calendarDate(value: Temporal.ZonedDateTime | Temporal.PlainDate): string {
+function calendarDate(value: Temporal.ZonedDateTime | Temporal.PlainDate | string): string {
   return value.toString().slice(0, 10);
 }
 
-function localDateTime(value: Temporal.ZonedDateTime | Temporal.PlainDate): string | null {
-  if (!(value instanceof Temporal.ZonedDateTime)) return null;
-  return value.toPlainDateTime().toString({ smallestUnit: "minute" });
-}
-
-function timeFromDateTime(value: Temporal.ZonedDateTime): string {
-  return value.toPlainTime().toString({ smallestUnit: "minute" });
+function localDateTime(value: Temporal.ZonedDateTime | Temporal.PlainDate | string): string | null {
+  if (typeof value === "string") {
+    return value.replace(" ", "T");
+  }
+  if (value instanceof Temporal.ZonedDateTime) {
+    return value.toPlainDateTime().toString({ smallestUnit: "minute" });
+  }
+  return null;
 }
 
 function isValidCompletedRange(start: string, stop: string): boolean {
@@ -142,7 +143,9 @@ export function CalendarView() {
           const stopTime = task.stopTime ? renderedStopTime : undefined;
           if (stopTime && !dayjs(startTime).isSame(dayjs(stopTime), "day")) {
             toast.showError("A time-tracking task cannot span multiple days.");
-            calendarApp?.events.set(eventRef.current);
+            setTimeout(() => {
+              calendarApp?.events.set(eventRef.current);
+            }, 0);
             return;
           }
           updateTaskTimesRef.current({
@@ -152,14 +155,39 @@ export function CalendarView() {
           });
         },
         onClickDateTime: (dateTime) => {
-          setAddDate(dateTime.toPlainDate().toString());
-          setAddStart(timeFromDateTime(dateTime));
-          setAddStop(timeFromDateTime(dateTime.add({ hours: 1 })));
+          const dateTimeStr = typeof dateTime === "string" ? dateTime : dateTime.toString();
+          const normalized = dateTimeStr.replace(" ", "T");
+          let datePart = normalized.slice(0, 10);
+          let startPart = "09:00";
+          let stopPart = "10:00";
+
+          try {
+            if (normalized.includes("T")) {
+              const pdt = Temporal.PlainDateTime.from(normalized);
+              datePart = pdt.toPlainDate().toString();
+              startPart = pdt.toPlainTime().toString({ smallestUnit: "minute" });
+              stopPart = pdt.add({ hours: 1 }).toPlainTime().toString({ smallestUnit: "minute" });
+            } else {
+              datePart = Temporal.PlainDate.from(normalized).toString();
+            }
+          } catch {
+            const parts = normalized.split("T");
+            datePart = parts[0];
+            if (parts[1]) {
+              startPart = parts[1].slice(0, 5);
+              const [h, m] = startPart.split(":").map(Number);
+              stopPart = `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            }
+          }
+
+          setAddDate(datePart);
+          setAddStart(startPart);
+          setAddStop(stopPart);
           setAddText("");
         },
       },
     },
-    [dragAndDropPlugin],
+    [dragAndDropPlugin, labels],
   );
 
   useEffect(() => {
