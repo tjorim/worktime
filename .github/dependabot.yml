@@ -10,6 +10,7 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "tjorim"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "deps"
       include: "scope"
@@ -70,6 +71,7 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "tjorim"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "deps(backend)"
       include: "scope"
@@ -89,6 +91,7 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "tjorim"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "deps(android)"
       include: "scope"
@@ -106,6 +109,7 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "tjorim"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "deps(docker)"
       include: "scope"
@@ -123,6 +127,7 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "tjorim"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "deps(compose)"
       include: "scope"
@@ -140,6 +145,7 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "tjorim"
+    open-pull-requests-limit: 20
     commit-message:
       prefix: "ci"
       include: "scope"
