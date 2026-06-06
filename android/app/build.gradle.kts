@@ -16,7 +16,7 @@ val oidcScope = providers.gradleProperty("WORKTIME_ANDROID_OIDC_SCOPE").orElse("
 
 android {
     namespace = "com.worktime.android"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.worktime.android"
