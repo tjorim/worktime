@@ -39,7 +39,7 @@ class WorktimeApiTest {
         val response = api.getSyncStatus(authorization = "Bearer token-123")
 
         val request = server.takeRequest()
-        assertEquals("/api/sync/status", request.requestUrl?.encodedPath)
+        assertEquals("/api/sync/status", request.requestLine.substringAfter(' ').substringBefore(' '))
         assertEquals("Bearer token-123", request.headers["Authorization"])
         assertEquals("2026-05-26T12:00:00Z", response.serverTimestamp)
     }
