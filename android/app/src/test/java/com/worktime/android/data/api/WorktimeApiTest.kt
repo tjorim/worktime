@@ -19,15 +19,16 @@ class WorktimeApiTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        server.close()
     }
 
     @Test
     fun getSyncStatusSendsAuthorizationHeaderAndParsesResponse() = runTest {
         server.enqueue(
-            MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody("""{"server_timestamp":"2026-05-26T12:00:00Z"}""")
+            MockResponse.Builder()
+                .addHeader("Content-Type", "application/json")
+                .body("""{"server_timestamp":"2026-05-26T12:00:00Z"}""")
+                .build()
         )
         val api =
             WorktimeApi.create(
@@ -38,7 +39,7 @@ class WorktimeApiTest {
         val response = api.getSyncStatus(authorization = "Bearer token-123")
 
         val request = server.takeRequest()
-        assertEquals("/api/sync/status", request.path)
+        assertEquals("/api/sync/status", request.requestUrl?.encodedPath)
         assertEquals("Bearer token-123", request.headers["Authorization"])
         assertEquals("2026-05-26T12:00:00Z", response.serverTimestamp)
     }
