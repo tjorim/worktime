@@ -14,8 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.worktime.android.feature.dashboard.MobileActionsUiState
 import com.worktime.android.feature.dashboard.DashboardUiState
+import com.worktime.android.feature.dashboard.MobileActionsUiState
 import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
@@ -31,7 +31,7 @@ fun TodayScreen(
     onStartTracking: (String, String?) -> Unit,
     onStopTracking: (String) -> Unit,
     onUpdateTask: (String, String?, String?) -> Unit,
-    onSetWorkLocation: (LocalDate, String, String?) -> Unit,
+    onSetWorkLocation: (LocalDate, String, String?) -> Unit
 ) {
     ReadModelScreen(title = "Today", uiState = uiState, onRetry = onRetry) { dashboard ->
         var taskText by remember(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.text ?: "") }
@@ -60,11 +60,11 @@ fun TodayScreen(
                             "Team ${dashboard.currentStatus.currentlyWorkingTeam.teamNumber}"
                         } else {
                             "Nobody scheduled right now"
-                        },
+                        }
                     )
                     text(
                         "Off-day progress",
-                        dashboard.currentStatus.offDayProgress?.let { "${it.current}/${it.total}" } ?: "—",
+                        dashboard.currentStatus.offDayProgress?.let { "${it.current}/${it.total}" } ?: "—"
                     )
                 }
             }
@@ -72,26 +72,26 @@ fun TodayScreen(
                 SummaryCard(title = "Time tracking") {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
                             value = taskText,
                             onValueChange = { taskText = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Task") },
-                            singleLine = true,
+                            singleLine = true
                         )
                         OutlinedTextField(
                             value = taskLabel,
                             onValueChange = { taskLabel = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Label (optional)") },
-                            singleLine = true,
+                            singleLine = true
                         )
                         if (actionsState.runningTask == null) {
                             Button(
                                 onClick = { onStartTracking(taskText, taskLabel.ifBlank { null }) },
-                                enabled = !actionsState.isSubmitting && taskText.isNotBlank(),
+                                enabled = !actionsState.isSubmitting && taskText.isNotBlank()
                             ) {
                                 Text("Start timer")
                             }
@@ -101,16 +101,16 @@ fun TodayScreen(
                                     onUpdateTask(
                                         actionsState.runningTask.id,
                                         taskText,
-                                        taskLabel.ifBlank { null },
+                                        taskLabel.ifBlank { null }
                                     )
                                 },
-                                enabled = !actionsState.isSubmitting && taskText.isNotBlank(),
+                                enabled = !actionsState.isSubmitting && taskText.isNotBlank()
                             ) {
                                 Text("Update task")
                             }
                             Button(
                                 onClick = { onStopTracking(actionsState.runningTask.id) },
-                                enabled = !actionsState.isSubmitting,
+                                enabled = !actionsState.isSubmitting
                             ) {
                                 Text("Stop timer")
                             }
@@ -123,28 +123,28 @@ fun TodayScreen(
                 SummaryCard(title = "Work location") {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
                             value = workLocationDate,
                             onValueChange = { workLocationDate = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Date (YYYY-MM-DD)") },
-                            singleLine = true,
+                            singleLine = true
                         )
                         OutlinedTextField(
                             value = countryCode,
                             onValueChange = { countryCode = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Country code") },
-                            singleLine = true,
+                            singleLine = true
                         )
                         OutlinedTextField(
                             value = workLocationLabel,
                             onValueChange = { workLocationLabel = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Label (optional)") },
-                            singleLine = true,
+                            singleLine = true
                         )
                         Button(
                             onClick = {
@@ -152,7 +152,7 @@ fun TodayScreen(
                                     onSetWorkLocation(parsedDate, countryCode, workLocationLabel.ifBlank { null })
                                 }
                             },
-                            enabled = !actionsState.isSubmitting && countryCode.length >= 2,
+                            enabled = !actionsState.isSubmitting && countryCode.length >= 2
                         ) {
                             Text("Set work location")
                         }
@@ -168,7 +168,7 @@ fun TodayScreen(
                     if (!actionsState.message.isNullOrBlank()) {
                         Text(
                             text = actionsState.message,
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                 }

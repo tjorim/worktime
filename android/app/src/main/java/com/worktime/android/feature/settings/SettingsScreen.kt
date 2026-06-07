@@ -26,7 +26,7 @@ fun SettingsScreen(
     onShiftNotificationsChanged: (Boolean) -> Unit,
     onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
     onSyncNotificationsChanged: (Boolean) -> Unit,
-    onLogout: () -> Unit,
+    onLogout: () -> Unit
 ) {
     ScreenList(title = "Settings") {
         item {
@@ -50,30 +50,31 @@ fun SettingsScreen(
         item {
             SummaryCard(title = "Notifications") {
                 Column(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
                         Text("Shifts channel", modifier = Modifier.weight(1f))
                         Switch(
                             checked = notificationPreferences.shiftsEnabled,
-                            onCheckedChange = onShiftNotificationsChanged,
+                            onCheckedChange = onShiftNotificationsChanged
                         )
                     }
                     androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
                         Text("Time tracking channel", modifier = Modifier.weight(1f))
                         Switch(
                             checked = notificationPreferences.timeTrackingEnabled,
-                            onCheckedChange = onTimeTrackingNotificationsChanged,
+                            onCheckedChange = onTimeTrackingNotificationsChanged
                         )
                     }
                     androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
                         Text("Sync/conflicts channel", modifier = Modifier.weight(1f))
                         Switch(
                             checked = notificationPreferences.syncConflictsEnabled,
-                            onCheckedChange = onSyncNotificationsChanged,
+                            onCheckedChange = onSyncNotificationsChanged
                         )
                     }
                 }
@@ -81,14 +82,15 @@ fun SettingsScreen(
         }
         item {
             Column(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxSize()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = "Switch environments with Gradle flavors or WORKTIME_ANDROID_* properties in CI/local builds.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Button(onClick = onLogout) {
                     Text("Sign out")

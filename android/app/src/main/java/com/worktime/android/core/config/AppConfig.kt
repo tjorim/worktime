@@ -9,6 +9,8 @@ data class AppConfig(
     val oidcClientId: String,
     val oidcScope: String,
     val oidcRedirectUri: String,
+    val certificatePinHosts: List<String>,
+    val certificatePins: List<String>
 )
 
 fun buildAppConfig(): AppConfig = AppConfig(
@@ -18,4 +20,10 @@ fun buildAppConfig(): AppConfig = AppConfig(
     oidcClientId = BuildConfig.OIDC_CLIENT_ID,
     oidcScope = BuildConfig.OIDC_SCOPE,
     oidcRedirectUri = BuildConfig.OIDC_REDIRECT_URI,
+    certificatePinHosts = BuildConfig.CERTIFICATE_PIN_HOSTS.toCsvList(),
+    certificatePins = BuildConfig.CERTIFICATE_PINS.toCsvList()
 )
+
+private fun String.toCsvList(): List<String> = split(",")
+    .map { it.trim() }
+    .filter { it.isNotEmpty() }

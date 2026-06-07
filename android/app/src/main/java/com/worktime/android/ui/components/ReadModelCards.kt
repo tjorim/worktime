@@ -16,14 +16,11 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun SummaryCard(
-    title: String,
-    body: @Composable ColumnScopeShim.() -> Unit,
-) {
+fun SummaryCard(title: String, body: @Composable ColumnScopeShim.() -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(text = title, style = MaterialTheme.typography.titleMedium)
             ColumnScopeShim(this).body()
@@ -31,9 +28,7 @@ fun SummaryCard(
     }
 }
 
-class ColumnScopeShim(
-    private val scope: androidx.compose.foundation.layout.ColumnScope,
-) {
+class ColumnScopeShim(private val scope: androidx.compose.foundation.layout.ColumnScope) {
     @Composable
     fun text(label: String, value: String) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -53,15 +48,18 @@ fun formatInstant(value: String): String = runCatching {
 }.getOrDefault(value)
 
 fun formatDate(value: String): String = runCatching {
-    java.time.LocalDate.parse(value).format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+    java.time.LocalDate
+        .parse(value)
+        .format(DateTimeFormatter.ofPattern("EEE, MMM d"))
 }.getOrDefault(value)
 
 fun formatShift(shift: ShiftSummary): String {
-    val hours = if (shift.startHour != null && shift.endHour != null) {
-        " ${shift.startHour.toPrettyHour()}-${shift.endHour.toPrettyHour()}"
-    } else {
-        ""
-    }
+    val hours =
+        if (shift.startHour != null && shift.endHour != null) {
+            " ${shift.startHour.toPrettyHour()}-${shift.endHour.toPrettyHour()}"
+        } else {
+            ""
+        }
     return "${shift.name} (${shift.displayCode})$hours"
 }
 

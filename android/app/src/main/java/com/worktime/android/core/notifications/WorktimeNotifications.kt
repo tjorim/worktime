@@ -21,11 +21,12 @@ class WorktimeNotifications(private val context: Context) {
     fun createChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val channels = listOf(
-            NotificationChannel(CHANNEL_SHIFTS, "Shifts", NotificationManager.IMPORTANCE_DEFAULT),
-            NotificationChannel(CHANNEL_TIME_TRACKING, "Time tracking", NotificationManager.IMPORTANCE_DEFAULT),
-            NotificationChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts", NotificationManager.IMPORTANCE_DEFAULT),
-        )
+        val channels =
+            listOf(
+                NotificationChannel(CHANNEL_SHIFTS, "Shifts", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_TIME_TRACKING, "Time tracking", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts", NotificationManager.IMPORTANCE_DEFAULT)
+            )
         manager.createNotificationChannels(channels)
     }
 
@@ -35,7 +36,7 @@ class WorktimeNotifications(private val context: Context) {
             channelId = CHANNEL_SHIFTS,
             title = "Shift reminder",
             message = message,
-            destination = "today",
+            destination = "today"
         )
     }
 
@@ -45,7 +46,7 @@ class WorktimeNotifications(private val context: Context) {
             channelId = CHANNEL_TIME_TRACKING,
             title = "Running timer reminder",
             message = message,
-            destination = "today",
+            destination = "today"
         )
     }
 
@@ -55,37 +56,36 @@ class WorktimeNotifications(private val context: Context) {
             channelId = CHANNEL_SYNC_CONFLICTS,
             title = "Sync status",
             message = message,
-            destination = "today",
+            destination = "today"
         )
     }
 
-    private fun show(
-        id: Int,
-        channelId: String,
-        title: String,
-        message: String,
-        destination: String,
-    ) {
-        val intent = Intent()
-            .setClass(context, MainActivity::class.java)
-            .setPackage(context.packageName)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            .putExtra(EXTRA_DESTINATION, destination)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-        val canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    private fun show(id: Int, channelId: String, title: String, message: String, destination: String) {
+        val intent =
+            Intent()
+                .setClass(context, MainActivity::class.java)
+                .setPackage(context.packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(EXTRA_DESTINATION, destination)
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                id,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        val notification =
+            NotificationCompat
+                .Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+        val canNotify =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         if (canNotify) {
             NotificationManagerCompat.from(context).notify(id, notification)
         }

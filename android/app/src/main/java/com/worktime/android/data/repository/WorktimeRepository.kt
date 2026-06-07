@@ -9,51 +9,58 @@ import com.worktime.android.data.model.TaskMutationRequest
 import com.worktime.android.data.model.TaskRecord
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.StateFlow
-import retrofit2.HttpException
 import java.io.IOException
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.TimeZone
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.StateFlow
+import retrofit2.HttpException
 
 sealed interface DashboardLoadResult {
     data class Success(val dashboard: DashboardResponse) : DashboardLoadResult
+
     data object LoggedOut : DashboardLoadResult
+
     data class Error(val message: String) : DashboardLoadResult
 }
 
 sealed interface MutationResult<out T> {
     data class Success<T>(val value: T) : MutationResult<T>
+
     data object LoggedOut : MutationResult<Nothing>
+
     data class ValidationError(val message: String) : MutationResult<Nothing>
+
     data class Error(val message: String) : MutationResult<Nothing>
 }
 
 interface DashboardRepository {
     val sessionState: StateFlow<SessionState>
+
     suspend fun loadDashboard(): DashboardLoadResult
+
     suspend fun startTimeTracking(text: String, labelId: String? = null): MutationResult<TaskRecord>
+
     suspend fun stopTimeTracking(taskId: String): MutationResult<TaskRecord>
+
     suspend fun updateTask(taskId: String, text: String? = null, labelId: String? = null): MutationResult<TaskRecord>
+
     suspend fun getRunningTask(): MutationResult<TaskRecord?>
-    suspend fun setWorkLocation(
-        date: LocalDate,
-        countryCode: String,
-        label: String? = null,
-    ): MutationResult<WorkLocationRecord>
+
+    suspend fun setWorkLocation(date: LocalDate, countryCode: String, label: String? = null): MutationResult<WorkLocationRecord>
 
     suspend fun loadWeeklyWorkLocations(until: LocalDate = LocalDate.now()): MutationResult<List<WorkLocationRecord>>
+
     suspend fun deleteLabel(labelId: String): MutationResult<Unit>
+
     suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse>
+
     fun logout()
 }
 
-class WorktimeRepository(
-    private val api: WorktimeApi,
-    private val sessionController: SessionController,
-) : DashboardRepository {
+class WorktimeRepository(private val api: WorktimeApi, private val sessionController: SessionController) : DashboardRepository {
     override val sessionState: StateFlow<SessionState> = sessionController.sessionState
     private var currentUserId: Int? = null
 
@@ -85,12 +92,13 @@ class WorktimeRepository(
             api.createTask(
                 authorization = "Bearer $token",
                 userId = userId,
-                payload = TaskMutationRequest(
+                payload =
+                TaskMutationRequest(
                     text = text,
                     labelId = labelId,
                     startTime = now,
-                    includesBreak = false,
-                ),
+                    includesBreak = false
+                )
             )
         }
     }
@@ -102,60 +110,52 @@ class WorktimeRepository(
                 authorization = "Bearer $token",
                 taskId = taskId,
                 userId = userId,
-                payload = TaskMutationRequest(stopTime = now),
+                payload = TaskMutationRequest(stopTime = now)
             )
         }
     }
 
-    override suspend fun updateTask(taskId: String, text: String?, labelId: String?): MutationResult<TaskRecord> {
-        return withAuthorizedUser { token, userId ->
-            api.updateTask(
+    override suspend fun updateTask(taskId: String, text: String?, labelId: String?): MutationResult<TaskRecord> = withAuthorizedUser { token, userId ->
+        api.updateTask(
+            authorization = "Bearer $token",
+            taskId = taskId,
+            userId = userId,
+            payload = TaskMutationRequest(text = text, labelId = labelId)
+        )
+    }
+
+    override suspend fun getRunningTask(): MutationResult<TaskRecord?> = withAuthorizedUser { token, userId ->
+        val response =
+            api.getRunningTask(
                 authorization = "Bearer $token",
-                taskId = taskId,
-                userId = userId,
-                payload = TaskMutationRequest(text = text, labelId = labelId),
+                userId = userId
             )
-        }
+        if (!response.isSuccessful) throw HttpException(response)
+        if (response.code() == 204) null else response.body()
     }
 
-    override suspend fun getRunningTask(): MutationResult<TaskRecord?> {
-        return withAuthorizedUser { token, userId ->
-            val response = api.getRunningTask(
-                authorization = "Bearer $token",
-                userId = userId,
-            )
-            if (!response.isSuccessful) throw HttpException(response)
-            if (response.code() == 204) null else response.body()
-        }
-    }
-
-    override suspend fun setWorkLocation(
-        date: LocalDate,
-        countryCode: String,
-        label: String?,
-    ): MutationResult<WorkLocationRecord> {
-        return withAuthorizedUser { token, userId ->
+    override suspend fun setWorkLocation(date: LocalDate, countryCode: String, label: String?): MutationResult<WorkLocationRecord> =
+        withAuthorizedUser { token, userId ->
             api.upsertWorkLocation(
                 authorization = "Bearer $token",
                 userId = userId,
-                payload = WorkLocationMutationRequest(
+                payload =
+                WorkLocationMutationRequest(
                     date = date.toString(),
                     countryCode = countryCode.uppercase(),
-                    label = label?.takeIf { it.isNotBlank() },
-                ),
+                    label = label?.takeIf { it.isNotBlank() }
+                )
             )
         }
-    }
 
-    override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> {
-        return withAuthorizedUser { token, userId ->
-            api.listWorkLocations(
+    override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> = withAuthorizedUser { token, userId ->
+        api
+            .listWorkLocations(
                 authorization = "Bearer $token",
                 userId = userId,
                 startDate = until.minusDays(6).toString(),
-                endDate = until.toString(),
+                endDate = until.toString()
             ).items
-        }
     }
 
     override suspend fun deleteLabel(labelId: String): MutationResult<Unit> {
@@ -166,7 +166,10 @@ class WorktimeRepository(
             MutationResult.Success(Unit)
         } catch (error: HttpException) {
             when (error.code()) {
-                401 -> { sessionController.logout(); MutationResult.LoggedOut }
+                401 -> {
+                    sessionController.logout()
+                    MutationResult.LoggedOut
+                }
                 409 -> MutationResult.ValidationError("Label is in use by tasks or templates and cannot be deleted")
                 else -> MutationResult.Error("Request failed (${error.code()})")
             }
@@ -178,10 +181,8 @@ class WorktimeRepository(
         }
     }
 
-    override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> {
-        return withAuthorizedUser { token, _ ->
-            api.getSyncStatus(authorization = "Bearer $token")
-        }
+    override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> = withAuthorizedUser { token, _ ->
+        api.getSyncStatus(authorization = "Bearer $token")
     }
 
     override fun logout() {

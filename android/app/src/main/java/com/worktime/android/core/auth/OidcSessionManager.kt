@@ -5,10 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.storage.SecureSessionStore
+import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
@@ -17,41 +20,38 @@ import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
-import kotlin.coroutines.resume
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
-class OidcSessionManager(
-    private val context: Context,
-    private val appConfig: AppConfig,
-    private val sessionStore: SecureSessionStore,
-) : SessionController {
+class OidcSessionManager(private val context: Context, private val appConfig: AppConfig, private val sessionStore: SecureSessionStore) : SessionController {
     private val tokenMutex = Mutex()
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
 
-    private var authState: AuthState? = try {
-        sessionStore.readAuthStateJson()
-            ?.takeIf { it.isNotBlank() }
-            ?.let(AuthState::jsonDeserialize)
-            ?.also(::publishState)
-    } catch (e: Exception) {
-        sessionStore.clear()
-        null
-    } ?: run {
-        _sessionState.value = SessionState.LoggedOut
-        null
-    }
+    private var authState: AuthState? =
+        try {
+            sessionStore
+                .readAuthStateJson()
+                ?.takeIf { it.isNotBlank() }
+                ?.let(AuthState::jsonDeserialize)
+                ?.also(::publishState)
+        } catch (e: Exception) {
+            sessionStore.clear()
+            null
+        } ?: run {
+            _sessionState.value = SessionState.LoggedOut
+            null
+        }
 
     override suspend fun createAuthorizationIntent(): Intent {
         val configuration = fetchAuthorizationServiceConfiguration()
-        val request = AuthorizationRequest.Builder(
-            configuration,
-            appConfig.oidcClientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(appConfig.oidcRedirectUri),
-        ).setScope(appConfig.oidcScope)
-            .build()
+        val request =
+            AuthorizationRequest
+                .Builder(
+                    configuration,
+                    appConfig.oidcClientId,
+                    ResponseTypeValues.CODE,
+                    Uri.parse(appConfig.oidcRedirectUri)
+                ).setScope(appConfig.oidcScope)
+                .build()
 
         return AuthorizationService(context).getAuthorizationRequestIntent(request)
     }
@@ -102,28 +102,23 @@ class OidcSessionManager(
         _sessionState.value = SessionState.LoggedOut
     }
 
-    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
-        return suspendCancellableCoroutine { continuation ->
-            AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(appConfig.oidcAuthority)) { config, ex ->
-                when {
-                    config != null -> continuation.resume(config)
-                    else -> continuation.resumeWith(Result.failure(ex ?: IllegalStateException("Failed to load OIDC configuration")))
-                }
+    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration = suspendCancellableCoroutine { continuation ->
+        AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(appConfig.oidcAuthority)) { config, ex ->
+            when {
+                config != null -> continuation.resume(config)
+                else -> continuation.resumeWith(Result.failure(ex ?: IllegalStateException("Failed to load OIDC configuration")))
             }
         }
     }
 
-    private suspend fun performTokenRequest(
-        request: TokenRequest,
-    ): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> {
-        return suspendCancellableCoroutine { continuation ->
+    private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
+        suspendCancellableCoroutine { continuation ->
             val service = AuthorizationService(context)
             service.performTokenRequest(request) { response, ex ->
                 service.dispose()
                 continuation.resume(response to ex)
             }
         }
-    }
 
     private fun persistAuthState(state: AuthState) {
         authState = state
