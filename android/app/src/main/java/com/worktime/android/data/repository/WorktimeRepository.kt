@@ -64,6 +64,14 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
     override val sessionState: StateFlow<SessionState> = sessionController.sessionState
     private var currentUserId: Int? = null
 
+    companion object {
+        private const val HTTP_NO_CONTENT = 204
+        private const val HTTP_BAD_REQUEST = 400
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_CONFLICT = 409
+        private const val WEEK_LOOKBACK_DAYS = 6L
+    }
+
     override suspend fun loadDashboard(): DashboardLoadResult {
         val token = sessionController.getFreshAccessToken() ?: return DashboardLoadResult.LoggedOut
         val timezone = TimeZone.getDefault().id
@@ -72,7 +80,7 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
             currentUserId = dashboard.identity.id
             DashboardLoadResult.Success(dashboard)
         } catch (error: HttpException) {
-            if (error.code() == 401) {
+            if (error.code() == HTTP_UNAUTHORIZED) {
                 sessionController.logout()
                 DashboardLoadResult.LoggedOut
             } else {
@@ -131,7 +139,7 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
                 userId = userId
             )
         if (!response.isSuccessful) throw HttpException(response)
-        if (response.code() == 204) null else response.body()
+        if (response.code() == HTTP_NO_CONTENT) null else response.body()
     }
 
     override suspend fun setWorkLocation(date: LocalDate, countryCode: String, label: String?): MutationResult<WorkLocationRecord> =
@@ -153,7 +161,7 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
             .listWorkLocations(
                 authorization = "Bearer $token",
                 userId = userId,
-                startDate = until.minusDays(6).toString(),
+                startDate = until.minusDays(WEEK_LOOKBACK_DAYS).toString(),
                 endDate = until.toString()
             ).items
     }
@@ -166,11 +174,11 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
             MutationResult.Success(Unit)
         } catch (error: HttpException) {
             when (error.code()) {
-                401 -> {
+                HTTP_UNAUTHORIZED -> {
                     sessionController.logout()
                     MutationResult.LoggedOut
                 }
-                409 -> MutationResult.ValidationError("Label is in use by tasks or templates and cannot be deleted")
+                HTTP_CONFLICT -> MutationResult.ValidationError("Label is in use by tasks or templates and cannot be deleted")
                 else -> MutationResult.Error("Request failed (${error.code()})")
             }
         } catch (_: IOException) {
@@ -196,10 +204,10 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         return try {
             MutationResult.Success(block(token, userId))
         } catch (error: HttpException) {
-            if (error.code() == 401) {
+            if (error.code() == HTTP_UNAUTHORIZED) {
                 sessionController.logout()
                 MutationResult.LoggedOut
-            } else if (error.code() == 400) {
+            } else if (error.code() == HTTP_BAD_REQUEST) {
                 MutationResult.ValidationError("Request validation failed")
             } else {
                 MutationResult.Error("Request failed (${error.code()})")

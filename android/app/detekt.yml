@@ -9,15 +9,27 @@ exceptions:
     active: true
   TooGenericExceptionCaught:
     active: true
+    exceptionNames:
+      - 'ArrayIndexOutOfBoundsException'
+      - 'Error'
+      - 'IllegalMonitorStateException'
+      - 'NullPointerException'
+      - 'IndexOutOfBoundsException'
+      - 'RuntimeException'
+      - 'Throwable'
 
 naming:
   FunctionNaming:
     active: true
+    ignoreAnnotated:
+      - 'Composable'
 
 style:
   MagicNumber:
     active: true
   MaxLineLength:
     active: true
+    maxLineLength: 160
   ReturnCount:
     active: true
+    excludeGuardClauses: true

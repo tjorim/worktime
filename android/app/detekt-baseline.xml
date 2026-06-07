@@ -4,59 +4,9 @@
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:TodayScreen.kt:@Composable fun TodayScreen</ID>
     <ID>CyclomaticComplexMethod:WorktimeApp.kt:@Composable fun WorktimeApp</ID>
-    <ID>FunctionNaming:LoginScreen.kt:@Composable fun LoginScreen</ID>
-    <ID>FunctionNaming:NextShiftsScreen.kt:@Composable fun NextShiftsScreen</ID>
-    <ID>FunctionNaming:ReadModelCards.kt:@Composable fun SummaryCard</ID>
-    <ID>FunctionNaming:ReadModelScreen.kt:@Composable fun EmptyPane</ID>
-    <ID>FunctionNaming:ReadModelScreen.kt:@Composable fun ReadModelScreen</ID>
-    <ID>FunctionNaming:ReadModelScreen.kt:@Composable fun ScreenList</ID>
-    <ID>FunctionNaming:ReadModelScreen.kt:@Composable private fun LoadingPane</ID>
-    <ID>FunctionNaming:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
-    <ID>FunctionNaming:TeamStatusScreen.kt:@Composable fun TeamStatusScreen</ID>
-    <ID>FunctionNaming:Theme.kt:@Composable fun WorktimeTheme</ID>
-    <ID>FunctionNaming:TimeOffSummaryScreen.kt:@Composable fun TimeOffSummaryScreen</ID>
-    <ID>FunctionNaming:TodayScreen.kt:@Composable fun TodayScreen</ID>
-    <ID>FunctionNaming:WorktimeApp.kt:@Composable fun WorktimeApp</ID>
-    <ID>FunctionNaming:WorktimeApp.kt:@Composable private fun WorktimeAuthenticatedScaffold</ID>
     <ID>LongMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
     <ID>LongMethod:TodayScreen.kt:@Composable fun TodayScreen</ID>
     <ID>LongMethod:WorktimeApp.kt:@Composable fun WorktimeApp</ID>
     <ID>LongMethod:WorktimeApp.kt:@Composable private fun WorktimeAuthenticatedScaffold</ID>
-    <ID>MagicNumber:WorktimeRepository.kt:WorktimeRepository$204</ID>
-    <ID>MagicNumber:WorktimeRepository.kt:WorktimeRepository$400</ID>
-    <ID>MagicNumber:WorktimeRepository.kt:WorktimeRepository$401</ID>
-    <ID>MagicNumber:WorktimeRepository.kt:WorktimeRepository$409</ID>
-    <ID>MagicNumber:WorktimeRepository.kt:WorktimeRepository$6</ID>
-    <ID>MaxLineLength:CertificatePinnerProviderTest.kt:CertificatePinnerProviderTest$private</ID>
-    <ID>MaxLineLength:DashboardViewModelTest.kt:DashboardViewModelTest.FakeDashboardRepository$override suspend</ID>
-    <ID>MaxLineLength:DashboardViewModelTest.kt:DashboardViewModelTest.FakeDashboardRepository$override suspend fun loadWeeklyWorkLocations: MutationResult&lt;List&lt;WorkLocationRecord&gt;&gt;</ID>
-    <ID>MaxLineLength:DashboardViewModelTest.kt:DashboardViewModelTest.FakeDashboardRepository$override suspend fun startTimeTracking: MutationResult&lt;TaskRecord&gt;</ID>
-    <ID>MaxLineLength:DashboardViewModelTest.kt:DashboardViewModelTest.FakeDashboardRepository$override suspend fun stopTimeTracking: MutationResult&lt;TaskRecord&gt;</ID>
-    <ID>MaxLineLength:DashboardViewModelTest.kt:DashboardViewModelTest.FakeDashboardRepository$override suspend fun updateTask: MutationResult&lt;TaskRecord&gt;</ID>
-    <ID>MaxLineLength:LoginScreen.kt:fun</ID>
-    <ID>MaxLineLength:LoginScreen.kt:is SessionState.Authenticated -&gt; if (sessionState.hasRefreshToken) "Session ready (refresh enabled)" else "Session ready"</ID>
-    <ID>MaxLineLength:LoginScreen.kt:text = "Native Android companion app for the current shift, next shifts, team status, and time-off summary."</ID>
-    <ID>MaxLineLength:NotificationPreferencesStore.kt:NotificationPreferences</ID>
-    <ID>MaxLineLength:OidcSessionManager.kt:OidcSessionManager$class</ID>
-    <ID>MaxLineLength:OidcSessionManager.kt:OidcSessionManager$else -&gt; continuation.resumeWith(Result.failure(ex ?: IllegalStateException("Failed to load OIDC configuration")))</ID>
-    <ID>MaxLineLength:OidcSessionManager.kt:OidcSessionManager$private suspend</ID>
-    <ID>MaxLineLength:ReadModelScreen.kt:fun</ID>
-    <ID>MaxLineLength:ReadModels.kt:Identity$data</ID>
-    <ID>MaxLineLength:ReadModels.kt:WorkLocationMutationRequest$data</ID>
-    <ID>MaxLineLength:SettingsScreen.kt:text = "Switch environments with Gradle flavors or WORKTIME_ANDROID_* properties in CI/local builds."</ID>
-    <ID>MaxLineLength:WorktimeApi.kt:WorktimeApi$suspend</ID>
-    <ID>MaxLineLength:WorktimeApi.kt:WorktimeApi.Companion$fun</ID>
-    <ID>MaxLineLength:WorktimeNotifications.kt:WorktimeNotifications$ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED</ID>
-    <ID>MaxLineLength:WorktimeRepository.kt:DashboardRepository$suspend fun setWorkLocation: MutationResult&lt;WorkLocationRecord&gt;</ID>
-    <ID>MaxLineLength:WorktimeRepository.kt:WorktimeRepository$class</ID>
-    <ID>MaxLineLength:WorktimeRepository.kt:WorktimeRepository$override suspend</ID>
-    <ID>MaxLineLength:WorktimeRepositoryTest.kt:WorktimeRepositoryTest.FakeApi$override suspend</ID>
-    <ID>MaxLineLength:WorktimeRepositoryTest.kt:WorktimeRepositoryTest.FakeApi$override suspend fun getRunningTask: Response&lt;TaskRecord&gt;</ID>
-    <ID>ReturnCount:CertificatePinnerProvider.kt:CertificatePinnerProvider$fun fromConfig: CertificatePinner?</ID>
-    <ID>ReturnCount:WorktimeRepository.kt:WorktimeRepository$override suspend fun deleteLabel: MutationResult&lt;Unit&gt;</ID>
-    <ID>ReturnCount:WorktimeRepository.kt:WorktimeRepository$private suspend fun &lt;T&gt; withAuthorizedUser: MutationResult&lt;T&gt;</ID>
-    <ID>SwallowedException:OidcSessionManager.kt:OidcSessionManager$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:OidcSessionManager.kt:OidcSessionManager$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:WorktimeRepository.kt:WorktimeRepository$error: Exception</ID>
   </CurrentIssues>
 </SmellBaseline>

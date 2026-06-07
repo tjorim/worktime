@@ -33,7 +33,7 @@ class OidcSessionManager(private val context: Context, private val appConfig: Ap
                 ?.takeIf { it.isNotBlank() }
                 ?.let(AuthState::jsonDeserialize)
                 ?.also(::publishState)
-        } catch (e: Exception) {
+        } catch (_: org.json.JSONException) {
             sessionStore.clear()
             null
         } ?: run {
