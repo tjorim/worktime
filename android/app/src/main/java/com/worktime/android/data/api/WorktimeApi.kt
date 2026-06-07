@@ -70,19 +70,18 @@ interface WorktimeApi {
                     ignoreUnknownKeys = true
                     explicitNulls = false
                 }
-            val client =
-                OkHttpClient
-                    .Builder()
-                    .apply {
-                        certificatePinner?.let(::certificatePinner)
-                        if (enableNetworkLogging) {
-                            addInterceptor(
-                                HttpLoggingInterceptor().apply {
-                                    level = HttpLoggingInterceptor.Level.BASIC
-                                }
-                            )
-                        }
-                    }.build()
+            val builder = OkHttpClient.Builder()
+            if (certificatePinner != null) {
+                builder.certificatePinner(certificatePinner)
+            }
+            if (enableNetworkLogging) {
+                builder.addInterceptor(
+                    HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BASIC
+                    }
+                )
+            }
+            val client = builder.build()
 
             return Retrofit
                 .Builder()

@@ -1,23 +1,23 @@
 complexity:
   CyclomaticComplexMethod:
-    active: false
+    active: true
   LongMethod:
-    active: false
+    active: true
 
 exceptions:
   SwallowedException:
-    active: false
+    active: true
   TooGenericExceptionCaught:
-    active: false
+    active: true
 
 naming:
   FunctionNaming:
-    active: false
+    active: true
 
 style:
   MagicNumber:
-    active: false
+    active: true
   MaxLineLength:
-    active: false
+    active: true
   ReturnCount:
-    active: false
+    active: true

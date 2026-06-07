@@ -148,6 +148,7 @@ dependencies {
 detekt {
     buildUponDefaultConfig = true
     config.setFrom(files("detekt.yml"))
+    baseline = file("detekt-baseline.xml")
 }
 
 ktlint {
