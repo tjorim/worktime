@@ -4,7 +4,7 @@ kotlin = "2.4.0"
 
 androidx-core-ktx = "1.19.0"
 androidx-activity = "1.13.0"
-androidx-lifecycle = "2.10.0"
+androidx-lifecycle = "2.11.0"
 androidx-navigation = "2.9.8"
 compose-ui = "1.11.2"
 compose-material3 = "1.4.0"
