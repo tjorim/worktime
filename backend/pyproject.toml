@@ -31,7 +31,7 @@ dev = [
   "pytest-asyncio==1.4.0",
   "ruff==0.15.18",
   "sentry-sdk[fastapi]==2.63.0",
-  "ty==0.0.51",
+  "ty==0.0.54",
 ]
 
 [tool.hatch.build.targets.wheel]
