@@ -7,10 +7,11 @@
 > performance**, not correctness gaps. Each step is atomic, preserves existing
 > behavior, and touches a bounded set of files.
 
-<analysis>
+## Analysis
+
 Here is my detailed review of the current codebase:
 
-## 1. Code Organization & Structure
+### 1. Code Organization & Structure
 
 - **Two parallel architectural conventions.** Most UI lives under
   `src/components/**`, but a single feature has been migrated to a
@@ -44,7 +45,7 @@ Here is my detailed review of the current codebase:
   flags (`enableGantt`, `enableTimeTracking`). This is the single biggest
   low-risk performance win available.
 
-## 2. Code Quality & Best Practices
+### 2. Code Quality & Best Practices
 
 - **`SettingsContext` is highly repetitive.** It defines ~20 near-identical
   `updateX` callbacks, each a `useCallback(setUserState(prev => ({...})))`
@@ -72,7 +73,7 @@ Here is my detailed review of the current codebase:
   `@/` alias imports, centralized storage keys, and a documented
   notify-then-pull SSE contract. The optimization plan must not regress these.
 
-## 3. UI/UX
+### 3. UI/UX
 
 - **Accessibility is partial but inconsistent.** 71 files use `aria-*` and
   decorative icons correctly carry `aria-hidden="true"`, and there's a
@@ -91,7 +92,6 @@ Here is my detailed review of the current codebase:
   surrounding toast handling; verifying every catch path produces a
   user-visible message (toast/inline) rather than a silent console line would
   tighten UX.
-</analysis>
 
 # Optimization Plan
 
@@ -239,14 +239,21 @@ Here is my detailed review of the current codebase:
 ## Tooling Guardrails
 
 - [ ] **Step 11: Lint rule to forbid raw `console.*` and enforce conventions**
-  - **Task**: Add an oxlint rule banning raw `console.*` (allow-list
-    `logger.ts`), and optionally a rule nudging feature-folder imports. Wire
-    into the existing `pnpm lint`.
+  - **Task**: Enable oxlint's `no-console` rule to ban raw `console.*`, and
+    optionally a rule nudging feature-folder imports. Wire into the existing
+    `pnpm lint`. Note: oxlint's `no-console` is a simple on/off toggle and does
+    **not** support a per-file allow-list in `.oxlintrc.json` the way ESLint's
+    `overrides` do. To keep `console.*` legal only inside `logger.ts`, use an
+    inline disable comment (`// oxlint-disable-next-line no-console`, or a
+    file-level `/* oxlint-disable no-console */`) within `logger.ts` rather than
+    a config allow-list.
   - **Files**:
-    - `frontend/.oxlintrc.json` (or equivalent oxlint config)
+    - `frontend/.oxlintrc.json` (or equivalent oxlint config): enable
+      `no-console`.
+    - `frontend/src/utils/logger.ts`: add the inline disable comment.
   - **Step Dependencies**: Step 4
   - **Success Criteria**: `pnpm lint` fails on a newly introduced raw
-    `console.log`; current code passes.
+    `console.log`; `logger.ts` and current code pass.
 
 ## Logical Next Step
 
@@ -256,5 +263,3 @@ calendar cut-over (Step 1) and lazy boundaries (Step 2) are in place, migrate
 the next vertical slice (time tracking or gantt) into a `src/features/*`
 folder, then update `AGENTS.md` to make the feature-folder layout the
 documented standard so the structural inconsistency is resolved going forward.
-</content>
-</invoke>
