@@ -253,7 +253,12 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   ) as unknown as UserSettings;
 
   // --- Validate lastUsed ---
-  const lastUsed = isObjectRecord(s.lastUsed) ? s.lastUsed : {};
+  const rawLastUsed = isObjectRecord(s.lastUsed) ? s.lastUsed : {};
+  // Migrate renamed tab keys before validation
+  const lastUsed =
+    rawLastUsed.activeTab === "unified-calendar"
+      ? { ...rawLastUsed, activeTab: "legacy-calendar" }
+      : rawLastUsed;
 
   const isTabEnabled = (tab: TabKey) => {
     if (tab === "timeoff") {

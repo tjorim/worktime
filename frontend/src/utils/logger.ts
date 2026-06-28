@@ -20,6 +20,6 @@ const callInDev = (level: LogLevel): LogMethod => {
 export const logger: Logger = {
   debug: callInDev("debug"),
   info: callInDev("info"),
-  warn: callInDev("warn"),
-  error: callInDev("error"),
+  warn: (...args) => console.warn(...args),
+  error: (...args) => console.error(...args),
 };

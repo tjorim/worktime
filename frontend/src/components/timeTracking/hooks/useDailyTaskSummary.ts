@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
-import type { StoredTimeTrackingTask } from "../types";
+import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
 
 export function useDailyTaskSummary(tasks: StoredTimeTrackingTask[], date: string) {
   const dailyTasks = useMemo(

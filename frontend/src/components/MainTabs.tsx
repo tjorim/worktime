@@ -75,16 +75,18 @@ export function MainTabs({
   onChangeTeam,
 }: MainTabsProps) {
   const tabsId = useId();
-  const [activeKey, setActiveKey] = useSyncedState(activeTab);
+  const { settings } = useSettings();
+  const {
+    options: { enableLegacyCalendar },
+  } = useDeveloperOptions();
+  const [activeKey, setActiveKey] = useSyncedState(
+    !enableLegacyCalendar && activeTab === "legacy-calendar" ? "calendar" : activeTab,
+  );
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
     null,
   );
-  const { settings } = useSettings();
-  const {
-    options: { enableLegacyCalendar },
-  } = useDeveloperOptions();
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
   const ganttEnabled = settings.enableGantt;
@@ -135,12 +137,15 @@ export function MainTabs({
     [enableLegacyCalendar, timeOffEnabled, timeTrackingEnabled, ganttEnabled],
   );
 
-  const loadingFallback = (
-    <div className="d-flex justify-content-center py-4" aria-live="polite">
-      <Spinner animation="border" role="status" size="sm">
-        <span className="visually-hidden">{m.loading()}</span>
-      </Spinner>
-    </div>
+  const loadingFallback = useMemo(
+    () => (
+      <div className="d-flex justify-content-center py-4" aria-live="polite">
+        <Spinner animation="border" role="status" size="sm">
+          <span className="visually-hidden">{m.loading()}</span>
+        </Spinner>
+      </div>
+    ),
+    [],
   );
 
   useEffect(() => {
@@ -174,7 +179,7 @@ export function MainTabs({
           >
             {activeKey === "calendar" && (
               <Suspense fallback={loadingFallback}>
-                <CalendarView />
+                <CalendarView onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
               </Suspense>
             )}
           </Tab>
@@ -211,17 +216,15 @@ export function MainTabs({
               </>
             }
           >
-            {activeKey === "schedule" && (
-              <ScheduleTabView
-                myTeam={myTeam}
-                currentDate={currentDate}
-                setCurrentDate={setCurrentDate}
-                onTeamClick={handleTeamClick}
-                onChangeSchedule={onChangeSchedule}
-                onChangeTeam={onChangeTeam}
-                isActive={true}
-              />
-            )}
+            <ScheduleTabView
+              myTeam={myTeam}
+              currentDate={currentDate}
+              setCurrentDate={setCurrentDate}
+              onTeamClick={handleTeamClick}
+              onChangeSchedule={onChangeSchedule}
+              onChangeTeam={onChangeTeam}
+              isActive={activeKey === "schedule"}
+            />
           </Tab>
 
           {timeOffEnabled && (
@@ -234,11 +237,9 @@ export function MainTabs({
                 </>
               }
             >
-              {activeKey === "timeoff" && (
-                <Suspense fallback={loadingFallback}>
-                  <TimeOffView isActive={true} />
-                </Suspense>
-              )}
+              <Suspense fallback={loadingFallback}>
+                <TimeOffView isActive={activeKey === "timeoff"} />
+              </Suspense>
             </Tab>
           )}
 
