@@ -20,6 +20,7 @@ import type { StoredTimeTrackingTask } from "./types";
 import type { GanttTask } from "@/types/gantt";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import * as m from "@/paraglide/messages.js";
+import { logger } from "@/utils/logger";
 
 export type EditRequest = {
   task: StoredTimeTrackingTask;
@@ -291,7 +292,7 @@ export function DailyTaskList({
       }
       closeEditModal();
     } catch (error) {
-      console.error("Failed to update task:", error);
+      logger.error("Failed to update task:", error);
       setEditError(m.tt_failed_to_update_task());
     }
   };
@@ -549,3 +550,4 @@ export function DailyTaskList({
     </>
   );
 }
+

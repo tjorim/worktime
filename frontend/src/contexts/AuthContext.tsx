@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useMemo } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
+import { logger } from "@/utils/logger";
 
 export interface AuthContextType {
   /** Whether the user has an active OIDC session. */
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const triggerLogin = useCallback(() => {
     oidcAuth.signinRedirect({ state: { returnTo: window.location.pathname } }).catch((error: unknown) => {
-      console.error("signinRedirect failed:", error);
+      logger.error("signinRedirect failed:", error);
       showError(m.auth_error_redirect_signin());
     });
   }, [oidcAuth, showError]);
@@ -76,14 +77,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Most OIDC providers handle sign-up via the same redirect flow.
     // Providers like authentik support a registration URL that can be configured.
     oidcAuth.signinRedirect({ state: { returnTo: window.location.pathname } }).catch((error: unknown) => {
-      console.error("signinRedirect (signup) failed:", error);
+      logger.error("signinRedirect (signup) failed:", error);
       showError(m.auth_error_redirect_signup());
     });
   }, [oidcAuth, showError]);
 
   const logout = useCallback(() => {
     oidcAuth.signoutRedirect().catch((error: unknown) => {
-      console.error("signoutRedirect failed:", error);
+      logger.error("signoutRedirect failed:", error);
       showError(m.auth_error_signout());
     });
   }, [oidcAuth, showError]);
@@ -104,3 +105,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
+

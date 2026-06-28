@@ -97,7 +97,7 @@ Here is my detailed review of the current codebase:
 
 ## Code Structure & Organization
 
-- [ ] **Step 1: Decide and document the calendar cut-over**
+- [x] **Step 1: Decide and document the calendar cut-over**
   - **Task**: Resolve the duplicate `CalendarView`. Either (a) make the legacy
     `calendar` tab delegate to the new `features/calendar/CalendarView` behind
     a developer-options flag, or (b) formally keep both with a documented
@@ -114,7 +114,7 @@ Here is my detailed review of the current codebase:
   - **Success Criteria**: Only one calendar path is active by default; the
     other is reachable only via an explicit flag, and the intent is documented.
 
-- [ ] **Step 2: Introduce lazy boundaries for heavy tabs**
+- [x] **Step 2: Introduce lazy boundaries for heavy tabs**
   - **Task**: Wrap the heaviest, flag-gated tab views in `React.lazy` +
     `Suspense` so `frappe-gantt`, `@schedule-x/*`, and time-tracking code split
     out of the initial bundle. Add a lightweight fallback (existing spinner/
@@ -129,7 +129,7 @@ Here is my detailed review of the current codebase:
   - **Success Criteria**: `pnpm build` produces separate chunks for gantt /
     schedule-x / time-tracking; initial JS shrinks; all tabs still render.
 
-- [ ] **Step 3: Render only the active tab**
+- [x] **Step 3: Render only the active tab**
   - **Task**: Apply the existing `activeKey === ...` guard pattern uniformly so
     inactive heavy tabs are not mounted. Verify nothing relies on a hidden
     tab's mounted side effects (e.g. background sync); leave those mounted at a
@@ -142,7 +142,7 @@ Here is my detailed review of the current codebase:
 
 ## Code Quality & Best Practices
 
-- [ ] **Step 4: Add a shared `logger` utility and route console calls through it**
+- [x] **Step 4: Add a shared `logger` utility and route console calls through it**
   - **Task**: Create a minimal `logger` (`debug`/`info`/`warn`/`error`) that is
     verbose in dev (`import.meta.env.DEV`) and quiet/forwarded in prod, as a
     single future telemetry choke point. Replace raw `console.*` calls with it.
@@ -157,7 +157,7 @@ Here is my detailed review of the current codebase:
   - **Success Criteria**: No raw `console.*` outside `logger.ts`; tests pass;
     dev logging unchanged in behavior.
 
-- [ ] **Step 5: Collapse repetitive `SettingsContext` setters**
+- [x] **Step 5: Collapse repetitive `SettingsContext` setters**
   - **Task**: Introduce a generic field-setter factory (e.g.
     `makeSettingUpdater("theme")`) to replace the ~20 near-identical
     `updateX` callbacks, preserving the exact public context API and memo
@@ -169,7 +169,7 @@ Here is my detailed review of the current codebase:
   - **Success Criteria**: Public `SettingsContextType` unchanged; existing
     SettingsContext tests pass; file LOC meaningfully reduced.
 
-- [ ] **Step 6: Make `normalizeUserState` schema-driven**
+- [x] **Step 6: Make `normalizeUserState` schema-driven**
   - **Task**: Replace the repeated `typeof ... ? ... : default` validation
     blocks with a small declarative validator map (enum/boolean/country
     validators per field). Preserve every existing default and migration
@@ -182,7 +182,7 @@ Here is my detailed review of the current codebase:
 
 ## Component Decomposition
 
-- [ ] **Step 7: Extract time-tracking view sub-components/hooks**
+- [x] **Step 7: Extract time-tracking view sub-components/hooks**
   - **Task**: Break `TimeTrackingDailyView.tsx` (655) and
     `TimeTrackingWeeklyView.tsx` (640) into smaller presentational pieces and
     move calculation logic into hooks (reusing `timeUtils.ts`). No behavior or
@@ -195,7 +195,7 @@ Here is my detailed review of the current codebase:
   - **Success Criteria**: Each file under ~400 LOC; time-tracking tests pass;
     no visual diff in screenshots.
 
-- [ ] **Step 8: Split `lastUsed` UI state from `settings` (measured)**
+- [x] **Step 8: Split `lastUsed` UI state from `settings` (measured)**
   - **Task**: If profiling shows re-render fan-out, move the volatile
     `lastUsed` slice into its own context/provider so changing the active tab
     doesn't re-render settings consumers. Keep a thin compatibility shim if
@@ -212,7 +212,7 @@ Here is my detailed review of the current codebase:
 
 ## UI/UX & Accessibility
 
-- [ ] **Step 9: Accessibility audit for icon-only controls**
+- [x] **Step 9: Accessibility audit for icon-only controls**
   - **Task**: Sweep icon-only buttons/links for missing accessible names; add
     `aria-label`/`visually-hidden` text where absent. Add one or two reusable
     helpers (e.g. an `IconButton` wrapper) to make the correct pattern the
@@ -225,7 +225,7 @@ Here is my detailed review of the current codebase:
   - **Success Criteria**: Every interactive icon-only control has an accessible
     name; no regression in existing `aria-*` usage; tests pass.
 
-- [ ] **Step 10: Guarantee user-visible error surfacing**
+- [x] **Step 10: Guarantee user-visible error surfacing**
   - **Task**: Audit `catch` blocks that currently only `console.error`
     (e.g. `.hday` import/parse in `TimeOffView`) and ensure each user-triggered
     failure also produces a toast/inline message via the existing `ToastContext`.
@@ -238,7 +238,7 @@ Here is my detailed review of the current codebase:
 
 ## Tooling Guardrails
 
-- [ ] **Step 11: Lint rule to forbid raw `console.*` and enforce conventions**
+- [x] **Step 11: Lint rule to forbid raw `console.*` and enforce conventions**
   - **Task**: Enable oxlint's `no-console` rule to ban raw `console.*`, and
     optionally a rule nudging feature-folder imports. Wire into the existing
     `pnpm lint`. Note: oxlint's `no-console` is a simple on/off toggle and does

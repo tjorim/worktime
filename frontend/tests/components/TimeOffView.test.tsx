@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -56,6 +56,25 @@ describe("TimeOffView", () => {
 
       expect(screen.getByRole("button", { name: /Import/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Export/i })).toBeInTheDocument();
+    });
+
+    it("should show a user-visible error when .hday file import fails", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+      const file = new File(["2025/01/15 Vacation day"], "broken.hday", { type: "text/plain" });
+      vi.spyOn(file, "text").mockRejectedValue(new Error("Read failed"));
+
+      await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
+
+      const errors = await screen.findAllByText(
+        "Failed to import file. Please check the format.",
+      );
+      expect(errors.length).toBeGreaterThanOrEqual(2);
     });
   });
 

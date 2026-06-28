@@ -15,6 +15,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
+import { logger } from "@/utils/logger";
 
 interface TeamMember {
   username: string;
@@ -162,7 +163,7 @@ export function TeamScheduleView() {
         return;
       }
 
-      console.error("Error fetching team data:", err);
+      logger.error("Error fetching team data:", err);
       setError(err instanceof Error ? err.message : m.team_unknown_error());
       setTeamData(null);
     } finally {
@@ -571,3 +572,4 @@ export function TeamScheduleView() {
     </div>
   );
 }
+

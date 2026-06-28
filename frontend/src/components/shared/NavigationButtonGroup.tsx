@@ -1,6 +1,7 @@
 import { useId } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import { IconButton } from "@/components/shared/IconButton";
 
 type NavigationButtonGroupProps = {
   isCurrent: boolean;
@@ -43,14 +44,13 @@ function NavigationButtonGroup({
   const effectiveSelectorId = selectorId ?? autoSelectorId;
   const buttons = (
     <>
-      <Button
+      <IconButton
         variant="outline-secondary"
         size={size}
         onClick={onPrevious}
-        aria-label={previousAriaLabel}
-      >
-        <i className="bi bi-chevron-left" aria-hidden="true"></i>
-      </Button>
+        icon="bi-chevron-left"
+        label={previousAriaLabel}
+      />
       <Button
         variant={isCurrent ? "primary" : "outline-primary"}
         size={size}
@@ -61,9 +61,13 @@ function NavigationButtonGroup({
         <i className={`bi ${currentIcon} me-1`} aria-hidden="true"></i>
         {currentLabel}
       </Button>
-      <Button variant="outline-secondary" size={size} onClick={onNext} aria-label={nextAriaLabel}>
-        <i className="bi bi-chevron-right" aria-hidden="true"></i>
-      </Button>
+      <IconButton
+        variant="outline-secondary"
+        size={size}
+        onClick={onNext}
+        icon="bi-chevron-right"
+        label={nextAriaLabel}
+      />
     </>
   );
 

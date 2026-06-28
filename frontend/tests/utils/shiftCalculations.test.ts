@@ -820,8 +820,7 @@ describe("getOffDayProgress Function Tests", () => {
     if (!foundOffDate) {
       // If no off days found in this range, that's still valid -
       // just means our test date range doesn't include an off period
-      // Skip the test in this case
-      console.log("No off days found in test range - this is expected behavior");
+      // No off days in this range is still valid for this broad progress check.
     }
   });
 
@@ -901,8 +900,6 @@ describe("getOffDayProgress Function Tests", () => {
           expect(progress.current).toBeGreaterThan(0);
           expect(progress.current).toBeLessThanOrEqual(2);
         }
-      } else {
-        console.log("Sunday is unexpectedly a working day for 9-5 schedule");
       }
     });
 
@@ -958,8 +955,6 @@ describe("getOffDayProgress Function Tests", () => {
           // Weekend should be 2 consecutive days
           expect(progress.total).toBe(2);
         }
-      } else {
-        console.log("Test skipped: Sunday is working day");
       }
     });
   });

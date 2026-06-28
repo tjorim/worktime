@@ -65,6 +65,7 @@
 
 import { normalizeEventFlags } from "./flags";
 import type { EventFlag, HdayEvent } from "./types";
+import { logger } from "@/utils/logger";
 
 /**
  * Color constants for event backgrounds.
@@ -142,7 +143,7 @@ function parsePrefixFlags(prefix: string): EventFlag[] {
     if (flagMap[ch]) {
       flags.push(flagMap[ch]);
     } else {
-      console.warn(
+      logger.warn(
         `Unknown flag character '${ch}' ignored. Known flags: a, p, b, e, h, i, k, s, u, w, n, f`,
       );
     }
@@ -240,7 +241,7 @@ export function parseHday(text: string): HdayEvent[] {
 
       // Regex guarantees weekday is 1-7; this check should never fail
       if (!weekday) {
-        console.error(`Weekly event regex matched but weekday is undefined: ${line}`);
+        logger.error(`Weekly event regex matched but weekday is undefined: ${line}`);
         events.push({ type: "unknown", raw: originalLine, flags: ["holiday"] });
         continue;
       }

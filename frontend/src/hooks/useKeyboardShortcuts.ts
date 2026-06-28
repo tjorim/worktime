@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { logger } from "@/utils/logger";
 
 interface KeyboardShortcuts {
   onToday?: () => void;
@@ -52,7 +53,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onToggleSettings?.();
             } catch (error) {
-              console.error("Error in onToggleSettings callback:", error);
+              logger.error("Error in onToggleSettings callback:", error);
             }
             break;
           case "h":
@@ -60,7 +61,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onToday?.();
             } catch (error) {
-              console.error("Error in onToday callback:", error);
+              logger.error("Error in onToday callback:", error);
             }
             break;
           case "k":
@@ -68,7 +69,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onPrevious?.();
             } catch (error) {
-              console.error("Error in onPrevious callback:", error);
+              logger.error("Error in onPrevious callback:", error);
             }
             break;
           case "j":
@@ -76,7 +77,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onNext?.();
             } catch (error) {
-              console.error("Error in onNext callback:", error);
+              logger.error("Error in onNext callback:", error);
             }
             break;
           case "t":
@@ -84,7 +85,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onTeamSelect?.();
             } catch (error) {
-              console.error("Error in onTeamSelect callback:", error);
+              logger.error("Error in onTeamSelect callback:", error);
             }
             break;
         }
@@ -98,7 +99,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onPrevious?.();
             } catch (error) {
-              console.error("Error in onPrevious callback:", error);
+              logger.error("Error in onPrevious callback:", error);
             }
           }
           break;
@@ -108,7 +109,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             try {
               shortcuts.onNext?.();
             } catch (error) {
-              console.error("Error in onNext callback:", error);
+              logger.error("Error in onNext callback:", error);
             }
           }
           break;
@@ -130,7 +131,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
               try {
                 shortcut.cb();
               } catch (error) {
-                console.error(`Error in ${shortcut.name} callback:`, error);
+                logger.error(`Error in ${shortcut.name} callback:`, error);
               }
             }
           }
@@ -145,3 +146,4 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
     };
   }, [shortcuts]);
 }
+

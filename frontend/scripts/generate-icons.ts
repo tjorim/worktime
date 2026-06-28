@@ -133,8 +133,8 @@ function createIcon(size: number) {
  * Generate a predefined set of PNG icons and write them to the icons directory.
  *
  * Creates icons for the configured sizes (16, 32, 48, 192, 512) using the internal icon
- * generator, saves each file under ICONS_DIR with filenames like `icon-<size>.png`, and logs
- * progress and final status to the console.
+ * generator, saves each file under ICONS_DIR with filenames like `icon-<size>.png`, and writes
+ * progress and final status to stdout/stderr.
  */
 function generateIcons(): void {
   const icons: IconConfig[] = [
@@ -145,7 +145,7 @@ function generateIcons(): void {
     { size: 512, filename: "icon-512.png", name: "512x512 PWA Icon" },
   ];
 
-  console.log("🎨 Generating Worktime icons...\n");
+  process.stdout.write("🎨 Generating Worktime icons...\n\n");
 
   icons.forEach(({ size, filename, name }) => {
     try {
@@ -155,21 +155,21 @@ function generateIcons(): void {
 
       writeFileSync(filePath, buffer);
       const sizeKB = (buffer.length / 1024).toFixed(1);
-      console.log(`✅ Generated ${name}: ${filename} (${sizeKB}KB)`);
+      process.stdout.write(`✅ Generated ${name}: ${filename} (${sizeKB}KB)\n`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`❌ Failed to generate ${name} (${filename}): ${message}`);
+      process.stderr.write(`❌ Failed to generate ${name} (${filename}): ${message}\n`);
     }
   });
 
-  console.log(`\n🎉 All icons generated successfully in ${ICONS_DIR}`);
-  console.log("\n📱 Icons are ready for PWA deployment!");
+  process.stdout.write(`\n🎉 All icons generated successfully in ${ICONS_DIR}\n`);
+  process.stdout.write("\n📱 Icons are ready for PWA deployment!\n");
 }
 
 // Run the generator
 try {
   generateIcons();
 } catch (error) {
-  console.error("❌ Error generating icons:", (error as Error).message);
+  process.stderr.write(`❌ Error generating icons: ${(error as Error).message}\n`);
   process.exit(1);
 }

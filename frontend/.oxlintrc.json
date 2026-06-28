@@ -8,5 +8,8 @@
     "node_modules/**",
     "NextShift/**",
     "HdayPlanner/**"
-  ]
+  ],
+  "rules": {
+    "no-console": "error"
+  }
 }

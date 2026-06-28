@@ -1,4 +1,5 @@
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "./types";
+import { logger } from "@/utils/logger";
 
 export const TYPE_FLAGS = [
   "business",
@@ -76,7 +77,7 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
         !TIME_LOCATION_FLAGS.includes(flag as TimeLocationFlag) ||
         flag === firstTimeLocationInInput,
     );
-    console.warn(
+    logger.warn(
       `Multiple time/location flags found (${foundTimeLocation.join(", ")}). Keeping first from input: ${firstTimeLocationInInput}`,
     );
   }
@@ -93,7 +94,7 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
       (flag) =>
         !TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">) || flag === firstTypeInInput,
     );
-    console.warn(
+    logger.warn(
       `Multiple type flags found (${foundTypes.join(", ")}). Keeping first from input: ${firstTypeInInput}`,
     );
   }
@@ -104,3 +105,4 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
 
   return normalized;
 }
+
