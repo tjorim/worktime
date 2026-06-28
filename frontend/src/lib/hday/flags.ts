@@ -1,5 +1,7 @@
+/* oxlint-disable no-console -- this module is shared with the bun-compiled
+   hday-helper (see hday-helper/src/main.ts), so it must stay free of the "@/"
+   alias and import.meta.env; console is the portable logging primitive here. */
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "./types";
-import { logger } from "@/utils/logger";
 
 export const TYPE_FLAGS = [
   "business",
@@ -77,7 +79,7 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
         !TIME_LOCATION_FLAGS.includes(flag as TimeLocationFlag) ||
         flag === firstTimeLocationInInput,
     );
-    logger.warn(
+    console.warn(
       `Multiple time/location flags found (${foundTimeLocation.join(", ")}). Keeping first from input: ${firstTimeLocationInInput}`,
     );
   }
@@ -94,7 +96,7 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
       (flag) =>
         !TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">) || flag === firstTypeInInput,
     );
-    logger.warn(
+    console.warn(
       `Multiple type flags found (${foundTypes.join(", ")}). Keeping first from input: ${firstTypeInInput}`,
     );
   }

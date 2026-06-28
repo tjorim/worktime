@@ -63,9 +63,11 @@
  * @module lib/hday/parser
  */
 
+/* oxlint-disable no-console -- this module is shared with the bun-compiled
+   hday-helper (see hday-helper/src/main.ts), so it must stay free of the "@/"
+   alias and import.meta.env; console is the portable logging primitive here. */
 import { normalizeEventFlags } from "./flags";
 import type { EventFlag, HdayEvent } from "./types";
-import { logger } from "@/utils/logger";
 
 /**
  * Color constants for event backgrounds.
@@ -143,7 +145,7 @@ function parsePrefixFlags(prefix: string): EventFlag[] {
     if (flagMap[ch]) {
       flags.push(flagMap[ch]);
     } else {
-      logger.warn(
+      console.warn(
         `Unknown flag character '${ch}' ignored. Known flags: a, p, b, e, h, i, k, s, u, w, n, f`,
       );
     }
@@ -241,7 +243,7 @@ export function parseHday(text: string): HdayEvent[] {
 
       // Regex guarantees weekday is 1-7; this check should never fail
       if (!weekday) {
-        logger.error(`Weekly event regex matched but weekday is undefined: ${line}`);
+        console.error(`Weekly event regex matched but weekday is undefined: ${line}`);
         events.push({ type: "unknown", raw: originalLine, flags: ["holiday"] });
         continue;
       }
