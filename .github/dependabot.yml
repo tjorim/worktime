@@ -79,7 +79,6 @@ updates:
       - "dependencies"
       - "backend"
       - "python"
-    versioning-strategy: "increase"
 
   # Monitor Android Gradle dependencies and wrapper versions
   - package-ecosystem: "gradle"
