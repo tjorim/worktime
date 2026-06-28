@@ -29,6 +29,7 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { calculateShift } from "./shiftCalculations";
 import { dayjs, formatHdayDate } from "./dateTimeUtils";
+import { logger } from "@/utils/logger";
 
 /**
  * Checks if a date matches any time-off event.
@@ -92,7 +93,7 @@ export function isPublicHolidayForShift(
     return publicHolidays.has(formatHdayDate(date));
   } catch (error) {
     // Invalid team number or other calculation error
-    console.warn("isPublicHolidayForShift error:", error);
+    logger.warn("isPublicHolidayForShift error:", error);
     return false;
   }
 }
@@ -144,7 +145,7 @@ export function isWorkingDay(
     return true;
   } catch (error) {
     // If calculation fails (e.g., invalid team number), treat as non-working
-    console.warn("isWorkingDay error:", error);
+    logger.warn("isWorkingDay error:", error);
     return false;
   }
 }
@@ -191,7 +192,7 @@ export function getNonWorkingReason(
 
     return null; // It's a working day
   } catch (error) {
-    console.warn("getNonWorkingReason error:", error);
+    logger.warn("getNonWorkingReason error:", error);
     return "Unable to determine";
   }
 }

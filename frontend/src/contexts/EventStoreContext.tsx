@@ -17,6 +17,7 @@ import type { TimeOffImportResult } from "@/lib/timeOff/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { hasSyncCollectionAuth, runWriteBatch, timeOffCollection } from "@/db/collections";
+import { logger } from "@/utils/logger";
 
 interface EventStoreContextType {
   rawText: string;
@@ -81,7 +82,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     try {
       return `${timeOffEntriesToHday(sortedEntries)}\n`;
     } catch (error) {
-      console.error("Failed to serialize time-off entries:", error);
+      logger.error("Failed to serialize time-off entries:", error);
       return "";
     }
   }, [sortedEntries]);
@@ -132,7 +133,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   const updateEntry = useCallback((id: string, entry: TimeOffEntry) => {
     const currentEntries = cloneEntries(sortedEntriesRef.current);
     if (!currentEntries.some((existing) => existing.id === id)) {
-      console.error(`Invalid entry id: ${id}`);
+      logger.error(`Invalid entry id: ${id}`);
       return;
     }
     const nextEntries = sortEntries(
@@ -155,7 +156,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   const deleteEntry = useCallback((id: string) => {
     const currentEntries = cloneEntries(sortedEntriesRef.current);
     if (!currentEntries.some((existing) => existing.id === id)) {
-      console.error(`Invalid entry id: ${id}`);
+      logger.error(`Invalid entry id: ${id}`);
       return;
     }
     const nextEntries = currentEntries.filter((entry) => entry.id !== id);
@@ -176,7 +177,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     const existingIds = new Set(currentEntries.map((entry) => entry.id));
     const valid = unique.filter((id) => existingIds.has(id));
     if (valid.length === 0) {
-      console.error("Invalid entry ids:", ids);
+      logger.error("Invalid entry ids:", ids);
       return;
     }
     const nextEntries = currentEntries.filter((entry) => !valid.includes(entry.id));

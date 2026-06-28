@@ -1,18 +1,20 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { LastUsedProvider, type LastUsedContextType } from "@/contexts/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { CountryCode } from "@/types/countries";
 import { isValidCountryCode } from "@/types/countries";
 
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
 export type TabKey =
   | "calendar"
-  | "unified-calendar"
+  | "legacy-calendar"
   | "schedule"
   | "timeoff"
   | "timetracking"
@@ -34,7 +36,7 @@ export interface LastUsed {
   ganttView: GanttViewKey;
 }
 
-interface UserSettings {
+export interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
   notifications: NotificationSetting;
@@ -48,7 +50,6 @@ interface UserSettings {
 
 interface SettingsContextType {
   settings: UserSettings;
-  lastUsed: LastUsed;
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
@@ -58,14 +59,6 @@ interface SettingsContextType {
   updateCrossBorderTrackingEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
-  updateLastActiveTab: (tab: TabKey) => void;
-  updateLastScheduleView: (view: ScheduleViewKey) => void;
-  updateLastTimeOffView: (view: TimeOffViewKey) => void;
-  updateLastTimeTrackingView: (view: TimeTrackingViewKey) => void;
-  updateLastOtherSchedule: (schedule: ScheduleOption | null) => void;
-  updateLastOtherTeam: (team: number | null) => void;
-  updateLastGanttViewMode: (mode: GanttViewMode) => void;
-  updateLastGanttView: (view: GanttViewKey) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -129,7 +122,7 @@ export const defaultLastUsed: LastUsed = {
 
 const validTabKeys = new Set<TabKey>([
   "calendar",
-  "unified-calendar",
+  "legacy-calendar",
   "schedule",
   "timeoff",
   "timetracking",
@@ -159,6 +152,7 @@ interface WorktimeUserState {
 }
 
 type RawState = Record<string, unknown>;
+type Validator<T> = (value: unknown) => T;
 
 const defaultUserState: WorktimeUserState = {
   hasCompletedOnboarding: false,
@@ -174,121 +168,142 @@ interface SettingsProviderProps {
   children: ReactNode;
 }
 
+const shallowEqualObject = <T extends object>(a: T, b: T): boolean => {
+  const aRecord = a as Record<string, unknown>;
+  const bRecord = b as Record<string, unknown>;
+  const aKeys = Object.keys(aRecord);
+  const bKeys = Object.keys(bRecord);
+  return (
+    aKeys.length === bKeys.length &&
+    aKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(bRecord, key) && Object.is(aRecord[key], bRecord[key]),
+    )
+  );
+};
+
+function useStableShallowObject<T extends object>(value: T): T {
+  const ref = useRef(value);
+  if (!shallowEqualObject(ref.current, value)) {
+    ref.current = value;
+  }
+  return ref.current;
+}
+
+const isObjectRecord = (value: unknown): value is RawState =>
+  typeof value === "object" && value !== null;
+
+const optionalBoolean = (value: unknown): boolean | undefined =>
+  value === true ? true : value === false ? false : undefined;
+
+const booleanWithDefault =
+  (fallback: boolean): Validator<boolean> =>
+  (value) =>
+    typeof value === "boolean" ? value : fallback;
+
+const enumWithDefault =
+  <T extends string>(validValues: ReadonlySet<T>, fallback: T): Validator<T> =>
+  (value) =>
+    typeof value === "string" && validValues.has(value as T) ? (value as T) : fallback;
+
+const countryWithDefault =
+  (fallback: CountryCode | null): Validator<CountryCode | null> =>
+  (value) =>
+    isValidCountryCode(value) ? value : fallback;
+
+const nullableScheduleOptionWithDefault =
+  (validValues: ReadonlySet<string>, fallback: ScheduleOption | null): Validator<ScheduleOption | null> =>
+  (value) => {
+    if (value === null) {
+      return null;
+    }
+    return typeof value === "string" && validValues.has(value) ? (value as ScheduleOption) : fallback;
+  };
+
+const nullableFiniteNumberWithDefault =
+  (fallback: number | null): Validator<number | null> =>
+  (value) => {
+    if (value === null) {
+      return null;
+    }
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  };
+
 const normalizeUserState = (state: unknown): WorktimeUserState => {
-  if (typeof state !== "object" || state === null) {
+  if (!isObjectRecord(state)) {
     return defaultUserState;
   }
 
-  const s = state as RawState;
+  const s = state;
 
-  const settings = (
-    typeof s.settings === "object" && s.settings !== null ? s.settings : {}
-  ) as RawState;
+  const settings = isObjectRecord(s.settings) ? s.settings : {};
   const scheduleOptionValues = new Set(SCHEDULE_OPTIONS.map((option) => option.value));
 
-  // --- Validate settings ---
-  const timeFormat = ["12h", "24h"].includes(settings.timeFormat as string)
-    ? (settings.timeFormat as TimeFormat)
-    : defaultSettings.timeFormat;
-  const theme = ["light", "dark", "auto"].includes(settings.theme as string)
-    ? (settings.theme as Theme)
-    : defaultSettings.theme;
-  const notifications = ["on", "off"].includes(settings.notifications as string)
-    ? (settings.notifications as NotificationSetting)
-    : defaultSettings.notifications;
+  const settingsValidators = {
+    timeFormat: enumWithDefault(new Set<TimeFormat>(["12h", "24h"]), defaultSettings.timeFormat),
+    theme: enumWithDefault(new Set<Theme>(["light", "dark", "auto"]), defaultSettings.theme),
+    notifications: enumWithDefault(
+      new Set<NotificationSetting>(["on", "off"]),
+      defaultSettings.notifications,
+    ),
+    enableTimeOff: booleanWithDefault(defaultSettings.enableTimeOff),
+    enableTimeTracking: booleanWithDefault(defaultSettings.enableTimeTracking),
+    enableGantt: booleanWithDefault(defaultSettings.enableGantt),
+    enableCrossBorderTracking: booleanWithDefault(defaultSettings.enableCrossBorderTracking),
+    homeCountry: countryWithDefault(defaultSettings.homeCountry),
+    officeCountry: countryWithDefault(defaultSettings.officeCountry),
+  } satisfies { [K in keyof UserSettings]: Validator<UserSettings[K]> };
 
-  const enableTimeOff =
-    typeof settings.enableTimeOff === "boolean"
-      ? settings.enableTimeOff
-      : defaultSettings.enableTimeOff;
-  const enableTimeTracking =
-    typeof settings.enableTimeTracking === "boolean"
-      ? settings.enableTimeTracking
-      : defaultSettings.enableTimeTracking;
-  const enableGantt =
-    typeof settings.enableGantt === "boolean" ? settings.enableGantt : defaultSettings.enableGantt;
-  const enableCrossBorderTracking =
-    typeof settings.enableCrossBorderTracking === "boolean"
-      ? settings.enableCrossBorderTracking
-      : defaultSettings.enableCrossBorderTracking;
-
-  const homeCountry = isValidCountryCode(settings.homeCountry)
-    ? settings.homeCountry
-    : defaultSettings.homeCountry;
-
-  const officeCountry = isValidCountryCode(settings.officeCountry)
-    ? settings.officeCountry
-    : defaultSettings.officeCountry;
+  const normalizedSettings = Object.fromEntries(
+    Object.entries(settingsValidators).map(([key, validator]) => [key, validator(settings[key])]),
+  ) as unknown as UserSettings;
 
   // --- Validate lastUsed ---
-  const lastUsed = (
-    typeof s.lastUsed === "object" && s.lastUsed !== null ? s.lastUsed : {}
-  ) as RawState;
+  const rawLastUsed = isObjectRecord(s.lastUsed) ? s.lastUsed : {};
+  // Migrate renamed tab keys before validation
+  const lastUsed =
+    rawLastUsed.activeTab === "unified-calendar"
+      ? { ...rawLastUsed, activeTab: "legacy-calendar" }
+      : rawLastUsed;
 
   const isTabEnabled = (tab: TabKey) => {
     if (tab === "timeoff") {
-      return enableTimeOff;
+      return normalizedSettings.enableTimeOff;
     }
     if (tab === "timetracking") {
-      return enableTimeTracking;
+      return normalizedSettings.enableTimeTracking;
     }
     if (tab === "gantt") {
-      return enableGantt;
+      return normalizedSettings.enableGantt;
     }
     return true;
   };
 
-  const activeTab =
-    typeof lastUsed.activeTab === "string" &&
-    validTabKeys.has(lastUsed.activeTab as TabKey) &&
-    isTabEnabled(lastUsed.activeTab as TabKey)
-      ? (lastUsed.activeTab as TabKey)
+  const activeTabValidator: Validator<TabKey> = (value) =>
+    typeof value === "string" && validTabKeys.has(value as TabKey) && isTabEnabled(value as TabKey)
+      ? (value as TabKey)
       : defaultLastUsed.activeTab;
 
-  const scheduleView =
-    typeof lastUsed.scheduleView === "string" &&
-    validScheduleViewKeys.has(lastUsed.scheduleView as ScheduleViewKey)
-      ? (lastUsed.scheduleView as ScheduleViewKey)
-      : defaultLastUsed.scheduleView;
+  const lastUsedValidators = {
+    activeTab: activeTabValidator,
+    scheduleView: enumWithDefault(validScheduleViewKeys, defaultLastUsed.scheduleView),
+    otherSchedule: nullableScheduleOptionWithDefault(
+      scheduleOptionValues,
+      defaultLastUsed.otherSchedule,
+    ),
+    timeOffView: enumWithDefault(validTimeOffViewKeys, defaultLastUsed.timeOffView),
+    timeTrackingView: enumWithDefault(
+      validTimeTrackingViewKeys,
+      defaultLastUsed.timeTrackingView,
+    ),
+    otherTeam: nullableFiniteNumberWithDefault(defaultLastUsed.otherTeam),
+    ganttViewMode: enumWithDefault(validGanttViewModes, defaultLastUsed.ganttViewMode),
+    ganttView: enumWithDefault(validGanttViewKeys, defaultLastUsed.ganttView),
+  } satisfies { [K in keyof LastUsed]: Validator<LastUsed[K]> };
 
-  const otherSchedule =
-    lastUsed.otherSchedule === null
-      ? null
-      : typeof lastUsed.otherSchedule === "string" &&
-          scheduleOptionValues.has(lastUsed.otherSchedule as ScheduleOption)
-        ? (lastUsed.otherSchedule as ScheduleOption)
-        : defaultLastUsed.otherSchedule;
-
-  const timeOffView =
-    typeof lastUsed.timeOffView === "string" &&
-    validTimeOffViewKeys.has(lastUsed.timeOffView as TimeOffViewKey)
-      ? (lastUsed.timeOffView as TimeOffViewKey)
-      : defaultLastUsed.timeOffView;
-
-  const timeTrackingView =
-    typeof lastUsed.timeTrackingView === "string" &&
-    validTimeTrackingViewKeys.has(lastUsed.timeTrackingView as TimeTrackingViewKey)
-      ? (lastUsed.timeTrackingView as TimeTrackingViewKey)
-      : defaultLastUsed.timeTrackingView;
-
-  const otherTeam =
-    lastUsed.otherTeam === null
-      ? null
-      : typeof lastUsed.otherTeam === "number" && Number.isFinite(lastUsed.otherTeam)
-        ? lastUsed.otherTeam
-        : defaultLastUsed.otherTeam;
-
-  const ganttViewMode =
-    typeof lastUsed.ganttViewMode === "string" &&
-    validGanttViewModes.has(lastUsed.ganttViewMode as GanttViewMode)
-      ? (lastUsed.ganttViewMode as GanttViewMode)
-      : defaultLastUsed.ganttViewMode;
-
-  const ganttView =
-    typeof lastUsed.ganttView === "string" &&
-    validGanttViewKeys.has(lastUsed.ganttView as GanttViewKey)
-      ? (lastUsed.ganttView as GanttViewKey)
-      : defaultLastUsed.ganttView;
+  const normalizedLastUsed = Object.fromEntries(
+    Object.entries(lastUsedValidators).map(([key, validator]) => [key, validator(lastUsed[key])]),
+  ) as unknown as LastUsed;
 
   // --- Validate scheduleType ---
   const scheduleType = (() => {
@@ -302,14 +317,11 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     if (typeof rawValue === "string" && scheduleOptionValues.has(rawValue as ScheduleOption)) {
       return rawValue as ScheduleOption;
     }
-    console.warn(
+    logger.warn(
       `Invalid schedule option "${rawValue}" found in localStorage. Falling back to default.`,
     );
     return defaultUserState.scheduleType;
   })();
-
-  const toOptionalBool = (v: unknown): boolean | undefined =>
-    v === true ? true : v === false ? false : undefined;
 
   return {
     hasCompletedOnboarding:
@@ -317,9 +329,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
     // Per-feature announcement flags: undefined = not yet shown, false = seen/dismissed, true = seen and enabled
-    accountSyncAnnouncementSeen: toOptionalBool(s.accountSyncAnnouncementSeen),
-    ganttAnnouncementSeen: toOptionalBool(s.ganttAnnouncementSeen),
-    crossBorderAnnouncementSeen: toOptionalBool(s.crossBorderAnnouncementSeen),
+    accountSyncAnnouncementSeen: optionalBoolean(s.accountSyncAnnouncementSeen),
+    ganttAnnouncementSeen: optionalBoolean(s.ganttAnnouncementSeen),
+    crossBorderAnnouncementSeen: optionalBoolean(s.crossBorderAnnouncementSeen),
     myTeam:
       s.myTeam === undefined
         ? defaultUserState.myTeam
@@ -327,27 +339,8 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
           ? s.myTeam
           : defaultUserState.myTeam,
     scheduleType,
-    settings: {
-      timeFormat,
-      theme,
-      notifications,
-      enableTimeOff,
-      enableTimeTracking,
-      enableGantt,
-      enableCrossBorderTracking,
-      homeCountry,
-      officeCountry,
-    },
-    lastUsed: {
-      activeTab,
-      scheduleView,
-      otherSchedule,
-      timeOffView,
-      timeTrackingView,
-      otherTeam,
-      ganttViewMode,
-      ganttView,
-    },
+    settings: normalizedSettings,
+    lastUsed: normalizedLastUsed,
   };
 };
 
@@ -377,176 +370,88 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   );
 
   const userState: WorktimeUserState = normalizeUserState(rawUserState);
+  const stableSettings = useStableShallowObject(userState.settings);
+  const stableLastUsed = useStableShallowObject(userState.lastUsed);
 
-  const updateTimeFormat = useCallback(
-    (format: TimeFormat) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, timeFormat: format },
-      }));
-    },
-    [setUserState],
-  );
+  const settingUpdaters = useMemo(() => {
+    const updateSetting = <K extends keyof UserSettings>(key: K) => {
+      return (value: UserSettings[K]) => {
+        setUserState((prev) => {
+          // `prev` is the raw localStorage value, which can be null or
+          // corrupted at runtime despite its static type; guard before spreading.
+          const base = isObjectRecord(prev) ? prev : defaultUserState;
+          const prevSettings = isObjectRecord(base.settings) ? base.settings : defaultSettings;
+          return {
+            ...base,
+            settings: { ...prevSettings, [key]: value },
+          };
+        });
+      };
+    };
 
-  const updateTheme = useCallback(
-    (theme: Theme) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, theme },
-      }));
-    },
-    [setUserState],
-  );
+    return {
+      updateTimeFormat: updateSetting("timeFormat"),
+      updateTheme: updateSetting("theme"),
+      updateNotifications: updateSetting("notifications"),
+      updateTimeOffEnabled: updateSetting("enableTimeOff"),
+      updateTimeTrackingEnabled: updateSetting("enableTimeTracking"),
+      updateGanttEnabled: updateSetting("enableGantt"),
+      updateCrossBorderTrackingEnabled: updateSetting("enableCrossBorderTracking"),
+      updateHomeCountry: updateSetting("homeCountry"),
+      updateOfficeCountry: updateSetting("officeCountry"),
+    };
+  }, [setUserState]);
 
-  const updateNotifications = useCallback(
-    (notifications: NotificationSetting) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, notifications },
-      }));
-    },
-    [setUserState],
-  );
+  const lastUsedUpdaters = useMemo(() => {
+    const updateLastUsed = <K extends keyof LastUsed>(key: K) => {
+      return (value: LastUsed[K]) => {
+        setUserState((prev) => {
+          // `prev` is the raw localStorage value, which can be null or
+          // corrupted at runtime despite its static type; guard before spreading.
+          const base = isObjectRecord(prev) ? prev : defaultUserState;
+          const prevLastUsed = isObjectRecord(base.lastUsed) ? base.lastUsed : defaultLastUsed;
+          return {
+            ...base,
+            lastUsed: { ...prevLastUsed, [key]: value },
+          };
+        });
+      };
+    };
 
-  const updateTimeOffEnabled = useCallback(
-    (enabled: boolean) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, enableTimeOff: enabled },
-      }));
-    },
-    [setUserState],
-  );
+    return {
+      updateLastActiveTab: updateLastUsed("activeTab"),
+      updateLastScheduleView: updateLastUsed("scheduleView"),
+      updateLastTimeOffView: updateLastUsed("timeOffView"),
+      updateLastTimeTrackingView: updateLastUsed("timeTrackingView"),
+      updateLastOtherSchedule: updateLastUsed("otherSchedule"),
+      updateLastOtherTeam: updateLastUsed("otherTeam"),
+      updateLastGanttViewMode: updateLastUsed("ganttViewMode"),
+      updateLastGanttView: updateLastUsed("ganttView"),
+    };
+  }, [setUserState]);
 
-  const updateTimeTrackingEnabled = useCallback(
-    (enabled: boolean) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, enableTimeTracking: enabled },
-      }));
-    },
-    [setUserState],
-  );
+  const {
+    updateTimeFormat,
+    updateTheme,
+    updateNotifications,
+    updateTimeOffEnabled,
+    updateTimeTrackingEnabled,
+    updateGanttEnabled,
+    updateCrossBorderTrackingEnabled,
+    updateHomeCountry,
+    updateOfficeCountry,
+  } = settingUpdaters;
 
-  const updateGanttEnabled = useCallback(
-    (enabled: boolean) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, enableGantt: enabled },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateHomeCountry = useCallback(
-    (country: CountryCode | null) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, homeCountry: country },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateOfficeCountry = useCallback(
-    (country: CountryCode | null) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, officeCountry: country },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateCrossBorderTrackingEnabled = useCallback(
-    (enabled: boolean) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, enableCrossBorderTracking: enabled },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastActiveTab = useCallback(
-    (tab: TabKey) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, activeTab: tab },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastScheduleView = useCallback(
-    (view: ScheduleViewKey) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, scheduleView: view },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastTimeOffView = useCallback(
-    (view: TimeOffViewKey) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, timeOffView: view },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastTimeTrackingView = useCallback(
-    (view: TimeTrackingViewKey) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, timeTrackingView: view },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastOtherSchedule = useCallback(
-    (schedule: ScheduleOption | null) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, otherSchedule: schedule },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastOtherTeam = useCallback(
-    (team: number | null) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, otherTeam: team },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastGanttViewMode = useCallback(
-    (mode: GanttViewMode) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, ganttViewMode: mode },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateLastGanttView = useCallback(
-    (view: GanttViewKey) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastUsed: { ...prev.lastUsed, ganttView: view },
-      }));
-    },
-    [setUserState],
-  );
+  const {
+    updateLastActiveTab,
+    updateLastScheduleView,
+    updateLastTimeOffView,
+    updateLastTimeTrackingView,
+    updateLastOtherSchedule,
+    updateLastOtherTeam,
+    updateLastGanttViewMode,
+    updateLastGanttView,
+  } = lastUsedUpdaters;
 
   const resetSettings = useCallback(() => {
     setUserState(defaultUserState);
@@ -669,8 +574,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const contextValue: SettingsContextType = useMemo(
     () => ({
-      settings: userState.settings,
-      lastUsed: userState.lastUsed,
+      settings: stableSettings,
       updateTimeFormat,
       updateTheme,
       updateNotifications,
@@ -680,14 +584,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
-      updateLastActiveTab,
-      updateLastScheduleView,
-      updateLastTimeOffView,
-      updateLastTimeTrackingView,
-      updateLastOtherSchedule,
-      updateLastOtherTeam,
-      updateLastGanttViewMode,
-      updateLastGanttView,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -705,7 +601,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       completeOnboardingWithSchedule,
     }),
     [
-      userState,
+      stableSettings,
+      userState.myTeam,
+      userState.scheduleType,
+      userState.hasCompletedOnboarding,
+      userState.accountSyncAnnouncementSeen,
+      userState.ganttAnnouncementSeen,
+      userState.crossBorderAnnouncementSeen,
       updateTimeFormat,
       updateTheme,
       updateNotifications,
@@ -715,14 +617,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
-      updateLastActiveTab,
-      updateLastScheduleView,
-      updateLastTimeOffView,
-      updateLastTimeTrackingView,
-      updateLastOtherSchedule,
-      updateLastOtherTeam,
-      updateLastGanttViewMode,
-      updateLastGanttView,
       resetSettings,
       setMyTeam,
       setScheduleType,
@@ -735,7 +629,36 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     ],
   );
 
-  return <SettingsContext.Provider value={contextValue}>{children}</SettingsContext.Provider>;
+  const lastUsedContextValue: LastUsedContextType = useMemo(
+    () => ({
+      lastUsed: stableLastUsed,
+      updateLastActiveTab,
+      updateLastScheduleView,
+      updateLastTimeOffView,
+      updateLastTimeTrackingView,
+      updateLastOtherSchedule,
+      updateLastOtherTeam,
+      updateLastGanttViewMode,
+      updateLastGanttView,
+    }),
+    [
+      stableLastUsed,
+      updateLastActiveTab,
+      updateLastScheduleView,
+      updateLastTimeOffView,
+      updateLastTimeTrackingView,
+      updateLastOtherSchedule,
+      updateLastOtherTeam,
+      updateLastGanttViewMode,
+      updateLastGanttView,
+    ],
+  );
+
+  return (
+    <SettingsContext.Provider value={contextValue}>
+      <LastUsedProvider value={lastUsedContextValue}>{children}</LastUsedProvider>
+    </SettingsContext.Provider>
+  );
 }
 
 /**

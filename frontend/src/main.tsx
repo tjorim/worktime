@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/main.scss";
 import { getLocale } from "./paraglide/runtime.js";
+import { logger } from "@/utils/logger";
 
 
 // Set the HTML lang attribute based on the current locale
@@ -36,7 +37,7 @@ async function startApp(): Promise<void> {
   try {
     await enableMocking();
   } catch (error) {
-    console.error("MSW failed to start:", error);
+    logger.error("MSW failed to start:", error);
   }
 
   const root = createRoot(rootContainer);
@@ -48,3 +49,4 @@ async function startApp(): Promise<void> {
 }
 
 void startApp();
+

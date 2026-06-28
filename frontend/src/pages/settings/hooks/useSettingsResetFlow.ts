@@ -2,6 +2,7 @@ import { useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
+import { logger } from "@/utils/logger";
 
 interface UseSettingsResetFlowParams {
   resetSettings: () => void;
@@ -55,7 +56,7 @@ export function useSettingsResetFlow({
       resetSettings();
       settingsCleared = true;
     } catch (error) {
-      console.error("Failed to reset settings:", error);
+      logger.error("Failed to reset settings:", error);
       errors.push(m.reset_item_settings());
     }
 
@@ -66,7 +67,7 @@ export function useSettingsResetFlow({
         clearCollectionById(labelsCollection);
         timeTrackingCleared = true;
       } catch (error) {
-        console.error("Failed to clear time tracking data:", error);
+        logger.error("Failed to clear time tracking data:", error);
         errors.push(m.reset_item_time_tracking_data());
       }
     }
@@ -76,7 +77,7 @@ export function useSettingsResetFlow({
         clearTimeOffEvents();
         timeOffCleared = true;
       } catch (error) {
-        console.error("Failed to clear time off data:", error);
+        logger.error("Failed to clear time off data:", error);
         errors.push(m.reset_item_time_off_data());
       }
     }
@@ -120,4 +121,5 @@ export function useSettingsResetFlow({
     handleConfirmReset,
   };
 }
+
 

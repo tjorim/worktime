@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
+import { logger } from "@/utils/logger";
 
 interface AccountProfile {
   id: number;
@@ -79,7 +80,7 @@ export function useSettingsAccount({
       })
       .catch((error) => {
         if (isCancelled) return;
-        console.error("Failed to load account profile:", error);
+        logger.error("Failed to load account profile:", error);
         setProfileError(m.account_profile_load_failed());
       })
       .finally(() => {
@@ -121,7 +122,7 @@ export function useSettingsAccount({
       })
       .catch((error) => {
         if (isCancelled) return;
-        console.error("Failed to load admin user list:", error);
+        logger.error("Failed to load admin user list:", error);
         setAdminUsersError(m.account_admin_users_load_failed());
       })
       .finally(() => {
@@ -179,7 +180,7 @@ export function useSettingsAccount({
       setProfileDraft(updatedProfile.display_name);
       showSuccessToast(m.account_profile_saved(), "bi-person-check");
     } catch (error) {
-      console.error("Failed to save account profile:", error);
+      logger.error("Failed to save account profile:", error);
       setProfileError(m.account_profile_save_failed());
     } finally {
       setIsProfileSaving(false);
@@ -206,7 +207,7 @@ export function useSettingsAccount({
       setAdminUsers((current) => current.filter((user) => user.id !== userId));
       showSuccessToast(m.account_admin_users_deleted(), "bi-trash");
     } catch (error) {
-      console.error("Failed to delete admin-managed user:", error);
+      logger.error("Failed to delete admin-managed user:", error);
       setAdminUsersDeleteError(
         error instanceof Error && error.message.trim() !== ""
           ? error.message
@@ -235,3 +236,4 @@ export function useSettingsAccount({
     handleDeleteAdminUser,
   };
 }
+

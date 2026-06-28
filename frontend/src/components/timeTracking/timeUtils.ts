@@ -1,3 +1,4 @@
+import { logger } from "@/utils/logger";
 /**
  * Mandatory break duration in minutes. Per labor law, employees working more
  * than 5.5 hours must take a 30-minute break that is automatically deducted
@@ -147,7 +148,7 @@ export function overlaps(
       }
       return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
     } catch (error) {
-      console.warn(`Failed to parse task times for task ${task.id}:`, task, error);
+      logger.warn(`Failed to parse task times for task ${task.id}:`, task, error);
       return false;
     }
   });

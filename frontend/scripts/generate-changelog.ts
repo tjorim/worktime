@@ -128,13 +128,13 @@ function main() {
   const changelogPath = join(process.cwd(), "../CHANGELOG.md");
 
   writeFileSync(changelogPath, changelog, "utf8");
-  console.log("✅ CHANGELOG.md generated successfully");
+  process.stdout.write("✅ CHANGELOG.md generated successfully\n");
 }
 
 // Run the generator
 try {
   main();
 } catch (error) {
-  console.error("❌ Error generating changelog:", (error as Error).message);
+  process.stderr.write(`❌ Error generating changelog: ${(error as Error).message}\n`);
   process.exit(1);
 }

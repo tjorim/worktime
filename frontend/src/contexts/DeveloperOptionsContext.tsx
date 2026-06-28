@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
+import { logger } from "@/utils/logger";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -13,6 +14,7 @@ export interface DeveloperOptions {
   autoConnect: boolean;
   isDevMode: boolean; // Persist dev mode visibility
   hdayHelperUrl: string | null; // URL of the local .hday helper server
+  enableLegacyCalendar: boolean;
 }
 
 interface DeveloperOptionsContextType {
@@ -20,6 +22,7 @@ interface DeveloperOptionsContextType {
   isDevMode: boolean;
   updateAutoConnect: (autoConnect: boolean) => void;
   updateHdayHelperUrl: (url: string | null) => void;
+  updateLegacyCalendarEnabled: (enabled: boolean) => void;
   toggleDevMode: () => void;
   testConnection: () => Promise<boolean>;
   disconnect: () => void;
@@ -32,6 +35,7 @@ const defaultOptions: DeveloperOptions = {
   autoConnect: false,
   isDevMode: false,
   hdayHelperUrl: null,
+  enableLegacyCalendar: false,
 };
 
 const DeveloperOptionsContext = createContext<DeveloperOptionsContextType | null>(null);
@@ -53,9 +57,16 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     DEVELOPER_OPTIONS_STORAGE_KEY,
     defaultOptions,
   );
+  const normalizedOptions: DeveloperOptions = useMemo(
+    () => ({
+      ...defaultOptions,
+      ...options,
+    }),
+    [options],
+  );
 
   // Use persisted isDevMode from options
-  const [isDevMode, setIsDevMode] = useState(options.isDevMode);
+  const [isDevMode, setIsDevMode] = useState(normalizedOptions.isDevMode);
 
   // Sync isDevMode changes to localStorage
   useEffect(() => {
@@ -76,7 +87,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
 
   // Auto-connect on mount if enabled
   useEffect(() => {
-    if (options.enabled && options.autoConnect) {
+    if (normalizedOptions.enabled && normalizedOptions.autoConnect) {
       testConnection();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,6 +103,13 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
   const updateHdayHelperUrl = useCallback(
     (url: string | null) => {
       setOptions((prev) => ({ ...prev, hdayHelperUrl: url || null }));
+    },
+    [setOptions],
+  );
+
+  const updateLegacyCalendarEnabled = useCallback(
+    (enabled: boolean) => {
+      setOptions((prev) => ({ ...prev, enableLegacyCalendar: enabled }));
     },
     [setOptions],
   );
@@ -134,7 +152,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
           return false;
         }
       } catch (error) {
-        console.error("Backend connection test failed:", error);
+        logger.error("Backend connection test failed:", error);
         setOptions((prev) => ({
           ...prev,
           connectionStatus: "error",
@@ -161,19 +179,21 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
 
   const contextValue = useMemo(
     () => ({
-      options,
+      options: normalizedOptions,
       isDevMode,
       updateAutoConnect,
       updateHdayHelperUrl,
+      updateLegacyCalendarEnabled,
       toggleDevMode,
       testConnection,
       disconnect,
     }),
     [
-      options,
+      normalizedOptions,
       isDevMode,
       updateAutoConnect,
       updateHdayHelperUrl,
+      updateLegacyCalendarEnabled,
       toggleDevMode,
       testConnection,
       disconnect,
@@ -181,8 +201,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
   );
 
   return (
-    <DeveloperOptionsContext.Provider value={contextValue}>
-      {children}
-    </DeveloperOptionsContext.Provider>
+    <DeveloperOptionsContext.Provider value={contextValue}>{children}</DeveloperOptionsContext.Provider>
   );
 }

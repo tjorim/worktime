@@ -1,20 +1,43 @@
 import type { Dayjs } from "dayjs";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
+import Spinner from "react-bootstrap/Spinner";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import type { ScheduleOption } from "@/data/rosters";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import type { TabKey } from "@/contexts/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
-import { CalendarView as LegacyCalendarView } from "@/components/CalendarView";
-import { CalendarView } from "@/features/calendar/CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
-import { TimeOffView } from "./TimeOffView";
-import { GanttView } from "./gantt/GanttView";
-import { TimeTrackingView } from "./timeTracking/TimeTrackingView";
+
+const CalendarView = lazy(() =>
+  import("@/features/calendar/CalendarView").then((module) => ({
+    default: module.CalendarView,
+  })),
+);
+const LegacyCalendarView = lazy(() =>
+  import("@/components/CalendarView").then((module) => ({
+    default: module.CalendarView,
+  })),
+);
+const TimeOffView = lazy(() =>
+  import("@/components/TimeOffView").then((module) => ({
+    default: module.TimeOffView,
+  })),
+);
+const TimeTrackingView = lazy(() =>
+  import("@/components/timeTracking/TimeTrackingView").then((module) => ({
+    default: module.TimeTrackingView,
+  })),
+);
+const GanttView = lazy(() =>
+  import("@/components/gantt/GanttView").then((module) => ({
+    default: module.GanttView,
+  })),
+);
 
 interface MainTabsProps {
   myTeam: number | null; // The user's team from onboarding
@@ -52,13 +75,18 @@ export function MainTabs({
   onChangeTeam,
 }: MainTabsProps) {
   const tabsId = useId();
-  const [activeKey, setActiveKey] = useSyncedState(activeTab);
+  const { settings } = useSettings();
+  const {
+    options: { enableLegacyCalendar },
+  } = useDeveloperOptions();
+  const [activeKey, setActiveKey] = useSyncedState(
+    !enableLegacyCalendar && activeTab === "legacy-calendar" ? "calendar" : activeTab,
+  );
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
     null,
   );
-  const { settings } = useSettings();
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
   const ganttEnabled = settings.enableGantt;
@@ -100,13 +128,24 @@ export function MainTabs({
   const availableTabs = useMemo<TabKey[]>(
     () => [
       "calendar",
-      "unified-calendar",
+      ...(enableLegacyCalendar ? (["legacy-calendar"] as TabKey[]) : []),
       "schedule",
       ...(timeOffEnabled ? (["timeoff"] as TabKey[]) : []),
       ...(timeTrackingEnabled ? (["timetracking"] as TabKey[]) : []),
       ...(ganttEnabled ? (["gantt"] as TabKey[]) : []),
     ],
-    [timeOffEnabled, timeTrackingEnabled, ganttEnabled],
+    [enableLegacyCalendar, timeOffEnabled, timeTrackingEnabled, ganttEnabled],
+  );
+
+  const loadingFallback = useMemo(
+    () => (
+      <div className="d-flex justify-content-center py-4" aria-live="polite">
+        <Spinner animation="border" role="status" size="sm">
+          <span className="visually-hidden">{m.loading()}</span>
+        </Spinner>
+      </div>
+    ),
+    [],
   );
 
   useEffect(() => {
@@ -133,30 +172,40 @@ export function MainTabs({
             eventKey="calendar"
             title={
               <>
-                <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
+                <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
                 {m.tab_calendar()}
               </>
             }
           >
-            <LegacyCalendarView
-              myTeam={myTeam}
-              onChangeSchedule={onChangeSchedule}
-              onChangeTeam={onChangeTeam}
-              onOpenScheduleTab={() => setActiveTab("schedule")}
-            />
+            {activeKey === "calendar" && (
+              <Suspense fallback={loadingFallback}>
+                <CalendarView onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
+              </Suspense>
+            )}
           </Tab>
 
-          <Tab
-            eventKey="unified-calendar"
-            title={
-              <>
-                <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
-                {m.tab_unified_calendar()}
-              </>
-            }
-          >
-            {activeKey === "unified-calendar" && <CalendarView />}
-          </Tab>
+          {enableLegacyCalendar && (
+            <Tab
+              eventKey="legacy-calendar"
+              title={
+                <>
+                  <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
+                  {m.tab_legacy_calendar()}
+                </>
+              }
+            >
+              {activeKey === "legacy-calendar" && (
+                <Suspense fallback={loadingFallback}>
+                  <LegacyCalendarView
+                    myTeam={myTeam}
+                    onChangeSchedule={onChangeSchedule}
+                    onChangeTeam={onChangeTeam}
+                    onOpenScheduleTab={() => setActiveTab("schedule")}
+                  />
+                </Suspense>
+              )}
+            </Tab>
+          )}
 
           <Tab
             eventKey="schedule"
@@ -188,7 +237,9 @@ export function MainTabs({
                 </>
               }
             >
-              <TimeOffView isActive={activeKey === "timeoff"} />
+              <Suspense fallback={loadingFallback}>
+                <TimeOffView isActive={activeKey === "timeoff"} />
+              </Suspense>
             </Tab>
           )}
 
@@ -202,7 +253,11 @@ export function MainTabs({
                 </>
               }
             >
-              <TimeTrackingView />
+              {activeKey === "timetracking" && (
+                <Suspense fallback={loadingFallback}>
+                  <TimeTrackingView />
+                </Suspense>
+              )}
             </Tab>
           )}
 
@@ -216,7 +271,11 @@ export function MainTabs({
                 </>
               }
             >
-              <GanttView />
+              {activeKey === "gantt" && (
+                <Suspense fallback={loadingFallback}>
+                  <GanttView />
+                </Suspense>
+              )}
             </Tab>
           )}
         </Tabs>

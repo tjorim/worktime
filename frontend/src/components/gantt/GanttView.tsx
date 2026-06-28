@@ -6,6 +6,7 @@ import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import type { GanttTask } from "@/types/gantt";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
@@ -25,7 +26,8 @@ export function GanttView() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { settings, lastUsed, updateLastGanttView, updateLastGanttViewMode } = useSettings();
+  const { settings } = useSettings();
+  const { lastUsed, updateLastGanttView, updateLastGanttViewMode } = useLastUsed();
   const timeOffDates = useMemo(
     () => (settings.enableTimeOff ? getGanttTimeOffDates(timeOffEntries, currentYear) : EMPTY_ARRAY),
     [currentYear, settings.enableTimeOff, timeOffEntries],

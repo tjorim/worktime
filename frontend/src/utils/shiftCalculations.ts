@@ -69,6 +69,7 @@ import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "@/data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
+import { logger } from "@/utils/logger";
 
 export type NullableScheduleOption = ScheduleOption | null | undefined;
 
@@ -325,7 +326,7 @@ export function calculateShift(
     // This indicates a likely configuration error: the schedulePattern is missing
     // an entry for the computed cycle position. Fall back to the schedule's OFF
     // shift definition to ensure consistent field population.
-    console.warn(
+    logger.warn(
       `[shiftCalculations] Missing schedulePattern day for cyclePosition=${cyclePosition} (cycleLength=${cycleLength}, teamNumber=${teamNumber}, schedule=${schedule.value}). Falling back to OFF shift.`,
     );
     return getShift("O", schedule.value);
@@ -692,7 +693,7 @@ export function isCurrentlyWorking(
  * @example
  * const currentTeam = getCurrentWorkingTeam(dayjs(), "5-shift");
  * if (currentTeam) {
- *   console.log(`Team ${currentTeam.teamNumber} is working ${currentTeam.shift.name}`);
+ *   logger.log(`Team ${currentTeam.teamNumber} is working ${currentTeam.shift.name}`);
  * }
  */
 export function getCurrentWorkingTeam(

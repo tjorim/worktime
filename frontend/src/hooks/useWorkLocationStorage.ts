@@ -8,6 +8,7 @@ import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/wo
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { toCountryCode } from "@/types/workLocation";
 import { workLocationsCollection } from "@/db/collections";
+import { logger } from "@/utils/logger";
 
 /**
  * Manages per-day work location storage backed by `workLocationsCollection`.
@@ -100,7 +101,7 @@ export function useWorkLocationStorage(year: number) {
 
       const d = dayjs(date);
       if (!d.isValid()) {
-        console.warn("Invalid date passed to setLocationForDate:", date);
+        logger.warn("Invalid date passed to setLocationForDate:", date);
         return false;
       }
       const key = d.format("YYYY-MM-DD");
@@ -130,7 +131,7 @@ export function useWorkLocationStorage(year: number) {
   const clearLocationForDate = useCallback((date: Dayjs | Date | string) => {
     const d = dayjs(date);
     if (!d.isValid()) {
-      console.warn("Invalid date passed to clearLocationForDate:", date);
+      logger.warn("Invalid date passed to clearLocationForDate:", date);
       return;
     }
     const key = d.format("YYYY-MM-DD");
@@ -150,3 +151,4 @@ export function useWorkLocationStorage(year: number) {
     clearLocationForDate,
   };
 }
+

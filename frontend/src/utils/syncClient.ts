@@ -29,6 +29,7 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // TypeScript representations of the backend sync wire schemas
@@ -795,7 +796,7 @@ function readSyncOutbox(userId: string): SyncPushPayload[] {
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as SyncPushPayload[]) : [];
   } catch (err) {
-    console.error("Failed to read sync outbox from localStorage:", err);
+    logger.error("Failed to read sync outbox from localStorage:", err);
     return [];
   }
 }

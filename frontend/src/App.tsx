@@ -11,6 +11,7 @@ import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { OngoingSyncProvider } from "@/contexts/OngoingSyncContext";
 import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
 import { SettingsProvider, type TabKey, useSettings } from "@/contexts/SettingsContext";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
@@ -21,6 +22,7 @@ import { getScheduleConfig } from "@/utils/scheduleUtils";
 
 import * as m from "@/paraglide/messages.js";
 import { router } from "@/router";
+import { logger } from "@/utils/logger";
 
 /**
  * The main application component for team selection and shift management.
@@ -45,10 +47,9 @@ function AppContent() {
     completeOnboardingWithSchedule,
     scheduleType,
     setScheduleType,
-    updateLastActiveTab,
     settings,
-    lastUsed,
   } = useSettings();
+  const { lastUsed, updateLastActiveTab } = useLastUsed();
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
@@ -200,7 +201,7 @@ function AppContent() {
       }
       setScheduleType(schedule);
     } catch (error) {
-      console.error("Failed to change schedule:", error);
+      logger.error("Failed to change schedule:", error);
       showError("Failed to change schedule. Please try again.");
     }
   };
@@ -345,3 +346,4 @@ function App() {
 }
 
 export default App;
+

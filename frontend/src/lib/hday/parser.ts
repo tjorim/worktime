@@ -63,6 +63,9 @@
  * @module lib/hday/parser
  */
 
+/* oxlint-disable no-console -- this module is shared with the bun-compiled
+   hday-helper (see hday-helper/src/main.ts), so it must stay free of the "@/"
+   alias and import.meta.env; console is the portable logging primitive here. */
 import { normalizeEventFlags } from "./flags";
 import type { EventFlag, HdayEvent } from "./types";
 

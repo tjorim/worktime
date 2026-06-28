@@ -16,6 +16,7 @@ import { getLocale } from "@/paraglide/runtime.js";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import * as m from "@/paraglide/messages.js";
+import { logger } from "@/utils/logger";
 
 interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -128,7 +129,7 @@ export function WeekView({
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
   if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
-    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
+    logger.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
     myTeam = null;
   }
   const isMyTeam = (teamNumber: number) => {
@@ -304,3 +305,4 @@ export function WeekView({
     </Card>
   );
 }
+
