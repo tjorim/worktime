@@ -173,7 +173,13 @@ const shallowEqualObject = <T extends object>(a: T, b: T): boolean => {
   const bRecord = b as Record<string, unknown>;
   const aKeys = Object.keys(aRecord);
   const bKeys = Object.keys(bRecord);
-  return aKeys.length === bKeys.length && aKeys.every((key) => Object.is(aRecord[key], bRecord[key]));
+  return (
+    aKeys.length === bKeys.length &&
+    aKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(bRecord, key) && Object.is(aRecord[key], bRecord[key]),
+    )
+  );
 };
 
 function useStableShallowObject<T extends object>(value: T): T {
@@ -370,10 +376,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const settingUpdaters = useMemo(() => {
     const updateSetting = <K extends keyof UserSettings>(key: K) => {
       return (value: UserSettings[K]) => {
-        setUserState((prev) => ({
-          ...prev,
-          settings: { ...prev.settings, [key]: value },
-        }));
+        setUserState((prev) => {
+          // `prev` is the raw localStorage value, which can be null or
+          // corrupted at runtime despite its static type; guard before spreading.
+          const base = isObjectRecord(prev) ? prev : defaultUserState;
+          const prevSettings = isObjectRecord(base.settings) ? base.settings : defaultSettings;
+          return {
+            ...base,
+            settings: { ...prevSettings, [key]: value },
+          };
+        });
       };
     };
 
@@ -393,10 +405,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const lastUsedUpdaters = useMemo(() => {
     const updateLastUsed = <K extends keyof LastUsed>(key: K) => {
       return (value: LastUsed[K]) => {
-        setUserState((prev) => ({
-          ...prev,
-          lastUsed: { ...prev.lastUsed, [key]: value },
-        }));
+        setUserState((prev) => {
+          // `prev` is the raw localStorage value, which can be null or
+          // corrupted at runtime despite its static type; guard before spreading.
+          const base = isObjectRecord(prev) ? prev : defaultUserState;
+          const prevLastUsed = isObjectRecord(base.lastUsed) ? base.lastUsed : defaultLastUsed;
+          return {
+            ...base,
+            lastUsed: { ...prevLastUsed, [key]: value },
+          };
+        });
       };
     };
 
