@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -215,7 +216,7 @@ private fun IdleTimeoutDropdown(selectedMinutes: Int, onSelected: (Int) -> Unit)
                 .fillMaxWidth()
                 .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable, true)
         )
-        ExposedDropdownMenuDefaults.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             IDLE_TIMEOUT_OPTIONS_MINUTES.forEach { minutes ->
                 DropdownMenuItem(
                     text = { Text("$minutes min") },
