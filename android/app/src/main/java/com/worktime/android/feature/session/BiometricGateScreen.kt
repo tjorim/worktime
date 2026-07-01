@@ -16,12 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.worktime.android.core.auth.BiometricAvailability
 
 @Composable
-fun BiometricGateScreen(
-    availability: BiometricAvailability,
-    isPrompting: Boolean,
-    onUnlock: () -> Unit,
-    onContinueWithoutLock: () -> Unit
-) {
+fun BiometricGateScreen(availability: BiometricAvailability, isPrompting: Boolean, onUnlock: () -> Unit, onContinueWithoutLock: () -> Unit) {
     Column(
         modifier =
         Modifier

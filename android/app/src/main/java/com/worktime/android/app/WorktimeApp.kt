@@ -1,5 +1,6 @@
 package com.worktime.android.app
 
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -170,7 +171,14 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
     WorktimeTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             if (isLocked && sessionState is SessionState.Authenticated) {
-                val activity = context as FragmentActivity
+                val activity =
+                    remember(context) {
+                        var current = context
+                        while (current is ContextWrapper && current !is FragmentActivity) {
+                            current = current.baseContext
+                        }
+                        current as FragmentActivity
+                    }
                 val authenticator = remember(activity) { BiometricAuthenticator(activity) }
                 val availability = remember(authenticator) { authenticator.checkAvailability() }
                 BiometricGateScreen(

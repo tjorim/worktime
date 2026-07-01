@@ -32,7 +32,12 @@ class BiometricGateViewModel(private val preferencesStore: BiometricLockPreferen
     private val _locked = MutableStateFlow(false)
     val locked: StateFlow<Boolean> = _locked.asStateFlow()
 
+    // DataStore writes are async; without this, a quick background/resume can read a stale
+    // (or not-yet-persisted) timestamp from disk and lock the app even though it never idled.
+    private var lastBackgroundEpochMillis: Long? = null
+
     fun onAppBackgrounded(nowEpochMillis: Long) {
+        lastBackgroundEpochMillis = nowEpochMillis
         viewModelScope.launch {
             preferencesStore.setLastBackgroundEpochMillis(nowEpochMillis)
         }
@@ -44,7 +49,7 @@ class BiometricGateViewModel(private val preferencesStore: BiometricLockPreferen
             if (BiometricGateDecision.shouldRequireAuthentication(
                     lockEnabled = prefs.lockEnabled,
                     idleTimeoutMinutes = prefs.idleTimeoutMinutes,
-                    lastBackgroundEpochMillis = prefs.lastBackgroundEpochMillis,
+                    lastBackgroundEpochMillis = lastBackgroundEpochMillis ?: prefs.lastBackgroundEpochMillis,
                     nowEpochMillis = nowEpochMillis
                 )
             ) {
@@ -68,11 +73,10 @@ class BiometricGateViewModel(private val preferencesStore: BiometricLockPreferen
     companion object {
         private const val STOP_TIMEOUT_MILLIS = 5_000L
 
-        fun factory(preferencesStore: BiometricLockPreferencesStore): ViewModelProvider.Factory =
-            viewModelFactory {
-                initializer {
-                    BiometricGateViewModel(preferencesStore = preferencesStore)
-                }
+        fun factory(preferencesStore: BiometricLockPreferencesStore): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                BiometricGateViewModel(preferencesStore = preferencesStore)
             }
+        }
     }
 }

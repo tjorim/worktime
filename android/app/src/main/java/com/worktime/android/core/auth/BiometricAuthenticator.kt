@@ -30,8 +30,7 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
     private val allowedAuthenticators =
         BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
-    fun checkAvailability(): BiometricAvailability =
-        when (BiometricManager.from(activity).canAuthenticate(allowedAuthenticators)) {
+    fun checkAvailability(): BiometricAvailability = when (BiometricManager.from(activity).canAuthenticate(allowedAuthenticators)) {
             BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.Available
             BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
                 BiometricAvailability.Unavailable(
