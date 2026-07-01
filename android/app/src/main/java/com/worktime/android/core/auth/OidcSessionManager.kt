@@ -33,7 +33,11 @@ class OidcSessionManager(private val context: Context, private val appConfig: Ap
                 ?.takeIf { it.isNotBlank() }
                 ?.let(AuthState::jsonDeserialize)
                 ?.also(::publishState)
-        } catch (_: org.json.JSONException) {
+        } catch (_: Exception) {
+            // readAuthStateJson() is backed by EncryptedSharedPreferences, which can throw
+            // GeneralSecurityException/IOException if the Android Keystore key is lost or
+            // corrupted, not just JSONException from malformed AuthState JSON. Treat any of
+            // these as a logged-out state rather than crashing on startup.
             sessionStore.clear()
             null
         } ?: run {

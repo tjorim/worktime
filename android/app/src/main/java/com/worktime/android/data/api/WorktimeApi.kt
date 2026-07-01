@@ -80,10 +80,11 @@ interface WorktimeApi {
                 )
             }
             val client = builder.build()
+            val normalizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
 
             return Retrofit
                 .Builder()
-                .baseUrl(baseUrl)
+                .baseUrl(normalizedBaseUrl)
                 .client(client)
                 .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .build()
