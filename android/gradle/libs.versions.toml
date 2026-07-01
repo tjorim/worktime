@@ -9,6 +9,7 @@ androidx-navigation = "2.9.8"
 compose-bom = "2026.05.01"
 androidx-datastore = "1.2.1"
 androidx-security-crypto = "1.1.0"
+androidx-biometric = "1.1.0"
 material = "1.14.0"
 kotlinx-serialization-json = "1.11.0"
 kotlinx-coroutines = "1.11.0"
@@ -34,6 +35,7 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidx-security-crypto" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidx-biometric" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }

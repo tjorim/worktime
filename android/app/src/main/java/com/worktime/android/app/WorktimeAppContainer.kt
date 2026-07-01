@@ -7,6 +7,7 @@ import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.config.buildAppConfig
 import com.worktime.android.core.network.CertificatePinnerProvider
 import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
+import com.worktime.android.core.storage.BiometricLockPreferencesStore
 import com.worktime.android.core.storage.NotificationPreferencesStore
 import com.worktime.android.core.storage.SecureSessionStore
 import com.worktime.android.data.api.WorktimeApi
@@ -17,6 +18,7 @@ class WorktimeAppContainer(context: Context) {
     private val secureSessionStore = SecureSessionStore(context)
     val notificationPreferencesStore = NotificationPreferencesStore(context)
     val apiBaseUrlOverrideStore = ApiBaseUrlOverrideStore(context)
+    val biometricLockPreferencesStore = BiometricLockPreferencesStore(context)
     val sessionManager =
         OidcSessionManager(
             context = context,

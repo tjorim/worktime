@@ -1,14 +1,14 @@
 package com.worktime.android
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import com.worktime.android.app.WorktimeAndroidApplication
 import com.worktime.android.app.WorktimeApp
 import com.worktime.android.app.navigation.WorktimeDestination
 import com.worktime.android.core.notifications.WorktimeNotifications
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = (application as WorktimeAndroidApplication).container
