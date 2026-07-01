@@ -1,6 +1,7 @@
 package com.worktime.android.data.api
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.worktime.android.core.network.DynamicBaseUrlInterceptor
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.SyncStatusResponse
 import com.worktime.android.data.model.TaskMutationRequest
@@ -64,7 +65,12 @@ interface WorktimeApi {
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
 
     companion object {
-        fun create(baseUrl: String, enableNetworkLogging: Boolean, certificatePinner: CertificatePinner = CertificatePinner.DEFAULT): WorktimeApi {
+        fun create(
+            baseUrl: String,
+            enableNetworkLogging: Boolean,
+            certificatePinner: CertificatePinner = CertificatePinner.DEFAULT,
+            baseUrlOverrideProvider: (() -> String?)? = null
+        ): WorktimeApi {
             val json =
                 Json {
                     ignoreUnknownKeys = true
@@ -72,6 +78,9 @@ interface WorktimeApi {
                 }
             val builder = OkHttpClient.Builder()
             builder.certificatePinner(certificatePinner)
+            if (baseUrlOverrideProvider != null) {
+                builder.addInterceptor(DynamicBaseUrlInterceptor(baseUrlOverrideProvider))
+            }
             if (enableNetworkLogging) {
                 builder.addInterceptor(
                     HttpLoggingInterceptor().apply {

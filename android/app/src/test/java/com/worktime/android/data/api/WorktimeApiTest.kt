@@ -43,4 +43,26 @@ class WorktimeApiTest {
         assertEquals("Bearer token-123", request.headers["Authorization"])
         assertEquals("2026-05-26T12:00:00Z", response.serverTimestamp)
     }
+
+    @Test
+    fun getSyncStatusUsesRuntimeBaseUrlOverrideWhenProvided() = runTest {
+        server.enqueue(
+            MockResponse.Builder()
+                .addHeader("Content-Type", "application/json")
+                .body("""{"server_timestamp":"2026-05-26T12:00:00Z"}""")
+                .build()
+        )
+        val api =
+            WorktimeApi.create(
+                baseUrl = "http://flavor-default.invalid/",
+                enableNetworkLogging = false,
+                baseUrlOverrideProvider = { server.url("/").toString() }
+            )
+
+        val response = api.getSyncStatus(authorization = "Bearer token-123")
+
+        val request = server.takeRequest()
+        assertEquals("/api/sync/status", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals("2026-05-26T12:00:00Z", response.serverTimestamp)
+    }
 }

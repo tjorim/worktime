@@ -76,6 +76,9 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
     val notificationPreferences by container.notificationPreferencesStore.preferences.collectAsStateWithLifecycle(
         initialValue = NotificationPreferences()
     )
+    val apiBaseUrlOverride by container.apiBaseUrlOverrideStore.override.collectAsStateWithLifecycle(
+        initialValue = null
+    )
 
     LaunchedEffect(uiState, actionsState, notificationPreferences) {
         val dashboard = (uiState as? DashboardUiState.Success)?.dashboard ?: return@LaunchedEffect
@@ -163,6 +166,19 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     appConfig = container.appConfig,
                     initialDestination = initialDestination,
                     notificationPreferences = notificationPreferences,
+                    apiBaseUrlOverride = apiBaseUrlOverride,
+                    onApiBaseUrlOverrideSave = { url ->
+                        coroutineScope.launch {
+                            container.apiBaseUrlOverrideStore.setOverride(url)
+                            dashboardViewModel.refresh()
+                        }
+                    },
+                    onApiBaseUrlOverrideClear = {
+                        coroutineScope.launch {
+                            container.apiBaseUrlOverrideStore.clearOverride()
+                            dashboardViewModel.refresh()
+                        }
+                    },
                     onRetry = dashboardViewModel::refresh,
                     onLogout = dashboardViewModel::logout,
                     onStartTracking = dashboardViewModel::startTimeTracking,
@@ -197,6 +213,9 @@ private fun WorktimeAuthenticatedScaffold(
     appConfig: com.worktime.android.core.config.AppConfig,
     initialDestination: String,
     notificationPreferences: NotificationPreferences,
+    apiBaseUrlOverride: String?,
+    onApiBaseUrlOverrideSave: (String) -> Unit,
+    onApiBaseUrlOverrideClear: () -> Unit,
     onRetry: () -> Unit,
     onLogout: () -> Unit,
     onStartTracking: (String, String?) -> Unit,
@@ -276,6 +295,9 @@ private fun WorktimeAuthenticatedScaffold(
                         uiState = uiState,
                         appConfig = appConfig,
                         notificationPreferences = notificationPreferences,
+                        apiBaseUrlOverride = apiBaseUrlOverride,
+                        onApiBaseUrlOverrideSave = onApiBaseUrlOverrideSave,
+                        onApiBaseUrlOverrideClear = onApiBaseUrlOverrideClear,
                         onShiftNotificationsChanged = onShiftNotificationsChanged,
                         onTimeTrackingNotificationsChanged = onTimeTrackingNotificationsChanged,
                         onSyncNotificationsChanged = onSyncNotificationsChanged,
