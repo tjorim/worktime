@@ -30,10 +30,11 @@ import retrofit2.Response
 class WorktimeRepositoryTest {
     @Test
     fun loadDashboardReturnsLoggedOutWhenNoTokenExists() = runTest {
-        val repository = WorktimeRepository(
-            api = FakeApi(),
-            sessionController = FakeSessionController(token = null),
-        )
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = null)
+            )
 
         val result = repository.loadDashboard()
 
@@ -43,10 +44,11 @@ class WorktimeRepositoryTest {
     @Test
     fun loadDashboardReturnsSuccessForHappyPath() = runTest {
         val dashboard = sampleDashboard()
-        val repository = WorktimeRepository(
-            api = FakeApi(response = dashboard),
-            sessionController = FakeSessionController(token = "token-123"),
-        )
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(response = dashboard),
+                sessionController = FakeSessionController(token = "token-123")
+            )
 
         val result = repository.loadDashboard()
 
@@ -57,10 +59,11 @@ class WorktimeRepositoryTest {
     @Test
     fun loadDashboardMapsUnauthorizedToLoggedOut() = runTest {
         val sessionController = FakeSessionController(token = "expired-token")
-        val repository = WorktimeRepository(
-            api = FakeApi(dashboardThrowable = httpException(401)),
-            sessionController = sessionController,
-        )
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(dashboardThrowable = httpException(401)),
+                sessionController = sessionController
+            )
 
         val result = repository.loadDashboard()
 
@@ -70,10 +73,11 @@ class WorktimeRepositoryTest {
 
     @Test
     fun startTrackingReturnsValidationErrorForBadRequest() = runTest {
-        val repository = WorktimeRepository(
-            api = FakeApi(taskThrowable = httpException(400)),
-            sessionController = FakeSessionController(token = "token-123"),
-        )
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(taskThrowable = httpException(400)),
+                sessionController = FakeSessionController(token = "token-123")
+            )
         repository.loadDashboard()
 
         val result = repository.startTimeTracking("Focus")
@@ -84,10 +88,11 @@ class WorktimeRepositoryTest {
     @Test
     fun updateTaskReturnsLoggedOutOnUnauthorized() = runTest {
         val sessionController = FakeSessionController(token = "token-123")
-        val repository = WorktimeRepository(
-            api = FakeApi(taskThrowable = httpException(401)),
-            sessionController = sessionController,
-        )
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(taskThrowable = httpException(401)),
+                sessionController = sessionController
+            )
         repository.loadDashboard()
 
         val result = repository.updateTask("task-1", "Updated", null)
@@ -98,17 +103,19 @@ class WorktimeRepositoryTest {
 
     @Test
     fun setWorkLocationReturnsSuccess() = runTest {
-        val repository = WorktimeRepository(
-            api = FakeApi(),
-            sessionController = FakeSessionController(token = "token-123"),
-        )
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = "token-123")
+            )
         repository.loadDashboard()
 
-        val result = repository.setWorkLocation(
-            date = java.time.LocalDate.parse("2026-05-26"),
-            countryCode = "de",
-            label = "Office",
-        )
+        val result =
+            repository.setWorkLocation(
+                date = java.time.LocalDate.parse("2026-05-26"),
+                countryCode = "de",
+                label = "Office"
+            )
 
         assertTrue(result is MutationResult.Success)
         assertEquals("DE", (result as MutationResult.Success).value.countryCode)
@@ -117,80 +124,54 @@ class WorktimeRepositoryTest {
     private class FakeApi(
         private val response: DashboardResponse = sampleDashboard(),
         private val dashboardThrowable: Throwable? = null,
-        private val taskThrowable: Throwable? = null,
+        private val taskThrowable: Throwable? = null
     ) : WorktimeApi {
         override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
             dashboardThrowable?.let { throw it }
             return response
         }
 
-        override suspend fun createTask(
-            authorization: String,
-            userId: Int,
-            payload: TaskMutationRequest,
-        ): TaskRecord {
+        override suspend fun createTask(authorization: String, userId: Int, payload: TaskMutationRequest): TaskRecord {
             taskThrowable?.let { throw it }
             return sampleTask(userId = userId, text = payload.text ?: "Task")
         }
 
-        override suspend fun updateTask(
-            authorization: String,
-            taskId: String,
-            userId: Int,
-            payload: TaskMutationRequest,
-        ): TaskRecord {
+        override suspend fun updateTask(authorization: String, taskId: String, userId: Int, payload: TaskMutationRequest): TaskRecord {
             taskThrowable?.let { throw it }
             return sampleTask(userId = userId, id = taskId, text = payload.text ?: "Task")
         }
 
-        override suspend fun getRunningTask(
-            authorization: String,
-            userId: Int,
-        ): Response<TaskRecord> = Response.success(sampleTask(userId = userId))
+        override suspend fun getRunningTask(authorization: String, userId: Int): Response<TaskRecord> = Response.success(sampleTask(userId = userId))
 
-        override suspend fun upsertWorkLocation(
-            authorization: String,
-            userId: Int,
-            payload: WorkLocationMutationRequest,
-        ): WorkLocationRecord {
-            return WorkLocationRecord(
+        override suspend fun upsertWorkLocation(authorization: String, userId: Int, payload: WorkLocationMutationRequest): WorkLocationRecord =
+            WorkLocationRecord(
                 id = 1,
                 userId = userId,
                 date = payload.date,
                 countryCode = payload.countryCode.uppercase(),
                 label = payload.label,
-                createdAt = "2026-05-26T12:00:00Z",
+                createdAt = "2026-05-26T12:00:00Z"
             )
-        }
 
-        override suspend fun listWorkLocations(
-            authorization: String,
-            userId: Int,
-            startDate: String?,
-            endDate: String?,
-        ): WorkLocationListResponse = WorkLocationListResponse(
-            items = emptyList(),
-            total = 0,
-        )
+        override suspend fun listWorkLocations(authorization: String, userId: Int, startDate: String?, endDate: String?): WorkLocationListResponse =
+            WorkLocationListResponse(
+                items = emptyList(),
+                total = 0
+            )
 
-        override suspend fun deleteLabel(
-            authorization: String,
-            labelId: String,
-            userId: Int,
-        ) {}
+        override suspend fun deleteLabel(authorization: String, labelId: String, userId: Int) = Unit
 
         override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
-            serverTimestamp = "2026-05-26T12:00:00Z",
+            serverTimestamp = "2026-05-26T12:00:00Z"
         )
     }
 
-    private class FakeSessionController(
-        token: String?,
-    ) : SessionController {
+    private class FakeSessionController(token: String?) : SessionController {
         private var currentToken: String? = token
-        override val sessionState = MutableStateFlow<SessionState>(
-            if (token == null) SessionState.LoggedOut else SessionState.Authenticated(hasRefreshToken = true),
-        )
+        override val sessionState =
+            MutableStateFlow<SessionState>(
+                if (token == null) SessionState.LoggedOut else SessionState.Authenticated(hasRefreshToken = true)
+            )
 
         override suspend fun createAuthorizationIntent() = throw UnsupportedOperationException()
 
@@ -208,27 +189,30 @@ class WorktimeRepositoryTest {
 private fun sampleDashboard(): DashboardResponse = DashboardResponse(
     asOf = "2026-05-26T12:00:00Z",
     identity = Identity(id = 1, username = "demo", displayName = "Demo User", isAdmin = false),
-    workContext = WorkContext(
+    workContext =
+    WorkContext(
         scheduleType = "5-shift",
         teamNumber = 1,
         effectiveTeamNumber = 1,
         state = "ready",
-        featureFlags = FeatureFlags(timeOffEnabled = true),
+        featureFlags = FeatureFlags(timeOffEnabled = true)
     ),
-    currentStatus = CurrentStatus(
+    currentStatus =
+    CurrentStatus(
         asOf = "2026-05-26T12:00:00Z",
         currentShift = null,
         currentlyWorkingTeam = null,
-        offDayProgress = null,
+        offDayProgress = null
     ),
     nextShifts = NextShifts(asOf = "2026-05-26T12:00:00Z", items = emptyList()),
     teamStatus = TeamStatus(asOf = "2026-05-26T12:00:00Z", items = emptyList()),
-    timeOffSummary = TimeOffSummary(
+    timeOffSummary =
+    TimeOffSummary(
         asOf = "2026-05-26T12:00:00Z",
         activeItems = emptyList(),
         upcomingItems = emptyList(),
-        totalUpcoming = 0,
-    ),
+        totalUpcoming = 0
+    )
 )
 
 private fun sampleTask(userId: Int, id: String = "task-1", text: String = "Task"): TaskRecord = TaskRecord(
@@ -239,7 +223,7 @@ private fun sampleTask(userId: Int, id: String = "task-1", text: String = "Task"
     startTime = "2026-05-26T12:00:00Z",
     stopTime = null,
     includesBreak = false,
-    createdAt = "2026-05-26T12:00:00Z",
+    createdAt = "2026-05-26T12:00:00Z"
 )
 
 private fun httpException(code: Int): HttpException {

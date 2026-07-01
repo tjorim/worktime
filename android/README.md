@@ -6,7 +6,7 @@ Native Android companion app for Worktime's mobile-first read-only flows.
 
 ```bash
 cd android
-./gradlew testDevDebugUnitTest
+./gradlew ktlintCheck detekt testDevDebugUnitTest
 ./gradlew assembleDevDebug
 ```
 
@@ -24,6 +24,10 @@ Override environment values with Gradle properties:
 - `WORKTIME_ANDROID_DEV_OIDC_CLIENT_ID`
 - `WORKTIME_ANDROID_PROD_OIDC_CLIENT_ID`
 - `WORKTIME_ANDROID_OIDC_SCOPE`
+- `WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS` (comma-separated OkHttp certificate pin hosts)
+- `WORKTIME_ANDROID_PROD_CERTIFICATE_PINS` (comma-separated `sha256/...` pins)
+
+Production builds pin `worktime.tjor.im` and `auth.tjor.im` to the ISRG Root X1 public key by default. Override the pin properties when the production TLS chain changes.
 
 Example:
 

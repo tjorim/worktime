@@ -1,5 +1,6 @@
 package com.worktime.android.feature.dashboard
 
+import app.cash.turbine.test
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.data.model.CurrentStatus
 import com.worktime.android.data.model.DashboardResponse
@@ -15,9 +16,10 @@ import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
+import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -28,7 +30,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
@@ -46,15 +47,18 @@ class DashboardViewModelTest {
 
     @Test
     fun startsInLoadingAndThenPublishesSuccess() = runTest(dispatcher) {
-        val repository = FakeDashboardRepository(
-            result = DashboardLoadResult.Success(sampleDashboard()),
-        )
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard())
+            )
 
         val viewModel = DashboardViewModel(repository)
-        assertEquals(DashboardUiState.Loading, viewModel.uiState.value)
-
-        advanceUntilIdle()
-        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+        viewModel.uiState.test {
+            assertEquals(DashboardUiState.Loading, awaitItem())
+            advanceUntilIdle()
+            assertTrue(awaitItem() is DashboardUiState.Success)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test
@@ -69,26 +73,28 @@ class DashboardViewModelTest {
 
     @Test
     fun publishesErrorState() = runTest(dispatcher) {
-        val repository = FakeDashboardRepository(
-            result = DashboardLoadResult.Error("Unable to load Worktime data (500)"),
-        )
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Error("Unable to load Worktime data (500)")
+            )
 
         val viewModel = DashboardViewModel(repository)
 
         advanceUntilIdle()
         assertEquals(
             DashboardUiState.Error("Unable to load Worktime data (500)"),
-            viewModel.uiState.value,
+            viewModel.uiState.value
         )
     }
 
     @Test
     fun staysLoadingWhileRequestIsPending() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>()
-        val repository = FakeDashboardRepository(
-            result = DashboardLoadResult.Success(sampleDashboard()),
-            gate = gate,
-        )
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                gate = gate
+            )
 
         val viewModel = DashboardViewModel(repository)
         advanceUntilIdle()
@@ -101,10 +107,11 @@ class DashboardViewModelTest {
 
     @Test
     fun surfacesValidationMessageForMutationFailures() = runTest(dispatcher) {
-        val repository = FakeDashboardRepository(
-            result = DashboardLoadResult.Success(sampleDashboard()),
-            startTrackingResult = MutationResult.ValidationError("Request validation failed"),
-        )
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                startTrackingResult = MutationResult.ValidationError("Request validation failed")
+            )
         val viewModel = DashboardViewModel(repository)
         advanceUntilIdle()
 
@@ -117,7 +124,7 @@ class DashboardViewModelTest {
     private class FakeDashboardRepository(
         private val result: DashboardLoadResult,
         private val gate: CompletableDeferred<Unit>? = null,
-        private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
+        private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
 
@@ -134,31 +141,22 @@ class DashboardViewModelTest {
 
         override suspend fun stopTimeTracking(taskId: String): MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
 
-        override suspend fun updateTask(
-            taskId: String,
-            text: String?,
-            labelId: String?,
-        ): MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
+        override suspend fun updateTask(taskId: String, text: String?, labelId: String?): MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
 
         override suspend fun getRunningTask(): MutationResult<TaskRecord?> = MutationResult.Success(null)
 
-        override suspend fun setWorkLocation(
-            date: LocalDate,
-            countryCode: String,
-            label: String?,
-        ): MutationResult<WorkLocationRecord> = MutationResult.Success(
+        override suspend fun setWorkLocation(date: LocalDate, countryCode: String, label: String?): MutationResult<WorkLocationRecord> = MutationResult.Success(
             WorkLocationRecord(
                 id = 1,
                 userId = 1,
                 date = date.toString(),
                 countryCode = countryCode,
                 label = label,
-                createdAt = "2026-05-26T12:00:00Z",
-            ),
+                createdAt = "2026-05-26T12:00:00Z"
+            )
         )
 
-        override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> =
-            MutationResult.Success(emptyList())
+        override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> = MutationResult.Success(emptyList())
 
         override suspend fun deleteLabel(labelId: String): MutationResult<Unit> = MutationResult.Success(Unit)
 
@@ -170,27 +168,30 @@ class DashboardViewModelTest {
 private fun sampleDashboard(): DashboardResponse = DashboardResponse(
     asOf = "2026-05-26T12:00:00Z",
     identity = Identity(id = 1, username = "demo", displayName = "Demo User", isAdmin = false),
-    workContext = WorkContext(
+    workContext =
+    WorkContext(
         scheduleType = "5-shift",
         teamNumber = 1,
         effectiveTeamNumber = 1,
         state = "ready",
-        featureFlags = FeatureFlags(timeOffEnabled = true),
+        featureFlags = FeatureFlags(timeOffEnabled = true)
     ),
-    currentStatus = CurrentStatus(
+    currentStatus =
+    CurrentStatus(
         asOf = "2026-05-26T12:00:00Z",
         currentShift = null,
         currentlyWorkingTeam = null,
-        offDayProgress = null,
+        offDayProgress = null
     ),
     nextShifts = NextShifts(asOf = "2026-05-26T12:00:00Z", items = emptyList()),
     teamStatus = TeamStatus(asOf = "2026-05-26T12:00:00Z", items = emptyList()),
-    timeOffSummary = TimeOffSummary(
+    timeOffSummary =
+    TimeOffSummary(
         asOf = "2026-05-26T12:00:00Z",
         activeItems = emptyList(),
         upcomingItems = emptyList(),
-        totalUpcoming = 0,
-    ),
+        totalUpcoming = 0
+    )
 )
 
 private fun sampleTask(): TaskRecord = TaskRecord(
@@ -201,5 +202,5 @@ private fun sampleTask(): TaskRecord = TaskRecord(
     startTime = "2026-05-26T12:00:00Z",
     stopTime = null,
     includesBreak = false,
-    createdAt = "2026-05-26T12:00:00Z",
+    createdAt = "2026-05-26T12:00:00Z"
 )

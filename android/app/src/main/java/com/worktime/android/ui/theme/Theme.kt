@@ -6,21 +6,23 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val LightColors = lightColorScheme(
-    primary = WorktimeBlue,
-    secondary = WorktimeBlue,
-    surface = WorktimeSurface,
-)
+private val LightColors =
+    lightColorScheme(
+        primary = WorktimeBlue,
+        secondary = WorktimeBlue,
+        surface = WorktimeSurface
+    )
 
-private val DarkColors = darkColorScheme(
-    primary = WorktimeBlueDark,
-    secondary = WorktimeBlueDark,
-)
+private val DarkColors =
+    darkColorScheme(
+        primary = WorktimeBlueDark,
+        secondary = WorktimeBlueDark
+    )
 
 @Composable
 fun WorktimeTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
-        content = content,
+        content = content
     )
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:TodayScreen.kt:@Composable fun TodayScreen</ID>
+    <ID>CyclomaticComplexMethod:WorktimeApp.kt:@Composable fun WorktimeApp</ID>
+    <ID>LongMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
+    <ID>LongMethod:TodayScreen.kt:@Composable fun TodayScreen</ID>
+    <ID>LongMethod:WorktimeApp.kt:@Composable fun WorktimeApp</ID>
+    <ID>LongMethod:WorktimeApp.kt:@Composable private fun WorktimeAuthenticatedScaffold</ID>
+  </CurrentIssues>
+</SmellBaseline>

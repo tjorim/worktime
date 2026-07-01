@@ -23,40 +23,39 @@ fun ReadModelScreen(
     title: String,
     uiState: DashboardUiState,
     onRetry: () -> Unit,
-    content: @Composable (dashboard: com.worktime.android.data.model.DashboardResponse) -> Unit,
+    content: @Composable (dashboard: com.worktime.android.data.model.DashboardResponse) -> Unit
 ) {
     when (uiState) {
         DashboardUiState.Loading -> LoadingPane(title = title)
-        DashboardUiState.LoggedOut -> EmptyPane(
-            title = title,
-            headline = "Sign in required",
-            body = "Authenticate to load your Worktime read models.",
-        )
-        is DashboardUiState.Error -> EmptyPane(
-            title = title,
-            headline = "Unable to load $title",
-            body = uiState.message,
-            actionLabel = "Retry",
-            onAction = onRetry,
-        )
+        DashboardUiState.LoggedOut ->
+            EmptyPane(
+                title = title,
+                headline = "Sign in required",
+                body = "Authenticate to load your Worktime read models."
+            )
+        is DashboardUiState.Error ->
+            EmptyPane(
+                title = title,
+                headline = "Unable to load $title",
+                body = uiState.message,
+                actionLabel = "Retry",
+                onAction = onRetry
+            )
         is DashboardUiState.Success -> content(uiState.dashboard)
     }
 }
 
 @Composable
-fun ScreenList(
-    title: String,
-    body: LazyListScope.() -> Unit,
-) {
+fun ScreenList(title: String, body: LazyListScope.() -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineSmall
             )
         }
         body()
@@ -69,27 +68,23 @@ private fun LoadingPane(title: String) {
 }
 
 @Composable
-fun EmptyPane(
-    title: String,
-    headline: String,
-    body: String,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
+fun EmptyPane(title: String, headline: String, body: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(text = title, style = MaterialTheme.typography.headlineSmall)
         Card(modifier = Modifier.padding(top = 16.dp)) {
             Column(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxWidth()
                     .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(text = headline, style = MaterialTheme.typography.titleMedium)
                 Text(text = body, style = MaterialTheme.typography.bodyMedium)

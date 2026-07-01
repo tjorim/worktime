@@ -13,10 +13,14 @@ fun TimeOffSummaryScreen(uiState: DashboardUiState, onRetry: () -> Unit) {
             item {
                 SummaryCard(title = "Summary") {
                     text("Upcoming entries", dashboard.timeOffSummary.totalUpcoming.toString())
-                    text("Active now", dashboard.timeOffSummary.activeItems.size.toString())
+                    text(
+                        "Active now",
+                        dashboard.timeOffSummary.activeItems.size
+                            .toString()
+                    )
                     text(
                         "Feature flag",
-                        if (dashboard.workContext.featureFlags.timeOffEnabled) "Enabled" else "Disabled",
+                        if (dashboard.workContext.featureFlags.timeOffEnabled) "Enabled" else "Disabled"
                     )
                 }
             }

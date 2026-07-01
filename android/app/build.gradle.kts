@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.ktlint)
 }
 
 fun quoted(value: String) = "\"$value\""
@@ -13,6 +15,14 @@ val prodOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_AUT
 val devOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_CLIENT_ID").orElse("worktime")
 val prodOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_CLIENT_ID").orElse("worktime")
 val oidcScope = providers.gradleProperty("WORKTIME_ANDROID_OIDC_SCOPE").orElse("openid profile email offline_access")
+val prodCertificatePinHosts =
+    providers
+        .gradleProperty("WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS")
+        .orElse("worktime.tjor.im,auth.tjor.im")
+val prodCertificatePins =
+    providers
+        .gradleProperty("WORKTIME_ANDROID_PROD_CERTIFICATE_PINS")
+        .orElse("sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")
 
 android {
     namespace = "com.worktime.android"
@@ -20,7 +30,7 @@ android {
 
     defaultConfig {
         applicationId = "com.worktime.android"
-        minSdk = 28
+        minSdk = 26
         targetSdk = 37
         // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
         versionCode = 1000
@@ -42,6 +52,8 @@ android {
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(devOidcClientId.get()))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope.get()))
             buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
+            buildConfigField("String", "CERTIFICATE_PIN_HOSTS", quoted(""))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
             manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
         }
         create("prod") {
@@ -52,6 +64,8 @@ android {
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(prodOidcClientId.get()))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope.get()))
             buildConfigField("String", "OIDC_REDIRECT_URI", quoted("com.worktime.android:/oauth2redirect"))
+            buildConfigField("String", "CERTIFICATE_PIN_HOSTS", quoted(prodCertificatePinHosts.get()))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(prodCertificatePins.get()))
             manifestPlaceholders["appAuthRedirectScheme"] = "com.worktime.android"
         }
     }
@@ -66,7 +80,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
+                "proguard-rules.pro"
             )
         }
     }
@@ -105,6 +119,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(platform(libs.compose.bom))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
@@ -122,6 +137,20 @@ dependencies {
 
     debugImplementation(libs.compose.ui.tooling)
 
+    testImplementation(platform(libs.compose.bom))
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    baseline = file("detekt-baseline.xml")
+}
+
+ktlint {
+    android.set(true)
 }
