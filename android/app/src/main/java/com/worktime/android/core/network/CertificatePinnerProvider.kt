@@ -4,9 +4,9 @@ import com.worktime.android.core.config.AppConfig
 import okhttp3.CertificatePinner
 
 object CertificatePinnerProvider {
-    fun fromConfig(appConfig: AppConfig): CertificatePinner? {
-        if (appConfig.environment != "prod") return null
-        if (appConfig.certificatePinHosts.isEmpty() || appConfig.certificatePins.isEmpty()) return null
+    fun fromConfig(appConfig: AppConfig): CertificatePinner {
+        if (appConfig.environment != "prod") return CertificatePinner.DEFAULT
+        if (appConfig.certificatePinHosts.isEmpty() || appConfig.certificatePins.isEmpty()) return CertificatePinner.DEFAULT
 
         return CertificatePinner
             .Builder()

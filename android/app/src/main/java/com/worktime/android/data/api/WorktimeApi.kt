@@ -64,16 +64,14 @@ interface WorktimeApi {
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
 
     companion object {
-        fun create(baseUrl: String, enableNetworkLogging: Boolean, certificatePinner: CertificatePinner? = null): WorktimeApi {
+        fun create(baseUrl: String, enableNetworkLogging: Boolean, certificatePinner: CertificatePinner = CertificatePinner.DEFAULT): WorktimeApi {
             val json =
                 Json {
                     ignoreUnknownKeys = true
                     explicitNulls = false
                 }
             val builder = OkHttpClient.Builder()
-            if (certificatePinner != null) {
-                builder.certificatePinner(certificatePinner)
-            }
+            builder.certificatePinner(certificatePinner)
             if (enableNetworkLogging) {
                 builder.addInterceptor(
                     HttpLoggingInterceptor().apply {

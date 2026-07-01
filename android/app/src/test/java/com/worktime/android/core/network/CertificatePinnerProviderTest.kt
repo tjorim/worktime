@@ -1,27 +1,28 @@
 package com.worktime.android.core.network
 
 import com.worktime.android.core.config.AppConfig
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
+import okhttp3.CertificatePinner
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class CertificatePinnerProviderTest {
     @Test
-    fun disablesPinningOutsideProduction() {
+    fun fallsBackToDefaultVerificationOutsideProduction() {
         val pinner = CertificatePinnerProvider.fromConfig(appConfig(environment = "dev"))
 
-        assertNull(pinner)
+        assertEquals(CertificatePinner.DEFAULT, pinner)
     }
 
     @Test
     fun createsPinnerForProductionPins() {
         val pinner = CertificatePinnerProvider.fromConfig(appConfig(environment = "prod"))
 
-        assertNotNull(pinner)
+        assertNotEquals(CertificatePinner.DEFAULT, pinner)
     }
 
     @Test
-    fun disablesProductionPinningWhenPinsAreEmpty() {
+    fun fallsBackToDefaultVerificationWhenProductionPinsAreEmpty() {
         val pinner =
             CertificatePinnerProvider.fromConfig(
                 appConfig(
@@ -30,7 +31,7 @@ class CertificatePinnerProviderTest {
                 )
             )
 
-        assertNull(pinner)
+        assertEquals(CertificatePinner.DEFAULT, pinner)
     }
 
     private fun appConfig(environment: String, certificatePins: List<String> = listOf("sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")): AppConfig =
