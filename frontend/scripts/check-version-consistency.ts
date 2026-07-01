@@ -96,13 +96,13 @@ if (markdownRelease.date !== tsRelease.date) {
 }
 
 if (failures.length > 0) {
-  console.error("❌ Version consistency check failed:\n");
+  process.stderr.write("❌ Version consistency check failed:\n\n");
   failures.forEach((failure) => {
-    console.error(`- ${failure}`);
+    process.stderr.write(`- ${failure}\n`);
   });
   process.exit(1);
 }
 
-console.log(
-  `✅ Version consistency check passed (version ${packageVersion}, release date ${markdownRelease.date}).`,
+process.stdout.write(
+  `✅ Version consistency check passed (version ${packageVersion}, release date ${markdownRelease.date}).\n`,
 );

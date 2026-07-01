@@ -47,6 +47,7 @@ import {
   type SyncPushResponse,
 } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
+import { logger } from "@/utils/logger";
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -248,7 +249,7 @@ export function useOngoingSync(
             pushResult = await pushSyncPayload(fetchFn, merged);
           } catch (err) {
             // Push threw (e.g. network error) — outbox stays intact for next retry.
-            console.error("useOngoingSync: outbox push threw:", err);
+            logger.error("useOngoingSync: outbox push threw:", err);
             if (!mountedRef.current) return;
             setOutboxCount(getSyncOutboxSize(userId));
             setHasSyncError(true);
@@ -324,7 +325,7 @@ export function useOngoingSync(
       // The `online` event fires after a real reconnect — always attempt a
       // flush immediately, bypassing any active back-off window.
       flushAndPull(true).catch((err: unknown) => {
-        console.error("useOngoingSync: flush on online event failed:", err);
+        logger.error("useOngoingSync: flush on online event failed:", err);
       });
     };
 
@@ -332,7 +333,7 @@ export function useOngoingSync(
       if (document.visibilityState === "visible") {
         // Passive trigger — respect the current back-off window.
         flushAndPull(false).catch((err: unknown) => {
-          console.error("useOngoingSync: flush on visibility change failed:", err);
+          logger.error("useOngoingSync: flush on visibility change failed:", err);
         });
       }
     };
@@ -375,7 +376,7 @@ export function useOngoingSync(
     if (!navigator.onLine) return;
     hasRunInitialFlushRef.current = true;
     flushAndPull(true).catch((err: unknown) => {
-      console.error("useOngoingSync: initial flush on mount failed:", err);
+      logger.error("useOngoingSync: initial flush on mount failed:", err);
     });
   }, [isActive, flushAndPull]);
 
@@ -388,7 +389,7 @@ export function useOngoingSync(
     // Explicit external trigger (e.g. SSE signal) — bypass back-off so that
     // real server-push notifications are never silently dropped.
     flushAndPull(true).catch((err: unknown) => {
-      console.error("useOngoingSync: triggerPull failed:", err);
+      logger.error("useOngoingSync: triggerPull failed:", err);
     });
   }, [flushAndPull]);
 
@@ -420,7 +421,7 @@ export function useOngoingSync(
               pullResult = await pullSyncData(fetchFn);
             } catch (err) {
               // Reconciliation pull threw — surface as a sync error but do NOT requeue.
-              console.error("useOngoingSync: reconciliation pull threw:", err);
+              logger.error("useOngoingSync: reconciliation pull threw:", err);
               if (mountedRef.current) {
                 setHasSyncError(true);
               }
@@ -438,7 +439,7 @@ export function useOngoingSync(
                 setHasSyncError(false);
               } catch (err) {
                 // Post-success callback threw — log but do NOT requeue the change.
-                console.error("useOngoingSync: post-reconciliation callback threw:", err);
+                logger.error("useOngoingSync: post-reconciliation callback threw:", err);
                 if (mountedRef.current) {
                   setHasSyncError(true);
                 }
@@ -481,7 +482,7 @@ export function useOngoingSync(
         try {
           await doEnqueue();
         } catch (err) {
-          console.error(
+          logger.error(
             "useOngoingSync: enqueueChange threw unexpectedly:",
             { userId, change },
             err,

@@ -1,6 +1,7 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
@@ -238,7 +239,7 @@ describe("SettingsContext unified user state", () => {
         }),
       );
 
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
 
       expect(result.current.lastUsed.activeTab).toBe("schedule");
       expect(result.current.lastUsed.scheduleView).toBe("week");
@@ -249,7 +250,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("updates lastUsed.activeTab via updateLastActiveTab", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
       await act(async () => {
         result.current.updateLastActiveTab("schedule");
       });
@@ -257,7 +258,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("updates lastUsed.otherSchedule via updateLastOtherSchedule", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
       await act(async () => {
         result.current.updateLastOtherSchedule("9-5");
       });
@@ -270,7 +271,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("updates lastUsed.otherTeam via updateLastOtherTeam", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
       await act(async () => {
         result.current.updateLastOtherTeam(3);
       });
@@ -283,7 +284,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("updates lastUsed.ganttViewMode via updateLastGanttViewMode", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
       await act(async () => {
         result.current.updateLastGanttViewMode("Week");
       });
@@ -296,7 +297,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("updates lastUsed.ganttView via updateLastGanttView", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
       await act(async () => {
         result.current.updateLastGanttView("table");
       });
@@ -304,7 +305,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("provides default lastUsed on fresh state", () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
       expect(result.current.lastUsed).toEqual({
         activeTab: "calendar",
         scheduleView: "today",
@@ -315,6 +316,32 @@ describe("SettingsContext unified user state", () => {
         ganttViewMode: "Day",
         ganttView: "chart",
       });
+    });
+
+    it("does not re-render settings-only consumers when lastUsed changes", () => {
+      let settingsRenderCount = 0;
+
+      function SettingsOnlyConsumer() {
+        settingsRenderCount += 1;
+        const { settings } = useSettings();
+        return <span>{settings.timeFormat}</span>;
+      }
+
+      function LastUsedUpdater() {
+        const { updateLastActiveTab } = useLastUsed();
+        return <button onClick={() => updateLastActiveTab("schedule")}>Update last used</button>;
+      }
+
+      render(
+        <SettingsProvider>
+          <SettingsOnlyConsumer />
+          <LastUsedUpdater />
+        </SettingsProvider>,
+      );
+
+      expect(settingsRenderCount).toBe(1);
+      fireEvent.click(screen.getByRole("button", { name: "Update last used" }));
+      expect(settingsRenderCount).toBe(1);
     });
   });
 

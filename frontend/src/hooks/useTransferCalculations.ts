@@ -1,9 +1,11 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getEffectiveTeam, getTeamCountForOption } from "@/utils/scheduleUtils";
 import { calculateShift, type ShiftType } from "@/utils/shiftCalculations";
+import { logger } from "@/utils/logger";
 
 export type TransferType = "handover" | "takeover";
 
@@ -114,7 +116,8 @@ export function useTransferCalculations({
   customStartDate,
   customEndDate,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
-  const { scheduleType, lastUsed, updateLastOtherTeam } = useSettings();
+  const { scheduleType } = useSettings();
+  const { lastUsed, updateLastOtherTeam } = useLastUsed();
   const teamCount = getTeamCountForOption(scheduleType);
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
@@ -178,7 +181,7 @@ export function useTransferCalculations({
 
     // Add performance warning for large date ranges
     if (endDate && endDate.diff(startDate, "day") > 365) {
-      console.warn(
+      logger.warn(
         "Large date range detected. Consider limiting the range for better performance.",
       );
     }
@@ -312,3 +315,4 @@ export function useTransferCalculations({
     validatedMyTeam,
   };
 }
+

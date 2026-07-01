@@ -1,38 +1,29 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
-import ReactSelect from "react-select";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
-import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import * as m from "@/paraglide/messages.js";
 
-type TemplateOption = { value: string; label: string };
-import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
+import { DailyDiscardConfirmation } from "./DailyDiscardConfirmation";
 import { DailyTaskList, type EditRequest } from "./DailyTaskList";
+import { DailyQuickTimer } from "./DailyQuickTimer";
+import { DailyTemplatePicker } from "./DailyTemplatePicker";
+import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import {
   buildLabelColorMap,
   buildLabelNameMap,
-  getContrastingTextColor,
   useDefaultLabelColor,
   type TimeTrackingLabel,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
+import { useDailyTaskSummary } from "./hooks/useDailyTaskSummary";
 
 type TimeTrackingDailyViewProps = {
   tasks: StoredTimeTrackingTask[];
@@ -57,120 +48,7 @@ function todayIso() {
   return dayjs().format("YYYY-MM-DD");
 }
 
-interface WorkLocationDayHeaderProps {
-  date: string; // YYYY-MM-DD
-}
-
-function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
-  const clearTooltipId = useId();
-  const { settings } = useSettings();
-  const year = dayjs(date).year();
-  const { workLocationMap, setLocationForDate, clearLocationForDate } =
-    useWorkLocationStorage(year);
-  const toast = useToast();
-  const [showOtherModal, setShowOtherModal] = useState(false);
-
-  const dayjsDate = dayjs(date);
-  const dateKey = dayjsDate.format("YYYY-MM-DD");
-  const stored = workLocationMap.get(dateKey);
-
-  const handleHome = () => {
-    const ok = setLocationForDate(dayjsDate, "home");
-    if (!ok) toast.showError(m.tt_configure_home_country());
-  };
-
-  const handleOffice = () => {
-    const ok = setLocationForDate(dayjsDate, "office");
-    if (!ok) toast.showError(m.tt_configure_office_country());
-  };
-
-  const handleClear = () => {
-    clearLocationForDate(dayjsDate);
-  };
-
-  const showHome = !!settings.homeCountry;
-  const showOffice = !!settings.officeCountry;
-
-  return (
-    <>
-      <div className="d-flex align-items-center gap-2 flex-wrap">
-        {showHome && (
-          <Button
-            size="sm"
-            variant={stored?.location === "home" ? "primary" : "outline-secondary"}
-            onClick={handleHome}
-            aria-pressed={stored?.location === "home"}
-          >
-            <i className="bi bi-house me-1" aria-hidden="true"></i>
-            {m.work_location_home()}
-          </Button>
-        )}
-        {showOffice && (
-          <Button
-            size="sm"
-            variant={stored?.location === "office" ? "primary" : "outline-secondary"}
-            onClick={handleOffice}
-            aria-pressed={stored?.location === "office"}
-          >
-            <i className="bi bi-building me-1" aria-hidden="true"></i>
-            {m.work_location_office()}
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant={stored?.location === "other" ? "primary" : "outline-secondary"}
-          onClick={() => setShowOtherModal(true)}
-          aria-pressed={stored?.location === "other"}
-        >
-          <i className="bi bi-geo-alt me-1" aria-hidden="true"></i>
-          {m.tt_other_location()}
-        </Button>
-        {stored && (
-          <OverlayTrigger
-            placement="top"
-            overlay={<Tooltip id={clearTooltipId}>{m.tt_clear_work_location()}</Tooltip>}
-          >
-            <Button
-              size="sm"
-              variant="outline-danger"
-              onClick={handleClear}
-              aria-label={m.tt_clear_work_location()}
-            >
-              <i className="bi bi-x" aria-hidden="true"></i>
-            </Button>
-          </OverlayTrigger>
-        )}
-      </div>
-      <OtherLocationModal
-        show={showOtherModal}
-        date={dayjsDate}
-        existing={stored}
-        onHide={() => setShowOtherModal(false)}
-        onConfirm={(countryCode, label) => {
-          const ok = setLocationForDate(dayjsDate, "other", { countryCode, label });
-          if (ok) {
-            setShowOtherModal(false);
-          } else {
-            toast.showError(m.tt_could_not_save_location());
-          }
-        }}
-      />
-    </>
-  );
-}
-
-function formatDuration(totalSeconds: number) {
-  const clampedSeconds = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(clampedSeconds / 3600);
-  const minutes = Math.floor((clampedSeconds % 3600) / 60);
-  const seconds = clampedSeconds % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes
-    .toString()
-    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-}
-
 export function TimeTrackingDailyView({
-  // oxlint-disable-line max-lines-per-function
   tasks,
   labels,
   templates = [],
@@ -195,8 +73,7 @@ export function TimeTrackingDailyView({
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
-  const dailyDate = dayjs(date);
-  const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
+  const isDailyCurrent = dayjs(date).isSame(dayjs(), "day");
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
   const templateOptions = useMemo(
@@ -220,44 +97,7 @@ export function TimeTrackingDailyView({
     }
   }, [labels, selectedLabel]);
 
-  const dailyTasks = useMemo(
-    () =>
-      tasks
-        .filter((task) => dayjs(task.startTime).format("YYYY-MM-DD") === date)
-        .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf()),
-    [tasks, date],
-  );
-
-  const runningTask = useMemo(
-    () =>
-      tasks.reduce<StoredTimeTrackingTask | null>((latest, task) => {
-        if (task.stopTime === undefined || task.stopTime === null) {
-          if (!latest || task.startTime > latest.startTime) {
-            return task;
-          }
-        }
-        return latest;
-      }, null),
-    [tasks],
-  );
-
-  const runningElapsed = useMemo(() => {
-    if (!runningTask) {
-      return null;
-    }
-    const start = dayjs(runningTask.startTime);
-    return formatDuration(liveTime.diff(start, "second"));
-  }, [liveTime, runningTask]);
-
-  const runningLabelBackground = useMemo(
-    () =>
-      runningTask ? (colorByLabelId[runningTask.label] ?? defaultLabelColor) : defaultLabelColor,
-    [runningTask, colorByLabelId, defaultLabelColor],
-  );
-  const runningLabelTextColor = useMemo(
-    () => getContrastingTextColor(runningLabelBackground),
-    [runningLabelBackground],
-  );
+  const { dailyTasks, runningTask } = useDailyTaskSummary(tasks, date);
 
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
@@ -397,7 +237,6 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_fill_all_fields());
       return false;
     }
-    // Validate stop time if provided (for stopped tasks)
     if (payload.stop) {
       if (!isValidRange(payload.start, payload.stop)) {
         setError(m.tt_error_stop_after_start());
@@ -421,9 +260,6 @@ export function TimeTrackingDailyView({
     const newStartTime = `${taskDate}T${payload.start}`;
     const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
 
-    // Overlap checking: only check if we have a stop time.
-    // Use the edited task's own date (not the currently selected view date)
-    // so cross-day edits validate against the correct day.
     if (payload.stop) {
       const sameDayTasks = tasks.filter(
         (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
@@ -481,34 +317,11 @@ export function TimeTrackingDailyView({
   return (
     <Card className="shadow-sm">
       <Card.Header>
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <span className="fw-semibold">
-            <i className="bi bi-clock me-2" aria-hidden="true"></i>
-            {m.tt_daily_heading()}
-          </span>
-          <DayNavigationButtonGroup
-            isCurrent={isDailyCurrent}
-            onPrevious={() =>
-              onSelectedDateChange(dailyDate.subtract(1, "day").format("YYYY-MM-DD"))
-            }
-            onCurrent={() => onSelectedDateChange(dayjs().format("YYYY-MM-DD"))}
-            onNext={() => onSelectedDateChange(dailyDate.add(1, "day").format("YYYY-MM-DD"))}
-            selectorLabel={m.tt_jump_to_date()}
-            selectorValue={date}
-            onSelectorChange={onSelectedDateChange}
-          />
-        </div>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-          <div className="text-muted small">
-            {dailyDate.format("dddd, MMMM D, YYYY")}
-            {isDailyCurrent && (
-              <Badge bg="success" className="ms-2" aria-label={m.today()}>
-                {m.today()}
-              </Badge>
-            )}
-          </div>
-          {settings.enableCrossBorderTracking && <WorkLocationDayHeader date={date} />}
-        </div>
+        <DailyViewHeader
+          date={date}
+          crossBorderEnabled={settings.enableCrossBorderTracking}
+          onSelectedDateChange={onSelectedDateChange}
+        />
       </Card.Header>
       <Card.Body>
         {error && (
@@ -516,78 +329,21 @@ export function TimeTrackingDailyView({
             {error}
           </Alert>
         )}
-        {templates.length > 0 && (
-          <Form.Group className="mb-2" controlId="timeTrackerTemplate">
-            <Form.Label className="visually-hidden">{m.tt_template()}</Form.Label>
-            <InputGroup>
-              <ReactSelect<TemplateOption>
-                unstyled
-                isClearable
-                isSearchable
-                inputId="timeTrackerTemplate"
-                placeholder={m.tt_choose_template()}
-                options={templateOptions}
-                value={selectedTemplateOption}
-                onChange={(selected) => setSelectedTemplateId(selected?.value ?? "")}
-                classNames={bootstrapSelectClassNames}
-                className="flex-fill"
-              />
-              <Button variant="outline-secondary" onClick={handleApplyTemplate}>
-                {m.tt_use_template()}
-              </Button>
-            </InputGroup>
-          </Form.Group>
-        )}
+        <DailyTemplatePicker
+          options={templateOptions}
+          value={selectedTemplateOption}
+          onChange={setSelectedTemplateId}
+          onApply={handleApplyTemplate}
+        />
 
-        <div className="border rounded p-3 mb-3">
-          <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
-            <div>
-              <div className="fw-semibold">{m.tt_quick_timer()}</div>
-              <div className="small text-muted">{m.tt_quick_timer_desc()}</div>
-            </div>
-            {runningTask ? (
-              <span className="badge text-bg-success">{m.tt_running_status()}</span>
-            ) : (
-              <span className="badge text-bg-secondary">{m.tt_idle_status()}</span>
-            )}
-          </div>
-          {runningTask ? (
-            <div className="mt-2">
-              <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                <div>
-                  <div className="fw-semibold">
-                    {runningTask.text}{" "}
-                    <span
-                      className="time-tracking-label"
-                      style={{
-                        backgroundColor: runningLabelBackground,
-                        color: runningLabelTextColor,
-                      }}
-                    >
-                      {labelNameById[runningTask.label] ?? m.tt_unknown_label()}
-                    </span>
-                  </div>
-                  <div className="small text-muted">
-                    {m.tt_started()} {dayjs(runningTask.startTime).format("HH:mm")} ·{" "}
-                    {m.tt_elapsed()} {runningElapsed}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={handleStopNow}
-                  aria-label={m.tt_stop_timer_for({ task: runningTask.text })}
-                >
-                  {m.tt_stop_timer()}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small">{m.tt_enter_task_hint()}</span>
-            </div>
-          )}
-        </div>
+        <DailyQuickTimer
+          runningTask={runningTask}
+          liveTime={liveTime}
+          colorByLabelId={colorByLabelId}
+          labelNameById={labelNameById}
+          defaultLabelColor={defaultLabelColor}
+          onStopNow={handleStopNow}
+        />
 
         <TaskEntryForm
           labels={labels}
@@ -633,22 +389,11 @@ export function TimeTrackingDailyView({
         />
       </Card.Body>
 
-      <ConfirmationDialog
+      <DailyDiscardConfirmation
         isOpen={showDiscardConfirm}
-        title={m.tt_discard_task_title()}
-        message={m.tt_discard_task_message()}
-        confirmLabel={m.discard()}
-        variant="danger"
-        onConfirm={() => {
-          if (runningTask) {
-            onRemoveTask(runningTask.id);
-            toast.showSuccess(m.tt_task_discarded());
-          }
-          setShowDiscardConfirm(false);
-        }}
-        onCancel={() => {
-          setShowDiscardConfirm(false);
-        }}
+        runningTask={runningTask}
+        onRemoveTask={onRemoveTask}
+        onClose={() => setShowDiscardConfirm(false)}
       />
     </Card>
   );

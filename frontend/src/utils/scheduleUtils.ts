@@ -1,4 +1,5 @@
 import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "@/data/rosters";
+import { logger } from "@/utils/logger";
 
 const SCHEDULE_MAP = new Map<string, ScheduleRoster>(
   SCHEDULE_OPTIONS.map((option) => [option.value, option]),
@@ -114,9 +115,10 @@ export function getEffectiveTeam(
   }
 
   if (myTeam < 1 || myTeam > teamCount) {
-    console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
+    logger.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
     return null;
   }
 
   return myTeam;
 }
+

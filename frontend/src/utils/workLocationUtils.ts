@@ -1,4 +1,5 @@
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
+import { logger } from "@/utils/logger";
 
 /**
  * Aggregates all stored entries in workLocationMap into a grouped summary
@@ -18,7 +19,7 @@ export function aggregateLocationCounts(
 
   for (const info of workLocationMap.values()) {
     if (info.location !== "home" && info.location !== "office" && info.location !== "other") {
-      console.warn(
+      logger.warn(
         "aggregateLocationCounts: skipping entry with unknown location",
         info.countryCode,
         info.label,
@@ -43,3 +44,4 @@ export function aggregateLocationCounts(
     (a, b) => a.countryCode.localeCompare(b.countryCode) || b.days - a.days,
   );
 }
+

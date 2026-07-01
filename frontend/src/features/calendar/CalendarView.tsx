@@ -61,11 +61,16 @@ function isValidCompletedRange(start: string, stop: string): boolean {
   );
 }
 
+interface CalendarViewProps {
+  onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
+}
+
 /** Unified Schedule-X view for shifts, time-off entries, and time-tracking tasks. */
-export function CalendarView() {
+export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewProps) {
   const [range, setRange] = useState<CalendarRange>(currentMonthRange);
   const events = useCalendarRangeData(range);
-  const { scheduleType } = useSettings();
+  const { scheduleType, myTeam } = useSettings();
   const toast = useToast();
   const { tasks, labels, addTask, updateTaskTimes } = useTimeTrackingStorage();
   const [selectedTask, setSelectedTask] = useState<StoredTimeTrackingTask | null>(null);
@@ -253,6 +258,28 @@ export function CalendarView() {
         Shifts, time off, and time tracking are shown together. Drag a time-tracking task to
         reschedule it.
       </Alert>
+      {(!scheduleType || myTeam === null) && (
+        <Alert variant="warning" className="d-flex align-items-center gap-2 py-2">
+          <i className="bi bi-exclamation-triangle" aria-hidden="true"></i>
+          <span>
+            No roster configured — no shifts will appear.
+            {onChangeSchedule && (
+              <>
+                {" "}
+                <Alert.Link as="button" onClick={onChangeSchedule}>
+                  Pick a schedule
+                </Alert.Link>
+                {onChangeTeam && " or "}
+              </>
+            )}
+            {onChangeTeam && (
+              <Alert.Link as="button" onClick={onChangeTeam}>
+                Pick a team
+              </Alert.Link>
+            )}
+          </span>
+        </Alert>
+      )}
       <ScheduleXCalendar calendarApp={calendarApp} />
 
       <TaskEditModal

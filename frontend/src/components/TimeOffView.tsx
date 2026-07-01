@@ -11,7 +11,7 @@ import {
 } from "@/lib/timeOff/codecs";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "@/hooks/useTimeOffKeyboardShortcuts";
@@ -36,6 +36,7 @@ import {
   DEFAULT_WEEKDAY,
 } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
+import { logger } from "@/utils/logger";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -74,7 +75,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
-  const { lastUsed, updateLastTimeOffView } = useSettings();
+  const { lastUsed, updateLastTimeOffView } = useLastUsed();
   const { options } = useDeveloperOptions();
   const toast = useToast();
 
@@ -339,7 +340,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         toast.showSuccess(m.timeoff_hday_applied(), "bi-check-circle");
       }
     } catch (error) {
-      console.error("Failed to parse raw .hday content:", error);
+      logger.error("Failed to parse raw .hday content:", error);
       setRawEditorError(m.timeoff_parse_failed());
       toast.showError(m.timeoff_parse_failed());
     }
@@ -381,7 +382,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         toast.showSuccess(m.timeoff_imported({ name: file.name }), "bi-download");
       }
     } catch (error) {
-      console.error("Failed to import .hday file:", error);
+      logger.error("Failed to import .hday file:", error);
       setRawEditorError(m.timeoff_import_failed());
       toast.showError(m.timeoff_import_failed());
     }
@@ -599,3 +600,4 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     </div>
   );
 }
+

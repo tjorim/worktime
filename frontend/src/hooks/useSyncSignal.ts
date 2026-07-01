@@ -27,6 +27,7 @@
 import { useEffect, useRef } from "react";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 import type { TriggerPullFn } from "@/hooks/useOngoingSync";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Transport abstraction
@@ -84,7 +85,7 @@ export function createSseTransport(url: string): SyncSignalTransport {
           }
         } catch {
           // Ignore malformed event data.
-          console.warn("useSyncSignal: failed to parse SSE event data:", event.data);
+          logger.warn("useSyncSignal: failed to parse SSE event data:", event.data);
         }
       };
 
@@ -93,7 +94,7 @@ export function createSseTransport(url: string): SyncSignalTransport {
       es.onerror = () => {
         // EventSource reconnects automatically after every error; using debug
         // level avoids console spam on flaky networks or proxy interruptions.
-        console.debug("useSyncSignal: SSE connection error — will retry automatically.");
+        logger.debug("useSyncSignal: SSE connection error — will retry automatically.");
       };
 
       return () => {
@@ -143,7 +144,7 @@ export function useSyncSignal(
     const unsubscribe = transport.subscribe((serverTimestamp) => {
       const serverTimestampMs = Date.parse(serverTimestamp);
       if (Number.isNaN(serverTimestampMs)) {
-        console.warn(
+        logger.warn(
           "useSyncSignal: received invalid server_timestamp from sync signal (expected ISO-8601 date):",
           serverTimestamp,
         );
@@ -155,7 +156,7 @@ export function useSyncSignal(
       if (cursor !== null) {
         const cursorMs = Date.parse(cursor);
         if (Number.isNaN(cursorMs)) {
-          console.warn(
+          logger.warn(
             "useSyncSignal: stored sync cursor is corrupted and will be removed; triggering a full pull:",
             cursor,
           );

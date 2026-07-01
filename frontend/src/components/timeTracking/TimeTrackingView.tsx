@@ -3,6 +3,7 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import { useEffect, useMemo, useState } from "react";
 import * as m from "@/paraglide/messages.js";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
@@ -23,7 +24,8 @@ const TIME_TRACKING_VIEWS = ["daily", "weekly", "config"] as const;
 const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
 
 export function TimeTrackingView() {
-  const { myTeam, scheduleType, lastUsed, updateLastTimeTrackingView } = useSettings();
+  const { myTeam, scheduleType } = useSettings();
+  const { lastUsed, updateLastTimeTrackingView } = useLastUsed();
   const {
     tasks,
     templates,

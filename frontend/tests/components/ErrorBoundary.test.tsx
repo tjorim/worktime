@@ -5,17 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import * as m from "@/paraglide/messages.js";
 
-// Mock console.error to avoid noise in test output
-const originalError = console.error;
+// Mock error logging to avoid noise in test output.
+const testConsole = globalThis["console"];
 const mockConsoleError = vi.fn();
 
 beforeEach(() => {
-  console.error = mockConsoleError;
+  vi.spyOn(testConsole, "error").mockImplementation(mockConsoleError);
   mockConsoleError.mockClear();
 });
 
 afterEach(() => {
-  console.error = originalError;
+  vi.restoreAllMocks();
 });
 
 // Test component that throws an error

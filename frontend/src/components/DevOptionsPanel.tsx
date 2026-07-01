@@ -26,8 +26,14 @@ const HELPER_CONNECTION_TIMEOUT_MS = 5000;
  * @returns The rendered developer options modal
  */
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
-  const { options, updateAutoConnect, updateHdayHelperUrl, testConnection, disconnect } =
-    useDeveloperOptions();
+  const {
+    options,
+    updateAutoConnect,
+    updateHdayHelperUrl,
+    updateLegacyCalendarEnabled,
+    testConnection,
+    disconnect,
+  } = useDeveloperOptions();
   const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
   const [isTesting, setIsTesting] = useState(false);
@@ -184,6 +190,13 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             checked={options.autoConnect}
             onChange={(e) => updateAutoConnect(e.target.checked)}
             disabled={options.connectionStatus === "connecting"}
+          />
+          <Form.Check
+            type="checkbox"
+            id="legacy-calendar-check"
+            label={m.dev_show_legacy_calendar()}
+            checked={options.enableLegacyCalendar}
+            onChange={(e) => updateLegacyCalendarEnabled(e.target.checked)}
           />
         </div>
 

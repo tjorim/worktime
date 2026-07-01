@@ -1,30 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import ProgressBar from "react-bootstrap/ProgressBar";
-import Table from "react-bootstrap/Table";
-import Tooltip from "react-bootstrap/Tooltip";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
-import { WORK_LOCATION_ICON_CLASS } from "@/components/calendar/workLocationConstants";
-import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
-import type { StoredTimeTrackingTask } from "./types";
-import { effectiveDurationHours } from "./timeUtils";
-import { EmptyState } from "@/components/shared/EmptyState";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-
-type OverviewRow = {
-  label: string;
-  date: string;
-  hours: number;
-};
-
-type Summary = Record<string, number>;
+import { useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
+import type { StoredTimeTrackingTask } from "./types";
+import { WeeklyDataView } from "./WeeklyDataView";
+import {
+  getWeekDateRange,
+  useWeeklyTimeTrackingSummary,
+} from "./hooks/useWeeklyTimeTrackingSummary";
 
 type TimeTrackingWeeklyViewProps = {
   tasks: StoredTimeTrackingTask[];
@@ -35,23 +26,6 @@ type TimeTrackingWeeklyViewProps = {
   weeklyWorkingDays?: number;
   onSwitchToDaily?: (date: string) => void;
 };
-
-function getWeekDateRange(year: number, week: number): [string, string] {
-  // Jan 4 is always in ISO week 1 of its calendar year
-  const start = dayjs(`${year}-01-04`).isoWeek(week).startOf("isoWeek");
-  const end = start.endOf("isoWeek");
-  return [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")];
-}
-
-function buildWeekDays(startIso: string) {
-  return Array.from({ length: 7 }, (_, idx) => {
-    const date = dayjs(startIso).add(idx, "day");
-    return {
-      iso: date.format("YYYY-MM-DD"),
-      label: date.format("dddd"),
-    };
-  });
-}
 
 export function TimeTrackingWeeklyView({
   tasks,
@@ -80,7 +54,6 @@ export function TimeTrackingWeeklyView({
 
   const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
   const { settings } = useSettings();
-  const crossBorderEnabled = settings.enableCrossBorderTracking;
   const liveTime = useLiveTime({ precision: "minute" });
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
@@ -88,114 +61,25 @@ export function TimeTrackingWeeklyView({
   const todayIso = liveTime.format("YYYY-MM-DD");
   const defaultLabelColor = useDefaultLabelColor();
 
-  // Extract primitives for stable useMemo dependencies
   const year = weekStart.isoWeekYear();
   const { workLocationMap } = useWorkLocationStorage(year);
   const isoWeek = weekStart.isoWeek();
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
-
-  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
-  // Build label name to color map for efficient lookup
-  const labelNameToColor = useMemo(() => {
-    const map: Record<string, string> = {};
-    labels.forEach((label) => {
-      map[label.name] = label.color;
-    });
-    return map;
-  }, [labels]);
-
-  const rows = useMemo<OverviewRow[]>(
-    () =>
-      tasks
-        .filter((task) => {
-          const taskDate = task.startTime.substring(0, 10);
-          return taskDate >= start && taskDate <= end;
-        })
-        .map((task) => {
-          const startDayjs = dayjs(task.startTime);
-          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : liveTime;
-          const rawHours = Math.max(stopDayjs.diff(startDayjs, "hour", true), 0);
-          const labelName = labelNameById[task.label] ?? "Unknown label";
-          return {
-            date: task.startTime.substring(0, 10),
-            label: labelName,
-            hours: effectiveDurationHours(rawHours, task.includesBreak),
-          };
-        }),
-    [tasks, start, end, labelNameById, liveTime],
-  );
-
-  const { summary, dailyTotals, labelNames, weekTotal, weekDays } = useMemo(() => {
-    const totals = rows.reduce<Summary>((acc, row) => {
-      acc[row.label] = (acc[row.label] ?? 0) + row.hours;
-      return acc;
-    }, {});
-    const days = buildWeekDays(start);
-    const dayTotals = days.reduce<Record<string, Summary>>((acc, day) => {
-      acc[day.iso] = {};
-      return acc;
-    }, {});
-
-    rows.forEach((row) => {
-      const bucket = dayTotals[row.date] ?? {};
-      bucket[row.label] = (bucket[row.label] ?? 0) + row.hours;
-      dayTotals[row.date] = bucket;
-    });
-
-    const labelList = Object.keys(totals).sort();
-    const weekSum = labelList.reduce((sum, label) => sum + (totals[label] ?? 0), 0);
-
-    return {
-      summary: totals,
-      dailyTotals: dayTotals,
-      labelNames: labelList,
-      weekTotal: weekSum,
-      weekDays: days,
-    };
-  }, [rows, start]);
-
-  // Calculate daily totals for each day
-  const dailyHourTotals = useMemo(() => {
-    return weekDays.map((day) => {
-      const daySummary = dailyTotals[day.iso] ?? {};
-      return labelNames.reduce((sum, label) => sum + (daySummary[label] ?? 0), 0);
-    });
-  }, [weekDays, dailyTotals, labelNames]);
-
-  // Calculate average daily hours (only for days with data)
-  const avgDailyHours = useMemo(() => {
-    const daysWithData = dailyHourTotals.filter((total) => total > 0).length;
-    return daysWithData > 0 ? weekTotal / daysWithData : 0;
-  }, [dailyHourTotals, weekTotal]);
-
-  // Calculate label percentages
-  const labelPercentages = useMemo(() => {
-    if (weekTotal === 0) return [];
-    return Object.entries(summary)
-      .map(([label, hours]) => ({
-        label,
-        hours,
-        percentage: (hours / weekTotal) * 100,
-        color: labelNameToColor[label] ?? defaultLabelColor,
-      }))
-      .sort((a, b) => b.hours - a.hours);
-  }, [summary, weekTotal, labelNameToColor, defaultLabelColor]);
-
-  const createDayKeyDownHandler =
-    (dayIso: string, preventEnterDefault: boolean) => (e: ReactKeyboardEvent<HTMLElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
-        if (e.key === " " || preventEnterDefault) {
-          e.preventDefault();
-        }
-        onSwitchToDaily?.(dayIso);
-      }
-    };
-
   const targetWorkingDays = weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
+
+  const summary = useWeeklyTimeTrackingSummary({
+    tasks,
+    labels,
+    liveTime,
+    start,
+    end,
+    defaultLabelColor,
+  });
+
   const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
   const weeklyProgressPercent =
     weeklyTargetHours && weeklyTargetHours > 0
-      ? Math.min((weekTotal / weeklyTargetHours) * 100, 100)
+      ? Math.min((summary.weekTotal / weeklyTargetHours) * 100, 100)
       : 0;
 
   return (
@@ -230,8 +114,7 @@ export function TimeTrackingWeeklyView({
         </div>
       </Card.Header>
       <Card.Body>
-        {/* Empty State */}
-        {rows.length === 0 && (
+        {summary.rows.length === 0 && (
           <EmptyState
             icon="bi-bar-chart"
             title={m.tt_no_weekly_data_title()}
@@ -248,391 +131,20 @@ export function TimeTrackingWeeklyView({
           />
         )}
 
-        {/* Enhanced Data View */}
-        {rows.length > 0 && (
-          <>
-            {/* Week Progress Indicator */}
-            {weeklyTargetHours !== undefined && (
-              <div className="mb-4">
-                {weeklyTargetHours > 0 ? (
-                  <>
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="fw-semibold">{m.tt_weekly_progress()}</span>
-                      <span className="text-muted">
-                        {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} /{" "}
-                        {m.tt_hours_value({ hours: weeklyTargetHours.toFixed(1) })}
-                        <Badge
-                          bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
-                          className="ms-2"
-                        >
-                          {weekTotal >= weeklyTargetHours
-                            ? m.tt_hours_delta({
-                                hours: (weekTotal - weeklyTargetHours).toFixed(1),
-                              })
-                            : m.tt_hours_remaining({
-                                hours: (weeklyTargetHours - weekTotal).toFixed(1),
-                              })}
-                        </Badge>
-                      </span>
-                    </div>
-                    <ProgressBar
-                      now={weeklyProgressPercent}
-                      variant={weekTotal >= weeklyTargetHours ? "success" : "primary"}
-                      style={{ height: "1.5rem" }}
-                      label={`${weeklyProgressPercent.toFixed(0)}%`}
-                    />
-                  </>
-                ) : (
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="fw-semibold">{m.tt_weekly_progress()}</span>
-                    <span className="text-muted">
-                      {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} /{" "}
-                      {m.tt_hours_value({ hours: "0.0" })}
-                      <Badge bg="secondary" className="ms-2">
-                        {m.tt_target_unavailable()}
-                      </Badge>
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Key Metrics Cards */}
-            <div className="row g-3 mb-4">
-              <div className="col-sm-6 col-lg-3">
-                <Card className="text-center h-100">
-                  <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">{m.tt_total_hours()}</div>
-                    <div className="h4 mb-0">
-                      {m.tt_hours_value({ hours: weekTotal.toFixed(1) })}
-                    </div>
-                  </Card.Body>
-                </Card>
-              </div>
-              <div className="col-sm-6 col-lg-3">
-                <Card className="text-center h-100">
-                  <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">
-                      {m.tt_avg_daily_hours()}
-                    </div>
-                    <div className="h4 mb-0">
-                      {m.tt_hours_value({ hours: avgDailyHours.toFixed(1) })}
-                    </div>
-                  </Card.Body>
-                </Card>
-              </div>
-              <div className="col-sm-6 col-lg-3">
-                <Card className="text-center h-100">
-                  <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">
-                      {m.tt_days_tracked()}
-                    </div>
-                    <div className="h4 mb-0">{dailyHourTotals.filter((h) => h > 0).length}</div>
-                  </Card.Body>
-                </Card>
-              </div>
-              <div className="col-sm-6 col-lg-3">
-                <Card className="text-center h-100">
-                  <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">
-                      {m.tt_top_category()}
-                    </div>
-                    <div className="h4 mb-0 text-truncate">{labelPercentages[0]?.label ?? "-"}</div>
-                  </Card.Body>
-                </Card>
-              </div>
-            </div>
-
-            {/* Daily Breakdown Chart */}
-            <div className="mb-4">
-              <h6 className="text-uppercase text-muted mb-3">
-                <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
-                {m.tt_daily_breakdown()}
-              </h6>
-              <div className="row g-2">
-                {weekDays.map((day, index) => {
-                  const dayTotal = dailyHourTotals[index] ?? 0;
-                  const isToday = day.iso === todayIso;
-                  const percentage =
-                    targetDaily > 0 ? Math.min((dayTotal / targetDaily) * 100, 100) : 0;
-                  const location = crossBorderEnabled
-                    ? (workLocationMap.get(day.iso) ?? null)
-                    : null;
-
-                  return (
-                    <div key={day.iso} className="col">
-                      <OverlayTrigger
-                        trigger={onSwitchToDaily ? ["hover", "focus"] : []}
-                        overlay={
-                          <Tooltip id={`weekly-day-${day.iso}`}>
-                            {m.tt_open_daily_log_title({ day: day.label })}
-                          </Tooltip>
-                        }
-                      >
-                      <div
-                        className={`text-center p-2 rounded ${isToday ? "bg-primary bg-opacity-10" : ""}${onSwitchToDaily ? " hover-highlight" : ""}`}
-                        role={onSwitchToDaily ? "button" : undefined}
-                        tabIndex={onSwitchToDaily ? 0 : undefined}
-                        onClick={() => onSwitchToDaily?.(day.iso)}
-                        onKeyDown={
-                          onSwitchToDaily ? createDayKeyDownHandler(day.iso, true) : undefined
-                        }
-                        style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
-                      >
-                        <div
-                          className={`small mb-1 ${isToday ? "fw-bold text-primary" : "text-muted"}`}
-                        >
-                          {day.label.substring(0, 3)}
-                          {isToday && (
-                            <Badge bg="primary" className="ms-1">
-                              {m.today()}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mb-1">
-                          <div
-                            className="mx-auto"
-                            role="img"
-                            aria-label={
-                              pluralRules.select(dayTotal) === "one"
-                                ? m.tt_weekly_chart_aria_one({
-                                    day: day.label,
-                                    hours: dayTotal.toFixed(1),
-                                    percent: percentage.toFixed(0),
-                                  })
-                                : m.tt_weekly_chart_aria({
-                                    day: day.label,
-                                    hours: dayTotal.toFixed(1),
-                                    percent: percentage.toFixed(0),
-                                  })
-                            }
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              borderRadius: "50%",
-                              background: `conic-gradient(
-                                ${percentage >= 100 ? "var(--bs-success)" : "var(--bs-primary)"} ${percentage}%,
-                                var(--bs-secondary-bg) ${percentage}%
-                              )`,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <div
-                              className="bg-body rounded-circle d-flex align-items-center justify-content-center"
-                              style={{ width: "32px", height: "32px" }}
-                              aria-hidden="true"
-                            >
-                              <small className="fw-semibold">{dayTotal.toFixed(1)}</small>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-muted" style={{ fontSize: "0.7rem" }}>
-                          {percentage.toFixed(0)}%
-                        </div>
-                        {location && (
-                          <div className="text-muted mt-1" style={{ fontSize: "0.65rem" }}>
-                            <i
-                              className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
-                              aria-hidden="true"
-                            />{" "}
-                            {location.countryCode}
-                          </div>
-                        )}
-                      </div>
-                      </OverlayTrigger>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Detailed Table */}
-            <div className="mb-4">
-              <h6 className="text-uppercase text-muted mb-3">
-                <i className="bi bi-table me-2" aria-hidden="true"></i>
-                {m.tt_detailed_breakdown()}
-              </h6>
-              <Table striped bordered hover responsive>
-                <thead>
-                  <tr>
-                    <th scope="col">{m.tt_col_day()}</th>
-                    {labelNames.map((label) => (
-                      <th key={label} scope="col">
-                        {label}
-                      </th>
-                    ))}
-                    <th scope="col">{m.tt_col_total_hours()}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {weekDays.map((day, index) => {
-                    const daySummary = dailyTotals[day.iso] ?? {};
-                    const dayTotal = dailyHourTotals[index] ?? 0;
-                    const isToday = day.iso === todayIso;
-                    const location = crossBorderEnabled
-                      ? (workLocationMap.get(day.iso) ?? null)
-                      : null;
-                    return (
-                      <tr
-                        key={day.iso}
-                        className={isToday ? "table-primary" : ""}
-                      >
-                        <th scope="row">
-                          {onSwitchToDaily ? (
-                            <button
-                              type="button"
-                              className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
-                              onClick={() => onSwitchToDaily(day.iso)}
-                              aria-label={m.tt_open_daily_log_title({ day: day.label })}
-                            >
-                              {day.label}
-                            </button>
-                          ) : (
-                            day.label
-                          )}
-                          {isToday && (
-                            <Badge bg="primary" className="ms-2" pill>
-                              {m.today()}
-                            </Badge>
-                          )}
-                          {location && (
-                            <span
-                              className="ms-2 text-muted fw-normal"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              <i
-                                className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
-                                aria-hidden="true"
-                              />{" "}
-                              {location.countryCode}
-                            </span>
-                          )}
-                        </th>
-                        {labelNames.map((label) => {
-                          const hours = daySummary[label] ?? 0;
-                          const cellId = `${day.iso}-${label}`;
-                          const cellValue = hours > 0 ? hours.toFixed(2) : null;
-                          return (
-                            <OverlayTrigger
-                              key={cellId}
-                              show={copiedCellId === cellId}
-                              overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
-                            >
-                              <td
-                                onClick={cellValue ? () => handleCopyCell(cellId, cellValue) : undefined}
-                                style={cellValue ? { cursor: "copy" } : undefined}
-                              >
-                                {cellValue ?? "-"}
-                              </td>
-                            </OverlayTrigger>
-                          );
-                        })}
-                        {(() => {
-                          const cellId = `${day.iso}-total`;
-                          const cellValue = dayTotal > 0 ? dayTotal.toFixed(2) : null;
-                          return (
-                            <OverlayTrigger
-                              show={copiedCellId === cellId}
-                              overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
-                            >
-                              <td
-                                className="fw-semibold"
-                                onClick={cellValue ? () => handleCopyCell(cellId, cellValue) : undefined}
-                                style={cellValue ? { cursor: "copy" } : undefined}
-                              >
-                                {cellValue ?? "-"}
-                              </td>
-                            </OverlayTrigger>
-                          );
-                        })()}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </div>
-
-            {/* Category Breakdown */}
-            {labelPercentages.length > 0 && (
-              <div className="mb-4">
-                <h6 className="text-uppercase text-muted mb-3">
-                  <i className="bi bi-pie-chart me-2" aria-hidden="true"></i>
-                  {m.tt_category_breakdown()}
-                </h6>
-                <div className="row g-3">
-                  {labelPercentages.map((item) => (
-                    <div key={item.label} className="col-12 col-md-6 col-lg-4">
-                      <Card className="h-100">
-                        <Card.Body>
-                          <div className="d-flex justify-content-between align-items-start mb-2">
-                            <div className="d-flex align-items-center">
-                              <div
-                                style={{
-                                  width: "12px",
-                                  height: "12px",
-                                  backgroundColor: item.color,
-                                  borderRadius: "2px",
-                                  marginRight: "8px",
-                                }}
-                              ></div>
-                              <span className="fw-semibold">{item.label}</span>
-                            </div>
-                            <Badge bg="secondary">{item.percentage.toFixed(0)}%</Badge>
-                          </div>
-                          <div className="h5 mb-2">
-                            {item.hours.toFixed(1)} {m.tt_hours_unit()}
-                          </div>
-                          <ProgressBar
-                            now={item.percentage}
-                            style={{ height: "8px", backgroundColor: item.color, opacity: 0.3 }}
-                          />
-                        </Card.Body>
-                      </Card>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Weekly Summary */}
-            <Card className="mt-4">
-              <Card.Body>
-                <h6 className="text-uppercase text-muted mb-3">
-                  <i className="bi bi-list-check me-2" aria-hidden="true"></i>
-                  {m.tt_weekly_summary_heading()}
-                </h6>
-                <div className="row">
-                  <div className="col-md-6">
-                    <ul className="list-unstyled mb-0">
-                      {Object.entries(summary).map(([label, hours]) => (
-                        <li key={label} className="mb-2">
-                          <span className="text-muted">{label}:</span>{" "}
-                          <span className="fw-semibold">
-                            {hours.toFixed(2)} {m.tt_hours_unit()}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="col-md-6">
-                    <div className="h5 mb-0">
-                      {m.tt_total_label()}:{" "}
-                      <span className="text-primary">
-                        {weekTotal.toFixed(2)} {m.tt_hours_unit()}
-                      </span>
-                    </div>
-                    {weeklyTargetHours !== undefined && (
-                      <div className="text-muted">
-                        {m.tt_target_label()}: {weeklyTargetHours.toFixed(1)} {m.tt_hours_unit()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-          </>
+        {summary.rows.length > 0 && (
+          <WeeklyDataView
+            {...summary}
+            weeklyTargetHours={weeklyTargetHours}
+            weeklyProgressPercent={weeklyProgressPercent}
+            todayIso={todayIso}
+            targetDaily={targetDaily}
+            crossBorderEnabled={settings.enableCrossBorderTracking}
+            workLocationMap={workLocationMap}
+            onSwitchToDaily={onSwitchToDaily}
+            pluralRules={pluralRules}
+            copiedCellId={copiedCellId}
+            onCopyCell={handleCopyCell}
+          />
         )}
       </Card.Body>
     </Card>

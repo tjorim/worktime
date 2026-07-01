@@ -5,6 +5,7 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import type { ScheduleOption } from "@/data/rosters";
 import { SCHEDULE_OPTIONS } from "@/data/rosters";
+import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { isValidScheduleType } from "@/utils/scheduleUtils";
@@ -59,12 +60,8 @@ export function ScheduleTabView({
   isActive = false,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
-  const {
-    scheduleType: userScheduleType,
-    updateLastScheduleView,
-    updateLastOtherSchedule,
-    lastUsed,
-  } = useSettings();
+  const { scheduleType: userScheduleType } = useSettings();
+  const { lastUsed, updateLastScheduleView, updateLastOtherSchedule } = useLastUsed();
   const [viewMode, setViewMode] = useState(lastUsed.scheduleView ?? DEFAULT_SCHEDULE_VIEW);
 
   // Initialize viewingScheduleType from persisted value, falling back to user's schedule
