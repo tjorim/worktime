@@ -32,22 +32,44 @@ class ApiBaseUrlOverrideStore(context: Context) {
                 prefs[KEY_API_BASE_URL_OVERRIDE]?.takeIf { it.isNotBlank() }
             }
 
+    @Volatile
+    private var isCacheLoaded = false
+
+    @Volatile
+    private var cachedOverride: String? = null
+
     /**
      * Synchronous read for request-time consumers (OkHttp interceptors run on background
-     * threads). DataStore keeps its state in memory after the first read, so this is cheap.
+     * threads). Backed by an in-memory cache after the first read so requests never block
+     * on `runBlocking`; the cache is kept in sync by [setOverride] and [clearOverride], the
+     * only writers to this store.
      */
-    fun currentOverrideBlocking(): String? = runBlocking { override.first() }
+    fun currentOverrideBlocking(): String? {
+        if (!isCacheLoaded) {
+            synchronized(this) {
+                if (!isCacheLoaded) {
+                    cachedOverride = runBlocking { override.first() }
+                    isCacheLoaded = true
+                }
+            }
+        }
+        return cachedOverride
+    }
 
     suspend fun setOverride(url: String) {
         dataStore.edit { it[KEY_API_BASE_URL_OVERRIDE] = url }
+        cachedOverride = url
+        isCacheLoaded = true
     }
 
     suspend fun clearOverride() {
         dataStore.edit { it.remove(KEY_API_BASE_URL_OVERRIDE) }
+        cachedOverride = null
+        isCacheLoaded = true
     }
 
     private companion object {
-        const val PREFERENCES_FILE = "api_base_url_override.pb"
+        const val PREFERENCES_FILE = "api_base_url_override"
         val KEY_API_BASE_URL_OVERRIDE = stringPreferencesKey("api_base_url_override")
     }
 }
