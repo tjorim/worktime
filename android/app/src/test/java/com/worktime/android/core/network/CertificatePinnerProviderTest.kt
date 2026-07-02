@@ -42,7 +42,7 @@ class CertificatePinnerProviderTest {
             oidcClientId = "worktime",
             oidcScope = "openid profile email offline_access",
             oidcRedirectUri = "com.worktime.android:/oauth2redirect",
-            certificatePinHosts = listOf("worktime.tjor.im", "auth.tjor.im"),
+            certificatePinHost = "worktime.tjor.im",
             certificatePins = certificatePins
         )
 }

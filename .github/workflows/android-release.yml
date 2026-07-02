@@ -53,13 +53,17 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-        run: ./gradlew :app:assembleProdRelease
+          ANDROID_API_BASE_URL: ${{ secrets.ANDROID_API_BASE_URL }}
+          ANDROID_OIDC_ISSUER_URL: ${{ secrets.ANDROID_OIDC_ISSUER_URL }}
+          ANDROID_CERTIFICATE_PIN_HOST: ${{ secrets.ANDROID_CERTIFICATE_PIN_HOST }}
+          ANDROID_CERTIFICATE_PINS: ${{ secrets.ANDROID_CERTIFICATE_PINS }}
+        run: ./gradlew :app:assembleRelease
 
       - name: Upload release APK
         if: steps.keystore.outputs.signing_available == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-apk
-          path: android/app/build/outputs/apk/prod/release/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 7

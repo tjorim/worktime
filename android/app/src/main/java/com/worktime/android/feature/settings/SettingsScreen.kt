@@ -55,10 +55,10 @@ fun SettingsScreen(
     ScreenList(title = "Settings") {
         item {
             SummaryCard(title = "Environment") {
-                text("Flavor", appConfig.environment)
+                text("Environment", appConfig.environment)
                 text("API base URL", apiBaseUrlOverride ?: appConfig.apiBaseUrl)
                 if (apiBaseUrlOverride != null) {
-                    text("Flavor default", appConfig.apiBaseUrl)
+                    text("Build default", appConfig.apiBaseUrl)
                 }
                 text("OIDC authority", appConfig.oidcAuthority)
                 text("OIDC client ID", appConfig.oidcClientId)
@@ -150,7 +150,7 @@ fun SettingsScreen(
             ) {
                 Text(
                     text =
-                    "Switch environments with Gradle flavors or WORKTIME_ANDROID_* properties in CI/local builds, " +
+                    "Switch environments with Gradle build variants or ANDROID_* properties in CI/local builds, " +
                         "or set a runtime API override above.",
                     style = MaterialTheme.typography.bodyMedium
                 )

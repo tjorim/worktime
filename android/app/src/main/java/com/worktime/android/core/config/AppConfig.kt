@@ -9,7 +9,7 @@ data class AppConfig(
     val oidcClientId: String,
     val oidcScope: String,
     val oidcRedirectUri: String,
-    val certificatePinHosts: List<String>,
+    val certificatePinHost: String,
     val certificatePins: List<String>
 )
 
@@ -20,7 +20,7 @@ fun buildAppConfig(): AppConfig = AppConfig(
     oidcClientId = BuildConfig.OIDC_CLIENT_ID,
     oidcScope = BuildConfig.OIDC_SCOPE,
     oidcRedirectUri = BuildConfig.OIDC_REDIRECT_URI,
-    certificatePinHosts = BuildConfig.CERTIFICATE_PIN_HOSTS.toCsvList(),
+    certificatePinHost = BuildConfig.CERTIFICATE_PIN_HOST,
     certificatePins = BuildConfig.CERTIFICATE_PINS.toCsvList()
 )
 
