@@ -27,7 +27,7 @@ Override environment values with Gradle properties:
 - `WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS` (comma-separated OkHttp certificate pin hosts)
 - `WORKTIME_ANDROID_PROD_CERTIFICATE_PINS` (comma-separated `sha256/...` pins)
 
-Production builds pin `worktime.tjor.im` and `auth.tjor.im` to the ISRG Root X1 public key by default. Override the pin properties when the production TLS chain changes.
+Production builds pin `worktime.tjor.im` and `auth.tjor.im` by default to the Google Trust Services WE1 intermediate public key (durable across leaf renewals) plus the current leaf key as a backup pin. Override the pin properties when the production TLS chain changes.
 
 Example:
 
