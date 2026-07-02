@@ -7,7 +7,7 @@ package com.worktime.android.core.auth
 object BiometricGateDecision {
     fun shouldRequireAuthentication(lockEnabled: Boolean, idleTimeoutMinutes: Int, lastBackgroundEpochMillis: Long?, nowEpochMillis: Long): Boolean {
         if (!lockEnabled) return false
-        if (lastBackgroundEpochMillis == null) return true
+        if (lastBackgroundEpochMillis == null) return false
         val idleMillis = nowEpochMillis - lastBackgroundEpochMillis
         val timeoutMillis = idleTimeoutMinutes.coerceAtLeast(0) * MILLIS_PER_MINUTE
         return idleMillis >= timeoutMillis

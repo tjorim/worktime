@@ -18,8 +18,8 @@ class BiometricGateDecisionTest {
     }
 
     @Test
-    fun `requires authentication when there is no recorded background timestamp`() {
-        assertTrue(
+    fun `does not require authentication when there is no recorded background timestamp`() {
+        assertFalse(
             BiometricGateDecision.shouldRequireAuthentication(
                 lockEnabled = true,
                 idleTimeoutMinutes = 5,
