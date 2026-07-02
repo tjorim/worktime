@@ -10,16 +10,20 @@ plugins {
 
 fun quoted(value: String) = "\"$value\""
 
+// No staging backend is deployed yet, so the default is an honest placeholder
+// rather than a real-looking hostname that resolves but serves nothing. Unlike
+// prod/release, staging builds are ad-hoc test artifacts, so a missing value
+// falls back to the placeholder instead of failing the build.
 val devApiBaseUrl = providers.gradleProperty("WORKTIME_ANDROID_DEV_API_BASE_URL").orElse("http://10.0.2.2:8000/")
 val prodApiBaseUrl = providers.gradleProperty("WORKTIME_ANDROID_PROD_API_BASE_URL").orElse("https://worktime.tjor.im/")
 val stagingApiBaseUrl =
-    providers.gradleProperty("WORKTIME_ANDROID_STAGING_API_BASE_URL").orElse("https://staging.worktime.tjor.im/")
+    providers.gradleProperty("WORKTIME_ANDROID_STAGING_API_BASE_URL").orElse("https://staging.placeholder.invalid/")
 val devOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_AUTHORITY").orElse("http://10.0.2.2:8080/realms/worktime")
 val prodOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_AUTHORITY").orElse("https://auth.tjor.im/realms/worktime")
 val stagingOidcAuthority =
     providers
         .gradleProperty("WORKTIME_ANDROID_STAGING_OIDC_AUTHORITY")
-        .orElse("https://staging-auth.tjor.im/realms/worktime")
+        .orElse("https://staging-auth.placeholder.invalid/realms/worktime")
 val devOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_CLIENT_ID").orElse("worktime")
 val prodOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_CLIENT_ID").orElse("worktime")
 val stagingOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_STAGING_OIDC_CLIENT_ID").orElse("worktime")
@@ -41,6 +45,25 @@ CertPinning.requireHostsConfiguredForPins(resolvedProdCertificatePinHosts, resol
 android {
     namespace = "com.worktime.android"
     compileSdk = 37
+
+    val keystorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePassword = providers.environmentVariable("STORE_PASSWORD").orNull
+    val keystoreKeyAlias = providers.environmentVariable("KEY_ALIAS").orNull
+    val keystoreKeyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+    signingConfigs {
+        if (!keystorePath.isNullOrBlank() &&
+            !keystorePassword.isNullOrBlank() &&
+            !keystoreKeyAlias.isNullOrBlank() &&
+            !keystoreKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keystoreKeyAlias
+                keyPassword = keystoreKeyPassword
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.worktime.android"
@@ -111,6 +134,10 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
