@@ -1,3 +1,5 @@
+import com.worktime.buildlogic.CertPinning
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -10,10 +12,17 @@ fun quoted(value: String) = "\"$value\""
 
 val devApiBaseUrl = providers.gradleProperty("WORKTIME_ANDROID_DEV_API_BASE_URL").orElse("http://10.0.2.2:8000/")
 val prodApiBaseUrl = providers.gradleProperty("WORKTIME_ANDROID_PROD_API_BASE_URL").orElse("https://worktime.tjor.im/")
+val stagingApiBaseUrl =
+    providers.gradleProperty("WORKTIME_ANDROID_STAGING_API_BASE_URL").orElse("https://staging.worktime.tjor.im/")
 val devOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_AUTHORITY").orElse("http://10.0.2.2:8080/realms/worktime")
 val prodOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_AUTHORITY").orElse("https://auth.tjor.im/realms/worktime")
+val stagingOidcAuthority =
+    providers
+        .gradleProperty("WORKTIME_ANDROID_STAGING_OIDC_AUTHORITY")
+        .orElse("https://staging-auth.tjor.im/realms/worktime")
 val devOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_CLIENT_ID").orElse("worktime")
 val prodOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_CLIENT_ID").orElse("worktime")
+val stagingOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_STAGING_OIDC_CLIENT_ID").orElse("worktime")
 val oidcScope = providers.gradleProperty("WORKTIME_ANDROID_OIDC_SCOPE").orElse("openid profile email offline_access")
 val prodCertificatePinHosts =
     providers
@@ -23,6 +32,11 @@ val prodCertificatePins =
     providers
         .gradleProperty("WORKTIME_ANDROID_PROD_CERTIFICATE_PINS")
         .orElse("sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")
+
+val resolvedProdCertificatePinHosts = CertPinning.splitCsv(prodCertificatePinHosts.get())
+val resolvedProdCertificatePins = CertPinning.splitCsv(prodCertificatePins.get())
+CertPinning.requireValidPinFormats(resolvedProdCertificatePins)
+CertPinning.requireHostsConfiguredForPins(resolvedProdCertificatePinHosts, resolvedProdCertificatePins)
 
 android {
     namespace = "com.worktime.android"
@@ -74,6 +88,25 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+        }
+        create("staging") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            val stagingRedirectScheme = "com.worktime.android.staging"
+            // Overrides the active flavor's endpoint/OIDC/pinning fields so every
+            // staging variant (devStaging, prodStaging) talks to the staging
+            // backend regardless of which environment flavor it is combined with.
+            buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("staging"))
+            buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl.get()))
+            buildConfigField("String", "OIDC_AUTHORITY", quoted(stagingOidcAuthority.get()))
+            buildConfigField("String", "OIDC_CLIENT_ID", quoted(stagingOidcClientId.get()))
+            buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope.get()))
+            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$stagingRedirectScheme:/oauth2redirect"))
+            buildConfigField("String", "CERTIFICATE_PIN_HOSTS", quoted(""))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
+            manifestPlaceholders["appAuthRedirectScheme"] = stagingRedirectScheme
         }
         release {
             isMinifyEnabled = true
