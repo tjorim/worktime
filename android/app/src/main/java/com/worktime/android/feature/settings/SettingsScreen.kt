@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -21,10 +25,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.network.DynamicBaseUrlInterceptor
+import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
+
+private const val IDLE_TIMEOUT_OPTION_1_MIN = 1
+private const val IDLE_TIMEOUT_OPTION_5_MIN = 5
+private const val IDLE_TIMEOUT_OPTION_15_MIN = 15
+private const val IDLE_TIMEOUT_OPTION_30_MIN = 30
+private val IDLE_TIMEOUT_OPTIONS_MINUTES =
+    listOf(IDLE_TIMEOUT_OPTION_1_MIN, IDLE_TIMEOUT_OPTION_5_MIN, IDLE_TIMEOUT_OPTION_15_MIN, IDLE_TIMEOUT_OPTION_30_MIN)
 
 @Composable
 fun SettingsScreen(
@@ -37,6 +49,9 @@ fun SettingsScreen(
     onShiftNotificationsChanged: (Boolean) -> Unit,
     onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
     onSyncNotificationsChanged: (Boolean) -> Unit,
+    biometricLockPreferences: BiometricLockPreferences,
+    onBiometricLockEnabledChanged: (Boolean) -> Unit,
+    onBiometricIdleTimeoutChanged: (Int) -> Unit,
     onLogout: () -> Unit
 ) {
     ScreenList(title = "Settings") {
@@ -103,6 +118,31 @@ fun SettingsScreen(
             }
         }
         item {
+            SummaryCard(title = "App lock") {
+                content {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("Require unlock after idle", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = biometricLockPreferences.lockEnabled,
+                            onCheckedChange = onBiometricLockEnabledChanged
+                        )
+                    }
+                    Text(
+                        text =
+                        "Uses your device's biometric or screen-lock credential to re-confirm it's you " +
+                            "after Worktime has been in the background past the idle timeout below.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (biometricLockPreferences.lockEnabled) {
+                        IdleTimeoutDropdown(
+                            selectedMinutes = biometricLockPreferences.idleTimeoutMinutes,
+                            onSelected = onBiometricIdleTimeoutChanged
+                        )
+                    }
+                }
+            }
+        }
+        item {
             Column(
                 modifier =
                 Modifier
@@ -156,6 +196,35 @@ private fun ApiBaseUrlOverrideCard(appConfig: AppConfig, apiBaseUrlOverride: Str
                 OutlinedButton(onClick = onClear, enabled = apiBaseUrlOverride != null) {
                     Text("Reset")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+private fun IdleTimeoutDropdown(selectedMinutes: Int, onSelected: (Int) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = "$selectedMinutes min",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Idle timeout") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable, true)
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            IDLE_TIMEOUT_OPTIONS_MINUTES.forEach { minutes ->
+                DropdownMenuItem(
+                    text = { Text("$minutes min") },
+                    onClick = {
+                        onSelected(minutes)
+                        expanded = false
+                    }
+                )
             }
         }
     }

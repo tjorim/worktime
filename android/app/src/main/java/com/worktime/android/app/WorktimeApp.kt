@@ -1,5 +1,6 @@
 package com.worktime.android.app
 
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +24,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -29,13 +35,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.worktime.android.app.navigation.WorktimeDestination
+import com.worktime.android.core.auth.BiometricAuthenticator
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.notifications.WorktimeNotifications
+import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.DashboardViewModel
 import com.worktime.android.feature.login.LoginScreen
 import com.worktime.android.feature.nextshifts.NextShiftsScreen
+import com.worktime.android.feature.session.BiometricGateScreen
+import com.worktime.android.feature.session.BiometricGateViewModel
 import com.worktime.android.feature.settings.SettingsScreen
 import com.worktime.android.feature.teamstatus.TeamStatusScreen
 import com.worktime.android.feature.timeoff.TimeOffSummaryScreen
@@ -123,6 +133,26 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
     var loginError by rememberSaveable { mutableStateOf<String?>(null) }
     var loginInFlight by rememberSaveable { mutableStateOf(false) }
 
+    val biometricGateViewModel: BiometricGateViewModel =
+        viewModel(factory = BiometricGateViewModel.factory(container.biometricLockPreferencesStore))
+    val biometricLockPreferences by biometricGateViewModel.preferences.collectAsStateWithLifecycle()
+    val isLocked by biometricGateViewModel.locked.collectAsStateWithLifecycle()
+    var isBiometricPrompting by rememberSaveable { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, biometricGateViewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> biometricGateViewModel.onAppBackgrounded(System.currentTimeMillis())
+                    Lifecycle.Event.ON_START -> biometricGateViewModel.onAppResumed(System.currentTimeMillis())
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val loginLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             coroutineScope.launch {
@@ -140,7 +170,33 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
 
     WorktimeTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            if (sessionState is SessionState.LoggedOut || uiState is DashboardUiState.LoggedOut) {
+            if (isLocked && sessionState is SessionState.Authenticated) {
+                val activity =
+                    remember(context) {
+                        var current = context
+                        while (current is ContextWrapper && current !is FragmentActivity) {
+                            current = current.baseContext
+                        }
+                        current as FragmentActivity
+                    }
+                val authenticator = remember(activity) { BiometricAuthenticator(activity) }
+                val availability = remember(authenticator) { authenticator.checkAvailability() }
+                BiometricGateScreen(
+                    availability = availability,
+                    isPrompting = isBiometricPrompting,
+                    onUnlock = {
+                        isBiometricPrompting = true
+                        authenticator.authenticate(
+                            onSuccess = {
+                                isBiometricPrompting = false
+                                biometricGateViewModel.onAuthenticationSucceeded()
+                            },
+                            onError = { isBiometricPrompting = false }
+                        )
+                    },
+                    onContinueWithoutLock = biometricGateViewModel::onAuthenticationSucceeded
+                )
+            } else if (sessionState is SessionState.LoggedOut || uiState is DashboardUiState.LoggedOut) {
                 LoginScreen(
                     sessionState = sessionState,
                     appConfig = container.appConfig,
@@ -199,7 +255,10 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                         coroutineScope.launch {
                             container.notificationPreferencesStore.setSyncConflictsEnabled(it)
                         }
-                    }
+                    },
+                    biometricLockPreferences = biometricLockPreferences,
+                    onBiometricLockEnabledChanged = biometricGateViewModel::setLockEnabled,
+                    onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes
                 )
             }
         }
@@ -224,7 +283,10 @@ private fun WorktimeAuthenticatedScaffold(
     onSetWorkLocation: (java.time.LocalDate, String, String?) -> Unit,
     onShiftNotificationsChanged: (Boolean) -> Unit,
     onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
-    onSyncNotificationsChanged: (Boolean) -> Unit
+    onSyncNotificationsChanged: (Boolean) -> Unit,
+    biometricLockPreferences: BiometricLockPreferences,
+    onBiometricLockEnabledChanged: (Boolean) -> Unit,
+    onBiometricIdleTimeoutChanged: (Int) -> Unit
 ) {
     val navController = rememberNavController()
     val destinations = remember { WorktimeDestination.entries.toList() }
@@ -301,6 +363,9 @@ private fun WorktimeAuthenticatedScaffold(
                         onShiftNotificationsChanged = onShiftNotificationsChanged,
                         onTimeTrackingNotificationsChanged = onTimeTrackingNotificationsChanged,
                         onSyncNotificationsChanged = onSyncNotificationsChanged,
+                        biometricLockPreferences = biometricLockPreferences,
+                        onBiometricLockEnabledChanged = onBiometricLockEnabledChanged,
+                        onBiometricIdleTimeoutChanged = onBiometricIdleTimeoutChanged,
                         onLogout = onLogout
                     )
                 }
