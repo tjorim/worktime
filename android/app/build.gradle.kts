@@ -34,14 +34,15 @@ val prodCertificatePinHosts =
         .orElse("worktime.tjor.im,auth.tjor.im")
 // Production TLS is issued by Google Trust Services (WE1 intermediate, root
 // GTS Root R4), not Let's Encrypt. Pin the WE1 intermediate key so routine
-// leaf renewals don't break pinning, plus the current leaf key as a backup
-// pin in case the intermediate is rotated before this default is updated.
+// leaf renewals don't break pinning, plus the GTS Root R4 root key as a
+// backup pin so an intermediate rotation (e.g. WE1 -> WE2) doesn't lock the
+// app out before this default can be updated.
 val prodCertificatePins =
     providers
         .gradleProperty("WORKTIME_ANDROID_PROD_CERTIFICATE_PINS")
         .orElse(
             "sha256/kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=," +
-                "sha256/nMPGO4vAbE/uzs+NgPqbpjzFq7kjTVxg/FTZcrVBYFI="
+                "sha256/mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c="
         )
 
 val resolvedProdCertificatePinHosts = CertPinning.splitCsv(prodCertificatePinHosts.get())
