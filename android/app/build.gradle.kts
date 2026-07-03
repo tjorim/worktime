@@ -109,21 +109,43 @@ if (releaseArtifactRequested) {
 
 // Single source of truth for the app version: frontend/package.json, kept in
 // lockstep with the web release version instead of a hand-maintained literal here.
+// Read via providers.fileContents (not File.readText()) so the file is tracked
+// as a build configuration input and this stays Configuration Cache-compatible.
 val appVersion =
-    File(rootDir.parentFile, "frontend/package.json").readText().let { json ->
-        Regex(""""version":\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
-            ?: error("Could not find a \"version\" field in frontend/package.json")
-    }
+    providers
+        .fileContents(layout.projectDirectory.file("../../frontend/package.json"))
+        .asText
+        .map { json ->
+            Regex(""""version":\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
+                ?: error("Could not find a \"version\" field in frontend/package.json")
+        }.get()
 
 fun versionCodeFor(version: String): Int {
     val parts = version.substringBefore("-").substringBefore("+").split(".")
     check(parts.size == 3) { "Expected a MAJOR.MINOR.PATCH version, got \"$version\"" }
-    val (major, minor, patch) = parts.map { it.toInt() }
+    val (major, minor, patch) =
+        parts.map {
+            it.toIntOrNull() ?: error("Invalid integer component \"$it\" in version \"$version\"")
+        }
     return major * 1_000_000 + minor * 1_000 + patch
 }
 
+// Falls back to "unknown" rather than failing the build when git is unavailable
+// (e.g. building from a downloaded source archive with no .git directory).
 val gitCommit =
-    providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }.standardOutput.asText.get().trim()
+    try {
+        providers
+            .exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+                isIgnoreExitValue = true
+            }.standardOutput
+            .asText
+            .get()
+            .trim()
+            .ifEmpty { "unknown" }
+    } catch (e: Exception) {
+        "unknown"
+    }
 
 android {
     namespace = "com.worktime.android"
