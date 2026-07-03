@@ -11,12 +11,11 @@ import org.json.JSONException
 import org.json.JSONObject
 
 class OidcServiceConfigurationDiscovery(
-    private val apiBaseUrl: String,
     private val client: OkHttpClient = OkHttpClient(),
 ) {
-    suspend fun fetch(): AuthorizationServiceConfiguration =
+    suspend fun fetch(apiBaseUrl: String): AuthorizationServiceConfiguration =
         withContext(Dispatchers.IO) {
-            client.newCall(Request.Builder().url(configUrl()).build()).execute().use { response ->
+            client.newCall(Request.Builder().url(configUrl(apiBaseUrl)).build()).execute().use { response ->
                 val body = response.body.string()
                 if (!response.isSuccessful) {
                     throw IOException("OIDC config endpoint returned HTTP ${response.code}: $body")
@@ -28,7 +27,7 @@ class OidcServiceConfigurationDiscovery(
             }
         }
 
-    private fun configUrl(): String = "${apiBaseUrl.trimEnd('/')}/api/auth/oidc-config"
+    private fun configUrl(apiBaseUrl: String): String = "${apiBaseUrl.trimEnd('/')}/api/auth/oidc-config"
 
     private fun parse(body: String): AuthorizationServiceConfiguration =
         try {

@@ -23,7 +23,8 @@ class WorktimeAppContainer(context: Context) {
         OidcSessionManager(
             context = context,
             appConfig = appConfig,
-            sessionStore = secureSessionStore
+            sessionStore = secureSessionStore,
+            apiBaseUrlProvider = apiBaseUrlOverrideStore::currentOverrideBlocking
         )
     private val api =
         WorktimeApi.create(

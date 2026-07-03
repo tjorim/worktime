@@ -25,11 +25,14 @@ class OidcSessionManager(
     private val context: Context,
     private val appConfig: AppConfig,
     private val sessionStore: SecureSessionStore,
-    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(appConfig.apiBaseUrl),
+    private val apiBaseUrlProvider: () -> String? = { null },
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(),
 ) : SessionController {
     private val tokenMutex = Mutex()
+    private val configMutex = Mutex()
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
+    private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
     private var authState: AuthState? =
         try {
@@ -111,7 +114,14 @@ class OidcSessionManager(
         _sessionState.value = SessionState.LoggedOut
     }
 
-    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration = oidcDiscovery.fetch()
+    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
+        val apiBaseUrl = apiBaseUrlProvider()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
+        cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
+        return configMutex.withLock {
+            cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
+                ?: oidcDiscovery.fetch(apiBaseUrl).also { cachedConfiguration = apiBaseUrl to it }
+        }
+    }
 
     private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
         suspendCancellableCoroutine { continuation ->

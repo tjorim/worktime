@@ -39,7 +39,7 @@ class OidcServiceConfigurationDiscoveryTest {
                 ).build(),
         )
 
-        val config = OidcServiceConfigurationDiscovery(server.url("/").toString(), OkHttpClient()).fetch()
+        val config = OidcServiceConfigurationDiscovery(OkHttpClient()).fetch(server.url("/").toString())
 
         assertEquals("/api/auth/oidc-config", server.takeRequest().url.encodedPath)
         assertEquals(
