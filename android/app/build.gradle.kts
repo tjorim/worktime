@@ -107,6 +107,24 @@ if (releaseArtifactRequested) {
     CertPinning.requireHostConfiguredForPins(resolvedReleaseCertificatePinHost, resolvedReleaseCertificatePins)
 }
 
+// Single source of truth for the app version: frontend/package.json, kept in
+// lockstep with the web release version instead of a hand-maintained literal here.
+val appVersion =
+    File(rootDir.parentFile, "frontend/package.json").readText().let { json ->
+        Regex(""""version":\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
+            ?: error("Could not find a \"version\" field in frontend/package.json")
+    }
+
+fun versionCodeFor(version: String): Int {
+    val parts = version.substringBefore("-").substringBefore("+").split(".")
+    check(parts.size == 3) { "Expected a MAJOR.MINOR.PATCH version, got \"$version\"" }
+    val (major, minor, patch) = parts.map { it.toInt() }
+    return major * 1_000_000 + minor * 1_000 + patch
+}
+
+val gitCommit =
+    providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }.standardOutput.asText.get().trim()
+
 android {
     namespace = "com.worktime.android"
     compileSdk = 37
@@ -138,8 +156,9 @@ android {
         minSdk = 26
         targetSdk = 37
         // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
-        versionCode = 1000
-        versionName = "0.1.0"
+        versionCode = versionCodeFor(appVersion)
+        versionName = appVersion
+        buildConfigField("String", "BUILD_COMMIT", quoted(gitCommit))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
