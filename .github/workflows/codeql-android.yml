@@ -2,6 +2,7 @@ name: CodeQL Android
 
 on:
   pull_request:
+    branches: [main]
     paths:
       - "android/**"
       - ".github/workflows/codeql-android.yml"
@@ -10,6 +11,8 @@ on:
     paths:
       - "android/**"
       - ".github/workflows/codeql-android.yml"
+  schedule:
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 concurrency:
@@ -17,17 +20,16 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: read
   contents: read
   security-events: write
 
 jobs:
   analyze:
-    name: Analyze Android (Java/Kotlin)
+    name: Analyze (java-kotlin)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Check CodeQL Kotlin support
@@ -48,11 +50,26 @@ jobs:
         uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         with:
           languages: java-kotlin
+          build-mode: manual
 
-      - name: Autobuild
+      - name: Set up JDK 17
         if: steps.codeql-kotlin.outputs.supported == 'true'
-        uses: github/codeql-action/autobuild@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version: "17"
+          distribution: temurin
+
+      - name: Set up Gradle
+        if: steps.codeql-kotlin.outputs.supported == 'true'
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Build for analysis
+        if: steps.codeql-kotlin.outputs.supported == 'true'
+        working-directory: android
+        run: ./gradlew :app:compileDebugKotlin
 
       - name: Perform CodeQL analysis
         if: steps.codeql-kotlin.outputs.supported == 'true'
         uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          category: /language:java-kotlin
