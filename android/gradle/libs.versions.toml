@@ -19,6 +19,7 @@ retrofit-kotlinx-serialization-converter = "1.0.0"
 appauth = "0.11.1"
 junit = "4.13.2"
 mockk = "1.14.11"
+json = "20250517"
 turbine = "1.2.1"
 detekt = "2.0.0-alpha.3"
 ktlint-gradle = "14.2.0"
@@ -49,6 +50,7 @@ retrofit-kotlinx-serialization-converter = { module = "com.jakewharton.retrofit:
 appauth = { module = "net.openid:appauth", version.ref = "appauth" }
 junit = { module = "junit:junit", version.ref = "junit" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+json = { module = "org.json:json", version.ref = "json" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
 [plugins]

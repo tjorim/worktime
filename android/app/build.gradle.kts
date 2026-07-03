@@ -219,6 +219,7 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.mockk)
+    testImplementation(libs.json)
 }
 
 detekt {
