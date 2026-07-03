@@ -35,8 +35,8 @@ class OidcServiceConfigurationDiscoveryTest {
                       "authorization_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/auth",
                       "token_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/token"
                     }
-                    """.trimIndent(),
-                ).build(),
+                    """.trimIndent()
+                ).build()
         )
 
         val config = OidcServiceConfigurationDiscovery(OkHttpClient()).fetch(server.url("/").toString())
@@ -44,11 +44,11 @@ class OidcServiceConfigurationDiscoveryTest {
         assertEquals("/api/auth/oidc-config", server.takeRequest().url.encodedPath)
         assertEquals(
             "https://auth.example.test/realms/worktime/protocol/openid-connect/auth",
-            config.authorizationEndpoint.toString(),
+            config.authorizationEndpoint.toString()
         )
         assertEquals(
             "https://auth.example.test/realms/worktime/protocol/openid-connect/token",
-            config.tokenEndpoint.toString(),
+            config.tokenEndpoint.toString()
         )
     }
 }
