@@ -152,7 +152,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.worktime.android"
+        applicationId = "im.tjor.worktime"
         minSdk = 26
         targetSdk = 37
         // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
@@ -166,7 +166,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            val redirectScheme = "com.worktime.android.debug"
+            val redirectScheme = "im.tjor.worktime.debug"
             buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("debug"))
             buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(debugOidcClientId))
@@ -196,10 +196,10 @@ android {
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(releaseOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("com.worktime.android:/oauth2redirect"))
+            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("im.tjor.worktime:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(resolvedReleaseCertificatePinHost))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins))
-            manifestPlaceholders["appAuthRedirectScheme"] = "com.worktime.android"
+            manifestPlaceholders["appAuthRedirectScheme"] = "im.tjor.worktime"
         }
     }
 
