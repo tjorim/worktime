@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.worktime.android.core.config.AppConfig
+import com.worktime.android.core.network.CertificatePinnerProvider
 import com.worktime.android.core.storage.SecureSessionStore
 import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,11 +21,25 @@ import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
+import okhttp3.OkHttpClient
 
-class OidcSessionManager(private val context: Context, private val appConfig: AppConfig, private val sessionStore: SecureSessionStore) : SessionController {
+class OidcSessionManager(
+    private val context: Context,
+    private val appConfig: AppConfig,
+    private val sessionStore: SecureSessionStore,
+    private val apiBaseUrlProvider: () -> String? = { null },
+    // Discovery returns the endpoints the whole auth flow trusts, so it must be
+    // pinned exactly like the API client; a plain OkHttpClient would let a
+    // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(
+        OkHttpClient.Builder().certificatePinner(CertificatePinnerProvider.fromConfig(appConfig)).build()
+    )
+) : SessionController {
     private val tokenMutex = Mutex()
+    private val configMutex = Mutex()
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
+    private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
     private var authState: AuthState? =
         try {
@@ -106,12 +121,12 @@ class OidcSessionManager(private val context: Context, private val appConfig: Ap
         _sessionState.value = SessionState.LoggedOut
     }
 
-    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration = suspendCancellableCoroutine { continuation ->
-        AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(appConfig.oidcAuthority)) { config, ex ->
-            when {
-                config != null -> continuation.resume(config)
-                else -> continuation.resumeWith(Result.failure(ex ?: IllegalStateException("Failed to load OIDC configuration")))
-            }
+    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
+        val apiBaseUrl = apiBaseUrlProvider()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
+        cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
+        return configMutex.withLock {
+            cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
+                ?: oidcDiscovery.fetch(apiBaseUrl).also { cachedConfiguration = apiBaseUrl to it }
         }
     }
 

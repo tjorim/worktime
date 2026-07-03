@@ -5,7 +5,7 @@ package com.worktime.buildlogic
  * they can be unit tested (script-local functions in a Kotlin DSL build script
  * cannot be). Runtime application of the resolved pins/hosts still lives in
  * CertificatePinnerProvider — this object only validates the gradle-property
- * inputs (WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS / _PINS) before they are
+ * inputs (ANDROID_CERTIFICATE_PIN_HOST / _PINS) before they are
  * baked into BuildConfig.
  */
 object CertPinning {
@@ -41,21 +41,21 @@ object CertPinning {
         }
     }
 
-    // Pins configured without hosts (or vice versa) would silently disable
+    // Pins configured without a host (or vice versa) would silently disable
     // pinning at runtime (CertificatePinnerProvider falls back to
-    // CertificatePinner.DEFAULT whenever either list is empty) — catch that
+    // CertificatePinner.DEFAULT whenever either value is empty) — catch that
     // misconfiguration at build time instead.
-    fun requireHostsConfiguredForPins(
-        hosts: List<String>,
+    fun requireHostConfiguredForPins(
+        host: String,
         pins: List<String>,
     ) {
-        check(pins.isEmpty() || hosts.isNotEmpty()) {
-            "Certificate pins are configured (WORKTIME_ANDROID_PROD_CERTIFICATE_PINS) but no hosts are set " +
-                "via WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS. Certificate pinning would be ineffective."
+        check(pins.isEmpty() || host.isNotBlank()) {
+            "Certificate pins are configured (ANDROID_CERTIFICATE_PINS) but no host is set " +
+                "via ANDROID_CERTIFICATE_PIN_HOST. Certificate pinning would be ineffective."
         }
-        check(hosts.isEmpty() || pins.isNotEmpty()) {
-            "Certificate pin hosts are configured (WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS) but no pins are " +
-                "set via WORKTIME_ANDROID_PROD_CERTIFICATE_PINS. Certificate pinning would be ineffective."
+        check(host.isBlank() || pins.isNotEmpty()) {
+            "Certificate pin host is configured (ANDROID_CERTIFICATE_PIN_HOST) but no pins are " +
+                "set via ANDROID_CERTIFICATE_PINS. Certificate pinning would be ineffective."
         }
     }
 }

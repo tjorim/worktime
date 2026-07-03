@@ -6,7 +6,7 @@ Keycloak, ZITADEL) and auto-provisions local user records on first login.
 The provider is configured via environment variables:
   OIDC_ISSUER_URL   — OIDC provider base URL
   OIDC_AUDIENCE     — Expected audience claim (optional)
-  OIDC_JWKS_URI     — JWKS endpoint override (defaults to {issuer}/jwks/)
+  OIDC_JWKS_URI     — JWKS endpoint override (auto-discovered via /.well-known/openid-configuration if omitted)
   OIDC_ALGORITHMS   — Comma-separated list of accepted algorithms (default RS256)
 
 Token subject claim (``sub``) is used as the stable external identity key.
@@ -41,23 +41,52 @@ _OIDC_ISSUER: str | None = settings.OIDC_ISSUER_URL or None
 _jwks_lock = asyncio.Lock()
 _jwks_cache: dict[str, Any] | None = None
 
+_jwks_uri_lock = asyncio.Lock()
+_jwks_uri_cache: str | None = None
 
-def _get_jwks_uri() -> str:
-    """Return the JWKS URI for the configured OIDC issuer."""
+
+def _http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(timeout=10)
+
+
+async def _resolve_jwks_uri() -> str:
+    """Return the JWKS URI, discovering it from the OIDC configuration document.
+
+    Keycloak (and other providers) serve their signing keys at a
+    provider-specific path, not the generic {issuer}/.well-known/jwks.json, so
+    the URI is discovered from the standard OIDC discovery document instead of
+    guessed. Discovery results are cached for the process lifetime.
+    """
+    global _jwks_uri_cache  # noqa: PLW0603
     if settings.OIDC_JWKS_URI:
         return settings.OIDC_JWKS_URI
-    base = settings.OIDC_ISSUER_URL.rstrip("/")
-    return f"{base}/.well-known/jwks.json"
+    if not settings.OIDC_ISSUER_URL:
+        raise OIDCTokenError("OIDC_ISSUER_URL is not configured")
+    async with _jwks_uri_lock:
+        if _jwks_uri_cache is not None:
+            return _jwks_uri_cache
+        base = settings.OIDC_ISSUER_URL.rstrip("/")
+        try:
+            async with _http_client() as client:
+                resp = await client.get(f"{base}/.well-known/openid-configuration")
+            resp.raise_for_status()
+            _jwks_uri_cache = resp.json()["jwks_uri"]
+            logger.info("Discovered JWKS URI: %s", _jwks_uri_cache)
+        except (httpx.HTTPError, KeyError, ValueError) as exc:
+            raise OIDCTokenError(f"OIDC discovery failed for {base}: {exc}") from exc
+        return _jwks_uri_cache
 
 
 async def _fetch_jwks() -> dict[str, Any]:
     """Fetch the JWKS document from the OIDC provider (async, non-blocking)."""
-    uri = _get_jwks_uri()
+    uri = await _resolve_jwks_uri()
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with _http_client() as client:
             response = await client.get(uri)
         response.raise_for_status()
         return response.json()
+    except OIDCTokenError:
+        raise
     except Exception as exc:
         logger.error("Failed to fetch JWKS from %s: %s", uri, exc)
         raise

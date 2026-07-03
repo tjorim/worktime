@@ -99,7 +99,7 @@ class DynamicBaseUrlInterceptorTest {
     @Test
     fun isValidOverrideAcceptsHttpUrlsAndRejectsGarbage() {
         assertTrue(DynamicBaseUrlInterceptor.isValidOverride("http://10.0.2.2:8000/"))
-        assertTrue(DynamicBaseUrlInterceptor.isValidOverride("https://staging.worktime.example"))
+        assertTrue(DynamicBaseUrlInterceptor.isValidOverride("https://test.worktime.example"))
         assertFalse(DynamicBaseUrlInterceptor.isValidOverride("not a url"))
         assertFalse(DynamicBaseUrlInterceptor.isValidOverride("ftp://host/"))
     }

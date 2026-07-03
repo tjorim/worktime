@@ -1,4 +1,5 @@
 import com.worktime.buildlogic.CertPinning
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -10,54 +11,113 @@ plugins {
 
 fun quoted(value: String) = "\"$value\""
 
-// No staging backend is deployed yet, so the default is an honest placeholder
-// rather than a real-looking hostname that resolves but serves nothing. Unlike
-// prod/release, staging builds are ad-hoc test artifacts, so a missing value
-// falls back to the placeholder instead of failing the build.
-val devApiBaseUrl = providers.gradleProperty("WORKTIME_ANDROID_DEV_API_BASE_URL").orElse("http://10.0.2.2:8000/")
-val prodApiBaseUrl = providers.gradleProperty("WORKTIME_ANDROID_PROD_API_BASE_URL").orElse("https://worktime.tjor.im/")
-val stagingApiBaseUrl =
-    providers.gradleProperty("WORKTIME_ANDROID_STAGING_API_BASE_URL").orElse("https://staging.placeholder.invalid/")
-val devOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_AUTHORITY").orElse("http://10.0.2.2:8080/realms/worktime")
-val prodOidcAuthority = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_AUTHORITY").orElse("https://auth.tjor.im/realms/worktime")
-val stagingOidcAuthority =
-    providers
-        .gradleProperty("WORKTIME_ANDROID_STAGING_OIDC_AUTHORITY")
-        .orElse("https://staging-auth.placeholder.invalid/realms/worktime")
-val devOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_DEV_OIDC_CLIENT_ID").orElse("worktime")
-val prodOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_PROD_OIDC_CLIENT_ID").orElse("worktime")
-val stagingOidcClientId = providers.gradleProperty("WORKTIME_ANDROID_STAGING_OIDC_CLIENT_ID").orElse("worktime")
-val oidcScope = providers.gradleProperty("WORKTIME_ANDROID_OIDC_SCOPE").orElse("openid profile email offline_access")
-val prodCertificatePinHosts =
-    providers
-        .gradleProperty("WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS")
-        .orElse("worktime.tjor.im,auth.tjor.im")
-// Production TLS is issued by Google Trust Services (WE1 intermediate, root
-// GTS Root R4), not Let's Encrypt. Pin the WE1 intermediate key so routine
-// leaf renewals don't break pinning, plus the GTS Root R4 root key as a
-// backup pin so an intermediate rotation (e.g. WE1 -> WE2) doesn't lock the
-// app out before this default can be updated.
-val prodCertificatePins =
-    providers
-        .gradleProperty("WORKTIME_ANDROID_PROD_CERTIFICATE_PINS")
-        .orElse(
-            "sha256/kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=," +
-                "sha256/mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c="
-        )
+val localProperties =
+    Properties().also { props ->
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { props.load(it) }
+        }
+    }
 
-val resolvedProdCertificatePinHosts = CertPinning.splitCsv(prodCertificatePinHosts.get())
-val resolvedProdCertificatePins = CertPinning.splitCsv(prodCertificatePins.get())
-CertPinning.requireValidPinFormats(resolvedProdCertificatePins)
-CertPinning.requireHostsConfiguredForPins(resolvedProdCertificatePinHosts, resolvedProdCertificatePins)
+val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":").lowercase() }
+
+fun isReleaseArtifactRequested(): Boolean {
+    if (requestedTaskNames.isEmpty()) {
+        return false
+    }
+
+    val nonArtifactKeywords = listOf("test", "lint", "detekt", "ktlint")
+    return requestedTaskNames.any { taskName ->
+        (taskName.contains("release") && nonArtifactKeywords.none { taskName.contains(it) }) ||
+            taskName in listOf("assemble", "build", "bundle")
+    }
+}
+
+fun resolveConfigValue(key: String, envKey: String, required: Boolean, default: String = ""): String {
+    // A blank value counts as missing so a placeholder line in local.properties
+    // still falls through to the next source or the default.
+    val explicitValue =
+        sequenceOf(
+            localProperties.getProperty(key),
+            providers.gradleProperty(key).orNull,
+            providers.environmentVariable(envKey).orNull
+        ).firstOrNull { !it.isNullOrBlank() }
+    if (required && explicitValue.isNullOrBlank()) {
+        error(
+            "Missing required build property '$key'. " +
+                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'."
+        )
+    }
+    return explicitValue ?: default
+}
+
+val releaseArtifactRequested = isReleaseArtifactRequested()
+val debugApiBaseUrl =
+    resolveConfigValue(
+        "ANDROID_DEBUG_API_BASE_URL",
+        "ANDROID_DEBUG_API_BASE_URL",
+        required = false,
+        default = "http://10.0.2.2:8000/"
+    )
+val releaseApiBaseUrl =
+    resolveConfigValue(
+        "ANDROID_API_BASE_URL",
+        "ANDROID_API_BASE_URL",
+        required = releaseArtifactRequested,
+        default = if (releaseArtifactRequested) "" else "https://release.placeholder.invalid/"
+    )
+val debugOidcClientId =
+    resolveConfigValue(
+        "ANDROID_DEBUG_OIDC_CLIENT_ID",
+        "ANDROID_DEBUG_OIDC_CLIENT_ID",
+        required = false,
+        default = "worktime"
+    )
+val releaseOidcClientId =
+    resolveConfigValue(
+        "ANDROID_OIDC_CLIENT_ID",
+        "ANDROID_OIDC_CLIENT_ID",
+        required = false,
+        default = "worktime"
+    )
+val oidcScope =
+    resolveConfigValue(
+        "ANDROID_OIDC_SCOPE",
+        "ANDROID_OIDC_SCOPE",
+        required = false,
+        default = "openid profile email offline_access"
+    )
+val releaseCertificatePinHosts =
+    resolveConfigValue(
+        "ANDROID_CERTIFICATE_PIN_HOST",
+        "ANDROID_CERTIFICATE_PIN_HOST",
+        required = releaseArtifactRequested
+    )
+val releaseCertificatePins =
+    resolveConfigValue(
+        "ANDROID_CERTIFICATE_PINS",
+        "ANDROID_CERTIFICATE_PINS",
+        required = releaseArtifactRequested
+    )
+
+val resolvedReleaseCertificatePinHost = releaseCertificatePinHosts.trim()
+val resolvedReleaseCertificatePins = CertPinning.splitCsv(releaseCertificatePins)
+if (releaseArtifactRequested) {
+    CertPinning.requireValidPinFormats(resolvedReleaseCertificatePins)
+    CertPinning.requireHostConfiguredForPins(resolvedReleaseCertificatePinHost, resolvedReleaseCertificatePins)
+}
 
 android {
     namespace = "com.worktime.android"
     compileSdk = 37
 
-    val keystorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
-    val keystorePassword = providers.environmentVariable("STORE_PASSWORD").orNull
-    val keystoreKeyAlias = providers.environmentVariable("KEY_ALIAS").orNull
-    val keystoreKeyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+    val keystorePath = localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePassword =
+        localProperties.getProperty("keystorePassword")
+            ?: providers.environmentVariable("STORE_PASSWORD").orNull
+    val keystoreKeyAlias = localProperties.getProperty("keyAlias") ?: providers.environmentVariable("KEY_ALIAS").orNull
+    val keystoreKeyPassword =
+        localProperties.getProperty("keyPassword") ?: providers.environmentVariable("KEY_PASSWORD").orNull
     signingConfigs {
         if (!keystorePath.isNullOrBlank() &&
             !keystorePassword.isNullOrBlank() &&
@@ -83,61 +143,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    flavorDimensions += "environment"
-
-    productFlavors {
-        create("dev") {
-            dimension = "environment"
-            applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
-            val redirectScheme = "com.worktime.android.dev"
-            buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("dev"))
-            buildConfigField("String", "API_BASE_URL", quoted(devApiBaseUrl.get()))
-            buildConfigField("String", "OIDC_AUTHORITY", quoted(devOidcAuthority.get()))
-            buildConfigField("String", "OIDC_CLIENT_ID", quoted(devOidcClientId.get()))
-            buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope.get()))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
-            buildConfigField("String", "CERTIFICATE_PIN_HOSTS", quoted(""))
-            buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
-            manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
-        }
-        create("prod") {
-            dimension = "environment"
-            buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("prod"))
-            buildConfigField("String", "API_BASE_URL", quoted(prodApiBaseUrl.get()))
-            buildConfigField("String", "OIDC_AUTHORITY", quoted(prodOidcAuthority.get()))
-            buildConfigField("String", "OIDC_CLIENT_ID", quoted(prodOidcClientId.get()))
-            buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope.get()))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("com.worktime.android:/oauth2redirect"))
-            buildConfigField("String", "CERTIFICATE_PIN_HOSTS", quoted(prodCertificatePinHosts.get()))
-            buildConfigField("String", "CERTIFICATE_PINS", quoted(prodCertificatePins.get()))
-            manifestPlaceholders["appAuthRedirectScheme"] = "com.worktime.android"
-        }
-    }
-
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-        }
-        create("staging") {
-            initWith(getByName("debug"))
-            matchingFallbacks += listOf("debug")
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
-            val stagingRedirectScheme = "com.worktime.android.staging"
-            // Overrides the active flavor's endpoint/OIDC/pinning fields so every
-            // staging variant (devStaging, prodStaging) talks to the staging
-            // backend regardless of which environment flavor it is combined with.
-            buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("staging"))
-            buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl.get()))
-            buildConfigField("String", "OIDC_AUTHORITY", quoted(stagingOidcAuthority.get()))
-            buildConfigField("String", "OIDC_CLIENT_ID", quoted(stagingOidcClientId.get()))
-            buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope.get()))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$stagingRedirectScheme:/oauth2redirect"))
-            buildConfigField("String", "CERTIFICATE_PIN_HOSTS", quoted(""))
+            val redirectScheme = "com.worktime.android.debug"
+            buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("debug"))
+            buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
+            buildConfigField("String", "OIDC_CLIENT_ID", quoted(debugOidcClientId))
+            buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
+            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
-            manifestPlaceholders["appAuthRedirectScheme"] = stagingRedirectScheme
+            manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
         }
         release {
             isMinifyEnabled = true
@@ -145,11 +163,24 @@ android {
             val releaseSigningConfig = signingConfigs.findByName("release")
             if (releaseSigningConfig != null) {
                 signingConfig = releaseSigningConfig
+            } else if (releaseArtifactRequested) {
+                error(
+                    "Release build requested but signing credentials are not set " +
+                        "(KEYSTORE_PATH, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD)."
+                )
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("prod"))
+            buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
+            buildConfigField("String", "OIDC_CLIENT_ID", quoted(releaseOidcClientId))
+            buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
+            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("com.worktime.android:/oauth2redirect"))
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(resolvedReleaseCertificatePinHost))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins))
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.worktime.android"
         }
     }
 
@@ -212,6 +243,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.mockk)
+    testImplementation(libs.json)
 }
 
 detekt {

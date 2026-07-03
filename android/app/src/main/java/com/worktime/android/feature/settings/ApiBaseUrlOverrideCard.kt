@@ -35,7 +35,7 @@ fun ApiBaseUrlOverrideCard(appConfig: AppConfig, apiBaseUrlOverride: String?, on
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Point this build at a different backend without reinstalling. Reset to return to the flavor default (${appConfig.apiBaseUrl}).",
+                text = "Point this build at a different backend without reinstalling. Reset to return to the build default (${appConfig.apiBaseUrl}).",
                 style = MaterialTheme.typography.bodySmall
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

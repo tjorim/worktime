@@ -71,6 +71,14 @@ class AccountProfile(BaseModel):
     capabilities: AccountCapabilities
 
 
+class OidcDiscoveryConfig(BaseModel):
+    """Public OIDC endpoints discovered by native clients from the API."""
+
+    issuer: str
+    authorization_url: str
+    token_url: str
+
+
 def _validate_hex_color(value: str | None) -> str | None:
     """Validate that a color value is in #RRGGBB hex format."""
     if value is None:

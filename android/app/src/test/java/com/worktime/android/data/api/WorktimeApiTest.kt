@@ -54,7 +54,7 @@ class WorktimeApiTest {
         )
         val api =
             WorktimeApi.create(
-                baseUrl = "http://flavor-default.invalid/",
+                baseUrl = "http://build-default.invalid/",
                 enableNetworkLogging = false,
                 baseUrlOverrideProvider = { server.url("/").toString() }
             )

@@ -15,8 +15,8 @@ import kotlinx.coroutines.runBlocking
 
 /**
  * Persists an optional runtime override for the API base URL, letting an installed build
- * target a different backend without reinstalling another Gradle flavor.
- * When no override is set, callers fall back to the flavor-configured `AppConfig.apiBaseUrl`.
+ * target a different backend without reinstalling another build variant.
+ * When no override is set, callers fall back to the build-configured `AppConfig.apiBaseUrl`.
  */
 class ApiBaseUrlOverrideStore(context: Context) {
     private val dataStore =

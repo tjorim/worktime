@@ -76,36 +76,36 @@ class CertPinningTest {
         }
     }
 
-    // ── requireHostsConfiguredForPins ────────────────────────────────────────
+    // ── requireHostConfiguredForPins ─────────────────────────────────────────
 
     @Test
-    fun `requireHostsConfiguredForPins accepts matching hosts and pins`() {
-        CertPinning.requireHostsConfiguredForPins(
-            hosts = listOf("worktime.tjor.im"),
+    fun `requireHostConfiguredForPins accepts matching host and pins`() {
+        CertPinning.requireHostConfiguredForPins(
+            host = "worktime.tjor.im",
             pins = listOf("sha256/abc"),
         )
     }
 
     @Test
-    fun `requireHostsConfiguredForPins accepts both empty`() {
-        CertPinning.requireHostsConfiguredForPins(hosts = emptyList(), pins = emptyList())
+    fun `requireHostConfiguredForPins accepts both empty`() {
+        CertPinning.requireHostConfiguredForPins(host = "", pins = emptyList())
     }
 
     @Test
-    fun `requireHostsConfiguredForPins fails when pins are configured but hosts are empty`() {
+    fun `requireHostConfiguredForPins fails when pins are configured but host is empty`() {
         val exception =
             assertThrows(IllegalStateException::class.java) {
-                CertPinning.requireHostsConfiguredForPins(hosts = emptyList(), pins = listOf("sha256/abc"))
+                CertPinning.requireHostConfiguredForPins(host = "", pins = listOf("sha256/abc"))
             }
-        assertTrue(exception.message.orEmpty().contains("WORKTIME_ANDROID_PROD_CERTIFICATE_PIN_HOSTS"))
+        assertTrue(exception.message.orEmpty().contains("ANDROID_CERTIFICATE_PIN_HOST"))
     }
 
     @Test
-    fun `requireHostsConfiguredForPins fails when hosts are configured but pins are empty`() {
+    fun `requireHostConfiguredForPins fails when host is configured but pins are empty`() {
         val exception =
             assertThrows(IllegalStateException::class.java) {
-                CertPinning.requireHostsConfiguredForPins(hosts = listOf("worktime.tjor.im"), pins = emptyList())
+                CertPinning.requireHostConfiguredForPins(host = "worktime.tjor.im", pins = emptyList())
             }
-        assertTrue(exception.message.orEmpty().contains("WORKTIME_ANDROID_PROD_CERTIFICATE_PINS"))
+        assertTrue(exception.message.orEmpty().contains("ANDROID_CERTIFICATE_PINS"))
     }
 }
