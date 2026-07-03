@@ -179,7 +179,6 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
-        unitTests.isIncludeAndroidResources = true
     }
 }
 
@@ -219,7 +218,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.okhttp.mockwebserver)
-    testImplementation(libs.robolectric)
+    testImplementation(libs.mockk)
 }
 
 detekt {
