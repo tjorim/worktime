@@ -1,4 +1,5 @@
 import com.worktime.buildlogic.CertPinning
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -9,6 +10,14 @@ plugins {
 }
 
 fun quoted(value: String) = "\"$value\""
+
+val localProperties =
+    Properties().also { props ->
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { props.load(it) }
+        }
+    }
 
 val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":").lowercase() }
 
@@ -24,15 +33,21 @@ fun isReleaseArtifactRequested(): Boolean {
     }
 }
 
-fun resolveConfigValue(key: String, required: Boolean, default: String = ""): String {
+fun resolveConfigValue(
+    key: String,
+    envKey: String,
+    required: Boolean,
+    default: String = "",
+): String {
     val value =
-        providers.gradleProperty(key).orNull
-            ?: providers.environmentVariable(key).orNull
+        localProperties.getProperty(key)
+            ?: providers.gradleProperty(key).orNull
+            ?: providers.environmentVariable(envKey).orNull
             ?: default.takeIf { it.isNotBlank() }
     if (required && value.isNullOrBlank()) {
         error(
             "Missing required build property '$key'. " +
-                "Set it as a Gradle property or as the env var '$key'."
+                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'."
         )
     }
     return value.orEmpty()
@@ -42,11 +57,13 @@ val releaseArtifactRequested = isReleaseArtifactRequested()
 val debugApiBaseUrl =
     resolveConfigValue(
         "ANDROID_DEBUG_API_BASE_URL",
+        "ANDROID_DEBUG_API_BASE_URL",
         required = false,
         default = "http://10.0.2.2:8000/"
     )
 val releaseApiBaseUrl =
     resolveConfigValue(
+        "ANDROID_API_BASE_URL",
         "ANDROID_API_BASE_URL",
         required = releaseArtifactRequested,
         default = if (releaseArtifactRequested) "" else "https://release.placeholder.invalid/"
@@ -54,11 +71,13 @@ val releaseApiBaseUrl =
 val debugOidcClientId =
     resolveConfigValue(
         "ANDROID_DEBUG_OIDC_CLIENT_ID",
+        "ANDROID_DEBUG_OIDC_CLIENT_ID",
         required = false,
         default = "worktime"
     )
 val releaseOidcClientId =
     resolveConfigValue(
+        "ANDROID_OIDC_CLIENT_ID",
         "ANDROID_OIDC_CLIENT_ID",
         required = false,
         default = "worktime"
@@ -66,16 +85,19 @@ val releaseOidcClientId =
 val oidcScope =
     resolveConfigValue(
         "ANDROID_OIDC_SCOPE",
+        "ANDROID_OIDC_SCOPE",
         required = false,
         default = "openid profile email offline_access"
     )
 val releaseCertificatePinHosts =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PIN_HOST",
+        "ANDROID_CERTIFICATE_PIN_HOST",
         required = releaseArtifactRequested
     )
 val releaseCertificatePins =
     resolveConfigValue(
+        "ANDROID_CERTIFICATE_PINS",
         "ANDROID_CERTIFICATE_PINS",
         required = releaseArtifactRequested
     )
@@ -91,10 +113,13 @@ android {
     namespace = "com.worktime.android"
     compileSdk = 37
 
-    val keystorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
-    val keystorePassword = providers.environmentVariable("STORE_PASSWORD").orNull
-    val keystoreKeyAlias = providers.environmentVariable("KEY_ALIAS").orNull
-    val keystoreKeyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+    val keystorePath = localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePassword =
+        localProperties.getProperty("keystorePassword")
+            ?: providers.environmentVariable("STORE_PASSWORD").orNull
+    val keystoreKeyAlias = localProperties.getProperty("keyAlias") ?: providers.environmentVariable("KEY_ALIAS").orNull
+    val keystoreKeyPassword =
+        localProperties.getProperty("keyPassword") ?: providers.environmentVariable("KEY_PASSWORD").orNull
     signingConfigs {
         if (!keystorePath.isNullOrBlank() &&
             !keystorePassword.isNullOrBlank() &&
