@@ -26,7 +26,7 @@ class OidcSessionManager(
     private val appConfig: AppConfig,
     private val sessionStore: SecureSessionStore,
     private val apiBaseUrlProvider: () -> String? = { null },
-    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(),
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery()
 ) : SessionController {
     private val tokenMutex = Mutex()
     private val configMutex = Mutex()
