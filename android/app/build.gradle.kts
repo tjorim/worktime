@@ -17,7 +17,7 @@ fun isReleaseArtifactRequested(): Boolean {
         return false
     }
 
-    val artifactVerbs = listOf("assemble", "bundle", "install", "package")
+    val artifactVerbs = listOf("assemble", "bundle", "install", "package", "publish", "upload")
     return requestedTaskNames.any { taskName ->
         (taskName.contains("release") && artifactVerbs.any { verb -> taskName.contains(verb) }) ||
             taskName in listOf("assemble", "build", "bundle")
@@ -27,7 +27,7 @@ fun isReleaseArtifactRequested(): Boolean {
 fun resolveConfigValue(key: String, required: Boolean, default: String = ""): String {
     val value =
         providers.gradleProperty(key).orNull
-            ?: System.getenv(key)
+            ?: providers.environmentVariable(key).orNull
             ?: default.takeIf { it.isNotBlank() }
     if (required && value.isNullOrBlank()) {
         error(
