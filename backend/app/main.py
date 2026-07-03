@@ -22,8 +22,8 @@ from .config.cors import get_cors_origins
 from .database import init_db
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.timing import TimingMiddleware
-from .routers.hday import router as hday_router
 from .routers.auth import router as auth_router
+from .routers.hday import router as hday_router
 from .routers.health import router as health_router
 from .routers.holidays import router as holidays_router
 from .routers.metrics import router as metrics_router
