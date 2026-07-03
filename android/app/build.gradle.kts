@@ -24,11 +24,7 @@ fun isReleaseArtifactRequested(): Boolean {
     }
 }
 
-fun resolveConfigValue(
-    key: String,
-    required: Boolean,
-    default: String = "",
-): String {
+fun resolveConfigValue(key: String, required: Boolean, default: String = ""): String {
     val value =
         providers.gradleProperty(key).orNull
             ?: System.getenv(key)
@@ -36,7 +32,7 @@ fun resolveConfigValue(
     if (required && value.isNullOrBlank()) {
         error(
             "Missing required build property '$key'. " +
-                "Set it as a Gradle property or as the env var '$key'.",
+                "Set it as a Gradle property or as the env var '$key'."
         )
     }
     return value.orEmpty()
@@ -47,41 +43,41 @@ val debugApiBaseUrl =
     resolveConfigValue(
         "ANDROID_DEBUG_API_BASE_URL",
         required = false,
-        default = "http://10.0.2.2:8000/",
+        default = "http://10.0.2.2:8000/"
     )
 val releaseApiBaseUrl =
     resolveConfigValue(
         "ANDROID_API_BASE_URL",
         required = releaseArtifactRequested,
-        default = if (releaseArtifactRequested) "" else "https://release.placeholder.invalid/",
+        default = if (releaseArtifactRequested) "" else "https://release.placeholder.invalid/"
     )
 val debugOidcClientId =
     resolveConfigValue(
         "ANDROID_DEBUG_OIDC_CLIENT_ID",
         required = false,
-        default = "worktime",
+        default = "worktime"
     )
 val releaseOidcClientId =
     resolveConfigValue(
         "ANDROID_OIDC_CLIENT_ID",
         required = false,
-        default = "worktime",
+        default = "worktime"
     )
 val oidcScope =
     resolveConfigValue(
         "ANDROID_OIDC_SCOPE",
         required = false,
-        default = "openid profile email offline_access",
+        default = "openid profile email offline_access"
     )
 val releaseCertificatePinHosts =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PIN_HOST",
-        required = releaseArtifactRequested,
+        required = releaseArtifactRequested
     )
 val releaseCertificatePins =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PINS",
-        required = releaseArtifactRequested,
+        required = releaseArtifactRequested
     )
 
 val resolvedReleaseCertificatePinHost = releaseCertificatePinHosts.trim()
@@ -145,7 +141,7 @@ android {
             } else if (releaseArtifactRequested) {
                 error(
                     "Release build requested but signing credentials are not set " +
-                        "(KEYSTORE_PATH, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD).",
+                        "(KEYSTORE_PATH, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD)."
                 )
             }
             proguardFiles(
