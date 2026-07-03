@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.worktime.android.core.config.AppConfig
+import com.worktime.android.core.network.CertificatePinnerProvider
 import com.worktime.android.core.storage.SecureSessionStore
 import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,13 +21,19 @@ import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
+import okhttp3.OkHttpClient
 
 class OidcSessionManager(
     private val context: Context,
     private val appConfig: AppConfig,
     private val sessionStore: SecureSessionStore,
     private val apiBaseUrlProvider: () -> String? = { null },
-    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery()
+    // Discovery returns the endpoints the whole auth flow trusts, so it must be
+    // pinned exactly like the API client; a plain OkHttpClient would let a
+    // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(
+        OkHttpClient.Builder().certificatePinner(CertificatePinnerProvider.fromConfig(appConfig)).build()
+    )
 ) : SessionController {
     private val tokenMutex = Mutex()
     private val configMutex = Mutex()

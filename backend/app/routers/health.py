@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..config.oidc_config import OIDCTokenError, _resolve_jwks_uri
 from ..database.engine import get_session
 
 logger = logging.getLogger(__name__)
@@ -77,14 +78,16 @@ async def readiness(
 
     async def _check_auth() -> tuple[str, bool]:
         """Check that the OIDC provider's JWKS endpoint is reachable."""
-        from ..config.oidc_config import _get_jwks_uri
-        jwks_uri = _get_jwks_uri()
         try:
+            jwks_uri = await _resolve_jwks_uri()
             async with httpx.AsyncClient(timeout=3.0) as client:
                 response = await client.get(jwks_uri)
             if response.status_code == 200:
                 return "ok", False
             logger.warning("Health check: OIDC provider returned unexpected status %s", response.status_code)
+            return "unreachable", True
+        except OIDCTokenError as e:
+            logger.error("Health check failed: OIDC discovery failed", exc_info=e)
             return "unreachable", True
         except Exception as e:
             logger.error("Health check failed: OIDC provider unreachable", exc_info=e)

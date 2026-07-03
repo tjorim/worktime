@@ -5,12 +5,14 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -66,5 +68,18 @@ class OidcServiceConfigurationDiscoveryTest {
             "https://auth.example.test/realms/worktime/protocol/openid-connect/token",
             config.tokenEndpoint.toString()
         )
+    }
+
+    @Test
+    fun `fetch throws with bounded error snippet on non-2xx response`() = runTest {
+        server.enqueue(MockResponse.Builder().code(502).body("x".repeat(5000)).build())
+
+        val exception =
+            runCatching { OidcServiceConfigurationDiscovery(OkHttpClient()).fetch(server.url("/").toString()) }
+                .exceptionOrNull()
+
+        assertTrue(exception is IOException)
+        assertTrue(exception!!.message!!.contains("HTTP 502"))
+        assertTrue(exception.message!!.length < 1200)
     }
 }

@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from types import SimpleNamespace
 
+import httpx
 import pytest
+from httpx import ASGITransport, AsyncClient
 
-from app.config import oidc_config
-from app.config import settings
+from app.config import oidc_config, settings
 from app.main import app
+from app.routers import auth as auth_routes
 
 
 def test_derive_username_and_display_name_from_preferred_username() -> None:
@@ -18,27 +22,185 @@ def test_derive_username_and_display_name_from_preferred_username() -> None:
     assert display_name == "Alice Smith"
 
 
-def test_oidc_config_endpoint_returns_public_provider_urls(monkeypatch) -> None:
-    from fastapi.testclient import TestClient
+def _mock_discovery_client(handler):
+    """Return a factory producing an httpx client backed by a mock transport."""
+    return lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
-    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", "https://auth.example.test/realms/worktime/")
 
-    response = TestClient(app).get("/api/auth/oidc-config")
+@pytest.mark.asyncio
+async def test_resolve_jwks_uri_requires_issuer_without_override(monkeypatch) -> None:
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", "")
+
+    with pytest.raises(oidc_config.OIDCTokenError, match="OIDC_ISSUER_URL is not configured"):
+        await oidc_config._resolve_jwks_uri()
+
+
+def test_resolve_jwks_uri_uses_override_without_issuer(monkeypatch) -> None:
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "https://auth.example.test/jwks.json")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", "")
+
+    assert asyncio.run(oidc_config._resolve_jwks_uri()) == "https://auth.example.test/jwks.json"
+
+
+@pytest.mark.asyncio
+async def test_resolve_jwks_uri_discovers_and_caches(monkeypatch) -> None:
+    issuer = "https://auth.example.test/realms/worktime"
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", issuer)
+    monkeypatch.setattr(oidc_config, "_jwks_uri_cache", None)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        assert str(request.url) == f"{issuer}/.well-known/openid-configuration"
+        return httpx.Response(
+            200,
+            content=json.dumps({"jwks_uri": f"{issuer}/protocol/openid-connect/certs"}),
+        )
+
+    monkeypatch.setattr(oidc_config, "_http_client", _mock_discovery_client(handler))
+
+    first = await oidc_config._resolve_jwks_uri()
+    second = await oidc_config._resolve_jwks_uri()
+
+    assert first == f"{issuer}/protocol/openid-connect/certs"
+    assert second == first
+    assert calls["n"] == 1
+
+
+@pytest.mark.asyncio
+async def test_resolve_jwks_uri_raises_when_discovery_fails(monkeypatch) -> None:
+    issuer = "https://auth.example.test/realms/worktime"
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", issuer)
+    monkeypatch.setattr(oidc_config, "_jwks_uri_cache", None)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    monkeypatch.setattr(oidc_config, "_http_client", _mock_discovery_client(handler))
+
+    with pytest.raises(oidc_config.OIDCTokenError, match="OIDC discovery failed"):
+        await oidc_config._resolve_jwks_uri()
+
+
+@pytest.mark.asyncio
+async def test_resolve_jwks_uri_raises_when_document_missing_jwks_uri(monkeypatch) -> None:
+    issuer = "https://auth.example.test/realms/worktime"
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", issuer)
+    monkeypatch.setattr(oidc_config, "_jwks_uri_cache", None)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=json.dumps({"issuer": issuer}))
+
+    monkeypatch.setattr(oidc_config, "_http_client", _mock_discovery_client(handler))
+
+    with pytest.raises(oidc_config.OIDCTokenError, match="OIDC discovery failed"):
+        await oidc_config._resolve_jwks_uri()
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_returns_discovered_provider_urls(monkeypatch) -> None:
+    issuer = "https://auth.example.test/realms/worktime"
+    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", issuer + "/")
+    monkeypatch.setattr(auth_routes, "_config_cache", {})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == f"{issuer}/.well-known/openid-configuration"
+        return httpx.Response(
+            200,
+            json={
+                "issuer": issuer,
+                "authorization_endpoint": f"{issuer}/protocol/openid-connect/auth",
+                "token_endpoint": f"{issuer}/protocol/openid-connect/token",
+            },
+        )
+
+    monkeypatch.setattr(auth_routes, "_http_client", _mock_discovery_client(handler))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
 
     assert response.status_code == 200
     assert response.json() == {
-        "issuer": "https://auth.example.test/realms/worktime",
-        "authorization_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/auth",
-        "token_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/token",
+        "issuer": issuer,
+        "authorization_url": f"{issuer}/protocol/openid-connect/auth",
+        "token_url": f"{issuer}/protocol/openid-connect/token",
     }
 
 
-def test_oidc_config_endpoint_returns_503_when_issuer_unset(monkeypatch) -> None:
-    from fastapi.testclient import TestClient
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_caches_discovery(monkeypatch) -> None:
+    issuer = "https://auth.example.test/application/o/worktime"
+    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", issuer)
+    monkeypatch.setattr(auth_routes, "_config_cache", {})
+    calls = {"n": 0}
 
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(
+            200,
+            json={
+                "issuer": issuer,
+                "authorization_endpoint": f"{issuer}/authorize/",
+                "token_endpoint": f"{issuer}/token/",
+            },
+        )
+
+    monkeypatch.setattr(auth_routes, "_http_client", _mock_discovery_client(handler))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.get("/api/auth/oidc-config")
+        second = await client.get("/api/auth/oidc-config")
+
+    assert first.status_code == 200
+    assert second.json() == first.json()
+    assert second.json()["authorization_url"] == f"{issuer}/authorize/"
+    assert calls["n"] == 1
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_returns_503_when_discovery_fails(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", "https://auth.example.test/realms/worktime")
+    monkeypatch.setattr(auth_routes, "_config_cache", {})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    monkeypatch.setattr(auth_routes, "_http_client", _mock_discovery_client(handler))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "OIDC discovery failed"
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_returns_503_when_document_incomplete(monkeypatch) -> None:
+    issuer = "https://auth.example.test/realms/worktime"
+    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", issuer)
+    monkeypatch.setattr(auth_routes, "_config_cache", {})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"issuer": issuer})
+
+    monkeypatch.setattr(auth_routes, "_http_client", _mock_discovery_client(handler))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
+
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_returns_503_when_issuer_unset(monkeypatch) -> None:
     monkeypatch.setattr(settings, "OIDC_ISSUER_URL", "")
 
-    response = TestClient(app).get("/api/auth/oidc-config")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
 
     assert response.status_code == 503
 

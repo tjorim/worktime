@@ -34,18 +34,21 @@ fun isReleaseArtifactRequested(): Boolean {
 }
 
 fun resolveConfigValue(key: String, envKey: String, required: Boolean, default: String = ""): String {
-    val value =
-        localProperties.getProperty(key)
-            ?: providers.gradleProperty(key).orNull
-            ?: providers.environmentVariable(envKey).orNull
-            ?: default.takeIf { it.isNotBlank() }
-    if (required && value.isNullOrBlank()) {
+    // A blank value counts as missing so a placeholder line in local.properties
+    // still falls through to the next source or the default.
+    val explicitValue =
+        sequenceOf(
+            localProperties.getProperty(key),
+            providers.gradleProperty(key).orNull,
+            providers.environmentVariable(envKey).orNull
+        ).firstOrNull { !it.isNullOrBlank() }
+    if (required && explicitValue.isNullOrBlank()) {
         error(
             "Missing required build property '$key'. " +
                 "Set it in local.properties, as a Gradle property, or as the env var '$envKey'."
         )
     }
-    return value.orEmpty()
+    return explicitValue ?: default
 }
 
 val releaseArtifactRequested = isReleaseArtifactRequested()
