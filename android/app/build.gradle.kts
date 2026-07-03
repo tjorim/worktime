@@ -82,8 +82,10 @@ val releaseCertificatePins =
 
 val resolvedReleaseCertificatePinHost = releaseCertificatePinHosts.trim()
 val resolvedReleaseCertificatePins = CertPinning.splitCsv(releaseCertificatePins)
-CertPinning.requireValidPinFormats(resolvedReleaseCertificatePins)
-CertPinning.requireHostConfiguredForPins(resolvedReleaseCertificatePinHost, resolvedReleaseCertificatePins)
+if (releaseArtifactRequested) {
+    CertPinning.requireValidPinFormats(resolvedReleaseCertificatePins)
+    CertPinning.requireHostConfiguredForPins(resolvedReleaseCertificatePinHost, resolvedReleaseCertificatePins)
+}
 
 android {
     namespace = "com.worktime.android"
