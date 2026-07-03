@@ -33,12 +33,7 @@ fun isReleaseArtifactRequested(): Boolean {
     }
 }
 
-fun resolveConfigValue(
-    key: String,
-    envKey: String,
-    required: Boolean,
-    default: String = "",
-): String {
+fun resolveConfigValue(key: String, envKey: String, required: Boolean, default: String = ""): String {
     val value =
         localProperties.getProperty(key)
             ?: providers.gradleProperty(key).orNull
