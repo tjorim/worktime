@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from app.config import oidc_config
+from app.config import settings
+from app.main import app
 
 
 def test_derive_username_and_display_name_from_preferred_username() -> None:
@@ -14,6 +16,31 @@ def test_derive_username_and_display_name_from_preferred_username() -> None:
     username, display_name = oidc_config._derive_username_and_display_name(claims, "sub-123")
     assert username == "alice"
     assert display_name == "Alice Smith"
+
+
+def test_oidc_config_endpoint_returns_public_provider_urls(monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", "https://auth.example.test/realms/worktime/")
+
+    response = TestClient(app).get("/api/auth/oidc-config")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "issuer": "https://auth.example.test/realms/worktime",
+        "authorization_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/auth",
+        "token_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/token",
+    }
+
+
+def test_oidc_config_endpoint_returns_503_when_issuer_unset(monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(settings, "OIDC_ISSUER_URL", "")
+
+    response = TestClient(app).get("/api/auth/oidc-config")
+
+    assert response.status_code == 503
 
 
 def test_derive_username_from_email_local_part() -> None:

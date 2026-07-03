@@ -21,7 +21,12 @@ import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
 
-class OidcSessionManager(private val context: Context, private val appConfig: AppConfig, private val sessionStore: SecureSessionStore) : SessionController {
+class OidcSessionManager(
+    private val context: Context,
+    private val appConfig: AppConfig,
+    private val sessionStore: SecureSessionStore,
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(appConfig.apiBaseUrl),
+) : SessionController {
     private val tokenMutex = Mutex()
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
@@ -106,14 +111,7 @@ class OidcSessionManager(private val context: Context, private val appConfig: Ap
         _sessionState.value = SessionState.LoggedOut
     }
 
-    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration = suspendCancellableCoroutine { continuation ->
-        AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(appConfig.oidcAuthority)) { config, ex ->
-            when {
-                config != null -> continuation.resume(config)
-                else -> continuation.resumeWith(Result.failure(ex ?: IllegalStateException("Failed to load OIDC configuration")))
-            }
-        }
-    }
+    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration = oidcDiscovery.fetch()
 
     private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
         suspendCancellableCoroutine { continuation ->

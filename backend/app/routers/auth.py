@@ -11,16 +11,18 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
 from app.database.engine import get_session
+from app.schemas import OidcDiscoveryConfig
 
 logger = logging.getLogger(__name__)
 
+router = APIRouter(prefix="/auth", tags=["Auth"])
 _bearer_scheme = HTTPBearer(auto_error=True)
 
 
@@ -28,6 +30,22 @@ _bearer_scheme = HTTPBearer(auto_error=True)
 class AuthenticatedPrincipal:
     user_id: int
     is_admin: bool = False
+
+
+@router.get("/oidc-config", response_model=OidcDiscoveryConfig)
+def oidc_config() -> OidcDiscoveryConfig:
+    """Return public OIDC endpoints for native clients."""
+    if not settings.OIDC_ISSUER_URL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OIDC not configured on this server",
+        )
+    issuer = settings.OIDC_ISSUER_URL.rstrip("/")
+    return OidcDiscoveryConfig(
+        issuer=issuer,
+        authorization_url=f"{issuer}/protocol/openid-connect/auth",
+        token_url=f"{issuer}/protocol/openid-connect/token",
+    )
 
 
 async def get_authenticated_principal(
@@ -105,4 +123,3 @@ def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal)
         return
     if principal.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-

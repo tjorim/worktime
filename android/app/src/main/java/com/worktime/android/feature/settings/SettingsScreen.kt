@@ -60,7 +60,7 @@ fun SettingsScreen(
                 if (apiBaseUrlOverride != null) {
                     text("Build default", appConfig.apiBaseUrl)
                 }
-                text("OIDC authority", appConfig.oidcAuthority)
+                text("OIDC config", "${(apiBaseUrlOverride ?: appConfig.apiBaseUrl).trimEnd('/')}/api/auth/oidc-config")
                 text("OIDC client ID", appConfig.oidcClientId)
                 text("OIDC scope", appConfig.oidcScope)
             }

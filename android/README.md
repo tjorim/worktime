@@ -19,8 +19,6 @@ Override environment values with Gradle properties:
 
 - `ANDROID_DEBUG_API_BASE_URL`
 - `ANDROID_API_BASE_URL`
-- `ANDROID_DEBUG_OIDC_ISSUER_URL`
-- `ANDROID_OIDC_ISSUER_URL`
 - `ANDROID_DEBUG_OIDC_CLIENT_ID`
 - `ANDROID_OIDC_CLIENT_ID`
 - `ANDROID_OIDC_SCOPE`
@@ -34,7 +32,6 @@ builds a signed `release` APK and requires these repository secrets:
 
 - `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` - release signing
 - `ANDROID_API_BASE_URL` - e.g. `https://worktime.tjor.im/`
-- `ANDROID_OIDC_ISSUER_URL` - e.g. `https://auth.tjor.im/realms/worktime`
 - `ANDROID_CERTIFICATE_PIN_HOST` - e.g. `worktime.tjor.im`
 - `ANDROID_CERTIFICATE_PINS` - comma-separated `sha256/<base64 SPKI hash>` pins,
   used for OkHttp certificate pinning in release builds
@@ -42,7 +39,9 @@ builds a signed `release` APK and requires these repository secrets:
 `assembleRelease` fails fast when these production values are missing instead
 of silently shipping an APK with placeholder endpoints or stale hardcoded pins.
 The pin host should be the production API host used by the app's OkHttp client.
-The OIDC authority is handled by AppAuth/browser flows, not this API pinner.
+The OIDC authorization and token endpoints are discovered from
+`${ANDROID_API_BASE_URL}/api/auth/oidc-config`, so the Android workflow does not
+need an OIDC issuer secret.
 
 Prefer pinning the current issuing intermediate CA plus a backup such as the root
 or documented rollover intermediate. Avoid leaf-only pinning: client-facing TLS is

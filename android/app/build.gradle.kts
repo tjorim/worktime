@@ -55,18 +55,6 @@ val releaseApiBaseUrl =
         required = releaseArtifactRequested,
         default = if (releaseArtifactRequested) "" else "https://release.placeholder.invalid/",
     )
-val debugOidcAuthority =
-    resolveConfigValue(
-        "ANDROID_DEBUG_OIDC_ISSUER_URL",
-        required = false,
-        default = "http://10.0.2.2:8080/realms/worktime",
-    )
-val releaseOidcAuthority =
-    resolveConfigValue(
-        "ANDROID_OIDC_ISSUER_URL",
-        required = releaseArtifactRequested,
-        default = if (releaseArtifactRequested) "" else "https://release-auth.placeholder.invalid/realms/worktime",
-    )
 val debugOidcClientId =
     resolveConfigValue(
         "ANDROID_DEBUG_OIDC_CLIENT_ID",
@@ -141,7 +129,6 @@ android {
             val redirectScheme = "com.worktime.android.debug"
             buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("debug"))
             buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
-            buildConfigField("String", "OIDC_AUTHORITY", quoted(debugOidcAuthority))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(debugOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
             buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
@@ -167,7 +154,6 @@ android {
             )
             buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("prod"))
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
-            buildConfigField("String", "OIDC_AUTHORITY", quoted(releaseOidcAuthority))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(releaseOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
             buildConfigField("String", "OIDC_REDIRECT_URI", quoted("com.worktime.android:/oauth2redirect"))
