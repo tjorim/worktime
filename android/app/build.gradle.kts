@@ -17,9 +17,9 @@ fun isReleaseArtifactRequested(): Boolean {
         return false
     }
 
-    val artifactVerbs = listOf("assemble", "bundle", "install", "package", "publish", "upload")
+    val nonArtifactKeywords = listOf("test", "lint", "detekt", "ktlint")
     return requestedTaskNames.any { taskName ->
-        (taskName.contains("release") && artifactVerbs.any { verb -> taskName.contains(verb) }) ||
+        (taskName.contains("release") && nonArtifactKeywords.none { taskName.contains(it) }) ||
             taskName in listOf("assemble", "build", "bundle")
     }
 }
