@@ -25,128 +25,130 @@ import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
 
 @Singleton
-class OidcSessionManager @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val appConfig: AppConfig,
-    private val oidcConfig: OidcConfig,
-    private val sessionStore: SecureSessionStore,
-    private val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
-    // Discovery returns the endpoints the whole auth flow trusts, so it must be
-    // pinned exactly like the API client; a plain OkHttpClient would let a
-    // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
-    private val oidcDiscovery: OidcServiceConfigurationDiscovery
-) : SessionController {
-    private val tokenMutex = Mutex()
-    private val configMutex = Mutex()
-    private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
-    override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
-    private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
+class OidcSessionManager
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+        private val appConfig: AppConfig,
+        private val oidcConfig: OidcConfig,
+        private val sessionStore: SecureSessionStore,
+        private val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
+        // Discovery returns the endpoints the whole auth flow trusts, so it must be
+        // pinned exactly like the API client; a plain OkHttpClient would let a
+        // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
+        private val oidcDiscovery: OidcServiceConfigurationDiscovery
+    ) : SessionController {
+        private val tokenMutex = Mutex()
+        private val configMutex = Mutex()
+        private val _sessionState = MutableStateFlow<SessionState>(SessionState.Initializing)
+        override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
+        private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
-    private var authState: AuthState? =
-        try {
-            sessionStore
-                .readAuthStateJson()
-                ?.takeIf { it.isNotBlank() }
-                ?.let(AuthState::jsonDeserialize)
-                ?.also(::publishState)
-        } catch (_: Exception) {
-            // readAuthStateJson() is backed by EncryptedSharedPreferences, which can throw
-            // GeneralSecurityException/IOException if the Android Keystore key is lost or
-            // corrupted, not just JSONException from malformed AuthState JSON. Treat any of
-            // these as a logged-out state rather than crashing on startup.
-            sessionStore.clear()
-            null
-        } ?: run {
-            _sessionState.value = SessionState.LoggedOut
-            null
+        private var authState: AuthState? =
+            try {
+                sessionStore
+                    .readAuthStateJson()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let(AuthState::jsonDeserialize)
+                    ?.also(::publishState)
+            } catch (_: Exception) {
+                // readAuthStateJson() is backed by EncryptedSharedPreferences, which can throw
+                // GeneralSecurityException/IOException if the Android Keystore key is lost or
+                // corrupted, not just JSONException from malformed AuthState JSON. Treat any of
+                // these as a logged-out state rather than crashing on startup.
+                sessionStore.clear()
+                null
+            } ?: run {
+                _sessionState.value = SessionState.LoggedOut
+                null
+            }
+
+        override suspend fun createAuthorizationIntent(): Intent {
+            val configuration = fetchAuthorizationServiceConfiguration()
+            val request =
+                AuthorizationRequest
+                    .Builder(
+                        configuration,
+                        oidcConfig.clientId,
+                        ResponseTypeValues.CODE,
+                        oidcConfig.redirectUri
+                    ).setScope(oidcConfig.scope)
+                    .build()
+
+            return AuthorizationService(context).getAuthorizationRequestIntent(request)
         }
 
-    override suspend fun createAuthorizationIntent(): Intent {
-        val configuration = fetchAuthorizationServiceConfiguration()
-        val request =
-            AuthorizationRequest
-                .Builder(
-                    configuration,
-                    oidcConfig.clientId,
-                    ResponseTypeValues.CODE,
-                    oidcConfig.redirectUri
-                ).setScope(oidcConfig.scope)
-                .build()
+        override suspend fun handleAuthorizationResponse(intent: Intent?): Result<Unit> = runCatching {
+            requireNotNull(intent) { "Missing sign-in result" }
+            val response = AuthorizationResponse.fromIntent(intent)
+            val exception = AuthorizationException.fromIntent(intent)
+            val newState = AuthState(response, exception)
 
-        return AuthorizationService(context).getAuthorizationRequestIntent(request)
-    }
+            if (response == null) {
+                val message = exception?.errorDescription ?: "Sign-in was cancelled"
+                _sessionState.value = SessionState.Error(message)
+                throw IllegalStateException(message)
+            }
 
-    override suspend fun handleAuthorizationResponse(intent: Intent?): Result<Unit> = runCatching {
-        requireNotNull(intent) { "Missing sign-in result" }
-        val response = AuthorizationResponse.fromIntent(intent)
-        val exception = AuthorizationException.fromIntent(intent)
-        val newState = AuthState(response, exception)
+            val (tokenResponse, tokenException) = performTokenRequest(response.createTokenExchangeRequest())
+            newState.update(tokenResponse, tokenException)
+            if (tokenException != null || tokenResponse?.accessToken.isNullOrBlank()) {
+                val message = tokenException?.errorDescription ?: "Missing access token"
+                _sessionState.value = SessionState.Error(message)
+                throw IllegalStateException(message)
+            }
 
-        if (response == null) {
-            val message = exception?.errorDescription ?: "Sign-in was cancelled"
-            _sessionState.value = SessionState.Error(message)
-            throw IllegalStateException(message)
+            persistAuthState(newState)
         }
 
-        val (tokenResponse, tokenException) = performTokenRequest(response.createTokenExchangeRequest())
-        newState.update(tokenResponse, tokenException)
-        if (tokenException != null || tokenResponse?.accessToken.isNullOrBlank()) {
-            val message = tokenException?.errorDescription ?: "Missing access token"
-            _sessionState.value = SessionState.Error(message)
-            throw IllegalStateException(message)
-        }
-
-        persistAuthState(newState)
-    }
-
-    override suspend fun getFreshAccessToken(): String? = tokenMutex.withLock {
-        val currentState = authState ?: return null
-        return suspendCancellableCoroutine { continuation ->
-            val service = AuthorizationService(context)
-            currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
-                service.dispose()
-                if (exception != null || accessToken.isNullOrBlank()) {
-                    logout()
-                    continuation.resume(null)
-                    return@performActionWithFreshTokens
+        override suspend fun getFreshAccessToken(): String? = tokenMutex.withLock {
+            val currentState = authState ?: return null
+            return suspendCancellableCoroutine { continuation ->
+                val service = AuthorizationService(context)
+                currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
+                    service.dispose()
+                    if (exception != null || accessToken.isNullOrBlank()) {
+                        logout()
+                        continuation.resume(null)
+                        return@performActionWithFreshTokens
+                    }
+                    persistAuthState(currentState)
+                    continuation.resume(accessToken)
                 }
-                persistAuthState(currentState)
-                continuation.resume(accessToken)
-            }
-        }
-    }
-
-    override fun logout() {
-        authState = null
-        sessionStore.clear()
-        _sessionState.value = SessionState.LoggedOut
-    }
-
-    private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
-        val apiBaseUrl = apiBaseUrlOverrideStore.currentOverrideBlocking()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
-        cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
-        return configMutex.withLock {
-            cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
-                ?: oidcDiscovery.fetch(apiBaseUrl).also { cachedConfiguration = apiBaseUrl to it }
-        }
-    }
-
-    private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
-        suspendCancellableCoroutine { continuation ->
-            val service = AuthorizationService(context)
-            service.performTokenRequest(request) { response, ex ->
-                service.dispose()
-                continuation.resume(response to ex)
             }
         }
 
-    private fun persistAuthState(state: AuthState) {
-        authState = state
-        sessionStore.writeAuthStateJson(state.jsonSerializeString())
-        publishState(state)
-    }
+        override fun logout() {
+            authState = null
+            sessionStore.clear()
+            _sessionState.value = SessionState.LoggedOut
+        }
 
-    private fun publishState(state: AuthState) {
-        _sessionState.value = SessionState.Authenticated(hasRefreshToken = !state.refreshToken.isNullOrBlank())
+        private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
+            val apiBaseUrl = apiBaseUrlOverrideStore.currentOverrideBlocking()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
+            cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
+            return configMutex.withLock {
+                cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
+                    ?: oidcDiscovery.fetch(apiBaseUrl).also { cachedConfiguration = apiBaseUrl to it }
+            }
+        }
+
+        private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
+            suspendCancellableCoroutine { continuation ->
+                val service = AuthorizationService(context)
+                service.performTokenRequest(request) { response, ex ->
+                    service.dispose()
+                    continuation.resume(response to ex)
+                }
+            }
+
+        private fun persistAuthState(state: AuthState) {
+            authState = state
+            sessionStore.writeAuthStateJson(state.jsonSerializeString())
+            publishState(state)
+        }
+
+        private fun publishState(state: AuthState) {
+            _sessionState.value = SessionState.Authenticated(hasRefreshToken = !state.refreshToken.isNullOrBlank())
+        }
     }
-}
