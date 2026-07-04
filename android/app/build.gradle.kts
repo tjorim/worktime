@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 fun quoted(value: String) = "\"$value\""
@@ -193,12 +195,10 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            val redirectScheme = "im.tjor.worktime.debug"
             buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("debug"))
             buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(debugOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
         }
@@ -222,7 +222,6 @@ android {
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(releaseOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("im.tjor.worktime:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(resolvedReleaseCertificatePinHost))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins))
         }
@@ -278,6 +277,8 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit.kotlinx.serialization.converter)
     implementation(libs.appauth)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
 
     debugImplementation(libs.compose.ui.tooling)
 

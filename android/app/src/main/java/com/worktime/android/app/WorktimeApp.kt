@@ -220,6 +220,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     uiState = uiState,
                     actionsState = actionsState,
                     appConfig = container.appConfig,
+                    oidcConfig = container.oidcConfig,
                     initialDestination = initialDestination,
                     notificationPreferences = notificationPreferences,
                     apiBaseUrlOverride = apiBaseUrlOverride,
@@ -270,6 +271,7 @@ private fun WorktimeAuthenticatedScaffold(
     uiState: DashboardUiState,
     actionsState: com.worktime.android.feature.dashboard.MobileActionsUiState,
     appConfig: com.worktime.android.core.config.AppConfig,
+    oidcConfig: com.worktime.android.core.auth.OidcConfig,
     initialDestination: String,
     notificationPreferences: NotificationPreferences,
     apiBaseUrlOverride: String?,
@@ -356,6 +358,7 @@ private fun WorktimeAuthenticatedScaffold(
                     SettingsScreen(
                         uiState = uiState,
                         appConfig = appConfig,
+                        oidcConfig = oidcConfig,
                         notificationPreferences = notificationPreferences,
                         apiBaseUrlOverride = apiBaseUrlOverride,
                         onApiBaseUrlOverrideSave = onApiBaseUrlOverrideSave,

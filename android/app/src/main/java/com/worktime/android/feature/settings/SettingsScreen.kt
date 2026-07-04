@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.worktime.android.core.auth.OidcConfig
 import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
@@ -40,6 +41,7 @@ private val IDLE_TIMEOUT_OPTIONS_MINUTES =
 fun SettingsScreen(
     uiState: DashboardUiState,
     appConfig: AppConfig,
+    oidcConfig: OidcConfig,
     notificationPreferences: NotificationPreferences,
     apiBaseUrlOverride: String?,
     onApiBaseUrlOverrideSave: (String) -> Unit,
@@ -61,8 +63,8 @@ fun SettingsScreen(
                     text("Build default", appConfig.apiBaseUrl)
                 }
                 text("OIDC config", "${(apiBaseUrlOverride ?: appConfig.apiBaseUrl).trimEnd('/')}/api/auth/oidc-config")
-                text("OIDC client ID", appConfig.oidcClientId)
-                text("OIDC scope", appConfig.oidcScope)
+                text("OIDC client ID", oidcConfig.clientId)
+                text("OIDC scope", oidcConfig.scope)
             }
         }
         item {

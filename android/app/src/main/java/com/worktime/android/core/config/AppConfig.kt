@@ -5,9 +5,6 @@ import com.worktime.android.BuildConfig
 data class AppConfig(
     val environment: String,
     val apiBaseUrl: String,
-    val oidcClientId: String,
-    val oidcScope: String,
-    val oidcRedirectUri: String,
     val certificatePinHost: String,
     val certificatePins: List<String>
 )
@@ -15,9 +12,6 @@ data class AppConfig(
 fun buildAppConfig(): AppConfig = AppConfig(
     environment = BuildConfig.WORKTIME_ENVIRONMENT,
     apiBaseUrl = BuildConfig.API_BASE_URL,
-    oidcClientId = BuildConfig.OIDC_CLIENT_ID,
-    oidcScope = BuildConfig.OIDC_SCOPE,
-    oidcRedirectUri = BuildConfig.OIDC_REDIRECT_URI,
     certificatePinHost = BuildConfig.CERTIFICATE_PIN_HOST,
     certificatePins = BuildConfig.CERTIFICATE_PINS.toCsvList()
 )

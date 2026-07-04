@@ -38,9 +38,6 @@ class CertificatePinnerProviderTest {
         AppConfig(
             environment = environment,
             apiBaseUrl = "https://worktime.tjor.im/",
-            oidcClientId = "worktime",
-            oidcScope = "openid profile email offline_access",
-            oidcRedirectUri = "com.worktime.android:/oauth2redirect",
             certificatePinHost = "worktime.tjor.im",
             certificatePins = certificatePins
         )
