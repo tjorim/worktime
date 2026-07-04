@@ -201,7 +201,6 @@ android {
             buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
-            manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
         }
         release {
             isMinifyEnabled = true
@@ -226,7 +225,6 @@ android {
             buildConfigField("String", "OIDC_REDIRECT_URI", quoted("im.tjor.worktime:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(resolvedReleaseCertificatePinHost))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins))
-            manifestPlaceholders["appAuthRedirectScheme"] = "im.tjor.worktime"
         }
     }
 
