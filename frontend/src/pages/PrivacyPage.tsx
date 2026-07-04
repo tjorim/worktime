@@ -73,6 +73,16 @@ export function PrivacyPage() {
               </section>
 
               <section>
+                <h2 className="h5">{m.privacy_page_children_title()}</h2>
+                <p className="mb-0">{m.privacy_page_children_body()}</p>
+              </section>
+
+              <section>
+                <h2 className="h5">{m.privacy_page_changes_title()}</h2>
+                <p className="mb-0">{m.privacy_page_changes_body()}</p>
+              </section>
+
+              <section>
                 <h2 className="h5">{m.privacy_page_contact_title()}</h2>
                 <p className="mb-0">
                   {m.privacy_page_contact_body()}{" "}
