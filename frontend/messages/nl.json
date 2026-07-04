@@ -1061,7 +1061,7 @@
   "privacy_page_thirdparty_holidays": "Gegevens over feestdagen en schoolvakanties worden opgehaald bij API's van derden en op de server gecachet. Deze verzoeken bevatten alleen een landcode en datumbereik — er worden geen account- of persoonsgegevens verzonden.",
   "privacy_page_thirdparty_errors": "Als de beheerder foutregistratie inschakelt, kunnen crash- en foutgegevens naar een externe foutregistratiedienst worden gestuurd. Persoonsgegevens zitten niet in deze meldingen.",
   "privacy_page_notifications_title": "Meldingen",
-  "privacy_page_notifications_body": "De Android-app kan lokale meldingen op het apparaat tonen voor ploegherinneringen, lopende timers en synchronisatiestatus. Deze worden op uw apparaat gegenereerd en nooit via een pushmeldingsdienst verstuurd, dus er verlaat geen meldingsgegevens uw apparaat.",
+  "privacy_page_notifications_body": "De Android-app kan lokale meldingen op het apparaat tonen voor ploegherinneringen, lopende timers en synchronisatiestatus. Deze worden op uw apparaat gegenereerd en nooit via een pushmeldingsdienst verstuurd, dus er verlaten geen meldingsgegevens uw apparaat.",
   "privacy_page_diagnostics_title": "Diagnostiek en operationele logs",
   "privacy_page_diagnostics_body": "De server houdt verzoeklogs bij (methode, pad, status, tijdsduur en de aangemelde gebruikers-ID) om de dienst te beheren en problemen op te lossen, plus een apart auditlog voor impactvolle acties zoals accountwijzigingen en het importeren of exporteren van gegevens. Deze logs bevatten geen verzoekinhoud of uw werkgegevens.",
   "privacy_page_retention_title": "Bewaartermijn",
