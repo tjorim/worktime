@@ -3,6 +3,7 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
+import { Link } from "@tanstack/react-router";
 import { useSettings } from "@/contexts/SettingsContext";
 import { CONFIG } from "@/utils/config";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
@@ -124,7 +125,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           </h6>
           <div className="d-grid gap-2">
             <Row className="g-2">
-              <Col xs={6}>
+              <Col xs={4}>
                 <a
                   href="https://github.com/tjorim/worktime#readme"
                   target="_blank"
@@ -135,7 +136,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   {m.about_documentation_btn()}
                 </a>
               </Col>
-              <Col xs={6}>
+              <Col xs={4}>
                 <a
                   href="https://github.com/tjorim/worktime"
                   target="_blank"
@@ -145,6 +146,16 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   <i className="bi bi-code-slash me-1"></i>
                   {m.about_source_code_btn()}
                 </a>
+              </Col>
+              <Col xs={4}>
+                <Link
+                  to="/privacy"
+                  onClick={onHide}
+                  className="btn btn-outline-secondary btn-sm w-100"
+                >
+                  <i className="bi bi-shield-lock me-1"></i>
+                  {m.about_privacy_policy_btn()}
+                </Link>
               </Col>
             </Row>
           </div>

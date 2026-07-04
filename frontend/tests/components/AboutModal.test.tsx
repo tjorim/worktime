@@ -4,6 +4,29 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AboutModal } from "@/components/AboutModal";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
+// Stub <Link> so tests don't need a RouterProvider context.
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    Link: ({
+      to,
+      className,
+      children,
+      onClick,
+    }: {
+      to: string;
+      className?: string;
+      children: React.ReactNode;
+      onClick?: () => void;
+    }) => (
+      <a href={to} className={className} onClick={onClick}>
+        {children}
+      </a>
+    ),
+  };
+});
+
 function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
   // Seed localStorage with the schedule type
   window.localStorage.setItem(
@@ -61,5 +84,14 @@ describe("AboutModal", () => {
     expect(screen.getByText("Schedule type: 9-5")).toBeInTheDocument();
     expect(screen.queryByText("5-team shift tracking")).not.toBeInTheDocument();
     expect(screen.queryByText("Transfer detection")).not.toBeInTheDocument();
+  });
+
+  it("links to the privacy policy", () => {
+    renderWithScheduleType("5-shift");
+
+    expect(screen.getByRole("link", { name: /Privacy Policy/i })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
   });
 });
