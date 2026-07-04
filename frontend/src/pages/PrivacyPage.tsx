@@ -26,12 +26,37 @@ export function PrivacyPage() {
               </section>
 
               <section>
+                <h2 className="h5">{m.privacy_page_signin_title()}</h2>
+                <p className="mb-0">{m.privacy_page_signin_body()}</p>
+              </section>
+
+              <section>
                 <h2 className="h5">{m.privacy_page_access_title()}</h2>
                 <ul className="mb-0">
                   <li>{m.privacy_page_access_you()}</li>
                   <li>{m.privacy_page_access_admins()}</li>
                   <li>{m.privacy_page_access_infra()}</li>
                 </ul>
+              </section>
+
+              <section>
+                <h2 className="h5">{m.privacy_page_thirdparty_title()}</h2>
+                <p className="mb-2">{m.privacy_page_thirdparty_intro()}</p>
+                <ul className="mb-0">
+                  <li>{m.privacy_page_thirdparty_identity()}</li>
+                  <li>{m.privacy_page_thirdparty_holidays()}</li>
+                  <li>{m.privacy_page_thirdparty_errors()}</li>
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="h5">{m.privacy_page_notifications_title()}</h2>
+                <p className="mb-0">{m.privacy_page_notifications_body()}</p>
+              </section>
+
+              <section>
+                <h2 className="h5">{m.privacy_page_diagnostics_title()}</h2>
+                <p className="mb-0">{m.privacy_page_diagnostics_body()}</p>
               </section>
 
               <section>
@@ -45,6 +70,20 @@ export function PrivacyPage() {
                   <li>{m.privacy_page_rights_export()}</li>
                   <li>{m.privacy_page_rights_delete()}</li>
                 </ul>
+              </section>
+
+              <section>
+                <h2 className="h5">{m.privacy_page_contact_title()}</h2>
+                <p className="mb-0">
+                  {m.privacy_page_contact_body()}{" "}
+                  <a
+                    href="https://github.com/tjorim/worktime/issues/new/choose"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {m.privacy_page_contact_link()}
+                  </a>
+                </p>
               </section>
 
               <section>

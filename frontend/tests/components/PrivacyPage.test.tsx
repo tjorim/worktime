@@ -20,5 +20,18 @@ describe("PrivacyPage", () => {
     expect(await screen.findByRole("heading", { name: "Privacy policy" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "What Worktime stores" })).toBeInTheDocument();
     expect(screen.getByText(/export your account data as JSON/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Signing in" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Third-party services and API communication" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Diagnostics and operational logs" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Contact us" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open an issue on GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/tjorim/worktime/issues/new/choose",
+    );
   });
 });
