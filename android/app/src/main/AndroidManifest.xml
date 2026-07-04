@@ -24,12 +24,12 @@
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             android:exported="true"
-            tools:node="merge">
+            tools:node="replace">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${appAuthRedirectScheme}" android:path="/oauth2redirect" />
+                <data android:scheme="${applicationId}" android:path="/oauth2redirect" />
             </intent-filter>
         </activity>
     </application>

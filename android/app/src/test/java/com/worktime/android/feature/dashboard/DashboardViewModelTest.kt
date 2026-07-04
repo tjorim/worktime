@@ -137,15 +137,22 @@ class DashboardViewModelTest {
             sessionState.value = SessionState.LoggedOut
         }
 
-        override suspend fun startTimeTracking(text: String, labelId: String?): MutationResult<TaskRecord> = startTrackingResult
+        override suspend fun startTimeTracking(text: String, labelId: String?): MutationResult<TaskRecord> =
+            startTrackingResult
 
-        override suspend fun stopTimeTracking(taskId: String): MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
+        override suspend fun stopTimeTracking(taskId: String): MutationResult<TaskRecord> =
+            MutationResult.Success(sampleTask())
 
-        override suspend fun updateTask(taskId: String, text: String?, labelId: String?): MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
+        override suspend fun updateTask(taskId: String, text: String?, labelId: String?): MutationResult<TaskRecord> =
+            MutationResult.Success(sampleTask())
 
         override suspend fun getRunningTask(): MutationResult<TaskRecord?> = MutationResult.Success(null)
 
-        override suspend fun setWorkLocation(date: LocalDate, countryCode: String, label: String?): MutationResult<WorkLocationRecord> = MutationResult.Success(
+        override suspend fun setWorkLocation(
+            date: LocalDate,
+            countryCode: String,
+            label: String?
+        ): MutationResult<WorkLocationRecord> = MutationResult.Success(
             WorkLocationRecord(
                 id = 1,
                 userId = 1,
@@ -156,7 +163,8 @@ class DashboardViewModelTest {
             )
         )
 
-        override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> = MutationResult.Success(emptyList())
+        override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> =
+            MutationResult.Success(emptyList())
 
         override suspend fun deleteLabel(labelId: String): MutationResult<Unit> = MutationResult.Success(Unit)
 

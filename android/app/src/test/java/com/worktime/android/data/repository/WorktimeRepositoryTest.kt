@@ -136,28 +136,41 @@ class WorktimeRepositoryTest {
             return sampleTask(userId = userId, text = payload.text ?: "Task")
         }
 
-        override suspend fun updateTask(authorization: String, taskId: String, userId: Int, payload: TaskMutationRequest): TaskRecord {
+        override suspend fun updateTask(
+            authorization: String,
+            taskId: String,
+            userId: Int,
+            payload: TaskMutationRequest
+        ): TaskRecord {
             taskThrowable?.let { throw it }
             return sampleTask(userId = userId, id = taskId, text = payload.text ?: "Task")
         }
 
-        override suspend fun getRunningTask(authorization: String, userId: Int): Response<TaskRecord> = Response.success(sampleTask(userId = userId))
+        override suspend fun getRunningTask(authorization: String, userId: Int): Response<TaskRecord> =
+            Response.success(sampleTask(userId = userId))
 
-        override suspend fun upsertWorkLocation(authorization: String, userId: Int, payload: WorkLocationMutationRequest): WorkLocationRecord =
-            WorkLocationRecord(
-                id = 1,
-                userId = userId,
-                date = payload.date,
-                countryCode = payload.countryCode.uppercase(),
-                label = payload.label,
-                createdAt = "2026-05-26T12:00:00Z"
-            )
+        override suspend fun upsertWorkLocation(
+            authorization: String,
+            userId: Int,
+            payload: WorkLocationMutationRequest
+        ): WorkLocationRecord = WorkLocationRecord(
+            id = 1,
+            userId = userId,
+            date = payload.date,
+            countryCode = payload.countryCode.uppercase(),
+            label = payload.label,
+            createdAt = "2026-05-26T12:00:00Z"
+        )
 
-        override suspend fun listWorkLocations(authorization: String, userId: Int, startDate: String?, endDate: String?): WorkLocationListResponse =
-            WorkLocationListResponse(
-                items = emptyList(),
-                total = 0
-            )
+        override suspend fun listWorkLocations(
+            authorization: String,
+            userId: Int,
+            startDate: String?,
+            endDate: String?
+        ): WorkLocationListResponse = WorkLocationListResponse(
+            items = emptyList(),
+            total = 0
+        )
 
         override suspend fun deleteLabel(authorization: String, labelId: String, userId: Int) = Unit
 

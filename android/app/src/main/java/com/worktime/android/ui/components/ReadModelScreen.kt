@@ -68,7 +68,13 @@ private fun LoadingPane(title: String) {
 }
 
 @Composable
-fun EmptyPane(title: String, headline: String, body: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
+fun EmptyPane(
+    title: String,
+    headline: String,
+    body: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
     Column(
         modifier =
         Modifier

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.main import app
+from app.routers import health as health_router
 from app.routers.health import _get_db_if_enabled
 
 
@@ -91,6 +92,25 @@ def test_readiness_check_success(readiness_client, tmp_path, monkeypatch):
     assert data["share"] == "ok"
 
 
+@pytest.mark.asyncio
+async def test_jwks_reachable_coalesces_concurrent_cache_misses(monkeypatch):
+    calls = 0
+
+    async def reachable() -> bool:
+        nonlocal calls
+        calls += 1
+        await health_router.asyncio.sleep(0)
+        return True
+
+    monkeypatch.setattr(health_router, "_jwks_readiness_cache", None)
+    monkeypatch.setattr(health_router, "_check_jwks_reachable", reachable)
+
+    results = await health_router.asyncio.gather(*(health_router._jwks_reachable() for _ in range(5)))
+
+    assert results == [True] * 5
+    assert calls == 1
+
+
 def test_readiness_check_directory_not_found(readiness_client, tmp_path, monkeypatch):
     """Test readiness check when share directory does not exist."""
     share_dir = tmp_path / "nonexistent"
@@ -172,4 +192,3 @@ def test_readiness_check_general_error(readiness_client, tmp_path, monkeypatch):
     assert data["share"] == "error"
     assert "error" in data
     assert data["error"] == "internal_error"
-

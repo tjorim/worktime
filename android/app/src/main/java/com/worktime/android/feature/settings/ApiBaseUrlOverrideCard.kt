@@ -20,7 +20,12 @@ import com.worktime.android.core.network.DynamicBaseUrlInterceptor
 import com.worktime.android.ui.components.SummaryCard
 
 @Composable
-fun ApiBaseUrlOverrideCard(appConfig: AppConfig, apiBaseUrlOverride: String?, onSave: (String) -> Unit, onClear: () -> Unit) {
+fun ApiBaseUrlOverrideCard(
+    appConfig: AppConfig,
+    apiBaseUrlOverride: String?,
+    onSave: (String) -> Unit,
+    onClear: () -> Unit
+) {
     SummaryCard(title = "API environment override") {
         content {
             var draft by rememberSaveable(apiBaseUrlOverride) { mutableStateOf(apiBaseUrlOverride.orEmpty()) }
@@ -35,7 +40,9 @@ fun ApiBaseUrlOverrideCard(appConfig: AppConfig, apiBaseUrlOverride: String?, on
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Point this build at a different backend without reinstalling. Reset to return to the build default (${appConfig.apiBaseUrl}).",
+                text =
+                "Point this build at a different backend without reinstalling. " +
+                    "Reset to return to the build default (${appConfig.apiBaseUrl}).",
                 style = MaterialTheme.typography.bodySmall
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

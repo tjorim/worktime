@@ -2,10 +2,12 @@ package com.worktime.android.core.auth
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import com.worktime.android.core.config.AppConfig
-import com.worktime.android.core.network.CertificatePinnerProvider
+import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.SecureSessionStore
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,19 +23,18 @@ import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
-import okhttp3.OkHttpClient
 
-class OidcSessionManager(
-    private val context: Context,
+@Singleton
+class OidcSessionManager @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val appConfig: AppConfig,
+    private val oidcConfig: OidcConfig,
     private val sessionStore: SecureSessionStore,
-    private val apiBaseUrlProvider: () -> String? = { null },
+    private val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
     // Discovery returns the endpoints the whole auth flow trusts, so it must be
     // pinned exactly like the API client; a plain OkHttpClient would let a
     // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
-    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(
-        OkHttpClient.Builder().certificatePinner(CertificatePinnerProvider.fromConfig(appConfig)).build()
-    )
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery
 ) : SessionController {
     private val tokenMutex = Mutex()
     private val configMutex = Mutex()
@@ -41,6 +42,7 @@ class OidcSessionManager(
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
     private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
+    @Volatile
     private var authState: AuthState? =
         try {
             sessionStore
@@ -66,10 +68,10 @@ class OidcSessionManager(
             AuthorizationRequest
                 .Builder(
                     configuration,
-                    appConfig.oidcClientId,
+                    oidcConfig.clientId,
                     ResponseTypeValues.CODE,
-                    Uri.parse(appConfig.oidcRedirectUri)
-                ).setScope(appConfig.oidcScope)
+                    oidcConfig.redirectUri
+                ).setScope(oidcConfig.scope)
                 .build()
 
         return AuthorizationService(context).getAuthorizationRequestIntent(request)
@@ -122,7 +124,7 @@ class OidcSessionManager(
     }
 
     private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
-        val apiBaseUrl = apiBaseUrlProvider()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
+        val apiBaseUrl = apiBaseUrlOverrideStore.override.value ?: appConfig.apiBaseUrl
         cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
         return configMutex.withLock {
             cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
@@ -130,14 +132,15 @@ class OidcSessionManager(
         }
     }
 
-    private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
-        suspendCancellableCoroutine { continuation ->
-            val service = AuthorizationService(context)
-            service.performTokenRequest(request) { response, ex ->
-                service.dispose()
-                continuation.resume(response to ex)
-            }
+    private suspend fun performTokenRequest(
+        request: TokenRequest
+    ): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> = suspendCancellableCoroutine { continuation ->
+        val service = AuthorizationService(context)
+        service.performTokenRequest(request) { response, ex ->
+            service.dispose()
+            continuation.resume(response to ex)
         }
+    }
 
     private fun persistAuthState(state: AuthState) {
         authState = state

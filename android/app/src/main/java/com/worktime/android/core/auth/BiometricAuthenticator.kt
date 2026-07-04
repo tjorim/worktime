@@ -30,21 +30,22 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
     private val allowedAuthenticators =
         BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
-    fun checkAvailability(): BiometricAvailability = when (BiometricManager.from(activity).canAuthenticate(allowedAuthenticators)) {
-        BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.Available
-        BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
-            BiometricAvailability.Unavailable(
-                "No biometric or device credential is set up on this device. Add one in your device " +
-                    "settings, or turn off app lock in Worktime settings."
-            )
-        BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
-            BiometricAvailability.Unavailable("This device has no biometric hardware.")
-        BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
-            BiometricAvailability.Unavailable("Biometric hardware is currently unavailable. Try again shortly.")
-        BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED ->
-            BiometricAvailability.Unavailable("A security update is required before app lock can be used.")
-        else -> BiometricAvailability.Unavailable("Device authentication is not available right now.")
-    }
+    fun checkAvailability(): BiometricAvailability =
+        when (BiometricManager.from(activity).canAuthenticate(allowedAuthenticators)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.Available
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
+                BiometricAvailability.Unavailable(
+                    "No biometric or device credential is set up on this device. Add one in your device " +
+                        "settings, or turn off app lock in Worktime settings."
+                )
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
+                BiometricAvailability.Unavailable("This device has no biometric hardware.")
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+                BiometricAvailability.Unavailable("Biometric hardware is currently unavailable. Try again shortly.")
+            BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED ->
+                BiometricAvailability.Unavailable("A security update is required before app lock can be used.")
+            else -> BiometricAvailability.Unavailable("Device authentication is not available right now.")
+        }
 
     fun authenticate(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val executor = ContextCompat.getMainExecutor(activity)

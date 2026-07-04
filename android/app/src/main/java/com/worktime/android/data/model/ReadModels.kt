@@ -15,7 +15,12 @@ data class DashboardResponse(
 )
 
 @Serializable
-data class Identity(val id: Int, val username: String, @SerialName("display_name") val displayName: String, @SerialName("is_admin") val isAdmin: Boolean)
+data class Identity(
+    val id: Int,
+    val username: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("is_admin") val isAdmin: Boolean
+)
 
 @Serializable
 data class FeatureFlags(@SerialName("time_off_enabled") val timeOffEnabled: Boolean)
@@ -117,7 +122,11 @@ data class TaskRecord(
 )
 
 @Serializable
-data class WorkLocationMutationRequest(val date: String, @SerialName("country_code") val countryCode: String, val label: String? = null)
+data class WorkLocationMutationRequest(
+    val date: String,
+    @SerialName("country_code") val countryCode: String,
+    val label: String? = null
+)
 
 @Serializable
 data class WorkLocationRecord(

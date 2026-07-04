@@ -104,5 +104,6 @@ class DynamicBaseUrlInterceptorTest {
         assertFalse(DynamicBaseUrlInterceptor.isValidOverride("ftp://host/"))
     }
 
-    private fun okhttp3.HttpUrl.encodedPathAndQueryOrPath(): String = encodedQuery?.let { "$encodedPath?$it" } ?: encodedPath
+    private fun okhttp3.HttpUrl.encodedPathAndQueryOrPath(): String =
+        encodedQuery?.let { "$encodedPath?$it" } ?: encodedPath
 }

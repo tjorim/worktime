@@ -1,4 +1,5 @@
 import com.worktime.buildlogic.CertPinning
+import groovy.json.JsonSlurper
 import java.util.Properties
 
 plugins {
@@ -7,6 +8,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 fun quoted(value: String) = "\"$value\""
@@ -107,11 +110,62 @@ if (releaseArtifactRequested) {
     CertPinning.requireHostConfiguredForPins(resolvedReleaseCertificatePinHost, resolvedReleaseCertificatePins)
 }
 
+// Single source of truth for the app version: frontend/package.json, kept in
+// lockstep with the web release version instead of a hand-maintained literal here.
+// Read via providers.fileContents (not File.readText()) so the file is tracked
+// as a build configuration input and this stays Configuration Cache-compatible.
+val appVersion =
+    providers
+        .fileContents(layout.projectDirectory.file("../../frontend/package.json"))
+        .asText
+        .map { jsonText ->
+            val json = JsonSlurper().parseText(jsonText) as Map<*, *>
+            json["version"] as? String
+                ?: error("Could not find a \"version\" field in frontend/package.json")
+        }.get()
+
+fun versionCodeFor(version: String): Int {
+    val parts = version.substringBefore("-").substringBefore("+").split(".")
+    check(parts.size == 3) { "Expected a MAJOR.MINOR.PATCH version, got \"$version\"" }
+    val (major, minor, patch) =
+        parts.map {
+            it.toIntOrNull() ?: error("Invalid integer component \"$it\" in version \"$version\"")
+        }
+    // minor/patch must each fit in 3 digits or they'd overflow into the next digit
+    // group and collide with a different version's computed code.
+    check(major >= 0) { "Major version must be non-negative, got $major" }
+    check(minor in 0..999) { "Minor version must be between 0 and 999 to avoid versionCode collision, got $minor" }
+    check(patch in 0..999) { "Patch version must be between 0 and 999 to avoid versionCode collision, got $patch" }
+    val versionCode = major * 1_000_000 + minor * 1_000 + patch
+    check(versionCode <= 2_100_000_000) {
+        "versionCode $versionCode exceeds Google Play maximum of 2100000000"
+    }
+    return versionCode
+}
+
+// Falls back to "unknown" rather than failing the build when git is unavailable
+// (e.g. building from a downloaded source archive with no .git directory).
+val gitCommit =
+    try {
+        providers
+            .exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+                isIgnoreExitValue = true
+            }.standardOutput
+            .asText
+            .get()
+            .trim()
+            .ifEmpty { "unknown" }
+    } catch (e: Exception) {
+        "unknown"
+    }
+
 android {
     namespace = "com.worktime.android"
     compileSdk = 37
 
-    val keystorePath = localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePath =
+        localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
     val keystorePassword =
         localProperties.getProperty("keystorePassword")
             ?: providers.environmentVariable("STORE_PASSWORD").orNull
@@ -134,12 +188,13 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.worktime.android"
+        applicationId = "im.tjor.worktime"
         minSdk = 26
         targetSdk = 37
         // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
-        versionCode = 1000
-        versionName = "0.1.0"
+        versionCode = versionCodeFor(appVersion)
+        versionName = appVersion
+        buildConfigField("String", "BUILD_COMMIT", quoted(gitCommit))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -147,15 +202,12 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            val redirectScheme = "com.worktime.android.debug"
             buildConfigField("String", "WORKTIME_ENVIRONMENT", quoted("debug"))
             buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(debugOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("$redirectScheme:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
-            manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
         }
         release {
             isMinifyEnabled = true
@@ -177,10 +229,8 @@ android {
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", quoted(releaseOidcClientId))
             buildConfigField("String", "OIDC_SCOPE", quoted(oidcScope))
-            buildConfigField("String", "OIDC_REDIRECT_URI", quoted("com.worktime.android:/oauth2redirect"))
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(resolvedReleaseCertificatePinHost))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins))
-            manifestPlaceholders["appAuthRedirectScheme"] = "com.worktime.android"
         }
     }
 
@@ -234,6 +284,8 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit.kotlinx.serialization.converter)
     implementation(libs.appauth)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
 
     debugImplementation(libs.compose.ui.tooling)
 

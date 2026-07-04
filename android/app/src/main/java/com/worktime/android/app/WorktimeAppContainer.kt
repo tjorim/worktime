@@ -2,30 +2,25 @@ package com.worktime.android.app
 
 import android.content.Context
 import com.worktime.android.BuildConfig
+import com.worktime.android.core.auth.OidcConfig
 import com.worktime.android.core.auth.OidcSessionManager
 import com.worktime.android.core.config.AppConfig
-import com.worktime.android.core.config.buildAppConfig
 import com.worktime.android.core.network.CertificatePinnerProvider
 import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.BiometricLockPreferencesStore
 import com.worktime.android.core.storage.NotificationPreferencesStore
-import com.worktime.android.core.storage.SecureSessionStore
 import com.worktime.android.data.api.WorktimeApi
 import com.worktime.android.data.repository.WorktimeRepository
 
-class WorktimeAppContainer(context: Context) {
-    val appConfig: AppConfig = buildAppConfig()
-    private val secureSessionStore = SecureSessionStore(context)
+class WorktimeAppContainer(
+    context: Context,
+    val appConfig: AppConfig,
+    val oidcConfig: OidcConfig,
+    val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
+    val sessionManager: OidcSessionManager
+) {
     val notificationPreferencesStore = NotificationPreferencesStore(context)
-    val apiBaseUrlOverrideStore = ApiBaseUrlOverrideStore(context)
     val biometricLockPreferencesStore = BiometricLockPreferencesStore(context)
-    val sessionManager =
-        OidcSessionManager(
-            context = context,
-            appConfig = appConfig,
-            sessionStore = secureSessionStore,
-            apiBaseUrlProvider = apiBaseUrlOverrideStore::currentOverrideBlocking
-        )
     private val api =
         WorktimeApi.create(
             baseUrl = appConfig.apiBaseUrl,

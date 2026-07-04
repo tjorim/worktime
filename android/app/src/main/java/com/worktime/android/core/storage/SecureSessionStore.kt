@@ -3,8 +3,12 @@ package com.worktime.android.core.storage
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class SecureSessionStore(context: Context) {
+@Singleton
+class SecureSessionStore @Inject constructor(@ApplicationContext context: Context) {
     private val prefs by lazy {
         val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
         EncryptedSharedPreferences.create(
@@ -16,14 +20,14 @@ class SecureSessionStore(context: Context) {
         )
     }
 
-    fun readAuthStateJson(): String? = prefs.getString(KEY_AUTH_STATE, null)
+    fun readAuthStateJson(): String? = runCatching { prefs.getString(KEY_AUTH_STATE, null) }.getOrNull()
 
     fun writeAuthStateJson(value: String) {
-        prefs.edit().putString(KEY_AUTH_STATE, value).apply()
+        runCatching { prefs.edit().putString(KEY_AUTH_STATE, value).apply() }
     }
 
     fun clear() {
-        prefs.edit().clear().apply()
+        runCatching { prefs.edit().clear().apply() }
     }
 
     private companion object {
