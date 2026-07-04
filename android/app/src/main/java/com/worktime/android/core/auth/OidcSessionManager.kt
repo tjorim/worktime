@@ -25,9 +25,7 @@ import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
 
 @Singleton
-class OidcSessionManager
-@Inject
-constructor(
+class OidcSessionManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val appConfig: AppConfig,
     private val oidcConfig: OidcConfig,
