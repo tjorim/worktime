@@ -42,6 +42,7 @@ class OidcSessionManager @Inject constructor(
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
     private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
+    @Volatile
     private var authState: AuthState? =
         try {
             sessionStore
@@ -123,8 +124,7 @@ class OidcSessionManager @Inject constructor(
     }
 
     private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
-        val apiBaseUrl =
-            apiBaseUrlOverrideStore.currentOverrideBlocking()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
+        val apiBaseUrl = apiBaseUrlOverrideStore.override.value ?: appConfig.apiBaseUrl
         cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
         return configMutex.withLock {
             cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second

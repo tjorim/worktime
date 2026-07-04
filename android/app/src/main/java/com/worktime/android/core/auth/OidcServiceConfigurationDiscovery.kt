@@ -19,7 +19,7 @@ class OidcServiceConfigurationDiscovery(private val client: OkHttpClient = OkHtt
                 val errorBody = runCatching { response.peekBody(1024).string() }.getOrElse { "" }
                 throw IOException("OIDC config endpoint returned HTTP ${response.code}: $errorBody")
             }
-            val body = response.body.string()
+            val body = runCatching { response.body.string() }.getOrElse { "" }
             if (body.isBlank()) {
                 throw IOException("Empty response from OIDC config endpoint")
             }

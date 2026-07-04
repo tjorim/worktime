@@ -15,6 +15,7 @@ Provides three endpoints that serve different consumers:
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
@@ -40,6 +41,38 @@ async def _get_db_if_enabled() -> AsyncGenerator[AsyncSession | None, None]:
             yield session
     else:
         yield None
+
+
+async def _check_jwks_reachable() -> bool:
+    """Check that the OIDC provider's JWKS endpoint is reachable."""
+    jwks_uri = await _resolve_jwks_uri()
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        response = await client.get(jwks_uri)
+    if response.status_code == 200:
+        return True
+    logger.warning("Health check: OIDC provider returned unexpected status %s", response.status_code)
+    return False
+
+
+_JWKS_READINESS_CACHE_SECONDS = 30.0
+_jwks_readiness_cache: tuple[float, bool] | None = None
+_jwks_readiness_lock = asyncio.Lock()
+
+
+async def _jwks_reachable() -> bool:
+    global _jwks_readiness_cache  # noqa: PLW0603
+    now = time.monotonic()
+    if _jwks_readiness_cache is not None and now - _jwks_readiness_cache[0] < _JWKS_READINESS_CACHE_SECONDS:
+        return _jwks_readiness_cache[1]
+
+    async with _jwks_readiness_lock:
+        now = time.monotonic()
+        if _jwks_readiness_cache is not None and now - _jwks_readiness_cache[0] < _JWKS_READINESS_CACHE_SECONDS:
+            return _jwks_readiness_cache[1]
+
+        reachable = await _check_jwks_reachable()
+        _jwks_readiness_cache = (now, True) if reachable else None
+        return reachable
 
 
 @router.get("/health/liveness")
@@ -79,12 +112,8 @@ async def readiness(
     async def _check_auth() -> tuple[str, bool]:
         """Check that the OIDC provider's JWKS endpoint is reachable."""
         try:
-            jwks_uri = await _resolve_jwks_uri()
-            async with httpx.AsyncClient(timeout=3.0) as client:
-                response = await client.get(jwks_uri)
-            if response.status_code == 200:
+            if await _jwks_reachable():
                 return "ok", False
-            logger.warning("Health check: OIDC provider returned unexpected status %s", response.status_code)
             return "unreachable", True
         except OIDCTokenError as e:
             logger.error("Health check failed: OIDC discovery failed", exc_info=e)
