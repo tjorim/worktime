@@ -123,7 +123,8 @@ class OidcSessionManager @Inject constructor(
     }
 
     private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
-        val apiBaseUrl = apiBaseUrlOverrideStore.currentOverrideBlocking()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
+        val apiBaseUrl =
+            apiBaseUrlOverrideStore.currentOverrideBlocking()?.takeIf { it.isNotBlank() } ?: appConfig.apiBaseUrl
         cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
         return configMutex.withLock {
             cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
@@ -131,14 +132,15 @@ class OidcSessionManager @Inject constructor(
         }
     }
 
-    private suspend fun performTokenRequest(request: TokenRequest): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> =
-        suspendCancellableCoroutine { continuation ->
-            val service = AuthorizationService(context)
-            service.performTokenRequest(request) { response, ex ->
-                service.dispose()
-                continuation.resume(response to ex)
-            }
+    private suspend fun performTokenRequest(
+        request: TokenRequest
+    ): Pair<net.openid.appauth.TokenResponse?, AuthorizationException?> = suspendCancellableCoroutine { continuation ->
+        val service = AuthorizationService(context)
+        service.performTokenRequest(request) { response, ex ->
+            service.dispose()
+            continuation.resume(response to ex)
         }
+    }
 
     private fun persistAuthState(state: AuthState) {
         authState = state

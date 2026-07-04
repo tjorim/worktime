@@ -158,7 +158,8 @@ android {
     namespace = "com.worktime.android"
     compileSdk = 37
 
-    val keystorePath = localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePath =
+        localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
     val keystorePassword =
         localProperties.getProperty("keystorePassword")
             ?: providers.environmentVariable("STORE_PASSWORD").orNull

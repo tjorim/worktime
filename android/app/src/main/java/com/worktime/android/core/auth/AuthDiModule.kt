@@ -26,7 +26,8 @@ object AuthDiModule {
     // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
     @Provides
     @Singleton
-    fun provideOidcServiceConfigurationDiscovery(appConfig: AppConfig): OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(
-        OkHttpClient.Builder().certificatePinner(CertificatePinnerProvider.fromConfig(appConfig)).build()
-    )
+    fun provideOidcServiceConfigurationDiscovery(appConfig: AppConfig): OidcServiceConfigurationDiscovery =
+        OidcServiceConfigurationDiscovery(
+            OkHttpClient.Builder().certificatePinner(CertificatePinnerProvider.fromConfig(appConfig)).build()
+        )
 }

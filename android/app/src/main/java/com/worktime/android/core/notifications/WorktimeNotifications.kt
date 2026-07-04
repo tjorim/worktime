@@ -85,7 +85,8 @@ class WorktimeNotifications(private val context: Context) {
                 .build()
         val canNotify =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
         if (canNotify) {
             NotificationManagerCompat.from(context).notify(id, notification)
         }

@@ -17,7 +17,13 @@ import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.config.AppConfig
 
 @Composable
-fun LoginScreen(sessionState: SessionState, appConfig: AppConfig, isBusy: Boolean, errorMessage: String?, onLogin: () -> Unit) {
+fun LoginScreen(
+    sessionState: SessionState,
+    appConfig: AppConfig,
+    isBusy: Boolean,
+    errorMessage: String?,
+    onLogin: () -> Unit
+) {
     Column(
         modifier =
         Modifier
@@ -36,7 +42,9 @@ fun LoginScreen(sessionState: SessionState, appConfig: AppConfig, isBusy: Boolea
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Native Android companion app for the current shift, next shifts, team status, and time-off summary.",
+                    text =
+                    "Native Android companion app for the current shift, next shifts, " +
+                        "team status, and time-off summary.",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(text = "Environment: ${appConfig.environment}")
@@ -46,7 +54,8 @@ fun LoginScreen(sessionState: SessionState, appConfig: AppConfig, isBusy: Boolea
                     when (sessionState) {
                         SessionState.Initializing -> "Checking existing session…"
                         SessionState.LoggedOut -> "No active session"
-                        is SessionState.Authenticated -> if (sessionState.hasRefreshToken) "Session ready (refresh enabled)" else "Session ready"
+                        is SessionState.Authenticated ->
+                            if (sessionState.hasRefreshToken) "Session ready (refresh enabled)" else "Session ready"
                         is SessionState.Error -> sessionState.message
                     }
                 )

@@ -11,7 +11,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
-data class NotificationPreferences(val shiftsEnabled: Boolean = true, val timeTrackingEnabled: Boolean = true, val syncConflictsEnabled: Boolean = true)
+data class NotificationPreferences(
+    val shiftsEnabled: Boolean = true,
+    val timeTrackingEnabled: Boolean = true,
+    val syncConflictsEnabled: Boolean = true
+)
 
 class NotificationPreferencesStore(context: Context) {
     private val dataStore =

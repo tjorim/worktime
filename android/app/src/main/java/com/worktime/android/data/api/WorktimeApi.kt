@@ -27,10 +27,17 @@ import retrofit2.http.Query
 
 interface WorktimeApi {
     @GET("api/read-models/dashboard")
-    suspend fun getDashboard(@Header("Authorization") authorization: String, @Query("timezone") timezone: String): DashboardResponse
+    suspend fun getDashboard(
+        @Header("Authorization") authorization: String,
+        @Query("timezone") timezone: String
+    ): DashboardResponse
 
     @POST("api/time-tracking/tasks")
-    suspend fun createTask(@Header("Authorization") authorization: String, @Query("user_id") userId: Int, @Body payload: TaskMutationRequest): TaskRecord
+    suspend fun createTask(
+        @Header("Authorization") authorization: String,
+        @Query("user_id") userId: Int,
+        @Body payload: TaskMutationRequest
+    ): TaskRecord
 
     @PUT("api/time-tracking/tasks/{taskId}")
     suspend fun updateTask(
@@ -41,7 +48,10 @@ interface WorktimeApi {
     ): TaskRecord
 
     @GET("api/time-tracking/tasks/running")
-    suspend fun getRunningTask(@Header("Authorization") authorization: String, @Query("user_id") userId: Int): Response<TaskRecord>
+    suspend fun getRunningTask(
+        @Header("Authorization") authorization: String,
+        @Query("user_id") userId: Int
+    ): Response<TaskRecord>
 
     @POST("api/work-locations/")
     suspend fun upsertWorkLocation(
@@ -59,7 +69,11 @@ interface WorktimeApi {
     ): WorkLocationListResponse
 
     @DELETE("api/time-tracking/labels/{labelId}")
-    suspend fun deleteLabel(@Header("Authorization") authorization: String, @Path("labelId") labelId: String, @Query("user_id") userId: Int)
+    suspend fun deleteLabel(
+        @Header("Authorization") authorization: String,
+        @Path("labelId") labelId: String,
+        @Query("user_id") userId: Int
+    )
 
     @GET("api/sync/status")
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse

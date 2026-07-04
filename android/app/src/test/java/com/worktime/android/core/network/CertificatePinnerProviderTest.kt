@@ -34,11 +34,13 @@ class CertificatePinnerProviderTest {
         assertEquals(CertificatePinner.DEFAULT, pinner)
     }
 
-    private fun appConfig(environment: String, certificatePins: List<String> = listOf("sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")): AppConfig =
-        AppConfig(
-            environment = environment,
-            apiBaseUrl = "https://worktime.tjor.im/",
-            certificatePinHost = "worktime.tjor.im",
-            certificatePins = certificatePins
-        )
+    private fun appConfig(
+        environment: String,
+        certificatePins: List<String> = listOf("sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")
+    ): AppConfig = AppConfig(
+        environment = environment,
+        apiBaseUrl = "https://worktime.tjor.im/",
+        certificatePinHost = "worktime.tjor.im",
+        certificatePins = certificatePins
+    )
 }

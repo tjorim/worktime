@@ -2,7 +2,12 @@ package com.worktime.android.core.config
 
 import com.worktime.android.BuildConfig
 
-data class AppConfig(val environment: String, val apiBaseUrl: String, val certificatePinHost: String, val certificatePins: List<String>)
+data class AppConfig(
+    val environment: String,
+    val apiBaseUrl: String,
+    val certificatePinHost: String,
+    val certificatePins: List<String>
+)
 
 fun buildAppConfig(): AppConfig = AppConfig(
     environment = BuildConfig.WORKTIME_ENVIRONMENT,
