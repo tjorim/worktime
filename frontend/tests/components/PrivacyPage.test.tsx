@@ -29,9 +29,7 @@ describe("PrivacyPage", () => {
       screen.getByRole("heading", { name: "Diagnostics and operational logs" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact us" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open an issue on GitHub" })).toHaveAttribute(
-      "href",
-      "https://github.com/tjorim/worktime/issues/new/choose",
-    );
+    expect(screen.getByText(/contact your Worktime app admin/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /github/i })).not.toBeInTheDocument();
   });
 });

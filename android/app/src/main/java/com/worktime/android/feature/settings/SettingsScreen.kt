@@ -165,7 +165,7 @@ fun SettingsScreen(
                 Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
                     Text("Privacy policy")
                 }
-                Button(onClick = { uriHandler.openUri(DATA_DELETION_REQUEST_URL) }) {
+                Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
                     Text("Request account or data deletion")
                 }
             }
@@ -174,7 +174,6 @@ fun SettingsScreen(
 }
 
 private const val PRIVACY_POLICY_URL = "https://worktime.tjor.im/privacy"
-private const val DATA_DELETION_REQUEST_URL = "https://github.com/tjorim/worktime/issues/new/choose"
 
 @Composable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
