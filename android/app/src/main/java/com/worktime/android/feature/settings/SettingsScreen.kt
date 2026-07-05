@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.worktime.android.core.auth.OidcConfig
 import com.worktime.android.core.config.AppConfig
@@ -54,6 +55,8 @@ fun SettingsScreen(
     onBiometricIdleTimeoutChanged: (Int) -> Unit,
     onLogout: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
+
     ScreenList(title = "Settings") {
         item {
             SummaryCard(title = "Environment") {
@@ -159,10 +162,19 @@ fun SettingsScreen(
                 Button(onClick = onLogout) {
                     Text("Sign out")
                 }
+                Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
+                    Text("Privacy policy")
+                }
+                Button(onClick = { uriHandler.openUri(DATA_DELETION_REQUEST_URL) }) {
+                    Text("Request account or data deletion")
+                }
             }
         }
     }
 }
+
+private const val PRIVACY_POLICY_URL = "https://worktime.tjor.im/privacy"
+private const val DATA_DELETION_REQUEST_URL = "https://github.com/tjorim/worktime/issues/new/choose"
 
 @Composable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
