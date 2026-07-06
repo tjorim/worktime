@@ -221,7 +221,12 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
             currentUserId = null
             MutationResult.Success(Unit)
         } catch (error: HttpException) {
-            MutationResult.Error("Request failed (${error.code()})")
+            if (error.code() == HTTP_UNAUTHORIZED) {
+                sessionController.logout()
+                MutationResult.LoggedOut
+            } else {
+                MutationResult.Error("Request failed (${error.code()})")
+            }
         } catch (_: IOException) {
             MutationResult.Error("Unable to reach the Worktime backend")
         } catch (error: Exception) {

@@ -147,6 +147,22 @@ class WorktimeRepositoryTest {
     }
 
     @Test
+    fun deleteAccountLogsOutOnUnauthorized() = runTest {
+        val sessionController = FakeSessionController(token = "token-123")
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(deleteAccountThrowable = httpException(401)),
+                sessionController = sessionController
+            )
+        repository.loadDashboard()
+
+        val result = repository.deleteAccount()
+
+        assertEquals(MutationResult.LoggedOut, result)
+        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
+    }
+
+    @Test
     fun deleteAccountReturnsErrorAndDoesNotLogOutOnFailure() = runTest {
         val sessionController = FakeSessionController(token = "token-123")
         val repository =

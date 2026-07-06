@@ -98,3 +98,6 @@ def test_admin_can_delete_own_account_via_me(
     response = db_client.delete("/api/me", headers=auth_headers(admin_id, is_admin=True))
 
     assert response.status_code == 204
+
+    stale_get = db_client.get("/api/me", headers=auth_headers(admin_id, is_admin=True))
+    assert stale_get.status_code == 404

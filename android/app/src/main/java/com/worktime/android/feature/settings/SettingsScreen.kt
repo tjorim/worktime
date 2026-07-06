@@ -171,9 +171,6 @@ fun SettingsScreen(
                 Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
                     Text("Privacy policy")
                 }
-                Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
-                    Text("Privacy and deletion options")
-                }
             }
         }
         item {
