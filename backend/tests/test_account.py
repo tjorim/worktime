@@ -58,3 +58,46 @@ def test_me_stale_principal_returns_404(
     """A token for a user that does not exist in the DB should yield 404."""
     response = db_client.get("/api/me", headers=auth_headers(9999))
     assert response.status_code == 404
+
+
+def test_unauthenticated_delete_me_returns_401(db_client: TestClient) -> None:
+    """Requests without an Authorization header should be rejected with 401."""
+    response = db_client.delete("/api/me")
+    assert response.status_code == 401
+
+
+def test_authenticated_delete_me_removes_user(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    """A signed-in user can delete their own account and its data."""
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "delete-me-user")
+
+    response = db_client.delete("/api/me", headers=auth_headers(user_id))
+
+    assert response.status_code == 204
+
+    stale_get = db_client.get("/api/me", headers=auth_headers(user_id))
+    assert stale_get.status_code == 404
+
+    admin_get = db_client.get(f"/api/users/{user_id}", headers=admin_headers)
+    assert admin_get.status_code == 404
+
+
+def test_admin_can_delete_own_account_via_me(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    """Unlike DELETE /api/users/{id}, self-service deletion allows admins to delete themselves."""
+    admin_headers = auth_headers(1, is_admin=True)
+    admin_id = create_user_factory(db_client, admin_headers, "self-delete-admin")
+
+    response = db_client.delete("/api/me", headers=auth_headers(admin_id, is_admin=True))
+
+    assert response.status_code == 204
+
+    stale_get = db_client.get("/api/me", headers=auth_headers(admin_id, is_admin=True))
+    assert stale_get.status_code == 404

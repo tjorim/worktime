@@ -121,10 +121,47 @@ class DashboardViewModelTest {
         assertEquals("Request validation failed", viewModel.actionsState.value.message)
     }
 
+    @Test
+    fun deleteAccountLogsOutOnSuccess() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                deleteAccountResult = MutationResult.Success(Unit)
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.deleteAccount()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.LoggedOut, viewModel.uiState.value)
+        assertEquals(false, viewModel.actionsState.value.isDeletingAccount)
+        assertEquals(null, viewModel.actionsState.value.deleteAccountError)
+    }
+
+    @Test
+    fun deleteAccountSurfacesErrorAndStaysSignedInOnFailure() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                deleteAccountResult = MutationResult.Error("Request failed (500)")
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.deleteAccount()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+        assertEquals(false, viewModel.actionsState.value.isDeletingAccount)
+        assertEquals("Request failed (500)", viewModel.actionsState.value.deleteAccountError)
+    }
+
     private class FakeDashboardRepository(
         private val result: DashboardLoadResult,
         private val gate: CompletableDeferred<Unit>? = null,
-        private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask())
+        private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
+        private val deleteAccountResult: MutationResult<Unit> = MutationResult.Success(Unit)
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
 
@@ -170,6 +207,8 @@ class DashboardViewModelTest {
 
         override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> =
             MutationResult.Success(SyncStatusResponse(serverTimestamp = "2026-05-26T12:00:00Z"))
+
+        override suspend fun deleteAccount(): MutationResult<Unit> = deleteAccountResult
     }
 }
 

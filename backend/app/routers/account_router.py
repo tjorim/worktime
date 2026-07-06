@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.schemas import AccountCapabilities, AccountProfile
-from app.services.db_service import NotFoundError, get_user
+from app.services.db_service import NotFoundError, delete_user_uncommitted, get_user
 
 router = APIRouter(tags=["Account"])
 
@@ -50,3 +50,32 @@ async def get_account_profile(
         # or per-user settings) without changing the response shape.
         capabilities=AccountCapabilities(backup_enabled=True),
     )
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"description": "Unauthorized - no valid session"},
+        404: {"description": "User not found - session references a deleted local user"},
+    },
+)
+async def delete_account(
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Permanently delete the authenticated user's account and user-scoped data.
+
+    Unlike the admin-facing ``DELETE /api/users/{id}`` endpoint, this is
+    self-service and intentionally does not block admins from deleting their
+    own account.
+
+    Raises 401 when no valid session is present (handled by
+    ``get_authenticated_principal``).
+    Raises 404 if the session maps to a local user id that no longer exists.
+    """
+    try:
+        async with session.begin():
+            await delete_user_uncommitted(session, principal.user_id)
+    except NotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error

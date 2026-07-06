@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -15,12 +16,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.worktime.android.core.auth.OidcConfig
 import com.worktime.android.core.config.AppConfig
@@ -52,8 +55,14 @@ fun SettingsScreen(
     biometricLockPreferences: BiometricLockPreferences,
     onBiometricLockEnabledChanged: (Boolean) -> Unit,
     onBiometricIdleTimeoutChanged: (Int) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    isDeletingAccount: Boolean = false,
+    deleteAccountError: String? = null,
+    onDeleteAccount: () -> Unit = {}
 ) {
+    val uriHandler = LocalUriHandler.current
+    var showDeleteAccountConfirm by rememberSaveable { mutableStateOf(false) }
+
     ScreenList(title = "Settings") {
         item {
             SummaryCard(title = "Environment") {
@@ -159,10 +168,69 @@ fun SettingsScreen(
                 Button(onClick = onLogout) {
                     Text("Sign out")
                 }
+                Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
+                    Text("Privacy policy")
+                }
+            }
+        }
+        item {
+            SummaryCard(title = "Danger zone") {
+                content {
+                    Text(
+                        text = "Permanently delete your account and all synced Worktime data. This cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (deleteAccountError != null) {
+                        Text(
+                            text = deleteAccountError,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Button(
+                        onClick = { showDeleteAccountConfirm = true },
+                        enabled = !isDeletingAccount,
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(if (isDeletingAccount) "Deleting…" else "Delete my account")
+                    }
+                }
             }
         }
     }
+
+    if (showDeleteAccountConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountConfirm = false },
+            title = { Text("Delete your account?") },
+            text = {
+                Text(
+                    "This will permanently delete your account and all synced Worktime data. " +
+                        "This action cannot be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteAccountConfirm = false
+                        onDeleteAccount()
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
+
+private const val PRIVACY_POLICY_URL = "https://worktime.tjor.im/privacy"
 
 @Composable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)

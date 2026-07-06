@@ -45,9 +45,12 @@ interface SettingsAccountSectionProps {
   adminUsersError: string | null;
   adminUsersDeleteError: string | null;
   deletingAdminUserId: number | null;
+  isDeletingAccount: boolean;
+  deleteAccountError: string | null;
   onProfileDraftChange: (value: string) => void;
   onSaveProfile: () => void;
   onDeleteAdminUser: (userId: number) => void;
+  onDeleteAccount: () => void;
   onLogout: () => void;
   onSignup: () => void;
   onLogin: () => void;
@@ -71,15 +74,19 @@ export function SettingsAccountSection({
   adminUsersError,
   adminUsersDeleteError,
   deletingAdminUserId,
+  isDeletingAccount,
+  deleteAccountError,
   onProfileDraftChange,
   onSaveProfile,
   onDeleteAdminUser,
+  onDeleteAccount,
   onLogout,
   onSignup,
   onLogin,
 }: SettingsAccountSectionProps) {
   const [pendingDeleteUserId, setPendingDeleteUserId] = useState<number | null>(null);
   const pendingDeleteUser = adminUsers.find((user) => user.id === pendingDeleteUserId) ?? null;
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
 
   return (
     <div className="border-bottom">
@@ -254,6 +261,25 @@ export function SettingsAccountSection({
                         )}
                       </div>
                     ) : null}
+
+                    <div className="pt-2 border-top">
+                      <h6 className="mb-2 text-danger">{m.account_delete_section_title()}</h6>
+                      <p className="text-muted small mb-2">{m.account_delete_description()}</p>
+                      {deleteAccountError ? (
+                        <Alert variant="danger" className="mb-2 py-2">
+                          {deleteAccountError}
+                        </Alert>
+                      ) : null}
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        disabled={isDeletingAccount}
+                        onClick={() => setShowDeleteAccountConfirm(true)}
+                      >
+                        <i className="bi bi-trash me-1"></i>
+                        {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>
@@ -312,6 +338,20 @@ export function SettingsAccountSection({
           setPendingDeleteUserId(null);
         }}
         onCancel={() => setPendingDeleteUserId(null)}
+        variant="danger"
+        icon="bi-trash"
+      />
+      <ConfirmationDialog
+        isOpen={showDeleteAccountConfirm}
+        title={m.account_delete_confirm_title()}
+        message={m.account_delete_confirm_message()}
+        confirmLabel={m.delete()}
+        cancelLabel={m.cancel()}
+        onConfirm={() => {
+          setShowDeleteAccountConfirm(false);
+          onDeleteAccount();
+        }}
+        onCancel={() => setShowDeleteAccountConfirm(false)}
         variant="danger"
         icon="bi-trash"
       />

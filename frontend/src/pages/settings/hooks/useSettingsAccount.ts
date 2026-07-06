@@ -25,6 +25,7 @@ interface UseSettingsAccountParams {
   displayName: string | null;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
   showSuccessToast: (message: string, icon?: string) => void;
+  onAccountDeleted: () => void;
 }
 
 const readErrorDetail = async (response: Response): Promise<string | null> => {
@@ -43,6 +44,7 @@ export function useSettingsAccount({
   displayName,
   fetchFn,
   showSuccessToast,
+  onAccountDeleted,
 }: UseSettingsAccountParams) {
   const [accountProfile, setAccountProfile] = useState<AccountProfile | null>(null);
   const [profileDraft, setProfileDraft] = useState("");
@@ -54,6 +56,8 @@ export function useSettingsAccount({
   const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
   const [adminUsersDeleteError, setAdminUsersDeleteError] = useState<string | null>(null);
   const [deletingAdminUserId, setDeletingAdminUserId] = useState<number | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -218,6 +222,28 @@ export function useSettingsAccount({
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    setDeleteAccountError(null);
+
+    try {
+      const response = await fetchFn("/api/me", { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error((await readErrorDetail(response)) ?? m.account_delete_failed());
+      }
+
+      showSuccessToast(m.account_deleted(), "bi-trash");
+      onAccountDeleted();
+    } catch (error) {
+      logger.error("Failed to delete account:", error);
+      setDeleteAccountError(
+        error instanceof Error && error.message.trim() !== "" ? error.message : m.account_delete_failed(),
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   return {
     accountProfile,
     profileDraft,
@@ -234,6 +260,9 @@ export function useSettingsAccount({
     adminUsersDeleteError,
     deletingAdminUserId,
     handleDeleteAdminUser,
+    isDeletingAccount,
+    deleteAccountError,
+    handleDeleteAccount,
   };
 }
 

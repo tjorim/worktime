@@ -84,16 +84,7 @@ export function PrivacyPage() {
 
               <section>
                 <h2 className="h5">{m.privacy_page_contact_title()}</h2>
-                <p className="mb-0">
-                  {m.privacy_page_contact_body()}{" "}
-                  <a
-                    href="https://github.com/tjorim/worktime/issues/new/choose"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {m.privacy_page_contact_link()}
-                  </a>
-                </p>
+                <p className="mb-0">{m.privacy_page_contact_body()}</p>
               </section>
 
               <section>
