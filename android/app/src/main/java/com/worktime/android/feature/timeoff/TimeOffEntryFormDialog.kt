@@ -78,7 +78,7 @@ private val ENTRY_FLAG_OPTIONS =
         "can_fly" to "Can fly"
     )
 
-/** Compose state holder for the form fields; created fresh per [existingEntry] so switching between entries resets it. */
+/** Form fields state, created fresh per [existingEntry] so switching between entries resets it. */
 private class TimeOffFormFieldsState(existingEntry: TimeOffEntryRecord?) {
     var entryKind by
         mutableStateOf(

@@ -87,7 +87,11 @@ class TimeOffViewModelTest {
 
         viewModel.openCreateForm()
         viewModel.submit(
-            TimeOffDraft.SingleDate(date = LocalDate.parse("2026-06-01"), entryType = "vacation", entryFlag = "full_day")
+            TimeOffDraft.SingleDate(
+                date = LocalDate.parse("2026-06-01"),
+                entryType = "vacation",
+                entryFlag = "full_day"
+            )
         )
         advanceUntilIdle()
 
@@ -107,7 +111,11 @@ class TimeOffViewModelTest {
 
         viewModel.openCreateForm()
         viewModel.submit(
-            TimeOffDraft.SingleDate(date = LocalDate.parse("2026-06-01"), entryType = "vacation", entryFlag = "full_day")
+            TimeOffDraft.SingleDate(
+                date = LocalDate.parse("2026-06-01"),
+                entryType = "vacation",
+                entryFlag = "full_day"
+            )
         )
         advanceUntilIdle()
 
@@ -195,8 +203,7 @@ class TimeOffViewModelTest {
 
         override suspend fun deleteTemplate(templateId: String) = throw UnsupportedOperationException()
 
-        override suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
-            createResult
+        override suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> = createResult
 
         override suspend fun listTimeOffEntries(
             startDate: LocalDate?,
@@ -206,12 +213,15 @@ class TimeOffViewModelTest {
         override suspend fun getTimeOffEntry(entryId: String): MutationResult<TimeOffEntryRecord> =
             throw UnsupportedOperationException()
 
-        override suspend fun updateTimeOffEntry(entryId: String, draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
-            updateResult
+        override suspend fun updateTimeOffEntry(
+            entryId: String,
+            draft: TimeOffDraft
+        ): MutationResult<TimeOffEntryRecord> = updateResult
 
         override suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit> = deleteResult
 
-        override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> = throw UnsupportedOperationException()
+        override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> =
+            throw UnsupportedOperationException()
 
         override suspend fun deleteAccount(): MutationResult<Unit> = throw UnsupportedOperationException()
 

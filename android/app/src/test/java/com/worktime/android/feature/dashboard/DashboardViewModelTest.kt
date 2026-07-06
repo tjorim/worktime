@@ -291,8 +291,10 @@ class DashboardViewModelTest {
         override suspend fun getTimeOffEntry(entryId: String): MutationResult<TimeOffEntryRecord> =
             throw UnsupportedOperationException()
 
-        override suspend fun updateTimeOffEntry(entryId: String, draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
-            throw UnsupportedOperationException()
+        override suspend fun updateTimeOffEntry(
+            entryId: String,
+            draft: TimeOffDraft
+        ): MutationResult<TimeOffEntryRecord> = throw UnsupportedOperationException()
 
         override suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit> =
             throw UnsupportedOperationException()
