@@ -6,17 +6,22 @@ import com.worktime.android.data.model.CurrentStatus
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.FeatureFlags
 import com.worktime.android.data.model.Identity
+import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.NextShifts
 import com.worktime.android.data.model.SyncStatusResponse
 import com.worktime.android.data.model.TaskRecord
 import com.worktime.android.data.model.TeamStatus
+import com.worktime.android.data.model.TemplateRecord
+import com.worktime.android.data.model.TimeOffEntryRecord
 import com.worktime.android.data.model.TimeOffSummary
 import com.worktime.android.data.model.WorkContext
 import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
+import com.worktime.android.data.repository.TimeOffDraft
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -157,10 +162,44 @@ class DashboardViewModelTest {
         assertEquals("Request failed (500)", viewModel.actionsState.value.deleteAccountError)
     }
 
+    @Test
+    fun refreshActionsPopulatesLabelsAndTemplates() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                listLabelsResult = MutationResult.Success(listOf(sampleLabel())),
+                listTemplatesResult = MutationResult.Success(listOf(sampleTemplate()))
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        assertEquals(listOf(sampleLabel()), viewModel.actionsState.value.labels)
+        assertEquals(listOf(sampleTemplate()), viewModel.actionsState.value.templates)
+    }
+
+    @Test
+    fun createLabelSurfacesConflictMessage() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                createLabelResult = MutationResult.ValidationError("Label name must be unique")
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.createLabel("Focus", "#FF0000")
+        advanceUntilIdle()
+
+        assertEquals("Label name must be unique", viewModel.actionsState.value.message)
+    }
+
     private class FakeDashboardRepository(
         private val result: DashboardLoadResult,
         private val gate: CompletableDeferred<Unit>? = null,
         private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
+        private val listLabelsResult: MutationResult<List<LabelRecord>> = MutationResult.Success(emptyList()),
+        private val listTemplatesResult: MutationResult<List<TemplateRecord>> = MutationResult.Success(emptyList()),
+        private val createLabelResult: MutationResult<LabelRecord> = MutationResult.Success(sampleLabel()),
         private val deleteAccountResult: MutationResult<Unit> = MutationResult.Success(Unit)
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
@@ -203,7 +242,60 @@ class DashboardViewModelTest {
         override suspend fun loadWeeklyWorkLocations(until: LocalDate): MutationResult<List<WorkLocationRecord>> =
             MutationResult.Success(emptyList())
 
+        override suspend fun getWorkLocation(date: LocalDate): MutationResult<WorkLocationRecord?> =
+            MutationResult.Success(null)
+
+        override suspend fun deleteWorkLocation(date: LocalDate): MutationResult<Unit> = MutationResult.Success(Unit)
+
+        override suspend fun listTasks(startDate: LocalDate?, endDate: LocalDate?): MutationResult<List<TaskRecord>> =
+            MutationResult.Success(emptyList())
+
+        override suspend fun deleteTask(taskId: String): MutationResult<Unit> = MutationResult.Success(Unit)
+
+        override suspend fun createLabel(name: String, color: String): MutationResult<LabelRecord> = createLabelResult
+
+        override suspend fun listLabels(): MutationResult<List<LabelRecord>> = listLabelsResult
+
+        override suspend fun updateLabel(labelId: String, name: String?, color: String?): MutationResult<LabelRecord> =
+            throw UnsupportedOperationException()
+
         override suspend fun deleteLabel(labelId: String): MutationResult<Unit> = MutationResult.Success(Unit)
+
+        override suspend fun createTemplate(
+            text: String,
+            labelId: String?,
+            startTime: LocalTime,
+            stopTime: LocalTime
+        ): MutationResult<TemplateRecord> = throw UnsupportedOperationException()
+
+        override suspend fun listTemplates(): MutationResult<List<TemplateRecord>> = listTemplatesResult
+
+        override suspend fun updateTemplate(
+            templateId: String,
+            text: String?,
+            labelId: String?,
+            startTime: LocalTime?,
+            stopTime: LocalTime?
+        ): MutationResult<TemplateRecord> = throw UnsupportedOperationException()
+
+        override suspend fun deleteTemplate(templateId: String): MutationResult<Unit> = MutationResult.Success(Unit)
+
+        override suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
+            throw UnsupportedOperationException()
+
+        override suspend fun listTimeOffEntries(
+            startDate: LocalDate?,
+            endDate: LocalDate?
+        ): MutationResult<List<TimeOffEntryRecord>> = MutationResult.Success(emptyList())
+
+        override suspend fun getTimeOffEntry(entryId: String): MutationResult<TimeOffEntryRecord> =
+            throw UnsupportedOperationException()
+
+        override suspend fun updateTimeOffEntry(entryId: String, draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
+            throw UnsupportedOperationException()
+
+        override suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit> =
+            throw UnsupportedOperationException()
 
         override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> =
             MutationResult.Success(SyncStatusResponse(serverTimestamp = "2026-05-26T12:00:00Z"))
@@ -249,5 +341,23 @@ private fun sampleTask(): TaskRecord = TaskRecord(
     startTime = "2026-05-26T12:00:00Z",
     stopTime = null,
     includesBreak = false,
+    createdAt = "2026-05-26T12:00:00Z"
+)
+
+private fun sampleLabel(): LabelRecord = LabelRecord(
+    id = "label-1",
+    userId = 1,
+    name = "Focus",
+    color = "#FF0000",
+    createdAt = "2026-05-26T12:00:00Z"
+)
+
+private fun sampleTemplate(): TemplateRecord = TemplateRecord(
+    id = "template-1",
+    userId = 1,
+    labelId = null,
+    text = "Deep work",
+    startTime = "09:00:00",
+    stopTime = "11:00:00",
     createdAt = "2026-05-26T12:00:00Z"
 )

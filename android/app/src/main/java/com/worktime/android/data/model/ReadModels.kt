@@ -122,6 +122,9 @@ data class TaskRecord(
 )
 
 @Serializable
+data class TaskListResponse(val items: List<TaskRecord>, val total: Int)
+
+@Serializable
 data class WorkLocationMutationRequest(
     val date: String,
     @SerialName("country_code") val countryCode: String,

@@ -1,27 +1,70 @@
 package com.worktime.android.feature.today
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.worktime.android.data.model.LabelRecord
+import com.worktime.android.data.model.TemplateRecord
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
+import com.worktime.android.ui.components.DatePickerField
 import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
 import com.worktime.android.ui.components.formatInstant
 import com.worktime.android.ui.components.formatShift
 import java.time.LocalDate
+
+private const val PRESET_COLOR_RED = "#F44336"
+private const val PRESET_COLOR_ORANGE = "#FF9800"
+private const val PRESET_COLOR_YELLOW = "#FBC02D"
+private const val PRESET_COLOR_GREEN = "#4CAF50"
+private const val PRESET_COLOR_TEAL = "#009688"
+private const val PRESET_COLOR_BLUE = "#2196F3"
+private const val PRESET_COLOR_PURPLE = "#9C27B0"
+private const val PRESET_COLOR_GREY = "#607D8B"
+
+private val PRESET_LABEL_COLORS =
+    listOf(
+        PRESET_COLOR_RED,
+        PRESET_COLOR_ORANGE,
+        PRESET_COLOR_YELLOW,
+        PRESET_COLOR_GREEN,
+        PRESET_COLOR_TEAL,
+        PRESET_COLOR_BLUE,
+        PRESET_COLOR_PURPLE,
+        PRESET_COLOR_GREY
+    )
 
 @Composable
 fun TodayScreen(
@@ -31,12 +74,15 @@ fun TodayScreen(
     onStartTracking: (String, String?) -> Unit,
     onStopTracking: (String) -> Unit,
     onUpdateTask: (String, String?, String?) -> Unit,
-    onSetWorkLocation: (LocalDate, String, String?) -> Unit
+    onSetWorkLocation: (LocalDate, String, String?) -> Unit,
+    onCreateLabel: (String, String) -> Unit
 ) {
     ReadModelScreen(title = "Today", uiState = uiState, onRetry = onRetry) { dashboard ->
         var taskText by remember(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.text ?: "") }
-        var taskLabel by remember(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.labelId ?: "") }
-        var workLocationDate by remember { mutableStateOf(LocalDate.now().toString()) }
+        var taskLabelId by remember(actionsState.runningTask) {
+            mutableStateOf(actionsState.runningTask?.labelId ?: "")
+        }
+        var workLocationDate by remember { mutableStateOf(LocalDate.now()) }
         var countryCode by remember { mutableStateOf("") }
         var workLocationLabel by remember { mutableStateOf("") }
 
@@ -74,6 +120,15 @@ fun TodayScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (actionsState.templates.isNotEmpty()) {
+                            TemplateChipsRow(
+                                templates = actionsState.templates,
+                                onApply = { template ->
+                                    taskText = template.text
+                                    taskLabelId = template.labelId ?: ""
+                                }
+                            )
+                        }
                         OutlinedTextField(
                             value = taskText,
                             onValueChange = { taskText = it },
@@ -81,16 +136,15 @@ fun TodayScreen(
                             label = { Text("Task") },
                             singleLine = true
                         )
-                        OutlinedTextField(
-                            value = taskLabel,
-                            onValueChange = { taskLabel = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Label (optional)") },
-                            singleLine = true
+                        LabelPickerField(
+                            labels = actionsState.labels,
+                            selectedLabelId = taskLabelId,
+                            onLabelSelected = { taskLabelId = it },
+                            onCreateLabel = onCreateLabel
                         )
                         if (actionsState.runningTask == null) {
                             Button(
-                                onClick = { onStartTracking(taskText, taskLabel.ifBlank { null }) },
+                                onClick = { onStartTracking(taskText, taskLabelId.ifBlank { null }) },
                                 enabled = !actionsState.isSubmitting && taskText.isNotBlank()
                             ) {
                                 Text("Start timer")
@@ -101,7 +155,7 @@ fun TodayScreen(
                                     onUpdateTask(
                                         actionsState.runningTask.id,
                                         taskText,
-                                        taskLabel.ifBlank { null }
+                                        taskLabelId.ifBlank { null }
                                     )
                                 },
                                 enabled = !actionsState.isSubmitting && taskText.isNotBlank()
@@ -125,12 +179,10 @@ fun TodayScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = workLocationDate,
-                            onValueChange = { workLocationDate = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Date (YYYY-MM-DD)") },
-                            singleLine = true
+                        DatePickerField(
+                            label = "Date",
+                            date = workLocationDate,
+                            onDateSelected = { workLocationDate = it }
                         )
                         OutlinedTextField(
                             value = countryCode,
@@ -148,9 +200,7 @@ fun TodayScreen(
                         )
                         Button(
                             onClick = {
-                                runCatching { LocalDate.parse(workLocationDate) }.getOrNull()?.let { parsedDate ->
-                                    onSetWorkLocation(parsedDate, countryCode, workLocationLabel.ifBlank { null })
-                                }
+                                onSetWorkLocation(workLocationDate, countryCode, workLocationLabel.ifBlank { null })
                             },
                             enabled = !actionsState.isSubmitting && countryCode.length >= 2
                         ) {
@@ -165,14 +215,137 @@ fun TodayScreen(
                     text("Server timestamp", actionsState.syncStatus?.serverTimestamp ?: "Unavailable")
                     text("Task updates", actionsState.syncStatus?.tasksUpdatedAt ?: "—")
                     text("Location updates", actionsState.syncStatus?.workLocationsUpdatedAt ?: "—")
-                    if (!actionsState.message.isNullOrBlank()) {
-                        Text(
-                            text = actionsState.message,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+                    actionsState.message?.takeIf { it.isNotBlank() }?.let {
+                        Text(text = it, modifier = Modifier.padding(top = 8.dp))
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun TemplateChipsRow(templates: List<TemplateRecord>, onApply: (TemplateRecord) -> Unit) {
+    Row(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        templates.forEach { template ->
+            AssistChip(onClick = { onApply(template) }, label = { Text(template.text) })
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LabelPickerField(
+    labels: List<LabelRecord>,
+    selectedLabelId: String,
+    onLabelSelected: (String) -> Unit,
+    onCreateLabel: (String, String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    val selectedLabel = labels.firstOrNull { it.id == selectedLabelId }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selectedLabel?.name ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Label (optional)") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("None") },
+                onClick = {
+                    onLabelSelected("")
+                    expanded = false
+                }
+            )
+            labels.forEach { label ->
+                DropdownMenuItem(
+                    text = { Text(label.name) },
+                    onClick = {
+                        onLabelSelected(label.id)
+                        expanded = false
+                    }
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("+ New label") },
+                onClick = {
+                    expanded = false
+                    showCreateDialog = true
+                }
+            )
+        }
+    }
+
+    if (showCreateDialog) {
+        NewLabelDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { name, color ->
+                onCreateLabel(name, color)
+                showCreateDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun NewLabelDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(PRESET_LABEL_COLORS.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New label") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PRESET_LABEL_COLORS.forEach { color ->
+                        Box(
+                            modifier =
+                            Modifier
+                                .size(32.dp)
+                                .background(
+                                    color = Color(android.graphics.Color.parseColor(color)),
+                                    shape = CircleShape
+                                ).border(
+                                    width = if (color == selectedColor) 2.dp else 0.dp,
+                                    color = Color.Black,
+                                    shape = CircleShape
+                                ).clickable { selectedColor = color }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onCreate(name, selectedColor) }, enabled = name.isNotBlank()) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

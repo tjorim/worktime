@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.worktime.android.data.model.DashboardResponse
+import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.SyncStatusResponse
 import com.worktime.android.data.model.TaskRecord
+import com.worktime.android.data.model.TemplateRecord
 import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
@@ -33,6 +35,8 @@ sealed interface DashboardUiState {
 data class MobileActionsUiState(
     val runningTask: TaskRecord? = null,
     val weeklyWorkLocations: List<WorkLocationRecord> = emptyList(),
+    val labels: List<LabelRecord> = emptyList(),
+    val templates: List<TemplateRecord> = emptyList(),
     val syncStatus: SyncStatusResponse? = null,
     val isSubmitting: Boolean = false,
     val message: String? = null,
@@ -98,11 +102,27 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                         else -> null
                     }
                 }
+            val labelsDeferred =
+                async {
+                    when (val result = repository.listLabels()) {
+                        is MutationResult.Success -> result.value
+                        else -> emptyList()
+                    }
+                }
+            val templatesDeferred =
+                async {
+                    when (val result = repository.listTemplates()) {
+                        is MutationResult.Success -> result.value
+                        else -> emptyList()
+                    }
+                }
             _actionsState.value =
                 _actionsState.value.copy(
                     runningTask = runningTaskDeferred.await(),
                     weeklyWorkLocations = weeklyLocationsDeferred.await(),
-                    syncStatus = syncStatusDeferred.await()
+                    syncStatus = syncStatusDeferred.await(),
+                    labels = labelsDeferred.await(),
+                    templates = templatesDeferred.await()
                 )
         }
     }
@@ -121,6 +141,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     fun setWorkLocation(date: LocalDate, countryCode: String, label: String?) {
         submitMutation { repository.setWorkLocation(date = date, countryCode = countryCode, label = label) }
+    }
+
+    fun createLabel(name: String, color: String) {
+        submitMutation { repository.createLabel(name, color) }
     }
 
     fun logout() {
