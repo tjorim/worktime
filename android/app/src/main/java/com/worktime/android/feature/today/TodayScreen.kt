@@ -69,8 +69,7 @@ private val PRESET_LABEL_COLORS =
 
 private const val OPAQUE_ALPHA_MASK = 0xFF000000L
 
-private fun parseHexColor(hex: String): Color =
-    Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK)
+private fun parseHexColor(hex: String): Color = Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK)
 
 @Composable
 fun TodayScreen(

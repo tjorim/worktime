@@ -124,10 +124,7 @@ interface WorktimeApi {
     ): TimeOffEntryRecord
 
     @DELETE("api/time-off/{entryId}")
-    suspend fun deleteTimeOffEntry(
-        @Header("Authorization") authorization: String,
-        @Path("entryId") entryId: String
-    )
+    suspend fun deleteTimeOffEntry(@Header("Authorization") authorization: String, @Path("entryId") entryId: String)
 
     @POST("api/time-tracking/labels")
     suspend fun createLabel(
