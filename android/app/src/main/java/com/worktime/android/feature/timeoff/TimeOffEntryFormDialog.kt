@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -79,34 +78,33 @@ private val ENTRY_FLAG_OPTIONS =
         "can_fly" to "Can fly"
     )
 
-@Composable
-fun TimeOffEntryFormDialog(
-    existingEntry: TimeOffEntryRecord?,
-    isSubmitting: Boolean,
-    message: String?,
-    onDismiss: () -> Unit,
-    onSubmit: (TimeOffDraft) -> Unit
-) {
+/** Compose state holder for the form fields; created fresh per [existingEntry] so switching between entries resets it. */
+private class TimeOffFormFieldsState(existingEntry: TimeOffEntryRecord?) {
     var entryKind by
-        rememberSaveable {
-            mutableStateOf(
-                when (existingEntry?.entryKind) {
-                    "range" -> EntryKindOption.DATE_RANGE
-                    "weekly" -> EntryKindOption.WEEKLY
-                    else -> EntryKindOption.SINGLE_DATE
-                }
-            )
-        }
-    var singleDate by rememberSaveable { mutableStateOf(existingEntry?.date?.let(LocalDate::parse)) }
-    var rangeStart by rememberSaveable { mutableStateOf(existingEntry?.startDate?.let(LocalDate::parse)) }
-    var rangeEnd by rememberSaveable { mutableStateOf(existingEntry?.endDate?.let(LocalDate::parse)) }
-    var weekday by rememberSaveable { mutableStateOf(existingEntry?.weekday ?: WEEKDAY_MONDAY) }
-    var entryType by rememberSaveable { mutableStateOf(existingEntry?.entryType ?: ENTRY_TYPE_OPTIONS.first().first) }
-    var entryFlag by rememberSaveable { mutableStateOf(existingEntry?.entryFlag ?: ENTRY_FLAG_OPTIONS.first().first) }
-    var note by rememberSaveable { mutableStateOf(existingEntry?.note ?: "") }
+        mutableStateOf(
+            when (existingEntry?.entryKind) {
+                "range" -> EntryKindOption.DATE_RANGE
+                "weekly" -> EntryKindOption.WEEKLY
+                else -> EntryKindOption.SINGLE_DATE
+            }
+        )
+    var singleDate by mutableStateOf(existingEntry?.date?.let(LocalDate::parse))
+    var rangeStart by mutableStateOf(existingEntry?.startDate?.let(LocalDate::parse))
+    var rangeEnd by mutableStateOf(existingEntry?.endDate?.let(LocalDate::parse))
+    var weekday by mutableStateOf(existingEntry?.weekday ?: WEEKDAY_MONDAY)
+    var entryType by mutableStateOf(existingEntry?.entryType ?: ENTRY_TYPE_OPTIONS.first().first)
+    var entryFlag by mutableStateOf(existingEntry?.entryFlag ?: ENTRY_FLAG_OPTIONS.first().first)
+    var note by mutableStateOf(existingEntry?.note ?: "")
 
-    val draft =
-        when (entryKind) {
+    val rangeIsInvalid: Boolean
+        get() {
+            val start = rangeStart
+            val end = rangeEnd
+            return entryKind == EntryKindOption.DATE_RANGE && start != null && end != null && end <= start
+        }
+
+    val draft: TimeOffDraft?
+        get() = when (entryKind) {
             EntryKindOption.SINGLE_DATE ->
                 singleDate?.let { TimeOffDraft.SingleDate(it, entryType, entryFlag, note.ifBlank { null }) }
             EntryKindOption.DATE_RANGE -> {
@@ -120,52 +118,23 @@ fun TimeOffEntryFormDialog(
             }
             EntryKindOption.WEEKLY -> TimeOffDraft.Weekly(weekday, entryType, entryFlag, note.ifBlank { null })
         }
+}
+
+@Composable
+fun TimeOffEntryFormDialog(
+    existingEntry: TimeOffEntryRecord?,
+    isSubmitting: Boolean,
+    message: String?,
+    onDismiss: () -> Unit,
+    onSubmit: (TimeOffDraft) -> Unit
+) {
+    val formState = remember(existingEntry) { TimeOffFormFieldsState(existingEntry) }
+    val draft = formState.draft
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existingEntry == null) "Add time off" else "Edit time off") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                EntryKindSelector(selected = entryKind, onSelect = { entryKind = it })
-                when (entryKind) {
-                    EntryKindOption.SINGLE_DATE ->
-                        DatePickerField(label = "Date", date = singleDate, onDateSelected = { singleDate = it })
-                    EntryKindOption.DATE_RANGE -> {
-                        DatePickerField(label = "Start date", date = rangeStart, onDateSelected = { rangeStart = it })
-                        DatePickerField(label = "End date", date = rangeEnd, onDateSelected = { rangeEnd = it })
-                    }
-                    EntryKindOption.WEEKLY ->
-                        LabeledDropdown(
-                            label = "Weekday",
-                            options = WEEKDAY_OPTIONS,
-                            selected = weekday,
-                            onSelect = { weekday = it }
-                        )
-                }
-                LabeledDropdown(
-                    label = "Type",
-                    options = ENTRY_TYPE_OPTIONS,
-                    selected = entryType,
-                    onSelect = { entryType = it }
-                )
-                LabeledDropdown(
-                    label = "Flag",
-                    options = ENTRY_FLAG_OPTIONS,
-                    selected = entryFlag,
-                    onSelect = { entryFlag = it }
-                )
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text("Note (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                message?.takeIf { it.isNotBlank() }?.let { Text(text = it) }
-            }
-        },
+        text = { TimeOffFormFields(formState = formState, message = message) },
         confirmButton = {
             Button(
                 onClick = { draft?.let(onSubmit) },
@@ -180,6 +149,66 @@ fun TimeOffEntryFormDialog(
             }
         }
     )
+}
+
+@Composable
+private fun TimeOffFormFields(formState: TimeOffFormFieldsState, message: String?) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        EntryKindSelector(selected = formState.entryKind, onSelect = { formState.entryKind = it })
+        TimeOffKindFields(formState)
+        LabeledDropdown(
+            label = "Type",
+            options = ENTRY_TYPE_OPTIONS,
+            selected = formState.entryType,
+            onSelect = { formState.entryType = it }
+        )
+        LabeledDropdown(
+            label = "Flag",
+            options = ENTRY_FLAG_OPTIONS,
+            selected = formState.entryFlag,
+            onSelect = { formState.entryFlag = it }
+        )
+        OutlinedTextField(
+            value = formState.note,
+            onValueChange = { formState.note = it },
+            label = { Text("Note (optional)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        message?.takeIf { it.isNotBlank() }?.let { Text(text = it) }
+    }
+}
+
+@Composable
+private fun TimeOffKindFields(formState: TimeOffFormFieldsState) {
+    when (formState.entryKind) {
+        EntryKindOption.SINGLE_DATE ->
+            DatePickerField(
+                label = "Date",
+                date = formState.singleDate,
+                onDateSelected = { formState.singleDate = it }
+            )
+        EntryKindOption.DATE_RANGE -> {
+            DatePickerField(
+                label = "Start date",
+                date = formState.rangeStart,
+                onDateSelected = { formState.rangeStart = it }
+            )
+            DatePickerField(label = "End date", date = formState.rangeEnd, onDateSelected = { formState.rangeEnd = it })
+            if (formState.rangeIsInvalid) {
+                Text("End date must be after start date. Use \"Single day\" for a one-day entry.")
+            }
+        }
+        EntryKindOption.WEEKLY ->
+            LabeledDropdown(
+                label = "Weekday",
+                options = WEEKDAY_OPTIONS,
+                selected = formState.weekday,
+                onSelect = { formState.weekday = it }
+            )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

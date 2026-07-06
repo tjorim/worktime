@@ -39,6 +39,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+@Suppress("TooManyFunctions") // one cohesive Retrofit client for the whole backend surface
 interface WorktimeApi {
     @GET("api/read-models/dashboard")
     suspend fun getDashboard(

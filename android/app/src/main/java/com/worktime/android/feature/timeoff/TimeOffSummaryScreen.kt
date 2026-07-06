@@ -55,29 +55,12 @@ fun TimeOffSummaryScreen(
                 onAction = onRetry
             )
         is TimeOffUiState.Success ->
-            ScreenList(title = "Time off") {
-                item {
-                    Button(onClick = onAdd) {
-                        Text("Add time off")
-                    }
-                }
-                if (uiState.entries.isEmpty()) {
-                    item {
-                        SummaryCard(title = "No entries yet") {
-                            text("Entries", "0")
-                        }
-                    }
-                }
-                uiState.entries.forEach { entry ->
-                    item {
-                        TimeOffEntryCard(
-                            entry = entry,
-                            onEdit = { onEdit(entry.entryId) },
-                            onDelete = { pendingDeleteId = entry.entryId }
-                        )
-                    }
-                }
-            }
+            TimeOffEntryList(
+                entries = uiState.entries,
+                onAdd = onAdd,
+                onEdit = onEdit,
+                onDeleteRequested = { pendingDeleteId = it }
+            )
     }
 
     if (formState.target != null) {
@@ -95,25 +78,65 @@ fun TimeOffSummaryScreen(
     }
 
     pendingDeleteId?.let { entryId ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteId = null },
-            title = { Text("Delete time off entry?") },
-            text = { Text("This cannot be undone.") },
-            confirmButton = {
-                Button(onClick = {
-                    onDelete(entryId)
-                    pendingDeleteId = null
-                }) {
-                    Text("Delete")
-                }
+        DeleteConfirmationDialog(
+            onConfirm = {
+                onDelete(entryId)
+                pendingDeleteId = null
             },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteId = null }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { pendingDeleteId = null }
         )
     }
+}
+
+@Composable
+private fun TimeOffEntryList(
+    entries: List<TimeOffEntryRecord>,
+    onAdd: () -> Unit,
+    onEdit: (String) -> Unit,
+    onDeleteRequested: (String) -> Unit
+) {
+    ScreenList(title = "Time off") {
+        item {
+            Button(onClick = onAdd) {
+                Text("Add time off")
+            }
+        }
+        if (entries.isEmpty()) {
+            item {
+                SummaryCard(title = "No entries yet") {
+                    text("Entries", "0")
+                }
+            }
+        }
+        entries.forEach { entry ->
+            item {
+                TimeOffEntryCard(
+                    entry = entry,
+                    onEdit = { onEdit(entry.entryId) },
+                    onDelete = { onDeleteRequested(entry.entryId) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete time off entry?") },
+        text = { Text("This cannot be undone.") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -136,7 +159,7 @@ private fun TimeOffEntryCard(entry: TimeOffEntryRecord, onEdit: () -> Unit, onDe
 }
 
 private fun TimeOffEntryRecord.datesLabel(): String = when (entryKind) {
-    "range" -> "${startDate?.let(::formatDate)} → ${endDate?.let(::formatDate)}"
+    "range" -> "${startDate?.let(::formatDate) ?: "—"} → ${endDate?.let(::formatDate) ?: "—"}"
     "weekly" -> "Every ${weekday?.let { WEEKDAY_NAMES[it] } ?: "week"}"
     else -> date?.let(::formatDate) ?: "—"
 }

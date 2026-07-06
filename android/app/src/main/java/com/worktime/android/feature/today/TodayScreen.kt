@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.worktime.android.data.model.LabelRecord
@@ -65,6 +66,11 @@ private val PRESET_LABEL_COLORS =
         PRESET_COLOR_PURPLE,
         PRESET_COLOR_GREY
     )
+
+private const val OPAQUE_ALPHA_MASK = 0xFF000000L
+
+private fun parseHexColor(hex: String): Color =
+    Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK)
 
 @Composable
 fun TodayScreen(
@@ -324,14 +330,13 @@ private fun NewLabelDialog(onDismiss: () -> Unit, onCreate: (String, String) -> 
                             modifier =
                             Modifier
                                 .size(32.dp)
-                                .background(
-                                    color = Color(android.graphics.Color.parseColor(color)),
-                                    shape = CircleShape
-                                ).border(
+                                .background(color = parseHexColor(color), shape = CircleShape)
+                                .border(
                                     width = if (color == selectedColor) 2.dp else 0.dp,
                                     color = Color.Black,
                                     shape = CircleShape
-                                ).clickable { selectedColor = color }
+                                ).clip(CircleShape)
+                                .clickable { selectedColor = color }
                         )
                     }
                 }

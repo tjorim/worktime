@@ -77,6 +77,7 @@ class TimeOffViewModel(private val repository: DashboardRepository) : ViewModel(
     }
 
     fun submit(draft: TimeOffDraft) {
+        if (_formState.value.isSubmitting) return
         val target = _formState.value.target ?: return
         viewModelScope.launch {
             _formState.value = _formState.value.copy(isSubmitting = true, message = null)
@@ -90,6 +91,7 @@ class TimeOffViewModel(private val repository: DashboardRepository) : ViewModel(
     }
 
     fun delete(entryId: String) {
+        if (_formState.value.isSubmitting) return
         viewModelScope.launch {
             _formState.value = _formState.value.copy(isSubmitting = true, message = null)
             applyMutationOutcome(repository.deleteTimeOffEntry(entryId))
