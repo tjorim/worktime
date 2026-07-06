@@ -226,7 +226,7 @@ class WorktimeRepositoryTest {
     fun getWorkLocationReturnsNullOnNotFound() = runTest {
         val repository =
             WorktimeRepository(
-                api = FakeApi(workLocationThrowable = httpException(404)),
+                api = FakeApi(workLocationNotFound = true),
                 sessionController = FakeSessionController(token = "token-123")
             )
         repository.loadDashboard()
@@ -505,6 +505,7 @@ class WorktimeRepositoryTest {
         private val taskThrowable: Throwable? = null,
         private val taskListResponse: TaskListResponse = TaskListResponse(items = emptyList(), total = 0),
         private val workLocationThrowable: Throwable? = null,
+        private val workLocationNotFound: Boolean = false,
         private val labelThrowable: Throwable? = null,
         private val labelListResponse: LabelListResponse = LabelListResponse(items = emptyList(), total = 0),
         private val templateThrowable: Throwable? = null,
@@ -580,6 +581,9 @@ class WorktimeRepositoryTest {
             userId: Int
         ): Response<WorkLocationRecord> {
             workLocationThrowable?.let { throw it }
+            if (workLocationNotFound) {
+                return Response.error(404, "".toResponseBody("text/plain".toMediaType()))
+            }
             return Response.success(
                 WorkLocationRecord(
                     id = 1,
