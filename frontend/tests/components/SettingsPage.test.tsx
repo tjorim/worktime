@@ -106,9 +106,11 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 function renderSettingsAccountHarness({
   fetchFn,
   showSuccessToast = vi.fn(),
+  onAccountDeleted = vi.fn(),
 }: {
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
   showSuccessToast?: (message: string, icon?: string) => void;
+  onAccountDeleted?: () => void;
 }) {
   function Harness() {
     const {
@@ -127,11 +129,15 @@ function renderSettingsAccountHarness({
       adminUsersDeleteError,
       deletingAdminUserId,
       handleDeleteAdminUser,
+      isDeletingAccount,
+      deleteAccountError,
+      handleDeleteAccount,
     } = useSettingsAccount({
       isAuthenticated: true,
       displayName: "Admin User",
       fetchFn,
       showSuccessToast,
+      onAccountDeleted,
     });
 
     return (
@@ -153,9 +159,12 @@ function renderSettingsAccountHarness({
         adminUsersError={adminUsersError}
         adminUsersDeleteError={adminUsersDeleteError}
         deletingAdminUserId={deletingAdminUserId}
+        isDeletingAccount={isDeletingAccount}
+        deleteAccountError={deleteAccountError}
         onProfileDraftChange={setProfileDraft}
         onSaveProfile={() => void handleSaveProfile()}
         onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
+        onDeleteAccount={() => void handleDeleteAccount()}
         onLogout={vi.fn()}
         onSignup={vi.fn()}
         onLogin={vi.fn()}
@@ -446,6 +455,115 @@ describe("SettingsPage Account Section", () => {
     );
     expect(adminRow).not.toBeNull();
     expect(within(adminRow!).getByRole("button", { name: "Delete" })).toBeDisabled();
+  });
+
+  it("renders a self-service account deletion danger zone", async () => {
+    const fetchFn = vi.fn(async (input: string) => {
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "member-user",
+          display_name: "Member User",
+          is_admin: false,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      throw new Error(`Unexpected request: GET ${input}`);
+    });
+
+    renderSettingsAccountHarness({ fetchFn });
+
+    expect(await screen.findByText("Danger zone")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete my account" })).toBeInTheDocument();
+  });
+
+  it("does not delete the account when the confirmation dialog is cancelled", async () => {
+    const fetchFn = vi.fn(async (input: string) => {
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "member-user",
+          display_name: "Member User",
+          is_admin: false,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      throw new Error(`Unexpected request: GET ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderSettingsAccountHarness({ fetchFn });
+
+    await user.click(await screen.findByRole("button", { name: "Delete my account" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Delete your account?")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fetchFn).not.toHaveBeenCalledWith("/api/me", expect.objectContaining({ method: "DELETE" }));
+  });
+
+  it("deletes the account and signs out after confirmation", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/me" && init?.method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "member-user",
+          display_name: "Member User",
+          is_admin: false,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const showSuccessToast = vi.fn();
+    const onAccountDeleted = vi.fn();
+
+    const user = userEvent.setup();
+    renderSettingsAccountHarness({ fetchFn, showSuccessToast, onAccountDeleted });
+
+    await user.click(await screen.findByRole("button", { name: "Delete my account" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(onAccountDeleted).toHaveBeenCalledTimes(1);
+    });
+    expect(fetchFn).toHaveBeenCalledWith("/api/me", { method: "DELETE" });
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", "bi-trash");
+  });
+
+  it("shows an inline error when self-service account deletion fails", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/me" && init?.method === "DELETE") {
+        return jsonResponse({ detail: "Could not delete your account right now." }, { status: 500 });
+      }
+      if (input === "/api/me") {
+        return jsonResponse({
+          id: 1,
+          username: "member-user",
+          display_name: "Member User",
+          is_admin: false,
+          capabilities: { backup_enabled: true },
+        });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const onAccountDeleted = vi.fn();
+
+    const user = userEvent.setup();
+    renderSettingsAccountHarness({ fetchFn, onAccountDeleted });
+
+    await user.click(await screen.findByRole("button", { name: "Delete my account" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByText("Could not delete your account right now.")).toBeInTheDocument();
+    expect(onAccountDeleted).not.toHaveBeenCalled();
   });
 
   it("saves profile changes for authenticated users", async () => {

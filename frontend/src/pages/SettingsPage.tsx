@@ -191,11 +191,15 @@ export function SettingsContent({
     adminUsersDeleteError,
     deletingAdminUserId,
     handleDeleteAdminUser,
+    isDeletingAccount,
+    deleteAccountError,
+    handleDeleteAccount,
   } = useSettingsAccount({
     isAuthenticated,
     displayName,
     fetchFn,
     showSuccessToast: toast.showSuccess,
+    onAccountDeleted: logout,
   });
   const { syncStatus, retryInSeconds, lastSyncedLabel, backupStatusLabel } = useSettingsSyncStatus({
     isAuthenticated,
@@ -289,6 +293,9 @@ export function SettingsContent({
         adminUsersDeleteError={adminUsersDeleteError}
         deletingAdminUserId={deletingAdminUserId}
         onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
+        isDeletingAccount={isDeletingAccount}
+        deleteAccountError={deleteAccountError}
+        onDeleteAccount={() => void handleDeleteAccount()}
         onLogout={logout}
         onSignup={triggerSignup}
         onLogin={triggerLogin}

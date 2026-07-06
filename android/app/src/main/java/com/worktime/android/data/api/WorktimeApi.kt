@@ -78,6 +78,9 @@ interface WorktimeApi {
     @GET("api/sync/status")
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
 
+    @DELETE("api/me")
+    suspend fun deleteAccount(@Header("Authorization") authorization: String)
+
     companion object {
         fun create(
             baseUrl: String,

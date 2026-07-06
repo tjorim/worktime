@@ -61,6 +61,8 @@ interface DashboardRepository {
 
     suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse>
 
+    suspend fun deleteAccount(): MutationResult<Unit>
+
     fun logout()
 }
 
@@ -209,6 +211,23 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
 
     override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> = withAuthorizedUser { token, _ ->
         api.getSyncStatus(authorization = "Bearer $token")
+    }
+
+    override suspend fun deleteAccount(): MutationResult<Unit> {
+        val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
+        return try {
+            api.deleteAccount(authorization = "Bearer $token")
+            sessionController.logout()
+            currentUserId = null
+            MutationResult.Success(Unit)
+        } catch (error: HttpException) {
+            MutationResult.Error("Request failed (${error.code()})")
+        } catch (_: IOException) {
+            MutationResult.Error("Unable to reach the Worktime backend")
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            MutationResult.Error(error.message ?: "Request failed")
+        }
     }
 
     override fun logout() {

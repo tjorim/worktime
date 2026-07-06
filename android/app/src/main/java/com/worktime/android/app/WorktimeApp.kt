@@ -238,6 +238,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     },
                     onRetry = dashboardViewModel::refresh,
                     onLogout = dashboardViewModel::logout,
+                    onDeleteAccount = dashboardViewModel::deleteAccount,
                     onStartTracking = dashboardViewModel::startTimeTracking,
                     onStopTracking = dashboardViewModel::stopTimeTracking,
                     onUpdateTask = dashboardViewModel::updateTask,
@@ -279,6 +280,7 @@ private fun WorktimeAuthenticatedScaffold(
     onApiBaseUrlOverrideClear: () -> Unit,
     onRetry: () -> Unit,
     onLogout: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onStartTracking: (String, String?) -> Unit,
     onStopTracking: (String) -> Unit,
     onUpdateTask: (String, String?, String?) -> Unit,
@@ -369,7 +371,10 @@ private fun WorktimeAuthenticatedScaffold(
                         biometricLockPreferences = biometricLockPreferences,
                         onBiometricLockEnabledChanged = onBiometricLockEnabledChanged,
                         onBiometricIdleTimeoutChanged = onBiometricIdleTimeoutChanged,
-                        onLogout = onLogout
+                        onLogout = onLogout,
+                        isDeletingAccount = actionsState.isDeletingAccount,
+                        deleteAccountError = actionsState.deleteAccountError,
+                        onDeleteAccount = onDeleteAccount
                     )
                 }
             }

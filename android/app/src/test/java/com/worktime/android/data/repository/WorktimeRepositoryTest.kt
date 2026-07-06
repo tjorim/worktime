@@ -121,10 +121,52 @@ class WorktimeRepositoryTest {
         assertEquals("DE", (result as MutationResult.Success).value.countryCode)
     }
 
+    @Test
+    fun deleteAccountReturnsLoggedOutWhenNoTokenExists() = runTest {
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = null)
+            )
+
+        val result = repository.deleteAccount()
+
+        assertEquals(MutationResult.LoggedOut, result)
+    }
+
+    @Test
+    fun deleteAccountLogsOutOnSuccess() = runTest {
+        val sessionController = FakeSessionController(token = "token-123")
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = sessionController)
+        repository.loadDashboard()
+
+        val result = repository.deleteAccount()
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
+    }
+
+    @Test
+    fun deleteAccountReturnsErrorAndDoesNotLogOutOnFailure() = runTest {
+        val sessionController = FakeSessionController(token = "token-123")
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(deleteAccountThrowable = httpException(500)),
+                sessionController = sessionController
+            )
+        repository.loadDashboard()
+
+        val result = repository.deleteAccount()
+
+        assertEquals(MutationResult.Error("Request failed (500)"), result)
+        assertEquals(SessionState.Authenticated(hasRefreshToken = true), sessionController.sessionState.value)
+    }
+
     private class FakeApi(
         private val response: DashboardResponse = sampleDashboard(),
         private val dashboardThrowable: Throwable? = null,
-        private val taskThrowable: Throwable? = null
+        private val taskThrowable: Throwable? = null,
+        private val deleteAccountThrowable: Throwable? = null
     ) : WorktimeApi {
         override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
             dashboardThrowable?.let { throw it }
@@ -177,6 +219,10 @@ class WorktimeRepositoryTest {
         override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
             serverTimestamp = "2026-05-26T12:00:00Z"
         )
+
+        override suspend fun deleteAccount(authorization: String) {
+            deleteAccountThrowable?.let { throw it }
+        }
     }
 
     private class FakeSessionController(token: String?) : SessionController {

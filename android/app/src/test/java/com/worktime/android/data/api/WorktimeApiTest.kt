@@ -65,4 +65,21 @@ class WorktimeApiTest {
         assertEquals("/api/sync/status", request.requestLine.substringAfter(' ').substringBefore(' '))
         assertEquals("2026-05-26T12:00:00Z", response.serverTimestamp)
     }
+
+    @Test
+    fun deleteAccountSendsAuthorizationHeaderAndDeleteMethod() = runTest {
+        server.enqueue(MockResponse.Builder().code(204).build())
+        val api =
+            WorktimeApi.create(
+                baseUrl = server.url("/").toString(),
+                enableNetworkLogging = false
+            )
+
+        api.deleteAccount(authorization = "Bearer token-123")
+
+        val request = server.takeRequest()
+        assertEquals("DELETE", request.method)
+        assertEquals("/api/me", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals("Bearer token-123", request.headers["Authorization"])
+    }
 }

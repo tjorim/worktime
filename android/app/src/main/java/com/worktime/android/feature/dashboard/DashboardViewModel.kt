@@ -35,7 +35,9 @@ data class MobileActionsUiState(
     val weeklyWorkLocations: List<WorkLocationRecord> = emptyList(),
     val syncStatus: SyncStatusResponse? = null,
     val isSubmitting: Boolean = false,
-    val message: String? = null
+    val message: String? = null,
+    val isDeletingAccount: Boolean = false,
+    val deleteAccountError: String? = null
 )
 
 class DashboardViewModel(private val repository: DashboardRepository) : ViewModel() {
@@ -124,6 +126,30 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
     fun logout() {
         repository.logout()
         _uiState.value = DashboardUiState.LoggedOut
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            _actionsState.value = _actionsState.value.copy(isDeletingAccount = true, deleteAccountError = null)
+            when (val result = repository.deleteAccount()) {
+                is MutationResult.Success -> {
+                    _uiState.value = DashboardUiState.LoggedOut
+                    _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
+                }
+                MutationResult.LoggedOut -> {
+                    _uiState.value = DashboardUiState.LoggedOut
+                    _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
+                }
+                is MutationResult.ValidationError -> {
+                    _actionsState.value =
+                        _actionsState.value.copy(isDeletingAccount = false, deleteAccountError = result.message)
+                }
+                is MutationResult.Error -> {
+                    _actionsState.value =
+                        _actionsState.value.copy(isDeletingAccount = false, deleteAccountError = result.message)
+                }
+            }
+        }
     }
 
     private fun submitMutation(block: suspend () -> MutationResult<*>) {

@@ -30,6 +30,8 @@ describe("PrivacyPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact us" })).toBeInTheDocument();
     expect(screen.getByText(/contact your Worktime app admin/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Settings > Account > Danger zone/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ask an app admin to remove it/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /github/i })).not.toBeInTheDocument();
   });
 });
