@@ -26,6 +26,8 @@ import com.worktime.android.data.model.TimeOffEntryMutationRequest
 import com.worktime.android.data.model.TimeOffEntryPatchRequest
 import com.worktime.android.data.model.TimeOffEntryRecord
 import com.worktime.android.data.model.TimeOffSummary
+import com.worktime.android.data.model.UserPreferencesRead
+import com.worktime.android.data.model.UserPreferencesWrite
 import com.worktime.android.data.model.WorkContext
 import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
@@ -34,6 +36,13 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -266,6 +275,70 @@ class WorktimeRepositoryTest {
     }
 
     @Test
+    fun loadWorkLocationPreferencesReadsBackendPreferencesBlob() = runTest {
+        val repository =
+            WorktimeRepository(
+                api =
+                FakeApi(
+                    preferencesResponse =
+                    UserPreferencesRead(
+                        data =
+                        JsonObject(
+                            mapOf(
+                                "settings" to
+                                    JsonObject(
+                                        mapOf(
+                                            "homeCountry" to JsonPrimitive("be"),
+                                            "officeCountry" to JsonPrimitive("nl")
+                                        )
+                                    )
+                            )
+                        )
+                    )
+                ),
+                sessionController = FakeSessionController(token = "token-123")
+            )
+
+        val result = repository.loadWorkLocationPreferences()
+
+        assertEquals(MutationResult.Success(WorkLocationPreferences(homeCountry = "BE", officeCountry = "NL")), result)
+    }
+
+    @Test
+    fun updateWorkLocationPreferencesPreservesExistingPreferencesBlob() = runTest {
+        val api =
+            FakeApi(
+                preferencesResponse =
+                UserPreferencesRead(
+                    data =
+                    JsonObject(
+                        mapOf(
+                            "activeTab" to JsonPrimitive("today"),
+                            "settings" to
+                                JsonObject(
+                                    mapOf(
+                                        "theme" to JsonPrimitive("dark"),
+                                        "homeCountry" to JsonPrimitive("BE")
+                                    )
+                                )
+                        )
+                    )
+                )
+            )
+        val repository = WorktimeRepository(api = api, sessionController = FakeSessionController(token = "token-123"))
+
+        val result = repository.updateWorkLocationPreferences(homeCountry = "de", officeCountry = "nl")
+
+        assertEquals(MutationResult.Success(WorkLocationPreferences(homeCountry = "DE", officeCountry = "NL")), result)
+        val data = requireNotNull(api.lastPreferencesWritePayload).data
+        assertEquals("today", data["activeTab"]?.jsonPrimitive?.content)
+        val settings = data["settings"]?.jsonObject
+        assertEquals("dark", settings?.get("theme")?.jsonPrimitive?.content)
+        assertEquals("DE", settings?.get("homeCountry")?.jsonPrimitive?.content)
+        assertEquals("NL", settings?.get("officeCountry")?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun createLabelReturnsValidationErrorOnConflict() = runTest {
         val repository =
             WorktimeRepository(
@@ -452,9 +525,10 @@ class WorktimeRepositoryTest {
 
     @Test
     fun updateTimeOffEntryReturnsSuccess() = runTest {
+        val api = FakeApi()
         val repository =
             WorktimeRepository(
-                api = FakeApi(),
+                api = api,
                 sessionController = FakeSessionController(token = "token-123")
             )
 
@@ -469,6 +543,30 @@ class WorktimeRepositoryTest {
             )
 
         assertTrue(result is MutationResult.Success)
+    }
+
+    @Test
+    fun updateTimeOffEntrySendsExplicitNullWhenNoteIsCleared() = runTest {
+        val api = FakeApi()
+        val repository =
+            WorktimeRepository(
+                api = api,
+                sessionController = FakeSessionController(token = "token-123")
+            )
+
+        repository.updateTimeOffEntry(
+            "entry-1",
+            TimeOffDraft.SingleDate(
+                date = LocalDate.parse("2026-06-02"),
+                entryType = "sick",
+                entryFlag = "full_day",
+                note = null
+            )
+        )
+
+        val payload = requireNotNull(api.lastTimeOffPatchPayload)
+        assertEquals(JsonNull, payload.note)
+        assertTrue(patchJson.encodeToString(payload).contains("\"note\":null"))
     }
 
     @Test
@@ -513,8 +611,14 @@ class WorktimeRepositoryTest {
         private val timeOffThrowable: Throwable? = null,
         private val timeOffListResponse: TimeOffEntryListResponse =
             TimeOffEntryListResponse(items = emptyList(), total = 0),
-        private val deleteAccountThrowable: Throwable? = null
+        private val deleteAccountThrowable: Throwable? = null,
+        private val preferencesResponse: UserPreferencesRead? = null
     ) : WorktimeApi {
+        var lastTimeOffPatchPayload: TimeOffEntryPatchRequest? = null
+            private set
+        var lastPreferencesWritePayload: UserPreferencesWrite? = null
+            private set
+
         override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
             dashboardThrowable?.let { throw it }
             return response
@@ -684,6 +788,7 @@ class WorktimeRepositoryTest {
             payload: TimeOffEntryPatchRequest
         ): TimeOffEntryRecord {
             timeOffThrowable?.let { throw it }
+            lastTimeOffPatchPayload = payload
             return sampleTimeOffEntry(entryId = entryId, entryType = payload.entryType ?: "vacation")
         }
 
@@ -694,6 +799,13 @@ class WorktimeRepositoryTest {
         override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
             serverTimestamp = "2026-05-26T12:00:00Z"
         )
+
+        override suspend fun getPreferences(authorization: String): UserPreferencesRead? = preferencesResponse
+
+        override suspend fun putPreferences(authorization: String, payload: UserPreferencesWrite): UserPreferencesRead {
+            lastPreferencesWritePayload = payload
+            return UserPreferencesRead(data = payload.data)
+        }
 
         override suspend fun deleteAccount(authorization: String) {
             deleteAccountThrowable?.let { throw it }
@@ -797,3 +909,5 @@ private fun httpException(code: Int): HttpException {
     val response = Response.error<String>(code, "".toResponseBody("text/plain".toMediaType()))
     return HttpException(response)
 }
+
+private val patchJson = Json { explicitNulls = false }

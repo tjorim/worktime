@@ -10,9 +10,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -100,7 +100,7 @@ private class TimeOffFormFieldsState(existingEntry: TimeOffEntryRecord?) {
         get() {
             val start = rangeStart
             val end = rangeEnd
-            return entryKind == EntryKindOption.DATE_RANGE && start != null && end != null && end <= start
+            return entryKind == EntryKindOption.DATE_RANGE && start != null && end != null && end < start
         }
 
     val draft: TimeOffDraft?
@@ -110,7 +110,7 @@ private class TimeOffFormFieldsState(existingEntry: TimeOffEntryRecord?) {
             EntryKindOption.DATE_RANGE -> {
                 val start = rangeStart
                 val end = rangeEnd
-                if (start != null && end != null && end > start) {
+                if (start != null && end != null && end >= start) {
                     TimeOffDraft.DateRange(start, end, entryType, entryFlag, note.ifBlank { null })
                 } else {
                     null
@@ -128,7 +128,7 @@ fun TimeOffEntryFormDialog(
     onDismiss: () -> Unit,
     onSubmit: (TimeOffDraft) -> Unit
 ) {
-    val formState = remember(existingEntry) { TimeOffFormFieldsState(existingEntry) }
+    val formState = remember(existingEntry?.entryId) { TimeOffFormFieldsState(existingEntry) }
     val draft = formState.draft
 
     AlertDialog(
@@ -198,7 +198,7 @@ private fun TimeOffKindFields(formState: TimeOffFormFieldsState) {
             )
             DatePickerField(label = "End date", date = formState.rangeEnd, onDateSelected = { formState.rangeEnd = it })
             if (formState.rangeIsInvalid) {
-                Text("End date must be after start date. Use \"Single day\" for a one-day entry.")
+                Text("End date must be on or after start date.")
             }
         }
         EntryKindOption.WEEKLY ->
@@ -242,7 +242,7 @@ private fun <T> LabeledDropdown(label: String, options: List<Pair<T, String>>, s
             modifier =
             Modifier
                 .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (value, text) ->

@@ -159,7 +159,11 @@ private fun TimeOffEntryCard(entry: TimeOffEntryRecord, onEdit: () -> Unit, onDe
 }
 
 private fun TimeOffEntryRecord.datesLabel(): String = when (entryKind) {
-    "range" -> "${startDate?.let(::formatDate) ?: "—"} → ${endDate?.let(::formatDate) ?: "—"}"
+    "range" -> {
+        val start = startDate?.let(::formatDate) ?: "—"
+        val end = endDate?.let(::formatDate) ?: "—"
+        "$start → $end"
+    }
     "weekly" -> "Every ${weekday?.let { WEEKDAY_NAMES[it] } ?: "week"}"
     else -> date?.let(::formatDate) ?: "—"
 }

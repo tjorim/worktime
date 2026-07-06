@@ -19,6 +19,8 @@ import com.worktime.android.data.model.TimeOffEntryListResponse
 import com.worktime.android.data.model.TimeOffEntryMutationRequest
 import com.worktime.android.data.model.TimeOffEntryPatchRequest
 import com.worktime.android.data.model.TimeOffEntryRecord
+import com.worktime.android.data.model.UserPreferencesRead
+import com.worktime.android.data.model.UserPreferencesWrite
 import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
@@ -92,6 +94,15 @@ interface WorktimeApi {
 
     @GET("api/sync/status")
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
+
+    @GET("api/preferences")
+    suspend fun getPreferences(@Header("Authorization") authorization: String): UserPreferencesRead?
+
+    @PUT("api/preferences")
+    suspend fun putPreferences(
+        @Header("Authorization") authorization: String,
+        @Body payload: UserPreferencesWrite
+    ): UserPreferencesRead
 
     @DELETE("api/me")
     suspend fun deleteAccount(@Header("Authorization") authorization: String)

@@ -171,6 +171,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     .onSuccess {
                         loginError = null
                         dashboardViewModel.refresh()
+                        timeOffViewModel.refresh()
                     }.onFailure {
                         loginError = it.message ?: "Unable to complete sign-in"
                     }
@@ -254,6 +255,8 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     onStopTracking = dashboardViewModel::stopTimeTracking,
                     onUpdateTask = dashboardViewModel::updateTask,
                     onSetWorkLocation = dashboardViewModel::setWorkLocation,
+                    onDeleteWorkLocation = dashboardViewModel::deleteWorkLocation,
+                    onUpdateWorkLocationPreferences = dashboardViewModel::updateWorkLocationPreferences,
                     onCreateLabel = dashboardViewModel::createLabel,
                     onRetryTimeOff = timeOffViewModel::refresh,
                     onAddTimeOff = timeOffViewModel::openCreateForm,
@@ -278,7 +281,12 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     },
                     biometricLockPreferences = biometricLockPreferences,
                     onBiometricLockEnabledChanged = biometricGateViewModel::setLockEnabled,
-                    onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes
+                    onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes,
+                    onUpdateLabel = dashboardViewModel::updateLabel,
+                    onDeleteLabel = dashboardViewModel::deleteLabel,
+                    onCreateTemplate = dashboardViewModel::createTemplate,
+                    onUpdateTemplate = dashboardViewModel::updateTemplate,
+                    onDeleteTemplate = dashboardViewModel::deleteTemplate
                 )
             }
         }
@@ -305,6 +313,8 @@ private fun WorktimeAuthenticatedScaffold(
     onStopTracking: (String) -> Unit,
     onUpdateTask: (String, String?, String?) -> Unit,
     onSetWorkLocation: (java.time.LocalDate, String, String?) -> Unit,
+    onDeleteWorkLocation: (java.time.LocalDate) -> Unit,
+    onUpdateWorkLocationPreferences: (String?, String?) -> Unit,
     onCreateLabel: (String, String) -> Unit,
     onRetryTimeOff: () -> Unit,
     onAddTimeOff: () -> Unit,
@@ -317,7 +327,12 @@ private fun WorktimeAuthenticatedScaffold(
     onSyncNotificationsChanged: (Boolean) -> Unit,
     biometricLockPreferences: BiometricLockPreferences,
     onBiometricLockEnabledChanged: (Boolean) -> Unit,
-    onBiometricIdleTimeoutChanged: (Int) -> Unit
+    onBiometricIdleTimeoutChanged: (Int) -> Unit,
+    onUpdateLabel: (String, String, String) -> Unit,
+    onDeleteLabel: (String) -> Unit,
+    onCreateTemplate: (String, String?, java.time.LocalTime, java.time.LocalTime) -> Unit,
+    onUpdateTemplate: (String, String, String?, java.time.LocalTime, java.time.LocalTime) -> Unit,
+    onDeleteTemplate: (String) -> Unit
 ) {
     val navController = rememberNavController()
     val destinations = remember { WorktimeDestination.entries.toList() }
@@ -364,6 +379,7 @@ private fun WorktimeAuthenticatedScaffold(
                         onStopTracking = onStopTracking,
                         onUpdateTask = onUpdateTask,
                         onSetWorkLocation = onSetWorkLocation,
+                        onDeleteWorkLocation = onDeleteWorkLocation,
                         onCreateLabel = onCreateLabel
                     )
                 }
@@ -411,7 +427,15 @@ private fun WorktimeAuthenticatedScaffold(
                         onLogout = onLogout,
                         isDeletingAccount = actionsState.isDeletingAccount,
                         deleteAccountError = actionsState.deleteAccountError,
-                        onDeleteAccount = onDeleteAccount
+                        onDeleteAccount = onDeleteAccount,
+                        actionsState = actionsState,
+                        onUpdateWorkLocationPreferences = onUpdateWorkLocationPreferences,
+                        onCreateLabel = onCreateLabel,
+                        onUpdateLabel = onUpdateLabel,
+                        onDeleteLabel = onDeleteLabel,
+                        onCreateTemplate = onCreateTemplate,
+                        onUpdateTemplate = onUpdateTemplate,
+                        onDeleteTemplate = onDeleteTemplate
                     )
                 }
             }

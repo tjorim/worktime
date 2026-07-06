@@ -2,6 +2,7 @@ package com.worktime.android.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class TimeOffEntryMutationRequest(
@@ -25,7 +26,7 @@ data class TimeOffEntryPatchRequest(
     val weekday: Int? = null,
     @SerialName("entry_type") val entryType: String? = null,
     @SerialName("entry_flag") val entryFlag: String? = null,
-    val note: String? = null
+    val note: JsonElement? = null
 )
 
 @Serializable

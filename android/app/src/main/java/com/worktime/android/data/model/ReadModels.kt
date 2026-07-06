@@ -2,6 +2,7 @@ package com.worktime.android.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class DashboardResponse(
@@ -155,3 +156,9 @@ data class SyncStatusResponse(
     @SerialName("preferences_updated_at") val preferencesUpdatedAt: String? = null,
     @SerialName("server_timestamp") val serverTimestamp: String
 )
+
+@Serializable
+data class UserPreferencesRead(val data: JsonObject)
+
+@Serializable
+data class UserPreferencesWrite(val data: JsonObject)

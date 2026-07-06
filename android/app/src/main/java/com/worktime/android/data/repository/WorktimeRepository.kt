@@ -16,6 +16,7 @@ import com.worktime.android.data.model.TemplateRecord
 import com.worktime.android.data.model.TimeOffEntryMutationRequest
 import com.worktime.android.data.model.TimeOffEntryPatchRequest
 import com.worktime.android.data.model.TimeOffEntryRecord
+import com.worktime.android.data.model.UserPreferencesWrite
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
 import java.io.IOException
@@ -26,6 +27,13 @@ import java.time.ZoneOffset
 import java.util.TimeZone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import retrofit2.HttpException
 
 sealed interface DashboardLoadResult {
@@ -45,6 +53,8 @@ sealed interface MutationResult<out T> {
 
     data class Error(val message: String) : MutationResult<Nothing>
 }
+
+data class WorkLocationPreferences(val homeCountry: String? = null, val officeCountry: String? = null)
 
 /** Domain shape for creating/editing a time-off entry, mirroring the backend's discriminated `entry_kind`. */
 sealed interface TimeOffDraft {
@@ -146,6 +156,13 @@ interface DashboardRepository {
     suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit>
 
     suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse>
+
+    suspend fun loadWorkLocationPreferences(): MutationResult<WorkLocationPreferences>
+
+    suspend fun updateWorkLocationPreferences(
+        homeCountry: String?,
+        officeCountry: String?
+    ): MutationResult<WorkLocationPreferences>
 
     suspend fun deleteAccount(): MutationResult<Unit>
 
@@ -441,6 +458,21 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         api.getSyncStatus(authorization = "Bearer $token")
     }
 
+    override suspend fun loadWorkLocationPreferences(): MutationResult<WorkLocationPreferences> =
+        withAuthorizedToken { token ->
+            api.getPreferences(authorization = "Bearer $token")?.data.toWorkLocationPreferences()
+        }
+
+    override suspend fun updateWorkLocationPreferences(
+        homeCountry: String?,
+        officeCountry: String?
+    ): MutationResult<WorkLocationPreferences> = withAuthorizedToken { token ->
+        val existing = api.getPreferences(authorization = "Bearer $token")?.data ?: JsonObject(emptyMap())
+        val updated = existing.withWorkLocationPreferences(homeCountry, officeCountry)
+        api.putPreferences(authorization = "Bearer $token", payload = UserPreferencesWrite(data = updated))
+        updated.toWorkLocationPreferences()
+    }
+
     override suspend fun deleteAccount(): MutationResult<Unit> = withAuthorizedToken { token ->
         api.deleteAccount(authorization = "Bearer $token")
         sessionController.logout()
@@ -537,7 +569,7 @@ private fun TimeOffDraft.toPatchRequest(): TimeOffEntryPatchRequest = when (this
             date = date.toString(),
             entryType = entryType,
             entryFlag = entryFlag,
-            note = note
+            note = note.toPatchNote()
         )
     is TimeOffDraft.DateRange ->
         TimeOffEntryPatchRequest(
@@ -546,7 +578,7 @@ private fun TimeOffDraft.toPatchRequest(): TimeOffEntryPatchRequest = when (this
             endDate = endDate.toString(),
             entryType = entryType,
             entryFlag = entryFlag,
-            note = note
+            note = note.toPatchNote()
         )
     is TimeOffDraft.Weekly ->
         TimeOffEntryPatchRequest(
@@ -554,6 +586,38 @@ private fun TimeOffDraft.toPatchRequest(): TimeOffEntryPatchRequest = when (this
             weekday = weekday,
             entryType = entryType,
             entryFlag = entryFlag,
-            note = note
+            note = note.toPatchNote()
         )
 }
+
+private fun String?.toPatchNote() = this?.let(::JsonPrimitive) ?: JsonNull
+
+private fun JsonObject?.toWorkLocationPreferences(): WorkLocationPreferences {
+    val settings = this?.get("settings")?.asJsonObjectOrNull()
+    return WorkLocationPreferences(
+        homeCountry = settings?.get("homeCountry")?.asStringOrNull()?.normalizeCountryCode(),
+        officeCountry = settings?.get("officeCountry")?.asStringOrNull()?.normalizeCountryCode()
+    )
+}
+
+private fun JsonObject.withWorkLocationPreferences(homeCountry: String?, officeCountry: String?): JsonObject {
+    val settings = this["settings"]?.asJsonObjectOrNull() ?: JsonObject(emptyMap())
+    val updatedSettings =
+        JsonObject(
+            settings
+                .toMutableMap()
+                .apply {
+                    put("homeCountry", homeCountry.toCountryJson())
+                    put("officeCountry", officeCountry.toCountryJson())
+                }
+        )
+    return JsonObject(toMutableMap().apply { put("settings", updatedSettings) })
+}
+
+private fun JsonElement.asJsonObjectOrNull(): JsonObject? = runCatching { jsonObject }.getOrNull()
+
+private fun JsonElement.asStringOrNull(): String? = runCatching { jsonPrimitive.contentOrNull }.getOrNull()
+
+private fun String?.toCountryJson(): JsonElement = normalizeCountryCode()?.let(::JsonPrimitive) ?: JsonNull
+
+private fun String?.normalizeCountryCode(): String? = this?.trim()?.uppercase()?.takeIf { it.length == 2 }

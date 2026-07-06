@@ -19,9 +19,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,15 +37,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.TemplateRecord
+import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
 import com.worktime.android.ui.components.DatePickerField
 import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
+import com.worktime.android.ui.components.formatDate
 import com.worktime.android.ui.components.formatInstant
 import com.worktime.android.ui.components.formatShift
 import java.time.LocalDate
+import java.util.Locale
 
 private const val PRESET_COLOR_RED = "#F44336"
 private const val PRESET_COLOR_ORANGE = "#FF9800"
@@ -68,6 +72,9 @@ private val PRESET_LABEL_COLORS =
     )
 
 private const val OPAQUE_ALPHA_MASK = 0xFF000000L
+private const val DEFAULT_COUNTRY_CODE = "BE"
+private const val HOME_LOCATION_LABEL = "Home"
+private const val OFFICE_LOCATION_LABEL = "Office"
 
 private fun parseHexColor(hex: String): Color = Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK)
 
@@ -80,6 +87,7 @@ fun TodayScreen(
     onStopTracking: (String) -> Unit,
     onUpdateTask: (String, String?, String?) -> Unit,
     onSetWorkLocation: (LocalDate, String, String?) -> Unit,
+    onDeleteWorkLocation: (LocalDate) -> Unit,
     onCreateLabel: (String, String) -> Unit
 ) {
     ReadModelScreen(title = "Today", uiState = uiState, onRetry = onRetry) { dashboard ->
@@ -90,6 +98,12 @@ fun TodayScreen(
         var workLocationDate by remember { mutableStateOf(LocalDate.now()) }
         var countryCode by remember { mutableStateOf("") }
         var workLocationLabel by remember { mutableStateOf("") }
+        val defaultCountryCode =
+            remember {
+                Locale.getDefault().country.takeIf { it.length == 2 } ?: DEFAULT_COUNTRY_CODE
+            }
+        val homeCountryCode = actionsState.workLocationPreferences.homeCountry ?: defaultCountryCode
+        val officeCountryCode = actionsState.workLocationPreferences.officeCountry ?: defaultCountryCode
 
         ScreenList(title = "Today") {
             item {
@@ -179,41 +193,27 @@ fun TodayScreen(
                 }
             }
             item {
-                SummaryCard(title = "Work location") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        DatePickerField(
-                            label = "Date",
-                            date = workLocationDate,
-                            onDateSelected = { workLocationDate = it }
-                        )
-                        OutlinedTextField(
-                            value = countryCode,
-                            onValueChange = { countryCode = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Country code") },
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = workLocationLabel,
-                            onValueChange = { workLocationLabel = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Label (optional)") },
-                            singleLine = true
-                        )
-                        Button(
-                            onClick = {
-                                onSetWorkLocation(workLocationDate, countryCode, workLocationLabel.ifBlank { null })
-                            },
-                            enabled = !actionsState.isSubmitting && countryCode.length >= 2
-                        ) {
-                            Text("Set work location")
-                        }
-                        text("Weekly entries", actionsState.weeklyWorkLocations.size.toString())
-                    }
-                }
+                WorkLocationCard(
+                    workLocationDate = workLocationDate,
+                    onDateSelected = { workLocationDate = it },
+                    countryCode = countryCode,
+                    onCountryCodeChange = { countryCode = it.take(2).uppercase() },
+                    workLocationLabel = workLocationLabel,
+                    onWorkLocationLabelChange = { workLocationLabel = it },
+                    weeklyWorkLocations = actionsState.weeklyWorkLocations,
+                    isSubmitting = actionsState.isSubmitting,
+                    homeCountryCode = homeCountryCode,
+                    officeCountryCode = officeCountryCode,
+                    onSetWorkLocation = { selectedCountryCode, selectedLabel ->
+                        onSetWorkLocation(workLocationDate, selectedCountryCode, selectedLabel)
+                    },
+                    onEditWorkLocation = { location ->
+                        workLocationDate = LocalDate.parse(location.date)
+                        countryCode = location.countryCode
+                        workLocationLabel = location.label.orEmpty()
+                    },
+                    onDeleteWorkLocation = { location -> onDeleteWorkLocation(LocalDate.parse(location.date)) }
+                )
             }
             item {
                 SummaryCard(title = "Sync") {
@@ -224,6 +224,148 @@ fun TodayScreen(
                         Text(text = it, modifier = Modifier.padding(top = 8.dp))
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkLocationCard(
+    workLocationDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit,
+    countryCode: String,
+    onCountryCodeChange: (String) -> Unit,
+    workLocationLabel: String,
+    onWorkLocationLabelChange: (String) -> Unit,
+    weeklyWorkLocations: List<WorkLocationRecord>,
+    isSubmitting: Boolean,
+    homeCountryCode: String,
+    officeCountryCode: String,
+    onSetWorkLocation: (String, String?) -> Unit,
+    onEditWorkLocation: (WorkLocationRecord) -> Unit,
+    onDeleteWorkLocation: (WorkLocationRecord) -> Unit
+) {
+    var showOtherFields by remember { mutableStateOf(false) }
+
+    SummaryCard(title = "Work location") {
+        content {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DatePickerField(
+                    label = "Date",
+                    date = workLocationDate,
+                    onDateSelected = onDateSelected
+                )
+                WorkLocationQuickChips(
+                    showOtherFields = showOtherFields,
+                    isSubmitting = isSubmitting,
+                    onHome = {
+                        showOtherFields = false
+                        onSetWorkLocation(homeCountryCode, HOME_LOCATION_LABEL)
+                    },
+                    onOffice = {
+                        showOtherFields = false
+                        onSetWorkLocation(officeCountryCode, OFFICE_LOCATION_LABEL)
+                    },
+                    onOther = { showOtherFields = !showOtherFields }
+                )
+                if (showOtherFields) {
+                    OtherWorkLocationFields(
+                        countryCode = countryCode,
+                        onCountryCodeChange = onCountryCodeChange,
+                        workLocationLabel = workLocationLabel,
+                        onWorkLocationLabelChange = onWorkLocationLabelChange,
+                        isSubmitting = isSubmitting,
+                        onSave = { onSetWorkLocation(countryCode, workLocationLabel.ifBlank { null }) }
+                    )
+                }
+                if (weeklyWorkLocations.isNotEmpty()) {
+                    WorkLocationChipsRow(
+                        locations = weeklyWorkLocations,
+                        isSubmitting = isSubmitting,
+                        onEdit = { location ->
+                            showOtherFields = true
+                            onEditWorkLocation(location)
+                        },
+                        onDelete = onDeleteWorkLocation
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkLocationQuickChips(
+    showOtherFields: Boolean,
+    isSubmitting: Boolean,
+    onHome: () -> Unit,
+    onOffice: () -> Unit,
+    onOther: () -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = false, onClick = onHome, enabled = !isSubmitting, label = { Text("Home") })
+        FilterChip(selected = false, onClick = onOffice, enabled = !isSubmitting, label = { Text("Office") })
+        FilterChip(selected = showOtherFields, onClick = onOther, enabled = !isSubmitting, label = { Text("Other") })
+    }
+}
+
+@Composable
+private fun OtherWorkLocationFields(
+    countryCode: String,
+    onCountryCodeChange: (String) -> Unit,
+    workLocationLabel: String,
+    onWorkLocationLabelChange: (String) -> Unit,
+    isSubmitting: Boolean,
+    onSave: () -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = countryCode,
+            onValueChange = onCountryCodeChange,
+            modifier = Modifier.weight(1f),
+            label = { Text("Country") },
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = workLocationLabel,
+            onValueChange = onWorkLocationLabelChange,
+            modifier = Modifier.weight(2f),
+            label = { Text("Label") },
+            singleLine = true
+        )
+    }
+    Button(
+        onClick = onSave,
+        enabled = !isSubmitting && countryCode.length == 2
+    ) {
+        Text("Save other")
+    }
+}
+
+@Composable
+private fun WorkLocationChipsRow(
+    locations: List<WorkLocationRecord>,
+    isSubmitting: Boolean,
+    onEdit: (WorkLocationRecord) -> Unit,
+    onDelete: (WorkLocationRecord) -> Unit
+) {
+    Row(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        locations.forEach { location ->
+            AssistChip(
+                onClick = { onEdit(location) },
+                label = { Text(location.chipLabel()) }
+            )
+            TextButton(onClick = { onDelete(location) }, enabled = !isSubmitting) {
+                Text("Clear")
             }
         }
     }
@@ -266,7 +408,7 @@ private fun LabelPickerField(
             modifier =
             Modifier
                 .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
@@ -353,3 +495,6 @@ private fun NewLabelDialog(onDismiss: () -> Unit, onCreate: (String, String) -> 
         }
     )
 }
+
+private fun WorkLocationRecord.chipLabel(): String =
+    listOfNotNull(formatDate(date), countryCode, label?.takeIf { it.isNotBlank() }).joinToString(" · ")

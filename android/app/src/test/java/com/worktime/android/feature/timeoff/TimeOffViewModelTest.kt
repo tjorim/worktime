@@ -12,6 +12,7 @@ import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.TimeOffDraft
+import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -173,6 +174,14 @@ class TimeOffViewModelTest {
             throw UnsupportedOperationException()
 
         override suspend fun deleteWorkLocation(date: LocalDate) = throw UnsupportedOperationException()
+
+        override suspend fun loadWorkLocationPreferences(): MutationResult<WorkLocationPreferences> =
+            throw UnsupportedOperationException()
+
+        override suspend fun updateWorkLocationPreferences(
+            homeCountry: String?,
+            officeCountry: String?
+        ): MutationResult<WorkLocationPreferences> = throw UnsupportedOperationException()
 
         override suspend fun createLabel(name: String, color: String): MutationResult<LabelRecord> =
             throw UnsupportedOperationException()

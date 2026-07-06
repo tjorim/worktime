@@ -20,6 +20,7 @@ import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.TimeOffDraft
+import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.CompletableDeferred
@@ -168,13 +169,19 @@ class DashboardViewModelTest {
             FakeDashboardRepository(
                 result = DashboardLoadResult.Success(sampleDashboard()),
                 listLabelsResult = MutationResult.Success(listOf(sampleLabel())),
-                listTemplatesResult = MutationResult.Success(listOf(sampleTemplate()))
+                listTemplatesResult = MutationResult.Success(listOf(sampleTemplate())),
+                workLocationPreferencesResult =
+                MutationResult.Success(WorkLocationPreferences(homeCountry = "BE", officeCountry = "NL"))
             )
         val viewModel = DashboardViewModel(repository)
         advanceUntilIdle()
 
         assertEquals(listOf(sampleLabel()), viewModel.actionsState.value.labels)
         assertEquals(listOf(sampleTemplate()), viewModel.actionsState.value.templates)
+        assertEquals(
+            WorkLocationPreferences(homeCountry = "BE", officeCountry = "NL"),
+            viewModel.actionsState.value.workLocationPreferences
+        )
     }
 
     @Test
@@ -193,16 +200,116 @@ class DashboardViewModelTest {
         assertEquals("Label name must be unique", viewModel.actionsState.value.message)
     }
 
+    @Test
+    fun deleteWorkLocationSubmitsMutation() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.deleteWorkLocation(LocalDate.parse("2026-06-01"))
+        advanceUntilIdle()
+
+        assertEquals(LocalDate.parse("2026-06-01"), repository.deletedWorkLocationDate)
+        assertEquals("Saved", viewModel.actionsState.value.message)
+    }
+
+    @Test
+    fun updateWorkLocationPreferencesSubmitsMutation() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.updateWorkLocationPreferences(homeCountry = "BE", officeCountry = "NL")
+        advanceUntilIdle()
+
+        assertEquals("BE", repository.updatedHomeCountry)
+        assertEquals("NL", repository.updatedOfficeCountry)
+        assertEquals("Saved", viewModel.actionsState.value.message)
+    }
+
+    @Test
+    fun updateLabelSubmitsMutation() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.updateLabel("label-1", "Renamed", "#2196F3")
+        advanceUntilIdle()
+
+        assertEquals("label-1", repository.updatedLabelId)
+        assertEquals("Renamed", repository.updatedLabelName)
+        assertEquals("#2196F3", repository.updatedLabelColor)
+        assertEquals("Saved", viewModel.actionsState.value.message)
+    }
+
+    @Test
+    fun createTemplateSubmitsMutation() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.createTemplate(
+            text = "Standup",
+            labelId = "label-1",
+            startTime = LocalTime.parse("09:00"),
+            stopTime = LocalTime.parse("09:15")
+        )
+        advanceUntilIdle()
+
+        assertEquals("Standup", repository.createdTemplateText)
+        assertEquals("label-1", repository.createdTemplateLabelId)
+        assertEquals(LocalTime.parse("09:00"), repository.createdTemplateStartTime)
+        assertEquals(LocalTime.parse("09:15"), repository.createdTemplateStopTime)
+        assertEquals("Saved", viewModel.actionsState.value.message)
+    }
+
+    @Test
+    fun deleteTemplateSubmitsMutation() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.deleteTemplate("template-1")
+        advanceUntilIdle()
+
+        assertEquals("template-1", repository.deletedTemplateId)
+        assertEquals("Saved", viewModel.actionsState.value.message)
+    }
+
     private class FakeDashboardRepository(
         private val result: DashboardLoadResult,
         private val gate: CompletableDeferred<Unit>? = null,
         private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
         private val listLabelsResult: MutationResult<List<LabelRecord>> = MutationResult.Success(emptyList()),
         private val listTemplatesResult: MutationResult<List<TemplateRecord>> = MutationResult.Success(emptyList()),
+        private val workLocationPreferencesResult: MutationResult<WorkLocationPreferences> =
+            MutationResult.Success(WorkLocationPreferences()),
         private val createLabelResult: MutationResult<LabelRecord> = MutationResult.Success(sampleLabel()),
         private val deleteAccountResult: MutationResult<Unit> = MutationResult.Success(Unit)
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
+        var updatedLabelId: String? = null
+            private set
+        var updatedLabelName: String? = null
+            private set
+        var updatedLabelColor: String? = null
+            private set
+        var createdTemplateText: String? = null
+            private set
+        var createdTemplateLabelId: String? = null
+            private set
+        var createdTemplateStartTime: LocalTime? = null
+            private set
+        var createdTemplateStopTime: LocalTime? = null
+            private set
+        var deletedWorkLocationDate: LocalDate? = null
+            private set
+        var updatedHomeCountry: String? = null
+            private set
+        var updatedOfficeCountry: String? = null
+            private set
+        var deletedTemplateId: String? = null
+            private set
 
         override suspend fun loadDashboard(): DashboardLoadResult {
             gate?.await()
@@ -245,7 +352,22 @@ class DashboardViewModelTest {
         override suspend fun getWorkLocation(date: LocalDate): MutationResult<WorkLocationRecord?> =
             MutationResult.Success(null)
 
-        override suspend fun deleteWorkLocation(date: LocalDate): MutationResult<Unit> = MutationResult.Success(Unit)
+        override suspend fun deleteWorkLocation(date: LocalDate): MutationResult<Unit> {
+            deletedWorkLocationDate = date
+            return MutationResult.Success(Unit)
+        }
+
+        override suspend fun loadWorkLocationPreferences(): MutationResult<WorkLocationPreferences> =
+            workLocationPreferencesResult
+
+        override suspend fun updateWorkLocationPreferences(
+            homeCountry: String?,
+            officeCountry: String?
+        ): MutationResult<WorkLocationPreferences> {
+            updatedHomeCountry = homeCountry
+            updatedOfficeCountry = officeCountry
+            return MutationResult.Success(WorkLocationPreferences(homeCountry, officeCountry))
+        }
 
         override suspend fun listTasks(startDate: LocalDate?, endDate: LocalDate?): MutationResult<List<TaskRecord>> =
             MutationResult.Success(emptyList())
@@ -256,8 +378,12 @@ class DashboardViewModelTest {
 
         override suspend fun listLabels(): MutationResult<List<LabelRecord>> = listLabelsResult
 
-        override suspend fun updateLabel(labelId: String, name: String?, color: String?): MutationResult<LabelRecord> =
-            throw UnsupportedOperationException()
+        override suspend fun updateLabel(labelId: String, name: String?, color: String?): MutationResult<LabelRecord> {
+            updatedLabelId = labelId
+            updatedLabelName = name
+            updatedLabelColor = color
+            return MutationResult.Success(sampleLabel())
+        }
 
         override suspend fun deleteLabel(labelId: String): MutationResult<Unit> = MutationResult.Success(Unit)
 
@@ -266,7 +392,13 @@ class DashboardViewModelTest {
             labelId: String?,
             startTime: LocalTime,
             stopTime: LocalTime
-        ): MutationResult<TemplateRecord> = throw UnsupportedOperationException()
+        ): MutationResult<TemplateRecord> {
+            createdTemplateText = text
+            createdTemplateLabelId = labelId
+            createdTemplateStartTime = startTime
+            createdTemplateStopTime = stopTime
+            return MutationResult.Success(sampleTemplate())
+        }
 
         override suspend fun listTemplates(): MutationResult<List<TemplateRecord>> = listTemplatesResult
 
@@ -276,9 +408,12 @@ class DashboardViewModelTest {
             labelId: String?,
             startTime: LocalTime?,
             stopTime: LocalTime?
-        ): MutationResult<TemplateRecord> = throw UnsupportedOperationException()
+        ): MutationResult<TemplateRecord> = MutationResult.Success(sampleTemplate())
 
-        override suspend fun deleteTemplate(templateId: String): MutationResult<Unit> = MutationResult.Success(Unit)
+        override suspend fun deleteTemplate(templateId: String): MutationResult<Unit> {
+            deletedTemplateId = templateId
+            return MutationResult.Success(Unit)
+        }
 
         override suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
             throw UnsupportedOperationException()
