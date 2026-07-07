@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
@@ -390,7 +390,7 @@ private fun LabelDropdown(labels: List<LabelRecord>, selectedLabelId: String, on
                 .fillMaxWidth()
                 .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("None") },
                 onClick = {
@@ -411,6 +411,7 @@ private fun LabelDropdown(labels: List<LabelRecord>, selectedLabelId: String, on
     }
 }
 
-private fun parseHexColor(hex: String): Color = Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK)
+private fun parseHexColor(hex: String): Color =
+    runCatching { Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK) }.getOrDefault(Color.Gray)
 
 private fun parseLocalTime(value: String): LocalTime? = runCatching { LocalTime.parse(value.trim()) }.getOrNull()
