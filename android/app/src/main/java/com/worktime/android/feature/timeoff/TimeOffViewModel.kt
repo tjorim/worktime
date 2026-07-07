@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed interface TimeOffUiState {
@@ -86,7 +87,7 @@ class TimeOffViewModel(private val repository: DashboardRepository) : ViewModel(
                     TimeOffFormTarget.Create -> repository.createTimeOffEntry(draft)
                     is TimeOffFormTarget.Edit -> repository.updateTimeOffEntry(target.entryId, draft)
                 }
-            applyMutationOutcome(result)
+            applyUpsertOutcome(result)
         }
     }
 
@@ -94,15 +95,15 @@ class TimeOffViewModel(private val repository: DashboardRepository) : ViewModel(
         if (_formState.value.isSubmitting) return
         viewModelScope.launch {
             _formState.value = _formState.value.copy(isSubmitting = true, message = null)
-            applyMutationOutcome(repository.deleteTimeOffEntry(entryId))
+            applyDeleteOutcome(entryId, repository.deleteTimeOffEntry(entryId))
         }
     }
 
-    private fun applyMutationOutcome(result: MutationResult<*>) {
+    private fun applyUpsertOutcome(result: MutationResult<TimeOffEntryRecord>) {
         _formState.value =
             when (result) {
                 is MutationResult.Success -> {
-                    refresh()
+                    upsertEntry(result.value)
                     TimeOffFormState()
                 }
                 MutationResult.LoggedOut -> {
@@ -115,6 +116,50 @@ class TimeOffViewModel(private val repository: DashboardRepository) : ViewModel(
                     _formState.value.copy(isSubmitting = false, message = result.message)
             }
     }
+
+    private fun applyDeleteOutcome(entryId: String, result: MutationResult<Unit>) {
+        _formState.value =
+            when (result) {
+                is MutationResult.Success -> {
+                    removeEntry(entryId)
+                    TimeOffFormState()
+                }
+                MutationResult.LoggedOut -> {
+                    _uiState.value = TimeOffUiState.LoggedOut
+                    _formState.value.copy(isSubmitting = false, message = "Session expired. Sign in again.")
+                }
+                is MutationResult.ValidationError ->
+                    _formState.value.copy(isSubmitting = false, message = result.message)
+                is MutationResult.Error ->
+                    _formState.value.copy(isSubmitting = false, message = result.message)
+            }
+    }
+
+    private fun upsertEntry(entry: TimeOffEntryRecord) {
+        _uiState.update { current ->
+            if (current !is TimeOffUiState.Success) return@update current
+            val entries = current.entries.filterNot { it.entryId == entry.entryId } + entry
+            current.copy(
+                entries =
+                entries.sortedWith(
+                    compareBy<TimeOffEntryRecord> { sortDate(it) }.thenBy { it.entryId }
+                )
+            )
+        }
+    }
+
+    private fun removeEntry(entryId: String) {
+        _uiState.update { current ->
+            if (current is TimeOffUiState.Success) {
+                current.copy(entries = current.entries.filterNot { it.entryId == entryId })
+            } else {
+                current
+            }
+        }
+    }
+
+    private fun sortDate(entry: TimeOffEntryRecord): String =
+        entry.date ?: entry.startDate ?: entry.weekday?.toString()?.padStart(2, '0') ?: entry.entryId
 
     companion object {
         fun factory(repository: DashboardRepository): ViewModelProvider.Factory = viewModelFactory {
