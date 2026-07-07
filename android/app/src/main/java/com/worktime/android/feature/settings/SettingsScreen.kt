@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -30,8 +29,10 @@ import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
+import com.worktime.android.feature.dashboard.MobileActionsUiState
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
+import java.time.LocalTime
 
 private const val IDLE_TIMEOUT_OPTION_1_MIN = 1
 private const val IDLE_TIMEOUT_OPTION_5_MIN = 5
@@ -58,7 +59,15 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     isDeletingAccount: Boolean = false,
     deleteAccountError: String? = null,
-    onDeleteAccount: () -> Unit = {}
+    onDeleteAccount: () -> Unit = {},
+    actionsState: MobileActionsUiState = MobileActionsUiState(),
+    onUpdateWorkLocationPreferences: (String?, String?) -> Unit = { _, _ -> },
+    onCreateLabel: (String, String) -> Unit = { _, _ -> },
+    onUpdateLabel: (String, String, String) -> Unit = { _, _, _ -> },
+    onDeleteLabel: (String) -> Unit = {},
+    onCreateTemplate: (String, String?, LocalTime, LocalTime) -> Unit = { _, _, _, _ -> },
+    onUpdateTemplate: (String, String, String?, LocalTime, LocalTime) -> Unit = { _, _, _, _, _ -> },
+    onDeleteTemplate: (String) -> Unit = {}
 ) {
     val uriHandler = LocalUriHandler.current
     var showDeleteAccountConfirm by rememberSaveable { mutableStateOf(false) }
@@ -92,6 +101,33 @@ fun SettingsScreen(
                     text("Admin", if (uiState.dashboard.identity.isAdmin) "Yes" else "No")
                 }
             }
+        }
+        item {
+            WorkLocationPreferencesCard(
+                homeCountry = actionsState.workLocationPreferences.homeCountry.orEmpty(),
+                officeCountry = actionsState.workLocationPreferences.officeCountry.orEmpty(),
+                isSubmitting = actionsState.isSubmitting,
+                onSave = onUpdateWorkLocationPreferences
+            )
+        }
+        item {
+            LabelManagementCard(
+                labels = actionsState.labels,
+                isSubmitting = actionsState.isSubmitting,
+                onCreateLabel = onCreateLabel,
+                onUpdateLabel = onUpdateLabel,
+                onDeleteLabel = onDeleteLabel
+            )
+        }
+        item {
+            TemplateManagementCard(
+                labels = actionsState.labels,
+                templates = actionsState.templates,
+                isSubmitting = actionsState.isSubmitting,
+                onCreateTemplate = onCreateTemplate,
+                onUpdateTemplate = onUpdateTemplate,
+                onDeleteTemplate = onDeleteTemplate
+            )
         }
         item {
             SummaryCard(title = "Notifications") {
@@ -233,6 +269,48 @@ fun SettingsScreen(
 private const val PRIVACY_POLICY_URL = "https://worktime.tjor.im/privacy"
 
 @Composable
+private fun WorkLocationPreferencesCard(
+    homeCountry: String,
+    officeCountry: String,
+    isSubmitting: Boolean,
+    onSave: (String?, String?) -> Unit
+) {
+    var home by rememberSaveable(homeCountry) { mutableStateOf(homeCountry) }
+    var office by rememberSaveable(officeCountry) { mutableStateOf(officeCountry) }
+
+    SummaryCard(title = "Work location defaults") {
+        content {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = home,
+                        onValueChange = { home = it.take(2).uppercase() },
+                        label = { Text("Home") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = office,
+                        onValueChange = { office = it.take(2).uppercase() },
+                        label = { Text("Office") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Button(
+                    onClick = { onSave(home.ifBlank { null }, office.ifBlank { null }) },
+                    enabled = !isSubmitting && home.isValidCountryField() && office.isValidCountryField()
+                ) {
+                    Text("Save defaults")
+                }
+            }
+        }
+    }
+}
+
+private fun String.isValidCountryField(): Boolean = isBlank() || length == 2
+
+@Composable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 private fun IdleTimeoutDropdown(selectedMinutes: Int, onSelected: (Int) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -245,9 +323,9 @@ private fun IdleTimeoutDropdown(selectedMinutes: Int, onSelected: (Int) -> Unit)
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable, true)
+                .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             IDLE_TIMEOUT_OPTIONS_MINUTES.forEach { minutes ->
                 DropdownMenuItem(
                     text = { Text("$minutes min") },

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -48,7 +49,10 @@ import com.worktime.android.feature.session.BiometricGateScreen
 import com.worktime.android.feature.session.BiometricGateViewModel
 import com.worktime.android.feature.settings.SettingsScreen
 import com.worktime.android.feature.teamstatus.TeamStatusScreen
+import com.worktime.android.feature.timeoff.TimeOffFormState
 import com.worktime.android.feature.timeoff.TimeOffSummaryScreen
+import com.worktime.android.feature.timeoff.TimeOffUiState
+import com.worktime.android.feature.timeoff.TimeOffViewModel
 import com.worktime.android.feature.today.TodayScreen
 import com.worktime.android.ui.theme.WorktimeTheme
 import java.time.Duration
@@ -83,6 +87,12 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
         )
     val uiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
     val actionsState by dashboardViewModel.actionsState.collectAsStateWithLifecycle()
+    val timeOffViewModel: TimeOffViewModel =
+        viewModel(
+            factory = TimeOffViewModel.factory(container.dashboardRepository)
+        )
+    val timeOffUiState by timeOffViewModel.uiState.collectAsStateWithLifecycle()
+    val timeOffFormState by timeOffViewModel.formState.collectAsStateWithLifecycle()
     val notificationPreferences by container.notificationPreferencesStore.preferences.collectAsStateWithLifecycle(
         initialValue = NotificationPreferences()
     )
@@ -162,6 +172,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     .onSuccess {
                         loginError = null
                         dashboardViewModel.refresh()
+                        timeOffViewModel.refresh()
                     }.onFailure {
                         loginError = it.message ?: "Unable to complete sign-in"
                     }
@@ -219,6 +230,8 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                 WorktimeAuthenticatedScaffold(
                     uiState = uiState,
                     actionsState = actionsState,
+                    timeOffUiState = timeOffUiState,
+                    timeOffFormState = timeOffFormState,
                     appConfig = container.appConfig,
                     oidcConfig = container.oidcConfig,
                     initialDestination = initialDestination,
@@ -243,6 +256,15 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     onStopTracking = dashboardViewModel::stopTimeTracking,
                     onUpdateTask = dashboardViewModel::updateTask,
                     onSetWorkLocation = dashboardViewModel::setWorkLocation,
+                    onDeleteWorkLocation = dashboardViewModel::deleteWorkLocation,
+                    onUpdateWorkLocationPreferences = dashboardViewModel::updateWorkLocationPreferences,
+                    onCreateLabel = dashboardViewModel::createLabel,
+                    onRetryTimeOff = timeOffViewModel::refresh,
+                    onAddTimeOff = timeOffViewModel::openCreateForm,
+                    onEditTimeOff = timeOffViewModel::openEditForm,
+                    onDismissTimeOffForm = timeOffViewModel::closeForm,
+                    onSubmitTimeOff = timeOffViewModel::submit,
+                    onDeleteTimeOff = timeOffViewModel::delete,
                     onShiftNotificationsChanged = {
                         coroutineScope.launch {
                             container.notificationPreferencesStore.setShiftsEnabled(it)
@@ -260,7 +282,12 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     },
                     biometricLockPreferences = biometricLockPreferences,
                     onBiometricLockEnabledChanged = biometricGateViewModel::setLockEnabled,
-                    onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes
+                    onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes,
+                    onUpdateLabel = dashboardViewModel::updateLabel,
+                    onDeleteLabel = dashboardViewModel::deleteLabel,
+                    onCreateTemplate = dashboardViewModel::createTemplate,
+                    onUpdateTemplate = dashboardViewModel::updateTemplate,
+                    onDeleteTemplate = dashboardViewModel::deleteTemplate
                 )
             }
         }
@@ -271,6 +298,8 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
 private fun WorktimeAuthenticatedScaffold(
     uiState: DashboardUiState,
     actionsState: com.worktime.android.feature.dashboard.MobileActionsUiState,
+    timeOffUiState: TimeOffUiState,
+    timeOffFormState: TimeOffFormState,
     appConfig: com.worktime.android.core.config.AppConfig,
     oidcConfig: com.worktime.android.core.auth.OidcConfig,
     initialDestination: String,
@@ -285,12 +314,26 @@ private fun WorktimeAuthenticatedScaffold(
     onStopTracking: (String) -> Unit,
     onUpdateTask: (String, String?, String?) -> Unit,
     onSetWorkLocation: (java.time.LocalDate, String, String?) -> Unit,
+    onDeleteWorkLocation: (java.time.LocalDate) -> Unit,
+    onUpdateWorkLocationPreferences: (String?, String?) -> Unit,
+    onCreateLabel: (String, String) -> Unit,
+    onRetryTimeOff: () -> Unit,
+    onAddTimeOff: () -> Unit,
+    onEditTimeOff: (String) -> Unit,
+    onDismissTimeOffForm: () -> Unit,
+    onSubmitTimeOff: (com.worktime.android.data.repository.TimeOffDraft) -> Unit,
+    onDeleteTimeOff: (String) -> Unit,
     onShiftNotificationsChanged: (Boolean) -> Unit,
     onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
     onSyncNotificationsChanged: (Boolean) -> Unit,
     biometricLockPreferences: BiometricLockPreferences,
     onBiometricLockEnabledChanged: (Boolean) -> Unit,
-    onBiometricIdleTimeoutChanged: (Int) -> Unit
+    onBiometricIdleTimeoutChanged: (Int) -> Unit,
+    onUpdateLabel: (String, String, String) -> Unit,
+    onDeleteLabel: (String) -> Unit,
+    onCreateTemplate: (String, String?, java.time.LocalTime, java.time.LocalTime) -> Unit,
+    onUpdateTemplate: (String, String, String?, java.time.LocalTime, java.time.LocalTime) -> Unit,
+    onDeleteTemplate: (String) -> Unit
 ) {
     val navController = rememberNavController()
     val destinations = remember { WorktimeDestination.entries.toList() }
@@ -315,7 +358,12 @@ private fun WorktimeAuthenticatedScaffold(
                                 }
                             }
                         },
-                        icon = { Text(destination.emoji) },
+                        icon = {
+                            Icon(
+                                imageVector = destination.icon,
+                                contentDescription = destination.label
+                            )
+                        },
                         label = { Text(destination.label) }
                     )
                 }
@@ -336,7 +384,9 @@ private fun WorktimeAuthenticatedScaffold(
                         onStartTracking = onStartTracking,
                         onStopTracking = onStopTracking,
                         onUpdateTask = onUpdateTask,
-                        onSetWorkLocation = onSetWorkLocation
+                        onSetWorkLocation = onSetWorkLocation,
+                        onDeleteWorkLocation = onDeleteWorkLocation,
+                        onCreateLabel = onCreateLabel
                     )
                 }
             }
@@ -352,7 +402,16 @@ private fun WorktimeAuthenticatedScaffold(
             }
             composable(WorktimeDestination.TimeOff.route) {
                 androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
-                    TimeOffSummaryScreen(uiState = uiState, onRetry = onRetry)
+                    TimeOffSummaryScreen(
+                        uiState = timeOffUiState,
+                        formState = timeOffFormState,
+                        onRetry = onRetryTimeOff,
+                        onAdd = onAddTimeOff,
+                        onEdit = onEditTimeOff,
+                        onDismissForm = onDismissTimeOffForm,
+                        onSubmit = onSubmitTimeOff,
+                        onDelete = onDeleteTimeOff
+                    )
                 }
             }
             composable(WorktimeDestination.Settings.route) {
@@ -374,7 +433,15 @@ private fun WorktimeAuthenticatedScaffold(
                         onLogout = onLogout,
                         isDeletingAccount = actionsState.isDeletingAccount,
                         deleteAccountError = actionsState.deleteAccountError,
-                        onDeleteAccount = onDeleteAccount
+                        onDeleteAccount = onDeleteAccount,
+                        actionsState = actionsState,
+                        onUpdateWorkLocationPreferences = onUpdateWorkLocationPreferences,
+                        onCreateLabel = onCreateLabel,
+                        onUpdateLabel = onUpdateLabel,
+                        onDeleteLabel = onDeleteLabel,
+                        onCreateTemplate = onCreateTemplate,
+                        onUpdateTemplate = onUpdateTemplate,
+                        onDeleteTemplate = onDeleteTemplate
                     )
                 }
             }

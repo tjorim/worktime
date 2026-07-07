@@ -1,46 +1,180 @@
 package com.worktime.android.feature.timeoff
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import com.worktime.android.feature.dashboard.DashboardUiState
-import com.worktime.android.ui.components.ReadModelScreen
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.worktime.android.data.model.TimeOffEntryRecord
+import com.worktime.android.data.repository.TimeOffDraft
+import com.worktime.android.ui.components.EmptyPane
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
+import com.worktime.android.ui.components.formatDate
 
 @Composable
-fun TimeOffSummaryScreen(uiState: DashboardUiState, onRetry: () -> Unit) {
-    ReadModelScreen(title = "Time off", uiState = uiState, onRetry = onRetry) { dashboard ->
-        ScreenList(title = "Time off") {
+fun TimeOffSummaryScreen(
+    uiState: TimeOffUiState,
+    formState: TimeOffFormState,
+    onRetry: () -> Unit,
+    onAdd: () -> Unit,
+    onEdit: (String) -> Unit,
+    onDismissForm: () -> Unit,
+    onSubmit: (TimeOffDraft) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    var pendingDeleteId by remember { mutableStateOf<String?>(null) }
+
+    when (uiState) {
+        TimeOffUiState.Loading ->
+            EmptyPane(
+                title = "Time off",
+                headline = "Loading",
+                body = "Fetching your time-off entries…"
+            )
+        TimeOffUiState.LoggedOut ->
+            EmptyPane(
+                title = "Time off",
+                headline = "Sign in required",
+                body = "Authenticate to manage your time off."
+            )
+        is TimeOffUiState.Error ->
+            EmptyPane(
+                title = "Time off",
+                headline = "Unable to load time off",
+                body = uiState.message,
+                actionLabel = "Retry",
+                onAction = onRetry
+            )
+        is TimeOffUiState.Success ->
+            TimeOffEntryList(
+                entries = uiState.entries,
+                onAdd = onAdd,
+                onEdit = onEdit,
+                onDeleteRequested = { pendingDeleteId = it }
+            )
+    }
+
+    if (formState.target != null) {
+        val existingEntry =
+            (uiState as? TimeOffUiState.Success)?.entries?.firstOrNull { entry ->
+                (formState.target as? TimeOffFormTarget.Edit)?.entryId == entry.entryId
+            }
+        TimeOffEntryFormDialog(
+            existingEntry = existingEntry,
+            isSubmitting = formState.isSubmitting,
+            message = formState.message,
+            onDismiss = onDismissForm,
+            onSubmit = onSubmit
+        )
+    }
+
+    pendingDeleteId?.let { entryId ->
+        DeleteConfirmationDialog(
+            onConfirm = {
+                onDelete(entryId)
+                pendingDeleteId = null
+            },
+            onDismiss = { pendingDeleteId = null }
+        )
+    }
+}
+
+@Composable
+private fun TimeOffEntryList(
+    entries: List<TimeOffEntryRecord>,
+    onAdd: () -> Unit,
+    onEdit: (String) -> Unit,
+    onDeleteRequested: (String) -> Unit
+) {
+    ScreenList(title = "Time off") {
+        item {
+            Button(onClick = onAdd) {
+                Text("Add time off")
+            }
+        }
+        if (entries.isEmpty()) {
             item {
-                SummaryCard(title = "Summary") {
-                    text("Upcoming entries", dashboard.timeOffSummary.totalUpcoming.toString())
-                    text(
-                        "Active now",
-                        dashboard.timeOffSummary.activeItems.size
-                            .toString()
-                    )
-                    text(
-                        "Feature flag",
-                        if (dashboard.workContext.featureFlags.timeOffEnabled) "Enabled" else "Disabled"
-                    )
+                SummaryCard(title = "No entries yet") {
+                    text("Entries", "0")
                 }
             }
-            dashboard.timeOffSummary.activeItems.forEach { activeItem ->
-                item {
-                    SummaryCard(title = "Active • ${activeItem.entryType}") {
-                        text("Dates", "${activeItem.startsOn} → ${activeItem.endsOn}")
-                        text("Note", activeItem.note ?: "—")
-                    }
-                }
+        }
+        entries.forEach { entry ->
+            item {
+                TimeOffEntryCard(
+                    entry = entry,
+                    onEdit = { onEdit(entry.entryId) },
+                    onDelete = { onDeleteRequested(entry.entryId) }
+                )
             }
-            dashboard.timeOffSummary.upcomingItems.forEach { upcomingItem ->
-                item {
-                    SummaryCard(title = "Upcoming • ${upcomingItem.entryType}") {
-                        text("Dates", "${upcomingItem.startsOn} → ${upcomingItem.endsOn}")
-                        text("Recurring", if (upcomingItem.isRecurringWeekly) "Weekly" else "No")
-                        text("Note", upcomingItem.note ?: "—")
-                    }
+        }
+    }
+}
+
+@Composable
+private fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete time off entry?") },
+        text = { Text("This cannot be undone.") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun TimeOffEntryCard(entry: TimeOffEntryRecord, onEdit: () -> Unit, onDelete: () -> Unit) {
+    SummaryCard(title = entry.entryType.replaceFirstChar { it.uppercase() }) {
+        text("Dates", entry.datesLabel())
+        text("Flag", entry.entryFlag.replace('_', ' '))
+        entry.note?.takeIf { it.isNotBlank() }?.let { text("Note", it) }
+        content {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onEdit) {
+                    Text("Edit")
+                }
+                TextButton(onClick = onDelete) {
+                    Text("Delete")
                 }
             }
         }
     }
 }
+
+private fun TimeOffEntryRecord.datesLabel(): String = when (entryKind) {
+    "range" -> {
+        val start = startDate?.let(::formatDate) ?: "—"
+        val end = endDate?.let(::formatDate) ?: "—"
+        "$start → $end"
+    }
+    "weekly" -> "Every ${weekday?.let { WEEKDAY_NAMES[it] } ?: "week"}"
+    else -> date?.let(::formatDate) ?: "—"
+}
+
+private val WEEKDAY_NAMES =
+    mapOf(
+        1 to "Monday",
+        2 to "Tuesday",
+        3 to "Wednesday",
+        4 to "Thursday",
+        5 to "Friday",
+        6 to "Saturday",
+        7 to "Sunday"
+    )

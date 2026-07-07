@@ -6,12 +6,15 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.worktime.android.data.model.DashboardResponse
+import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.SyncStatusResponse
 import com.worktime.android.data.model.TaskRecord
+import com.worktime.android.data.model.TemplateRecord
 import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
+import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -33,6 +36,9 @@ sealed interface DashboardUiState {
 data class MobileActionsUiState(
     val runningTask: TaskRecord? = null,
     val weeklyWorkLocations: List<WorkLocationRecord> = emptyList(),
+    val labels: List<LabelRecord> = emptyList(),
+    val templates: List<TemplateRecord> = emptyList(),
+    val workLocationPreferences: WorkLocationPreferences = WorkLocationPreferences(),
     val syncStatus: SyncStatusResponse? = null,
     val isSubmitting: Boolean = false,
     val message: String? = null,
@@ -40,6 +46,7 @@ data class MobileActionsUiState(
     val deleteAccountError: String? = null
 )
 
+@Suppress("TooManyFunctions") // one view model facade for all mobile dashboard actions
 class DashboardViewModel(private val repository: DashboardRepository) : ViewModel() {
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -98,11 +105,35 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                         else -> null
                     }
                 }
+            val workLocationPreferencesDeferred =
+                async {
+                    when (val result = repository.loadWorkLocationPreferences()) {
+                        is MutationResult.Success -> result.value
+                        else -> WorkLocationPreferences()
+                    }
+                }
+            val labelsDeferred =
+                async {
+                    when (val result = repository.listLabels()) {
+                        is MutationResult.Success -> result.value
+                        else -> emptyList()
+                    }
+                }
+            val templatesDeferred =
+                async {
+                    when (val result = repository.listTemplates()) {
+                        is MutationResult.Success -> result.value
+                        else -> emptyList()
+                    }
+                }
             _actionsState.value =
                 _actionsState.value.copy(
                     runningTask = runningTaskDeferred.await(),
                     weeklyWorkLocations = weeklyLocationsDeferred.await(),
-                    syncStatus = syncStatusDeferred.await()
+                    syncStatus = syncStatusDeferred.await(),
+                    workLocationPreferences = workLocationPreferencesDeferred.await(),
+                    labels = labelsDeferred.await(),
+                    templates = templatesDeferred.await()
                 )
         }
     }
@@ -121,6 +152,59 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     fun setWorkLocation(date: LocalDate, countryCode: String, label: String?) {
         submitMutation { repository.setWorkLocation(date = date, countryCode = countryCode, label = label) }
+    }
+
+    fun deleteWorkLocation(date: LocalDate) {
+        submitMutation { repository.deleteWorkLocation(date) }
+    }
+
+    fun updateWorkLocationPreferences(homeCountry: String?, officeCountry: String?) {
+        submitMutation { repository.updateWorkLocationPreferences(homeCountry, officeCountry) }
+    }
+
+    fun createLabel(name: String, color: String) {
+        submitMutation { repository.createLabel(name, color) }
+    }
+
+    fun updateLabel(labelId: String, name: String, color: String) {
+        submitMutation { repository.updateLabel(labelId = labelId, name = name, color = color) }
+    }
+
+    fun deleteLabel(labelId: String) {
+        submitMutation { repository.deleteLabel(labelId) }
+    }
+
+    fun createTemplate(text: String, labelId: String?, startTime: java.time.LocalTime, stopTime: java.time.LocalTime) {
+        submitMutation {
+            repository.createTemplate(
+                text = text,
+                labelId = labelId,
+                startTime = startTime,
+                stopTime = stopTime
+            )
+        }
+    }
+
+    fun updateTemplate(
+        templateId: String,
+        text: String,
+        labelId: String?,
+        startTime: java.time.LocalTime,
+        stopTime: java.time.LocalTime
+    ) {
+        submitMutation {
+            repository.updateTemplate(
+                templateId = templateId,
+                text = text,
+                labelId = labelId,
+                startTime = startTime,
+                stopTime = stopTime
+            )
+        }
+    }
+
+    fun deleteTemplate(templateId: String) {
+        submitMutation { repository.deleteTemplate(templateId) }
     }
 
     fun logout() {
