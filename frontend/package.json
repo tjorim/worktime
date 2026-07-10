@@ -44,7 +44,7 @@
     "@schedule-x/drag-and-drop": "^3.7.3",
     "@schedule-x/event-modal": "^4.6.0",
     "@schedule-x/react": "^4.1.0",
-    "@schedule-x/theme-default": "^4.6.0",
+    "@schedule-x/theme-default": "^4.6.1",
     "@tanstack/query-db-collection": "^1.0.47",
     "@tanstack/react-db": "^0.1.92",
     "@tanstack/react-form": "^1.33.1",
