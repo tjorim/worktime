@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
+import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { HomePage } from "@/pages/HomePage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { SettingsPage } from "@/pages/SettingsPage";
@@ -42,7 +43,13 @@ const privacyRoute = createRoute({
   component: PrivacyPage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, settingsRoute, privacyRoute]);
+const authCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/auth/callback",
+  component: AuthCallbackPage,
+});
+
+const routeTree = rootRoute.addChildren([homeRoute, settingsRoute, privacyRoute, authCallbackRoute]);
 
 export const router = createRouter({
   routeTree,
