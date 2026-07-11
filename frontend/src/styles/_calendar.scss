@@ -156,6 +156,7 @@
     position: relative;
     opacity: 0.8;
     visibility: visible;
+    box-shadow: 0 0 0 1px var(--wt-month-calendar-focus-outline);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--wt-month-calendar-focus-outline) 35%, transparent);
     pointer-events: auto;
   }
