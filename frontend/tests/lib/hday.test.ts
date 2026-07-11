@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildPreviewLine,
   EVENT_COLORS,
+  EVENT_TEXT_COLORS,
   type EventFlag,
   getEventClass,
   getEventColor,
+  getEventTextColor,
   getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
@@ -212,6 +214,26 @@ describe("getEventColor", () => {
   });
 
   describe("color accessibility", () => {
+    const relativeLuminance = (hexColor: string): number => {
+      const channels = [1, 3, 5].map(
+        (start) => parseInt(hexColor.slice(start, start + 2), 16) / 255,
+      );
+      const [red, green, blue] = channels.map((channel) =>
+        channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+
+    const contrastRatio = (firstColor: string, secondColor: string): number => {
+      const firstLuminance = relativeLuminance(firstColor);
+      const secondLuminance = relativeLuminance(secondColor);
+      const lighter = Math.max(firstLuminance, secondLuminance);
+      const darker = Math.min(firstLuminance, secondLuminance);
+
+      return (lighter + 0.05) / (darker + 0.05);
+    };
+
     it("returns dark yellow/gold (#D9AD00) for course, not bright yellow", () => {
       expect(getEventColor(["course"])).toBe("#D9AD00");
       expect(getEventColor(["course"])).not.toBe("#FFFF00");
@@ -220,6 +242,32 @@ describe("getEventColor", () => {
     it("returns teal (#008899) for in-office, not cyan", () => {
       expect(getEventColor(["in"])).toBe("#008899");
       expect(getEventColor(["in"])).not.toBe("#00FFFF");
+    });
+
+    it("pairs every event background with a WCAG AA compliant text color", () => {
+      Object.entries(EVENT_COLORS).forEach(([key, backgroundColor]) => {
+        const textColor = EVENT_TEXT_COLORS[key as keyof typeof EVENT_TEXT_COLORS];
+
+        expect(contrastRatio(backgroundColor, textColor)).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+
+    it("uses light text for full-day colors that fail contrast with black text", () => {
+      expect(getEventTextColor(["weekend"])).toBe("#FFFFFF");
+      expect(getEventTextColor(["birthday"])).toBe("#FFFFFF");
+      expect(getEventTextColor(["ill"])).toBe("#FFFFFF");
+    });
+
+    it("returns recurring colors for weekly events with default flags", () => {
+      expect(getEventColor(["holiday"], "weekly")).toBe(EVENT_COLORS.RECURRING_FULL);
+      expect(getEventTextColor(["holiday"], "weekly")).toBe(EVENT_TEXT_COLORS.RECURRING_FULL);
+    });
+
+    it("returns recurring half-day colors for weekly half-day events with default flags", () => {
+      expect(getEventColor(["half_am", "holiday"], "weekly")).toBe(EVENT_COLORS.RECURRING_HALF);
+      expect(getEventTextColor(["half_am", "holiday"], "weekly")).toBe(
+        EVENT_TEXT_COLORS.RECURRING_HALF,
+      );
     });
   });
 });
@@ -393,6 +441,8 @@ describe("EVENT_COLORS constants", () => {
     expect(EVENT_COLORS.COURSE_HALF).toBe("#F0D04D");
     expect(EVENT_COLORS.IN_OFFICE_FULL).toBe("#008899");
     expect(EVENT_COLORS.IN_OFFICE_HALF).toBe("#00B8CC");
+    expect(EVENT_COLORS.RECURRING_FULL).toBe("#3D6B8C");
+    expect(EVENT_COLORS.RECURRING_HALF).toBe("#7AA8C4");
   });
 
   it("has valid hex color format for all colors", () => {
