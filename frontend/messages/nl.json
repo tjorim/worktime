@@ -1105,5 +1105,8 @@
   "gantt_logged_empty": "Er is nog geen tijd gelogd voor deze taak.",
   "gantt_logged_minutes": "{minutes} min",
   "gantt_logged_hours": "{hours} u",
-  "gantt_logged_hours_minutes": "{hours} u {minutes} min"
+  "gantt_logged_hours_minutes": "{hours} u {minutes} min",
+  "auth_callback_spinner": "Aanmelden afronden...",
+  "auth_callback_title": "Aanmelden afronden",
+  "auth_callback_description": "Even geduld terwijl Worktime klaar is met het verbinden van uw account."
 }

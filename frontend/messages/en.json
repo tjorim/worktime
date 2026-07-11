@@ -1125,5 +1125,8 @@
   "gantt_logged_empty": "No time has been logged for this task yet.",
   "gantt_logged_minutes": "{minutes} min",
   "gantt_logged_hours": "{hours} h",
-  "gantt_logged_hours_minutes": "{hours} h {minutes} min"
+  "gantt_logged_hours_minutes": "{hours} h {minutes} min",
+  "auth_callback_spinner": "Completing sign-in...",
+  "auth_callback_title": "Completing sign-in",
+  "auth_callback_description": "Please wait while Worktime finishes connecting your account."
 }
