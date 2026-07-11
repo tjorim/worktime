@@ -173,6 +173,40 @@ describe("AuthContext", () => {
 
       expect(screen.getAllByText("Sign-in failed: Consent was denied")).toHaveLength(1);
     });
+
+    it("shows a toast again when the same OIDC error object recurs after being cleared", async () => {
+      const error = new Error("Silent renew failed");
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        error,
+      };
+
+      const { rerender } = renderWithProviders(<AuthStatusDisplay />);
+      expect(await screen.findByText("Sign-in failed: Silent renew failed")).toBeInTheDocument();
+
+      mockOidcAuth = { ...mockOidcAuth, error: null };
+      rerender(
+        <ToastProvider>
+          <AuthProvider>
+            <AuthStatusDisplay />
+          </AuthProvider>
+        </ToastProvider>,
+      );
+
+      mockOidcAuth = { ...mockOidcAuth, error };
+      rerender(
+        <ToastProvider>
+          <AuthProvider>
+            <AuthStatusDisplay />
+          </AuthProvider>
+        </ToastProvider>,
+      );
+
+      expect(screen.getAllByText("Sign-in failed: Silent renew failed")).toHaveLength(2);
+    });
   });
 
   describe("triggerLogin", () => {

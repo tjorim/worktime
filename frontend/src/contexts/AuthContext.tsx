@@ -64,7 +64,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const lastDisplayedOidcErrorRef = useRef<unknown>(null);
 
   useEffect(() => {
-    if (!oidcAuth.error || lastDisplayedOidcErrorRef.current === oidcAuth.error) {
+    if (!oidcAuth.error) {
+      lastDisplayedOidcErrorRef.current = null;
+      return;
+    }
+
+    if (lastDisplayedOidcErrorRef.current === oidcAuth.error) {
       return;
     }
 
