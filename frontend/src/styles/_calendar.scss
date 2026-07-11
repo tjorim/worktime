@@ -151,6 +151,19 @@
   pointer-events: auto;
 }
 
+@media (hover: none), (pointer: coarse) {
+  .month-calendar-add-btn {
+    opacity: 0.7;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .month-calendar-add-btn:active,
+  .month-calendar-add-btn:focus-visible {
+    opacity: 1;
+  }
+}
+
 .month-calendar-day-header {
   border: none;
   background: transparent;
