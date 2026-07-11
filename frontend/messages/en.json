@@ -957,6 +957,8 @@
   "login_error_generic": "Login failed. Please try again.",
   "auth_session_expired": "Your session has expired. Please sign in again.",
   "auth_error_forbidden": "Access denied. You do not have permission to perform this action.",
+  "auth_error_oidc": "Sign-in failed: {message}",
+  "auth_error_unknown": "Unknown authentication error",
   "auth_error_redirect_signin": "Failed to redirect to the login page. Please refresh and try again.",
   "auth_error_redirect_signup": "Failed to redirect to the sign-up page. Please refresh and try again.",
   "auth_error_signout": "Sign out failed. Please refresh the page.",

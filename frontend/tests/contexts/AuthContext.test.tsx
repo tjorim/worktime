@@ -135,6 +135,44 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
       expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
+
+    it("shows a toast when OIDC reports an authentication error", async () => {
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        error: new Error("Invalid state parameter"),
+      };
+
+      renderWithProviders(<AuthStatusDisplay />);
+
+      expect(await screen.findByText("Sign-in failed: Invalid state parameter")).toBeInTheDocument();
+    });
+
+    it("does not show duplicate toasts for the same OIDC error object", async () => {
+      const error = new Error("Consent was denied");
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        error,
+      };
+
+      const { rerender } = renderWithProviders(<AuthStatusDisplay />);
+      expect(await screen.findByText("Sign-in failed: Consent was denied")).toBeInTheDocument();
+
+      rerender(
+        <ToastProvider>
+          <AuthProvider>
+            <AuthStatusDisplay />
+          </AuthProvider>
+        </ToastProvider>,
+      );
+
+      expect(screen.getAllByText("Sign-in failed: Consent was denied")).toHaveLength(1);
+    });
   });
 
   describe("triggerLogin", () => {
