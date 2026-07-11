@@ -202,7 +202,7 @@ function AppContent() {
       setScheduleType(schedule);
     } catch (error) {
       logger.error("Failed to change schedule:", error);
-      showError("Failed to change schedule. Please try again.");
+      showError(m.schedule_change_failed());
     }
   };
 
@@ -222,7 +222,7 @@ function AppContent() {
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
       // Ensure a schedule has been selected before completing onboarding
       if (!scheduleType) {
-        showError("Please select a schedule before completing setup.");
+        showError(m.schedule_required_before_setup());
         return;
       }
       const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
@@ -233,19 +233,14 @@ function AppContent() {
         // ScheduleOption, this runtime check protects against data corruption, invalid
         // localStorage state, or future refactoring issues. This prevents silently completing
         // onboarding with inconsistent schedule data.
-        showError(
-          "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
-        );
+        showError(m.selected_schedule_missing());
         return;
       }
       const requiresTeam = selectedScheduleConfig.shiftConfig.teamCount > 1;
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
       if (teamForCompletion !== null) {
-        showSuccess(
-          `Team ${teamForCompletion} selected! Your shifts are now personalized.`,
-          "bi-people-fill",
-        );
+        showSuccess(m.team_selected_success({ team: teamForCompletion }), "bi-people-fill");
       }
     }
     setShowTeamModal(false);
