@@ -9,6 +9,10 @@ import { ToastProvider } from "@/contexts/ToastContext";
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
 const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
 const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
+const mockAddAccessTokenExpiring = vi.fn();
+const mockRemoveAccessTokenExpiring = vi.fn();
+const mockAddSilentRenewError = vi.fn();
+const mockRemoveSilentRenewError = vi.fn();
 let mockOidcAuth: Record<string, unknown> = {
   isAuthenticated: false,
   isLoading: true,
@@ -16,6 +20,12 @@ let mockOidcAuth: Record<string, unknown> = {
   signinRedirect: mockSigninRedirect,
   removeUser: mockRemoveUser,
   signoutRedirect: mockSignoutRedirect,
+  events: {
+    addAccessTokenExpiring: mockAddAccessTokenExpiring,
+    removeAccessTokenExpiring: mockRemoveAccessTokenExpiring,
+    addSilentRenewError: mockAddSilentRenewError,
+    removeSilentRenewError: mockRemoveSilentRenewError,
+  },
 };
 
 vi.mock("react-oidc-context", () => ({
@@ -65,6 +75,12 @@ describe("AuthContext", () => {
       signinRedirect: mockSigninRedirect,
       removeUser: mockRemoveUser,
       signoutRedirect: mockSignoutRedirect,
+      events: {
+        addAccessTokenExpiring: mockAddAccessTokenExpiring,
+        removeAccessTokenExpiring: mockRemoveAccessTokenExpiring,
+        addSilentRenewError: mockAddSilentRenewError,
+        removeSilentRenewError: mockRemoveSilentRenewError,
+      },
     };
   });
 
@@ -206,6 +222,47 @@ describe("AuthContext", () => {
       );
 
       expect(screen.getAllByText("Sign-in failed: Silent renew failed")).toHaveLength(2);
+    });
+
+    it("warns when the access token is about to expire", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+
+      renderWithProviders(<AuthStatusDisplay />);
+
+      const handler = mockAddAccessTokenExpiring.mock.calls.at(-1)?.[0];
+      expect(handler).toBeTypeOf("function");
+      handler();
+
+      expect(
+        await screen.findByText("Your session will expire soon. Please save your work and sign in again if prompted."),
+      ).toBeInTheDocument();
+    });
+
+    it("shows an error when silent token renewal fails", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+
+      renderWithProviders(<AuthStatusDisplay />);
+
+      const handler = mockAddSilentRenewError.mock.calls.at(-1)?.[0];
+      expect(handler).toBeTypeOf("function");
+      handler(new Error("login_required"));
+
+      expect(
+        await screen.findByText("Your session could not be refreshed. Please sign in again to keep syncing changes."),
+      ).toBeInTheDocument();
+    });
+
+    it("unsubscribes from OIDC session lifecycle events on unmount", () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+
+      const { unmount } = renderWithProviders(<AuthStatusDisplay />);
+      const expiringHandler = mockAddAccessTokenExpiring.mock.calls.at(-1)?.[0];
+      const renewErrorHandler = mockAddSilentRenewError.mock.calls.at(-1)?.[0];
+
+      unmount();
+
+      expect(mockRemoveAccessTokenExpiring).toHaveBeenCalledWith(expiringHandler);
+      expect(mockRemoveSilentRenewError).toHaveBeenCalledWith(renewErrorHandler);
     });
   });
 
