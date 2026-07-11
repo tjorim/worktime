@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
@@ -61,6 +61,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     null;
 
   const { showError } = useToast();
+  const lastDisplayedOidcErrorRef = useRef<unknown>(null);
+
+  useEffect(() => {
+    if (!oidcAuth.error) {
+      lastDisplayedOidcErrorRef.current = null;
+      return;
+    }
+
+    if (lastDisplayedOidcErrorRef.current === oidcAuth.error) {
+      return;
+    }
+
+    lastDisplayedOidcErrorRef.current = oidcAuth.error;
+    logger.error("OIDC authentication error:", oidcAuth.error);
+    const errorMessage =
+      oidcAuth.error instanceof Error && oidcAuth.error.message.trim() !== ""
+        ? oidcAuth.error.message
+        : m.auth_error_unknown();
+    showError(m.auth_error_oidc({ message: errorMessage }));
+  }, [oidcAuth.error, showError]);
 
   const getAccessToken = useCallback((): string | null => {
     return oidcAuth.user?.access_token ?? null;
