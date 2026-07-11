@@ -95,14 +95,26 @@ describe("TimeTrackingDailyView", () => {
       );
     });
 
-    it("disables start-now until task details are entered", async () => {
-      renderView();
+    it("starts a timer with a default task name when task is blank", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:30"));
+      vi.stubGlobal("crypto", { randomUUID: () => "task-123" } as unknown as Crypto);
+      const onAddTask = vi.fn().mockResolvedValue(true);
+
+      renderView({ onAddTask });
 
       const startNowButton = screen.getByRole("button", { name: /Start Now/i });
-      expect(startNowButton).toBeDisabled();
+      expect(startNowButton).toBeEnabled();
+      fireEvent.click(startNowButton);
 
-      fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Focus work" } });
-      expect(screen.getByRole("button", { name: /Start Now/i })).toBeEnabled();
+      expect(onAddTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "task-123",
+          text: "Untitled task",
+          label: "Development",
+          startTime: "2025-01-01T10:15",
+        }),
+      );
     });
 
     it("renders the running task UI with elapsed time", () => {

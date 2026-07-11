@@ -161,6 +161,7 @@
   "tt_use_template": "Sjabloon gebruiken",
   "tt_select_label": "Selecteer een label",
   "tt_unknown_label": "Onbekend label",
+  "tt_default_task_name": "Naamloze taak",
   "tt_enter_task_hint": "Vul hieronder taakdetails in en start live bijhouden of voeg een voltooid tijdsbereik toe.",
   "tt_task_updated": "Taak succesvol bijgewerkt.",
   "tt_task_discarded": "Taak verwijderd.",

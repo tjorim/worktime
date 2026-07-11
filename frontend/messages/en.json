@@ -168,6 +168,7 @@
   "tt_use_template": "Use Template",
   "tt_select_label": "Select a label",
   "tt_unknown_label": "Unknown label",
+  "tt_default_task_name": "Untitled task",
   "tt_enter_task_hint": "Enter task details below, then start live tracking or add a completed time range.",
   "tt_task_updated": "Task updated successfully.",
   "tt_task_discarded": "Task discarded.",
