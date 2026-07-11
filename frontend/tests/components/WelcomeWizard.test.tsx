@@ -9,6 +9,7 @@ import { WelcomeWizard } from "@/components/WelcomeWizard";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { labelsCollection } from "@/db/collections";
 
 // OIDC mocks are provided globally by tests/setup.ts
 
@@ -821,6 +822,23 @@ describe("WelcomeWizard", () => {
       // Continue button should be enabled
       const continueButton = screen.getByRole("button", { name: /Continue/i });
       expect(continueButton).not.toBeDisabled();
+    });
+
+    it("seeds a default time tracking label when enabled during onboarding", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<WelcomeWizard {...defaultProps} startStep="time-tracking-setup" />);
+
+      await screen.findByRole("heading", { name: /Set Up Time Tracking/i });
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
+
+      await waitFor(() => {
+        expect(labelsCollection.toArray).toEqual([
+          expect.objectContaining({
+            name: "General",
+            color: expect.stringMatching(/^#[0-9a-f]{6}$/i),
+          }),
+        ]);
+      });
     });
 
     it("should not proceed without schedule selection", async () => {
