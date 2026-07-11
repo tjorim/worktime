@@ -4,6 +4,7 @@ import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { HomePage } from "@/pages/HomePage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
 
 const rootRoute = createRootRoute({
   component: AppLayout,
@@ -49,7 +50,19 @@ const authCallbackRoute = createRoute({
   component: AuthCallbackPage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, settingsRoute, privacyRoute, authCallbackRoute]);
+const silentRenewCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/auth/silent-callback",
+  component: SilentRenewCallbackPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  settingsRoute,
+  privacyRoute,
+  authCallbackRoute,
+  silentRenewCallbackRoute,
+]);
 
 export const router = createRouter({
   routeTree,

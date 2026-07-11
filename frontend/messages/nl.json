@@ -949,6 +949,8 @@
   "login_error_rate_limited": "Te veel aanmeldpogingen. Probeer het later opnieuw.",
   "login_error_generic": "Aanmelden mislukt. Probeer het opnieuw.",
   "auth_session_expired": "Uw sessie is verlopen. Meld u opnieuw aan.",
+  "auth_access_token_expiring": "Uw sessie verloopt binnenkort. Sla uw werk op en meld u opnieuw aan als daarom wordt gevraagd.",
+  "auth_silent_renew_failed": "Uw sessie kon niet worden vernieuwd. Meld u opnieuw aan om wijzigingen te blijven synchroniseren.",
   "auth_error_forbidden": "Toegang geweigerd. U heeft geen rechten om deze actie uit te voeren.",
   "auth_error_oidc": "Aanmelden mislukt: {message}",
   "auth_error_unknown": "Onbekende authenticatiefout",

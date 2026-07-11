@@ -956,6 +956,8 @@
   "login_error_rate_limited": "Too many login attempts. Please try again later.",
   "login_error_generic": "Login failed. Please try again.",
   "auth_session_expired": "Your session has expired. Please sign in again.",
+  "auth_access_token_expiring": "Your session will expire soon. Please save your work and sign in again if prompted.",
+  "auth_silent_renew_failed": "Your session could not be refreshed. Please sign in again to keep syncing changes.",
   "auth_error_forbidden": "Access denied. You do not have permission to perform this action.",
   "auth_error_oidc": "Sign-in failed: {message}",
   "auth_error_unknown": "Unknown authentication error",
