@@ -40,6 +40,24 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
+async function getTeamFetchErrorMessage(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+
+    if (body && typeof body === "object" && "detail" in body) {
+      const { detail } = body as { detail: unknown };
+
+      if (typeof detail === "string" && detail.trim()) {
+        return detail;
+      }
+    }
+  } catch {
+    // Fall back to a generic user-facing message when the error body is not JSON.
+  }
+
+  return m.team_unknown_error();
+}
+
 /**
  * Check if a date has an event for a member
  */
@@ -147,8 +165,8 @@ export function TeamScheduleView() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(m.team_fetch_failed({ error: errorText }));
+        const errorMessage = await getTeamFetchErrorMessage(response);
+        throw new Error(m.team_fetch_failed({ error: errorMessage }));
       }
 
       const data: TeamHdayResponse = await response.json();
