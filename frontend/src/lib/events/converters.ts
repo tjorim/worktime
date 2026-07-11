@@ -29,10 +29,19 @@ import { v4 as uuidv4 } from "uuid";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import { dayjs, splitFractionalHour, pad2 } from "@/utils/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
-import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
+import {
+  getEventColor,
+  getEventTextColor,
+  getEventTypeLabel,
+  getTimeLocationSymbol,
+} from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
+import {
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/timeOff/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**
@@ -81,8 +90,12 @@ export function shiftToCalendarEvent(shift: ShiftResult): CalendarEvent {
     type: "shift",
     team: shift.teamNumber,
     shiftCode: shift.shift.code as "M" | "L" | "N" | "D" | "O",
-    startTime: shift.shift.start !== null ? formatShiftTime(shift.shift.start) : undefined,
-    endTime: shift.shift.end !== null ? formatShiftTime(shift.shift.end) : undefined,
+    startTime:
+      shift.shift.start !== null
+        ? formatShiftTime(shift.shift.start)
+        : undefined,
+    endTime:
+      shift.shift.end !== null ? formatShiftTime(shift.shift.end) : undefined,
     className: shift.shift.className,
   };
 
@@ -164,11 +177,13 @@ export function entriesToCalendarEvents(
     const flags = getEntryFlagsForDisplay(entry);
     const color = getEventColor(flags);
     const typeLabel = getEventTypeLabel(flags);
+    const textColor = getEventTextColor(flags);
     const symbol = getTimeLocationSymbol(flags);
 
     const meta: HolidayMetadata = {
       type: "holiday",
       color,
+      textColor,
       flags,
       typeLabel,
       symbol,
@@ -258,11 +273,13 @@ function hdayRangeToCalendarEvent(event: HdayEvent): CalendarEvent {
   const flags = event.flags || [];
   const color = getEventColor(flags);
   const typeLabel = getEventTypeLabel(flags);
+  const textColor = getEventTextColor(flags);
   const symbol = getTimeLocationSymbol(flags);
 
   const meta: HolidayMetadata = {
     type: "holiday",
     color,
+    textColor,
     flags,
     typeLabel,
     symbol,
@@ -317,6 +334,7 @@ function hdayWeeklyToCalendarEvents(
   const flags = event.flags || [];
   const color = getEventColor(flags);
   const typeLabel = getEventTypeLabel(flags);
+  const textColor = getEventTextColor(flags);
   const symbol = getTimeLocationSymbol(flags);
 
   // Generate occurrences for each matching weekday in the date range
@@ -333,6 +351,7 @@ function hdayWeeklyToCalendarEvents(
     const meta: HolidayMetadata = {
       type: "holiday",
       color,
+      textColor,
       flags,
       typeLabel,
       symbol,

@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildPreviewLine,
   EVENT_COLORS,
+  EVENT_TEXT_COLORS,
   type EventFlag,
   getEventClass,
   getEventColor,
+  getEventTextColor,
   getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
@@ -30,11 +32,15 @@ describe("getEventColor", () => {
     });
 
     it("returns HOLIDAY_HALF for holiday with half_am", () => {
-      expect(getEventColor(["holiday", "half_am"])).toBe(EVENT_COLORS.HOLIDAY_HALF);
+      expect(getEventColor(["holiday", "half_am"])).toBe(
+        EVENT_COLORS.HOLIDAY_HALF,
+      );
     });
 
     it("returns HOLIDAY_HALF for holiday with half_pm", () => {
-      expect(getEventColor(["holiday", "half_pm"])).toBe(EVENT_COLORS.HOLIDAY_HALF);
+      expect(getEventColor(["holiday", "half_pm"])).toBe(
+        EVENT_COLORS.HOLIDAY_HALF,
+      );
     });
 
     it("returns HOLIDAY_HALF for half_am without type flag", () => {
@@ -52,16 +58,24 @@ describe("getEventColor", () => {
     });
 
     it("returns BUSINESS_HALF for business with half_am", () => {
-      expect(getEventColor(["business", "half_am"])).toBe(EVENT_COLORS.BUSINESS_HALF);
+      expect(getEventColor(["business", "half_am"])).toBe(
+        EVENT_COLORS.BUSINESS_HALF,
+      );
     });
 
     it("returns BUSINESS_HALF for business with half_pm", () => {
-      expect(getEventColor(["business", "half_pm"])).toBe(EVENT_COLORS.BUSINESS_HALF);
+      expect(getEventColor(["business", "half_pm"])).toBe(
+        EVENT_COLORS.BUSINESS_HALF,
+      );
     });
 
     it("returns BUSINESS_HALF for business with multiple time flags (keeps only first)", () => {
       // Mutual exclusivity: only half_am is kept
-      const normalized = normalizeEventFlags(["business", "half_am", "half_pm"]);
+      const normalized = normalizeEventFlags([
+        "business",
+        "half_am",
+        "half_pm",
+      ]);
       expect(getEventColor(normalized)).toBe(EVENT_COLORS.BUSINESS_HALF);
     });
   });
@@ -72,11 +86,15 @@ describe("getEventColor", () => {
     });
 
     it("returns COURSE_HALF for course with half_am", () => {
-      expect(getEventColor(["course", "half_am"])).toBe(EVENT_COLORS.COURSE_HALF);
+      expect(getEventColor(["course", "half_am"])).toBe(
+        EVENT_COLORS.COURSE_HALF,
+      );
     });
 
     it("returns COURSE_HALF for course with half_pm", () => {
-      expect(getEventColor(["course", "half_pm"])).toBe(EVENT_COLORS.COURSE_HALF);
+      expect(getEventColor(["course", "half_pm"])).toBe(
+        EVENT_COLORS.COURSE_HALF,
+      );
     });
   });
 
@@ -86,11 +104,15 @@ describe("getEventColor", () => {
     });
 
     it("returns IN_OFFICE_HALF for in with half_am", () => {
-      expect(getEventColor(["in", "half_am"])).toBe(EVENT_COLORS.IN_OFFICE_HALF);
+      expect(getEventColor(["in", "half_am"])).toBe(
+        EVENT_COLORS.IN_OFFICE_HALF,
+      );
     });
 
     it("returns IN_OFFICE_HALF for in with half_pm", () => {
-      expect(getEventColor(["in", "half_pm"])).toBe(EVENT_COLORS.IN_OFFICE_HALF);
+      expect(getEventColor(["in", "half_pm"])).toBe(
+        EVENT_COLORS.IN_OFFICE_HALF,
+      );
     });
   });
 
@@ -100,11 +122,15 @@ describe("getEventColor", () => {
     });
 
     it("returns WEEKEND_HALF for weekend with half_am", () => {
-      expect(getEventColor(["weekend", "half_am"])).toBe(EVENT_COLORS.WEEKEND_HALF);
+      expect(getEventColor(["weekend", "half_am"])).toBe(
+        EVENT_COLORS.WEEKEND_HALF,
+      );
     });
 
     it("returns WEEKEND_HALF for weekend with half_pm", () => {
-      expect(getEventColor(["weekend", "half_pm"])).toBe(EVENT_COLORS.WEEKEND_HALF);
+      expect(getEventColor(["weekend", "half_pm"])).toBe(
+        EVENT_COLORS.WEEKEND_HALF,
+      );
     });
   });
 
@@ -114,11 +140,15 @@ describe("getEventColor", () => {
     });
 
     it("returns BIRTHDAY_HALF for birthday with half_am", () => {
-      expect(getEventColor(["birthday", "half_am"])).toBe(EVENT_COLORS.BIRTHDAY_HALF);
+      expect(getEventColor(["birthday", "half_am"])).toBe(
+        EVENT_COLORS.BIRTHDAY_HALF,
+      );
     });
 
     it("returns BIRTHDAY_HALF for birthday with half_pm", () => {
-      expect(getEventColor(["birthday", "half_pm"])).toBe(EVENT_COLORS.BIRTHDAY_HALF);
+      expect(getEventColor(["birthday", "half_pm"])).toBe(
+        EVENT_COLORS.BIRTHDAY_HALF,
+      );
     });
   });
 
@@ -152,30 +182,62 @@ describe("getEventColor", () => {
 
   describe("priority handling with multiple type flags", () => {
     it("prioritizes business over all other types", () => {
-      expect(getEventColor(["business", "weekend"])).toBe(EVENT_COLORS.BUSINESS_FULL);
-      expect(getEventColor(["business", "birthday"])).toBe(EVENT_COLORS.BUSINESS_FULL);
-      expect(getEventColor(["business", "ill"])).toBe(EVENT_COLORS.BUSINESS_FULL);
-      expect(getEventColor(["business", "course"])).toBe(EVENT_COLORS.BUSINESS_FULL);
-      expect(getEventColor(["business", "in"])).toBe(EVENT_COLORS.BUSINESS_FULL);
-      expect(getEventColor(["business", "other"])).toBe(EVENT_COLORS.BUSINESS_FULL);
-      expect(getEventColor(["business", "holiday"])).toBe(EVENT_COLORS.BUSINESS_FULL);
+      expect(getEventColor(["business", "weekend"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
+      expect(getEventColor(["business", "birthday"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
+      expect(getEventColor(["business", "ill"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
+      expect(getEventColor(["business", "course"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
+      expect(getEventColor(["business", "in"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
+      expect(getEventColor(["business", "other"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
+      expect(getEventColor(["business", "holiday"])).toBe(
+        EVENT_COLORS.BUSINESS_FULL,
+      );
     });
 
     it("prioritizes weekend over birthday, ill, course, in, other, holiday", () => {
-      expect(getEventColor(["weekend", "birthday"])).toBe(EVENT_COLORS.WEEKEND_FULL);
+      expect(getEventColor(["weekend", "birthday"])).toBe(
+        EVENT_COLORS.WEEKEND_FULL,
+      );
       expect(getEventColor(["weekend", "ill"])).toBe(EVENT_COLORS.WEEKEND_FULL);
-      expect(getEventColor(["weekend", "course"])).toBe(EVENT_COLORS.WEEKEND_FULL);
+      expect(getEventColor(["weekend", "course"])).toBe(
+        EVENT_COLORS.WEEKEND_FULL,
+      );
       expect(getEventColor(["weekend", "in"])).toBe(EVENT_COLORS.WEEKEND_FULL);
-      expect(getEventColor(["weekend", "other"])).toBe(EVENT_COLORS.WEEKEND_FULL);
-      expect(getEventColor(["weekend", "holiday"])).toBe(EVENT_COLORS.WEEKEND_FULL);
+      expect(getEventColor(["weekend", "other"])).toBe(
+        EVENT_COLORS.WEEKEND_FULL,
+      );
+      expect(getEventColor(["weekend", "holiday"])).toBe(
+        EVENT_COLORS.WEEKEND_FULL,
+      );
     });
 
     it("prioritizes birthday over ill, course, in, other, holiday", () => {
-      expect(getEventColor(["birthday", "ill"])).toBe(EVENT_COLORS.BIRTHDAY_FULL);
-      expect(getEventColor(["birthday", "course"])).toBe(EVENT_COLORS.BIRTHDAY_FULL);
-      expect(getEventColor(["birthday", "in"])).toBe(EVENT_COLORS.BIRTHDAY_FULL);
-      expect(getEventColor(["birthday", "other"])).toBe(EVENT_COLORS.BIRTHDAY_FULL);
-      expect(getEventColor(["birthday", "holiday"])).toBe(EVENT_COLORS.BIRTHDAY_FULL);
+      expect(getEventColor(["birthday", "ill"])).toBe(
+        EVENT_COLORS.BIRTHDAY_FULL,
+      );
+      expect(getEventColor(["birthday", "course"])).toBe(
+        EVENT_COLORS.BIRTHDAY_FULL,
+      );
+      expect(getEventColor(["birthday", "in"])).toBe(
+        EVENT_COLORS.BIRTHDAY_FULL,
+      );
+      expect(getEventColor(["birthday", "other"])).toBe(
+        EVENT_COLORS.BIRTHDAY_FULL,
+      );
+      expect(getEventColor(["birthday", "holiday"])).toBe(
+        EVENT_COLORS.BIRTHDAY_FULL,
+      );
     });
 
     it("prioritizes ill over course, in, other, holiday", () => {
@@ -188,12 +250,16 @@ describe("getEventColor", () => {
     it("prioritizes course over in, other, holiday", () => {
       expect(getEventColor(["course", "in"])).toBe(EVENT_COLORS.COURSE_FULL);
       expect(getEventColor(["course", "other"])).toBe(EVENT_COLORS.COURSE_FULL);
-      expect(getEventColor(["course", "holiday"])).toBe(EVENT_COLORS.COURSE_FULL);
+      expect(getEventColor(["course", "holiday"])).toBe(
+        EVENT_COLORS.COURSE_FULL,
+      );
     });
 
     it("prioritizes in over other, holiday", () => {
       expect(getEventColor(["in", "other"])).toBe(EVENT_COLORS.IN_OFFICE_FULL);
-      expect(getEventColor(["in", "holiday"])).toBe(EVENT_COLORS.IN_OFFICE_FULL);
+      expect(getEventColor(["in", "holiday"])).toBe(
+        EVENT_COLORS.IN_OFFICE_FULL,
+      );
     });
 
     it("prioritizes other over holiday", () => {
@@ -201,17 +267,53 @@ describe("getEventColor", () => {
     });
 
     it("maintains priority with half-day flags", () => {
-      expect(getEventColor(["business", "weekend", "half_am"])).toBe(EVENT_COLORS.BUSINESS_HALF);
-      expect(getEventColor(["weekend", "birthday", "half_pm"])).toBe(EVENT_COLORS.WEEKEND_HALF);
-      expect(getEventColor(["birthday", "ill", "half_am"])).toBe(EVENT_COLORS.BIRTHDAY_HALF);
-      expect(getEventColor(["ill", "course", "half_pm"])).toBe(EVENT_COLORS.ILL_HALF);
-      expect(getEventColor(["course", "in", "half_am"])).toBe(EVENT_COLORS.COURSE_HALF);
-      expect(getEventColor(["in", "other", "half_pm"])).toBe(EVENT_COLORS.IN_OFFICE_HALF);
-      expect(getEventColor(["other", "holiday", "half_am"])).toBe(EVENT_COLORS.OTHER_HALF);
+      expect(getEventColor(["business", "weekend", "half_am"])).toBe(
+        EVENT_COLORS.BUSINESS_HALF,
+      );
+      expect(getEventColor(["weekend", "birthday", "half_pm"])).toBe(
+        EVENT_COLORS.WEEKEND_HALF,
+      );
+      expect(getEventColor(["birthday", "ill", "half_am"])).toBe(
+        EVENT_COLORS.BIRTHDAY_HALF,
+      );
+      expect(getEventColor(["ill", "course", "half_pm"])).toBe(
+        EVENT_COLORS.ILL_HALF,
+      );
+      expect(getEventColor(["course", "in", "half_am"])).toBe(
+        EVENT_COLORS.COURSE_HALF,
+      );
+      expect(getEventColor(["in", "other", "half_pm"])).toBe(
+        EVENT_COLORS.IN_OFFICE_HALF,
+      );
+      expect(getEventColor(["other", "holiday", "half_am"])).toBe(
+        EVENT_COLORS.OTHER_HALF,
+      );
     });
   });
 
   describe("color accessibility", () => {
+    const relativeLuminance = (hexColor: string): number => {
+      const channels = [1, 3, 5].map(
+        (start) => parseInt(hexColor.slice(start, start + 2), 16) / 255,
+      );
+      const [red, green, blue] = channels.map((channel) =>
+        channel <= 0.03928
+          ? channel / 12.92
+          : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+
+    const contrastRatio = (firstColor: string, secondColor: string): number => {
+      const firstLuminance = relativeLuminance(firstColor);
+      const secondLuminance = relativeLuminance(secondColor);
+      const lighter = Math.max(firstLuminance, secondLuminance);
+      const darker = Math.min(firstLuminance, secondLuminance);
+
+      return (lighter + 0.05) / (darker + 0.05);
+    };
+
     it("returns dark yellow/gold (#D9AD00) for course, not bright yellow", () => {
       expect(getEventColor(["course"])).toBe("#D9AD00");
       expect(getEventColor(["course"])).not.toBe("#FFFF00");
@@ -220,6 +322,23 @@ describe("getEventColor", () => {
     it("returns teal (#008899) for in-office, not cyan", () => {
       expect(getEventColor(["in"])).toBe("#008899");
       expect(getEventColor(["in"])).not.toBe("#00FFFF");
+    });
+
+    it("pairs every event background with a WCAG AA compliant text color", () => {
+      Object.entries(EVENT_COLORS).forEach(([key, backgroundColor]) => {
+        const textColor =
+          EVENT_TEXT_COLORS[key as keyof typeof EVENT_TEXT_COLORS];
+
+        expect(
+          contrastRatio(backgroundColor, textColor),
+        ).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+
+    it("uses light text for full-day colors that fail contrast with black text", () => {
+      expect(getEventTextColor(["weekend"])).toBe("#FFFFFF");
+      expect(getEventTextColor(["birthday"])).toBe("#FFFFFF");
+      expect(getEventTextColor(["ill"])).toBe("#FFFFFF");
     });
   });
 });
@@ -1123,7 +1242,9 @@ describe("getEventColorClass", () => {
   it("returns recurring-full for a weekly event with no explicit type flag (plain d1)", () => {
     // The parser injects "holiday" as the default flag for bare dx entries.
     // Without eventType, this would incorrectly return vacation red.
-    expect(getEventColorClass(["holiday"], "weekly")).toBe("event-recurring-full");
+    expect(getEventColorClass(["holiday"], "weekly")).toBe(
+      "event-recurring-full",
+    );
   });
 
   it("returns recurring-full for a weekly event with empty flags", () => {
@@ -1131,11 +1252,15 @@ describe("getEventColorClass", () => {
   });
 
   it("respects explicit type flag on a weekly event (e.g. business trip every Monday)", () => {
-    expect(getEventColorClass(["business"], "weekly")).toBe("event-business-full");
+    expect(getEventColorClass(["business"], "weekly")).toBe(
+      "event-business-full",
+    );
   });
 
   it("respects half-day flag on a weekly event", () => {
-    expect(getEventColorClass(["half_am", "holiday"], "weekly")).toBe("event-recurring-half");
+    expect(getEventColorClass(["half_am", "holiday"], "weekly")).toBe(
+      "event-recurring-half",
+    );
   });
 
   it("is backward compatible — omitting eventType returns vacation color for default flag", () => {
@@ -1247,7 +1372,9 @@ describe("getEventClass", () => {
   });
 
   it("prioritizes business over other type flags", () => {
-    expect(getEventClass(["business", "course", "in"])).toBe("event-business-full");
+    expect(getEventClass(["business", "course", "in"])).toBe(
+      "event-business-full",
+    );
   });
 
   it("prioritizes course over in", () => {
@@ -1258,6 +1385,8 @@ describe("getEventClass", () => {
     // Mutual exclusivity: when both half_am and half_pm present, only half_am is kept
     const normalized1 = normalizeEventFlags(["half_am", "half_pm", "business"]);
     expect(getEventClass(normalized1)).toBe("event-business-half");
-    expect(getEventClass(["half_am", "course", "in"])).toBe("event-course-half");
+    expect(getEventClass(["half_am", "course", "in"])).toBe(
+      "event-course-half",
+    );
   });
 });
