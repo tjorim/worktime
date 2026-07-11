@@ -102,14 +102,12 @@ export function TimeTrackingDailyView({
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
-  const canStartNow = !runningTask && hasTaskDetails;
+  const canStartNow = !runningTask && selectedLabel.trim().length > 0;
   const startDisabledReason = runningTask
     ? m.tt_reason_stopwatch_running()
-    : !text.trim()
-      ? m.tt_reason_enter_task_name()
-      : !selectedLabel
-        ? m.tt_reason_select_label()
-        : undefined;
+    : !selectedLabel.trim()
+      ? m.tt_reason_select_label()
+      : undefined;
   const addDisabledReason = !text.trim()
     ? m.tt_reason_enter_task_name()
     : !start.trim() || !stop.trim()
@@ -124,7 +122,7 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_fill_all_fields());
       return;
     }
-    if (!selectedLabel) {
+    if (!selectedLabel.trim()) {
       setError(m.tt_error_configure_label());
       return;
     }
@@ -166,11 +164,7 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_task_already_running_start());
       return;
     }
-    if (!text.trim()) {
-      setError(m.tt_error_enter_task_name());
-      return;
-    }
-    if (!selectedLabel) {
+    if (!selectedLabel.trim()) {
       setError(m.tt_error_configure_label());
       return;
     }
@@ -179,7 +173,7 @@ export function TimeTrackingDailyView({
     const startDate = now.format("YYYY-MM-DD");
     const added = await onAddTask({
       id: crypto.randomUUID(),
-      text: text.trim(),
+      text: text.trim() || m.tt_default_task_name(),
       label: selectedLabel,
       ganttTaskId: selectedGanttTaskId || undefined,
       startTime,
