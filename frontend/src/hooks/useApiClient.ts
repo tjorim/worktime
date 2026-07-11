@@ -4,6 +4,15 @@ import { useToast } from "@/contexts/ToastContext";
 import { apiFetch } from "@/utils/apiClient";
 import * as m from "@/paraglide/messages.js";
 
+export interface AuthenticatedRequestInit extends RequestInit {
+  /**
+   * When true, 401 responses show the session-expired warning without starting
+   * an OIDC redirect. Use this for passive/background work that must not yank
+   * the user away from unsaved edits.
+   */
+  suppressUnauthorizedRedirect?: boolean;
+}
+
 /**
  * Hook that returns an `apiFetch` function with standard error handling.
  *
@@ -22,22 +31,32 @@ export function useApiClient() {
   const { showError, showWarning } = useToast();
 
   const authenticatedFetch = useCallback(
-    async (url: string, init: RequestInit = {}): Promise<Response> => {
+    async (
+      url: string,
+      init: AuthenticatedRequestInit = {},
+    ): Promise<Response> => {
+      const { suppressUnauthorizedRedirect = false, ...requestInit } = init;
       const token = getAccessToken();
-      const headers = new Headers(init.headers);
+      const headers = new Headers(requestInit.headers);
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
-      return apiFetch(url, { ...init, headers }, {
-        onUnauthorized: () => {
-          showWarning(m.auth_session_expired());
-          triggerLogin();
+      return apiFetch(
+        url,
+        { ...requestInit, headers },
+        {
+          onUnauthorized: () => {
+            showWarning(m.auth_session_expired());
+            if (!suppressUnauthorizedRedirect) {
+              triggerLogin();
+            }
+          },
+          onForbidden: () => {
+            logout();
+            showError(m.auth_error_forbidden());
+          },
         },
-        onForbidden: () => {
-          logout();
-          showError(m.auth_error_forbidden());
-        },
-      });
+      );
     },
     [triggerLogin, logout, getAccessToken, showError, showWarning],
   );
