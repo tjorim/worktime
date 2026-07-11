@@ -105,7 +105,7 @@ export function TimeTrackingDailyView({
   const canStartNow = !runningTask && selectedLabel.trim().length > 0;
   const startDisabledReason = runningTask
     ? m.tt_reason_stopwatch_running()
-    : !selectedLabel
+    : !selectedLabel.trim()
       ? m.tt_reason_select_label()
       : undefined;
   const addDisabledReason = !text.trim()
@@ -122,7 +122,7 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_fill_all_fields());
       return;
     }
-    if (!selectedLabel) {
+    if (!selectedLabel.trim()) {
       setError(m.tt_error_configure_label());
       return;
     }
@@ -164,7 +164,7 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_task_already_running_start());
       return;
     }
-    if (!selectedLabel) {
+    if (!selectedLabel.trim()) {
       setError(m.tt_error_configure_label());
       return;
     }
