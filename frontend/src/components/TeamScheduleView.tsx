@@ -41,18 +41,22 @@ interface TeamHdayResponse {
 }
 
 async function getTeamFetchErrorMessage(response: Response): Promise<string> {
-  try {
-    const body: unknown = await response.json();
+  const contentType = response.headers.get("content-type");
 
-    if (body && typeof body === "object" && "detail" in body) {
-      const { detail } = body as { detail: unknown };
+  if (contentType?.includes("application/json")) {
+    try {
+      const body: unknown = await response.json();
 
-      if (typeof detail === "string" && detail.trim()) {
-        return detail;
+      if (body && typeof body === "object" && "detail" in body) {
+        const { detail } = body as { detail: unknown };
+
+        if (typeof detail === "string" && detail.trim()) {
+          return detail;
+        }
       }
+    } catch {
+      // Fall back to a generic user-facing message when parsing fails.
     }
-  } catch {
-    // Fall back to a generic user-facing message when the error body is not JSON.
   }
 
   return m.team_unknown_error();
