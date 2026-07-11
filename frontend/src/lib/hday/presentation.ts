@@ -1,8 +1,4 @@
-import {
-  getPrimaryTimeLocationFlag,
-  getPrimaryTypeFlag,
-  hasHalfDayFlag,
-} from "./flags";
+import { getPrimaryTimeLocationFlag, getPrimaryTypeFlag, hasHalfDayFlag } from "./flags";
 import type { EventFlag, HdayEvent } from "./types";
 
 /** Event background colors paired with text colors that meet WCAG AA contrast. */
@@ -23,6 +19,8 @@ export const EVENT_COLORS = {
   ILL_HALF: "#669933",
   OTHER_FULL: "#008B8B",
   OTHER_HALF: "#4DB8B8",
+  RECURRING_FULL: "#3D6B8C",
+  RECURRING_HALF: "#7AA8C4",
 } as const;
 
 export const EVENT_TEXT_COLORS = {
@@ -42,29 +40,31 @@ export const EVENT_TEXT_COLORS = {
   ILL_HALF: "#000000",
   OTHER_FULL: "#000000",
   OTHER_HALF: "#000000",
+  RECURRING_FULL: "#FFFFFF",
+  RECURRING_HALF: "#000000",
 } as const;
 
-export function getEventColor(flags?: EventFlag[]): string {
+export function getEventColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
   const isHalfDay = hasHalfDayFlag(flags);
-  switch (getPrimaryTypeFlag(flags)) {
+  const primaryType = getPrimaryTypeFlag(flags);
+
+  if (primaryType === "holiday" && eventType === "weekly") {
+    return isHalfDay ? EVENT_COLORS.RECURRING_HALF : EVENT_COLORS.RECURRING_FULL;
+  }
+
+  switch (primaryType) {
     case "business":
-      return isHalfDay
-        ? EVENT_COLORS.BUSINESS_HALF
-        : EVENT_COLORS.BUSINESS_FULL;
+      return isHalfDay ? EVENT_COLORS.BUSINESS_HALF : EVENT_COLORS.BUSINESS_FULL;
     case "weekend":
       return isHalfDay ? EVENT_COLORS.WEEKEND_HALF : EVENT_COLORS.WEEKEND_FULL;
     case "birthday":
-      return isHalfDay
-        ? EVENT_COLORS.BIRTHDAY_HALF
-        : EVENT_COLORS.BIRTHDAY_FULL;
+      return isHalfDay ? EVENT_COLORS.BIRTHDAY_HALF : EVENT_COLORS.BIRTHDAY_FULL;
     case "ill":
       return isHalfDay ? EVENT_COLORS.ILL_HALF : EVENT_COLORS.ILL_FULL;
     case "course":
       return isHalfDay ? EVENT_COLORS.COURSE_HALF : EVENT_COLORS.COURSE_FULL;
     case "in":
-      return isHalfDay
-        ? EVENT_COLORS.IN_OFFICE_HALF
-        : EVENT_COLORS.IN_OFFICE_FULL;
+      return isHalfDay ? EVENT_COLORS.IN_OFFICE_HALF : EVENT_COLORS.IN_OFFICE_FULL;
     case "other":
       return isHalfDay ? EVENT_COLORS.OTHER_HALF : EVENT_COLORS.OTHER_FULL;
     default:
@@ -72,48 +72,35 @@ export function getEventColor(flags?: EventFlag[]): string {
   }
 }
 
-export function getEventTextColor(flags?: EventFlag[]): string {
+export function getEventTextColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
   const isHalfDay = hasHalfDayFlag(flags);
-  switch (getPrimaryTypeFlag(flags)) {
+  const primaryType = getPrimaryTypeFlag(flags);
+
+  if (primaryType === "holiday" && eventType === "weekly") {
+    return isHalfDay ? EVENT_TEXT_COLORS.RECURRING_HALF : EVENT_TEXT_COLORS.RECURRING_FULL;
+  }
+
+  switch (primaryType) {
     case "business":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.BUSINESS_HALF
-        : EVENT_TEXT_COLORS.BUSINESS_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.BUSINESS_HALF : EVENT_TEXT_COLORS.BUSINESS_FULL;
     case "weekend":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.WEEKEND_HALF
-        : EVENT_TEXT_COLORS.WEEKEND_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.WEEKEND_HALF : EVENT_TEXT_COLORS.WEEKEND_FULL;
     case "birthday":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.BIRTHDAY_HALF
-        : EVENT_TEXT_COLORS.BIRTHDAY_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.BIRTHDAY_HALF : EVENT_TEXT_COLORS.BIRTHDAY_FULL;
     case "ill":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.ILL_HALF
-        : EVENT_TEXT_COLORS.ILL_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.ILL_HALF : EVENT_TEXT_COLORS.ILL_FULL;
     case "course":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.COURSE_HALF
-        : EVENT_TEXT_COLORS.COURSE_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.COURSE_HALF : EVENT_TEXT_COLORS.COURSE_FULL;
     case "in":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.IN_OFFICE_HALF
-        : EVENT_TEXT_COLORS.IN_OFFICE_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.IN_OFFICE_HALF : EVENT_TEXT_COLORS.IN_OFFICE_FULL;
     case "other":
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.OTHER_HALF
-        : EVENT_TEXT_COLORS.OTHER_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.OTHER_HALF : EVENT_TEXT_COLORS.OTHER_FULL;
     default:
-      return isHalfDay
-        ? EVENT_TEXT_COLORS.HOLIDAY_HALF
-        : EVENT_TEXT_COLORS.HOLIDAY_FULL;
+      return isHalfDay ? EVENT_TEXT_COLORS.HOLIDAY_HALF : EVENT_TEXT_COLORS.HOLIDAY_FULL;
   }
 }
 
-export function getEventColorClass(
-  flags?: EventFlag[],
-  eventType?: HdayEvent["type"],
-): string {
+export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
   const suffix = hasHalfDayFlag(flags) ? "half" : "full";
   const primaryType = getPrimaryTypeFlag(flags);
 
