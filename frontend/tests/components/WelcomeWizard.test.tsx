@@ -841,6 +841,21 @@ describe("WelcomeWizard", () => {
       });
     });
 
+    it("does not overwrite existing time tracking labels during onboarding", async () => {
+      const user = userEvent.setup();
+      labelsCollection.insert({ id: "existing-label", name: "Support", color: "#3B82F6" });
+      renderWithProviders(<WelcomeWizard {...defaultProps} startStep="time-tracking-setup" />);
+
+      await screen.findByRole("heading", { name: /Set Up Time Tracking/i });
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
+
+      await waitFor(() => {
+        expect(labelsCollection.toArray).toEqual([
+          expect.objectContaining({ id: "existing-label", name: "Support", color: "#3B82F6" }),
+        ]);
+      });
+    });
+
     it("should not proceed without schedule selection", async () => {
       const user = userEvent.setup();
 

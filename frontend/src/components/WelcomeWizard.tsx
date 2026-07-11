@@ -6,6 +6,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import { labelsCollection } from "@/db/collections";
 import type { ScheduleOption } from "@/data/rosters";
 import {
   getTeamCountForOption,
@@ -87,7 +88,7 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
-  const { labels: timeTrackingLabels, updateLabels } = useTimeTrackingStorage();
+  const { updateLabels } = useTimeTrackingStorage();
   const { isAuthenticated, displayName, triggerSignup } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
@@ -174,7 +175,7 @@ export function WelcomeWizard({
   };
 
   const handleTimeTrackingComplete = () => {
-    if (isTimeTrackingEnabled && timeTrackingLabels.length === 0) {
+    if (isTimeTrackingEnabled && labelsCollection.toArray.length === 0) {
       updateLabels([createDefaultTimeTrackingLabel()]);
     }
     nextStep();
