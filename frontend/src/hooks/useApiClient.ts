@@ -10,6 +10,7 @@ import * as m from "@/paraglide/messages.js";
  * The returned function automatically:
  * - Injects the OIDC Bearer token into the `Authorization` header.
  * - Redirects to the login page on 401 Unauthorized and shows a session-expired toast.
+ *   This avoids also starting logout, so only one OIDC navigation is triggered.
  * - Shows an error toast and clears auth on 403 Forbidden.
  *
  * Must be used inside AuthProvider and ToastProvider.
@@ -29,7 +30,6 @@ export function useApiClient() {
       }
       return apiFetch(url, { ...init, headers }, {
         onUnauthorized: () => {
-          logout();
           showWarning(m.auth_session_expired());
           triggerLogin();
         },
