@@ -39,7 +39,7 @@ describe("useApiClient", () => {
     await result.current("/api/data", { headers: { "X-Test": "yes" } });
 
     const [, init] = vi.mocked(apiFetch).mock.calls[0];
-    const headers = new Headers(init.headers);
+    const headers = new Headers(init?.headers);
     expect(headers.get("Authorization")).toBe("Bearer token-123");
     expect(headers.get("X-Test")).toBe("yes");
   });
