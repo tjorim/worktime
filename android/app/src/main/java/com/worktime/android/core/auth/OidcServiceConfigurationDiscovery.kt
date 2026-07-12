@@ -34,6 +34,7 @@ class OidcServiceConfigurationDiscovery(private val client: OkHttpClient = OkHtt
         AuthorizationServiceConfiguration(
             Uri.parse(json.getString("authorization_url")),
             Uri.parse(json.getString("token_url")),
+            null,
             json.optString("end_session_url").takeIf { it.isNotBlank() }?.let(Uri::parse)
         )
     } catch (exception: JSONException) {

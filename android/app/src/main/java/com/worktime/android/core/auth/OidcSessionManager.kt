@@ -122,16 +122,10 @@ class OidcSessionManager @Inject constructor(
         val stateToEnd = authState
         runCatching {
             val configuration = fetchAuthorizationServiceConfiguration()
-            val endSessionEndpoint = configuration.endSessionEndpoint ?: return@runCatching
-            val endSessionConfig =
-                AuthorizationServiceConfiguration(
-                    configuration.authorizationEndpoint,
-                    configuration.tokenEndpoint,
-                    endSessionEndpoint
-                )
+            if (configuration.endSessionEndpoint == null) return@runCatching
             val builder =
                 EndSessionRequest
-                    .Builder(endSessionConfig)
+                    .Builder(configuration)
                     .setPostLogoutRedirectUri(oidcConfig.redirectUri)
             stateToEnd?.idToken?.let(builder::setIdTokenHint)
             val request = builder.build()
