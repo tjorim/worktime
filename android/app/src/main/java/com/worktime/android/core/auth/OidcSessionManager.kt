@@ -2,6 +2,7 @@ package com.worktime.android.core.auth
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.SecureSessionStore
@@ -85,7 +86,8 @@ class OidcSessionManager @Inject constructor(
         val newState = AuthState(response, exception)
 
         if (response == null) {
-            val message = exception?.errorDescription ?: "Sign-in was cancelled"
+            exception?.let { Log.w(TAG, "Authorization response failed", it) }
+            val message = AuthErrorMessages.authorizationResponseError(context, exception)
             _sessionState.value = SessionState.Error(message)
             throw IllegalStateException(message)
         }
@@ -93,7 +95,8 @@ class OidcSessionManager @Inject constructor(
         val (tokenResponse, tokenException) = performTokenRequest(response.createTokenExchangeRequest())
         newState.update(tokenResponse, tokenException)
         if (tokenException != null || tokenResponse?.accessToken.isNullOrBlank()) {
-            val message = tokenException?.errorDescription ?: "Missing access token"
+            tokenException?.let { Log.w(TAG, "Token exchange failed", it) }
+            val message = AuthErrorMessages.tokenExchangeError(context, tokenException)
             _sessionState.value = SessionState.Error(message)
             throw IllegalStateException(message)
         }
@@ -170,5 +173,9 @@ class OidcSessionManager @Inject constructor(
 
     private fun publishState(state: AuthState) {
         _sessionState.value = SessionState.Authenticated(hasRefreshToken = !state.refreshToken.isNullOrBlank())
+    }
+
+    private companion object {
+        const val TAG = "OidcSessionManager"
     }
 }

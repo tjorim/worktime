@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Worktime</string>
+    <string name="auth_error_access_denied">Sign-in was denied. Please try again or contact your administrator.</string>
+    <string name="auth_error_authorization_failed">Unable to complete sign-in. Please try again.</string>
+    <string name="auth_error_complete_sign_in">Unable to complete sign-in. Please try again.</string>
+    <string name="auth_error_network">Unable to reach the sign-in service. Check your connection and try again.</string>
+    <string name="auth_error_provider_unavailable">The sign-in service is unavailable. Please try again later.</string>
+    <string name="auth_error_sign_in_cancelled">Sign-in was cancelled.</string>
+    <string name="auth_error_start_sign_in">Unable to start sign-in. Please try again.</string>
+    <string name="auth_error_token_exchange_failed">Unable to finish sign-in. Please try again.</string>
 </resources>
