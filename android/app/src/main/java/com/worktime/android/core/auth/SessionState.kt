@@ -19,5 +19,5 @@ interface SessionController {
 
     suspend fun getFreshAccessToken(): String?
 
-    fun logout()
+    suspend fun logout()
 }

@@ -778,6 +778,20 @@ describe("useOngoingSync", () => {
       });
     });
 
+    it("marks automatic pull requests as safe from unauthorized redirects", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse });
+
+      renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      const [, init] = mockFetch.mock.calls[0];
+      expect(init).toMatchObject({ suppressUnauthorizedRedirect: true });
+    });
+
     it("does not make network calls when sync is not established", () => {
       const { result } = renderHook(() => useOngoingSync(false, "user-1", mockFetch));
 

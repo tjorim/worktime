@@ -316,7 +316,7 @@ class DashboardViewModelTest {
             return result
         }
 
-        override fun logout() {
+        override suspend fun logout() {
             sessionState.value = SessionState.LoggedOut
         }
 

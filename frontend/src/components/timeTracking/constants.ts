@@ -8,6 +8,16 @@ export type TimeTrackingLabel = {
 
 export type TimeTrackingLabelInput = Omit<TimeTrackingLabel, "id"> & { id?: string };
 
+export const DEFAULT_TIME_TRACKING_LABEL_NAME = "General";
+
+export function createDefaultTimeTrackingLabel(): TimeTrackingLabel {
+  return {
+    id: crypto.randomUUID(),
+    name: DEFAULT_TIME_TRACKING_LABEL_NAME,
+    color: getDefaultLabelColor(),
+  };
+}
+
 const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
 export function isHexColor(value: unknown): value is string {

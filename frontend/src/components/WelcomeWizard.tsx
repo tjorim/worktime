@@ -5,6 +5,8 @@ import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSyncedState } from "@/hooks/useSyncedState";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import { labelsCollection } from "@/db/collections";
 import type { ScheduleOption } from "@/data/rosters";
 import {
   getTeamCountForOption,
@@ -29,6 +31,7 @@ import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
 import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
+import { createDefaultTimeTrackingLabel } from "@/components/timeTracking/constants";
 import * as m from "@/paraglide/messages.js";
 
 export type WizardCompletionPayload = {
@@ -85,6 +88,7 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
+  const { updateLabels } = useTimeTrackingStorage();
   const { isAuthenticated, displayName, triggerSignup } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
@@ -171,6 +175,9 @@ export function WelcomeWizard({
   };
 
   const handleTimeTrackingComplete = () => {
+    if (isTimeTrackingEnabled && labelsCollection.toArray.length === 0) {
+      updateLabels([createDefaultTimeTrackingLabel()]);
+    }
     nextStep();
   };
 

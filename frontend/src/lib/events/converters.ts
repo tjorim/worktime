@@ -29,7 +29,12 @@ import { v4 as uuidv4 } from "uuid";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import { dayjs, splitFractionalHour, pad2 } from "@/utils/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
-import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
+import {
+  getEventColor,
+  getEventTextColor,
+  getEventTypeLabel,
+  getTimeLocationSymbol,
+} from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
@@ -164,11 +169,13 @@ export function entriesToCalendarEvents(
     const flags = getEntryFlagsForDisplay(entry);
     const color = getEventColor(flags);
     const typeLabel = getEventTypeLabel(flags);
+    const textColor = getEventTextColor(flags);
     const symbol = getTimeLocationSymbol(flags);
 
     const meta: HolidayMetadata = {
       type: "holiday",
       color,
+      textColor,
       flags,
       typeLabel,
       symbol,
@@ -256,13 +263,15 @@ function hdayRangeToCalendarEvent(event: HdayEvent): CalendarEvent {
   const end = event.end.replace(/\//g, "-");
 
   const flags = event.flags || [];
-  const color = getEventColor(flags);
+  const color = getEventColor(flags, event.type);
   const typeLabel = getEventTypeLabel(flags);
+  const textColor = getEventTextColor(flags, event.type);
   const symbol = getTimeLocationSymbol(flags);
 
   const meta: HolidayMetadata = {
     type: "holiday",
     color,
+    textColor,
     flags,
     typeLabel,
     symbol,
@@ -315,8 +324,9 @@ function hdayWeeklyToCalendarEvents(
 
   const events: CalendarEvent[] = [];
   const flags = event.flags || [];
-  const color = getEventColor(flags);
+  const color = getEventColor(flags, event.type);
   const typeLabel = getEventTypeLabel(flags);
+  const textColor = getEventTextColor(flags, event.type);
   const symbol = getTimeLocationSymbol(flags);
 
   // Generate occurrences for each matching weekday in the date range
@@ -333,6 +343,7 @@ function hdayWeeklyToCalendarEvents(
     const meta: HolidayMetadata = {
       type: "holiday",
       color,
+      textColor,
       flags,
       typeLabel,
       symbol,

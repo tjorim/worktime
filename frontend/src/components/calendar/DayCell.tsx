@@ -160,7 +160,7 @@ function openMenuFromElement(el: HTMLElement, handler: (x: number, y: number) =>
  * - Click-to-view existing events, right-click context menu for actions
  * - Keyboard accessible: Enter/Shift+F10 opens context menu
  * - Touch accessible: long-press opens context menu
- * - "+" add button visible on hover/focus-within
+ * - "+" add button visible on hover/focus-within and persistently discoverable on touch devices
  *
  * Accessibility:
  * - role="gridcell" for ARIA grid semantics

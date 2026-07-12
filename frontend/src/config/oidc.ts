@@ -4,7 +4,8 @@
  * Environment variables (all optional):
  *   VITE_OIDC_AUTHORITY     — OIDC provider base URL
  *   VITE_OIDC_CLIENT_ID     — Client identifier registered with the provider
- *   VITE_OIDC_REDIRECT_URI  — Callback URL after successful login (defaults to /auth/callback)
+ *   VITE_OIDC_REDIRECT_URI         — Callback URL after successful login (defaults to /auth/callback)
+ *   VITE_OIDC_SILENT_REDIRECT_URI  — Hidden iframe callback URL for silent renew (defaults to /auth/silent-callback)
  *   VITE_OIDC_SCOPE         — Requested OAuth scopes (default: openid profile email)
  */
 
@@ -15,12 +16,15 @@ const OIDC_AUTHORITY =
 const OIDC_CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID ?? "worktime";
 const OIDC_REDIRECT_URI =
   import.meta.env.VITE_OIDC_REDIRECT_URI ?? `${window.location.origin}/auth/callback`;
+const OIDC_SILENT_REDIRECT_URI =
+  import.meta.env.VITE_OIDC_SILENT_REDIRECT_URI ?? `${window.location.origin}/auth/silent-callback`;
 const OIDC_SCOPE = import.meta.env.VITE_OIDC_SCOPE ?? "openid profile email";
 
 export const oidcConfig: AuthProviderProps = {
   authority: OIDC_AUTHORITY,
   client_id: OIDC_CLIENT_ID,
   redirect_uri: OIDC_REDIRECT_URI,
+  silent_redirect_uri: OIDC_SILENT_REDIRECT_URI,
   scope: OIDC_SCOPE,
   post_logout_redirect_uri: window.location.origin,
   /**

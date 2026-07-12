@@ -116,7 +116,7 @@
   outline-offset: -1px;
 }
 
-/* "+" add button — visible on hover or when cell/children have focus */
+/* "+" add button — visible on hover/focus, with a persistent touch affordance below */
 
 .month-calendar-add-btn {
   display: inline-flex;
@@ -149,6 +149,32 @@
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .month-calendar-add-btn {
+    position: relative;
+    opacity: 0.8;
+    visibility: visible;
+    box-shadow: 0 0 0 1px var(--wt-month-calendar-focus-outline);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--wt-month-calendar-focus-outline) 35%, transparent);
+    pointer-events: auto;
+  }
+
+  .month-calendar-add-btn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  .month-calendar-add-btn:active,
+  .month-calendar-add-btn:focus-visible {
+    opacity: 1;
+  }
 }
 
 .month-calendar-day-header {

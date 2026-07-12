@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
@@ -60,7 +60,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
     (oidcAuth.user?.profile.preferred_username as string | undefined) ??
     null;
 
-  const { showError } = useToast();
+  const { showError, showWarning } = useToast();
+  const lastDisplayedOidcErrorRef = useRef<unknown>(null);
+
+  useEffect(() => {
+    if (!oidcAuth.error) {
+      lastDisplayedOidcErrorRef.current = null;
+      return;
+    }
+
+    if (lastDisplayedOidcErrorRef.current === oidcAuth.error) {
+      return;
+    }
+
+    lastDisplayedOidcErrorRef.current = oidcAuth.error;
+    logger.error("OIDC authentication error:", oidcAuth.error);
+    const errorMessage =
+      oidcAuth.error instanceof Error && oidcAuth.error.message.trim() !== ""
+        ? oidcAuth.error.message
+        : m.auth_error_unknown();
+    showError(m.auth_error_oidc({ message: errorMessage }));
+  }, [oidcAuth.error, showError]);
+
+  useEffect(() => {
+    if (!oidcAuth.events) {
+      return;
+    }
+
+    const handleAccessTokenExpiring = () => {
+      logger.warn("OIDC access token is expiring soon.");
+      showWarning(m.auth_access_token_expiring());
+    };
+
+    const handleSilentRenewError = (error: Error) => {
+      logger.error("OIDC silent renew failed:", error);
+      showError(m.auth_silent_renew_failed());
+    };
+
+    oidcAuth.events.addAccessTokenExpiring(handleAccessTokenExpiring);
+    oidcAuth.events.addSilentRenewError(handleSilentRenewError);
+
+    return () => {
+      oidcAuth.events?.removeAccessTokenExpiring(handleAccessTokenExpiring);
+      oidcAuth.events?.removeSilentRenewError(handleSilentRenewError);
+    };
+  }, [oidcAuth.events, showError, showWarning]);
 
   const getAccessToken = useCallback((): string | null => {
     return oidcAuth.user?.access_token ?? null;

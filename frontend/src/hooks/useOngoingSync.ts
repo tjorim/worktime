@@ -49,7 +49,13 @@ import {
 import { getSyncCursorKey } from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
 
-type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+type BackgroundSafeRequestInit = RequestInit & {
+  suppressUnauthorizedRedirect?: boolean;
+};
+type FetchFn = (
+  url: string,
+  init?: BackgroundSafeRequestInit,
+) => Promise<Response>;
 
 /** Minimum delay (ms) for the first outbox flush retry after a failure. */
 export const INITIAL_BACK_OFF_MS = 1_000;
@@ -101,7 +107,9 @@ export type TriggerPullFn = () => void;
  * - `"keep-mine"`: re-push the conflicted local items with `client_updated_at = now()` so
  *   they win the last-write-wins check on the next push.
  */
-export type ResolveOngoingConflictsFn = (choice: "keep-server" | "keep-mine") => void;
+export type ResolveOngoingConflictsFn = (
+  choice: "keep-server" | "keep-mine",
+) => void;
 
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
@@ -125,7 +133,11 @@ async function reconcilePreferences(fetchFn: FetchFn): Promise<string | null> {
   const serverMs = parseTimestampMs(serverTimestamp);
 
   if (localPrefs && (!serverPrefs || localMs > serverMs)) {
-    const pushed = await pushPreferences(fetchFn, localPrefs.data, localPrefs.clientUpdatedAt);
+    const pushed = await pushPreferences(
+      fetchFn,
+      localPrefs.data,
+      localPrefs.clientUpdatedAt,
+    );
     return pushed ? localPrefs.clientUpdatedAt : serverTimestamp;
   }
 
@@ -169,7 +181,8 @@ export function useOngoingSync(
   });
   const [hasSyncError, setHasSyncError] = useState(false);
   const [conflictCount, setConflictCount] = useState(0);
-  const [conflictedPayload, setConflictedPayload] = useState<SyncPushPayload | null>(null);
+  const [conflictedPayload, setConflictedPayload] =
+    useState<SyncPushPayload | null>(null);
   // Keep a stable ref to conflictedPayload for use inside callbacks without
   // creating stale closures.
   const conflictedPayloadRef = useRef<SyncPushPayload | null>(null);
@@ -230,15 +243,25 @@ export function useOngoingSync(
    *   the current back-off window.
    */
   const flushAndPull = useCallback(
-    async (force = false) => {
+    async (force = false, suppressUnauthorizedRedirect = false) => {
       if (!isActive || !userId || !fetchFn) return;
       if (isFlushingRef.current) return;
       // Respect back-off unless the caller explicitly forces a flush (e.g. the
       // `online` event after a real reconnect, or an SSE-triggered pull).
-      if (!force && retryAfterRef.current !== null && Date.now() < retryAfterRef.current) return;
+      if (
+        !force &&
+        retryAfterRef.current !== null &&
+        Date.now() < retryAfterRef.current
+      )
+        return;
       isFlushingRef.current = true;
       setIsSyncing(true);
       try {
+        const syncFetch: FetchFn = suppressUnauthorizedRedirect
+          ? (url, init = {}) =>
+              fetchFn(url, { ...init, suppressUnauthorizedRedirect: true })
+          : fetchFn;
+
         // --- Flush outbox ---
         let flushConflicts = 0;
         const dequeued = dequeueAndMergeSyncOutbox(userId);
@@ -246,7 +269,7 @@ export function useOngoingSync(
           const { merged, commit } = dequeued;
           let pushResult: SyncPushResponse | null;
           try {
-            pushResult = await pushSyncPayload(fetchFn, merged);
+            pushResult = await pushSyncPayload(syncFetch, merged);
           } catch (err) {
             // Push threw (e.g. network error) — outbox stays intact for next retry.
             logger.error("useOngoingSync: outbox push threw:", err);
@@ -272,7 +295,8 @@ export function useOngoingSync(
           if (flushConflicts > 0) {
             const extracted = extractConflictedItems(merged, pushResult);
             conflictedPayloadRef.current = extracted;
-            conflictServerTimestampRef.current = maxConflictServerTimestamp(pushResult);
+            conflictServerTimestampRef.current =
+              maxConflictServerTimestamp(pushResult);
             setConflictedPayload(extracted);
             setConflictCount(flushConflicts);
           }
@@ -286,11 +310,11 @@ export function useOngoingSync(
           flushConflicts > 0 || conflictCount > 0
             ? undefined
             : (localStorage.getItem(getSyncCursorKey(userId)) ?? undefined);
-        const pullResult = await pullSyncData(fetchFn, cursor);
+        const pullResult = await pullSyncData(syncFetch, cursor);
         if (!mountedRef.current) return;
         if (pullResult) {
           onIncrementalPullRef.current?.(pullResult);
-          await reconcilePreferences(fetchFn);
+          await reconcilePreferences(syncFetch);
           if (!mountedRef.current) return;
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
@@ -324,7 +348,7 @@ export function useOngoingSync(
     const handleOnline = () => {
       // The `online` event fires after a real reconnect — always attempt a
       // flush immediately, bypassing any active back-off window.
-      flushAndPull(true).catch((err: unknown) => {
+      flushAndPull(true, true).catch((err: unknown) => {
         logger.error("useOngoingSync: flush on online event failed:", err);
       });
     };
@@ -332,8 +356,11 @@ export function useOngoingSync(
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         // Passive trigger — respect the current back-off window.
-        flushAndPull(false).catch((err: unknown) => {
-          logger.error("useOngoingSync: flush on visibility change failed:", err);
+        flushAndPull(false, true).catch((err: unknown) => {
+          logger.error(
+            "useOngoingSync: flush on visibility change failed:",
+            err,
+          );
         });
       }
     };
@@ -356,7 +383,9 @@ export function useOngoingSync(
   // once on mount, so without this effect they would serve stale data for the
   // new user.
   useEffect(() => {
-    setLastSyncedAt(userId ? localStorage.getItem(getSyncCursorKey(userId)) : null);
+    setLastSyncedAt(
+      userId ? localStorage.getItem(getSyncCursorKey(userId)) : null,
+    );
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
     setHasSyncError(false);
     setConflictCount(0);
@@ -375,7 +404,7 @@ export function useOngoingSync(
     // Only run the initial flush if we are currently online.
     if (!navigator.onLine) return;
     hasRunInitialFlushRef.current = true;
-    flushAndPull(true).catch((err: unknown) => {
+    flushAndPull(true, true).catch((err: unknown) => {
       logger.error("useOngoingSync: initial flush on mount failed:", err);
     });
   }, [isActive, flushAndPull]);
@@ -388,7 +417,7 @@ export function useOngoingSync(
   const triggerPull: TriggerPullFn = useCallback(() => {
     // Explicit external trigger (e.g. SSE signal) — bypass back-off so that
     // real server-push notifications are never silently dropped.
-    flushAndPull(true).catch((err: unknown) => {
+    flushAndPull(true, true).catch((err: unknown) => {
       logger.error("useOngoingSync: triggerPull failed:", err);
     });
   }, [flushAndPull]);
@@ -413,7 +442,8 @@ export function useOngoingSync(
           if (conflicts > 0) {
             const extracted = extractConflictedItems(change, result);
             conflictedPayloadRef.current = extracted;
-            conflictServerTimestampRef.current = maxConflictServerTimestamp(result);
+            conflictServerTimestampRef.current =
+              maxConflictServerTimestamp(result);
             setConflictedPayload(extracted);
             setConflictCount(conflicts);
             let pullResult: SyncPullResponse | null = null;
@@ -439,7 +469,10 @@ export function useOngoingSync(
                 setHasSyncError(false);
               } catch (err) {
                 // Post-success callback threw — log but do NOT requeue the change.
-                logger.error("useOngoingSync: post-reconciliation callback threw:", err);
+                logger.error(
+                  "useOngoingSync: post-reconciliation callback threw:",
+                  err,
+                );
                 if (mountedRef.current) {
                   setHasSyncError(true);
                 }

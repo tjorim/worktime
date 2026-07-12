@@ -2,6 +2,7 @@ package com.worktime.android.core.auth
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.SecureSessionStore
@@ -9,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +23,7 @@ import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.EndSessionRequest
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
 
@@ -84,7 +87,8 @@ class OidcSessionManager @Inject constructor(
         val newState = AuthState(response, exception)
 
         if (response == null) {
-            val message = exception?.errorDescription ?: "Sign-in was cancelled"
+            exception?.let { Log.w(TAG, "Authorization response failed", it) }
+            val message = AuthErrorMessages.authorizationResponseError(context, exception)
             _sessionState.value = SessionState.Error(message)
             throw IllegalStateException(message)
         }
@@ -92,7 +96,8 @@ class OidcSessionManager @Inject constructor(
         val (tokenResponse, tokenException) = performTokenRequest(response.createTokenExchangeRequest())
         newState.update(tokenResponse, tokenException)
         if (tokenException != null || tokenResponse?.accessToken.isNullOrBlank()) {
-            val message = tokenException?.errorDescription ?: "Missing access token"
+            tokenException?.let { Log.w(TAG, "Token exchange failed", it) }
+            val message = AuthErrorMessages.tokenExchangeError(context, tokenException)
             _sessionState.value = SessionState.Error(message)
             throw IllegalStateException(message)
         }
@@ -107,7 +112,7 @@ class OidcSessionManager @Inject constructor(
             currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
                 service.dispose()
                 if (exception != null || accessToken.isNullOrBlank()) {
-                    logout()
+                    clearLocalSession()
                     continuation.resume(null)
                     return@performActionWithFreshTokens
                 }
@@ -117,7 +122,28 @@ class OidcSessionManager @Inject constructor(
         }
     }
 
-    override fun logout() {
+    override suspend fun logout() {
+        val stateToEnd = authState
+        runCatching {
+            val configuration = fetchAuthorizationServiceConfiguration()
+            if (configuration.endSessionEndpoint == null) return@runCatching
+            val builder =
+                EndSessionRequest
+                    .Builder(configuration)
+                    .setPostLogoutRedirectUri(oidcConfig.redirectUri)
+            stateToEnd?.idToken?.let(builder::setIdTokenHint)
+            val request = builder.build()
+            val service = AuthorizationService(context)
+            val intent = service.getEndSessionRequestIntent(request).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            service.dispose()
+        }.onFailure { exception ->
+            if (exception is CancellationException) throw exception
+        }
+        clearLocalSession()
+    }
+
+    private fun clearLocalSession() {
         authState = null
         sessionStore.clear()
         _sessionState.value = SessionState.LoggedOut
@@ -150,5 +176,9 @@ class OidcSessionManager @Inject constructor(
 
     private fun publishState(state: AuthState) {
         _sessionState.value = SessionState.Authenticated(hasRefreshToken = !state.refreshToken.isNullOrBlank())
+    }
+
+    private companion object {
+        const val TAG = "OidcSessionManager"
     }
 }
