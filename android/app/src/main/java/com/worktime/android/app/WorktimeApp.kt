@@ -175,7 +175,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                         dashboardViewModel.refresh()
                         timeOffViewModel.refresh()
                     }.onFailure {
-                        loginError = it.message ?: AuthErrorMessages.completeSignInError(context)
+                        loginError = (it as? IllegalStateException)?.message ?: AuthErrorMessages.completeSignInError(context)
                     }
             }
         }
