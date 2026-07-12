@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -136,6 +137,8 @@ class OidcSessionManager @Inject constructor(
             val intent = service.getEndSessionRequestIntent(request).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
             service.dispose()
+        }.onFailure { exception ->
+            if (exception is CancellationException) throw exception
         }
         clearLocalSession()
     }
