@@ -53,6 +53,7 @@ async def _discover(issuer: str) -> OidcDiscoveryConfig:
         issuer=data.get("issuer", issuer),
         authorization_url=data["authorization_endpoint"],
         token_url=data["token_endpoint"],
+        end_session_url=data.get("end_session_endpoint"),
     )
 
 
