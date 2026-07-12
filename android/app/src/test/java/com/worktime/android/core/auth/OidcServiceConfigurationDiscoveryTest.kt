@@ -51,7 +51,8 @@ class OidcServiceConfigurationDiscoveryTest {
                     {
                       "issuer": "https://auth.example.test/realms/worktime",
                       "authorization_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/auth",
-                      "token_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/token"
+                      "token_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/token",
+                      "end_session_url": "https://auth.example.test/realms/worktime/protocol/openid-connect/logout"
                     }
                     """.trimIndent()
                 ).build()
@@ -67,6 +68,10 @@ class OidcServiceConfigurationDiscoveryTest {
         assertEquals(
             "https://auth.example.test/realms/worktime/protocol/openid-connect/token",
             config.tokenEndpoint.toString()
+        )
+        assertEquals(
+            "https://auth.example.test/realms/worktime/protocol/openid-connect/logout",
+            config.endSessionEndpoint.toString()
         )
     }
 

@@ -825,7 +825,7 @@ class WorktimeRepositoryTest {
 
         override suspend fun getFreshAccessToken(): String? = currentToken
 
-        override fun logout() {
+        override suspend fun logout() {
             currentToken = null
             sessionState.value = SessionState.LoggedOut
         }

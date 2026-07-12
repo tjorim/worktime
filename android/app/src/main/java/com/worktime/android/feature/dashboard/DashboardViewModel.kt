@@ -208,8 +208,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
     }
 
     fun logout() {
-        repository.logout()
-        _uiState.value = DashboardUiState.LoggedOut
+        viewModelScope.launch {
+            repository.logout()
+            _uiState.value = DashboardUiState.LoggedOut
+        }
     }
 
     fun deleteAccount() {

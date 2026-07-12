@@ -115,6 +115,7 @@ async def test_oidc_config_endpoint_returns_discovered_provider_urls(monkeypatch
                 "issuer": issuer,
                 "authorization_endpoint": f"{issuer}/protocol/openid-connect/auth",
                 "token_endpoint": f"{issuer}/protocol/openid-connect/token",
+                "end_session_endpoint": f"{issuer}/protocol/openid-connect/logout",
             },
         )
 
@@ -128,6 +129,7 @@ async def test_oidc_config_endpoint_returns_discovered_provider_urls(monkeypatch
         "issuer": issuer,
         "authorization_url": f"{issuer}/protocol/openid-connect/auth",
         "token_url": f"{issuer}/protocol/openid-connect/token",
+        "end_session_url": f"{issuer}/protocol/openid-connect/logout",
     }
 
 
@@ -146,6 +148,7 @@ async def test_oidc_config_endpoint_caches_discovery(monkeypatch) -> None:
                 "issuer": issuer,
                 "authorization_endpoint": f"{issuer}/authorize/",
                 "token_endpoint": f"{issuer}/token/",
+                "end_session_endpoint": f"{issuer}/logout/",
             },
         )
 

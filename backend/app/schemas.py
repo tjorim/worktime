@@ -77,6 +77,7 @@ class OidcDiscoveryConfig(BaseModel):
     issuer: str
     authorization_url: str
     token_url: str
+    end_session_url: str | None = None
 
 
 def _validate_hex_color(value: str | None) -> str | None:

@@ -166,7 +166,7 @@ interface DashboardRepository {
 
     suspend fun deleteAccount(): MutationResult<Unit>
 
-    fun logout()
+    suspend fun logout()
 }
 
 @Suppress("TooManyFunctions") // implements the single-facade DashboardRepository
@@ -479,7 +479,7 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         currentUserId = null
     }
 
-    override fun logout() {
+    override suspend fun logout() {
         sessionController.logout()
         currentUserId = null
     }

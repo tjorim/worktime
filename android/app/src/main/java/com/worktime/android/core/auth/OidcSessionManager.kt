@@ -21,6 +21,7 @@ import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.EndSessionRequest
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenRequest
 
@@ -107,7 +108,7 @@ class OidcSessionManager @Inject constructor(
             currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
                 service.dispose()
                 if (exception != null || accessToken.isNullOrBlank()) {
-                    logout()
+                    clearLocalSession()
                     continuation.resume(null)
                     return@performActionWithFreshTokens
                 }
@@ -117,7 +118,26 @@ class OidcSessionManager @Inject constructor(
         }
     }
 
-    override fun logout() {
+    override suspend fun logout() {
+        val stateToEnd = authState
+        runCatching {
+            val configuration = fetchAuthorizationServiceConfiguration()
+            if (configuration.endSessionEndpoint == null) return@runCatching
+            val builder =
+                EndSessionRequest
+                    .Builder(configuration)
+                    .setPostLogoutRedirectUri(oidcConfig.redirectUri)
+            stateToEnd?.idToken?.let(builder::setIdTokenHint)
+            val request = builder.build()
+            val service = AuthorizationService(context)
+            val intent = service.getEndSessionRequestIntent(request).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            service.dispose()
+        }
+        clearLocalSession()
+    }
+
+    private fun clearLocalSession() {
         authState = null
         sessionStore.clear()
         _sessionState.value = SessionState.LoggedOut
