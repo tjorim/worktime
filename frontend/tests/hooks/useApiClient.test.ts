@@ -58,6 +58,24 @@ describe("useApiClient", () => {
     expect(auth.logout).not.toHaveBeenCalled();
   });
 
+  it("can show an unauthorized warning without starting a login redirect", async () => {
+    vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
+      options.onUnauthorized();
+      throw new Error("Unauthorized");
+    });
+    const { result } = renderHook(() => useApiClient());
+
+    await expect(
+      result.current("/api/data", { suppressUnauthorizedRedirect: true }),
+    ).rejects.toThrow("Unauthorized");
+
+    const [, init] = vi.mocked(apiFetch).mock.calls[0];
+    expect("suppressUnauthorizedRedirect" in (init ?? {})).toBe(false);
+    expect(toast.showWarning).toHaveBeenCalledOnce();
+    expect(auth.triggerLogin).not.toHaveBeenCalled();
+    expect(auth.logout).not.toHaveBeenCalled();
+  });
+
   it("logs out and shows an error when a request is forbidden", async () => {
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onForbidden();
