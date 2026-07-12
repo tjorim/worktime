@@ -36,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.worktime.android.app.navigation.WorktimeDestination
+import com.worktime.android.core.auth.AuthErrorMessages
 import com.worktime.android.core.auth.BiometricAuthenticator
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.notifications.WorktimeNotifications
@@ -174,7 +175,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                         dashboardViewModel.refresh()
                         timeOffViewModel.refresh()
                     }.onFailure {
-                        loginError = it.message ?: "Unable to complete sign-in"
+                        loginError = it.message ?: AuthErrorMessages.completeSignInError(context)
                     }
             }
         }
@@ -221,7 +222,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                                 .onSuccess(loginLauncher::launch)
                                 .onFailure {
                                     loginInFlight = false
-                                    loginError = it.message ?: "Unable to start sign-in"
+                                    loginError = AuthErrorMessages.startSignInError(context)
                                 }
                         }
                     }
