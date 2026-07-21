@@ -1873,6 +1873,156 @@ class TestSyncCorrectnessFixes:
         assert result["status"] == "conflict"
         assert "in use" in result["conflict_reason"]
 
+    def test_push_task_create_rejects_stop_time_before_start_time(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Sync push must reject an inverted time range, matching the REST create_task check.
+
+        The REST path (db_service.create_task) already rejects
+        stop_time < start_time; the sync push path had no equivalent check,
+        so a client could silently write a negative-duration task that the
+        REST API would have refused.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "task-time-order-create-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": str(uuid4()),
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Inverted range",
+                        "label_id": None,
+                        "start_time": "2026-02-01T10:00:00+00:00",
+                        "stop_time": "2026-02-01T09:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+    def test_push_task_update_rejects_stop_time_before_effective_start_time(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """The same check must apply to a partial update, using the merged start/stop times."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "task-time-order-update-user")
+        headers = auth_headers(user_id)
+
+        task_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "text": "Valid range",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # Only start_time is updated (to after the existing stop_time) — the
+        # check must use the *effective* stop_time (unchanged), not skip
+        # validation just because stop_time wasn't part of this payload.
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "start_time": "2026-02-01T11:00:00+00:00",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+    def test_push_client_updated_at_is_clamped_to_prevent_permanent_lww_lock(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A wildly-future client_updated_at (bad clock / unit bug) must not permanently win LWW.
+
+        Conflict detection is a pure `>` comparison with no other tiebreaker,
+        so an unclamped record stamped far in the future would win every
+        future comparison forever — including a later correction from the
+        *same* device once its clock is fixed. The server clamps the stored
+        value to _MAX_CLOCK_SKEW ahead of its own clock, so a legitimate,
+        further-future edit from another device with a sane clock can still
+        win.
+        """
+        from app.services.sync_service import _MAX_CLOCK_SKEW
+
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "clock-skew-user")
+        headers = auth_headers(user_id)
+
+        task_id = str(uuid4())
+        bogus_future = (datetime.now(UTC) + timedelta(days=3650)).isoformat()
+
+        create_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": bogus_future,
+                        "text": "Created with a broken clock",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 200
+        assert create_resp.json()["results"]["tasks"][0]["status"] == "ok"
+
+        # A legitimate edit stamped further ahead than the clamp ceiling must
+        # still win — proving the bogus value did not get stored as-is.
+        legitimate_future_edit = (
+            datetime.now(UTC) + _MAX_CLOCK_SKEW + timedelta(minutes=1)
+        ).isoformat()
+        edit_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "update",
+                        "client_updated_at": legitimate_future_edit,
+                        "text": "Fixed-clock correction wins",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert edit_resp.status_code == 200, edit_resp.text
+        assert edit_resp.json()["results"]["tasks"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/api/sync/pull", headers=headers)
+        pulled = next(t for t in pull_resp.json()["tasks"] if t["id"] == task_id)
+        assert pulled["text"] == "Fixed-clock correction wins"
+
     def test_pull_server_timestamp_includes_safety_overlap(
         self, db_client: TestClient, auth_headers
     ) -> None:
@@ -1926,6 +2076,277 @@ class TestSyncCorrectnessFixes:
         }
         resp = db_client.post("/api/sync/push", json=oversized, headers=headers)
         assert resp.status_code == 422
+
+    def test_push_creating_two_labels_with_same_name_returns_conflict_not_500(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Two devices independently creating a same-named label must not 500 the batch.
+
+        uq_active_label_user_name is a partial unique index on (user_id,
+        name); previously nothing checked for this before commit, so the
+        second label's INSERT raised IntegrityError, which /sync/push did not
+        catch — the whole batch (transaction) 500'd, and since the outbox
+        retries the identical batch forever, the offending label wedged every
+        other queued change behind it indefinitely.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-collision-create-user")
+        headers = auth_headers(user_id)
+
+        first_id = str(uuid4())
+        second_id = str(uuid4())
+
+        first_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": first_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "Duplicate Name",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert first_resp.status_code == 200
+        assert first_resp.json()["results"]["labels"][0]["status"] == "ok"
+
+        # A different label id, same name — as if two devices both created a
+        # "Duplicate Name" label offline before ever syncing.
+        second_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": second_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "Duplicate Name",
+                        "color": "#DDEEFF",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert second_resp.status_code == 200, second_resp.text
+        result = second_resp.json()["results"]["labels"][0]
+        assert result["status"] == "conflict"
+        assert "already exists" in result["conflict_reason"]
+
+        # The first label is untouched and the second was never created.
+        pull_resp = db_client.get("/api/sync/pull", headers=headers)
+        names = [label["name"] for label in pull_resp.json()["labels"] if label["deleted_at"] is None]
+        assert names == ["Duplicate Name"]
+
+    def test_push_creating_same_name_label_twice_in_one_batch_only_conflicts_the_second(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """The collision check must see earlier same-batch inserts (autoflush), not just committed rows."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-collision-batch-user")
+        headers = auth_headers(user_id)
+
+        first_id = str(uuid4())
+        second_id = str(uuid4())
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": first_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "Same Batch",
+                        "color": "#AABBCC",
+                    },
+                    {
+                        "id": second_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-9),
+                        "name": "Same Batch",
+                        "color": "#DDEEFF",
+                    },
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        results = resp.json()["results"]["labels"]
+        assert results[0]["status"] == "ok"
+        assert results[1]["status"] == "conflict"
+
+    def test_push_rename_colliding_with_another_active_label_returns_conflict(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Renaming a label to a name already used by another active label must conflict, not 500."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-rename-collision-user")
+        headers = auth_headers(user_id)
+
+        keep_id = str(uuid4())
+        rename_id = str(uuid4())
+
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": keep_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Existing",
+                        "color": "#AABBCC",
+                    },
+                    {
+                        "id": rename_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Original",
+                        "color": "#DDEEFF",
+                    },
+                ]
+            },
+            headers=headers,
+        )
+
+        rename_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": rename_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "name": "Existing",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert rename_resp.status_code == 200, rename_resp.text
+        result = rename_resp.json()["results"]["labels"][0]
+        assert result["status"] == "conflict"
+        assert "already exists" in result["conflict_reason"]
+
+    def test_push_renaming_label_to_its_own_current_name_is_a_no_op_not_a_conflict(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """An update that doesn't actually change the name must not false-positive against itself."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-self-rename-user")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Unchanged",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "name": "Unchanged",
+                        "color": "#112233",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        result = resp.json()["results"]["labels"][0]
+        assert result["status"] == "ok"
+
+    def test_push_reviving_soft_deleted_label_colliding_with_active_label_returns_conflict(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Reviving a soft-deleted label must also respect the active-name uniqueness."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-revive-collision-user")
+        headers = auth_headers(user_id)
+
+        tombstoned_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": tombstoned_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-30),
+                        "name": "Revivable",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {"id": tombstoned_id, "action": "delete", "client_updated_at": _ts(-20)}
+                ]
+            },
+            headers=headers,
+        )
+
+        # A new, active label claims the freed-up name while the first is tombstoned.
+        new_active_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": new_active_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "Revivable",
+                        "color": "#DDEEFF",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # An old device, unaware of any of this, tries to revive its tombstoned label.
+        revive_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": tombstoned_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "color": "#FFFFFF",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert revive_resp.status_code == 200, revive_resp.text
+        result = revive_resp.json()["results"]["labels"][0]
+        assert result["status"] == "conflict"
+        assert "already exists" in result["conflict_reason"]
 
     def test_rest_update_wins_over_stale_sync_push(
         self, db_client: TestClient, auth_headers
@@ -2046,6 +2467,182 @@ class TestSyncCorrectnessFixes:
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         pulled = [t for t in pull_resp.json()["tasks"] if t["id"] == task_id]
         assert pulled[0]["gantt_task_id"] == gantt_id
+
+    def test_push_task_with_nonexistent_gantt_reference_returns_400_not_500(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A task linking to a gantt_task_id that doesn't exist must 400, not 500.
+
+        _validate_task_gantt_reference raises NotFoundError (not
+        ValidationError); the push endpoint previously only caught
+        ValidationError, so this bubbled up as an unhandled 500. This is a
+        plausible everyday race, not just a malformed-payload edge case: a
+        task's gantt_task_id can go stale if another device deletes that
+        gantt task between this device's last pull and its next push.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "gantt-ref-404-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": str(uuid4()),
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Dangling gantt reference",
+                        "label_id": None,
+                        "gantt_task_id": str(uuid4()),  # does not exist
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 400, resp.text
+
+    def test_push_id_colliding_with_another_users_task_returns_conflict_not_400(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A client-generated UUID colliding with another user's task id must not abort the batch.
+
+        Previously this raised ValidationError ("task not found"), 400ing the
+        *entire* batch — every other record in the same push failed too, and
+        the response also implicitly leaked that the id belongs to someone
+        else (distinguishable from an ordinary stale-record conflict).
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        owner_id = _create_user(db_client, admin_h, "task-collision-owner")
+        prober_id = _create_user(db_client, admin_h, "task-collision-prober")
+        owner_headers = auth_headers(owner_id)
+        prober_headers = auth_headers(prober_id)
+
+        shared_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": shared_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "text": "Owner's task",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=owner_headers,
+        )
+
+        other_task_id = str(uuid4())
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": shared_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "text": "Trying to update someone else's task",
+                    },
+                    {
+                        "id": other_task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Unrelated task in the same batch",
+                        "label_id": None,
+                        "start_time": "2026-02-01T11:00:00+00:00",
+                        "stop_time": "2026-02-01T12:00:00+00:00",
+                        "includes_break": False,
+                    },
+                ]
+            },
+            headers=prober_headers,
+        )
+        assert resp.status_code == 200, resp.text
+        results = resp.json()["results"]["tasks"]
+        assert results[0]["status"] == "conflict"
+        assert results[1]["status"] == "ok"
+
+        # The owner's task is untouched.
+        owner_pull = db_client.get("/api/sync/pull", headers=owner_headers)
+        owner_task = next(t for t in owner_pull.json()["tasks"] if t["id"] == shared_id)
+        assert owner_task["text"] == "Owner's task"
+
+    def test_push_id_colliding_with_another_users_template_or_gantt_task_returns_conflict(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Same fix as tasks/labels, for templates and gantt tasks."""
+        admin_h = auth_headers(1, is_admin=True)
+        owner_id = _create_user(db_client, admin_h, "other-entity-collision-owner")
+        prober_id = _create_user(db_client, admin_h, "other-entity-collision-prober")
+        owner_headers = auth_headers(owner_id)
+        prober_headers = auth_headers(prober_id)
+
+        template_id = str(uuid4())
+        gantt_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "text": "Owner's template",
+                        "label_id": None,
+                        "start_time": "09:00:00",
+                        "stop_time": "10:00:00",
+                    }
+                ],
+                "gantt_tasks": [
+                    {
+                        "id": gantt_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "Owner's gantt task",
+                        "start_date": "2026-02-01",
+                        "end_date": "2026-02-28",
+                        "progress": 0,
+                    }
+                ],
+            },
+            headers=owner_headers,
+        )
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "text": "Prober trying to rename",
+                    }
+                ],
+                "gantt_tasks": [
+                    {
+                        "id": gantt_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "name": "Prober trying to rename",
+                    }
+                ],
+            },
+            headers=prober_headers,
+        )
+        assert resp.status_code == 200, resp.text
+        results = resp.json()["results"]
+        assert results["templates"][0]["status"] == "conflict"
+        assert results["gantt_tasks"][0]["status"] == "conflict"
 
     def test_rest_write_triggers_sync_broadcast(self, db_client: TestClient, auth_headers) -> None:
         """CRUD writes must emit a sync_changed hint (previously only /sync/push did)."""
