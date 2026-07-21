@@ -134,9 +134,13 @@ export function PersonalizedStatusContent({
     const elapsedSeconds = today.diff(effectiveStartTime, "second");
     const clampedElapsedSeconds = Math.max(0, elapsedSeconds);
     const percentage = Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100));
-    const elapsedHours = Math.floor(clampedElapsedSeconds / 3600);
-    // For flex shifts the presence span is fixed (e.g. 8.5h), so show it
-    // verbatim rather than rounding the raw second diff.
+    // For flex shifts the presence span is fixed (e.g. 8.5h), so show the total
+    // verbatim and give elapsed matching one-decimal precision — otherwise a
+    // fully-elapsed flex shift would read "8h / 8.5h".
+    const elapsedHours =
+      isFlexShift && flexWindow
+        ? Math.round(clampedElapsedSeconds / 360) / 10
+        : Math.floor(clampedElapsedSeconds / 3600);
     const totalHours =
       isFlexShift && flexWindow ? flexWindow.presenceHours : Math.round(totalSeconds / 3600);
     return { percentage, elapsedHours, totalHours };

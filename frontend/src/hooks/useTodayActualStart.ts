@@ -19,7 +19,10 @@ export function useTodayActualStart(day: Dayjs): Dayjs | null {
   return useMemo(() => {
     if (!settings.enableTimeTracking) return null;
     let earliest: Dayjs | null = null;
-    for (const task of tasks) {
+    for (const task of tasks ?? []) {
+      // Guard against a missing start: dayjs(undefined) would default to "now"
+      // and could falsely match today.
+      if (!task.startTime) continue;
       const start = dayjs(task.startTime);
       if (!start.isValid() || start.format("YYYY-MM-DD") !== dayKey) continue;
       if (!earliest || start.isBefore(earliest)) earliest = start;

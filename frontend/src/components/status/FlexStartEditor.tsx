@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { Dayjs } from "dayjs";
@@ -29,12 +29,12 @@ export function FlexStartEditor({
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
-  // Seed the draft from the current value (or the default) each time editing opens.
-  useEffect(() => {
-    if (isEditing) {
-      setDraft(startTime ? startTime.format("HH:mm") : defaultInputTime);
-    }
-  }, [isEditing, startTime, defaultInputTime]);
+  // Seed the draft directly when editing opens, rather than via an effect: this
+  // avoids extra renders and can't clobber the user's typing on a background update.
+  const startEditing = () => {
+    setDraft(startTime ? startTime.format("HH:mm") : defaultInputTime);
+    setIsEditing(true);
+  };
 
   if (!isEditing) {
     return (
@@ -42,7 +42,7 @@ export function FlexStartEditor({
         variant="link"
         size="sm"
         className="p-0 text-decoration-none align-baseline"
-        onClick={() => setIsEditing(true)}
+        onClick={startEditing}
       >
         <i className="bi bi-pencil me-1" aria-hidden="true"></i>
         {startTime ? m.edit() : m.personalized_status_flex_set_start()}
