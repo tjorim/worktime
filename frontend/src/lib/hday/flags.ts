@@ -101,7 +101,7 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
     );
   }
 
-  if (!normalized.some((flag) => TYPE_FLAGS_SET.has(flag))) {
+  if (!normalized.some((flag) => TYPE_FLAGS_SET.has(flag) || flag === "holiday")) {
     return [...normalized, "holiday"];
   }
 
