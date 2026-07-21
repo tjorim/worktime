@@ -20,7 +20,7 @@ interface KeyboardShortcuts {
  *
  * Registers a keydown event listener on the document to trigger the corresponding callback in `shortcuts` when specific keys or key combinations are pressed. Shortcut handling is disabled when the focus is on input, textarea, select, or contentEditable elements.
  *
- * @param shortcuts - Object with optional callbacks for "today", "previous", "next", and "team select" actions, invoked when their respective shortcuts are pressed
+ * @param shortcuts - Object with optional callbacks for "today" (h), "previous" (k / ArrowLeft), "next" (j / ArrowRight), and "team select" (Alt+T) actions, invoked when their respective shortcuts are pressed
  */
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
   useEffect(() => {
@@ -46,50 +46,29 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
         return;
       }
 
-      // Handle key combinations
-      if (event.ctrlKey || event.metaKey) {
-        switch (event.key.toLowerCase()) {
-          case ",":
-            event.preventDefault?.();
-            try {
-              shortcuts.onToggleSettings?.();
-            } catch (error) {
-              logger.error("Error in onToggleSettings callback:", error);
-            }
-            break;
-          case "h":
-            event.preventDefault?.();
-            try {
-              shortcuts.onToday?.();
-            } catch (error) {
-              logger.error("Error in onToday callback:", error);
-            }
-            break;
-          case "k":
-            event.preventDefault?.();
-            try {
-              shortcuts.onPrevious?.();
-            } catch (error) {
-              logger.error("Error in onPrevious callback:", error);
-            }
-            break;
-          case "j":
-            event.preventDefault?.();
-            try {
-              shortcuts.onNext?.();
-            } catch (error) {
-              logger.error("Error in onNext callback:", error);
-            }
-            break;
-          case "t":
-            event.preventDefault?.();
-            try {
-              shortcuts.onTeamSelect?.();
-            } catch (error) {
-              logger.error("Error in onTeamSelect callback:", error);
-            }
-            break;
+      // Ctrl/Cmd+, - Settings. The only modifier combo here because it's the only
+      // one that isn't reserved by the browser (unlike Ctrl/Cmd+H/J/K/T, which are
+      // intercepted before the page ever sees them).
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === ",") {
+        event.preventDefault?.();
+        try {
+          shortcuts.onToggleSettings?.();
+        } catch (error) {
+          logger.error("Error in onToggleSettings callback:", error);
         }
+        return;
+      }
+
+      // Alt+T - Team select. Alt-based combos pass through to the page, unlike Ctrl/Cmd+T
+      // (new tab), and the modifier keeps it distinct from the plain "t" Time Tracking tab shortcut.
+      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "t") {
+        event.preventDefault?.();
+        try {
+          shortcuts.onTeamSelect?.();
+        } catch (error) {
+          logger.error("Error in onTeamSelect callback:", error);
+        }
+        return;
       }
 
       // Handle single keys
@@ -128,18 +107,22 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
           }
           break;
         default:
-          // Tab switching shortcuts (single keys without modifiers)
+          // Single-key shortcuts without modifiers: tab switching plus Today/Previous/Next,
+          // rebound off Ctrl/Cmd+H/J/K since browsers reserve those combos for themselves.
           if (!event.ctrlKey && !event.metaKey && !event.altKey) {
             const key = event.key.toLowerCase();
-            const tabShortcuts: Record<string, { cb?: () => void; name: string }> = {
+            const singleKeyShortcuts: Record<string, { cb?: () => void; name: string }> = {
               c: { cb: shortcuts.onTabCalendar, name: "onTabCalendar" },
               s: { cb: shortcuts.onTabSchedule, name: "onTabSchedule" },
               o: { cb: shortcuts.onTabTimeOff, name: "onTabTimeOff" },
               t: { cb: shortcuts.onTabTimeTracking, name: "onTabTimeTracking" },
               g: { cb: shortcuts.onTabGantt, name: "onTabGantt" },
+              h: { cb: shortcuts.onToday, name: "onToday" },
+              k: { cb: shortcuts.onPrevious, name: "onPrevious" },
+              j: { cb: shortcuts.onNext, name: "onNext" },
             };
 
-            const shortcut = tabShortcuts[key];
+            const shortcut = singleKeyShortcuts[key];
             if (shortcut?.cb) {
               event.preventDefault?.();
               try {

@@ -26,7 +26,10 @@ export function KeyboardShortcutsModal({
     ...(enableTimeOff ? [{ keys: ["O"], description: m.shortcuts_timeoff_tab() }] : []),
     ...(enableTimeTracking ? [{ keys: ["T"], description: m.shortcuts_timetracking_tab() }] : []),
     ...(enableGantt ? [{ keys: ["G"], description: m.shortcuts_gantt_tab() }] : []),
+    { keys: ["H"], description: m.shortcuts_today() },
     { keys: ["←", "→"], description: m.shortcuts_prev_next_date() },
+    { keys: ["K", "J"], description: m.shortcuts_prev_next_date_alt() },
+    { keys: ["Alt", "T"], description: m.shortcuts_team_select() },
     { keys: ["Ctrl", ","], description: m.shortcuts_open_settings() },
     { keys: ["?"], description: m.shortcuts_show_shortcuts() },
   ];

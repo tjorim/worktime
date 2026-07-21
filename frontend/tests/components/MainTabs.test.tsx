@@ -93,6 +93,17 @@ describe("MainTabs", () => {
     });
   });
 
+  describe("Keyboard shortcuts", () => {
+    it("calls onChangeTeam when Alt+T is pressed", () => {
+      const mockOnChangeTeam = vi.fn();
+      renderWithProviders(<MainTabs {...defaultProps} onChangeTeam={mockOnChangeTeam} />);
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", altKey: true }));
+
+      expect(mockOnChangeTeam).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("Props synchronization", () => {
     it("updates active tab when activeTab prop changes", () => {
       const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
