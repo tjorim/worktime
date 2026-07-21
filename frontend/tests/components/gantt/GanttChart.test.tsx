@@ -225,6 +225,87 @@ describe("GanttChart", () => {
     expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50%");
   });
 
+  it("popup function includes logged time when available for the task", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          {
+            id: "task-1",
+            name: "My Task",
+            start: "2026-03-01",
+            end: "2026-03-05",
+            progress: 50,
+          },
+        ]}
+        initialViewMode="Day"
+        loggedMinutesByTaskId={new Map([["task-1", 90]])}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    const setDetails = vi.fn();
+
+    instance.options.popup?.({
+      task: {
+        id: "task-1",
+        name: "My Task",
+        progress: 50,
+        _start: new Date(2026, 2, 1),
+        _end: new Date(2026, 2, 5),
+        actual_duration: 4,
+      },
+      set_title: vi.fn(),
+      set_subtitle: vi.fn(),
+      set_details: setDetails,
+    });
+
+    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50% · 1 h 30 min logged");
+  });
+
+  it("popup function omits logged time when none has been recorded for the task", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          { id: "task-1", name: "My Task", start: "2026-03-01", end: "2026-03-05", progress: 50 },
+        ]}
+        initialViewMode="Day"
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    const setDetails = vi.fn();
+
+    instance.options.popup?.({
+      task: {
+        id: "task-1",
+        name: "My Task",
+        progress: 50,
+        _start: new Date(2026, 2, 1),
+        _end: new Date(2026, 2, 5),
+        actual_duration: 4,
+      },
+      set_title: vi.fn(),
+      set_subtitle: vi.fn(),
+      set_details: setDetails,
+    });
+
+    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50%");
+  });
+
   it("popup function pluralizes duration details", async () => {
     render(
       <GanttChart

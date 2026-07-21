@@ -10,6 +10,7 @@ import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
+import { getTotalLoggedMinutes } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "@/components/gantt/GanttChart";
@@ -41,6 +42,10 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
     [currentYear, settings.enableTimeOff, timeOffEntries],
   );
   const view = lastUsed.ganttView;
+  const loggedMinutesByTaskId = useMemo(
+    () => new Map(tasks.map((task) => [task.id, getTotalLoggedMinutes(task.id, timeTrackingTasks)])),
+    [tasks, timeTrackingTasks],
+  );
   const linkedEntryCount = useMemo(
     () =>
       editingTask
@@ -150,6 +155,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
           initialViewMode={lastUsed.ganttViewMode}
           holidays={holidayDates}
           timeOffDates={timeOffDates}
+          loggedMinutesByTaskId={loggedMinutesByTaskId}
           onTaskClick={handleTaskClick}
           onDateChange={handleDateChange}
           onProgressChange={handleProgressChange}

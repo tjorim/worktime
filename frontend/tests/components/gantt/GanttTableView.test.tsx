@@ -148,6 +148,23 @@ describe("GanttTableView", () => {
     );
   });
 
+  it("shows total logged time per task next to progress", () => {
+    tasksCollection.insert({
+      id: "entry-1",
+      text: "Built release",
+      label: "Support",
+      startTime: "2026-06-01T09:00",
+      stopTime: "2026-06-01T10:30",
+      ganttTaskId: "task-earlier",
+    });
+
+    render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+    const rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("1 h 30 min");
+    expect(rows[2]).toHaveTextContent("—");
+  });
+
   it("does not warn about unlinked entries when the task has no logged time", async () => {
     tasksCollection.insert({
       id: "entry-1",

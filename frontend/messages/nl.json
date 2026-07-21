@@ -769,6 +769,7 @@
   "gantt_table_start": "Start",
   "gantt_table_end": "Einde",
   "gantt_table_progress": "Voortgang",
+  "gantt_table_logged": "Gelogd",
   "gantt_table_dependencies": "Afhankelijkheden",
   "gantt_table_notes": "Notities",
   "gantt_table_actions": "Acties",

@@ -5,6 +5,7 @@ import Table from "react-bootstrap/Table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
+import { formatLoggedDuration, getTotalLoggedMinutes } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
@@ -30,6 +31,10 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
   const [deletingTask, setDeletingTask] = useState<GanttTask | null>(null);
   const { tasks: timeTrackingTasks } = useTimeTrackingStorage();
   const taskNames = useMemo(() => new Map(tasks.map((task) => [task.id, task.name])), [tasks]);
+  const loggedMinutesByTaskId = useMemo(
+    () => new Map(tasks.map((task) => [task.id, getTotalLoggedMinutes(task.id, timeTrackingTasks)])),
+    [tasks, timeTrackingTasks],
+  );
   const linkedEntryCount = useMemo(
     () =>
       deletingTask
@@ -68,6 +73,11 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
     if (!deletingTask) return;
     onDeleteTask(deletingTask.id);
     setDeletingTask(null);
+  };
+
+  const getLoggedLabel = (taskId: string) => {
+    const minutes = loggedMinutesByTaskId.get(taskId) ?? 0;
+    return minutes > 0 ? formatLoggedDuration(minutes) : "—";
   };
 
   const getDependencies = (dependencies?: string) => {
@@ -112,6 +122,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
             </th>
             <th scope="col">{m.gantt_table_end()}</th>
             <th scope="col">{m.gantt_table_progress()}</th>
+            <th scope="col">{m.gantt_table_logged()}</th>
             <th scope="col">{m.gantt_table_dependencies()}</th>
             <th scope="col">{m.gantt_table_notes()}</th>
             <th scope="col" className="text-end">
@@ -122,7 +133,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
         <tbody>
           {sortedTasks.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center text-muted py-4">
+              <td colSpan={8} className="text-center text-muted py-4">
                 {m.gantt_table_empty()}
               </td>
             </tr>
@@ -146,6 +157,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     <span className="small text-muted text-nowrap">{task.progress}%</span>
                   </div>
                 </td>
+                <td className="text-nowrap">{getLoggedLabel(task.id)}</td>
                 <td>{getDependencies(task.dependencies)}</td>
                 <td title={task.notes}>{task.notes || "—"}</td>
                 <td className="text-end text-nowrap">
