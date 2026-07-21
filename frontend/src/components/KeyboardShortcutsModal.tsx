@@ -28,6 +28,7 @@ export function KeyboardShortcutsModal({
     ...(enableGantt ? [{ keys: ["G"], description: m.shortcuts_gantt_tab() }] : []),
     { keys: ["←", "→"], description: m.shortcuts_prev_next_date() },
     { keys: ["Ctrl", ","], description: m.shortcuts_open_settings() },
+    { keys: ["?"], description: m.shortcuts_show_shortcuts() },
   ];
 
   const categories = [{ category: m.shortcuts_nav_category(), items: navigationItems }];

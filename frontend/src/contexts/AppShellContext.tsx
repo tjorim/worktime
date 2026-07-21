@@ -18,6 +18,9 @@ export interface AppShellContextType {
   showAbout: boolean;
   openAbout: () => void;
   closeAbout: () => void;
+  showShortcuts: boolean;
+  openShortcuts: () => void;
+  closeShortcuts: () => void;
   myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;

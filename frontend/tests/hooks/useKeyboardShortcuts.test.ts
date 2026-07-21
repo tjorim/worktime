@@ -10,6 +10,7 @@ describe("useKeyboardShortcuts", () => {
     onTeamSelect: vi.fn(),
     onTabTimeTracking: vi.fn(),
     onTabGantt: vi.fn(),
+    onShowShortcuts: vi.fn(),
   };
 
   beforeEach(() => {
@@ -124,5 +125,41 @@ describe("useKeyboardShortcuts", () => {
     document.dispatchEvent(event);
 
     expect(mockShortcuts.onTabGantt).toHaveBeenCalledTimes(1);
+  });
+
+  it("triggers onShowShortcuts when ? (Shift+/) is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "?", shiftKey: true });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onShowShortcuts).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trigger onShowShortcuts when typing ? in an input", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
+
+    const event = new KeyboardEvent("keydown", { key: "?", shiftKey: true });
+    Object.defineProperty(event, "target", { value: input });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onShowShortcuts).not.toHaveBeenCalled();
+
+    document.body.removeChild(input);
+  });
+
+  it("does not trigger onShowShortcuts when ? is combined with Ctrl/Meta/Alt", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    for (const modifier of ["ctrlKey", "metaKey", "altKey"] as const) {
+      const event = new KeyboardEvent("keydown", { key: "?", [modifier]: true });
+      document.dispatchEvent(event);
+    }
+
+    expect(mockShortcuts.onShowShortcuts).not.toHaveBeenCalled();
   });
 });

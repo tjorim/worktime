@@ -12,6 +12,7 @@ interface KeyboardShortcuts {
   onTabTimeTracking?: () => void;
   onTabGantt?: () => void;
   onToggleSettings?: () => void;
+  onShowShortcuts?: () => void;
 }
 
 /**
@@ -93,6 +94,19 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
 
       // Handle single keys
       switch (event.key) {
+        case "?":
+          // "?" (Shift+/) opens the keyboard shortcuts overlay from anywhere.
+          // Only intercept when a handler is registered so consumers that don't
+          // provide onShowShortcuts don't swallow the browser's default behavior.
+          if (shortcuts.onShowShortcuts && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            event.preventDefault?.();
+            try {
+              shortcuts.onShowShortcuts();
+            } catch (error) {
+              logger.error("Error in onShowShortcuts callback:", error);
+            }
+          }
+          break;
         case "ArrowLeft":
           if (!event.ctrlKey && !event.metaKey && !event.altKey) {
             event.preventDefault?.();

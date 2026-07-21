@@ -4,6 +4,7 @@ import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useAppShellContext } from "@/contexts/AppShellContext";
 import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
 import * as m from "@/paraglide/messages.js";
 
@@ -17,6 +18,7 @@ export function Header() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isSettingsPage = pathname === "/settings";
+  const { openShortcuts } = useAppShellContext();
 
   const handleToggleSettings = useCallback(() => {
     void navigate({ to: isSettingsPage ? "/" : "/settings" });
@@ -29,8 +31,9 @@ export function Header() {
   const shortcuts = useMemo(
     () => ({
       onToggleSettings: handleToggleSettings,
+      onShowShortcuts: openShortcuts,
     }),
-    [handleToggleSettings],
+    [handleToggleSettings, openShortcuts],
   );
 
   useKeyboardShortcuts(shortcuts);
