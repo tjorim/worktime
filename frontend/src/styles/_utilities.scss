@@ -148,6 +148,40 @@ body {
 }
 
 /* ============================================================================
+   MAIN TAB NAVIGATION
+   ========================================================================= */
+
+/* Scroll instead of wrap so the bar never breaks into a cramped second row */
+.main-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+
+  .nav-item {
+    flex-shrink: 0;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+}
+
+/* Icon-only tabs below `sm` keep the bar to a single row on phone widths;
+   the accessible name is preserved via `aria-label` on the nav link. */
+@media (width <= 575.98px) {
+  .main-tab-label {
+    display: none;
+  }
+}
+
+/* ============================================================================
    SYNC STATUS INDICATOR
    ========================================================================= */
 
