@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useToast } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
@@ -11,7 +11,6 @@ import { logger } from "@/utils/logger";
  */
 export function PwaUpdateToast() {
   const { addToast, removeToast } = useToast();
-  const toastIdRef = useRef<string | null>(null);
 
   const {
     needRefresh: [needRefresh],
@@ -23,8 +22,9 @@ export function PwaUpdateToast() {
   });
 
   useEffect(() => {
-    if (!needRefresh || toastIdRef.current !== null) return;
-    toastIdRef.current = addToast({
+    if (!needRefresh) return;
+
+    const toastId = addToast({
       message: m.pwa_update_available(),
       variant: "info",
       icon: "bi-arrow-clockwise",
@@ -36,13 +36,11 @@ export function PwaUpdateToast() {
         },
       },
     });
-  }, [needRefresh, addToast, updateServiceWorker]);
 
-  useEffect(() => {
     return () => {
-      if (toastIdRef.current !== null) removeToast(toastIdRef.current);
+      removeToast(toastId);
     };
-  }, [removeToast]);
+  }, [needRefresh, addToast, removeToast, updateServiceWorker]);
 
   return null;
 }
