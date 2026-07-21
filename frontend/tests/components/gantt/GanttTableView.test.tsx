@@ -1,9 +1,18 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GanttTableView } from "@/components/gantt/GanttTableView";
+import { tasksCollection } from "@/db/collections";
 import type { GanttTask } from "@/types/gantt";
+
+function clearTasksCollection() {
+  for (const item of [...tasksCollection.toArray]) {
+    if (tasksCollection.has(item.id)) {
+      tasksCollection.delete(item.id);
+    }
+  }
+}
 
 const tasks: GanttTask[] = [
   {
@@ -25,6 +34,14 @@ const tasks: GanttTask[] = [
 ];
 
 describe("GanttTableView", () => {
+  beforeEach(() => {
+    clearTasksCollection();
+  });
+
+  afterEach(() => {
+    clearTasksCollection();
+  });
+
   it("shows task details and sorts by start date by default", () => {
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
 
@@ -83,5 +100,49 @@ describe("GanttTableView", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
     expect(onDeleteTask).toHaveBeenCalledWith("task-earlier");
+  });
+
+  it("warns about linked time-tracking entries when deleting a task", async () => {
+    tasksCollection.insert({
+      id: "entry-1",
+      text: "Built release",
+      label: "Support",
+      startTime: "2026-06-01T09:00",
+      stopTime: "2026-06-01T10:00",
+      ganttTaskId: "task-earlier",
+    });
+    tasksCollection.insert({
+      id: "entry-2",
+      text: "Tested release",
+      label: "Support",
+      startTime: "2026-06-02T09:00",
+      stopTime: "2026-06-02T10:00",
+      ganttTaskId: "task-earlier",
+    });
+
+    const user = userEvent.setup();
+    render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Delete Build release" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "This will also unlink 2 time-tracking entries.",
+    );
+  });
+
+  it("does not warn about unlinked entries when the task has no logged time", async () => {
+    tasksCollection.insert({
+      id: "entry-1",
+      text: "Unrelated entry",
+      label: "Support",
+      startTime: "2026-06-01T09:00",
+      stopTime: "2026-06-01T10:00",
+      ganttTaskId: "some-other-task",
+    });
+
+    const user = userEvent.setup();
+    render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Delete Build release" }));
+    expect(screen.getByRole("dialog")).not.toHaveTextContent("time-tracking entr");
   });
 });

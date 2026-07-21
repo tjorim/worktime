@@ -765,6 +765,8 @@
   "gantt_delete_task_title": "Delete task",
   "gantt_delete_task_message": "Are you sure you want to delete \"{name}\"? This cannot be undone.",
   "gantt_delete_task_unnamed_message": "Are you sure you want to delete this task?",
+  "gantt_delete_task_unlink_count": "This will also unlink {count} time-tracking entry.",
+  "gantt_delete_task_unlink_count_plural": "This will also unlink {count} time-tracking entries.",
   "gantt_delete_label": "Delete",
   "gantt_toggle_view_aria": "Gantt view",
   "gantt_chart_view": "Chart",

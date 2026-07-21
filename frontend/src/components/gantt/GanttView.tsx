@@ -9,6 +9,8 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
+import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "@/components/gantt/GanttChart";
 import { GanttTableView } from "@/components/gantt/GanttTableView";
@@ -23,6 +25,7 @@ export function GanttView() {
   const { publicHolidayMap } = usePublicHolidays(currentYear);
   const holidayDates = useMemo(() => [...publicHolidayMap.keys()], [publicHolidayMap]);
   const { entries: timeOffEntries } = useEventStore();
+  const { tasks: timeTrackingTasks } = useTimeTrackingStorage();
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -33,6 +36,13 @@ export function GanttView() {
     [currentYear, settings.enableTimeOff, timeOffEntries],
   );
   const view = lastUsed.ganttView;
+  const linkedEntryCount = useMemo(
+    () =>
+      editingTask
+        ? timeTrackingTasks.filter((entry) => entry.ganttTaskId === editingTask.id).length
+        : 0,
+    [editingTask, timeTrackingTasks],
+  );
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -160,11 +170,7 @@ export function GanttView() {
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
         title={m.gantt_delete_task_title()}
-        message={
-          editingTask
-            ? m.gantt_delete_task_message({ name: editingTask.name })
-            : m.gantt_delete_task_unnamed_message()
-        }
+        message={getGanttDeleteConfirmMessage(editingTask?.name, linkedEntryCount)}
         confirmLabel={m.gantt_delete_label()}
         variant="danger"
         icon="bi-trash"
