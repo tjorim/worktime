@@ -35,7 +35,6 @@ import {
   dequeueAndMergeSyncOutbox,
   extractConflictedItems,
   fetchPreferences,
-  fetchSyncStatus,
   getSyncOutboxSize,
   maxConflictServerTimestamp,
   pullSyncData,
@@ -196,9 +195,34 @@ export function useOngoingSync(
   const retryDelayMsRef = useRef(0);
   const retryAfterRef = useRef<number | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
+  // Timer that actually fires the next retry once the back-off window
+  // elapses. Without this, back-off only *gates* passive triggers
+  // (visibility/online) — a tab left open and idle past the window would
+  // never retry until the user did something. `flushAndPullRef` breaks the
+  // circular reference (flushAndPull itself depends on scheduleBackOff).
+  const backOffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushAndPullRef = useRef<
+    ((force?: boolean, suppressUnauthorizedRedirect?: boolean) => Promise<void>) | null
+  >(null);
+
+  const clearBackOffTimer = useCallback(() => {
+    if (backOffTimerRef.current !== null) {
+      clearTimeout(backOffTimerRef.current);
+      backOffTimerRef.current = null;
+    }
+  }, []);
+
+  /** Reset back-off state (refs, state, and any pending scheduled retry). */
+  const clearBackOff = useCallback(() => {
+    retryDelayMsRef.current = 0;
+    retryAfterRef.current = null;
+    setRetryAfter(null);
+    clearBackOffTimer();
+  }, [clearBackOffTimer]);
 
   /**
-   * Advance the back-off delay and set the next retry window.
+   * Advance the back-off delay, set the next retry window, and schedule a
+   * timer to actually attempt the retry when that window elapses.
    * Called on every failed flush-and-pull cycle.  Refs and the state setter are all
    * stable, so this callback never needs to be recreated.
    */
@@ -210,7 +234,18 @@ export function useOngoingSync(
     retryDelayMsRef.current = nextDelay;
     retryAfterRef.current = Date.now() + nextDelay;
     setRetryAfter(retryAfterRef.current);
-  }, []); // Refs and state setters are stable — empty dependency array is correct.
+
+    clearBackOffTimer();
+    backOffTimerRef.current = setTimeout(() => {
+      backOffTimerRef.current = null;
+      // `force` because the window has already elapsed by definition once
+      // this timer fires — no need to re-check it, and forcing sidesteps any
+      // Date.now() drift right at the boundary.
+      flushAndPullRef.current?.(true, true).catch((err: unknown) => {
+        logger.error("useOngoingSync: scheduled back-off retry failed:", err);
+      });
+    }, nextDelay);
+  }, [clearBackOffTimer]);
 
   // Keep a stable ref to the latest pull callback so the flush closure does
   // not become stale when `onIncrementalPull` identity changes.
@@ -320,9 +355,7 @@ export function useOngoingSync(
           setLastSyncedAt(pullResult.server_timestamp);
           setHasSyncError(false);
           // Reset back-off on success.
-          retryDelayMsRef.current = 0;
-          retryAfterRef.current = null;
-          setRetryAfter(null);
+          clearBackOff();
           if (flushConflicts === 0 && conflictedPayloadRef.current === null) {
             setConflictCount(0);
             setConflictedPayload(null);
@@ -338,8 +371,22 @@ export function useOngoingSync(
         isFlushingRef.current = false;
       }
     },
-    [isActive, userId, fetchFn, conflictCount, scheduleBackOff],
+    [isActive, userId, fetchFn, conflictCount, scheduleBackOff, clearBackOff],
   );
+
+  // Keep a stable ref to the latest flushAndPull so the back-off timer
+  // (scheduled outside React's render cycle) never calls a stale closure.
+  useEffect(() => {
+    flushAndPullRef.current = flushAndPull;
+  }, [flushAndPull]);
+
+  // Cancel any pending back-off retry on unmount so it doesn't fire (and
+  // touch state) after the component is gone.
+  useEffect(() => {
+    return () => {
+      clearBackOffTimer();
+    };
+  }, [clearBackOffTimer]);
 
   // Listen for reconnect and visibility-change events.
   useEffect(() => {
@@ -391,12 +438,11 @@ export function useOngoingSync(
     setConflictCount(0);
     conflictedPayloadRef.current = null;
     setConflictedPayload(null);
-    // Reset back-off when the signed-in user changes.
-    retryDelayMsRef.current = 0;
-    retryAfterRef.current = null;
-    setRetryAfter(null);
+    // Reset back-off (and cancel any pending scheduled retry for the
+    // previous user) when the signed-in user changes.
+    clearBackOff();
     hasRunInitialFlushRef.current = false;
-  }, [userId]);
+  }, [userId, clearBackOff]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -431,6 +477,11 @@ export function useOngoingSync(
       if (!isActive || !userId || !fetchFn) return;
 
       const doEnqueue = async () => {
+        // Recorded before the push so the post-push pull (below) can request
+        // everything from this point forward — including any concurrent
+        // change from another device that lands on the server while this
+        // push is in flight.
+        const cursorBeforePush = localStorage.getItem(getSyncCursorKey(userId)) ?? undefined;
         // Attempt an immediate push.
         const result = await pushSyncPayload(fetchFn, change);
         if (!mountedRef.current) return;
@@ -489,18 +540,40 @@ export function useOngoingSync(
               setConflictCount(0);
               setConflictedPayload(null);
             }
-            // Refresh the cursor so incremental pulls stay accurate.  A second
-            // network request is required here because the push response only
-            // contains per-record results (no server_timestamp).  The alternative
-            // would be to extend the backend push response with a timestamp, which
-            // would eliminate this extra round trip.
-            const newStatus = await fetchSyncStatus(fetchFn);
-            if (!mountedRef.current) return;
-            if (newStatus) {
-              storeSyncCursor(userId, newStatus.server_timestamp);
-              setLastSyncedAt(newStatus.server_timestamp);
+            // The cursor must only ever advance as the result of a pull that
+            // has actually ingested every record up to that point. Fetching
+            // just the status timestamp and storing it directly (as this used
+            // to do) would silently and permanently skip any concurrent
+            // change from another device landing between the old cursor and
+            // that new timestamp — a pull is required here, not a status
+            // check, even though this device's own push already applied
+            // locally.
+            let pullResult: SyncPullResponse | null = null;
+            try {
+              pullResult = await pullSyncData(fetchFn, cursorBeforePush);
+            } catch (err) {
+              logger.error("useOngoingSync: post-push pull threw:", err);
+              if (mountedRef.current) {
+                setHasSyncError(true);
+              }
+              return;
             }
-            setHasSyncError(false);
+            if (!mountedRef.current) return;
+            if (pullResult) {
+              try {
+                onIncrementalPullRef.current?.(pullResult);
+                storeSyncCursor(userId, pullResult.server_timestamp);
+                setLastSyncedAt(pullResult.server_timestamp);
+                setHasSyncError(false);
+              } catch (err) {
+                logger.error("useOngoingSync: post-push incremental-pull callback threw:", err);
+                if (mountedRef.current) {
+                  setHasSyncError(true);
+                }
+              }
+            } else {
+              setHasSyncError(true);
+            }
           }
         } else {
           // Push failed — queue for later flush.
