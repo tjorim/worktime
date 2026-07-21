@@ -63,6 +63,10 @@ export function TaskEditModal({
 
   const selectedLabelOption = useSelectedLabelOption(labels, value.label);
   const selectedGanttTaskOption = useSelectedGanttTaskOption(ganttTasks, value.ganttTaskId);
+  const ganttTaskOptions = useMemo(
+    () => ganttTasks.map((task) => ({ value: task.id, label: task.name })),
+    [ganttTasks],
+  );
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -118,9 +122,9 @@ export function TaskEditModal({
                 isSearchable
                 inputId="editTaskGanttTask"
                 placeholder={m.tt_no_gantt_task()}
-                options={ganttTasks.map((task) => ({ value: task.id, label: task.name }))}
+                options={ganttTaskOptions}
                 value={selectedGanttTaskOption}
-                onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value ?? "" })}
+                onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value })}
                 classNames={bootstrapSelectClassNames}
               />
             </Form.Group>

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
@@ -61,6 +62,10 @@ export function TaskEntryForm({
 }: TaskEntryFormProps) {
   const selectedLabelOption = useSelectedLabelOption(labels, label);
   const selectedGanttTaskOption = useSelectedGanttTaskOption(ganttTasks, ganttTaskId);
+  const ganttTaskOptions = useMemo(
+    () => ganttTasks.map((task) => ({ value: task.id, label: task.name })),
+    [ganttTasks],
+  );
   const primaryFieldWidth = showGanttPicker ? 2 : 3;
 
   const renderDisabledTooltipButton = (
@@ -124,7 +129,7 @@ export function TaskEntryForm({
               isSearchable
               inputId="timeTrackerGanttTask"
               placeholder={m.tt_no_gantt_task()}
-              options={ganttTasks.map((task) => ({ value: task.id, label: task.name }))}
+              options={ganttTaskOptions}
               value={selectedGanttTaskOption}
               onChange={(selected) => onGanttTaskChange(selected?.value ?? "")}
               classNames={bootstrapSelectClassNames}
