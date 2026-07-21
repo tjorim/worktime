@@ -130,6 +130,8 @@
   "close": "Close",
   "toast_close_aria": "Close notification",
   "toast_undo": "Undo",
+  "pwa_update_available": "A new version of Worktime is available.",
+  "pwa_update_reload": "Reload",
   "save": "Save",
   "back": "Back",
   "next": "Next",

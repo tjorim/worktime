@@ -25,6 +25,9 @@ export default defineConfig({
       "@": resolve(__dirname, "src"),
       "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
       "react-select": fileURLToPath(new URL("tests/__mocks__/react-select.tsx", import.meta.url)),
+      "virtual:pwa-register/react": fileURLToPath(
+        new URL("tests/__mocks__/virtual-pwa-register-react.ts", import.meta.url),
+      ),
     },
   },
   test: {
