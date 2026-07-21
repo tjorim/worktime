@@ -113,6 +113,10 @@ Here is my detailed review of the current codebase:
     replace `calendar` or coexist permanently.
   - **Success Criteria**: Only one calendar path is active by default; the
     other is reachable only via an explicit flag, and the intent is documented.
+  - **Update**: The original direction here (feature-folder calendar as
+    default, legacy roster view gated and slated for eventual removal) was
+    reversed — see `docs/calendar-migration.md` for the current decision.
+    Both calendars are permanent, coexisting features; neither is "legacy."
 
 - [x] **Step 2: Introduce lazy boundaries for heavy tabs**
   - **Task**: Wrap the heaviest, flag-gated tab views in `React.lazy` +

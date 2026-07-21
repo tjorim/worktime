@@ -9,12 +9,14 @@ interface SettingsFeaturesSectionProps {
   enableTimeTracking: boolean;
   enableGantt: boolean;
   enableCrossBorderTracking: boolean;
+  enableUnifiedCalendar: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
   onToggleTimeOff: (checked: boolean) => void;
   onToggleTimeTracking: (checked: boolean) => void;
   onToggleGantt: (checked: boolean) => void;
   onToggleCrossBorderTracking: (checked: boolean) => void;
+  onToggleUnifiedCalendar: (checked: boolean) => void;
   onUpdateHomeCountry: (country: CountryCode | null) => void;
   onUpdateOfficeCountry: (country: CountryCode | null) => void;
 }
@@ -24,12 +26,14 @@ export function SettingsFeaturesSection({
   enableTimeTracking,
   enableGantt,
   enableCrossBorderTracking,
+  enableUnifiedCalendar,
   homeCountry,
   officeCountry,
   onToggleTimeOff,
   onToggleTimeTracking,
   onToggleGantt,
   onToggleCrossBorderTracking,
+  onToggleUnifiedCalendar,
   onUpdateHomeCountry,
   onUpdateOfficeCountry,
 }: SettingsFeaturesSectionProps) {
@@ -101,6 +105,21 @@ export function SettingsFeaturesSection({
                   checked={enableCrossBorderTracking}
                   onChange={(event) => onToggleCrossBorderTracking(event.target.checked)}
                   aria-label="Toggle cross-border tracking"
+                />
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.unified_calendar_label()}</div>
+                  <small className="text-muted">{m.unified_calendar_description()}</small>
+                </div>
+                <Form.Check
+                  type="switch"
+                  id="toggle-unified-calendar"
+                  checked={enableUnifiedCalendar}
+                  onChange={(event) => onToggleUnifiedCalendar(event.target.checked)}
+                  aria-label="Toggle unified calendar"
                 />
               </div>
             </ListGroup.Item>

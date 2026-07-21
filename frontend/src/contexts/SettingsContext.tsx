@@ -14,7 +14,7 @@ export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
 export type TabKey =
   | "calendar"
-  | "legacy-calendar"
+  | "unified-calendar"
   | "schedule"
   | "timeoff"
   | "timetracking"
@@ -44,6 +44,7 @@ export interface UserSettings {
   enableTimeTracking: boolean;
   enableGantt: boolean;
   enableCrossBorderTracking: boolean;
+  enableUnifiedCalendar: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
 }
@@ -57,6 +58,7 @@ interface SettingsContextType {
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateGanttEnabled: (enabled: boolean) => void;
   updateCrossBorderTrackingEnabled: (enabled: boolean) => void;
+  updateUnifiedCalendarEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
   resetSettings: () => void;
@@ -105,6 +107,7 @@ export const defaultSettings: UserSettings = {
   enableTimeTracking: false,
   enableGantt: false,
   enableCrossBorderTracking: false,
+  enableUnifiedCalendar: false,
   homeCountry: null,
   officeCountry: null,
 };
@@ -122,7 +125,7 @@ export const defaultLastUsed: LastUsed = {
 
 const validTabKeys = new Set<TabKey>([
   "calendar",
-  "legacy-calendar",
+  "unified-calendar",
   "schedule",
   "timeoff",
   "timetracking",
@@ -250,6 +253,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     enableTimeTracking: booleanWithDefault(defaultSettings.enableTimeTracking),
     enableGantt: booleanWithDefault(defaultSettings.enableGantt),
     enableCrossBorderTracking: booleanWithDefault(defaultSettings.enableCrossBorderTracking),
+    enableUnifiedCalendar: booleanWithDefault(defaultSettings.enableUnifiedCalendar),
     homeCountry: countryWithDefault(defaultSettings.homeCountry),
     officeCountry: countryWithDefault(defaultSettings.officeCountry),
   } satisfies { [K in keyof UserSettings]: Validator<UserSettings[K]> };
@@ -260,11 +264,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
 
   // --- Validate lastUsed ---
   const rawLastUsed = isObjectRecord(s.lastUsed) ? s.lastUsed : {};
-  // Migrate renamed tab keys before validation
-  const lastUsed =
-    rawLastUsed.activeTab === "unified-calendar"
-      ? { ...rawLastUsed, activeTab: "legacy-calendar" }
-      : rawLastUsed;
 
   const isTabEnabled = (tab: TabKey) => {
     if (tab === "timeoff") {
@@ -275,6 +274,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     }
     if (tab === "gantt") {
       return normalizedSettings.enableGantt;
+    }
+    if (tab === "unified-calendar") {
+      return normalizedSettings.enableUnifiedCalendar;
     }
     return true;
   };
@@ -302,7 +304,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   } satisfies { [K in keyof LastUsed]: Validator<LastUsed[K]> };
 
   const normalizedLastUsed = Object.fromEntries(
-    Object.entries(lastUsedValidators).map(([key, validator]) => [key, validator(lastUsed[key])]),
+    Object.entries(lastUsedValidators).map(([key, validator]) => [key, validator(rawLastUsed[key])]),
   ) as unknown as LastUsed;
 
   // --- Validate scheduleType ---
@@ -397,6 +399,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeTrackingEnabled: updateSetting("enableTimeTracking"),
       updateGanttEnabled: updateSetting("enableGantt"),
       updateCrossBorderTrackingEnabled: updateSetting("enableCrossBorderTracking"),
+      updateUnifiedCalendarEnabled: updateSetting("enableUnifiedCalendar"),
       updateHomeCountry: updateSetting("homeCountry"),
       updateOfficeCountry: updateSetting("officeCountry"),
     };
@@ -438,6 +441,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     updateTimeTrackingEnabled,
     updateGanttEnabled,
     updateCrossBorderTrackingEnabled,
+    updateUnifiedCalendarEnabled,
     updateHomeCountry,
     updateOfficeCountry,
   } = settingUpdaters;
@@ -582,6 +586,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeTrackingEnabled,
       updateGanttEnabled,
       updateCrossBorderTrackingEnabled,
+      updateUnifiedCalendarEnabled,
       updateHomeCountry,
       updateOfficeCountry,
       resetSettings,
@@ -615,6 +620,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeTrackingEnabled,
       updateGanttEnabled,
       updateCrossBorderTrackingEnabled,
+      updateUnifiedCalendarEnabled,
       updateHomeCountry,
       updateOfficeCountry,
       resetSettings,

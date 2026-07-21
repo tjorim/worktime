@@ -171,6 +171,7 @@ export function SettingsContent({
     updateTimeTrackingEnabled,
     updateGanttEnabled,
     updateCrossBorderTrackingEnabled,
+    updateUnifiedCalendarEnabled,
     updateHomeCountry,
     updateOfficeCountry,
     resetSettings,
@@ -335,12 +336,14 @@ export function SettingsContent({
         enableTimeTracking={settings.enableTimeTracking}
         enableGantt={settings.enableGantt}
         enableCrossBorderTracking={settings.enableCrossBorderTracking}
+        enableUnifiedCalendar={settings.enableUnifiedCalendar}
         homeCountry={settings.homeCountry ?? null}
         officeCountry={settings.officeCountry ?? null}
         onToggleTimeOff={updateTimeOffEnabled}
         onToggleTimeTracking={updateTimeTrackingEnabled}
         onToggleGantt={updateGanttEnabled}
         onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
+        onToggleUnifiedCalendar={updateUnifiedCalendarEnabled}
         onUpdateHomeCountry={updateHomeCountry}
         onUpdateOfficeCountry={updateOfficeCountry}
       />
