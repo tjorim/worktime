@@ -62,7 +62,11 @@ def test_disabled_limiter_never_rejects():
 
 
 def test_different_client_ips_get_independent_buckets():
-    client = TestClient(_build_app())
+    # TestClient's default simulated peer is the string "testclient", not an
+    # IP, so it would never pass the trusted-proxy check on its own. Pin it
+    # to a private address to simulate "arrived via Caddy" and vary
+    # X-Real-IP per request to simulate different real clients behind it.
+    client = TestClient(_build_app(), client=("172.20.0.2", 12345))
     assert client.get("/ping", headers={"X-Real-IP": "1.1.1.1"}).status_code == 200
     assert client.get("/ping", headers={"X-Real-IP": "1.1.1.1"}).status_code == 200
     assert client.get("/ping", headers={"X-Real-IP": "1.1.1.1"}).status_code == 429
@@ -88,3 +92,20 @@ def test_get_client_ip_falls_back_to_request_client():
     request = Request(scope)
 
     assert get_client_ip(request) == "10.0.0.5"
+
+
+def test_get_client_ip_ignores_x_real_ip_from_untrusted_public_peer():
+    """A caller reaching the app directly (bypassing Caddy) can't spoof X-Real-IP.
+
+    If the request didn't come from a private-network peer, the header is
+    attacker-controlled — trusting it would let a single caller draw a fresh
+    rate-limit bucket on every request by varying the header value.
+    """
+    scope = {
+        "type": "http",
+        "headers": [(b"x-real-ip", b"9.9.9.9")],
+        "client": ("8.8.8.8", 12345),
+    }
+    request = Request(scope)
+
+    assert get_client_ip(request) == "8.8.8.8"
