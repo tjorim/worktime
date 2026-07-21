@@ -154,7 +154,7 @@ export function MainTabs({
 
   return (
     <>
-      <main id="main-content">
+      <div>
         <Tabs
           activeKey={activeKey}
           onSelect={(k) => {
@@ -277,7 +277,7 @@ export function MainTabs({
             </Tab>
           )}
         </Tabs>
-      </main>
+      </div>
 
       {/* Schedule Detail Modal */}
       {selectedScheduleForDetail && (
