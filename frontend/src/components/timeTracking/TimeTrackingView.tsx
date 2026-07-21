@@ -1,10 +1,11 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useToast } from "@/contexts/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { calculateWeeklyShiftTarget } from "@/utils/shiftCalculations";
@@ -26,6 +27,7 @@ const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
 export function TimeTrackingView() {
   const { myTeam, scheduleType } = useSettings();
   const { lastUsed, updateLastTimeTrackingView } = useLastUsed();
+  const toast = useToast();
   const {
     tasks,
     templates,
@@ -40,6 +42,21 @@ export function TimeTrackingView() {
     updateTemplates,
     updateLabels,
   } = useTimeTrackingStorage();
+
+  // Delete immediately, then offer undo. Re-adding restores the same task id
+  // via the existing store API, so sync sees a restore rather than a duplicate.
+  const handleRemoveTask = useCallback(
+    (id: string) => {
+      const removedTask = tasks.find((task) => task.id === id);
+      removeTask(id);
+      if (removedTask) {
+        toast.showUndo(m.tt_task_removed(), () => {
+          void addTask(removedTask);
+        });
+      }
+    },
+    [tasks, removeTask, addTask, toast],
+  );
   const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView ?? DEFAULT_TIME_TRACKING_VIEW);
   const [selectedDailyDate, setSelectedDailyDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [selectedWeeklyDate, setSelectedWeeklyDate] = useState(dayjs().format("YYYY-MM-DD"));
@@ -103,7 +120,7 @@ export function TimeTrackingView() {
           onSelectedDateChange={setSelectedDailyDate}
           onAddTask={addTask}
           onUpdateTaskTimes={updateTaskTimes}
-          onRemoveTask={removeTask}
+          onRemoveTask={handleRemoveTask}
           onToggleBreak={toggleBreak}
         />
       )}
