@@ -28,6 +28,11 @@ export interface AppShellContextType {
   onTabChange: (tab: TabKey) => void;
   onChangeSchedule: () => void;
   onChangeTeam: () => void;
+  // One-shot handoff for opening a specific time-tracking entry's edit modal from
+  // another tab (e.g. a Gantt task's linked entries list).
+  pendingTaskEditId: string | null;
+  requestTaskEdit: (taskId: string) => void;
+  clearPendingTaskEdit: () => void;
   // WelcomeWizard state — lifted here so AppLayout can render the wizard outside the route outlet
   showTeamModal: boolean;
   teamModalMode: "onboarding" | "change-team" | "change-schedule";

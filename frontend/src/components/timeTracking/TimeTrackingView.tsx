@@ -24,7 +24,16 @@ const TIME_TRACKING_VIEWS = ["daily", "weekly", "config"] as const;
  */
 const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
 
-export function TimeTrackingView() {
+interface TimeTrackingViewProps {
+  /** ID of a time-tracking entry to jump straight to the edit modal for, e.g. requested from the Gantt tab. */
+  pendingTaskEditId?: string | null;
+  onClearPendingTaskEdit?: () => void;
+}
+
+export function TimeTrackingView({
+  pendingTaskEditId,
+  onClearPendingTaskEdit,
+}: TimeTrackingViewProps = {}) {
   const { myTeam, scheduleType } = useSettings();
   const { lastUsed, updateLastTimeTrackingView } = useLastUsed();
   const toast = useToast();
@@ -64,6 +73,22 @@ export function TimeTrackingView() {
   useEffect(() => {
     updateLastTimeTrackingView(viewMode);
   }, [updateLastTimeTrackingView, viewMode]);
+
+  const pendingEditTask = useMemo(
+    () => (pendingTaskEditId ? (tasks.find((item) => item.id === pendingTaskEditId) ?? null) : null),
+    [pendingTaskEditId, tasks],
+  );
+
+  useEffect(() => {
+    if (!pendingTaskEditId) return;
+    if (!pendingEditTask) {
+      // Entry no longer exists (e.g. removed) — clear the request so it doesn't get stuck.
+      onClearPendingTaskEdit?.();
+      return;
+    }
+    setViewMode("daily");
+    setSelectedDailyDate(pendingEditTask.startTime.slice(0, 10));
+  }, [pendingTaskEditId, pendingEditTask, onClearPendingTaskEdit]);
 
   const effectiveTeam = useMemo(
     () => getEffectiveTeam(myTeam, scheduleType),
@@ -122,6 +147,8 @@ export function TimeTrackingView() {
           onUpdateTaskTimes={updateTaskTimes}
           onRemoveTask={handleRemoveTask}
           onToggleBreak={toggleBreak}
+          externalEditRequest={pendingEditTask ? { task: pendingEditTask } : null}
+          onExternalEditRequestHandled={onClearPendingTaskEdit}
         />
       )}
 

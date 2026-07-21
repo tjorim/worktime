@@ -133,6 +133,7 @@ function AppContent() {
   const [showAbout, setShowAbout] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
+  const [pendingTaskEditId, setPendingTaskEditId] = useState<string | null>(null);
 
   const handleTabChange = useCallback(
     (tab: TabKey) => {
@@ -280,6 +281,9 @@ function AppContent() {
             onTabChange: handleTabChange,
             onChangeSchedule: handleChangeSchedule,
             onChangeTeam: handleChangeTeam,
+            pendingTaskEditId,
+            requestTaskEdit: setPendingTaskEditId,
+            clearPendingTaskEdit: () => setPendingTaskEditId(null),
             showTeamModal,
             teamModalMode,
             teamWizardStartStep:

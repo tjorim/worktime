@@ -1149,6 +1149,8 @@
   "gantt_logged_minutes": "{minutes} min",
   "gantt_logged_hours": "{hours} h",
   "gantt_logged_hours_minutes": "{hours} h {minutes} min",
+  "gantt_logged_edit_entry_aria": "Edit {name} in Time Tracking",
+  "gantt_logged_unlink_entry_aria": "Unlink {name} from this task",
   "auth_callback_spinner": "Completing sign-in...",
   "auth_callback_title": "Completing sign-in",
   "auth_callback_description": "Please wait while Worktime finishes connecting your account."

@@ -19,7 +19,12 @@ import * as m from "@/paraglide/messages.js";
 
 const EMPTY_ARRAY: string[] = [];
 
-export function GanttView() {
+interface GanttViewProps {
+  /** Navigate to Time Tracking with the given logged entry pre-selected for editing. */
+  onNavigateToEntry?: (entryId: string) => void;
+}
+
+export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();
   const currentYear = dayjs().year();
   const { publicHolidayMap } = usePublicHolidays(currentYear);
@@ -165,6 +170,7 @@ export function GanttView() {
         task={editingTask ?? undefined}
         existingTasks={tasks}
         onDelete={editingTask ? () => setShowDeleteConfirm(true) : undefined}
+        onNavigateToEntry={onNavigateToEntry}
       />
 
       <ConfirmationDialog

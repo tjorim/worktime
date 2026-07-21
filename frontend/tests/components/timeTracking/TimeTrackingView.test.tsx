@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingView } from "@/components/timeTracking/TimeTrackingView";
 import { SettingsProvider } from "@/contexts/SettingsContext";
@@ -94,6 +94,78 @@ describe("TimeTrackingView", () => {
       expect(screen.getByRole("button", { name: /Go to previous day/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^Go to today$/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Go to next day/i })).toBeInTheDocument();
+    });
+  });
+
+  describe("Cross-tab entry navigation", () => {
+    const renderWithPendingEdit = (
+      pendingTaskEditId: string | null,
+      onClearPendingTaskEdit = vi.fn(),
+    ) =>
+      render(
+        <SettingsProvider>
+          <ToastProvider>
+            <TimeTrackingView
+              pendingTaskEditId={pendingTaskEditId}
+              onClearPendingTaskEdit={onClearPendingTaskEdit}
+            />
+          </ToastProvider>
+        </SettingsProvider>,
+      );
+
+    it("switches to daily view, jumps to the entry's date, and opens its edit modal", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 2,
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: true,
+          },
+          lastUsed: {
+            activeTab: "timetracking",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "weekly",
+            otherTeam: null,
+          },
+        }),
+      );
+      mockTasks = [
+        {
+          id: "task-a",
+          text: "Ship feature",
+          label: "Development",
+          startTime: "2025-01-03T09:00",
+          stopTime: "2025-01-03T10:00",
+        },
+      ];
+      const onClearPendingTaskEdit = vi.fn();
+
+      renderWithPendingEdit("task-a", onClearPendingTaskEdit);
+
+      expect(screen.getByText("Daily Time Tracking")).toBeInTheDocument();
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByLabelText(/^Task$/i)).toHaveValue("Ship feature");
+      expect(onClearPendingTaskEdit).toHaveBeenCalled();
+    });
+
+    it("clears the pending request when the entry no longer exists", () => {
+      mockTasks = [];
+      const onClearPendingTaskEdit = vi.fn();
+
+      renderWithPendingEdit("missing-task", onClearPendingTaskEdit);
+
+      expect(onClearPendingTaskEdit).toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 

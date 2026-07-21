@@ -92,6 +92,84 @@ describe("GanttTaskModal", () => {
     expect(screen.getByText("Client · 2026-03-01")).toBeInTheDocument();
   });
 
+  it("navigates to the entry in Time Tracking and closes the modal", async () => {
+    const user = userEvent.setup();
+    const onHide = vi.fn();
+    const onNavigateToEntry = vi.fn();
+    labelsCollection.insert({ id: "client-2", name: "Client", color: "#123456" });
+    tasksCollection.insert({
+      id: "logged-task-nav",
+      text: "Write spec",
+      label: "client-2",
+      ganttTaskId: "task-nav",
+      startTime: "2026-03-02T09:00",
+      stopTime: "2026-03-02T10:00",
+    });
+
+    render(
+      <GanttTaskModal
+        show
+        onHide={onHide}
+        onSave={vi.fn()}
+        existingTasks={[{ id: "task-nav", name: "Task Nav" }]}
+        task={{
+          id: "task-nav",
+          name: "Task Nav",
+          start: "2026-03-01",
+          end: "2026-03-03",
+          progress: 0,
+        }}
+        onNavigateToEntry={onNavigateToEntry}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Edit Write spec in Time Tracking" }),
+    );
+
+    expect(onNavigateToEntry).toHaveBeenCalledWith("logged-task-nav");
+    expect(onHide).toHaveBeenCalled();
+  });
+
+  it("unlinks a logged entry from the task without deleting it", async () => {
+    const user = userEvent.setup();
+    labelsCollection.insert({ id: "client-3", name: "Client", color: "#123456" });
+    tasksCollection.insert({
+      id: "logged-task-unlink",
+      text: "Review PR",
+      label: "client-3",
+      ganttTaskId: "task-unlink",
+      startTime: "2026-03-04T09:00",
+      stopTime: "2026-03-04T10:00",
+    });
+
+    render(
+      <GanttTaskModal
+        show
+        onHide={vi.fn()}
+        onSave={vi.fn()}
+        existingTasks={[{ id: "task-unlink", name: "Task Unlink" }]}
+        task={{
+          id: "task-unlink",
+          name: "Task Unlink",
+          start: "2026-03-01",
+          end: "2026-03-03",
+          progress: 0,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Review PR")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Unlink Review PR from this task" }));
+
+    expect(screen.getByText("No time has been logged for this task yet.")).toBeInTheDocument();
+    const stored = (tasksCollection.toArray as Array<{ id: string; ganttTaskId?: string }>).find(
+      (t) => t.id === "logged-task-unlink",
+    );
+    expect(stored?.ganttTaskId).toBeUndefined();
+  });
+
   it("shows edit mode title and delete action", () => {
     render(
       <GanttTaskModal

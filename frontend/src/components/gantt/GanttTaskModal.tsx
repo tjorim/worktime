@@ -22,6 +22,8 @@ interface GanttTaskModalProps {
   task?: GanttTask;
   existingTasks: Array<Pick<GanttTask, "id" | "name">>;
   onDelete?: () => void;
+  /** Navigate to Time Tracking with the given logged entry pre-selected for editing. */
+  onNavigateToEntry?: (entryId: string) => void;
 }
 
 const DATE_FORMAT = "YYYY-MM-DD";
@@ -89,11 +91,16 @@ export function GanttTaskModal({
   task,
   existingTasks,
   onDelete,
+  onNavigateToEntry,
 }: GanttTaskModalProps) {
   const [form, setForm] = useState<FormState>(() => createInitialValue(task));
   const [selectedDeps, setSelectedDeps] = useState<string[]>(() => parseDeps(task?.dependencies));
   const [wasValidated, setWasValidated] = useState(false);
-  const { tasks: timeTrackingTasks, labels: timeTrackingLabels } = useTimeTrackingStorage();
+  const {
+    tasks: timeTrackingTasks,
+    labels: timeTrackingLabels,
+    updateTaskTimes,
+  } = useTimeTrackingStorage();
 
   useEffect(() => {
     setForm(createInitialValue(task));
@@ -156,6 +163,20 @@ export function GanttTaskModal({
     () => loggedEntries.reduce((total, entry) => total + entry.loggedMinutes, 0),
     [loggedEntries],
   );
+
+  const handleEditEntry = (entryId: string) => {
+    onNavigateToEntry?.(entryId);
+    onHide();
+  };
+
+  const handleUnlinkEntry = (entry: { id: string; startTime: string; stopTime?: string | null }) => {
+    updateTaskTimes({
+      id: entry.id,
+      newStartTime: entry.startTime,
+      newStopTime: entry.stopTime,
+      ganttTaskId: "",
+    });
+  };
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
@@ -281,14 +302,35 @@ export function GanttTaskModal({
             ) : (
               <ListGroup variant="flush">
                 {loggedEntries.map((entry) => (
-                  <ListGroup.Item key={entry.id} className="px-0 py-2 d-flex justify-content-between gap-3">
+                  <ListGroup.Item
+                    key={entry.id}
+                    className="px-0 py-2 d-flex justify-content-between align-items-center gap-3"
+                  >
                     <span>
                       <span className="d-block">{entry.text}</span>
                       <span className="text-muted small">
                         {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} · {dayjs(entry.startTime).format("YYYY-MM-DD")}
                       </span>
                     </span>
-                    <span className="text-nowrap">{formatLoggedDuration(entry.loggedMinutes)}</span>
+                    <span className="d-flex align-items-center gap-2 flex-shrink-0">
+                      <span className="text-nowrap">{formatLoggedDuration(entry.loggedMinutes)}</span>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        aria-label={m.gantt_logged_edit_entry_aria({ name: entry.text })}
+                        onClick={() => handleEditEntry(entry.id)}
+                      >
+                        <i className="bi bi-pencil" aria-hidden="true"></i>
+                      </Button>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        aria-label={m.gantt_logged_unlink_entry_aria({ name: entry.text })}
+                        onClick={() => handleUnlinkEntry(entry)}
+                      >
+                        <i className="bi bi-x-circle" aria-hidden="true"></i>
+                      </Button>
+                    </span>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
