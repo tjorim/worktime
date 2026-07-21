@@ -107,7 +107,7 @@ class WorktimeApiTest {
         val response = api.listTimeOffEntries(authorization = "Bearer token-123")
 
         val request = server.takeRequest()
-        assertEquals("/api/time-off/", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals("/api/time-off", request.requestLine.substringAfter(' ').substringBefore(' '))
         assertEquals("Bearer token-123", request.headers["Authorization"])
         assertEquals(1, response.items.size)
         assertEquals("entry-1", response.items.first().entryId)

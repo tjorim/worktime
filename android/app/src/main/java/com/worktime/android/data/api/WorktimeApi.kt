@@ -70,14 +70,14 @@ interface WorktimeApi {
         @Query("user_id") userId: Int
     ): Response<TaskRecord>
 
-    @POST("api/work-locations/")
+    @POST("api/work-locations")
     suspend fun upsertWorkLocation(
         @Header("Authorization") authorization: String,
         @Query("user_id") userId: Int,
         @Body payload: WorkLocationMutationRequest
     ): WorkLocationRecord
 
-    @GET("api/work-locations/")
+    @GET("api/work-locations")
     suspend fun listWorkLocations(
         @Header("Authorization") authorization: String,
         @Query("user_id") userId: Int,
@@ -108,13 +108,13 @@ interface WorktimeApi {
     suspend fun deleteAccount(@Header("Authorization") authorization: String)
 
     // Time off is resolved from the bearer token only - no user_id query param.
-    @POST("api/time-off/")
+    @POST("api/time-off")
     suspend fun upsertTimeOffEntry(
         @Header("Authorization") authorization: String,
         @Body payload: TimeOffEntryMutationRequest
     ): Response<TimeOffEntryRecord>
 
-    @GET("api/time-off/")
+    @GET("api/time-off")
     suspend fun listTimeOffEntries(
         @Header("Authorization") authorization: String,
         @Query("start_date") startDate: String? = null,
