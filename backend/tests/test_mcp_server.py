@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -95,13 +95,67 @@ async def test_whoami_and_time_tracking_summary_happy_path(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     whoami_payload = await backend.whoami()
-    summary_payload = await backend.get_time_tracking_summary()
+    # Explicit range: the fixed 2026-05-01 task date would fall outside the
+    # no-args default 30-day lookback window once "now" (real wall-clock
+    # time in CI) moves past it — see test_get_time_tracking_summary_default_window
+    # for coverage of that default.
+    summary_payload = await backend.get_time_tracking_summary(
+        start_at=datetime(2026, 4, 1, tzinfo=UTC),
+        end_at=datetime(2026, 6, 1, tzinfo=UTC),
+    )
 
     assert whoami_payload["user_id"] == user.id
     assert whoami_payload["username"] == "mcp-user"
     assert summary_payload["task_count"] == 1
     assert summary_payload["tracked_seconds"] == 5400
     assert summary_payload["tasks"][0]["text"] == "Task from MCP"
+    assert summary_payload["default_range_applied"] is False
+
+
+async def test_get_time_tracking_summary_default_window(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Omitting both start_at and end_at defaults to a trailing 30-day window.
+
+    A task inside the window is included; one 60 days back (well outside
+    the 30-day default) is not — bounding the response to a recent slice
+    instead of the user's entire history.
+    """
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+    now = datetime.now(UTC)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="default-window-user", display_name="Default Window")
+        )
+        await db_service.create_task(
+            session,
+            user.id,
+            TaskCreate(
+                text="Recent task",
+                start_time=now - timedelta(days=1),
+                stop_time=now - timedelta(days=1) + timedelta(hours=1),
+            ),
+        )
+        await db_service.create_task(
+            session,
+            user.id,
+            TaskCreate(
+                text="Old task",
+                start_time=now - timedelta(days=60),
+                stop_time=now - timedelta(days=60) + timedelta(hours=1),
+            ),
+        )
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    summary_payload = await backend.get_time_tracking_summary()
+
+    assert summary_payload["default_range_applied"] is True
+    assert summary_payload["task_count"] == 1
+    assert summary_payload["tasks"][0]["text"] == "Recent task"
 
 
 async def test_list_labels_returns_active_labels_for_authenticated_user(
