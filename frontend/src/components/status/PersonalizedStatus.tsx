@@ -6,12 +6,17 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import type { ScheduleOption } from "@/data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
 import { getScheduleConfig, isValidScheduleType } from "@/utils/scheduleUtils";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
-import { setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { useTodayActualStart } from "@/hooks/useTodayActualStart";
+import { useFlexStartOverride } from "@/hooks/useFlexStartOverride";
+import { formatTimeByPreference, setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/utils/flexShift";
 import { getLocale } from "@/paraglide/runtime.js";
+import { FlexStartEditor } from "./FlexStartEditor";
 import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
 import { CountdownBadge } from "@/components/shared/CountdownBadge";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
@@ -38,6 +43,7 @@ export function PersonalizedStatusContent({
 }: PersonalizedStatusContentProps) {
   const teamTooltipId = useId();
   const locale = getLocale();
+  const { settings } = useSettings();
   const weekdayDateFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
     [locale],
@@ -86,22 +92,66 @@ export function PersonalizedStatusContent({
     return setTimeFromFractionalHour(endDate, end);
   }, [currentShift]);
 
+  // Flex-time handling: for shifts with a flex window (e.g. the 9-5 Day shift),
+  // anchor the finish to the actual clock-in plus a flat presence span instead
+  // of the nominal roster end. This avoids showing "2 hours left" at 15:30 to
+  // someone who started at 07:00 and can already go home.
+  const flexWindow = useMemo(() => getFlexWindow(currentShift.shift), [currentShift.shift]);
+  const actualStart = useTodayActualStart(currentShift.date);
+  const manualStart = useFlexStartOverride(currentShift.date);
+  const isFlexShift = flexWindow != null && currentShift.shift.isWorking;
+
+  // A logged time-tracking clock-in is authoritative; otherwise fall back to a
+  // manual "I started at ..." override. Either drives a real countdown/progress.
+  const flexStartTime = isFlexShift ? (actualStart ?? manualStart.startTime) : null;
+  // Only offer the manual editor when time-tracking is not already providing
+  // the start (editing it would have no effect while a clock-in exists).
+  const showFlexEditor = isFlexShift && !actualStart;
+  const flexEndTime = useMemo(
+    () =>
+      flexStartTime && flexWindow
+        ? getFlexEndFromStart(flexStartTime, flexWindow.presenceHours)
+        : null,
+    [flexStartTime, flexWindow],
+  );
+  // No clock-in yet: show the possible leave range instead of a false countdown.
+  const flexEndRange = useMemo(
+    () =>
+      isFlexShift && flexWindow && !flexStartTime
+        ? getFlexEndRange(currentShift.date, flexWindow)
+        : null,
+    [isFlexShift, flexWindow, flexStartTime, currentShift.date],
+  );
+
+  const effectiveStartTime = isFlexShift ? flexStartTime : currentShiftStartTime;
+  const effectiveEndTime = isFlexShift ? flexEndTime : currentShiftEndTime;
+
   // Shift progress percentage (elapsed / total duration)
   const shiftProgress = useMemo(() => {
-    if (!currentShiftStartTime || !currentShiftEndTime) return null;
-    const totalSeconds = currentShiftEndTime.diff(currentShiftStartTime, "second");
+    if (!effectiveStartTime || !effectiveEndTime) return null;
+    const totalSeconds = effectiveEndTime.diff(effectiveStartTime, "second");
     if (totalSeconds <= 0) return null;
-    const elapsedSeconds = today.diff(currentShiftStartTime, "second");
+    const elapsedSeconds = today.diff(effectiveStartTime, "second");
     const clampedElapsedSeconds = Math.max(0, elapsedSeconds);
     const percentage = Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100));
-    const elapsedHours = Math.floor(clampedElapsedSeconds / 3600);
-    const totalHours = Math.round(totalSeconds / 3600);
+    // For flex shifts the presence span is fixed (e.g. 8.5h), so show the total
+    // verbatim and give elapsed matching one-decimal precision — otherwise a
+    // fully-elapsed flex shift would read "8h / 8.5h".
+    const elapsedHours =
+      isFlexShift && flexWindow
+        ? Math.round(clampedElapsedSeconds / 360) / 10
+        : Math.floor(clampedElapsedSeconds / 3600);
+    const totalHours =
+      isFlexShift && flexWindow ? flexWindow.presenceHours : Math.round(totalSeconds / 3600);
     return { percentage, elapsedHours, totalHours };
-  }, [currentShiftStartTime, currentShiftEndTime, today]);
+  }, [effectiveStartTime, effectiveEndTime, today, isFlexShift, flexWindow]);
+
+  const flexHourLabel = (fractionalHour: number) =>
+    formatTimeByPreference(setTimeFromFractionalHour(today, fractionalHour), settings.timeFormat);
 
   const countdown = useCountdown(nextShiftStartTime);
-  const shiftStartCountdown = useCountdown(currentShiftStartTime);
-  const shiftEndCountdown = useCountdown(currentShiftEndTime);
+  const shiftStartCountdown = useCountdown(effectiveStartTime);
+  const shiftEndCountdown = useCountdown(effectiveEndTime);
   const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
 
   // Tooltip details for current shift badge
@@ -145,24 +195,61 @@ export function PersonalizedStatusContent({
                   className="cursor-help"
                 />
               </OverlayTrigger>
-              {currentShift.shift.start != null && currentShift.shift.end != null && (
-                <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
+              {currentShift.shift.start != null &&
+                currentShift.shift.end != null &&
+                !isFlexShift && (
+                  <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
+                )}
+              {isFlexShift && flexWindow && (
+                <div className="small text-muted mt-1">
+                  <i className="bi bi-hourglass-split me-1" aria-hidden="true"></i>
+                  {m.personalized_status_flex_window({
+                    earliest: flexHourLabel(flexWindow.earliestStart),
+                    latest: flexHourLabel(flexWindow.latestStart),
+                    hours: String(flexWindow.presenceHours),
+                  })}
+                </div>
+              )}
+              {isFlexShift && flexStartTime && flexEndTime && (
+                <div className="small text-muted mt-1">
+                  <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
+                  {m.personalized_status_flex_clocked({
+                    start: formatTimeByPreference(flexStartTime, settings.timeFormat),
+                    end: formatTimeByPreference(flexEndTime, settings.timeFormat),
+                  })}
+                </div>
+              )}
+              {isFlexShift && flexEndRange && (
+                <div className="mt-2">
+                  <span className="fw-semibold">
+                    <i className="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+                    {m.personalized_status_flex_leave_range({
+                      earliest: formatTimeByPreference(
+                        flexEndRange.earliestEnd,
+                        settings.timeFormat,
+                      ),
+                      latest: formatTimeByPreference(flexEndRange.latestEnd, settings.timeFormat),
+                    })}
+                  </span>
+                  {settings.enableTimeTracking && (
+                    <div className="small text-muted mt-1">
+                      {m.personalized_status_flex_leave_hint()}
+                    </div>
+                  )}
+                </div>
               )}
               {currentShift.shift.isWorking &&
-                currentShiftStartTime &&
-                !today.isAfter(currentShiftStartTime) && (
-                  <CountdownBadge
-                    countdown={shiftStartCountdown}
-                    startTime={currentShiftStartTime}
-                  />
+                effectiveStartTime &&
+                !today.isAfter(effectiveStartTime) && (
+                  <CountdownBadge countdown={shiftStartCountdown} startTime={effectiveStartTime} />
                 )}
               {currentShift.shift.isWorking &&
-                currentShiftStartTime &&
-                today.isAfter(currentShiftStartTime) && (
+                effectiveStartTime &&
+                today.isAfter(effectiveStartTime) && (
                   <>
                     <CountdownBadge
                       countdown={shiftEndCountdown}
-                      startTime={currentShiftEndTime}
+                      startTime={effectiveEndTime}
                       label={m.personalized_status_ends_in()}
                       variant="warning"
                     />
@@ -194,6 +281,19 @@ export function PersonalizedStatusContent({
                     )}
                   </>
                 )}
+              {showFlexEditor && flexWindow && (
+                <div className="mt-2">
+                  <FlexStartEditor
+                    startTime={manualStart.startTime}
+                    defaultInputTime={setTimeFromFractionalHour(
+                      currentShift.date,
+                      flexWindow.earliestStart,
+                    ).format("HH:mm")}
+                    onSet={manualStart.setStartTime}
+                    onClear={manualStart.clear}
+                  />
+                </div>
+              )}
               {!currentShift.shift.isWorking && offDayProgress && (
                 <div className="mt-2">
                   <div className="small text-muted mb-1">

@@ -1,7 +1,7 @@
 import { logger } from "@/utils/logger";
 /**
  * Mandatory break duration in minutes. Per labor law, employees working more
- * than 5.5 hours must take a 30-minute break that is automatically deducted
+ * than 5 hours must take a 30-minute break that is automatically deducted
  * from their logged time.
  */
 export const BREAK_DURATION_MINUTES = 30;

@@ -8,6 +8,17 @@ export type ShiftTimeDefinition = {
   start: number | null;
   end: number | null;
   displayCode: string;
+  /**
+   * Optional flex-time window. When present, the fixed `start`/`end` are only
+   * the nominal window: the employee may clock in any time between
+   * `flexStartEarliest` and `flexStartLatest` and is present for
+   * `presenceHours` (work + mandatory break) from their actual start.
+   * Used by the Current Status card to show a realistic finish time/range
+   * instead of a misleading countdown to the fixed `end`.
+   */
+  flexStartEarliest?: number;
+  flexStartLatest?: number;
+  presenceHours?: number;
 };
 
 const OFF_SHIFT_TIME: ShiftTimeDefinition = Object.freeze({
@@ -175,6 +186,11 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           start: 9,
           end: 17,
           displayCode: "D",
+          // Flex day: clock in between 07:00 and 09:00, present 8.5h
+          // (8h work + 30 min mandatory break), so finish 15:30-17:30.
+          flexStartEarliest: 7,
+          flexStartLatest: 9,
+          presenceHours: 8.5,
         },
         O: OFF_SHIFT_TIME,
       },
