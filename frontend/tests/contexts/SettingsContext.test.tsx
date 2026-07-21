@@ -208,6 +208,38 @@ describe("SettingsContext unified user state", () => {
     });
   });
 
+  describe("Unified calendar settings", () => {
+    it("defaults enableUnifiedCalendar to false", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.settings.enableUnifiedCalendar).toBe(false);
+    });
+
+    it("toggles enableUnifiedCalendar via updateUnifiedCalendarEnabled", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      await act(async () => {
+        result.current.updateUnifiedCalendarEnabled(true);
+      });
+      expect(result.current.settings.enableUnifiedCalendar).toBe(true);
+
+      await act(async () => {
+        result.current.updateUnifiedCalendarEnabled(false);
+      });
+      expect(result.current.settings.enableUnifiedCalendar).toBe(false);
+    });
+
+    it("persists enableUnifiedCalendar to localStorage", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateUnifiedCalendarEnabled(true);
+      });
+      const stored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(parsed.settings.enableUnifiedCalendar).toBe(true);
+    });
+  });
+
   describe("lastUsed and updaters", () => {
     it("prefers lastUsed over settings when both present", () => {
       window.localStorage.setItem(
