@@ -18,9 +18,9 @@ from app.schemas import (
     SyncPushResponse,
     SyncStatusResponse,
 )
-from app.services.db_service import ValidationError
+from app.services.db_service import NotFoundError, ValidationError
 from app.services.sync_service import get_sync_status, pull_changes, push_changes
-from app.utils.sse_manager import sync_event_manager
+from app.utils.sse_manager import notify_sync_changed, sync_event_manager
 from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
@@ -52,15 +52,16 @@ async def push_endpoint(
     try:
         with time_operation("sync", timings):
             result = await push_changes(session, authenticated_user_id, payload)
-    except ValidationError as error:
+    except (ValidationError, NotFoundError) as error:
+        # NotFoundError surfaces from _validate_task_gantt_reference (a task
+        # or template linking to a gantt_task_id that doesn't exist, or was
+        # deleted on another device between pull and push) — a plausible
+        # everyday race in a multi-device offline-first client, not just a
+        # malformed-payload edge case, so it must map to 400 rather than
+        # bubbling up as an unhandled 500.
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    try:
-        await sync_event_manager.broadcast_sync_changed(authenticated_user_id)
-    except Exception:
-        logger.warning(
-            "SSE: broadcast_sync_changed failed for user %d (non-fatal)", authenticated_user_id, exc_info=True
-        )
+    await notify_sync_changed(authenticated_user_id)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -129,9 +130,12 @@ async def events_endpoint(
     ``_SSE_KEEPALIVE_TIMEOUT`` seconds to prevent proxy/firewall
     idle-connection timeouts.
 
-    The browser reconnects automatically on drop; **no event replay** is
-    performed on reconnect.  Missed events are recovered by the incremental
-    pull that the client issues on reconnect anyway.
+    Each connection's event queue (maxsize=1) only exists while that
+    connection is open — a notification fired during a drop has no queue to
+    reach and is lost, not replayed on reconnect. The client is expected to
+    force an unconditional catch-up pull whenever its SSE connection
+    re-establishes (not just when an event arrives) to cover that gap; see
+    ``createFetchSseTransport`` in the frontend.
     """
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
     sync_event_manager.subscribe(authenticated_user_id, queue)

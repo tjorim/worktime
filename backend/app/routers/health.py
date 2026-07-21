@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..config.oidc_config import OIDCTokenError, _resolve_jwks_uri
 from ..database.engine import get_session
+from ..middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ async def _jwks_reachable() -> bool:
 
 
 @router.get("/health/liveness")
+@limiter.exempt
 async def liveness() -> JSONResponse:
     """Liveness probe — returns 200 immediately with no external I/O.
 
@@ -90,6 +92,7 @@ async def liveness() -> JSONResponse:
 
 
 @router.get("/health/readiness")
+@limiter.exempt
 async def readiness(
     db: Annotated[AsyncSession | None, Depends(_get_db_if_enabled)],
 ) -> JSONResponse:

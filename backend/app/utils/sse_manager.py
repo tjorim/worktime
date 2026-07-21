@@ -240,3 +240,17 @@ class SyncEventManager:
 
 #: Module-level singleton; imported by routers and wired up in main.py lifespan.
 sync_event_manager = SyncEventManager()
+
+
+async def notify_sync_changed(user_id: int) -> None:
+    """Broadcast a ``sync_changed`` hint for *user_id*, swallowing all errors.
+
+    The hint is a freshness signal only — a failed broadcast must never fail
+    the write that triggered it, so every exception is logged and suppressed.
+    """
+    try:
+        await sync_event_manager.broadcast_sync_changed(user_id)
+    except Exception:
+        logger.warning(
+            "SSE: broadcast_sync_changed failed for user %d (non-fatal)", user_id, exc_info=True
+        )

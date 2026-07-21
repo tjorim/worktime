@@ -102,6 +102,39 @@ async def _get_jwks(*, force_refresh: bool = False) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Periodic background refresh
+# ---------------------------------------------------------------------------
+
+_JWKS_REFRESH_INTERVAL_SECONDS = 3600
+
+
+async def _periodic_jwks_refresh_loop() -> None:
+    """Background loop that force-refreshes the JWKS cache periodically.
+
+    Without this, the cache only refreshes reactively when a token's ``kid``
+    isn't found in it (see ``decode_token``) — so a provider-side key
+    rotation that keeps the same ``kid``, or a JWKS URI change, would go
+    unnoticed until a process restart. Failures are logged and swallowed;
+    the existing cached JWKS keeps serving requests, and the reactive
+    refresh-on-miss path is unaffected by this loop failing.
+    """
+    while True:
+        try:
+            await asyncio.sleep(_JWKS_REFRESH_INTERVAL_SECONDS)
+            await _get_jwks(force_refresh=True)
+            logger.debug("Periodic JWKS refresh succeeded")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.warning("Periodic JWKS refresh failed (non-fatal)", exc_info=True)
+
+
+def start_periodic_jwks_refresh() -> asyncio.Task[None]:
+    """Start the background JWKS refresh loop and return its task for shutdown cancellation."""
+    return asyncio.create_task(_periodic_jwks_refresh_loop())
+
+
+# ---------------------------------------------------------------------------
 # Token validation
 # ---------------------------------------------------------------------------
 
@@ -234,27 +267,43 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any], db_sess
     username, display_name = _derive_username_and_display_name(claims, subject)
     username = await _find_available_username(db_session, username, subject)
 
-    try:
-        local_user = await create_user(
-            db_session,
-            UserCreate(
-                username=username,
-                display_name=display_name,
-                settings={},
-            ),
-            oidc_subject=subject,
-        )
-        logger.info(
-            "Auto-provisioned local Worktime user %r for OIDC subject %s",
-            username,
-            subject,
-        )
-    except (IntegrityError, ConflictError):
-        # Race condition: concurrent first-login for the same subject.
-        await db_session.rollback()
-        result = await db_session.execute(select(User).where(User.oidc_subject == subject))
-        local_user = result.scalar_one_or_none()
-        if local_user is None:
+    for attempt in range(2):
+        try:
+            local_user = await create_user(
+                db_session,
+                UserCreate(
+                    username=username,
+                    display_name=display_name,
+                    settings={},
+                ),
+                oidc_subject=subject,
+            )
+            logger.info(
+                "Auto-provisioned local Worktime user %r for OIDC subject %s",
+                username,
+                subject,
+            )
+            return local_user
+        except (IntegrityError, ConflictError):
+            # Two possible races: a concurrent first-login for the *same*
+            # subject won the INSERT, or a *different* new user claimed the
+            # derived username between the availability check and the INSERT.
+            await db_session.rollback()
+            result = await db_session.execute(select(User).where(User.oidc_subject == subject))
+            local_user = result.scalar_one_or_none()
+            if local_user is not None:
+                return local_user
+            if attempt == 0:
+                # Username collision with a different subject — the conflicting
+                # row is now committed and visible, so re-deriving produces a
+                # fresh candidate. Retry once instead of failing the login.
+                logger.info(
+                    "Username %r was claimed concurrently — retrying provisioning for subject %s",
+                    username,
+                    subject,
+                )
+                username = await _find_available_username(db_session, username, subject)
+                continue
             raise
 
-    return local_user
+    raise RuntimeError(f"Could not provision local user for OIDC subject {subject!r}")

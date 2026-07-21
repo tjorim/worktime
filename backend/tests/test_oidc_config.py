@@ -385,3 +385,131 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
 
     assert local_user is created_local_user
     assert recorded["username"].startswith("alice-")
+
+
+async def test_get_or_create_local_user_retries_on_username_collision_race(monkeypatch) -> None:
+    """A concurrent signup claiming the derived username must not fail the login.
+
+    When create_user raises because a *different* subject won the username
+    between the availability check and the INSERT, provisioning re-derives a
+    fresh candidate and retries once instead of surfacing a 500.
+    """
+    from app.services.db_service import ConflictError
+
+    created_local_user = SimpleNamespace(id=44, username="alice-sub-abc1", display_name="Alice")
+
+    class FakeResult:
+        def __init__(self, value):
+            self._value = value
+
+        def scalar_one_or_none(self):
+            return self._value
+
+    class FakeSession:
+        def __init__(self):
+            self.calls = 0
+            self.rollbacks = 0
+
+        async def execute(self, _query):
+            self.calls += 1
+            if self.calls == 1:
+                return FakeResult(None)  # oidc_subject lookup → not found
+            if self.calls == 2:
+                return FakeResult(None)  # username "alice" appears available
+            if self.calls == 3:
+                return FakeResult(None)  # subject re-lookup after collision → still missing
+            if self.calls == 4:
+                return FakeResult(object())  # "alice" now visibly taken by the other signup
+            return FakeResult(None)  # suffixed candidate is available
+
+        async def rollback(self):
+            self.rollbacks += 1
+
+    create_attempts: list[str] = []
+
+    async def fake_create_user(session, payload, *, oidc_subject=None):
+        create_attempts.append(payload.username)
+        if len(create_attempts) == 1:
+            raise ConflictError("username already exists")
+        return created_local_user
+
+    monkeypatch.setattr(oidc_config, "create_user", fake_create_user)
+
+    session = FakeSession()
+    local_user = await oidc_config.get_or_create_local_user(
+        "sub-abc12345",
+        {"preferred_username": "alice"},
+        session,
+    )
+
+    assert local_user is created_local_user
+    assert session.rollbacks == 1
+    assert len(create_attempts) == 2
+    assert create_attempts[0] == "alice"
+    assert create_attempts[1] != "alice"
+    assert create_attempts[1].startswith("alice-")
+
+
+# ---------------------------------------------------------------------------
+# Periodic JWKS refresh
+# ---------------------------------------------------------------------------
+
+
+async def test_periodic_jwks_refresh_loop_calls_force_refresh(monkeypatch) -> None:
+    """The loop force-refreshes the JWKS cache once per sleep interval."""
+    sleep_calls: list[float] = []
+    refresh_calls = 0
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 3:
+            raise asyncio.CancelledError
+
+    async def fake_get_jwks(*, force_refresh: bool = False) -> dict:
+        nonlocal refresh_calls
+        assert force_refresh is True
+        refresh_calls += 1
+        return {"keys": []}
+
+    monkeypatch.setattr(oidc_config.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
+
+    with pytest.raises(asyncio.CancelledError):
+        await oidc_config._periodic_jwks_refresh_loop()
+
+    assert sleep_calls == [oidc_config._JWKS_REFRESH_INTERVAL_SECONDS] * 3
+    assert refresh_calls == 2
+
+
+async def test_periodic_jwks_refresh_loop_swallows_refresh_failures(monkeypatch) -> None:
+    """A failed refresh is logged and swallowed — the loop keeps running."""
+    sleep_calls: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 3:
+            raise asyncio.CancelledError
+
+    async def failing_get_jwks(*, force_refresh: bool = False) -> dict:
+        raise httpx.HTTPError("upstream unavailable")
+
+    monkeypatch.setattr(oidc_config.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(oidc_config, "_get_jwks", failing_get_jwks)
+
+    with pytest.raises(asyncio.CancelledError):
+        await oidc_config._periodic_jwks_refresh_loop()
+
+    # The loop must have survived two failed refreshes to reach the third sleep.
+    assert len(sleep_calls) == 3
+
+
+async def test_start_periodic_jwks_refresh_returns_cancellable_task() -> None:
+    """start_periodic_jwks_refresh schedules the loop and returns its task."""
+    task = oidc_config.start_periodic_jwks_refresh()
+    try:
+        assert isinstance(task, asyncio.Task)
+        assert not task.done()
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task

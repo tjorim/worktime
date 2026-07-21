@@ -15,11 +15,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastmcp.utilities.lifespan import combine_lifespans
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .database import init_db
+from .middleware.rate_limit import handle_rate_limit_exceeded, limiter
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.timing import TimingMiddleware
 from .routers.auth import router as auth_router
@@ -153,15 +156,28 @@ async def lifespan(app: FastAPI):
         # Start cache warming in background - don't block startup
         asyncio.create_task(_warm_cache_async())
         logger.info("✓ Cache warming started in background")
-    
+
+    # Periodically force-refresh the OIDC JWKS cache so a provider-side key
+    # rotation that reuses the same `kid`, or a JWKS URI change, is picked up
+    # without a backend restart (the reactive refresh-on-miss path alone
+    # can't detect either case).
+    jwks_refresh_task = None
+    if settings.OIDC_ISSUER_URL:
+        from .config.oidc_config import start_periodic_jwks_refresh
+
+        jwks_refresh_task = start_periodic_jwks_refresh()
+        logger.info("✓ Periodic OIDC JWKS refresh started in background")
+
     logger.info("=" * 60)
     logger.info("Startup complete - Server ready to accept connections")
     logger.info("=" * 60)
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Worktime Backend API shutting down...")
+    if jwks_refresh_task is not None:
+        jwks_refresh_task.cancel()
     if settings.DATABASE_ENABLED:
         await sync_event_manager.stop_pg_listener()
 
@@ -209,6 +225,17 @@ if _mcp_app is not None:
     app.add_middleware(_MCPAwareCORSMiddleware, **_cors_kwargs)
 else:
     app.add_middleware(CORSMiddleware, **_cors_kwargs)
+
+# Per-client-IP rate limiting. `limiter.enabled` (RATE_LIMIT_ENABLED) gates
+# actual enforcement; the middleware is always registered so a 429 still gets
+# a request ID, timing header, and access-log entry like any other response.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
+app.add_middleware(SlowAPIMiddleware)
+if settings.RATE_LIMIT_ENABLED:
+    logger.info(f"✓ Rate limiting enabled ({settings.RATE_LIMIT_DEFAULT} per client IP)")
+else:
+    logger.info("Rate limiting disabled (RATE_LIMIT_ENABLED=false)")
 
 # TimingMiddleware records metrics and sets X-Total-Ms.
 app.add_middleware(TimingMiddleware)

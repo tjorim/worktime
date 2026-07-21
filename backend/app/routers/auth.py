@@ -155,6 +155,22 @@ def require_user_match(user_id: int, authenticated_user_id: int) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
+def resolve_scoped_user_id(user_id: int | None, authenticated_user_id: int) -> int:
+    """Resolve the effective user id for an endpoint with an optional ``user_id`` param.
+
+    A handful of older endpoints (time-tracking, work-locations, gantt-tasks)
+    require ``?user_id=`` and then 403 unless it equals the caller's own id —
+    there is no path where a different value is ever allowed, so the
+    parameter was pure ceremony. It's optional now: omit it (preferred) and
+    the authenticated user's own id is used directly, or pass it as before
+    for backward compatibility, in which case it's still validated to match.
+    """
+    if user_id is None:
+        return authenticated_user_id
+    require_user_match(user_id, authenticated_user_id)
+    return authenticated_user_id
+
+
 def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal) -> None:
     """Allow access to the same user or any user when the principal is admin."""
     if principal.is_admin:

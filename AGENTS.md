@@ -53,7 +53,7 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 | Field | Value |
 |-------|-------|
 | Endpoint | `GET /api/sync/events` |
-| Auth | Session cookie required (`withCredentials: true`) |
+| Auth | Bearer token via `Authorization` header, same as every other endpoint — the client opens the stream with `fetch()` (parsed via `eventsource-parser`), not native `EventSource`, since `EventSource` cannot send custom headers |
 | Event name | `sync_changed` |
 | Payload | `{ "type": "sync_changed", "server_timestamp": "<ISO-8601>" }` |
 | Keepalive | `: keepalive` comment every 15 s |
@@ -63,12 +63,12 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 
 - **Proxy buffering** — set `X-Accel-Buffering: no` (already sent by the endpoint) so Nginx/Caddy does not buffer the stream.
 - **Timeouts** — ensure the proxy does not close idle SSE connections before the 15 s keepalive fires. Caddy's default idle timeout is fine; Nginx needs `proxy_read_timeout` ≥ 60 s.
-- **CORS / cookies** — the frontend uses `withCredentials: true`; the backend must echo `Access-Control-Allow-Credentials: true` and a non-wildcard `Access-Control-Allow-Origin`.
+- **CORS** — cross-origin dev setups rely on the existing `CORSMiddleware` config (`Authorization` is already in `allow_headers`); same-origin production deployments (frontend and API behind the same Caddy host) need no CORS handling at all for this endpoint.
 - **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the asyncpg LISTEN connection is unavailable (e.g. during startup or a Postgres restart), the manager falls back to in-process delivery automatically; no operator action is required.
 
 ### Adding new live-update behaviour
 
-- **Reuse `SyncSignalTransport`** when the update follows the same notify-then-pull shape: the live signal is just a freshness hint and the data arrives via a normal fetch. Implement a new `SyncSignalTransport` adapter (or reuse `createSseTransport`) and pass it to `useSyncSignal`.
+- **Reuse `SyncSignalTransport`** when the update follows the same notify-then-pull shape: the live signal is just a freshness hint and the data arrives via a normal fetch. Implement a new `SyncSignalTransport` adapter (or reuse `createFetchSseTransport`) and pass it to `useSyncSignal`.
 - **Stay request/poll-based** for user-triggered actions, infrequent state changes, or anything that needs the full response payload inline (not a separate fetch). Adding SSE complexity for those cases is not worth it.
 - The transport abstraction also decouples the wire protocol: replacing SSE with WebSockets later only requires a new adapter — no changes to `useSyncSignal` or its callers.
 

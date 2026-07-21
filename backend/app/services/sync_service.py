@@ -27,11 +27,11 @@ removing the row, so pull queries can propagate the deletion to other clients.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
-from sqlalchemy import select, update
+from sqlalchemy import literal, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -71,6 +71,36 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+# Safety overlap subtracted from the server_timestamp reported by pull_changes
+# and get_sync_status (clients persist either value as their sync cursor).
+#
+# Push handlers stamp ``updated_at`` when they process a record, but the row
+# only becomes visible to other transactions at commit time.  A pull that runs
+# concurrently can therefore return a ``server_timestamp`` *later* than the
+# ``updated_at`` of a record it never saw — and a client storing that value as
+# its cursor would skip the record forever.  Reporting a slightly older
+# timestamp makes the next incremental pull re-read the recent window instead.
+# Re-delivered records are harmless: clients apply pulls idempotently via
+# last-write-wins.
+_PULL_CURSOR_OVERLAP = timedelta(seconds=30)
+
+# Upper bound on how far into the future a client-supplied client_updated_at
+# is trusted, relative to the server's own clock.
+#
+# LWW conflict detection is a pure ">" comparison on this field with no other
+# tiebreaker, so a device with a badly wrong clock (or a unit bug — e.g.
+# sending milliseconds where seconds were expected, landing sometime in the
+# year 48000) would otherwise win every future comparison unconditionally,
+# permanently freezing that record: no other device could ever generate a
+# "later" timestamp to overwrite it, including a subsequent correction from
+# the same device once its clock is fixed. Clamping bounds the damage to
+# _MAX_CLOCK_SKEW of un-overwritable time instead of forever.
+_MAX_CLOCK_SKEW = timedelta(minutes=5)
+
+
+def _clamp_client_timestamp(client_updated_at: datetime) -> datetime:
+    """Clamp a client-supplied timestamp to at most _MAX_CLOCK_SKEW into the future."""
+    return min(as_utc(client_updated_at), _now() + _MAX_CLOCK_SKEW)
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +128,28 @@ async def _validate_task_label_reference(
         raise ValidationError("label not found")
 
 
+async def _label_name_taken(
+    session: AsyncSession, user_id: int, name: str, *, exclude_id: str | None
+) -> bool:
+    """Whether another *active* label already owns (user_id, name).
+
+    Mirrors the ``uq_active_label_user_name`` partial unique index so callers
+    can return a per-record conflict instead of letting the INSERT/UPDATE hit
+    that constraint at commit time — which would raise ``IntegrityError`` for
+    the whole batch (one transaction covers every record in the push), not
+    just the offending label.
+    """
+    conditions = [
+        TimeTrackingLabel.user_id == user_id,
+        TimeTrackingLabel.name == name,
+        TimeTrackingLabel.deleted_at.is_(None),
+    ]
+    if exclude_id is not None:
+        conditions.append(TimeTrackingLabel.id != exclude_id)
+    result = await session.execute(select(TimeTrackingLabel.id).where(*conditions).limit(1))
+    return result.scalar_one_or_none() is not None
+
+
 async def _push_label(
     session: AsyncSession, user_id: int, item: LabelSyncItem
 ) -> SyncRecordResult:
@@ -107,18 +159,24 @@ async def _push_label(
     if item.action == "delete":
         if label is None or label.user_id != user_id or label.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(label.client_updated_at):
+        if _clamp_client_timestamp(item.client_updated_at) <= as_utc(label.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=label.updated_at,
                 conflict_reason="server version is newer",
             )
+        # Only *active* references block deletion — soft-deleted tasks/templates
+        # must not pin their label forever (mirrors db_service.delete_label).
         task_count = await session.scalar(
-            select(sql_func.count()).select_from(TimeTrackingTask).where(TimeTrackingTask.label_id == item.id)
+            select(sql_func.count())
+            .select_from(TimeTrackingTask)
+            .where(TimeTrackingTask.label_id == item.id, TimeTrackingTask.deleted_at.is_(None))
         )
         template_count = await session.scalar(
-            select(sql_func.count()).select_from(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == item.id)
+            select(sql_func.count())
+            .select_from(TimeTrackingTemplate)
+            .where(TimeTrackingTemplate.label_id == item.id, TimeTrackingTemplate.deleted_at.is_(None))
         )
         if task_count or template_count:
             return SyncRecordResult(
@@ -127,7 +185,7 @@ async def _push_label(
                 server_updated_at=label.updated_at,
                 conflict_reason="label is in use by tasks or templates and cannot be deleted",
             )
-        label.client_updated_at = as_utc(item.client_updated_at)
+        label.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         label.deleted_at = now
         label.updated_at = now
         session.add(label)
@@ -138,34 +196,63 @@ async def _push_label(
         if item.name is None or item.color is None:
             from app.services.db_service import ValidationError
             raise ValidationError("name and color are required for label create")
+        if await _label_name_taken(session, user_id, item.name, exclude_id=None):
+            return SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                conflict_reason="a label with this name already exists",
+            )
         label = TimeTrackingLabel(
             id=item.id,
             user_id=user_id,
             name=item.name,
             color=item.color,
-            client_updated_at=as_utc(item.client_updated_at),
+            client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
         session.add(label)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if label.user_id != user_id:
-        from app.services.db_service import ValidationError
-        raise ValidationError("label not found")
+        # The id collides with another user's label. Returning a per-record
+        # conflict (rather than raising, which would 400 the whole batch) both
+        # keeps the rest of the batch processing and avoids leaking whether
+        # the id belongs to someone else vs. genuinely being stale — same
+        # response shape as an ordinary LWW conflict either way.
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            conflict_reason="server version is newer",
+        )
 
-    if as_utc(item.client_updated_at) <= as_utc(label.client_updated_at):
+    if _clamp_client_timestamp(item.client_updated_at) <= as_utc(label.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
             server_updated_at=label.updated_at,
             conflict_reason="server version is newer",
         )
+    new_name = item.name if item.name is not None else label.name
+    is_reviving = label.deleted_at is not None
+    # A rename or a revival-from-soft-delete can each collide with another
+    # active label that already holds that name — a same-name, no-op update
+    # (name unchanged, already active) cannot, so skip the check there to
+    # avoid a spurious self-collision false positive.
+    if (new_name != label.name or is_reviving) and await _label_name_taken(
+        session, user_id, new_name, exclude_id=label.id
+    ):
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            server_updated_at=label.updated_at,
+            conflict_reason="a label with this name already exists",
+        )
     if item.name is not None:
         label.name = item.name
     if item.color is not None:
         label.color = item.color
-    if label.deleted_at is not None:
+    if is_reviving:
         label.deleted_at = None
-    label.client_updated_at = as_utc(item.client_updated_at)
+    label.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     label.updated_at = now
     session.add(label)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -180,14 +267,14 @@ async def _push_task(
     if item.action == "delete":
         if task is None or task.user_id != user_id or task.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
+        if _clamp_client_timestamp(item.client_updated_at) <= as_utc(task.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=task.updated_at,
                 conflict_reason="server version is newer",
             )
-        task.client_updated_at = as_utc(item.client_updated_at)
+        task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
@@ -197,6 +284,9 @@ async def _push_task(
         if item.text is None or item.start_time is None:
             from app.services.db_service import ValidationError
             raise ValidationError("text and start_time are required for task create")
+        if item.stop_time is not None and as_utc(item.stop_time) < as_utc(item.start_time):
+            from app.services.db_service import ValidationError
+            raise ValidationError("stop_time cannot be earlier than start_time")
         await _validate_task_label_reference(session, user_id, item.label_id)
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
         task = TimeTrackingTask(
@@ -208,16 +298,22 @@ async def _push_task(
             start_time=item.start_time,
             stop_time=item.stop_time,
             includes_break=item.includes_break or False,
-            client_updated_at=as_utc(item.client_updated_at),
+            client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
         session.add(task)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task.user_id != user_id:
-        from app.services.db_service import ValidationError
-        raise ValidationError("task not found")
+        # See the equivalent check in _push_label: a per-record conflict
+        # keeps the rest of the batch processing and avoids an id-ownership
+        # oracle, rather than raising and 400ing the whole batch.
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            conflict_reason="server version is newer",
+        )
 
-    if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
+    if _clamp_client_timestamp(item.client_updated_at) <= as_utc(task.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -225,6 +321,15 @@ async def _push_task(
             conflict_reason="server version is newer",
         )
     provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
+    candidate_start_time = (
+        item.start_time
+        if "start_time" in provided_fields and item.start_time is not None
+        else task.start_time
+    )
+    candidate_stop_time = item.stop_time if "stop_time" in provided_fields else task.stop_time
+    if candidate_stop_time is not None and as_utc(candidate_stop_time) < as_utc(candidate_start_time):
+        from app.services.db_service import ValidationError
+        raise ValidationError("stop_time cannot be earlier than start_time")
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
@@ -241,7 +346,7 @@ async def _push_task(
         task.includes_break = item.includes_break
     if task.deleted_at is not None:
         task.deleted_at = None
-    task.client_updated_at = as_utc(item.client_updated_at)
+    task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     task.updated_at = now
     session.add(task)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -256,14 +361,14 @@ async def _push_template(
     if item.action == "delete":
         if template is None or template.user_id != user_id or template.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(template.client_updated_at):
+        if _clamp_client_timestamp(item.client_updated_at) <= as_utc(template.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=template.updated_at,
                 conflict_reason="server version is newer",
             )
-        template.client_updated_at = as_utc(item.client_updated_at)
+        template.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         template.deleted_at = now
         template.updated_at = now
         session.add(template)
@@ -281,16 +386,20 @@ async def _push_template(
             text=item.text,
             start_time=item.start_time,
             stop_time=item.stop_time,
-            client_updated_at=as_utc(item.client_updated_at),
+            client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
         session.add(template)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if template.user_id != user_id:
-        from app.services.db_service import ValidationError
-        raise ValidationError("template not found")
+        # See the equivalent check in _push_label.
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            conflict_reason="server version is newer",
+        )
 
-    if as_utc(item.client_updated_at) <= as_utc(template.client_updated_at):
+    if _clamp_client_timestamp(item.client_updated_at) <= as_utc(template.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -309,7 +418,7 @@ async def _push_template(
         template.stop_time = item.stop_time
     if template.deleted_at is not None:
         template.deleted_at = None
-    template.client_updated_at = as_utc(item.client_updated_at)
+    template.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     template.updated_at = now
     session.add(template)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -322,25 +431,33 @@ async def _push_work_location(
     now = _now()
     date_key = item.date.isoformat()
 
+    # The unique index on (user_id, date) is partial (active rows only), so
+    # multiple soft-deleted rows are legal at the schema level.  Pick the
+    # active row if one exists, otherwise the most recently updated tombstone,
+    # instead of scalar_one_or_none() which would raise on duplicates and
+    # abort the whole push batch.
     result = await session.execute(
-        select(WorkLocation).where(
+        select(WorkLocation)
+        .where(
             WorkLocation.user_id == user_id,
             WorkLocation.date == item.date,
         )
+        .order_by(WorkLocation.deleted_at.is_(None).desc(), WorkLocation.updated_at.desc())
+        .limit(1)
     )
-    location: WorkLocation | None = result.scalar_one_or_none()
+    location: WorkLocation | None = result.scalars().first()
 
     if item.action == "delete":
         if location is None or location.deleted_at is not None:
             return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(location.client_updated_at):
+        if _clamp_client_timestamp(item.client_updated_at) <= as_utc(location.client_updated_at):
             return SyncRecordResult(
                 id=date_key,
                 status="conflict",
                 server_updated_at=location.updated_at,
                 conflict_reason="server version is newer",
             )
-        location.client_updated_at = as_utc(item.client_updated_at)
+        location.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         location.deleted_at = now
         location.updated_at = now
         session.add(location)
@@ -355,12 +472,12 @@ async def _push_work_location(
             date=item.date,
             country_code=item.country_code,
             label=item.label,
-            client_updated_at=as_utc(item.client_updated_at),
+            client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
         session.add(location)
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
-    if as_utc(item.client_updated_at) <= as_utc(location.client_updated_at):
+    if _clamp_client_timestamp(item.client_updated_at) <= as_utc(location.client_updated_at):
         return SyncRecordResult(
             id=date_key,
             status="conflict",
@@ -374,7 +491,7 @@ async def _push_work_location(
         location.label = item.label
     if location.deleted_at is not None:
         location.deleted_at = None
-    location.client_updated_at = as_utc(item.client_updated_at)
+    location.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     location.updated_at = now
     session.add(location)
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
@@ -398,14 +515,14 @@ async def _push_time_off_entry(
     if isinstance(item, TimeOffEntrySyncDeleteItem):
         if entry is None or entry.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(entry.client_updated_at):
+        if _clamp_client_timestamp(item.client_updated_at) <= as_utc(entry.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=entry.updated_at,
                 conflict_reason="server version is newer",
             )
-        entry.client_updated_at = as_utc(item.client_updated_at)
+        entry.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         entry.deleted_at = now
         entry.updated_at = now
         session.add(entry)
@@ -438,11 +555,11 @@ async def _push_time_off_entry(
             end_date=item.end_date,
             weekday=item.weekday,
         )
-        entry.client_updated_at = as_utc(item.client_updated_at)
+        entry.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         session.add(entry)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
-    if as_utc(item.client_updated_at) <= as_utc(entry.client_updated_at):
+    if _clamp_client_timestamp(item.client_updated_at) <= as_utc(entry.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -466,7 +583,7 @@ async def _push_time_off_entry(
         entry.note = item.note
     if entry.deleted_at is not None:
         entry.deleted_at = None
-    entry.client_updated_at = as_utc(item.client_updated_at)
+    entry.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     entry.updated_at = now
     session.add(entry)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -481,14 +598,14 @@ async def _push_gantt_task(
     if item.action == "delete":
         if task is None or task.user_id != user_id or task.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
+        if _clamp_client_timestamp(item.client_updated_at) <= as_utc(task.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=task.updated_at,
                 conflict_reason="server version is newer",
             )
-        task.client_updated_at = as_utc(item.client_updated_at)
+        task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
@@ -512,16 +629,20 @@ async def _push_gantt_task(
             progress=item.progress or 0,
             dependencies=item.dependencies,
             notes=item.notes,
-            client_updated_at=as_utc(item.client_updated_at),
+            client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
         session.add(task)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task.user_id != user_id:
-        from app.services.db_service import ValidationError
-        raise ValidationError("gantt task not found")
+        # See the equivalent check in _push_label.
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            conflict_reason="server version is newer",
+        )
 
-    if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
+    if _clamp_client_timestamp(item.client_updated_at) <= as_utc(task.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -543,7 +664,7 @@ async def _push_gantt_task(
         task.notes = item.notes
     if task.deleted_at is not None:
         task.deleted_at = None
-    task.client_updated_at = as_utc(item.client_updated_at)
+    task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     task.updated_at = now
     session.add(task)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -590,8 +711,16 @@ async def push_changes(
         "gantt_tasks": [],
     }
 
+    # Referenced entities are processed before the entities that link to them:
+    # labels and gantt tasks must exist before tasks/templates that reference
+    # them are validated.  A first-sync upload sends everything in one batch,
+    # so processing tasks before gantt tasks would reject any task carrying a
+    # gantt_task_id link with "gantt task not found".
     for item in changes.labels:
         results["labels"].append(await _push_label(session, user_id, item))
+
+    for item in changes.gantt_tasks:
+        results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
 
     for item in changes.tasks:
         results["tasks"].append(await _push_task(session, user_id, item))
@@ -604,9 +733,6 @@ async def push_changes(
 
     for item in changes.time_off_entries:
         results["time_off_entries"].append(await _push_time_off_entry(session, user_id, item))
-
-    for item in changes.gantt_tasks:
-        results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
 
     await session.commit()
     return SyncPushResponse(results=results)
@@ -632,32 +758,52 @@ async def pull_changes(
         work_locations=[WorkLocationSyncRead.model_validate(r, from_attributes=True) for r in work_locations],
         time_off_entries=[TimeOffEntrySyncRead.model_validate(r, from_attributes=True) for r in time_off_entries],
         gantt_tasks=[GanttTaskSyncRead.model_validate(r, from_attributes=True) for r in gantt_tasks],
-        server_timestamp=_now(),
+        server_timestamp=_now() - _PULL_CURSOR_OVERLAP,
     )
 
 
+type _StatusEntityModel = SyncEntityModel | UserPreferences
+
+_STATUS_ENTITY_MODELS: tuple[tuple[str, type[_StatusEntityModel]], ...] = (
+    ("labels", TimeTrackingLabel),
+    ("tasks", TimeTrackingTask),
+    ("templates", TimeTrackingTemplate),
+    ("work_locations", WorkLocation),
+    ("time_off_entries", TimeOffEntry),
+    ("gantt_tasks", GanttTask),
+    ("preferences", UserPreferences),
+)
+
+
 async def get_sync_status(session: AsyncSession, user_id: int) -> SyncStatusResponse:
-    """Return the most-recent ``updated_at`` per entity type for the user."""
+    """Return the most-recent ``updated_at`` per entity type for the user.
 
-    async def _max_ts(model, user_id: int) -> datetime | None:
-        result = await session.execute(
-            select(sql_func.max(model.updated_at)).where(model.user_id == user_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def _prefs_updated_at(user_id: int) -> datetime | None:
-        result = await session.execute(
-            select(UserPreferences.updated_at).where(UserPreferences.user_id == user_id)
-        )
-        return result.scalar_one_or_none()
+    A single UNION ALL query replaces what used to be 7 sequential
+    round-trips (one MAX(updated_at) query per entity type plus one for
+    preferences) — AsyncSession only supports one in-flight statement at a
+    time anyway, so those awaits were purely serial latency, not parallel
+    work. Each subquery is an unconditional MAX() with no GROUP BY, so it
+    always returns exactly one row (NULL when the user has no rows for that
+    entity), keeping the UNION ALL at a fixed 7 rows.
+    """
+    subqueries = [
+        select(
+            literal(entity).label("entity"),
+            sql_func.max(model.updated_at).label("updated_at"),
+        ).where(model.user_id == user_id)
+        for entity, model in _STATUS_ENTITY_MODELS
+    ]
+    combined = subqueries[0].union_all(*subqueries[1:])
+    result = await session.execute(combined)
+    by_entity: dict[str, datetime | None] = {row.entity: row.updated_at for row in result}
 
     return SyncStatusResponse(
-        labels_updated_at=await _max_ts(TimeTrackingLabel, user_id),
-        tasks_updated_at=await _max_ts(TimeTrackingTask, user_id),
-        templates_updated_at=await _max_ts(TimeTrackingTemplate, user_id),
-        work_locations_updated_at=await _max_ts(WorkLocation, user_id),
-        time_off_entries_updated_at=await _max_ts(TimeOffEntry, user_id),
-        gantt_tasks_updated_at=await _max_ts(GanttTask, user_id),
-        preferences_updated_at=await _prefs_updated_at(user_id),
-        server_timestamp=_now(),
+        labels_updated_at=by_entity.get("labels"),
+        tasks_updated_at=by_entity.get("tasks"),
+        templates_updated_at=by_entity.get("templates"),
+        work_locations_updated_at=by_entity.get("work_locations"),
+        time_off_entries_updated_at=by_entity.get("time_off_entries"),
+        gantt_tasks_updated_at=by_entity.get("gantt_tasks"),
+        preferences_updated_at=by_entity.get("preferences"),
+        server_timestamp=_now() - _PULL_CURSOR_OVERLAP,
     )

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -95,13 +95,67 @@ async def test_whoami_and_time_tracking_summary_happy_path(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     whoami_payload = await backend.whoami()
-    summary_payload = await backend.get_time_tracking_summary()
+    # Explicit range: the fixed 2026-05-01 task date would fall outside the
+    # no-args default 30-day lookback window once "now" (real wall-clock
+    # time in CI) moves past it — see test_get_time_tracking_summary_default_window
+    # for coverage of that default.
+    summary_payload = await backend.get_time_tracking_summary(
+        start_at=datetime(2026, 4, 1, tzinfo=UTC),
+        end_at=datetime(2026, 6, 1, tzinfo=UTC),
+    )
 
     assert whoami_payload["user_id"] == user.id
     assert whoami_payload["username"] == "mcp-user"
     assert summary_payload["task_count"] == 1
     assert summary_payload["tracked_seconds"] == 5400
     assert summary_payload["tasks"][0]["text"] == "Task from MCP"
+    assert summary_payload["default_range_applied"] is False
+
+
+async def test_get_time_tracking_summary_default_window(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Omitting both start_at and end_at defaults to a trailing 30-day window.
+
+    A task inside the window is included; one 60 days back (well outside
+    the 30-day default) is not — bounding the response to a recent slice
+    instead of the user's entire history.
+    """
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+    now = datetime.now(UTC)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="default-window-user", display_name="Default Window")
+        )
+        await db_service.create_task(
+            session,
+            user.id,
+            TaskCreate(
+                text="Recent task",
+                start_time=now - timedelta(days=1),
+                stop_time=now - timedelta(days=1) + timedelta(hours=1),
+            ),
+        )
+        await db_service.create_task(
+            session,
+            user.id,
+            TaskCreate(
+                text="Old task",
+                start_time=now - timedelta(days=60),
+                stop_time=now - timedelta(days=60) + timedelta(hours=1),
+            ),
+        )
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    summary_payload = await backend.get_time_tracking_summary()
+
+    assert summary_payload["default_range_applied"] is True
+    assert summary_payload["task_count"] == 1
+    assert summary_payload["tasks"][0]["text"] == "Recent task"
 
 
 async def test_list_labels_returns_active_labels_for_authenticated_user(
@@ -241,7 +295,7 @@ async def test_start_time_entry_blocks_second_running_task(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """start_time_entry raises ConflictError when a running task already exists."""
+    """start_time_entry raises ValueError (mapped from ConflictError) when a running task already exists."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -260,7 +314,7 @@ text="First task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
 
-    with pytest.raises(db_service.ConflictError):
+    with pytest.raises(ValueError, match="only one running task"):
         await backend.start_time_entry(
         text="Second task",
             start_time=datetime(2026, 5, 1, 9, 30, tzinfo=UTC),
@@ -272,7 +326,7 @@ async def test_stop_time_entry_no_running_task(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """stop_time_entry raises NotFoundError when no running task exists."""
+    """stop_time_entry raises ValueError (mapped from NotFoundError) when no running task exists."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -286,7 +340,7 @@ async def test_stop_time_entry_no_running_task(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    with pytest.raises(db_service.NotFoundError, match="no running task"):
+    with pytest.raises(ValueError, match="no running task"):
         await backend.stop_time_entry()
 
 
@@ -363,7 +417,7 @@ async def test_update_time_tracking_task_unauthorized(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """update_time_tracking_task raises NotFoundError for another user's task."""
+    """update_time_tracking_task raises ValueError (mapped from NotFoundError) for another user's task."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -387,7 +441,7 @@ async def test_update_time_tracking_task_unauthorized(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
-    with pytest.raises(db_service.NotFoundError):
+    with pytest.raises(ValueError):
         await backend.update_time_tracking_task(
         task_id=task.id,
             text="Hacked",
@@ -442,7 +496,7 @@ async def test_delete_time_tracking_task_unauthorized(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """delete_time_tracking_task raises NotFoundError for another user's task."""
+    """delete_time_tracking_task raises ValueError (mapped from NotFoundError) for another user's task."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -470,7 +524,7 @@ async def test_delete_time_tracking_task_unauthorized(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
-    with pytest.raises(db_service.NotFoundError):
+    with pytest.raises(ValueError):
         await backend.delete_time_tracking_task(task_id=task.id)
 
 
@@ -541,7 +595,7 @@ value_date=date(2026, 5, 1),
     assert deleted["date"] == "2026-05-01"
     assert deleted["user_id"] == user.id
 
-    with pytest.raises(db_service.NotFoundError):
+    with pytest.raises(ValueError):
         await backend.delete_work_location(
         value_date=date(2026, 5, 1),
         )
@@ -657,7 +711,7 @@ async def test_delete_time_off_event_unauthorized(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """delete_time_off_event raises NotFoundError for another user's entry."""
+    """delete_time_off_event raises ValueError (mapped from NotFoundError) for another user's entry."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -681,7 +735,7 @@ async def test_delete_time_off_event_unauthorized(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
-    with pytest.raises(db_service.NotFoundError):
+    with pytest.raises(ValueError):
         await backend.delete_time_off_event(entry_id=entry.entry_id)
 
 
@@ -765,7 +819,7 @@ async def test_delete_gantt_task_unauthorized(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """delete_gantt_task raises NotFoundError for another user's task."""
+    """delete_gantt_task raises ValueError (mapped from NotFoundError) for another user's task."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -789,7 +843,7 @@ async def test_delete_gantt_task_unauthorized(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
 
-    with pytest.raises(db_service.NotFoundError):
+    with pytest.raises(ValueError):
         await backend.delete_gantt_task(task_id=gantt.id)
 
 
@@ -821,6 +875,10 @@ async def test_write_tools_produce_audit_log_entries(
 value_date=date(2026, 5, 1),
         country_code="DE",
     )
+    # append() dispatches the file write to a background thread when called
+    # from a running event loop (which this async test is) — wait for it
+    # before asserting on file contents.
+    await audit_module.flush()
 
     assert audit_file.exists()
     lines = [json.loads(line) for line in audit_file.read_text().splitlines() if line.strip()]

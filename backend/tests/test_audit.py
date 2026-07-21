@@ -174,23 +174,80 @@ def test_audit_timestamp_format(temp_audit_dir):
     assert timestamp.tzinfo is not None
 
 
-def test_audit_append_permission_error(temp_audit_dir, monkeypatch):
-    """Test that permission errors are raised."""
+def test_audit_append_permission_error_is_swallowed(temp_audit_dir, monkeypatch):
+    """Audit logging is diagnostic: a permission error must not raise.
+
+    A failure to create the audit log directory (or open the log file) is
+    logged and swallowed rather than propagated, so a disk/permissions issue
+    on the audit log can never fail the operation being recorded.
+    """
     audit_dir, audit_file = temp_audit_dir
-    
+
     # Create directory with no write permissions (Unix only)
     audit_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Mock mkdir to raise PermissionError
     original_mkdir = Path.mkdir
-    
+
     def mock_mkdir(self, *args, **kwargs):
         if str(self) == str(audit_dir):
             raise PermissionError("No write permission")
         return original_mkdir(self, *args, **kwargs)
-    
+
     monkeypatch.setattr(Path, "mkdir", mock_mkdir)
-    
-    # Should raise PermissionError
-    with pytest.raises(PermissionError):
-        audit_logger.append("test.hday", "read")
+
+    # Must not raise, and must not have written anything.
+    audit_logger.append("test.hday", "read")
+    assert not audit_file.exists()
+
+
+def test_audit_append_dispatches_to_thread_inside_event_loop(temp_audit_dir):
+    """Inside a running event loop, the write happens on a background thread.
+
+    append() itself is synchronous, so this drives it from an async test and
+    awaits the dispatched executor future to observe the completed write
+    without depending on real-world thread-scheduling timing.
+    """
+    import asyncio
+
+    audit_dir, audit_file = temp_audit_dir
+
+    async def _run() -> None:
+        loop = asyncio.get_running_loop()
+        original_run_in_executor = loop.run_in_executor
+        futures = []
+
+        def capturing_run_in_executor(executor, func, *args):
+            future = original_run_in_executor(executor, func, *args)
+            futures.append(future)
+            return future
+
+        loop.run_in_executor = capturing_run_in_executor
+        try:
+            audit_logger.append("async.hday", "read", "via loop")
+            assert futures, "append() did not dispatch to run_in_executor"
+            await futures[0]
+        finally:
+            loop.run_in_executor = original_run_in_executor
+
+    asyncio.run(_run())
+
+    with open(audit_file, encoding="utf-8") as f:
+        entry = json.loads(f.readline())
+    assert entry["target"] == "async.hday"
+    assert entry["details"] == "via loop"
+
+
+def test_audit_log_rotates_past_max_bytes(temp_audit_dir, monkeypatch):
+    """The audit log rotates to a backup file once it exceeds the size cap."""
+    from app.audit import logger as audit_module
+
+    audit_dir, audit_file = temp_audit_dir
+    monkeypatch.setattr(audit_module, "_MAX_BYTES", 200)
+    monkeypatch.setattr(audit_module, "_BACKUP_COUNT", 2)
+
+    for i in range(50):
+        audit_logger.append(f"file{i}.hday", "read", "x" * 20)
+
+    backup_file = audit_file.with_name(audit_file.name + ".1")
+    assert backup_file.exists(), "expected at least one rotation to have occurred"

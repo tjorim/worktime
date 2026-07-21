@@ -86,25 +86,26 @@ describe("useOngoingSync", () => {
   describe("enqueueChange", () => {
     it("pushes the change immediately when online and updates lastSyncedAt", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
-      const refreshedStatus = {
-        labels_updated_at: null,
-        tasks_updated_at: "2026-01-02T00:00:00.000Z",
-        templates_updated_at: null,
-        work_locations_updated_at: null,
-        time_off_entries_updated_at: null,
-        preferences_updated_at: null,
+      const postPushPullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
       // Mocks are consumed in order:
       // 1. Initial flush on mount: outbox empty → no push, only a pull
       // 2. enqueueChange: immediate push succeeds (no conflicts)
-      // 3. enqueueChange: fetchSyncStatus refreshes the cursor (extra round-trip
-      //    because the push response does not include a server_timestamp)
+      // 3. enqueueChange: pull from the pre-push cursor to advance the cursor
+      //    (a status-only refresh would silently skip concurrent changes from
+      //    other devices — see useOngoingSync.enqueueChange)
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
-        .mockResolvedValueOnce({ ok: true, json: async () => refreshedStatus }); // status refresh
+        .mockResolvedValueOnce({ ok: true, json: async () => postPushPullResponse }); // post-push pull
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -135,9 +136,84 @@ describe("useOngoingSync", () => {
 
       const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
       expect(pushCall).toBeDefined();
+      // The post-push pull must use the cursor from *before* this push, not a
+      // bare status refresh — otherwise a concurrent change from another
+      // device landing in that window would be silently skipped forever.
+      const postPushPullCall = mockFetch.mock.calls.find(([url]: [string]) =>
+        url.startsWith("/api/sync/pull?since="),
+      );
+      expect(postPushPullCall?.[0]).toBe(
+        `/api/sync/pull?since=${encodeURIComponent("2026-01-01T00:00:00.000Z")}`,
+      );
       // Outbox should remain empty after successful push
       expect(result.current.outboxCount).toBe(0);
       expect(getSyncOutboxSize("user-1")).toBe(0);
+    });
+
+    it("does not silently skip a concurrent change from another device landing during the push", async () => {
+      // Regression test for the cursor-advance race: previously, a successful
+      // push refreshed the cursor from GET /sync/status (a timestamp only,
+      // no data) instead of pulling — any record from another device with
+      // updated_at between the old and new cursor was never fetched again.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const concurrentChangeFromOtherDevice = {
+        labels: [],
+        tasks: [
+          {
+            id: "task-from-other-device",
+            user_id: 1,
+            label_id: null,
+            gantt_task_id: null,
+            text: "Created on another device",
+            start_time: "2026-01-01T12:00:00.000Z",
+            stop_time: null,
+            includes_break: false,
+            client_updated_at: "2026-01-01T12:00:00.000Z",
+            updated_at: "2026-01-01T12:00:00.000Z",
+            deleted_at: null,
+          },
+        ],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+        server_timestamp: "2026-01-02T00:00:00.000Z",
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
+        .mockResolvedValueOnce({ ok: true, json: async () => concurrentChangeFromOtherDevice }); // post-push pull
+
+      const onIncrementalPull = vi.fn();
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch, onIncrementalPull),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
+      });
+      onIncrementalPull.mockClear();
+
+      await act(async () => {
+        result.current.enqueueChange(emptySyncPayload());
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
+      });
+
+      // The concurrent record from the other device must have been applied,
+      // not silently skipped by a bare cursor advance.
+      expect(onIncrementalPull).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tasks: expect.arrayContaining([
+            expect.objectContaining({ id: "task-from-other-device" }),
+          ]),
+        }),
+      );
     });
 
     it("queues the change in the outbox when push fails", async () => {
@@ -171,6 +247,53 @@ describe("useOngoingSync", () => {
       expect(outboxRaw).not.toBeNull();
       const outbox = JSON.parse(outboxRaw!);
       expect(outbox[0].tasks[0].id).toBe("task-offline");
+    });
+
+    it("sets hasSyncError and schedules a back-off retry when an immediate push fails", async () => {
+      // Regression test: a failed enqueueChange push previously queued the
+      // change to the outbox but left hasSyncError false and scheduled no
+      // retry — the change would sit unsynced until some *unrelated*
+      // trigger (the next enqueueChange, a visibility/online event)
+      // happened to run flushAndPull. Isolated from the initial mount flush
+      // (which succeeds here with an empty outbox) so this failure is the
+      // only thing that could have set hasSyncError/retryAfter.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
+        .mockResolvedValueOnce({ ok: false }); // enqueueChange push fails
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
+      });
+      expect(result.current.hasSyncError).toBe(false);
+      expect(result.current.retryAfter).toBeNull();
+
+      const change = emptySyncPayload();
+      change.tasks.push({
+        id: "task-offline-2",
+        action: "create",
+        client_updated_at: "2026-01-02T00:00:00.000Z",
+        text: "Offline task 2",
+        label_id: null,
+        start_time: "2026-01-02T08:00:00.000Z",
+        stop_time: null,
+        includes_break: false,
+      });
+
+      await act(async () => {
+        result.current.enqueueChange(change);
+      });
+
+      await waitFor(() => {
+        expect(result.current.outboxCount).toBe(1);
+      });
+      expect(result.current.hasSyncError).toBe(true);
+      expect(result.current.retryAfter).not.toBeNull();
+      expect(result.current.retryAfter).toBeGreaterThan(Date.now());
     });
   });
 
@@ -1043,6 +1166,95 @@ describe("useOngoingSync", () => {
       });
 
       dateSpy.mockRestore();
+    });
+
+    it("automatically retries once the back-off window elapses, with no user interaction", async () => {
+      // Regression test: back-off previously only *gated* passive triggers
+      // (visibility/online) — nothing scheduled a retry attempt on its own,
+      // so a tab left open and idle past the window would never retry until
+      // the user did something (switched tabs, went offline/online). Uses
+      // real timing (no fake timers) since this file relies on real promise
+      // resolution throughout; the back-off window is the real 1 s minimum.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      let callCount = 0;
+      mockFetch.mockImplementation(async (url: string) => {
+        callCount++;
+        if (url === "/api/sync/push") {
+          if (callCount <= 1) return { ok: false }; // Initial flush fails.
+          return { ok: true, json: async () => emptyPushResponse };
+        }
+        if (url.startsWith("/api/sync/pull")) {
+          return { ok: true, json: async () => incrementalPullResponse };
+        }
+        return { ok: false };
+      });
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+      const callsAfterInitialFailure = mockFetch.mock.calls.length;
+
+      // No visibility/online event fires — wait past the back-off window and
+      // let the scheduled timer retry on its own.
+      await waitFor(
+        () => {
+          expect(result.current.hasSyncError).toBe(false);
+        },
+        { timeout: INITIAL_BACK_OFF_MS + 2_000 },
+      );
+
+      expect(mockFetch.mock.calls.length).toBeGreaterThan(callsAfterInitialFailure);
+      expect(result.current.retryAfter).toBeNull();
+    });
+
+    it("cancels the pending scheduled retry once a flush succeeds via another trigger", async () => {
+      // If the online event's forced flush succeeds first, the timer from
+      // the earlier failure must not fire a second, redundant retry later.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      let callCount = 0;
+      mockFetch.mockImplementation(async (url: string) => {
+        callCount++;
+        if (url === "/api/sync/push") {
+          if (callCount <= 1) return { ok: false }; // Initial flush fails.
+          return { ok: true, json: async () => emptyPushResponse };
+        }
+        if (url.startsWith("/api/sync/pull")) {
+          return { ok: true, json: async () => incrementalPullResponse };
+        }
+        return { ok: false };
+      });
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(false);
+        expect(result.current.retryAfter).toBeNull();
+      });
+
+      const callsAfterOnlineSuccess = mockFetch.mock.calls.length;
+
+      // Wait past what would have been the original scheduled retry time.
+      // Real timing: no assertion inside waitFor can observe "nothing
+      // happened", so just wait out the window directly.
+      await new Promise((resolve) => setTimeout(resolve, INITIAL_BACK_OFF_MS + 200));
+
+      expect(mockFetch.mock.calls.length).toBe(callsAfterOnlineSuccess);
     });
   });
 });

@@ -26,6 +26,8 @@ def test_default_settings():
     assert settings.OIDC_ISSUER_URL == "http://localhost:9000/application/o/worktime"
     assert settings.OIDC_AUDIENCE == ""
     assert settings.OIDC_ALGORITHMS == "RS256"
+    assert settings.RATE_LIMIT_ENABLED is True
+    assert settings.RATE_LIMIT_DEFAULT == "200/minute"
 
 
 def test_custom_settings():

@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import get_authenticated_user_id, require_user_match
+from app.routers.auth import get_authenticated_user_id, resolve_scoped_user_id
 from app.schemas import (
     LabelCreate,
     LabelListResponse,
@@ -45,6 +45,7 @@ from app.services.db_service import (
     update_task,
     update_template,
 )
+from app.utils.pagination import MAX_PAGE_LIMIT, paginate
 from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/time-tracking", tags=["Time Tracking"])
@@ -63,11 +64,11 @@ def _handle_error(error: Exception) -> None:
 @router.post("/labels", response_model=LabelRead, status_code=status.HTTP_201_CREATED)
 async def create_label_endpoint(
     payload: LabelCreate,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         label = await create_label(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -79,18 +80,21 @@ async def create_label_endpoint(
 
 @router.get("/labels", response_model=LabelListResponse)
 async def list_labels_endpoint(
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
+    limit: int | None = Query(default=None, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         labels = await list_labels_for_user(session, user_id)
 
+    page, total = paginate(labels, limit=limit, offset=offset)
     response = LabelListResponse(
-        items=[LabelRead.model_validate(item, from_attributes=True) for item in labels],
-        total=len(labels),
+        items=[LabelRead.model_validate(item, from_attributes=True) for item in page],
+        total=total,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -102,11 +106,11 @@ async def list_labels_endpoint(
 @router.get("/labels/{label_id}", response_model=LabelRead)
 async def get_label_endpoint(
     label_id: str,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         label = await get_label(session, user_id, label_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -120,11 +124,11 @@ async def get_label_endpoint(
 async def update_label_endpoint(
     label_id: str,
     payload: LabelUpdate,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         label = await update_label(session, user_id, label_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -137,11 +141,11 @@ async def update_label_endpoint(
 @router.delete("/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_label_endpoint(
     label_id: str,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         await delete_label(session, user_id, label_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -153,11 +157,11 @@ async def delete_label_endpoint(
 @router.post("/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task_endpoint(
     payload: TaskCreate,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
 
     try:
         task = await create_task(session, user_id, payload)
@@ -170,15 +174,17 @@ async def create_task_endpoint(
 
 @router.get("/tasks", response_model=TaskListResponse)
 async def list_tasks_endpoint(
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     label_id: str | None = None,
     gantt_task_id: str | None = None,
+    limit: int | None = Query(default=None, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         tasks = await list_tasks(
@@ -190,9 +196,10 @@ async def list_tasks_endpoint(
             gantt_task_id=gantt_task_id,
         )
 
+    page, total = paginate(tasks, limit=limit, offset=offset)
     response = TaskListResponse(
-        items=[TaskRead.model_validate(item, from_attributes=True) for item in tasks],
-        total=len(tasks),
+        items=[TaskRead.model_validate(item, from_attributes=True) for item in page],
+        total=total,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -203,11 +210,11 @@ async def list_tasks_endpoint(
 
 @router.get("/tasks/running", response_model=TaskRead | None)
 async def get_running_task_endpoint(
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         task = await get_running_task(session, user_id)
@@ -227,11 +234,11 @@ async def get_running_task_endpoint(
 @router.get("/tasks/{task_id}", response_model=TaskRead)
 async def get_task_endpoint(
     task_id: str,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         task = await get_task(session, user_id, task_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -245,11 +252,11 @@ async def get_task_endpoint(
 async def update_task_endpoint(
     task_id: str,
     payload: TaskUpdate,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         task = await update_task(session, user_id, task_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -262,11 +269,11 @@ async def update_task_endpoint(
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task_endpoint(
     task_id: str,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         await delete_task(session, user_id, task_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -278,11 +285,11 @@ async def delete_task_endpoint(
 @router.post("/templates", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
 async def create_template_endpoint(
     payload: TemplateCreate,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
 
     try:
         template = await create_template(session, user_id, payload)
@@ -295,18 +302,21 @@ async def create_template_endpoint(
 
 @router.get("/templates", response_model=TemplateListResponse)
 async def list_templates_endpoint(
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
+    limit: int | None = Query(default=None, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         templates = await list_templates_for_user(session, user_id)
 
+    page, total = paginate(templates, limit=limit, offset=offset)
     response = TemplateListResponse(
-        items=[TemplateRead.model_validate(item, from_attributes=True) for item in templates],
-        total=len(templates),
+        items=[TemplateRead.model_validate(item, from_attributes=True) for item in page],
+        total=total,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -318,11 +328,11 @@ async def list_templates_endpoint(
 @router.get("/templates/{template_id}", response_model=TemplateRead)
 async def get_template_endpoint(
     template_id: str,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         template = await get_template(session, user_id, template_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -336,11 +346,11 @@ async def get_template_endpoint(
 async def update_template_endpoint(
     template_id: str,
     payload: TemplateUpdate,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         template = await update_template(session, user_id, template_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -353,11 +363,11 @@ async def update_template_endpoint(
 @router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_template_endpoint(
     template_id: str,
-    user_id: int = Query(..., ge=1),
+    user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    require_user_match(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
     try:
         await delete_template(session, user_id, template_id)
     except (NotFoundError, ConflictError, ValidationError) as error:

@@ -86,11 +86,13 @@ def test_db_user_crud_endpoints(
     assert by_username_response.status_code == 200
     assert by_username_response.json()["id"] == user_id
 
-    forbidden_by_username = client.get(
+    # 404 (not 403) for a foreign username — a 403 here would let any
+    # authenticated caller enumerate which usernames are taken.
+    not_found_by_username = client.get(
         "/api/users/by-username/api-user-other",
         headers=_auth_headers(user_id),
     )
-    assert forbidden_by_username.status_code == 403
+    assert not_found_by_username.status_code == 404
 
     update_response = client.put(
         f"/api/users/{user_id}",
@@ -443,11 +445,11 @@ def test_work_location_endpoints_require_auth_and_user_match(db_client: TestClie
         headers=admin_headers,
     ).json()["id"]
 
-    unauthenticated = client.get(f"/api/work-locations/?user_id={owner_id}")
+    unauthenticated = client.get(f"/api/work-locations?user_id={owner_id}")
     assert unauthenticated.status_code == 401
 
     forbidden = client.get(
-        f"/api/work-locations/?user_id={owner_id}",
+        f"/api/work-locations?user_id={owner_id}",
         headers=_auth_headers(other_id),
     )
     assert forbidden.status_code == 403
@@ -465,7 +467,7 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     headers = _auth_headers(user_id)
 
     create_response = client.post(
-        f"/api/work-locations/?user_id={user_id}",
+        f"/api/work-locations?user_id={user_id}",
         json={"date": "2026-01-02", "country_code": "nl", "label": "Home"},
         headers=headers,
     )
@@ -473,7 +475,7 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     assert create_response.json()["country_code"] == "NL"
 
     update_response = client.post(
-        f"/api/work-locations/?user_id={user_id}",
+        f"/api/work-locations?user_id={user_id}",
         json={"date": "2026-01-02", "country_code": "BE", "label": "Client"},
         headers=headers,
     )
@@ -481,7 +483,7 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     assert update_response.json()["label"] == "Client"
 
     list_response = client.get(
-        f"/api/work-locations/?user_id={user_id}&start_date=2026-01-01&end_date=2026-01-03",
+        f"/api/work-locations?user_id={user_id}&start_date=2026-01-01&end_date=2026-01-03",
         headers=headers,
     )
     assert list_response.status_code == 200
@@ -508,14 +510,14 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     assert missing_response.status_code == 404
 
     invalid_country_response = client.post(
-        f"/api/work-locations/?user_id={user_id}",
+        f"/api/work-locations?user_id={user_id}",
         json={"date": "2026-01-03", "country_code": "ZZ", "label": None},
         headers=headers,
     )
     assert invalid_country_response.status_code == 422
 
     missing_body_response = client.post(
-        f"/api/work-locations/?user_id={user_id}",
+        f"/api/work-locations?user_id={user_id}",
         headers=headers,
     )
     assert missing_body_response.status_code == 422

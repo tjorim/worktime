@@ -488,3 +488,108 @@ def test_cross_user_cannot_read_modify_or_delete_time_tracking_resources(
         f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
         headers=other_headers,
     ).status_code == 403
+
+
+def test_user_id_query_param_is_optional_and_derived_from_auth(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    """Omitting ?user_id= now works — the authenticated user's own id is used.
+
+    The parameter is kept for backward compatibility (and is still validated
+    to match when provided — see the next test), but new callers no longer
+    need to pass it.
+    """
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "no-param-owner")
+    headers = auth_headers(user_id)
+
+    label_response = db_client.post(
+        "/api/time-tracking/labels",
+        json={"name": "No param", "color": "#445566"},
+        headers=headers,
+    )
+    assert label_response.status_code == 201, label_response.text
+    label_id = label_response.json()["id"]
+
+    list_response = db_client.get("/api/time-tracking/labels", headers=headers)
+    assert list_response.status_code == 200
+    assert any(item["id"] == label_id for item in list_response.json()["items"])
+
+    get_response = db_client.get(f"/api/time-tracking/labels/{label_id}", headers=headers)
+    assert get_response.status_code == 200
+
+    delete_response = db_client.delete(f"/api/time-tracking/labels/{label_id}", headers=headers)
+    assert delete_response.status_code == 204
+
+
+def test_user_id_query_param_still_validated_when_provided(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    """Passing a foreign user_id (old calling convention) still 403s."""
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "param-owner")
+    other_id = create_user_factory(db_client, admin_headers, "param-other")
+    other_headers = auth_headers(other_id)
+
+    response = db_client.post(
+        f"/api/time-tracking/labels?user_id={owner_id}",
+        json={"name": "Should fail", "color": "#665544"},
+        headers=other_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_list_labels_pagination(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    """?limit=&offset= slice the response while `total` reflects the full count."""
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "pagination-owner")
+    headers = auth_headers(user_id)
+
+    created_ids = []
+    for i in range(5):
+        response = db_client.post(
+            "/api/time-tracking/labels",
+            json={"name": f"Label {i}", "color": "#010101"},
+            headers=headers,
+        )
+        assert response.status_code == 201
+        created_ids.append(response.json()["id"])
+
+    # No pagination params — unpaginated behavior is unchanged.
+    full = db_client.get("/api/time-tracking/labels", headers=headers)
+    assert full.status_code == 200
+    assert full.json()["total"] == 5
+    assert len(full.json()["items"]) == 5
+
+    # limit alone.
+    first_page = db_client.get("/api/time-tracking/labels?limit=2", headers=headers)
+    assert first_page.status_code == 200
+    assert first_page.json()["total"] == 5
+    assert len(first_page.json()["items"]) == 2
+
+    # limit + offset covers the remainder without overlap or gaps.
+    second_page = db_client.get("/api/time-tracking/labels?limit=2&offset=2", headers=headers)
+    third_page = db_client.get("/api/time-tracking/labels?limit=2&offset=4", headers=headers)
+    assert len(second_page.json()["items"]) == 2
+    assert len(third_page.json()["items"]) == 1
+
+    seen_ids = {item["id"] for item in first_page.json()["items"]}
+    seen_ids |= {item["id"] for item in second_page.json()["items"]}
+    seen_ids |= {item["id"] for item in third_page.json()["items"]}
+    assert seen_ids == set(created_ids)
+
+    # Exceeding the server-side cap is rejected rather than silently clamped.
+    from app.utils.pagination import MAX_PAGE_LIMIT
+
+    too_large = db_client.get(
+        f"/api/time-tracking/labels?limit={MAX_PAGE_LIMIT + 1}", headers=headers
+    )
+    assert too_large.status_code == 422
