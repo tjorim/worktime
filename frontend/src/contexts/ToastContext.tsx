@@ -221,6 +221,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const showUndo = useCallback(
     (message: string, onUndo: () => void, icon?: string) => {
+      let clicked = false;
       const id = addToast({
         message,
         variant: "info",
@@ -229,8 +230,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
         action: {
           label: m.toast_undo(),
           onClick: () => {
-            onUndo();
-            removeToast(id);
+            if (clicked) return;
+            clicked = true;
+            try {
+              onUndo();
+            } finally {
+              removeToast(id);
+            }
           },
         },
       });
