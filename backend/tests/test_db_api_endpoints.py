@@ -86,11 +86,13 @@ def test_db_user_crud_endpoints(
     assert by_username_response.status_code == 200
     assert by_username_response.json()["id"] == user_id
 
-    forbidden_by_username = client.get(
+    # 404 (not 403) for a foreign username — a 403 here would let any
+    # authenticated caller enumerate which usernames are taken.
+    not_found_by_username = client.get(
         "/api/users/by-username/api-user-other",
         headers=_auth_headers(user_id),
     )
-    assert forbidden_by_username.status_code == 403
+    assert not_found_by_username.status_code == 404
 
     update_response = client.put(
         f"/api/users/{user_id}",
