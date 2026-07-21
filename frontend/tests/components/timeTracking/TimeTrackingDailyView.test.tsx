@@ -496,10 +496,6 @@ describe("TimeTrackingDailyView", () => {
   });
 
   describe("Gantt picker visibility", () => {
-    afterEach(() => {
-      window.localStorage.clear();
-    });
-
     const enableGantt = () => {
       window.localStorage.setItem(
         USER_STATE_STORAGE_KEY,
