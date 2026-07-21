@@ -53,6 +53,25 @@ describe("GanttTableView", () => {
     expect(rows[2]).toHaveTextContent("25%");
   });
 
+  it("formats start and end dates through locale-aware formatting instead of raw strings", () => {
+    render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+    const rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
+    expect(rows[1]).not.toHaveTextContent("2026-06-01");
+    expect(rows[1]).toHaveTextContent("Jun 1, 2026");
+    expect(rows[2]).not.toHaveTextContent("2026-06-05");
+    expect(rows[2]).toHaveTextContent("Jun 5, 2026");
+  });
+
+  it("shows a visible label for tasks with 0% progress", () => {
+    const emptyProgressTask: GanttTask = { ...tasks[1], id: "task-empty", progress: 0 };
+    render(
+      <GanttTableView tasks={[emptyProgressTask]} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("table", { name: "Gantt tasks" })).toHaveTextContent("0%");
+  });
+
   it("renders malformed dependency data safely", () => {
     const malformedTask = { ...tasks[0], dependencies: ["task-earlier"] } as unknown as GanttTask;
 
