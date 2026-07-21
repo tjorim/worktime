@@ -142,7 +142,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
             >
               <Toast.Body className="d-flex align-items-center">
                 {toast.icon && <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>}
-                <span className={isLight ? "text-dark" : "text-white"}>{toast.message}</span>
+                <span className={`${isLight ? "text-dark" : "text-white"} me-2`}>
+                  {toast.message}
+                </span>
                 <CloseButton
                   className="ms-auto"
                   variant={isLight ? undefined : "white"}
