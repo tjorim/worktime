@@ -22,8 +22,14 @@
  * - **Lifecycle**: the hook subscribes when both `isActive` is true and a
  *   transport is provided.  The transport's cleanup function is called on
  *   unmount or when inputs change.
+ *
+ * - **Reconnect recovery**: the server's per-connection event queue does not
+ *   survive a dropped connection, so `createFetchSseTransport` forces a
+ *   catch-up pull on every *re*connect (not the first connection), skipping
+ *   the dedup check — see its implementation for details.
  */
 
+import { fetchEventSource, EventStreamContentType } from "@microsoft/fetch-event-source";
 import { useEffect, useRef } from "react";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 import type { TriggerPullFn } from "@/hooks/useOngoingSync";
@@ -59,47 +65,95 @@ export interface SyncSignalTransport {
 // SSE transport adapter
 // ---------------------------------------------------------------------------
 
+/** Thrown from `onopen`/`onerror` to stop `fetchEventSource` from retrying. */
+class FatalSseError extends Error {}
+
+const INITIAL_RETRY_MS = 1_000;
+const MAX_RETRY_MS = 30_000;
+
 /**
- * Create an SSE-based `SyncSignalTransport` that connects to the given URL.
+ * Create a fetch-based `SyncSignalTransport` that connects to the given URL
+ * with a Bearer token.
  *
- * The returned transport opens an `EventSource` connection on `subscribe()`
- * and listens for `sync_changed` events.  It uses `withCredentials: true` so
- * that the browser's session cookie is included, satisfying the authentication
- * requirement for the `/api/sync/events` endpoint.
+ * `GET /api/sync/events` authenticates the same way as every other endpoint —
+ * an `Authorization: Bearer <token>` header — which native `EventSource`
+ * cannot send (it has no API for custom request headers; `withCredentials`
+ * only forwards cookies, and the backend has no cookie-based auth). This
+ * transport uses `@microsoft/fetch-event-source` to open the stream via
+ * `fetch()` instead, so the token can be attached like any other request.
  *
- * `EventSource` reconnects automatically on network interruptions; no manual
- * reconnect logic is needed.
+ * Reconnects with exponential backoff on network/stream errors. A 401/403
+ * response is treated as fatal (stops retrying) rather than hammering the
+ * endpoint with a token the server has already rejected — `OngoingSyncContext`
+ * recreates this transport whenever the access token changes (e.g. after a
+ * silent renewal), which re-subscribes with a fresh token.
  *
  * @param url - The full URL of the SSE endpoint (e.g. `https://api/sync/events`).
+ * @param accessToken - The current OIDC access token to send as a Bearer header.
  */
-export function createSseTransport(url: string): SyncSignalTransport {
+export function createFetchSseTransport(url: string, accessToken: string): SyncSignalTransport {
   return {
     subscribe(onSignal) {
-      const es = new EventSource(url, { withCredentials: true });
+      const controller = new AbortController();
+      let retryMs = INITIAL_RETRY_MS;
+      // The server's per-connection event queue (maxsize=1) only exists while
+      // a connection is open — any sync_changed notification fired during a
+      // drop is lost, not queued. On every *re*connect (not the first
+      // connection, which already gets its own initial pull on mount), force
+      // a catch-up pull with a synthetic "now" timestamp so it always beats
+      // the dedup check in useSyncSignal, regardless of whether anything was
+      // actually missed.
+      let hasConnectedOnce = false;
 
-      const handleMessage = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data) as { type?: string; server_timestamp?: string };
-          if (typeof data.server_timestamp === "string") {
-            onSignal(data.server_timestamp);
+      fetchEventSource(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: controller.signal,
+        async onopen(response) {
+          if (response.ok && response.headers.get("content-type")?.startsWith(EventStreamContentType)) {
+            retryMs = INITIAL_RETRY_MS;
+            if (hasConnectedOnce) {
+              onSignal(new Date().toISOString());
+            }
+            hasConnectedOnce = true;
+            return;
           }
-        } catch {
-          // Ignore malformed event data.
-          logger.warn("useSyncSignal: failed to parse SSE event data:", event.data);
-        }
-      };
-
-      es.addEventListener("sync_changed", handleMessage);
-
-      es.onerror = () => {
-        // EventSource reconnects automatically after every error; using debug
-        // level avoids console spam on flaky networks or proxy interruptions.
-        logger.debug("useSyncSignal: SSE connection error — will retry automatically.");
-      };
+          if (response.status === 401 || response.status === 403) {
+            throw new FatalSseError(`SSE authentication failed: ${response.status}`);
+          }
+          throw new Error(`SSE connection failed: ${response.status}`);
+        },
+        onmessage(event) {
+          if (event.event !== "sync_changed") return;
+          try {
+            const data = JSON.parse(event.data) as { type?: string; server_timestamp?: string };
+            if (typeof data.server_timestamp === "string") {
+              onSignal(data.server_timestamp);
+            }
+          } catch {
+            // Ignore malformed event data.
+            logger.warn("useSyncSignal: failed to parse SSE event data:", event.data);
+          }
+        },
+        onerror(err) {
+          if (err instanceof FatalSseError) {
+            logger.warn("useSyncSignal: SSE authentication failed — giving up until reconnect:", err);
+            throw err; // Rethrowing tells fetchEventSource to stop retrying.
+          }
+          // Any other error (network blip, proxy interruption, non-2xx status)
+          // gets an exponential-backoff retry; using debug level avoids console
+          // spam on flaky networks.
+          logger.debug("useSyncSignal: SSE connection error — retrying:", err);
+          const interval = retryMs;
+          retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
+          return interval;
+        },
+      }).catch(() => {
+        // Fatal errors and aborts both settle this promise; already logged
+        // above (or expected, for a clean unsubscribe) — nothing more to do.
+      });
 
       return () => {
-        es.removeEventListener("sync_changed", handleMessage);
-        es.close();
+        controller.abort();
       };
     },
   };

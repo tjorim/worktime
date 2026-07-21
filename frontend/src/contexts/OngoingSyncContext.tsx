@@ -26,7 +26,7 @@ import {
   type TriggerPullFn,
   type ResolveOngoingConflictsFn,
 } from "@/hooks/useOngoingSync";
-import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
+import { useSyncSignal, createFetchSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
 import { setSyncCollectionAuth, applyIncrementalPullToCollections } from "@/db/collections";
 import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
 
@@ -138,13 +138,17 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     onIncrementalPull,
   );
 
-  // Build the SSE transport. The transport is
-  // null when the user is not authenticated so that no connection is opened
-  // before sync is established.
+  // Build the SSE transport. The transport is null when the user is not
+  // authenticated, or has no access token yet, so that no connection is
+  // opened before sync is established. Re-created whenever the access token
+  // value changes (e.g. after a silent OIDC renewal) so the new connection
+  // always carries a fresh Bearer token — `createFetchSseTransport` bakes the
+  // token into the request at subscribe() time rather than reading it live.
+  const accessToken = isAuthenticated ? getAccessToken() : null;
   const sseTransport = useMemo<SyncSignalTransport | null>(() => {
-    if (!isAuthenticated) return null;
-    return createSseTransport("/api/sync/events");
-  }, [isAuthenticated]);
+    if (!accessToken) return null;
+    return createFetchSseTransport("/api/sync/events", accessToken);
+  }, [accessToken]);
 
   // Subscribe to sync-changed signals and trigger incremental pulls.
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
