@@ -29,7 +29,7 @@ from app.utils.timing import time_operation
 router = APIRouter(prefix="/work-locations", tags=["Work Locations"])
 
 
-@router.post("/", response_model=WorkLocationRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WorkLocationRead, status_code=status.HTTP_201_CREATED)
 async def create_or_update_work_location_endpoint(
     payload: WorkLocationCreate,
     user_id: int | None = Query(default=None, ge=1),
@@ -48,7 +48,7 @@ async def create_or_update_work_location_endpoint(
     return WorkLocationRead.model_validate(location, from_attributes=True)
 
 
-@router.get("/", response_model=WorkLocationListResponse)
+@router.get("", response_model=WorkLocationListResponse)
 async def list_work_locations_endpoint(
     user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),

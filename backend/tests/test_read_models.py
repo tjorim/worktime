@@ -52,7 +52,7 @@ def test_dashboard_returns_reusable_read_models(
     _seed_work_context(db_client, headers, schedule_type="5-shift", team_number=1)
 
     first_time_off = db_client.post(
-        "/api/time-off/",
+        "/api/time-off",
         json={
             "entry_id": "summer-trip",
             "entry_kind": "date",
@@ -66,7 +66,7 @@ def test_dashboard_returns_reusable_read_models(
     assert first_time_off.status_code == 201, first_time_off.text
 
     second_time_off = db_client.post(
-        "/api/time-off/",
+        "/api/time-off",
         json={
             "entry_id": "training-week",
             "entry_kind": "range",

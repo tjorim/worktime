@@ -31,7 +31,7 @@ from app.utils.timing import time_operation
 router = APIRouter(prefix="/time-off", tags=["Time Off"])
 
 
-@router.post("/", response_model=TimeOffEntryRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TimeOffEntryRead, status_code=status.HTTP_201_CREATED)
 async def create_or_update_time_off_endpoint(
     payload: TimeOffEntryCreate,
     authenticated_user_id: int = Depends(get_authenticated_user_id),
@@ -45,7 +45,7 @@ async def create_or_update_time_off_endpoint(
     )
 
 
-@router.get("/", response_model=TimeOffEntryListResponse)
+@router.get("", response_model=TimeOffEntryListResponse)
 async def list_time_off_entries_endpoint(
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     start_date: date | None = None,

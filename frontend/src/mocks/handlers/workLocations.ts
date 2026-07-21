@@ -16,7 +16,7 @@ export const workLocationHandlers = [
     });
   }),
 
-  http.post("*/api/work-locations/", async ({ request }) => {
+  http.post("*/api/work-locations", async ({ request }) => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
