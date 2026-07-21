@@ -130,6 +130,7 @@ function AppContent() {
     : [];
   const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
 
   const handleTabChange = useCallback(
@@ -267,6 +268,9 @@ function AppContent() {
             showAbout,
             openAbout: () => setShowAbout(true),
             closeAbout: () => setShowAbout(false),
+            showShortcuts,
+            openShortcuts: () => setShowShortcuts(true),
+            closeShortcuts: () => setShowShortcuts(false),
             myTeam,
             currentDate,
             setCurrentDate,

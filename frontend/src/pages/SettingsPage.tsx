@@ -16,7 +16,6 @@ import { hasMultipleTeams } from "@/utils/scheduleUtils";
 import { type ScheduleOption } from "@/data/rosters";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
-import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
@@ -49,7 +48,7 @@ const SETTINGS_SECTIONS: Array<{
 export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
-  const { openAbout } = useAppShellContext();
+  const { openAbout, openShortcuts } = useAppShellContext();
   const activeSection = search.section ?? "general";
 
   const sectionMeta = useMemo(() => {
@@ -113,6 +112,7 @@ export function SettingsPage() {
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
+              onShowShortcuts={openShortcuts}
             />
           </div>
         </div>
@@ -134,20 +134,22 @@ export type SettingsSection =
  *
  * @param onHide - Callback invoked when a settings action should close the page
  * @param onShowAbout - Optional callback invoked to open the global About experience
+ * @param onShowShortcuts - Optional callback invoked to open the global keyboard shortcuts overlay
  * @param activeSection - Active settings section key; defaults to "general" when unset
  * @returns Rendered settings page content
  */
 export function SettingsContent({
   onHide,
   onShowAbout,
+  onShowShortcuts,
   activeSection = "general",
 }: {
   onHide: () => void;
   onShowAbout?: () => void;
+  onShowShortcuts?: () => void;
   activeSection?: SettingsSection;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
@@ -353,7 +355,7 @@ export function SettingsContent({
         isDevMode={isDevMode}
         onShowChangelog={() => setShowChangelog(true)}
         onShowAboutHelp={() => onShowAbout?.()}
-        onShowShortcuts={() => setShowShortcuts(true)}
+        onShowShortcuts={() => onShowShortcuts?.()}
         onShowDevOptions={() => setShowDevOptions(true)}
       />
     ),
@@ -393,15 +395,6 @@ export function SettingsContent({
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={() => setShowChangelog(false)} />
-
-      {/* Keyboard Shortcuts Modal */}
-      <KeyboardShortcutsModal
-        show={showShortcuts}
-        onHide={() => setShowShortcuts(false)}
-        enableTimeOff={settings.enableTimeOff}
-        enableTimeTracking={settings.enableTimeTracking}
-        enableGantt={settings.enableGantt}
-      />
 
       {/* Developer Options Modal */}
       <DevOptionsPanel show={showDevOptions} onHide={() => setShowDevOptions(false)} />
