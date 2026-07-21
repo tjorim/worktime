@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import CloseButton from "react-bootstrap/CloseButton";
 import Toast from "react-bootstrap/Toast";
 import ToastContainer from "react-bootstrap/ToastContainer";
+import * as m from "@/paraglide/messages.js";
+
+/** Default autohide delay for info/success/warning toasts (ms). */
+const DEFAULT_TOAST_DELAY = 4000;
+/** Longer autohide delay for error toasts so failures aren't missed (ms). */
+const ERROR_TOAST_DELAY = 10000;
 
 export interface ToastMessage {
   id: string;
@@ -57,7 +64,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     const id = crypto.randomUUID();
     const newToast: ToastMessage = {
       id,
-      delay: 4000,
+      delay: DEFAULT_TOAST_DELAY,
       autohide: true,
       variant: "info",
       ...toast,
@@ -78,7 +85,12 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const showError = useCallback(
     (message: string, icon?: string) => {
-      addToast({ message, variant: "danger", icon: icon ?? "bi-x-circle-fill" });
+      addToast({
+        message,
+        variant: "danger",
+        icon: icon ?? "bi-x-circle-fill",
+        delay: ERROR_TOAST_DELAY,
+      });
     },
     [addToast],
   );
@@ -113,23 +125,36 @@ export function ToastProvider({ children }: ToastProviderProps) {
     <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer position="top-end" className="p-3 position-fixed" style={{ zIndex: 1100 }}>
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            onClose={() => removeToast(toast.id)}
-            show={true}
-            autohide={toast.autohide}
-            delay={toast.delay}
-            bg={toast.variant}
-          >
-            <Toast.Body className="d-flex align-items-center">
-              {toast.icon && <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>}
-              <span className={toast.variant === "warning" ? "text-dark" : "text-white"}>
-                {toast.message}
-              </span>
-            </Toast.Body>
-          </Toast>
-        ))}
+        {toasts.map((toast) => {
+          const isError = toast.variant === "danger";
+          const isLight = toast.variant === "warning";
+          return (
+            <Toast
+              key={toast.id}
+              onClose={() => removeToast(toast.id)}
+              show={true}
+              autohide={toast.autohide}
+              delay={toast.delay}
+              bg={toast.variant}
+              // Errors interrupt (assertive); other toasts announce politely.
+              role={isError ? "alert" : "status"}
+              aria-live={isError ? "assertive" : "polite"}
+            >
+              <Toast.Body className="d-flex align-items-center">
+                {toast.icon && <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>}
+                <span className={`${isLight ? "text-dark" : "text-white"} me-2`}>
+                  {toast.message}
+                </span>
+                <CloseButton
+                  className="ms-auto"
+                  variant={isLight ? undefined : "white"}
+                  onClick={() => removeToast(toast.id)}
+                  aria-label={m.toast_close_aria()}
+                />
+              </Toast.Body>
+            </Toast>
+          );
+        })}
       </ToastContainer>
     </ToastContext.Provider>
   );

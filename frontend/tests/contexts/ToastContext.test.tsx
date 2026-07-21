@@ -172,6 +172,59 @@ describe("ToastContext", () => {
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 
+  it("should announce non-error toasts politely with role=status", () => {
+    render(
+      <ToastProvider>
+        <TestComponent />
+      </ToastProvider>,
+    );
+
+    act(() => {
+      screen.getByText("Show Success").click();
+    });
+
+    const toast = screen.getByRole("status");
+    expect(toast).toHaveTextContent("Success message");
+    expect(toast).toHaveAttribute("aria-live", "polite");
+  });
+
+  it("should announce error toasts assertively with role=alert", () => {
+    render(
+      <ToastProvider>
+        <TestComponent />
+      </ToastProvider>,
+    );
+
+    act(() => {
+      screen.getByText("Show Error").click();
+    });
+
+    const toast = screen.getByRole("alert");
+    expect(toast).toHaveTextContent("Error message");
+    expect(toast).toHaveAttribute("aria-live", "assertive");
+  });
+
+  it("should dismiss a toast when the close button is clicked", () => {
+    render(
+      <ToastProvider>
+        <TestComponent />
+      </ToastProvider>,
+    );
+
+    act(() => {
+      screen.getByText("Show Success").click();
+    });
+
+    expect(screen.getByText("Success message")).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", { name: "Close notification" });
+    act(() => {
+      closeButton.click();
+    });
+
+    expect(screen.queryByText("Success message")).not.toBeInTheDocument();
+  });
+
   it("should render toast container with correct positioning", () => {
     render(
       <ToastProvider>
