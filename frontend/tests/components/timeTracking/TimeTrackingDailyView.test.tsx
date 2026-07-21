@@ -4,9 +4,11 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "@/components/timeTracking/TimeTrackingDailyView";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsProvider, defaultSettings } from "@/contexts/SettingsContext";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { ganttTasksCollection } from "@/db/collections";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 const TEST_LABELS = [
   { id: "Development", name: "Development", color: "#198754" },
@@ -490,6 +492,45 @@ describe("TimeTrackingDailyView", () => {
         newStartTime: `${today}T09:00`,
         newStopTime: `${today}T11:00`,
       });
+    });
+  });
+
+  describe("Gantt picker visibility", () => {
+    const enableGantt = () => {
+      window.localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { ...defaultSettings, enableGantt: true } }),
+      );
+    };
+
+    it("hides the Gantt task picker when the feature is disabled", () => {
+      renderView();
+
+      expect(screen.queryByLabelText(/^Gantt task$/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the Gantt task picker when enabled but no Gantt tasks exist", () => {
+      enableGantt();
+      renderView();
+
+      expect(screen.queryByLabelText(/^Gantt task$/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the Gantt task picker when enabled and Gantt tasks exist", () => {
+      enableGantt();
+      ganttTasksCollection.utils.writeUpsert([
+        {
+          id: "gantt-1",
+          name: "Plan release",
+          start: "2026-03-01",
+          end: "2026-03-05",
+          progress: 0,
+        },
+      ]);
+
+      renderView();
+
+      expect(screen.getByLabelText(/^Gantt task$/i)).toBeInTheDocument();
     });
   });
 

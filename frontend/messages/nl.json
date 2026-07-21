@@ -1120,6 +1120,7 @@
   "dev_hday_helper_failed": "✗ Kan geen verbinding maken met .hday-helper — controleer de URL en zorg dat deze actief is",
   "tt_gantt_task": "Gantt-taak",
   "tt_no_gantt_task": "Geen Gantt-taak",
+  "tt_gantt_task_badge": "Gantt: {name}",
   "gantt_logged_time_heading": "Gelogde tijd",
   "gantt_logged_total": "{duration} gelogd",
   "gantt_logged_empty": "Er is nog geen tijd gelogd voor deze taak.",

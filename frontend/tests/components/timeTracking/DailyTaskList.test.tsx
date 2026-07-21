@@ -5,6 +5,7 @@ import "@testing-library/jest-dom";
 import { DailyTaskList } from "@/components/timeTracking/DailyTaskList";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
 import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { GanttTask } from "@/types/gantt";
 import { dayjs } from "@/utils/dateTimeUtils";
 
 const TEST_LABELS: TimeTrackingLabel[] = [
@@ -37,12 +38,19 @@ describe("DailyTaskList", () => {
   const renderList = (
     tasks: StoredTimeTrackingTask[],
     labels = TEST_LABELS,
-    opts: { liveTime?: ReturnType<typeof dayjs>; isToday?: boolean } = {},
+    opts: {
+      liveTime?: ReturnType<typeof dayjs>;
+      isToday?: boolean;
+      ganttTasks?: GanttTask[];
+      showGanttPicker?: boolean;
+    } = {},
   ) =>
     render(
       <DailyTaskList
         tasks={tasks}
         labels={labels}
+        ganttTasks={opts.ganttTasks ?? []}
+        showGanttPicker={opts.showGanttPicker ?? false}
         onUpdateTask={onUpdateTask}
         onRemoveTask={onRemoveTask}
         onToggleBreak={onToggleBreak}
@@ -63,6 +71,35 @@ describe("DailyTaskList", () => {
       renderList([makeTask()]);
 
       expect(screen.queryByText("-30min")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Gantt task badge", () => {
+    const GANTT_TASKS: GanttTask[] = [
+      { id: "gantt-1", name: "Plan release", start: "2026-02-01", end: "2026-02-10", progress: 0 },
+    ];
+
+    it("renders a badge with the linked Gantt task's name", () => {
+      renderList([makeTask({ ganttTaskId: "gantt-1" })], TEST_LABELS, {
+        ganttTasks: GANTT_TASKS,
+      });
+
+      expect(screen.getByText("Plan release")).toBeInTheDocument();
+      expect(screen.getByLabelText("Gantt: Plan release")).toBeInTheDocument();
+    });
+
+    it("does not render a badge when the task has no linked Gantt task", () => {
+      renderList([makeTask()], TEST_LABELS, { ganttTasks: GANTT_TASKS });
+
+      expect(screen.queryByLabelText(/^Gantt:/)).not.toBeInTheDocument();
+    });
+
+    it("does not render a badge when the linked Gantt task no longer exists", () => {
+      renderList([makeTask({ ganttTaskId: "missing-task" })], TEST_LABELS, {
+        ganttTasks: GANTT_TASKS,
+      });
+
+      expect(screen.queryByLabelText(/^Gantt:/)).not.toBeInTheDocument();
     });
   });
 
