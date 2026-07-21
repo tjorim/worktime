@@ -429,6 +429,16 @@ describe("normalizeEventFlags", () => {
     const result = normalizeEventFlags(["business", "half_am"]);
     expect(result).toEqual(["business", "half_am"]);
   });
+
+  it("does not duplicate holiday when already present", () => {
+    const result = normalizeEventFlags(["holiday"]);
+    expect(result).toEqual(["holiday"]);
+  });
+
+  it("does not duplicate holiday when already present alongside a half-day flag", () => {
+    const result = normalizeEventFlags(["holiday", "half_am"]);
+    expect(result).toEqual(["holiday", "half_am"]);
+  });
 });
 
 describe("EVENT_COLORS constants", () => {
