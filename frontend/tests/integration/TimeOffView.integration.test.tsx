@@ -269,18 +269,13 @@ describe("TimeOffView Integration Tests", () => {
       expect(updatedEntries.every((e) => e.note !== "Summer vacation")).toBe(true);
 
       // === DELETE ===
-      // Click delete button
+      // Click delete button — single deletes are immediate, no confirmation dialog
       const deleteButton = screen.getByRole("button", {
         name: /Delete Updated summer vacation/i,
       });
       await user.click(deleteButton);
 
-      // Confirm deletion in dialog
-      const dialog = await screen.findByRole("dialog");
-      const confirmButton = within(dialog).getByRole("button", { name: /Delete/i });
-      await user.click(confirmButton);
-
-      // Verify event is removed
+      // Verify event is removed right away
       await waitFor(() => {
         expect(screen.queryByText("Updated summer vacation")).not.toBeInTheDocument();
       });

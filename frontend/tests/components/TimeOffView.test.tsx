@@ -247,32 +247,7 @@ describe("TimeOffView", () => {
   });
 
   describe("Delete Event", () => {
-    it("should show confirmation dialog before deleting", async () => {
-      render(
-        <AllProviders>
-          <TimeOffView />
-        </AllProviders>,
-      );
-
-      const user = userEvent.setup();
-
-      // Add event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
-      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
-      await user.clear(startInput);
-      await user.type(startInput, "2025-01-15");
-      await user.click(screen.getByRole("button", { name: /^Add$/i }));
-
-      const deleteButton = screen.getByRole("button", { name: /Delete Holiday/i });
-      await user.click(deleteButton);
-
-      // Confirmation dialog should appear
-      const dialog = await screen.findByRole("dialog");
-      expect(within(dialog).getByText(/Delete Event/i)).toBeInTheDocument();
-      expect(within(dialog).getByText(/Are you sure/i)).toBeInTheDocument();
-    });
-
-    it("should delete event when confirmed", async () => {
+    it("should delete immediately without a confirmation dialog", async () => {
       render(
         <AllProviders>
           <TimeOffView />
@@ -295,14 +270,46 @@ describe("TimeOffView", () => {
       const deleteButton = screen.getByRole("button", { name: /Delete To be deleted/i });
       await user.click(deleteButton);
 
-      // Confirm deletion - scope to modal to avoid matching table delete buttons
-      const modal = await screen.findByRole("dialog");
-      const confirmButton = within(modal).getByRole("button", { name: /Delete/i });
-      await user.click(confirmButton);
-
-      // Event should be removed
+      // No confirmation dialog — the entry is removed right away.
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       await waitFor(() => {
         expect(screen.queryByText("To be deleted")).not.toBeInTheDocument();
+      });
+
+      // An undo toast is offered.
+      expect(screen.getByText(/Event deleted successfully/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Undo/i })).toBeInTheDocument();
+    });
+
+    it("should restore the event when the undo toast action is clicked", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      // Add event
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-01-15");
+      const titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "To be deleted");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      const deleteButton = screen.getByRole("button", { name: /Delete To be deleted/i });
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText("To be deleted")).not.toBeInTheDocument();
+      });
+
+      // Undo restores the entry.
+      await user.click(screen.getByRole("button", { name: /Undo/i }));
+      await waitFor(() => {
+        expect(screen.getByText("To be deleted")).toBeInTheDocument();
       });
     });
   });
@@ -455,6 +462,12 @@ describe("TimeOffView", () => {
 
       await waitFor(() => {
         expect(screen.queryByText("Bulk delete me")).not.toBeInTheDocument();
+      });
+
+      // A bulk delete still offers an undo toast that restores the entries.
+      await user.click(screen.getByRole("button", { name: /Undo/i }));
+      await waitFor(() => {
+        expect(screen.getByText("Bulk delete me")).toBeInTheDocument();
       });
     });
   });

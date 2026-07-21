@@ -131,9 +131,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     rawEditorTextRef.current = rawEditorText;
   }, [rawEditorText]);
 
-  // Delete confirmation
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+  // Bulk delete keeps a confirmation dialog (higher stakes); single deletes are
+  // immediate with an undo toast.
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -247,18 +246,13 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   };
 
   const handleDeleteClick = (entryId: string) => {
-    setDeleteEntryId(entryId);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (deleteEntryId) {
-      deleteEntry(deleteEntryId);
-      setSelectedIds(new Set());
-      toast.showSuccess(m.timeoff_event_deleted(), "bi-trash");
-    }
-    setShowDeleteConfirm(false);
-    setDeleteEntryId(null);
+    const entry = entries.find((currentEntry) => currentEntry.id === entryId);
+    if (!entry) return;
+    // Act immediately, then offer an undo — re-adding restores the same entry id
+    // via the existing store API, so no duplicate or conflicting entry is created.
+    deleteEntry(entryId);
+    setSelectedIds(new Set());
+    toast.showUndo(m.timeoff_event_deleted(), () => addEntries([entry]));
   };
 
   const handleToggleSelection = (id: string) => {
@@ -283,8 +277,12 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleBulkDeleteConfirm = () => {
     if (selectedIds.size > 0) {
+      // Capture the entries before deleting so undo can restore them exactly.
+      const removedEntries = entries.filter((entry) => selectedIds.has(entry.id));
       deleteEntries(Array.from(selectedIds));
-      toast.showSuccess(m.timeoff_events_deleted({ count: selectedIds.size }), "bi-trash");
+      toast.showUndo(m.timeoff_events_deleted({ count: removedEntries.length }), () =>
+        addEntries(removedEntries),
+      );
     }
     setSelectedIds(new Set());
     setShowBulkDeleteConfirm(false);
@@ -575,18 +573,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         onCancel={() => setShowResetConfirm(false)}
       />
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={showDeleteConfirm}
-        title={m.timeoff_delete_event_title()}
-        message={m.timeoff_delete_event_message()}
-        confirmLabel={m.delete()}
-        cancelLabel={m.cancel()}
-        variant="danger"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
-
+      {/* Bulk Delete Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={showBulkDeleteConfirm}
         title={m.timeoff_delete_selected_title()}
