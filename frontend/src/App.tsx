@@ -5,6 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PwaUpdateToast } from "@/components/PwaUpdateToast";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppShellProvider } from "@/contexts/AppShellContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -256,6 +257,7 @@ function AppContent() {
 
   return (
     <OngoingSyncProvider isSyncEstablished={isSyncEstablished}>
+      <PwaUpdateToast />
       <ErrorBoundary>
         <AppShellProvider
           value={{

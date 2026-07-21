@@ -35,6 +35,8 @@ interface IconConfig {
   size: number;
   filename: string;
   name: string;
+  /** Maskable icons need a full-bleed solid background (safe-zone padding for OS masking). */
+  maskable?: boolean;
 }
 
 // Ensure icons directory exists
@@ -45,15 +47,25 @@ if (!existsSync(ICONS_DIR)) {
 /**
  * Create a Worktime icon with clock design
  * @param size - Icon size in pixels
+ * @param maskable - When true, fills the full canvas edge-to-edge with a solid
+ *   background color instead of a circular gradient, so OS icon masks (which crop
+ *   to a circle/squircle/etc.) never clip into transparent space. The clock design
+ *   itself is unchanged and already sits within the ~80% "safe zone" diameter.
  * @returns Canvas with the icon
  */
-function createIcon(size: number) {
+function createIcon(size: number, maskable = false) {
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext("2d");
 
   const centerX = size / 2;
   const centerY = size / 2;
   const radius = size * RATIOS.radius;
+
+  if (maskable) {
+    // Full-bleed solid background so the OS mask never crops into transparency.
+    ctx.fillStyle = COLORS.gradientEnd;
+    ctx.fillRect(0, 0, size, size);
+  }
 
   // Background gradient
   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
@@ -143,13 +155,25 @@ function generateIcons(): void {
     { size: 48, filename: "icon-48.png", name: "48x48 Favicon" },
     { size: 192, filename: "icon-192.png", name: "192x192 PWA Icon" },
     { size: 512, filename: "icon-512.png", name: "512x512 PWA Icon" },
+    {
+      size: 192,
+      filename: "icon-192-maskable.png",
+      name: "192x192 Maskable PWA Icon",
+      maskable: true,
+    },
+    {
+      size: 512,
+      filename: "icon-512-maskable.png",
+      name: "512x512 Maskable PWA Icon",
+      maskable: true,
+    },
   ];
 
   process.stdout.write("🎨 Generating Worktime icons...\n\n");
 
-  icons.forEach(({ size, filename, name }) => {
+  icons.forEach(({ size, filename, name, maskable }) => {
     try {
-      const canvas = createIcon(size);
+      const canvas = createIcon(size, maskable);
       const buffer = canvas.toBuffer("image/png");
       const filePath = join(ICONS_DIR, filename);
 

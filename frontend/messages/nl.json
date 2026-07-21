@@ -123,6 +123,8 @@
   "close": "Sluiten",
   "toast_close_aria": "Melding sluiten",
   "toast_undo": "Ongedaan maken",
+  "pwa_update_available": "Er is een nieuwe versie van Worktime beschikbaar.",
+  "pwa_update_reload": "Herladen",
   "save": "Opslaan",
   "back": "Terug",
   "next": "Volgende",
