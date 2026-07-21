@@ -248,6 +248,53 @@ describe("useOngoingSync", () => {
       const outbox = JSON.parse(outboxRaw!);
       expect(outbox[0].tasks[0].id).toBe("task-offline");
     });
+
+    it("sets hasSyncError and schedules a back-off retry when an immediate push fails", async () => {
+      // Regression test: a failed enqueueChange push previously queued the
+      // change to the outbox but left hasSyncError false and scheduled no
+      // retry — the change would sit unsynced until some *unrelated*
+      // trigger (the next enqueueChange, a visibility/online event)
+      // happened to run flushAndPull. Isolated from the initial mount flush
+      // (which succeeds here with an empty outbox) so this failure is the
+      // only thing that could have set hasSyncError/retryAfter.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
+        .mockResolvedValueOnce({ ok: false }); // enqueueChange push fails
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
+      });
+      expect(result.current.hasSyncError).toBe(false);
+      expect(result.current.retryAfter).toBeNull();
+
+      const change = emptySyncPayload();
+      change.tasks.push({
+        id: "task-offline-2",
+        action: "create",
+        client_updated_at: "2026-01-02T00:00:00.000Z",
+        text: "Offline task 2",
+        label_id: null,
+        start_time: "2026-01-02T08:00:00.000Z",
+        stop_time: null,
+        includes_break: false,
+      });
+
+      await act(async () => {
+        result.current.enqueueChange(change);
+      });
+
+      await waitFor(() => {
+        expect(result.current.outboxCount).toBe(1);
+      });
+      expect(result.current.hasSyncError).toBe(true);
+      expect(result.current.retryAfter).not.toBeNull();
+      expect(result.current.retryAfter).toBeGreaterThan(Date.now());
+    });
   });
 
   describe("flush and pull on visibility change", () => {

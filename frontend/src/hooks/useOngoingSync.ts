@@ -576,9 +576,18 @@ export function useOngoingSync(
             }
           }
         } else {
-          // Push failed — queue for later flush.
+          // Push failed — queue for later flush. Without setHasSyncError and
+          // scheduleBackOff here, this failure was invisible to the rest of
+          // the hook: hasSyncError stayed false (no UI indication anything
+          // was wrong) and nothing scheduled a retry — the change would sit
+          // in the outbox until some *unrelated* trigger (the next
+          // enqueueChange, a visibility/online event) happened to run
+          // flushAndPull. Now it drives the same back-off retry timer every
+          // other failure path in this file already uses.
           appendToSyncOutbox(userId, change);
           setOutboxCount(getSyncOutboxSize(userId));
+          setHasSyncError(true);
+          scheduleBackOff();
         }
       };
 
@@ -601,7 +610,7 @@ export function useOngoingSync(
         }
       });
     },
-    [isActive, userId, fetchFn],
+    [isActive, userId, fetchFn, scheduleBackOff],
   );
 
   /**
