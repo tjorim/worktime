@@ -3,10 +3,12 @@ import Button from "react-bootstrap/Button";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 type SortColumn = "name" | "start";
 type SortDirection = "asc" | "desc";
@@ -44,6 +46,12 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
       }),
     [sortColumn, sortDirection, tasks],
   );
+
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(getLocale() === "nl" ? "nl-NL" : "en-US", { dateStyle: "medium" }),
+    [],
+  );
+  const formatDate = (isoDate: string) => dateFormatter.format(dayjs(isoDate).toDate());
 
   const handleSort = (column: SortColumn) => {
     if (column === sortColumn) {
@@ -129,10 +137,13 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     {task.name}
                   </Button>
                 </td>
-                <td>{task.start}</td>
-                <td>{task.end}</td>
+                <td>{formatDate(task.start)}</td>
+                <td>{formatDate(task.end)}</td>
                 <td style={{ minWidth: "8rem" }}>
-                  <ProgressBar now={task.progress} label={`${task.progress}%`} />
+                  <div className="d-flex align-items-center gap-2">
+                    <ProgressBar now={task.progress} className="border flex-grow-1" />
+                    <span className="small text-muted text-nowrap">{task.progress}%</span>
+                  </div>
                 </td>
                 <td>{getDependencies(task.dependencies)}</td>
                 <td title={task.notes}>{task.notes || "—"}</td>
