@@ -159,6 +159,10 @@ body {
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 
+  .nav-item {
+    flex-shrink: 0;
+  }
+
   .nav-link {
     display: flex;
     align-items: center;
