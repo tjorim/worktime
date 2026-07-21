@@ -70,6 +70,7 @@ export function TimeTrackingDailyView({
   const [error, setError] = useState("");
   const { settings } = useSettings();
   const { tasks: ganttTasks } = useGanttTasks();
+  const showGanttPicker = settings.enableGantt && ganttTasks.length > 0;
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
@@ -348,7 +349,7 @@ export function TimeTrackingDailyView({
           ganttTasks={ganttTasks}
           ganttTaskId={selectedGanttTaskId}
           onGanttTaskChange={setSelectedGanttTaskId}
-          showGanttPicker={settings.enableGantt}
+          showGanttPicker={showGanttPicker}
           start={start}
           onStartChange={setStart}
           stop={stop}
@@ -372,7 +373,7 @@ export function TimeTrackingDailyView({
           tasks={dailyTasks}
           labels={labels}
           ganttTasks={ganttTasks}
-          showGanttPicker={settings.enableGantt}
+          showGanttPicker={showGanttPicker}
           editRequest={editRequest}
           onEditRequestHandled={() => setEditRequest(null)}
           onUpdateTask={handleUpdateTask}

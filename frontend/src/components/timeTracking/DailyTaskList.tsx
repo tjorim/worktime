@@ -90,7 +90,14 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
         placement="top"
         overlay={<Tooltip id={tooltipId}>{m.tt_gap_aria({ minutes: durationMinutes })}</Tooltip>}
       >
-        <Badge bg="warning" text="dark" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }} tabIndex={0}>
+        <Badge
+          bg="warning"
+          text="dark"
+          pill
+          className="flex-shrink-0"
+          style={{ fontSize: "0.75rem" }}
+          tabIndex={0}
+        >
           <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
           {m.tt_gap_label({ minutes: durationMinutes })}
         </Badge>
@@ -156,6 +163,14 @@ export function DailyTaskList({
     [labels],
   );
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const ganttTaskNameById = useMemo(
+    () =>
+      ganttTasks.reduce<Record<string, string>>((map, task) => {
+        map[task.id] = task.name;
+        return map;
+      }, {}),
+    [ganttTasks],
+  );
 
   const editingTask = editingTaskId
     ? (tasks.find((task) => task.id === editingTaskId) ?? externalEditingTask)
@@ -208,7 +223,14 @@ export function DailyTaskList({
   const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
     setExternalEditingTask(null);
-    setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false, ganttTaskId: "" });
+    setEditForm({
+      text: "",
+      label: "",
+      start: "",
+      stop: "",
+      includesBreak: false,
+      ganttTaskId: "",
+    });
     setEditError("");
     setEditInfo("");
   }, []);
@@ -437,6 +459,9 @@ export function DailyTaskList({
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
             const gap = gapAfter[index] ?? null;
+            const ganttTaskName = task.ganttTaskId
+              ? ganttTaskNameById[task.ganttTaskId]
+              : undefined;
             return (
               <Fragment key={task.id}>
                 <ListGroup.Item
@@ -479,6 +504,26 @@ export function DailyTaskList({
                             >
                               <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
                               {BREAK_DURATION_MINUTES}min
+                            </Badge>
+                          </OverlayTrigger>
+                        )}
+                        {ganttTaskName && (
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id={`gantt-badge-${task.id}`}>
+                                {m.tt_gantt_task_badge({ name: ganttTaskName })}
+                              </Tooltip>
+                            }
+                          >
+                            <Badge
+                              bg="info"
+                              className="ms-2"
+                              aria-label={m.tt_gantt_task_badge({ name: ganttTaskName })}
+                              tabIndex={0}
+                            >
+                              <i className="bi bi-bar-chart-steps me-1" aria-hidden="true"></i>
+                              {ganttTaskName}
                             </Badge>
                           </OverlayTrigger>
                         )}
@@ -550,4 +595,3 @@ export function DailyTaskList({
     </>
   );
 }
-
