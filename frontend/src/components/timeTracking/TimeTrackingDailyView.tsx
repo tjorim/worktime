@@ -42,6 +42,9 @@ type TimeTrackingDailyViewProps = {
   }) => void;
   onRemoveTask: (id: string) => void;
   onToggleBreak: (taskId: string, includesBreak: boolean) => void;
+  /** One-shot request to open a specific entry's edit modal, e.g. from another tab. */
+  externalEditRequest?: EditRequest | null;
+  onExternalEditRequestHandled?: () => void;
 };
 
 function todayIso() {
@@ -58,9 +61,18 @@ export function TimeTrackingDailyView({
   onUpdateTaskTimes,
   onRemoveTask,
   onToggleBreak,
+  externalEditRequest,
+  onExternalEditRequestHandled,
 }: TimeTrackingDailyViewProps) {
   const date = selectedDate || todayIso();
   const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
+
+  useEffect(() => {
+    if (externalEditRequest) {
+      setEditRequest(externalEditRequest);
+      onExternalEditRequestHandled?.();
+    }
+  }, [externalEditRequest, onExternalEditRequestHandled]);
   const [text, setText] = useState("");
   const [selectedLabel, setSelectedLabel] = useState<string>("");
   const [selectedGanttTaskId, setSelectedGanttTaskId] = useState("");

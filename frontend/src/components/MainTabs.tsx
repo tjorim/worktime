@@ -46,6 +46,11 @@ interface MainTabsProps {
   onTabChange?: (tab: TabKey) => void;
   onChangeSchedule?: () => void; // Callback to open schedule selector
   onChangeTeam?: () => void; // Callback to open team selector
+  // One-shot handoff for opening a specific time-tracking entry's edit modal from
+  // another tab (e.g. a Gantt task's linked entries list).
+  pendingTaskEditId?: string | null;
+  onRequestTaskEdit?: (taskId: string) => void;
+  onClearPendingTaskEdit?: () => void;
 }
 
 /**
@@ -72,6 +77,9 @@ export function MainTabs({
   onTabChange,
   onChangeSchedule,
   onChangeTeam,
+  pendingTaskEditId,
+  onRequestTaskEdit,
+  onClearPendingTaskEdit,
 }: MainTabsProps) {
   const tabsId = useId();
   const { settings } = useSettings();
@@ -102,6 +110,14 @@ export function MainTabs({
       onTabChange?.(tab);
     },
     [setActiveKey, onTabChange],
+  );
+
+  const handleNavigateToEntry = useCallback(
+    (entryId: string) => {
+      onRequestTaskEdit?.(entryId);
+      setActiveTab("timetracking");
+    },
+    [onRequestTaskEdit, setActiveTab],
   );
 
   const shortcuts = useMemo(() => {
@@ -260,7 +276,10 @@ export function MainTabs({
             >
               {activeKey === "timetracking" && (
                 <Suspense fallback={loadingFallback}>
-                  <TimeTrackingView />
+                  <TimeTrackingView
+                    pendingTaskEditId={pendingTaskEditId}
+                    onClearPendingTaskEdit={onClearPendingTaskEdit}
+                  />
                 </Suspense>
               )}
             </Tab>
@@ -279,7 +298,7 @@ export function MainTabs({
             >
               {activeKey === "gantt" && (
                 <Suspense fallback={loadingFallback}>
-                  <GanttView />
+                  <GanttView onNavigateToEntry={handleNavigateToEntry} />
                 </Suspense>
               )}
             </Tab>

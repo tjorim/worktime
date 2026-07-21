@@ -12,6 +12,9 @@ export function HomePage() {
     onTabChange,
     onChangeSchedule,
     onChangeTeam,
+    pendingTaskEditId,
+    requestTaskEdit,
+    clearPendingTaskEdit,
   } = useAppShellContext();
 
   return (
@@ -32,6 +35,9 @@ export function HomePage() {
           onTabChange={onTabChange}
           onChangeSchedule={onChangeSchedule}
           onChangeTeam={onChangeTeam}
+          pendingTaskEditId={pendingTaskEditId}
+          onRequestTaskEdit={requestTaskEdit}
+          onClearPendingTaskEdit={clearPendingTaskEdit}
         />
       </ErrorBoundary>
     </main>
