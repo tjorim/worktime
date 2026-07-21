@@ -49,10 +49,14 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
       // Ctrl/Cmd+, - Settings. The only modifier combo here because it's the only
       // one that isn't reserved by the browser (unlike Ctrl/Cmd+H/J/K/T, which are
       // intercepted before the page ever sees them).
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === ",") {
+      if (
+        shortcuts.onToggleSettings &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === ","
+      ) {
         event.preventDefault?.();
         try {
-          shortcuts.onToggleSettings?.();
+          shortcuts.onToggleSettings();
         } catch (error) {
           logger.error("Error in onToggleSettings callback:", error);
         }
@@ -61,10 +65,17 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
 
       // Alt+T - Team select. Alt-based combos pass through to the page, unlike Ctrl/Cmd+T
       // (new tab), and the modifier keeps it distinct from the plain "t" Time Tracking tab shortcut.
-      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "t") {
+      // event.code fallback handles macOS, where Option+T remaps event.key to "†" on US layouts.
+      if (
+        shortcuts.onTeamSelect &&
+        event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        (event.key.toLowerCase() === "t" || event.code === "KeyT")
+      ) {
         event.preventDefault?.();
         try {
-          shortcuts.onTeamSelect?.();
+          shortcuts.onTeamSelect();
         } catch (error) {
           logger.error("Error in onTeamSelect callback:", error);
         }
@@ -143,4 +154,3 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
     };
   }, [shortcuts]);
 }
-

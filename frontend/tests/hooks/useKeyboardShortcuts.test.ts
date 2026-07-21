@@ -118,6 +118,34 @@ describe("useKeyboardShortcuts", () => {
     expect(mockShortcuts.onTabTimeTracking).not.toHaveBeenCalled();
   });
 
+  it("triggers onTeamSelect via event.code fallback on macOS layouts where Option+T remaps event.key", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    // On macOS US layouts, Option+T produces "†" as event.key, but event.code stays "KeyT".
+    const event = new KeyboardEvent("keydown", { key: "†", code: "KeyT", altKey: true });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onTeamSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call preventDefault for Ctrl+, when onToggleSettings is not provided", () => {
+    renderHook(() => useKeyboardShortcuts({}));
+
+    const event = new KeyboardEvent("keydown", { key: ",", ctrlKey: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("does not call preventDefault for Alt+T when onTeamSelect is not provided", () => {
+    renderHook(() => useKeyboardShortcuts({}));
+
+    const event = new KeyboardEvent("keydown", { key: "t", altKey: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it("ignores shortcuts when focus is on input elements", () => {
     renderHook(() => useKeyboardShortcuts(mockShortcuts));
 
