@@ -21,11 +21,13 @@ export function formatLoggedDuration(minutes: number): string {
   return m.gantt_logged_hours_minutes({ hours, minutes: remainingMinutes });
 }
 
-export function getTotalLoggedMinutes(taskId: string, entries: StoredTimeTrackingTask[]): number {
-  return entries
-    .filter((entry) => entry.ganttTaskId === taskId)
-    .reduce(
-      (total, entry) => total + getLoggedMinutes(entry.startTime, entry.stopTime, entry.includesBreak),
-      0,
-    );
+export function getLoggedMinutesByTaskId(entries: StoredTimeTrackingTask[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.ganttTaskId) {
+      const minutes = getLoggedMinutes(entry.startTime, entry.stopTime, entry.includesBreak);
+      map.set(entry.ganttTaskId, (map.get(entry.ganttTaskId) ?? 0) + minutes);
+    }
+  }
+  return map;
 }

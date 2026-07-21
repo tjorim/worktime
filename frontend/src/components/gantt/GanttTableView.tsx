@@ -5,7 +5,7 @@ import Table from "react-bootstrap/Table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
-import { formatLoggedDuration, getTotalLoggedMinutes } from "@/utils/ganttLoggedTime";
+import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
@@ -32,8 +32,8 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
   const { tasks: timeTrackingTasks } = useTimeTrackingStorage();
   const taskNames = useMemo(() => new Map(tasks.map((task) => [task.id, task.name])), [tasks]);
   const loggedMinutesByTaskId = useMemo(
-    () => new Map(tasks.map((task) => [task.id, getTotalLoggedMinutes(task.id, timeTrackingTasks)])),
-    [tasks, timeTrackingTasks],
+    () => getLoggedMinutesByTaskId(timeTrackingTasks),
+    [timeTrackingTasks],
   );
   const linkedEntryCount = useMemo(
     () =>

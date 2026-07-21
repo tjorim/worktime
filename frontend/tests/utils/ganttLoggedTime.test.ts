@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatLoggedDuration,
   getLoggedMinutes,
-  getTotalLoggedMinutes,
+  getLoggedMinutesByTaskId,
 } from "@/utils/ganttLoggedTime";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
 
@@ -35,7 +35,7 @@ describe("formatLoggedDuration", () => {
   });
 });
 
-describe("getTotalLoggedMinutes", () => {
+describe("getLoggedMinutesByTaskId", () => {
   const entries: StoredTimeTrackingTask[] = [
     {
       id: "entry-1",
@@ -61,13 +61,24 @@ describe("getTotalLoggedMinutes", () => {
       stopTime: "2026-06-03T10:00",
       ganttTaskId: "task-2",
     },
+    {
+      id: "entry-4",
+      text: "Not linked to any task",
+      label: "Support",
+      startTime: "2026-06-04T09:00",
+      stopTime: "2026-06-04T10:00",
+    },
   ];
 
-  it("sums logged minutes for entries linked to the given task", () => {
-    expect(getTotalLoggedMinutes("task-1", entries)).toBe(150);
+  it("returns a map of total logged minutes grouped by task ID", () => {
+    const map = getLoggedMinutesByTaskId(entries);
+    expect(map.get("task-1")).toBe(150);
+    expect(map.get("task-2")).toBe(60);
+    expect(map.get("task-3")).toBeUndefined();
   });
 
-  it("returns 0 when no entries are linked to the task", () => {
-    expect(getTotalLoggedMinutes("task-3", entries)).toBe(0);
+  it("ignores entries without a linked Gantt task", () => {
+    const map = getLoggedMinutesByTaskId(entries);
+    expect(map.size).toBe(2);
   });
 });
