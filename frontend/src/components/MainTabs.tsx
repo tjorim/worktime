@@ -163,15 +163,17 @@ export function MainTabs({
             setActiveTab(newKey);
           }}
           id={tabsId}
+          className="main-tabs"
         >
           <Tab
             eventKey="calendar"
             title={
               <>
-                <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
-                {m.tab_calendar()}
+                <i className="bi bi-calendar3" aria-hidden="true"></i>
+                <span className="main-tab-label">{m.tab_calendar()}</span>
               </>
             }
+            tabAttrs={{ "aria-label": m.tab_calendar() }}
           >
             {activeKey === "calendar" && (
               <Suspense fallback={loadingFallback}>
@@ -190,10 +192,11 @@ export function MainTabs({
               eventKey="unified-calendar"
               title={
                 <>
-                  <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
-                  {m.tab_unified_calendar()}
+                  <i className="bi bi-calendar-range" aria-hidden="true"></i>
+                  <span className="main-tab-label">{m.tab_unified_calendar()}</span>
                 </>
               }
+              tabAttrs={{ "aria-label": m.tab_unified_calendar() }}
             >
               {activeKey === "unified-calendar" && (
                 <Suspense fallback={loadingFallback}>
@@ -210,10 +213,11 @@ export function MainTabs({
             eventKey="schedule"
             title={
               <>
-                <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
-                {m.tab_schedule()}
+                <i className="bi bi-calendar-week" aria-hidden="true"></i>
+                <span className="main-tab-label">{m.tab_schedule()}</span>
               </>
             }
+            tabAttrs={{ "aria-label": m.tab_schedule() }}
           >
             <ScheduleTabView
               myTeam={myTeam}
@@ -231,10 +235,11 @@ export function MainTabs({
               eventKey="timeoff"
               title={
                 <>
-                  <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-                  {m.tab_time_off()}
+                  <i className="bi bi-calendar-check" aria-hidden="true"></i>
+                  <span className="main-tab-label">{m.tab_time_off()}</span>
                 </>
               }
+              tabAttrs={{ "aria-label": m.tab_time_off() }}
             >
               <Suspense fallback={loadingFallback}>
                 <TimeOffView isActive={activeKey === "timeoff"} />
@@ -247,10 +252,11 @@ export function MainTabs({
               eventKey="timetracking"
               title={
                 <>
-                  <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
-                  {m.tab_time_tracking()}
+                  <i className="bi bi-stopwatch" aria-hidden="true"></i>
+                  <span className="main-tab-label">{m.tab_time_tracking()}</span>
                 </>
               }
+              tabAttrs={{ "aria-label": m.tab_time_tracking() }}
             >
               {activeKey === "timetracking" && (
                 <Suspense fallback={loadingFallback}>
@@ -265,10 +271,11 @@ export function MainTabs({
               eventKey="gantt"
               title={
                 <>
-                  <i className="bi bi-bar-chart-steps me-1" aria-hidden="true"></i>
-                  {m.tab_gantt()}
+                  <i className="bi bi-bar-chart-steps" aria-hidden="true"></i>
+                  <span className="main-tab-label">{m.tab_gantt()}</span>
                 </>
               }
+              tabAttrs={{ "aria-label": m.tab_gantt() }}
             >
               {activeKey === "gantt" && (
                 <Suspense fallback={loadingFallback}>
