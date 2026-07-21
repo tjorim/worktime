@@ -53,7 +53,7 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 | Field | Value |
 |-------|-------|
 | Endpoint | `GET /api/sync/events` |
-| Auth | Bearer token via `Authorization` header, same as every other endpoint — the client opens the stream with `fetch()` (via `@microsoft/fetch-event-source`), not native `EventSource`, since `EventSource` cannot send custom headers |
+| Auth | Bearer token via `Authorization` header, same as every other endpoint — the client opens the stream with `fetch()` (parsed via `eventsource-parser`), not native `EventSource`, since `EventSource` cannot send custom headers |
 | Event name | `sync_changed` |
 | Payload | `{ "type": "sync_changed", "server_timestamp": "<ISO-8601>" }` |
 | Keepalive | `: keepalive` comment every 15 s |

@@ -40,7 +40,6 @@
     "check-version-consistency": "tsx scripts/check-version-consistency.ts"
   },
   "dependencies": {
-    "@microsoft/fetch-event-source": "^2.0.1",
     "@schedule-x/calendar": "^4.6.1",
     "@schedule-x/drag-and-drop": "^3.7.3",
     "@schedule-x/event-modal": "^4.6.1",
@@ -56,6 +55,7 @@
     "bootstrap-icons": "^1.13.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.21",
+    "eventsource-parser": "^3.1.0",
     "frappe-gantt": "^1.2.2",
     "oidc-client-ts": "^3.5.0",
     "react": "^19.2.7",

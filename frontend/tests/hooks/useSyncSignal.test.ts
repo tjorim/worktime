@@ -4,13 +4,6 @@ import { createFetchSseTransport, useSyncSignal, type SyncSignalTransport } from
 import { storeSyncCursor } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 
-const fetchEventSourceMock = vi.fn();
-
-vi.mock("@microsoft/fetch-event-source", () => ({
-  fetchEventSource: (...args: unknown[]) => fetchEventSourceMock(...args),
-  EventStreamContentType: "text/event-stream",
-}));
-
 /**
  * Create a mock transport that captures the onSignal callback so tests can
  * simulate server-push events.  Returns both the transport and a helper to
@@ -415,200 +408,262 @@ describe("useSyncSignal", () => {
 // ---------------------------------------------------------------------------
 // createFetchSseTransport — fetch-based SSE adapter unit tests
 //
-// @microsoft/fetch-event-source is mocked: its own frame-parsing is already
-// covered upstream, so these tests exercise our glue code by capturing the
-// options object passed to it and invoking the callbacks (onopen, onmessage,
-// onerror) directly, the same way the library would.
+// eventsource-parser's own frame-parsing is well-tested upstream, so these
+// tests exercise it for real (through a genuine ReadableStream) rather than
+// mocking it away — what's actually ours to verify is the fetch/auth/retry
+// orchestration around it. Fake timers drive the exponential-backoff retry
+// loop deterministically instead of waiting on real wall-clock time.
 // ---------------------------------------------------------------------------
 
-interface CapturedFetchEventSourceOptions {
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
-  onopen: (response: Response) => Promise<void>;
-  onmessage: (event: { id: string; event: string; data: string; retry?: number }) => void;
-  onerror: (err: unknown) => number | undefined;
+/** Build one raw SSE wire-format frame. */
+function sseFrame(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-function captureOptions(): CapturedFetchEventSourceOptions {
-  expect(fetchEventSourceMock).toHaveBeenCalledTimes(1);
-  return fetchEventSourceMock.mock.calls[0]![1] as CapturedFetchEventSourceOptions;
+/** A live SSE response body the test can push frames into (or close/error) on demand. */
+function sseController() {
+  let controllerRef: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controllerRef = controller;
+    },
+  });
+  const encoder = new TextEncoder();
+  return {
+    stream,
+    send(event: string, data: unknown) {
+      controllerRef.enqueue(encoder.encode(sseFrame(event, data)));
+    },
+    /** Push a raw, hand-written frame (e.g. deliberately malformed JSON). */
+    sendRaw(rawFrame: string) {
+      controllerRef.enqueue(encoder.encode(rawFrame));
+    },
+    close() {
+      controllerRef.close();
+    },
+  };
 }
 
-function okResponse(): Response {
-  return new Response(null, { status: 200, headers: { "content-type": "text/event-stream" } });
+function sseResponse(stream: ReadableStream<Uint8Array>, status = 200): Response {
+  return new Response(stream, { status, headers: { "content-type": "text/event-stream" } });
 }
 
 describe("createFetchSseTransport", () => {
   afterEach(() => {
-    fetchEventSourceMock.mockReset();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it("opens the stream with the given URL and Authorization header", () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+  it("opens fetch with the given URL, Authorization, and Accept headers", async () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
+    vi.stubGlobal("fetch", fetchMock);
 
     createFetchSseTransport("https://api.example.com/sync/events", "token-abc").subscribe(vi.fn());
 
-    expect(fetchEventSourceMock).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "https://api.example.com/sync/events",
-      expect.objectContaining({ headers: { Authorization: "Bearer token-abc" } }),
+      expect.objectContaining({
+        headers: { Authorization: "Bearer token-abc", Accept: "text/event-stream" },
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
   it("calls onSignal with server_timestamp when a sync_changed event arrives", async () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+    const controller = sseController();
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(controller.stream));
+    vi.stubGlobal("fetch", fetchMock);
 
     const onSignal = vi.fn();
     createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
-    const options = captureOptions();
 
-    options.onmessage({
-      id: "",
-      event: "sync_changed",
-      data: JSON.stringify({ type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" }),
-    });
+    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" });
+    await vi.waitFor(() => expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z"));
+  });
 
+  it("ignores events whose event name is not sync_changed", async () => {
+    const controller = sseController();
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(controller.stream));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onSignal = vi.fn();
+    createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
+
+    controller.send("keepalive", { irrelevant: true });
+    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" });
+    await vi.waitFor(() => expect(onSignal).toHaveBeenCalledTimes(1));
     expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z");
   });
 
-  it("ignores events whose event name is not sync_changed", () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+  it("does not call onSignal when event data is missing server_timestamp", async () => {
+    const controller = sseController();
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(controller.stream));
+    vi.stubGlobal("fetch", fetchMock);
 
     const onSignal = vi.fn();
     createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
-    const options = captureOptions();
 
-    options.onmessage({ id: "", event: "keepalive", data: "{}" });
+    controller.send("sync_changed", { type: "sync_changed" });
+    // Follow up with a well-formed event so there's something to waitFor —
+    // proves the first (bad) event was processed and skipped, not just
+    // "not processed yet".
+    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" });
 
-    expect(onSignal).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(onSignal).toHaveBeenCalledTimes(1));
+    expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z");
   });
 
-  it("does not call onSignal when event data is missing server_timestamp", () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
-
-    const onSignal = vi.fn();
-    createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
-    const options = captureOptions();
-
-    options.onmessage({ id: "", event: "sync_changed", data: JSON.stringify({ type: "sync_changed" }) });
-
-    expect(onSignal).not.toHaveBeenCalled();
-  });
-
-  it("does not throw and does not call onSignal when event data is malformed JSON", () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+  it("does not throw and does not call onSignal when event data is malformed JSON", async () => {
+    const controller = sseController();
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(controller.stream));
+    vi.stubGlobal("fetch", fetchMock);
 
     const onSignal = vi.fn();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
-    const options = captureOptions();
 
-    options.onmessage({ id: "", event: "sync_changed", data: "not-json{{{" });
+    controller.sendRaw("event: sync_changed\ndata: not-json{{{\n\n");
+    // Follow up with a well-formed event so there's something to waitFor —
+    // proves the malformed one was processed (and skipped), not just "not
+    // processed yet".
+    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-05-01T00:00:00.000Z" });
 
-    expect(onSignal).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(onSignal).toHaveBeenCalledTimes(1));
+    expect(onSignal).toHaveBeenCalledWith("2026-05-01T00:00:00.000Z");
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("failed to parse SSE event data"),
       "not-json{{{",
     );
   });
 
-  it("resolves onopen without throwing for a 200 text/event-stream response", async () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+  it("resolves onopen without scheduling a retry for a 200 text/event-stream response", async () => {
+    vi.useFakeTimers();
+    const controller = sseController();
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(controller.stream));
+    vi.stubGlobal("fetch", fetchMock);
 
     createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
-    const options = captureOptions();
+    await vi.advanceTimersByTimeAsync(0);
 
-    await expect(options.onopen(okResponse())).resolves.toBeUndefined();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // still just the one open connection
   });
 
-  it("throws a fatal error from onopen on 401, and onerror rethrows it (stops retrying)", async () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
-
-    createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
-    const options = captureOptions();
+  it("gives up (no retry) on a 401, and does not hammer the endpoint", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const unauthorized = new Response(null, { status: 401 });
-    await expect(options.onopen(unauthorized)).rejects.toThrow("SSE authentication failed: 401");
-
-    let caught: unknown;
-    try {
-      await options.onopen(unauthorized);
-    } catch (err) {
-      caught = err;
-    }
-    expect(() => options.onerror(caught)).toThrow();
-  });
-
-  it("throws a non-fatal error from onopen on other non-ok statuses", async () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
-
     createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
-    const options = captureOptions();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    await expect(options.onopen(new Response(null, { status: 503 }))).rejects.toThrow(
-      "SSE connection failed: 503",
-    );
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no retry scheduled
   });
 
-  it("onerror returns an increasing back-off interval for non-fatal errors, capped at the max", () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+  it("retries a non-auth failure with an increasing back-off interval", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "debug").mockImplementation(() => {});
 
     createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
-    const options = captureOptions();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    const first = options.onerror(new Error("network blip"));
-    const second = options.onerror(new Error("network blip"));
-    const third = options.onerror(new Error("network blip"));
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 1s -> 2nd attempt
 
-    expect(first).toBe(1_000);
-    expect(second).toBe(2_000);
-    expect(third).toBe(4_000);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3); // 2s -> 3rd attempt
+
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(fetchMock).toHaveBeenCalledTimes(4); // 4s -> 4th attempt
   });
 
   it("resets the back-off interval after a successful reconnect", async () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
+    vi.useFakeTimers();
+    const controller = sseController();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 })) // 1st: fails
+      .mockResolvedValueOnce(sseResponse(controller.stream)) // 2nd: succeeds, stays open
+      .mockResolvedValue(new Response(null, { status: 503 })); // 3rd+: fails again
+    vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "debug").mockImplementation(() => {});
-
-    createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
-    const options = captureOptions();
-
-    options.onerror(new Error("blip"));
-    expect(options.onerror(new Error("blip"))).toBe(2_000);
-
-    await options.onopen(okResponse());
-
-    expect(options.onerror(new Error("blip"))).toBe(1_000);
-  });
-
-  it("forces a catch-up pull (via onSignal) on a *re*connect, but not on the first connection", async () => {
-    fetchEventSourceMock.mockReturnValue(new Promise(() => {}));
 
     const onSignal = vi.fn();
     createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
-    const options = captureOptions();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    await options.onopen(okResponse());
+    await vi.advanceTimersByTimeAsync(1_000); // 2nd attempt (succeeds)
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Close the now-open stream to trigger a reconnect — if back-off hadn't
+    // reset, the next attempt would be scheduled 2s out instead of 1s.
+    controller.close();
+    await vi.advanceTimersByTimeAsync(0);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchMock).toHaveBeenCalledTimes(2); // not yet — under 1s
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3); // exactly 1s after the drop
+  });
+
+  it("forces a catch-up pull (via onSignal) on a *re*connect, but not on the first connection", async () => {
+    vi.useFakeTimers();
+    const first = sseController();
+    const second = sseController();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(sseResponse(first.stream))
+      .mockResolvedValueOnce(sseResponse(second.stream));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    const onSignal = vi.fn();
+    createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
+    await vi.advanceTimersByTimeAsync(0);
     expect(onSignal).not.toHaveBeenCalled();
 
-    await options.onopen(okResponse());
+    first.close(); // drop -> reconnect
+    await vi.advanceTimersByTimeAsync(1_000);
+
     expect(onSignal).toHaveBeenCalledTimes(1);
-    expect(onSignal).toHaveBeenCalledWith(expect.any(String));
     expect(Number.isNaN(Date.parse(onSignal.mock.calls[0]![0] as string))).toBe(false);
   });
 
-  it("aborts the underlying request when the cleanup function is called", () => {
-    let capturedSignal: AbortSignal | undefined;
-    fetchEventSourceMock.mockImplementation((_url: string, options: CapturedFetchEventSourceOptions) => {
-      capturedSignal = options.signal;
-      return new Promise(() => {});
-    });
+  it("aborts the in-flight fetch when the cleanup function is called", async () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
 
     const cleanup = createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
 
-    expect(capturedSignal?.aborted).toBe(false);
+    const signal = fetchMock.mock.calls[0]?.[1]?.signal as AbortSignal;
+    expect(signal.aborted).toBe(false);
     cleanup();
-    expect(capturedSignal?.aborted).toBe(true);
+    expect(signal.aborted).toBe(true);
+  });
+
+  it("does not schedule a retry after cleanup, even if the in-flight request then fails", async () => {
+    vi.useFakeTimers();
+    let rejectFetch: (err: unknown) => void;
+    const fetchMock = vi.fn().mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectFetch = reject;
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cleanup = createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
+    cleanup();
+    rejectFetch!(new DOMException("aborted", "AbortError"));
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no reconnect attempt after cleanup
   });
 });
