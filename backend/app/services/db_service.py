@@ -41,6 +41,7 @@ from app.schemas import (
     WorkLocationUpdate,
 )
 from app.utils.datetime import as_utc
+from app.utils.sse_manager import notify_sync_changed
 
 
 class NotFoundError(Exception):
@@ -242,6 +243,7 @@ async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate
     session.add(label)
     await session.commit()
     await session.refresh(label)
+    await notify_sync_changed(user_id)
     return label
 
 
@@ -282,9 +284,13 @@ async def update_label(
 
     for field, value in data.items():
         setattr(label, field, value)
+    # Bump the LWW timestamp so a later sync push carrying stale data cannot
+    # silently overwrite this edit (conflict detection compares client_updated_at).
+    label.client_updated_at = datetime.now(UTC)
     session.add(label)
     await session.commit()
     await session.refresh(label)
+    await notify_sync_changed(user_id)
     return label
 
 
@@ -309,6 +315,7 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> No
     label.client_updated_at = now
     session.add(label)
     await session.commit()
+    await notify_sync_changed(user_id)
 
 
 # Task operations
@@ -345,6 +352,7 @@ async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) 
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    await notify_sync_changed(user_id)
     return task
 
 
@@ -419,9 +427,13 @@ async def update_task(
 
     for field, value in data.items():
         setattr(task, field, value)
+    # Bump the LWW timestamp so a later sync push carrying stale data cannot
+    # silently overwrite this edit (conflict detection compares client_updated_at).
+    task.client_updated_at = datetime.now(UTC)
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    await notify_sync_changed(user_id)
     return task
 
 
@@ -432,6 +444,7 @@ async def delete_task(session: AsyncSession, user_id: int, task_id: str) -> None
     task.client_updated_at = now
     session.add(task)
     await session.commit()
+    await notify_sync_changed(user_id)
 
 
 # Template operations
@@ -446,6 +459,7 @@ async def create_template(
     session.add(template)
     await session.commit()
     await session.refresh(template)
+    await notify_sync_changed(user_id)
     return template
 
 
@@ -484,9 +498,13 @@ async def update_template(
 
     for field, value in data.items():
         setattr(template, field, value)
+    # Bump the LWW timestamp so a later sync push carrying stale data cannot
+    # silently overwrite this edit (conflict detection compares client_updated_at).
+    template.client_updated_at = datetime.now(UTC)
     session.add(template)
     await session.commit()
     await session.refresh(template)
+    await notify_sync_changed(user_id)
     return template
 
 
@@ -497,6 +515,7 @@ async def delete_template(session: AsyncSession, user_id: int, template_id: str)
     template.client_updated_at = now
     session.add(template)
     await session.commit()
+    await notify_sync_changed(user_id)
 
 
 # Work location operations
@@ -507,12 +526,17 @@ async def create_or_update_work_location(
 ) -> WorkLocation:
     await _ensure_user_exists(session, user_id)
 
+    # The unique index on (user_id, date) is partial (active rows only), so
+    # multiple soft-deleted rows are legal at the schema level.  Pick the
+    # active row if one exists, otherwise the most recently updated tombstone,
+    # instead of scalar_one_or_none() which would raise on duplicates.
     result = await session.execute(
-        select(WorkLocation).where(
-            WorkLocation.user_id == user_id, WorkLocation.date == payload.date
-        )
+        select(WorkLocation)
+        .where(WorkLocation.user_id == user_id, WorkLocation.date == payload.date)
+        .order_by(WorkLocation.deleted_at.is_(None).desc(), WorkLocation.updated_at.desc())
+        .limit(1)
     )
-    location = result.scalar_one_or_none()
+    location = result.scalars().first()
 
     if location is None:
         location = WorkLocation(user_id=user_id, **payload.model_dump())
@@ -525,6 +549,7 @@ async def create_or_update_work_location(
     session.add(location)
     await session.commit()
     await session.refresh(location)
+    await notify_sync_changed(user_id)
     return location
 
 
@@ -574,9 +599,13 @@ async def update_work_location(
 
     for field, value in data.items():
         setattr(location, field, value)
+    # Bump the LWW timestamp so a later sync push carrying stale data cannot
+    # silently overwrite this edit (conflict detection compares client_updated_at).
+    location.client_updated_at = datetime.now(UTC)
     session.add(location)
     await session.commit()
     await session.refresh(location)
+    await notify_sync_changed(user_id)
     return location
 
 
@@ -587,6 +616,7 @@ async def delete_work_location(session: AsyncSession, user_id: int, value_date: 
     location.client_updated_at = now
     session.add(location)
     await session.commit()
+    await notify_sync_changed(user_id)
 
 
 # Gantt task operations
@@ -603,6 +633,7 @@ async def create_gantt_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    await notify_sync_changed(user_id)
     return task
 
 
@@ -635,9 +666,13 @@ async def update_gantt_task(
 
     for field, value in data.items():
         setattr(task, field, value)
+    # Bump the LWW timestamp so a later sync push carrying stale data cannot
+    # silently overwrite this edit (conflict detection compares client_updated_at).
+    task.client_updated_at = datetime.now(UTC)
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    await notify_sync_changed(user_id)
     return task
 
 
@@ -653,6 +688,7 @@ async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -
         .values(gantt_task_id=None, client_updated_at=now, updated_at=now)
     )
     await session.commit()
+    await notify_sync_changed(user_id)
 
 
 # User preferences operations
@@ -699,6 +735,7 @@ async def upsert_user_preferences(
             raise RuntimeError("user preferences upsert failed to return or load a row")
 
     await session.commit()
+    await notify_sync_changed(user_id)
     return prefs
 
 
@@ -833,7 +870,9 @@ async def create_or_update_time_off_entry(
         entry.entry_flag = payload.entry_flag
         entry.note = payload.note
         entry.deleted_at = None
-        entry.updated_at = datetime.now(UTC)
+        now = datetime.now(UTC)
+        entry.updated_at = now
+        entry.client_updated_at = now
         created = False
 
     session.add(entry)
@@ -863,11 +902,14 @@ async def create_or_update_time_off_entry(
         entry.entry_flag = payload.entry_flag
         entry.note = payload.note
         entry.deleted_at = None
-        entry.updated_at = datetime.now(UTC)
+        now = datetime.now(UTC)
+        entry.updated_at = now
+        entry.client_updated_at = now
         session.add(entry)
         await session.commit()
         created = False
     await session.refresh(entry)
+    await notify_sync_changed(user_id)
     return entry, created
 
 
@@ -896,10 +938,15 @@ async def update_time_off_entry(
         }
     for field, value in data.items():
         setattr(entry, field, value)
-    entry.updated_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    entry.updated_at = now
+    # Bump the LWW timestamp so a later sync push carrying stale data cannot
+    # silently overwrite this edit (conflict detection compares client_updated_at).
+    entry.client_updated_at = now
     session.add(entry)
     await session.commit()
     await session.refresh(entry)
+    await notify_sync_changed(user_id)
     return entry
 
 
@@ -909,5 +956,7 @@ async def delete_time_off_entry(session: AsyncSession, user_id: int, entry_id: s
     now = datetime.now(UTC)
     entry.deleted_at = now
     entry.updated_at = now
+    entry.client_updated_at = now
     session.add(entry)
     await session.commit()
+    await notify_sync_changed(user_id)

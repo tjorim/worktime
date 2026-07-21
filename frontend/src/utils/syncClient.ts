@@ -262,6 +262,21 @@ export function syncStatusHasData(status: SyncStatusResponse): boolean {
 }
 
 /**
+ * Deduplicate by natural key, keeping the last (most-recent local) entry per
+ * key.  The outbox merge concatenates multiple offline mutations, so the same
+ * record may appear more than once.  Keeping only the newest entry is safe
+ * because every queued mutation carries the full record (see collections.ts)
+ * and the server upserts creates/updates by natural key.
+ */
+function dedupeByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    map.set(keyFn(item), item);
+  }
+  return Array.from(map.values());
+}
+
+/**
  * Count the total number of conflict records across all entity types in a
  * push response.  Returns 0 when there are no conflicts.
  */
@@ -292,17 +307,6 @@ export function extractConflictedItems(
     );
   }
   const ids = (key: string): Set<string> => conflicted[key] ?? new Set();
-
-  // Deduplicate by natural key, keeping the last (most-recent local) entry per key.
-  // The outbox merge concatenates multiple offline mutations, so the same record
-  // may appear more than once.
-  function dedupeByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
-    const map = new Map<string, T>();
-    for (const item of items) {
-      map.set(keyFn(item), item);
-    }
-    return Array.from(map.values());
-  }
 
   return {
     labels: dedupeByKey(
@@ -383,10 +387,67 @@ export function bumpClientTimestamps(
 }
 
 /**
- * Call POST /db/sync/push with a pre-built payload.
- * Returns the server response, or null on network/parse failure.
+ * Maximum items per entity list accepted by POST /api/sync/push in a single
+ * request (mirrors MAX_SYNC_PUSH_ITEMS in backend/app/schemas.py).  Larger
+ * payloads are split transparently by pushSyncPayload.
  */
-export async function pushSyncPayload(
+export const MAX_SYNC_PUSH_ITEMS = 1000;
+
+/**
+ * Entity processing order for chunked pushes.  Referenced entities (labels,
+ * gantt tasks) are pushed before the tasks/templates that link to them so
+ * that server-side reference validation succeeds across chunk boundaries.
+ * Mirrors the processing order of push_changes in the backend sync service.
+ */
+const PUSH_ENTITY_ORDER: readonly (keyof SyncPushPayload)[] = [
+  "labels",
+  "gantt_tasks",
+  "tasks",
+  "templates",
+  "work_locations",
+  "time_off_entries",
+];
+
+function emptyPushPayload(): SyncPushPayload {
+  return {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+    gantt_tasks: [],
+  };
+}
+
+/**
+ * Split an oversized payload into single-entity chunks of at most
+ * MAX_SYNC_PUSH_ITEMS items each, in dependency order.
+ */
+function chunkPushPayload(payload: SyncPushPayload): SyncPushPayload[] {
+  const chunks: SyncPushPayload[] = [];
+  for (const key of PUSH_ENTITY_ORDER) {
+    const items = payload[key] ?? [];
+    for (let i = 0; i < items.length; i += MAX_SYNC_PUSH_ITEMS) {
+      const chunk = emptyPushPayload();
+      (chunk[key] as unknown[]) = items.slice(i, i + MAX_SYNC_PUSH_ITEMS);
+      chunks.push(chunk);
+    }
+  }
+  return chunks;
+}
+
+/** Concatenate the per-entity results of several push responses into one. */
+function mergePushResponses(responses: SyncPushResponse[]): SyncPushResponse {
+  const results: Record<string, SyncRecordResult[]> = {};
+  for (const response of responses) {
+    for (const [entityType, records] of Object.entries(response.results ?? {})) {
+      (results[entityType] ??= []).push(...(records ?? []));
+    }
+  }
+  return { results };
+}
+
+async function pushSinglePayload(
   fetch: FetchFn,
   payload: SyncPushPayload,
 ): Promise<SyncPushResponse | null> {
@@ -401,6 +462,36 @@ export async function pushSyncPayload(
   } catch {
     return null;
   }
+}
+
+/**
+ * Call POST /db/sync/push with a pre-built payload.
+ * Returns the server response, or null on network/parse failure.
+ *
+ * Payloads whose entity lists exceed MAX_SYNC_PUSH_ITEMS (e.g. a first-sync
+ * upload of a long local history) are split into sequential requests and the
+ * per-record results merged back into a single response.  If any chunk fails,
+ * null is returned; chunks already applied are harmless because pushes are
+ * idempotent (last-write-wins per record), so a retry re-sends everything.
+ */
+export async function pushSyncPayload(
+  fetch: FetchFn,
+  payload: SyncPushPayload,
+): Promise<SyncPushResponse | null> {
+  const oversized = PUSH_ENTITY_ORDER.some(
+    (key) => (payload[key] ?? []).length > MAX_SYNC_PUSH_ITEMS,
+  );
+  if (!oversized) {
+    return pushSinglePayload(fetch, payload);
+  }
+
+  const responses: SyncPushResponse[] = [];
+  for (const chunk of chunkPushPayload(payload)) {
+    const response = await pushSinglePayload(fetch, chunk);
+    if (response === null) return null;
+    responses.push(response);
+  }
+  return mergePushResponses(responses);
 }
 
 /**
@@ -805,12 +896,10 @@ function readSyncOutbox(userId: string): SyncPushPayload[] {
  * Append a single change payload to the outbox queue stored in localStorage.
  * Called when an immediate push fails (e.g. offline).
  *
- * Note: entries are not coalesced — each failed write is stored as a separate
- * item.  Rapid offline mutations to the same record produce multiple entries,
- * all of which are merged and sent together in the next flush.  The backend
- * uses last-write-wins per record ID, so only the latest entry for a given ID
- * takes effect.  If outbox size ever becomes a concern, coalescing by ID could
- * be added here.
+ * Note: entries are not coalesced at append time — each failed write is
+ * stored as a separate item.  Rapid offline mutations to the same record
+ * produce multiple entries; dequeueAndMergeSyncOutbox coalesces them by
+ * natural key (keeping the newest) before the flush is sent.
  */
 export function appendToSyncOutbox(userId: string, change: SyncPushPayload): void {
   try {
@@ -844,6 +933,12 @@ export function getSyncOutboxSize(userId: string): number {
  * caller must invoke the returned `commit` function to clear the outbox.  If
  * the push fails the outbox is left intact and will be retried on the next
  * flush cycle.
+ *
+ * Entries are coalesced by natural key (id, or date for work locations),
+ * keeping only the newest entry per record.  This is safe because every
+ * queued mutation carries the full record and the server upserts by natural
+ * key, and it keeps long-offline flushes bounded by the number of *distinct*
+ * records rather than the number of mutations.
  */
 export function dequeueAndMergeSyncOutbox(
   userId: string,
@@ -872,5 +967,15 @@ export function dequeueAndMergeSyncOutbox(
     );
     merged.gantt_tasks.push(...(Array.isArray(payload.gantt_tasks) ? payload.gantt_tasks : []));
   }
-  return { merged, commit: () => clearSyncOutbox(userId) };
+  return {
+    merged: {
+      labels: dedupeByKey(merged.labels, (l) => l.id),
+      tasks: dedupeByKey(merged.tasks, (t) => t.id),
+      templates: dedupeByKey(merged.templates, (t) => t.id),
+      work_locations: dedupeByKey(merged.work_locations, (w) => w.date),
+      time_off_entries: dedupeByKey(merged.time_off_entries, (e) => e.id),
+      gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
+    },
+    commit: () => clearSyncOutbox(userId),
+  };
 }

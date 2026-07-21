@@ -1751,3 +1751,317 @@ class TestSyncEventsEndpoint:
             )
             assert resp.status_code == 200
             mock_bc.assert_called_once_with(user_id)
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for sync correctness fixes
+# ---------------------------------------------------------------------------
+
+
+class TestSyncCorrectnessFixes:
+    """Regression tests for LWW/cursor correctness fixes."""
+
+    def test_sync_label_delete_ignores_soft_deleted_references(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A label whose only referencing tasks are soft-deleted must be deletable.
+
+        Previously the sync push counted soft-deleted tasks as active references,
+        making the label permanently undeletable via sync (while the REST path
+        allowed it) — every outbox flush re-surfaced a bogus conflict.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-tombstone-user")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        task_id = str(uuid4())
+
+        create_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Tombstoned",
+                        "color": "#AABBCC",
+                    }
+                ],
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "text": "Uses label",
+                        "label_id": label_id,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 200
+
+        # Soft-delete the referencing task, then delete the label.
+        delete_task_resp = db_client.post(
+            "/api/sync/push",
+            json={"tasks": [{"id": task_id, "action": "delete", "client_updated_at": _ts(-10)}]},
+            headers=headers,
+        )
+        assert delete_task_resp.status_code == 200
+        assert delete_task_resp.json()["results"]["tasks"][0]["status"] == "ok"
+
+        delete_label_resp = db_client.post(
+            "/api/sync/push",
+            json={"labels": [{"id": label_id, "action": "delete", "client_updated_at": _ts(-5)}]},
+            headers=headers,
+        )
+        assert delete_label_resp.status_code == 200
+        result = delete_label_resp.json()["results"]["labels"][0]
+        assert result["status"] == "ok", result
+
+    def test_sync_label_delete_conflicts_on_active_reference(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A label with an *active* referencing task must still refuse deletion."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-active-ref-user")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        task_id = str(uuid4())
+
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Still Used",
+                        "color": "#AABBCC",
+                    }
+                ],
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "text": "Active task",
+                        "label_id": label_id,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ],
+            },
+            headers=headers,
+        )
+
+        delete_label_resp = db_client.post(
+            "/api/sync/push",
+            json={"labels": [{"id": label_id, "action": "delete", "client_updated_at": _ts(-5)}]},
+            headers=headers,
+        )
+        assert delete_label_resp.status_code == 200
+        result = delete_label_resp.json()["results"]["labels"][0]
+        assert result["status"] == "conflict"
+        assert "in use" in result["conflict_reason"]
+
+    def test_pull_server_timestamp_includes_safety_overlap(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """The pull cursor must lag real time so concurrent pushes are not skipped.
+
+        pull_changes subtracts _PULL_CURSOR_OVERLAP from the reported
+        server_timestamp; without it, records committed concurrently with a
+        pull could fall permanently behind the client's cursor.
+        """
+        from app.services.sync_service import _PULL_CURSOR_OVERLAP
+
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "overlap-user")
+        headers = auth_headers(user_id)
+
+        before = datetime.now(UTC)
+        resp = db_client.get("/api/sync/pull", headers=headers)
+        after = datetime.now(UTC)
+        assert resp.status_code == 200
+
+        server_timestamp = datetime.fromisoformat(resp.json()["server_timestamp"])
+        assert server_timestamp <= after - _PULL_CURSOR_OVERLAP + timedelta(seconds=1)
+        assert server_timestamp >= before - _PULL_CURSOR_OVERLAP - timedelta(seconds=1)
+
+        # The status endpoint's server_timestamp is also persisted as a cursor
+        # by the frontend and must carry the same overlap.
+        status_resp = db_client.get("/api/sync/status", headers=headers)
+        assert status_resp.status_code == 200
+        status_timestamp = datetime.fromisoformat(status_resp.json()["server_timestamp"])
+        assert status_timestamp <= datetime.now(UTC) - _PULL_CURSOR_OVERLAP + timedelta(seconds=1)
+
+    def test_push_batch_size_limit_enforced(self, db_client: TestClient, auth_headers) -> None:
+        """A push batch exceeding MAX_SYNC_PUSH_ITEMS per entity list returns 422."""
+        from app.schemas import MAX_SYNC_PUSH_ITEMS
+
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "batch-limit-user")
+        headers = auth_headers(user_id)
+
+        oversized = {
+            "labels": [
+                {
+                    "id": str(uuid4()),
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    "name": f"Label {i}",
+                    "color": "#AABBCC",
+                }
+                for i in range(MAX_SYNC_PUSH_ITEMS + 1)
+            ]
+        }
+        resp = db_client.post("/api/sync/push", json=oversized, headers=headers)
+        assert resp.status_code == 422
+
+    def test_rest_update_wins_over_stale_sync_push(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """An edit made via the REST/MCP path must not be silently reverted.
+
+        REST updates now bump client_updated_at, so a sync push carrying a
+        client timestamp older than the REST edit (but newer than the record's
+        original creation) is reported as a conflict instead of clobbering it.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "rest-lww-user")
+        headers = auth_headers(user_id)
+
+        task_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-60),
+                        "text": "Original",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # Edit via the REST path (same code path the MCP server uses).
+        rest_resp = db_client.put(
+            f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
+            json={"text": "Edited via REST"},
+            headers=headers,
+        )
+        assert rest_resp.status_code == 200
+
+        # A stale device pushes an update stamped after creation but before
+        # the REST edit — it must lose, not silently overwrite.
+        stale_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-30),
+                        "text": "Stale offline edit",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert stale_resp.status_code == 200
+        result = stale_resp.json()["results"]["tasks"][0]
+        assert result["status"] == "conflict"
+
+        pull_resp = db_client.get("/api/sync/pull", headers=headers)
+        pulled = [t for t in pull_resp.json()["tasks"] if t["id"] == task_id]
+        assert pulled[0]["text"] == "Edited via REST"
+
+    def test_push_creates_gantt_linked_task_in_single_batch(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A single batch may create a gantt task and a task linking to it.
+
+        First-sync uploads send everything in one push; gantt tasks must be
+        processed before time-tracking tasks or the gantt_task_id reference
+        validation rejects the whole batch with 400.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "gantt-link-batch-user")
+        headers = auth_headers(user_id)
+
+        gantt_id = str(uuid4())
+        task_id = str(uuid4())
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Linked to gantt",
+                        "label_id": None,
+                        "gantt_task_id": gantt_id,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": "2026-02-01T10:00:00+00:00",
+                        "includes_break": False,
+                    }
+                ],
+                "gantt_tasks": [
+                    {
+                        "id": gantt_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "Project A",
+                        "start_date": "2026-02-01",
+                        "end_date": "2026-02-28",
+                        "progress": 0,
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        results = resp.json()["results"]
+        assert results["gantt_tasks"][0]["status"] == "ok"
+        assert results["tasks"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/api/sync/pull", headers=headers)
+        pulled = [t for t in pull_resp.json()["tasks"] if t["id"] == task_id]
+        assert pulled[0]["gantt_task_id"] == gantt_id
+
+    def test_rest_write_triggers_sync_broadcast(self, db_client: TestClient, auth_headers) -> None:
+        """CRUD writes must emit a sync_changed hint (previously only /sync/push did)."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "rest-broadcast-user")
+        headers = auth_headers(user_id)
+
+        with patch(
+            "app.utils.sse_manager.sync_event_manager.broadcast_sync_changed",
+            new_callable=AsyncMock,
+        ) as mock_bc:
+            mock_bc.return_value = 0
+            resp = db_client.post(
+                f"/api/time-tracking/labels?user_id={user_id}",
+                json={"name": "Broadcast Label", "color": "#AABBCC"},
+                headers=headers,
+            )
+            assert resp.status_code == 201
+            mock_bc.assert_called_once_with(user_id)

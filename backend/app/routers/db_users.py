@@ -158,10 +158,11 @@ async def get_user_by_username_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> UserRead:
     user = await get_user_by_username(session, username)
-    if user is None:
+    # Return 404 for both "does not exist" and "not yours": a 403 here would
+    # let any authenticated caller enumerate which usernames are taken.
+    if user is None or (not principal.is_admin and user.id != principal.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
 
-    require_user_or_admin_match(user.id, principal)
     return UserRead.model_validate(user, from_attributes=True)
 
 

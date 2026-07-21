@@ -27,7 +27,7 @@ removing the row, so pull queries can propagate the deletion to other clients.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
@@ -69,6 +69,20 @@ from app.utils.datetime import as_utc
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+# Safety overlap subtracted from the server_timestamp reported by pull_changes
+# and get_sync_status (clients persist either value as their sync cursor).
+#
+# Push handlers stamp ``updated_at`` when they process a record, but the row
+# only becomes visible to other transactions at commit time.  A pull that runs
+# concurrently can therefore return a ``server_timestamp`` *later* than the
+# ``updated_at`` of a record it never saw — and a client storing that value as
+# its cursor would skip the record forever.  Reporting a slightly older
+# timestamp makes the next incremental pull re-read the recent window instead.
+# Re-delivered records are harmless: clients apply pulls idempotently via
+# last-write-wins.
+_PULL_CURSOR_OVERLAP = timedelta(seconds=30)
 
 
 
@@ -114,11 +128,17 @@ async def _push_label(
                 server_updated_at=label.updated_at,
                 conflict_reason="server version is newer",
             )
+        # Only *active* references block deletion — soft-deleted tasks/templates
+        # must not pin their label forever (mirrors db_service.delete_label).
         task_count = await session.scalar(
-            select(sql_func.count()).select_from(TimeTrackingTask).where(TimeTrackingTask.label_id == item.id)
+            select(sql_func.count())
+            .select_from(TimeTrackingTask)
+            .where(TimeTrackingTask.label_id == item.id, TimeTrackingTask.deleted_at.is_(None))
         )
         template_count = await session.scalar(
-            select(sql_func.count()).select_from(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == item.id)
+            select(sql_func.count())
+            .select_from(TimeTrackingTemplate)
+            .where(TimeTrackingTemplate.label_id == item.id, TimeTrackingTemplate.deleted_at.is_(None))
         )
         if task_count or template_count:
             return SyncRecordResult(
@@ -322,13 +342,21 @@ async def _push_work_location(
     now = _now()
     date_key = item.date.isoformat()
 
+    # The unique index on (user_id, date) is partial (active rows only), so
+    # multiple soft-deleted rows are legal at the schema level.  Pick the
+    # active row if one exists, otherwise the most recently updated tombstone,
+    # instead of scalar_one_or_none() which would raise on duplicates and
+    # abort the whole push batch.
     result = await session.execute(
-        select(WorkLocation).where(
+        select(WorkLocation)
+        .where(
             WorkLocation.user_id == user_id,
             WorkLocation.date == item.date,
         )
+        .order_by(WorkLocation.deleted_at.is_(None).desc(), WorkLocation.updated_at.desc())
+        .limit(1)
     )
-    location: WorkLocation | None = result.scalar_one_or_none()
+    location: WorkLocation | None = result.scalars().first()
 
     if item.action == "delete":
         if location is None or location.deleted_at is not None:
@@ -590,8 +618,16 @@ async def push_changes(
         "gantt_tasks": [],
     }
 
+    # Referenced entities are processed before the entities that link to them:
+    # labels and gantt tasks must exist before tasks/templates that reference
+    # them are validated.  A first-sync upload sends everything in one batch,
+    # so processing tasks before gantt tasks would reject any task carrying a
+    # gantt_task_id link with "gantt task not found".
     for item in changes.labels:
         results["labels"].append(await _push_label(session, user_id, item))
+
+    for item in changes.gantt_tasks:
+        results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
 
     for item in changes.tasks:
         results["tasks"].append(await _push_task(session, user_id, item))
@@ -604,9 +640,6 @@ async def push_changes(
 
     for item in changes.time_off_entries:
         results["time_off_entries"].append(await _push_time_off_entry(session, user_id, item))
-
-    for item in changes.gantt_tasks:
-        results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
 
     await session.commit()
     return SyncPushResponse(results=results)
@@ -632,7 +665,7 @@ async def pull_changes(
         work_locations=[WorkLocationSyncRead.model_validate(r, from_attributes=True) for r in work_locations],
         time_off_entries=[TimeOffEntrySyncRead.model_validate(r, from_attributes=True) for r in time_off_entries],
         gantt_tasks=[GanttTaskSyncRead.model_validate(r, from_attributes=True) for r in gantt_tasks],
-        server_timestamp=_now(),
+        server_timestamp=_now() - _PULL_CURSOR_OVERLAP,
     )
 
 
@@ -659,5 +692,5 @@ async def get_sync_status(session: AsyncSession, user_id: int) -> SyncStatusResp
         time_off_entries_updated_at=await _max_ts(TimeOffEntry, user_id),
         gantt_tasks_updated_at=await _max_ts(GanttTask, user_id),
         preferences_updated_at=await _prefs_updated_at(user_id),
-        server_timestamp=_now(),
+        server_timestamp=_now() - _PULL_CURSOR_OVERLAP,
     )

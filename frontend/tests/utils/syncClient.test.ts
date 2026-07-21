@@ -14,6 +14,7 @@ import {
   fetchSyncStatus,
   getSyncOutboxSize,
   hasSyncCursor,
+  MAX_SYNC_PUSH_ITEMS,
   maxConflictServerTimestamp,
   pullSyncData,
   pushPreferences,
@@ -21,6 +22,7 @@ import {
   storeSyncCursor,
   syncStatusHasData,
   timeOffEntriesToSyncItems,
+  type SyncPushPayload,
 } from "@/utils/syncClient";
 import {
   getSyncCursorKey,
@@ -549,6 +551,85 @@ describe("syncClient", () => {
         templates: [],
         work_locations: [],
       });
+      expect(result).toBeNull();
+    });
+
+    it("splits oversized payloads into chunks and merges the results", async () => {
+      const taskCount = MAX_SYNC_PUSH_ITEMS + 5;
+      const tasks = Array.from({ length: taskCount }, (_, i) => ({
+        id: `task-${i}`,
+        action: "create",
+        client_updated_at: "2026-01-01T00:00:00Z",
+        text: `Task ${i}`,
+        start_time: "2026-01-01T09:00:00Z",
+      }));
+      const labels = [
+        {
+          id: "label-1",
+          action: "create",
+          client_updated_at: "2026-01-01T00:00:00Z",
+          name: "L",
+          color: "#000",
+        },
+      ];
+
+      mockFetch.mockImplementation(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as SyncPushPayload;
+        const results: Record<string, { id: string; status: string }[]> = {};
+        for (const [key, items] of Object.entries(body)) {
+          if (Array.isArray(items) && items.length > 0) {
+            results[key] = items.map((item) => ({
+              id: "id" in item ? (item.id as string) : (item as { date: string }).date,
+              status: "ok",
+            }));
+          }
+        }
+        return { ok: true, json: async () => ({ results }) };
+      });
+
+      const result = await pushSyncPayload(mockFetch, {
+        ...emptyPayload(),
+        labels,
+        tasks,
+      } as SyncPushPayload);
+
+      // 1 label chunk + 2 task chunks (1000 + 5)
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      // Referenced entities (labels) are pushed before tasks.
+      const firstBody = JSON.parse(
+        String((mockFetch.mock.calls[0] as [string, RequestInit])[1]?.body),
+      ) as SyncPushPayload;
+      expect(firstBody.labels).toHaveLength(1);
+      expect(firstBody.tasks).toHaveLength(0);
+      // Each request stays within the server's per-list cap.
+      for (const call of mockFetch.mock.calls as [string, RequestInit][]) {
+        const body = JSON.parse(String(call[1]?.body)) as SyncPushPayload;
+        for (const items of Object.values(body)) {
+          expect((items as unknown[]).length).toBeLessThanOrEqual(MAX_SYNC_PUSH_ITEMS);
+        }
+      }
+      // Merged response contains every record's result.
+      expect(result!.results["tasks"]).toHaveLength(taskCount);
+      expect(result!.results["labels"]).toHaveLength(1);
+    });
+
+    it("returns null when any chunk of an oversized payload fails", async () => {
+      const tasks = Array.from({ length: MAX_SYNC_PUSH_ITEMS + 1 }, (_, i) => ({
+        id: `task-${i}`,
+        action: "create",
+        client_updated_at: "2026-01-01T00:00:00Z",
+        text: `Task ${i}`,
+        start_time: "2026-01-01T09:00:00Z",
+      }));
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) })
+        .mockResolvedValueOnce({ ok: false });
+
+      const result = await pushSyncPayload(mockFetch, {
+        ...emptyPayload(),
+        tasks,
+      } as SyncPushPayload);
       expect(result).toBeNull();
     });
   });
@@ -1373,6 +1454,31 @@ describe("syncClient", () => {
       expect(result!.merged.labels).toHaveLength(1);
       expect(result!.merged.work_locations).toHaveLength(1);
       expect(result!.merged.templates).toHaveLength(1);
+    });
+
+    it("coalesces duplicate record ids keeping the newest entry", () => {
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A", text: "first edit" }],
+        work_locations: [{ date: "2026-01-01", country_code: "BE" }],
+      } as never);
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A", text: "second edit" }, { id: "task-B" }],
+        work_locations: [{ date: "2026-01-01", country_code: "NL" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      // task-A appears once, with the newest payload winning.
+      expect(result!.merged.tasks).toHaveLength(2);
+      const taskA = result!.merged.tasks.find((t) => t.id === "task-A");
+      expect((taskA as { text?: string }).text).toBe("second edit");
+      // Work locations coalesce by date.
+      expect(result!.merged.work_locations).toHaveLength(1);
+      expect((result!.merged.work_locations[0] as { country_code?: string }).country_code).toBe(
+        "NL",
+      );
     });
 
     it("skips corrupted/non-object outbox entries without throwing", () => {

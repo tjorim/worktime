@@ -20,7 +20,7 @@ from app.schemas import (
 )
 from app.services.db_service import ValidationError
 from app.services.sync_service import get_sync_status, pull_changes, push_changes
-from app.utils.sse_manager import sync_event_manager
+from app.utils.sse_manager import notify_sync_changed, sync_event_manager
 from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
@@ -55,12 +55,7 @@ async def push_endpoint(
     except ValidationError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    try:
-        await sync_event_manager.broadcast_sync_changed(authenticated_user_id)
-    except Exception:
-        logger.warning(
-            "SSE: broadcast_sync_changed failed for user %d (non-fatal)", authenticated_user_id, exc_info=True
-        )
+    await notify_sync_changed(authenticated_user_id)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,

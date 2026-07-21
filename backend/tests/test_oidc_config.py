@@ -385,3 +385,66 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
 
     assert local_user is created_local_user
     assert recorded["username"].startswith("alice-")
+
+
+async def test_get_or_create_local_user_retries_on_username_collision_race(monkeypatch) -> None:
+    """A concurrent signup claiming the derived username must not fail the login.
+
+    When create_user raises because a *different* subject won the username
+    between the availability check and the INSERT, provisioning re-derives a
+    fresh candidate and retries once instead of surfacing a 500.
+    """
+    from app.services.db_service import ConflictError
+
+    created_local_user = SimpleNamespace(id=44, username="alice-sub-abc1", display_name="Alice")
+
+    class FakeResult:
+        def __init__(self, value):
+            self._value = value
+
+        def scalar_one_or_none(self):
+            return self._value
+
+    class FakeSession:
+        def __init__(self):
+            self.calls = 0
+            self.rollbacks = 0
+
+        async def execute(self, _query):
+            self.calls += 1
+            if self.calls == 1:
+                return FakeResult(None)  # oidc_subject lookup → not found
+            if self.calls == 2:
+                return FakeResult(None)  # username "alice" appears available
+            if self.calls == 3:
+                return FakeResult(None)  # subject re-lookup after collision → still missing
+            if self.calls == 4:
+                return FakeResult(object())  # "alice" now visibly taken by the other signup
+            return FakeResult(None)  # suffixed candidate is available
+
+        async def rollback(self):
+            self.rollbacks += 1
+
+    create_attempts: list[str] = []
+
+    async def fake_create_user(session, payload, *, oidc_subject=None):
+        create_attempts.append(payload.username)
+        if len(create_attempts) == 1:
+            raise ConflictError("username already exists")
+        return created_local_user
+
+    monkeypatch.setattr(oidc_config, "create_user", fake_create_user)
+
+    session = FakeSession()
+    local_user = await oidc_config.get_or_create_local_user(
+        "sub-abc12345",
+        {"preferred_username": "alice"},
+        session,
+    )
+
+    assert local_user is created_local_user
+    assert session.rollbacks == 1
+    assert len(create_attempts) == 2
+    assert create_attempts[0] == "alice"
+    assert create_attempts[1] != "alice"
+    assert create_attempts[1].startswith("alice-")

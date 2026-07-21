@@ -24,13 +24,22 @@ class ListResponse[T](BaseModel):
 
 
 class UserRegister(BaseModel):
-    """Payload for the self-serve registration endpoint.
+    """Payload for the admin-only pre-registration endpoint.
 
     ``display_name`` is optional; it defaults to the username when omitted.
     Authentication is handled by the OIDC provider; no password is stored locally.
+
+    The username pattern mirrors what OIDC auto-provisioning derives from
+    ``preferred_username``/email claims: it must start with a letter or digit
+    and may contain letters, digits, and ``. _ @ + -`` (no whitespace or
+    control characters).
     """
 
-    username: str = Field(min_length=1, max_length=150)
+    username: str = Field(
+        min_length=1,
+        max_length=150,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._@+-]*$",
+    )
     display_name: str | None = None
 
 
@@ -722,15 +731,29 @@ class UserDataExport(BaseModel):
     preferences: dict[str, Any]
 
 
+# Upper bound per entity list in a single push batch.  Generous for real
+# outbox flushes (which hold at most a few hundred queued changes) while
+# preventing a single request from processing an unbounded batch in one
+# transaction.  Clients with more pending changes must split into multiple
+# pushes.
+MAX_SYNC_PUSH_ITEMS = 1000
+
+
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 
-    labels: list[LabelSyncItem] = []
-    tasks: list[TaskSyncItem] = []
-    templates: list[TemplateSyncItem] = []
-    work_locations: list[WorkLocationSyncItem] = []
-    time_off_entries: list[TimeOffEntrySyncItem] = []
-    gantt_tasks: list[GanttTaskSyncItem] = []
+    labels: list[LabelSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
+    tasks: list[TaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
+    templates: list[TemplateSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
+    work_locations: list[WorkLocationSyncItem] = Field(
+        default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS
+    )
+    time_off_entries: list[TimeOffEntrySyncItem] = Field(
+        default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS
+    )
+    gantt_tasks: list[GanttTaskSyncItem] = Field(
+        default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS
+    )
 
 
 class SyncPushResponse(BaseModel):

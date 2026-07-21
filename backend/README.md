@@ -84,7 +84,7 @@ The shared directory is expected to look like this:
 - Auth endpoints:
   - internal SuperTokens base path: `/auth/*`
   - public shared-host path in this repo: `/auth/*`
-- Registration endpoint (public): `POST /api/users/register`
+- Registration endpoint (admin-only pre-provisioning): `POST /api/users/register`
 - Database endpoints: `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`
 - Debug endpoint in non-production only: `/api/debug/benchmark`
 
