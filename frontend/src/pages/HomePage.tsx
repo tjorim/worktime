@@ -15,7 +15,7 @@ export function HomePage() {
   } = useAppShellContext();
 
   return (
-    <main id="main-content" role="main">
+    <main id="main-content">
       <ErrorBoundary>
         <CurrentStatus
           myTeam={myTeam}
