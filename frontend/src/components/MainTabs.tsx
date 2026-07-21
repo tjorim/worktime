@@ -108,6 +108,7 @@ export function MainTabs({
     const baseShortcuts = {
       onTabCalendar: () => setActiveTab("calendar"),
       onTabSchedule: () => setActiveTab("schedule"),
+      ...(onChangeTeam ? { onTeamSelect: onChangeTeam } : {}),
     };
 
     return {
@@ -116,7 +117,7 @@ export function MainTabs({
       ...(timeTrackingEnabled ? { onTabTimeTracking: () => setActiveTab("timetracking") } : {}),
       ...(ganttEnabled ? { onTabGantt: () => setActiveTab("gantt") } : {}),
     };
-  }, [setActiveTab, timeOffEnabled, timeTrackingEnabled, ganttEnabled]);
+  }, [setActiveTab, onChangeTeam, timeOffEnabled, timeTrackingEnabled, ganttEnabled]);
 
   useKeyboardShortcuts(shortcuts);
 

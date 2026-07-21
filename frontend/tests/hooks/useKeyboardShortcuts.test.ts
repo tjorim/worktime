@@ -37,13 +37,40 @@ describe("useKeyboardShortcuts", () => {
     removeEventListenerSpy.mockRestore();
   });
 
-  it("triggers onToday when Ctrl+H is pressed", () => {
+  it("triggers onToday when h is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "h" });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onToday).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trigger onToday when Ctrl+H is pressed (browser-reserved combo)", () => {
     renderHook(() => useKeyboardShortcuts(mockShortcuts));
 
     const event = new KeyboardEvent("keydown", { key: "h", ctrlKey: true });
     document.dispatchEvent(event);
 
-    expect(mockShortcuts.onToday).toHaveBeenCalledTimes(1);
+    expect(mockShortcuts.onToday).not.toHaveBeenCalled();
+  });
+
+  it("triggers onPrevious when k is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "k" });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onPrevious).toHaveBeenCalledTimes(1);
+  });
+
+  it("triggers onNext when j is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "j" });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onNext).toHaveBeenCalledTimes(1);
   });
 
   it("triggers onPrevious when left arrow is pressed", () => {
@@ -64,13 +91,59 @@ describe("useKeyboardShortcuts", () => {
     expect(mockShortcuts.onNext).toHaveBeenCalledTimes(1);
   });
 
-  it("triggers onTeamSelect when Ctrl+T is pressed", () => {
+  it("triggers onTeamSelect when Alt+T is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "t", altKey: true });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onTeamSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trigger onTeamSelect when Ctrl+T is pressed (browser-reserved combo)", () => {
     renderHook(() => useKeyboardShortcuts(mockShortcuts));
 
     const event = new KeyboardEvent("keydown", { key: "t", ctrlKey: true });
     document.dispatchEvent(event);
 
+    expect(mockShortcuts.onTeamSelect).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger onTabTimeTracking when Alt+T is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "t", altKey: true });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onTabTimeTracking).not.toHaveBeenCalled();
+  });
+
+  it("triggers onTeamSelect via event.code fallback on macOS layouts where Option+T remaps event.key", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    // On macOS US layouts, Option+T produces "†" as event.key, but event.code stays "KeyT".
+    const event = new KeyboardEvent("keydown", { key: "†", code: "KeyT", altKey: true });
+    document.dispatchEvent(event);
+
     expect(mockShortcuts.onTeamSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call preventDefault for Ctrl+, when onToggleSettings is not provided", () => {
+    renderHook(() => useKeyboardShortcuts({}));
+
+    const event = new KeyboardEvent("keydown", { key: ",", ctrlKey: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("does not call preventDefault for Alt+T when onTeamSelect is not provided", () => {
+    renderHook(() => useKeyboardShortcuts({}));
+
+    const event = new KeyboardEvent("keydown", { key: "t", altKey: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("ignores shortcuts when focus is on input elements", () => {
@@ -81,7 +154,7 @@ describe("useKeyboardShortcuts", () => {
     document.body.appendChild(input);
     input.focus();
 
-    const event = new KeyboardEvent("keydown", { key: "h", ctrlKey: true });
+    const event = new KeyboardEvent("keydown", { key: "h" });
     Object.defineProperty(event, "target", { value: input });
     document.dispatchEvent(event);
 
