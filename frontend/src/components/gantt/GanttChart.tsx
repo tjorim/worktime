@@ -3,10 +3,13 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { GanttViewMode } from "@/contexts/SettingsContext";
+import { formatLoggedDuration } from "@/utils/ganttLoggedTime";
 import { getLocale } from "@/paraglide/runtime.js";
+import * as m from "@/paraglide/messages.js";
 
 const POPUP_DATE_FORMAT = "MMM D";
 const EMPTY_ARRAY: string[] = [];
+const EMPTY_MAP: Map<string, number> = new Map();
 
 const htmlEscapeMap: Record<string, string> = {
   "&": "&amp;",
@@ -25,6 +28,8 @@ interface GanttChartProps {
   initialViewMode?: GanttViewMode;
   holidays?: string[];
   timeOffDates?: string[];
+  /** Total logged time per task, in minutes. Shown as an extra detail in the hover popup. */
+  loggedMinutesByTaskId?: Map<string, number>;
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
@@ -50,6 +55,7 @@ export function GanttChart({
   initialViewMode = "Day",
   holidays = EMPTY_ARRAY,
   timeOffDates = EMPTY_ARRAY,
+  loggedMinutesByTaskId = EMPTY_MAP,
   onTaskClick,
   onDateChange,
   onProgressChange,
@@ -60,6 +66,7 @@ export function GanttChart({
   const tasksRef = useRef(tasks);
   const prevTasksRef = useRef<GanttTask[]>([]);
   const initialViewModeRef = useRef(initialViewMode);
+  const loggedMinutesByTaskIdRef = useRef(loggedMinutesByTaskId);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
@@ -67,6 +74,7 @@ export function GanttChart({
 
   tasksRef.current = tasks;
   initialViewModeRef.current = initialViewMode;
+  loggedMinutesByTaskIdRef.current = loggedMinutesByTaskId;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
@@ -132,7 +140,13 @@ export function GanttChart({
               : "";
           const progress =
             typeof ctx.task.progress === "number" ? `${Math.floor(ctx.task.progress)}%` : "";
-          const details = [dateRange, duration, progress].filter(Boolean).join(" · ");
+          const taskId = getTaskId(ctx.task);
+          const loggedMinutes = taskId ? loggedMinutesByTaskIdRef.current.get(taskId) : undefined;
+          const logged =
+            loggedMinutes != null && loggedMinutes > 0
+              ? m.gantt_logged_total({ duration: formatLoggedDuration(loggedMinutes) })
+              : "";
+          const details = [dateRange, duration, progress, logged].filter(Boolean).join(" · ");
 
           ctx.set_details(details);
         },

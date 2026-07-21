@@ -776,6 +776,7 @@
   "gantt_table_start": "Start",
   "gantt_table_end": "End",
   "gantt_table_progress": "Progress",
+  "gantt_table_logged": "Logged",
   "gantt_table_dependencies": "Dependencies",
   "gantt_table_notes": "Notes",
   "gantt_table_actions": "Actions",

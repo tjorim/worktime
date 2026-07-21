@@ -8,7 +8,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { BREAK_DURATION_MINUTES } from "@/components/timeTracking/timeUtils";
+import { getLoggedMinutes, formatLoggedDuration } from "@/utils/ganttLoggedTime";
 import * as m from "@/paraglide/messages.js";
 
 type DepOption = { value: string; label: string };
@@ -51,20 +51,6 @@ function createInitialValue(task?: GanttTask): FormState {
   };
 }
 
-
-function getLoggedMinutes(startTime: string, stopTime: string | null | undefined, includesBreak?: boolean): number {
-  const stop = stopTime ? dayjs(stopTime) : dayjs();
-  const rawMinutes = Math.max(0, stop.diff(dayjs(startTime), "minute"));
-  return Math.max(0, rawMinutes - (includesBreak ? BREAK_DURATION_MINUTES : 0));
-}
-
-function formatLoggedDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (hours === 0) return m.gantt_logged_minutes({ minutes: remainingMinutes });
-  if (remainingMinutes === 0) return m.gantt_logged_hours({ hours });
-  return m.gantt_logged_hours_minutes({ hours, minutes: remainingMinutes });
-}
 
 function parseDeps(dependencies?: unknown): string[] {
   if (typeof dependencies === "string") {
