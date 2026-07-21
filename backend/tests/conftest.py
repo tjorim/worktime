@@ -69,6 +69,17 @@ def reset_cache() -> Generator[None, None, None]:
     yield
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> Generator[None, None, None]:
+    """Clear the rate limiter's in-memory storage before each test.
+
+    TestClient requests all share the same client IP, so without this every
+    test in the suite would draw down the same RATE_LIMIT_DEFAULT bucket.
+    """
+    app.state.limiter.reset()
+    yield
+
+
 @pytest_asyncio.fixture(scope="session")
 async def _schema_engine() -> AsyncGenerator[AsyncEngine, None]:
     """Session-scoped engine: create schema once, drop it after all tests."""

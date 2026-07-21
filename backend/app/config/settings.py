@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     # OIDC_ALGORITHMS: Comma-separated list of accepted signing algorithms
     OIDC_ALGORITHMS: str = "RS256"
 
+    # Per-client-IP rate limiting (slowapi). RATE_LIMIT_DEFAULT applies to every
+    # /api route unless explicitly exempted (e.g. health probes).
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_DEFAULT: str = "200/minute"
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
