@@ -47,9 +47,10 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
     [sortColumn, sortDirection, tasks],
   );
 
+  const locale = getLocale();
   const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(getLocale() === "nl" ? "nl-NL" : "en-US", { dateStyle: "medium" }),
-    [],
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
+    [locale],
   );
   const formatDate = (isoDate: string) => dateFormatter.format(dayjs(isoDate).toDate());
 
