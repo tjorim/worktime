@@ -14,7 +14,6 @@ export interface DeveloperOptions {
   autoConnect: boolean;
   isDevMode: boolean; // Persist dev mode visibility
   hdayHelperUrl: string | null; // URL of the local .hday helper server
-  enableLegacyCalendar: boolean;
 }
 
 interface DeveloperOptionsContextType {
@@ -22,7 +21,6 @@ interface DeveloperOptionsContextType {
   isDevMode: boolean;
   updateAutoConnect: (autoConnect: boolean) => void;
   updateHdayHelperUrl: (url: string | null) => void;
-  updateLegacyCalendarEnabled: (enabled: boolean) => void;
   toggleDevMode: () => void;
   testConnection: () => Promise<boolean>;
   disconnect: () => void;
@@ -35,7 +33,6 @@ const defaultOptions: DeveloperOptions = {
   autoConnect: false,
   isDevMode: false,
   hdayHelperUrl: null,
-  enableLegacyCalendar: false,
 };
 
 const DeveloperOptionsContext = createContext<DeveloperOptionsContextType | null>(null);
@@ -103,13 +100,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
   const updateHdayHelperUrl = useCallback(
     (url: string | null) => {
       setOptions((prev) => ({ ...prev, hdayHelperUrl: url || null }));
-    },
-    [setOptions],
-  );
-
-  const updateLegacyCalendarEnabled = useCallback(
-    (enabled: boolean) => {
-      setOptions((prev) => ({ ...prev, enableLegacyCalendar: enabled }));
     },
     [setOptions],
   );
@@ -183,7 +173,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
       isDevMode,
       updateAutoConnect,
       updateHdayHelperUrl,
-      updateLegacyCalendarEnabled,
       toggleDevMode,
       testConnection,
       disconnect,
@@ -193,7 +182,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
       isDevMode,
       updateAutoConnect,
       updateHdayHelperUrl,
-      updateLegacyCalendarEnabled,
       toggleDevMode,
       testConnection,
       disconnect,

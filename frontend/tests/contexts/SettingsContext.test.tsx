@@ -137,6 +137,7 @@ describe("SettingsContext unified user state", () => {
         enableTimeTracking: false,
         enableGantt: false,
         enableCrossBorderTracking: false,
+        enableUnifiedCalendar: false,
         homeCountry: null,
         officeCountry: null,
       },

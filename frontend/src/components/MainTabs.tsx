@@ -4,7 +4,6 @@ import Spinner from "react-bootstrap/Spinner";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import type { ScheduleOption } from "@/data/rosters";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import type { TabKey } from "@/contexts/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -14,12 +13,12 @@ import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 
 const CalendarView = lazy(() =>
-  import("@/features/calendar/CalendarView").then((module) => ({
+  import("@/components/CalendarView").then((module) => ({
     default: module.CalendarView,
   })),
 );
-const LegacyCalendarView = lazy(() =>
-  import("@/components/CalendarView").then((module) => ({
+const UnifiedCalendarView = lazy(() =>
+  import("@/features/calendar/CalendarView").then((module) => ({
     default: module.CalendarView,
   })),
 );
@@ -76,12 +75,7 @@ export function MainTabs({
 }: MainTabsProps) {
   const tabsId = useId();
   const { settings } = useSettings();
-  const {
-    options: { enableLegacyCalendar },
-  } = useDeveloperOptions();
-  const [activeKey, setActiveKey] = useSyncedState(
-    !enableLegacyCalendar && activeTab === "legacy-calendar" ? "calendar" : activeTab,
-  );
+  const [activeKey, setActiveKey] = useSyncedState(activeTab);
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
@@ -90,6 +84,7 @@ export function MainTabs({
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
   const ganttEnabled = settings.enableGantt;
+  const unifiedCalendarEnabled = settings.enableUnifiedCalendar;
 
   const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
@@ -128,13 +123,13 @@ export function MainTabs({
   const availableTabs = useMemo<TabKey[]>(
     () => [
       "calendar",
-      ...(enableLegacyCalendar ? (["legacy-calendar"] as TabKey[]) : []),
+      ...(unifiedCalendarEnabled ? (["unified-calendar"] as TabKey[]) : []),
       "schedule",
       ...(timeOffEnabled ? (["timeoff"] as TabKey[]) : []),
       ...(timeTrackingEnabled ? (["timetracking"] as TabKey[]) : []),
       ...(ganttEnabled ? (["gantt"] as TabKey[]) : []),
     ],
-    [enableLegacyCalendar, timeOffEnabled, timeTrackingEnabled, ganttEnabled],
+    [unifiedCalendarEnabled, timeOffEnabled, timeTrackingEnabled, ganttEnabled],
   );
 
   const loadingFallback = useMemo(
@@ -172,35 +167,38 @@ export function MainTabs({
             eventKey="calendar"
             title={
               <>
-                <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
+                <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
                 {m.tab_calendar()}
               </>
             }
           >
             {activeKey === "calendar" && (
               <Suspense fallback={loadingFallback}>
-                <CalendarView onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
+                <CalendarView
+                  myTeam={myTeam}
+                  onChangeSchedule={onChangeSchedule}
+                  onChangeTeam={onChangeTeam}
+                  onOpenScheduleTab={() => setActiveTab("schedule")}
+                />
               </Suspense>
             )}
           </Tab>
 
-          {enableLegacyCalendar && (
+          {unifiedCalendarEnabled && (
             <Tab
-              eventKey="legacy-calendar"
+              eventKey="unified-calendar"
               title={
                 <>
-                  <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
-                  {m.tab_legacy_calendar()}
+                  <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
+                  {m.tab_unified_calendar()}
                 </>
               }
             >
-              {activeKey === "legacy-calendar" && (
+              {activeKey === "unified-calendar" && (
                 <Suspense fallback={loadingFallback}>
-                  <LegacyCalendarView
-                    myTeam={myTeam}
+                  <UnifiedCalendarView
                     onChangeSchedule={onChangeSchedule}
                     onChangeTeam={onChangeTeam}
-                    onOpenScheduleTab={() => setActiveTab("schedule")}
                   />
                 </Suspense>
               )}
