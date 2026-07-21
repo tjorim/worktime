@@ -9,6 +9,10 @@ import type { TimeTrackingLabel } from "./constants";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
+import {
+  useSelectedGanttTaskOption,
+  type GanttTaskOption,
+} from "@/hooks/useSelectedGanttTaskOption";
 import * as m from "@/paraglide/messages.js";
 import type { GanttTask } from "@/types/gantt";
 
@@ -58,6 +62,7 @@ export function TaskEditModal({
   }, [value.start, value.stop]);
 
   const selectedLabelOption = useSelectedLabelOption(labels, value.label);
+  const selectedGanttTaskOption = useSelectedGanttTaskOption(ganttTasks, value.ganttTaskId);
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -107,17 +112,17 @@ export function TaskEditModal({
           {showGanttPicker && (
             <Form.Group controlId="editTaskGanttTask" className="mb-3">
               <Form.Label>{m.tt_gantt_task()}</Form.Label>
-              <Form.Select
-                value={value.ganttTaskId ?? ""}
-                onChange={(event) => onChange({ ...value, ganttTaskId: event.target.value })}
-              >
-                <option value="">{m.tt_no_gantt_task()}</option>
-                {ganttTasks.map((task) => (
-                  <option key={task.id} value={task.id}>
-                    {task.name}
-                  </option>
-                ))}
-              </Form.Select>
+              <ReactSelect<GanttTaskOption>
+                unstyled
+                isClearable
+                isSearchable
+                inputId="editTaskGanttTask"
+                placeholder={m.tt_no_gantt_task()}
+                options={ganttTasks.map((task) => ({ value: task.id, label: task.name }))}
+                value={selectedGanttTaskOption}
+                onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value ?? "" })}
+                classNames={bootstrapSelectClassNames}
+              />
             </Form.Group>
           )}
           <div className="d-flex gap-3 mb-3">

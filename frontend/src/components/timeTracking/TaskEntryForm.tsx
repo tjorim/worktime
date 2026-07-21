@@ -10,6 +10,10 @@ import type { TimeTrackingLabel } from "./constants";
 import type { GanttTask } from "@/types/gantt";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
+import {
+  useSelectedGanttTaskOption,
+  type GanttTaskOption,
+} from "@/hooks/useSelectedGanttTaskOption";
 import * as m from "@/paraglide/messages.js";
 
 type TaskEntryFormProps = {
@@ -56,6 +60,7 @@ export function TaskEntryForm({
   onStartNow,
 }: TaskEntryFormProps) {
   const selectedLabelOption = useSelectedLabelOption(labels, label);
+  const selectedGanttTaskOption = useSelectedGanttTaskOption(ganttTasks, ganttTaskId);
   const primaryFieldWidth = showGanttPicker ? 2 : 3;
 
   const renderDisabledTooltipButton = (
@@ -113,14 +118,17 @@ export function TaskEntryForm({
         <Col md={primaryFieldWidth}>
           <Form.Group controlId="timeTrackerGanttTask">
             <Form.Label>{m.tt_gantt_task()}</Form.Label>
-            <Form.Select value={ganttTaskId} onChange={(event) => onGanttTaskChange(event.target.value)}>
-              <option value="">{m.tt_no_gantt_task()}</option>
-              {ganttTasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.name}
-                </option>
-              ))}
-            </Form.Select>
+            <ReactSelect<GanttTaskOption>
+              unstyled
+              isClearable
+              isSearchable
+              inputId="timeTrackerGanttTask"
+              placeholder={m.tt_no_gantt_task()}
+              options={ganttTasks.map((task) => ({ value: task.id, label: task.name }))}
+              value={selectedGanttTaskOption}
+              onChange={(selected) => onGanttTaskChange(selected?.value ?? "")}
+              classNames={bootstrapSelectClassNames}
+            />
           </Form.Group>
         </Col>
       )}
