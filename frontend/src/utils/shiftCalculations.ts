@@ -84,6 +84,11 @@ export interface Shift {
   end: number | null;
   isWorking: boolean;
   className: string;
+  // Optional flex-time window carried through from the roster definition
+  // (see ShiftTimeDefinition). Present only for flex shifts such as the 9-5 Day.
+  flexStartEarliest?: number;
+  flexStartLatest?: number;
+  presenceHours?: number;
 }
 
 /**
@@ -125,6 +130,9 @@ const buildShift = (
     start: number | null;
     end: number | null;
     displayCode: string;
+    flexStartEarliest?: number;
+    flexStartLatest?: number;
+    presenceHours?: number;
   },
   emoji: string,
   className: string,
@@ -138,6 +146,13 @@ const buildShift = (
     end: definition.end,
     isWorking: code !== "O",
     className,
+    ...(definition.flexStartEarliest != null
+      ? { flexStartEarliest: definition.flexStartEarliest }
+      : {}),
+    ...(definition.flexStartLatest != null
+      ? { flexStartLatest: definition.flexStartLatest }
+      : {}),
+    ...(definition.presenceHours != null ? { presenceHours: definition.presenceHours } : {}),
   };
 };
 
