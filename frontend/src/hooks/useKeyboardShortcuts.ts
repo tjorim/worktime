@@ -96,10 +96,12 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
       switch (event.key) {
         case "?":
           // "?" (Shift+/) opens the keyboard shortcuts overlay from anywhere.
-          if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+          // Only intercept when a handler is registered so consumers that don't
+          // provide onShowShortcuts don't swallow the browser's default behavior.
+          if (shortcuts.onShowShortcuts && !event.ctrlKey && !event.metaKey && !event.altKey) {
             event.preventDefault?.();
             try {
-              shortcuts.onShowShortcuts?.();
+              shortcuts.onShowShortcuts();
             } catch (error) {
               logger.error("Error in onShowShortcuts callback:", error);
             }
