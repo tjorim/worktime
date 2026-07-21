@@ -121,6 +121,7 @@
   "loading": "Laden...",
   "error": "Fout",
   "close": "Sluiten",
+  "toast_close_aria": "Melding sluiten",
   "save": "Opslaan",
   "back": "Terug",
   "next": "Volgende",

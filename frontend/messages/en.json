@@ -128,6 +128,7 @@
   "loading": "Loading...",
   "error": "Error",
   "close": "Close",
+  "toast_close_aria": "Close notification",
   "save": "Save",
   "back": "Back",
   "next": "Next",
