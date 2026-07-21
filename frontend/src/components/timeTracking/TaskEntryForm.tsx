@@ -56,6 +56,7 @@ export function TaskEntryForm({
   onStartNow,
 }: TaskEntryFormProps) {
   const selectedLabelOption = useSelectedLabelOption(labels, label);
+  const primaryFieldWidth = showGanttPicker ? 2 : 3;
 
   const renderDisabledTooltipButton = (
     buttonKey: string,
@@ -81,7 +82,7 @@ export function TaskEntryForm({
 
   return (
     <Row className="g-3 align-items-end">
-      <Col md={3}>
+      <Col md={primaryFieldWidth}>
         <Form.Group controlId="timeTrackerTask">
           <Form.Label>{m.form_task()}</Form.Label>
           <Form.Control
@@ -91,7 +92,7 @@ export function TaskEntryForm({
           />
         </Form.Group>
       </Col>
-      <Col md={3}>
+      <Col md={primaryFieldWidth}>
         <Form.Group controlId="timeTrackerLabel">
           <Form.Label>{m.form_label()}</Form.Label>
           <ReactSelect<LabelOption>
@@ -109,7 +110,7 @@ export function TaskEntryForm({
         </Form.Group>
       </Col>
       {showGanttPicker && (
-        <Col md={3}>
+        <Col md={primaryFieldWidth}>
           <Form.Group controlId="timeTrackerGanttTask">
             <Form.Label>{m.tt_gantt_task()}</Form.Label>
             <Form.Select value={ganttTaskId} onChange={(event) => onGanttTaskChange(event.target.value)}>
