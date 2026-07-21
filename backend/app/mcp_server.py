@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import os
 from collections import Counter
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
-from typing import Any
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Concatenate
 
 from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, MultiAuth
@@ -41,6 +42,7 @@ from app.schemas import (
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
+    ValidationError,
     create_gantt_task,
     create_or_update_time_off_entry,
     create_or_update_work_location,
@@ -64,7 +66,11 @@ from app.services.db_service import (
     update_task,
     update_time_off_entry,
 )
-from app.services.read_models_service import build_dashboard_read_model, compute_next_shifts_for_team
+from app.services.read_models_service import (
+    build_dashboard_read_model,
+    compute_next_shifts_for_team,
+    get_schedule_type_for_user,
+)
 from app.services.sync_service import get_sync_status
 
 
@@ -121,6 +127,16 @@ def _parse_integration_key_mapping(value: str) -> dict[str, tuple[int, bool]]:
       token=user_id:admin
       token=user_id:user
     Multiple entries are comma-separated.
+
+    These are long-lived static bearer tokens with no built-in expiry — an
+    intentional trade-off for self-hosted, operator-controlled integrations
+    (they bypass the OIDC login flow entirely). To rotate a key: add a new
+    token=user_id entry alongside the old one, update the calling
+    integration to use it, then remove the old entry and restart the
+    process (the mapping is parsed once at startup, in _build_auth_provider).
+    There is no revocation mechanism short of removing the entry and
+    restarting, so treat these tokens like any other long-lived credential —
+    store them in a secret manager, not in version control.
     """
     mapping: dict[str, tuple[int, bool]] = {}
     for item in (part.strip() for part in value.split(",") if part.strip()):
@@ -170,6 +186,39 @@ def _to_iso_datetime(value: datetime) -> str:
         value = value.replace(tzinfo=UTC)
     return value.astimezone(UTC).isoformat()
 
+
+# Default lookback window for get_time_tracking_summary when the caller omits
+# both start_at and end_at — bounds the response to a reasonable size instead
+# of returning the user's entire tracked-task history into the model's
+# context on every unfiltered call.
+_DEFAULT_SUMMARY_WINDOW = timedelta(days=30)
+
+# Hard cap on items returned by get_gantt_tasks. Personal Gantt boards are
+# typically small (a handful of projects), so this is a defense-in-depth
+# bound rather than an expected everyday limit.
+_MAX_GANTT_TASKS_RETURNED = 200
+
+
+def _map_domain_errors[**P, R](
+    func: Callable[Concatenate[WorktimeMcpBackend, P], Awaitable[R]],
+) -> Callable[Concatenate[WorktimeMcpBackend, P], Awaitable[R]]:
+    """Translate db_service domain exceptions into ValueError for MCP callers.
+
+    Without this, only delete_label mapped ConflictError to ValueError —
+    every other write tool let ConflictError / NotFoundError / ValidationError
+    (e.g. "only one running task is allowed per user") propagate raw, so the
+    calling model saw an opaque failure instead of the actionable message the
+    exception already carries. Apply to every write tool method.
+    """
+
+    @functools.wraps(func)
+    async def wrapper(self: WorktimeMcpBackend, *args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return await func(self, *args, **kwargs)
+        except (ConflictError, NotFoundError, ValidationError) as exc:
+            raise ValueError(str(exc)) from exc
+
+    return wrapper
 
 
 class WorktimeMcpBackend:
@@ -333,12 +382,15 @@ class WorktimeMcpBackend:
             raise ValueError("limit must be at least 1")
         limit = min(limit, 50)
         async with self._tool_context() as (context, db):
-            principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
-            dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
-            schedule_type = dashboard.work_context.schedule_type
+            # Only the schedule type is needed here, so use the lightweight
+            # lookup instead of build_dashboard_read_model(), which would also
+            # fetch the user row, list time-off entries, and compute a
+            # team_status entry for every team in the schedule.
+            as_of = datetime.now(UTC)
+            schedule_type = await get_schedule_type_for_user(db, context.user_id)
             if schedule_type is None:
                 return {
-                    "as_of": _to_iso_datetime(dashboard.as_of),
+                    "as_of": _to_iso_datetime(as_of),
                     "schedule_type": None,
                     "team_number": team_number,
                     "items": [],
@@ -346,11 +398,11 @@ class WorktimeMcpBackend:
             items = compute_next_shifts_for_team(
                 schedule_type,
                 team_number,
-                as_of=dashboard.as_of,
+                as_of=as_of,
                 limit=limit,
             )
             return {
-                "as_of": _to_iso_datetime(dashboard.as_of),
+                "as_of": _to_iso_datetime(as_of),
                 "schedule_type": schedule_type,
                 "team_number": team_number,
                 "items": [
@@ -422,13 +474,22 @@ class WorktimeMcpBackend:
         start_at: datetime | None = None,
         end_at: datetime | None = None,
     ) -> dict[str, Any]:
+        """Summarize time-tracking tasks for the authenticated user.
+
+        When both start_at and end_at are omitted, defaults to the trailing
+        30 days rather than the user's entire history, so a plain call stays
+        bounded. Pass explicit dates for a wider or narrower range.
+        """
         now_utc = datetime.now(UTC)
+        default_range_applied = start_at is None and end_at is None
+        effective_end = end_at or now_utc
+        effective_start = start_at or (effective_end - _DEFAULT_SUMMARY_WINDOW)
         async with self._tool_context() as (context, db):
             tasks = await list_tasks(
                 db,
                 user_id=context.user_id,
-                start_date=start_at,
-                end_date=end_at,
+                start_date=effective_start,
+                end_date=effective_end,
             )
             payload_tasks = [TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json") for task in tasks]
             total_seconds = 0
@@ -450,8 +511,9 @@ class WorktimeMcpBackend:
 
             return {
                 "user_id": context.user_id,
-                "start_at": _to_iso_datetime(start_at) if start_at else None,
-                "end_at": _to_iso_datetime(end_at) if end_at else None,
+                "start_at": _to_iso_datetime(effective_start),
+                "end_at": _to_iso_datetime(effective_end),
+                "default_range_applied": default_range_applied,
                 "task_count": len(payload_tasks),
                 "tracked_seconds": total_seconds,
                 "running_task": running_payload,
@@ -473,6 +535,7 @@ class WorktimeMcpBackend:
                 ]
             }
 
+    @_map_domain_errors
     async def delete_label(self, label_id: str) -> dict[str, Any]:
         """Delete a time-tracking label owned by the authenticated user.
 
@@ -480,10 +543,7 @@ class WorktimeMcpBackend:
         templates.  Returns a confirmation payload on success.
         """
         async with self._tool_context() as (context, db):
-            try:
-                await delete_label(db, context.user_id, label_id)
-            except ConflictError as exc:
-                raise ValueError(str(exc)) from exc
+            await delete_label(db, context.user_id, label_id)
             audit.append(
                 target=f"user:{context.user_id}:label:{label_id}",
                 action="delete_label",
@@ -514,10 +574,15 @@ class WorktimeMcpBackend:
                     if task["start_date"] <= _to_iso_date(active_on) <= task["end_date"]
                 ]
 
+            total_tasks = len(payload_tasks)
+            truncated = total_tasks > _MAX_GANTT_TASKS_RETURNED
+            payload_tasks = payload_tasks[:_MAX_GANTT_TASKS_RETURNED]
+
             return {
                 "user_id": context.user_id,
                 "active_on": _to_iso_date(active_on) if active_on is not None else None,
-                "total_tasks": len(payload_tasks),
+                "total_tasks": total_tasks,
+                "truncated": truncated,
                 "tasks": payload_tasks,
             }
 
@@ -530,6 +595,7 @@ class WorktimeMcpBackend:
     # Personal write tools
     # ------------------------------------------------------------------
 
+    @_map_domain_errors
     async def start_time_entry(
         self,
         text: str,
@@ -559,6 +625,7 @@ class WorktimeMcpBackend:
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def stop_time_entry(
         self,
         stop_time: datetime | None = None,
@@ -583,6 +650,7 @@ class WorktimeMcpBackend:
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def create_time_tracking_task(
         self,
         text: str,
@@ -613,6 +681,7 @@ class WorktimeMcpBackend:
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def update_time_tracking_task(
         self,
         task_id: str,
@@ -621,15 +690,20 @@ class WorktimeMcpBackend:
         stop_time: datetime | None = None,
         includes_break: bool | None = None,
         label_id: str | None = None,
+        clear_stop_time: bool = False,
+        clear_label_id: bool = False,
     ) -> dict[str, Any]:
         """Update a time-tracking task owned by the authenticated user.
 
-        Omit any parameter to leave it unchanged. Tasks always require a label;
-        label_id cannot be cleared.
+        Omit any parameter to leave it unchanged. Set clear_stop_time=True to
+        reopen the task (make it running again) instead of passing a
+        stop_time; set clear_label_id=True to unlink its label. Both take
+        precedence over the corresponding value parameter when true.
 
         Side effects: updates the specified TimeTrackingTask row.  Authorization
-        is enforced — the task must belong to the caller.  Returns the updated
-        task resource.
+        is enforced — the task must belong to the caller.  Reopening a task
+        (clear_stop_time=True) fails if another task is already running.
+        Returns the updated task resource.
         """
         async with self._tool_context() as (context, db):
             # Verify ownership before updating
@@ -637,11 +711,15 @@ class WorktimeMcpBackend:
             update_data: dict[str, Any] = {}
             if text is not None:
                 update_data["text"] = text
-            if label_id is not None:
+            if clear_label_id:
+                update_data["label_id"] = None
+            elif label_id is not None:
                 update_data["label_id"] = label_id
             if start_time is not None:
                 update_data["start_time"] = start_time
-            if stop_time is not None:
+            if clear_stop_time:
+                update_data["stop_time"] = None
+            elif stop_time is not None:
                 update_data["stop_time"] = stop_time
             if includes_break is not None:
                 update_data["includes_break"] = includes_break
@@ -655,14 +733,17 @@ class WorktimeMcpBackend:
             )
             return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def delete_time_tracking_task(
         self,
         task_id: str,
     ) -> dict[str, Any]:
         """Delete a time-tracking task owned by the authenticated user.
 
-        Side effects: removes the TimeTrackingTask row from the database.  The
-        task must belong to the caller.  Returns a confirmation payload.
+        Side effects: soft-deletes the TimeTrackingTask row (sets deleted_at
+        so the deletion propagates through the sync layer to other devices;
+        the row is not removed).  The task must belong to the caller.
+        Returns a confirmation payload.
         """
         async with self._tool_context() as (context, db):
             await delete_task(db, context.user_id, task_id)
@@ -673,6 +754,7 @@ class WorktimeMcpBackend:
             )
             return {"deleted": True, "task_id": task_id, "user_id": context.user_id}
 
+    @_map_domain_errors
     async def set_work_location(
         self,
         value_date: date,
@@ -694,14 +776,17 @@ class WorktimeMcpBackend:
             )
             return WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def delete_work_location(
         self,
         value_date: date,
     ) -> dict[str, Any]:
         """Delete the work location entry for a given date.
 
-        Side effects: removes the WorkLocation row for (user_id, date).  Returns
-        a confirmation payload.
+        Side effects: soft-deletes the WorkLocation row for (user_id, date)
+        (sets deleted_at so the deletion propagates through the sync layer to
+        other devices; the row is not removed).  Returns a confirmation
+        payload.
         """
         async with self._tool_context() as (context, db):
             await delete_work_location(db, context.user_id, value_date)
@@ -712,6 +797,7 @@ class WorktimeMcpBackend:
             )
             return {"deleted": True, "date": value_date.isoformat(), "user_id": context.user_id}
 
+    @_map_domain_errors
     async def create_time_off_event(
         self,
         entry_kind: EntryKind,
@@ -751,6 +837,7 @@ class WorktimeMcpBackend:
             )
             return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def update_time_off_event(
         self,
         entry_id: str,
@@ -798,6 +885,7 @@ class WorktimeMcpBackend:
             )
             return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def delete_time_off_event(
         self,
         entry_id: str,
@@ -819,6 +907,7 @@ class WorktimeMcpBackend:
             )
             return {"deleted": True, "entry_id": entry_id, "user_id": context.user_id}
 
+    @_map_domain_errors
     async def create_gantt_task(
         self,
         name: str,
@@ -849,6 +938,7 @@ class WorktimeMcpBackend:
             )
             return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def update_gantt_task(
         self,
         task_id: str,
@@ -890,14 +980,18 @@ class WorktimeMcpBackend:
             )
             return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
+    @_map_domain_errors
     async def delete_gantt_task(
         self,
         task_id: str,
     ) -> dict[str, Any]:
         """Delete a personal Gantt task.
 
-        Side effects: removes the GanttTask row from the database.  The task
-        must belong to the authenticated user.  Returns a confirmation payload.
+        Side effects: soft-deletes the GanttTask row (sets deleted_at so the
+        deletion propagates through the sync layer to other devices; the row
+        is not removed) and unlinks any time-tracking tasks that referenced
+        it.  The task must belong to the authenticated user.  Returns a
+        confirmation payload.
         """
         async with self._tool_context() as (context, db):
             # Verify ownership before deleting

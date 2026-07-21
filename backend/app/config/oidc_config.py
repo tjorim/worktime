@@ -102,6 +102,39 @@ async def _get_jwks(*, force_refresh: bool = False) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Periodic background refresh
+# ---------------------------------------------------------------------------
+
+_JWKS_REFRESH_INTERVAL_SECONDS = 3600
+
+
+async def _periodic_jwks_refresh_loop() -> None:
+    """Background loop that force-refreshes the JWKS cache periodically.
+
+    Without this, the cache only refreshes reactively when a token's ``kid``
+    isn't found in it (see ``decode_token``) — so a provider-side key
+    rotation that keeps the same ``kid``, or a JWKS URI change, would go
+    unnoticed until a process restart. Failures are logged and swallowed;
+    the existing cached JWKS keeps serving requests, and the reactive
+    refresh-on-miss path is unaffected by this loop failing.
+    """
+    while True:
+        try:
+            await asyncio.sleep(_JWKS_REFRESH_INTERVAL_SECONDS)
+            await _get_jwks(force_refresh=True)
+            logger.debug("Periodic JWKS refresh succeeded")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.warning("Periodic JWKS refresh failed (non-fatal)", exc_info=True)
+
+
+def start_periodic_jwks_refresh() -> asyncio.Task[None]:
+    """Start the background JWKS refresh loop and return its task for shutdown cancellation."""
+    return asyncio.create_task(_periodic_jwks_refresh_loop())
+
+
+# ---------------------------------------------------------------------------
 # Token validation
 # ---------------------------------------------------------------------------
 

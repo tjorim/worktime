@@ -89,6 +89,7 @@ class TimeTrackingLabel(ClientTimestampMixin, Base):
             unique=True,
             postgresql_where=sql_text("deleted_at IS NULL"),
         ),
+        Index("ix_time_tracking_labels_user_id_updated_at", "user_id", "updated_at"),
     )
 
 
@@ -121,6 +122,11 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
         DateTime(timezone=True), nullable=True, index=True
     )
 
+    __table_args__ = (
+        Index("ix_time_tracking_tasks_user_id_updated_at", "user_id", "updated_at"),
+        Index("ix_time_tracking_tasks_user_id_start_time", "user_id", "start_time"),
+    )
+
 
 class TimeTrackingTemplate(ClientTimestampMixin, Base):
     """Reusable time tracking template."""
@@ -143,6 +149,10 @@ class TimeTrackingTemplate(ClientTimestampMixin, Base):
     )
     deleted_at: Mapped[dt_datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
+    )
+
+    __table_args__ = (
+        Index("ix_time_tracking_templates_user_id_updated_at", "user_id", "updated_at"),
     )
 
 
@@ -174,6 +184,7 @@ class WorkLocation(ClientTimestampMixin, Base):
             unique=True,
             postgresql_where=sql_text("deleted_at IS NULL"),
         ),
+        Index("ix_work_locations_user_id_updated_at", "user_id", "updated_at"),
     )
 
 
@@ -201,6 +212,8 @@ class GanttTask(ClientTimestampMixin, Base):
     deleted_at: Mapped[dt_datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
+
+    __table_args__ = (Index("ix_gantt_tasks_user_id_updated_at", "user_id", "updated_at"),)
 
 
 class UserPreferences(ClientTimestampMixin, Base):
@@ -280,6 +293,7 @@ class TimeOffEntry(ClientTimestampMixin, Base):
             " OR entry_kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL",
             name="ck_time_off_shape",
         ),
+        Index("ix_time_off_entries_user_id_updated_at", "user_id", "updated_at"),
     )
 
 

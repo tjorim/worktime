@@ -465,6 +465,19 @@ def _build_work_context(preferences_data: Mapping[str, Any]) -> ReadModelWorkCon
     )
 
 
+async def get_schedule_type_for_user(session: AsyncSession, user_id: int) -> ScheduleType | None:
+    """Return just the user's configured schedule type, or None if unset.
+
+    A lightweight alternative to build_dashboard_read_model() for callers
+    that only need the schedule type: it issues a single preferences query
+    instead of also fetching the user row, computing time-off entries, and
+    building a full team_status list for every team in the schedule.
+    """
+    preferences = await get_user_preferences(session, user_id)
+    preferences_data = preferences.data if preferences is not None else {}
+    return _build_work_context(preferences_data).schedule_type
+
+
 async def build_dashboard_read_model(
     session: AsyncSession,
     principal: AuthenticatedPrincipal,

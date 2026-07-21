@@ -27,6 +27,12 @@ def _build_engine():
             # Override via DATABASE_POOL_SIZE / DATABASE_POOL_MAX_OVERFLOW env vars if needed.
             pool_size=settings.DATABASE_POOL_SIZE,
             max_overflow=settings.DATABASE_POOL_MAX_OVERFLOW,
+            # Test each pooled connection with a lightweight ping before handing
+            # it out. Without this, connections dropped by a Postgres restart
+            # (or an idle-connection reaper) sit in the pool until first use,
+            # so the first requests after such an event fail instead of
+            # transparently reconnecting.
+            pool_pre_ping=True,
         )
         _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 

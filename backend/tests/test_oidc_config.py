@@ -448,3 +448,68 @@ async def test_get_or_create_local_user_retries_on_username_collision_race(monke
     assert create_attempts[0] == "alice"
     assert create_attempts[1] != "alice"
     assert create_attempts[1].startswith("alice-")
+
+
+# ---------------------------------------------------------------------------
+# Periodic JWKS refresh
+# ---------------------------------------------------------------------------
+
+
+async def test_periodic_jwks_refresh_loop_calls_force_refresh(monkeypatch) -> None:
+    """The loop force-refreshes the JWKS cache once per sleep interval."""
+    sleep_calls: list[float] = []
+    refresh_calls = 0
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 3:
+            raise asyncio.CancelledError
+
+    async def fake_get_jwks(*, force_refresh: bool = False) -> dict:
+        nonlocal refresh_calls
+        assert force_refresh is True
+        refresh_calls += 1
+        return {"keys": []}
+
+    monkeypatch.setattr(oidc_config.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
+
+    with pytest.raises(asyncio.CancelledError):
+        await oidc_config._periodic_jwks_refresh_loop()
+
+    assert sleep_calls == [oidc_config._JWKS_REFRESH_INTERVAL_SECONDS] * 3
+    assert refresh_calls == 2
+
+
+async def test_periodic_jwks_refresh_loop_swallows_refresh_failures(monkeypatch) -> None:
+    """A failed refresh is logged and swallowed — the loop keeps running."""
+    sleep_calls: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 3:
+            raise asyncio.CancelledError
+
+    async def failing_get_jwks(*, force_refresh: bool = False) -> dict:
+        raise httpx.HTTPError("upstream unavailable")
+
+    monkeypatch.setattr(oidc_config.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(oidc_config, "_get_jwks", failing_get_jwks)
+
+    with pytest.raises(asyncio.CancelledError):
+        await oidc_config._periodic_jwks_refresh_loop()
+
+    # The loop must have survived two failed refreshes to reach the third sleep.
+    assert len(sleep_calls) == 3
+
+
+async def test_start_periodic_jwks_refresh_returns_cancellable_task() -> None:
+    """start_periodic_jwks_refresh schedules the loop and returns its task."""
+    task = oidc_config.start_periodic_jwks_refresh()
+    try:
+        assert isinstance(task, asyncio.Task)
+        assert not task.done()
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task

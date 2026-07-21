@@ -31,7 +31,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
-from sqlalchemy import select, update
+from sqlalchemy import literal, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -669,28 +669,48 @@ async def pull_changes(
     )
 
 
+type _StatusEntityModel = SyncEntityModel | UserPreferences
+
+_STATUS_ENTITY_MODELS: tuple[tuple[str, type[_StatusEntityModel]], ...] = (
+    ("labels", TimeTrackingLabel),
+    ("tasks", TimeTrackingTask),
+    ("templates", TimeTrackingTemplate),
+    ("work_locations", WorkLocation),
+    ("time_off_entries", TimeOffEntry),
+    ("gantt_tasks", GanttTask),
+    ("preferences", UserPreferences),
+)
+
+
 async def get_sync_status(session: AsyncSession, user_id: int) -> SyncStatusResponse:
-    """Return the most-recent ``updated_at`` per entity type for the user."""
+    """Return the most-recent ``updated_at`` per entity type for the user.
 
-    async def _max_ts(model, user_id: int) -> datetime | None:
-        result = await session.execute(
-            select(sql_func.max(model.updated_at)).where(model.user_id == user_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def _prefs_updated_at(user_id: int) -> datetime | None:
-        result = await session.execute(
-            select(UserPreferences.updated_at).where(UserPreferences.user_id == user_id)
-        )
-        return result.scalar_one_or_none()
+    A single UNION ALL query replaces what used to be 7 sequential
+    round-trips (one MAX(updated_at) query per entity type plus one for
+    preferences) — AsyncSession only supports one in-flight statement at a
+    time anyway, so those awaits were purely serial latency, not parallel
+    work. Each subquery is an unconditional MAX() with no GROUP BY, so it
+    always returns exactly one row (NULL when the user has no rows for that
+    entity), keeping the UNION ALL at a fixed 7 rows.
+    """
+    subqueries = [
+        select(
+            literal(entity).label("entity"),
+            sql_func.max(model.updated_at).label("updated_at"),
+        ).where(model.user_id == user_id)
+        for entity, model in _STATUS_ENTITY_MODELS
+    ]
+    combined = subqueries[0].union_all(*subqueries[1:])
+    result = await session.execute(combined)
+    by_entity: dict[str, datetime | None] = {row.entity: row.updated_at for row in result}
 
     return SyncStatusResponse(
-        labels_updated_at=await _max_ts(TimeTrackingLabel, user_id),
-        tasks_updated_at=await _max_ts(TimeTrackingTask, user_id),
-        templates_updated_at=await _max_ts(TimeTrackingTemplate, user_id),
-        work_locations_updated_at=await _max_ts(WorkLocation, user_id),
-        time_off_entries_updated_at=await _max_ts(TimeOffEntry, user_id),
-        gantt_tasks_updated_at=await _max_ts(GanttTask, user_id),
-        preferences_updated_at=await _prefs_updated_at(user_id),
+        labels_updated_at=by_entity.get("labels"),
+        tasks_updated_at=by_entity.get("tasks"),
+        templates_updated_at=by_entity.get("templates"),
+        work_locations_updated_at=by_entity.get("work_locations"),
+        time_off_entries_updated_at=by_entity.get("time_off_entries"),
+        gantt_tasks_updated_at=by_entity.get("gantt_tasks"),
+        preferences_updated_at=by_entity.get("preferences"),
         server_timestamp=_now() - _PULL_CURSOR_OVERLAP,
     )

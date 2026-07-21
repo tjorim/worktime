@@ -153,15 +153,28 @@ async def lifespan(app: FastAPI):
         # Start cache warming in background - don't block startup
         asyncio.create_task(_warm_cache_async())
         logger.info("✓ Cache warming started in background")
-    
+
+    # Periodically force-refresh the OIDC JWKS cache so a provider-side key
+    # rotation that reuses the same `kid`, or a JWKS URI change, is picked up
+    # without a backend restart (the reactive refresh-on-miss path alone
+    # can't detect either case).
+    jwks_refresh_task = None
+    if settings.OIDC_ISSUER_URL:
+        from .config.oidc_config import start_periodic_jwks_refresh
+
+        jwks_refresh_task = start_periodic_jwks_refresh()
+        logger.info("✓ Periodic OIDC JWKS refresh started in background")
+
     logger.info("=" * 60)
     logger.info("Startup complete - Server ready to accept connections")
     logger.info("=" * 60)
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Worktime Backend API shutting down...")
+    if jwks_refresh_task is not None:
+        jwks_refresh_task.cancel()
     if settings.DATABASE_ENABLED:
         await sync_event_manager.stop_pg_listener()
 

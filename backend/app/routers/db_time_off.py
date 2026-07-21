@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,7 @@ from app.services.db_service import (
     list_time_off_entries,
     update_time_off_entry,
 )
+from app.utils.pagination import MAX_PAGE_LIMIT, paginate
 from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/time-off", tags=["Time Off"])
@@ -49,6 +50,8 @@ async def list_time_off_entries_endpoint(
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     start_date: date | None = None,
     end_date: date | None = None,
+    limit: int | None = Query(default=None, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     timings: dict[str, float] = {}
@@ -60,9 +63,10 @@ async def list_time_off_entries_endpoint(
             end_date=end_date,
         )
 
+    page, total = paginate(entries, limit=limit, offset=offset)
     response = TimeOffEntryListResponse(
-        items=[TimeOffEntryRead.model_validate(e, from_attributes=True) for e in entries],
-        total=len(entries),
+        items=[TimeOffEntryRead.model_validate(e, from_attributes=True) for e in page],
+        total=total,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
