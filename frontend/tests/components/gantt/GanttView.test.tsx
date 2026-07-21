@@ -83,7 +83,15 @@ vi.mock("@/components/gantt/GanttChart.tsx", () => ({
 }));
 
 import { GanttView } from "@/components/gantt/GanttView";
-import { ganttTasksCollection } from "@/db/collections";
+import { ganttTasksCollection, tasksCollection } from "@/db/collections";
+
+function clearTasksCollection() {
+  for (const item of [...tasksCollection.toArray]) {
+    if (tasksCollection.has(item.id)) {
+      tasksCollection.delete(item.id);
+    }
+  }
+}
 
 type MockUserState = {
   hasCompletedOnboarding: boolean;
@@ -148,6 +156,7 @@ function renderWithSettings(
 describe("GanttView", () => {
   afterEach(() => {
     window.localStorage.clear();
+    clearTasksCollection();
   });
 
   it('renders the "Add Task" button', () => {
@@ -215,6 +224,36 @@ describe("GanttView", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Plan release" })).not.toBeInTheDocument();
     });
+  });
+
+  it("warns about a single linked time-tracking entry before deleting a task", async () => {
+    const user = userEvent.setup();
+    ganttTasksCollection.utils.writeUpsert([
+      {
+        id: "task-1",
+        name: "Plan release",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: 40,
+      },
+    ]);
+    tasksCollection.insert({
+      id: "entry-1",
+      text: "Planned release",
+      label: "Support",
+      startTime: "2026-03-01T09:00",
+      stopTime: "2026-03-01T10:00",
+      ganttTaskId: "task-1",
+    });
+
+    renderWithSettings(<GanttView />);
+
+    await user.click(screen.getByRole("button", { name: "Plan release" }));
+    await user.click(screen.getByRole("button", { name: "Delete Task" }));
+
+    expect(
+      screen.getByText("This will also unlink 1 time-tracking entry.", { exact: false }),
+    ).toBeInTheDocument();
   });
 
   it("uses Day as initial library view mode and no duplicate top-level mode buttons", () => {

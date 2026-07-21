@@ -3,6 +3,8 @@ import Button from "react-bootstrap/Button";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
 
@@ -24,7 +26,15 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
   const [sortColumn, setSortColumn] = useState<SortColumn>("start");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [deletingTask, setDeletingTask] = useState<GanttTask | null>(null);
+  const { tasks: timeTrackingTasks } = useTimeTrackingStorage();
   const taskNames = useMemo(() => new Map(tasks.map((task) => [task.id, task.name])), [tasks]);
+  const linkedEntryCount = useMemo(
+    () =>
+      deletingTask
+        ? timeTrackingTasks.filter((entry) => entry.ganttTaskId === deletingTask.id).length
+        : 0,
+    [deletingTask, timeTrackingTasks],
+  );
 
   const sortedTasks = useMemo(
     () =>
@@ -158,7 +168,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
       <ConfirmationDialog
         isOpen={deletingTask !== null}
         title={m.gantt_delete_task_title()}
-        message={deletingTask ? m.gantt_delete_task_message({ name: deletingTask.name }) : ""}
+        message={deletingTask ? getGanttDeleteConfirmMessage(deletingTask.name, linkedEntryCount) : ""}
         confirmLabel={m.gantt_delete_label()}
         variant="danger"
         icon="bi-trash"
