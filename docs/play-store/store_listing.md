@@ -29,6 +29,6 @@
 
   Worktime is built for people who want a straightforward way to keep track of their working time without unnecessary complexity.
 
-- **App icon (512x512 PNG):** not produced — no image-generation tool available in this environment; supply your own or export from `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`.
-- **Feature graphic (1024x500 PNG/JPEG):** not produced — needs a real design asset.
+- **App icon (512x512 PNG):** `app-icon-512.png` (same artwork as `frontend/public/assets/icons/icon-512.png`).
+- **Feature graphic (1024x500 PNG/JPEG):** `feature-graphic-1024x500.png`.
 - **Phone / 7-inch tablet / 10-inch tablet screenshots:** not produced — capturing these requires running the app on a device or emulator with a display, which isn't available on this headless host.
