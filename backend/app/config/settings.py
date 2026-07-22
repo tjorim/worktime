@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from urllib.parse import quote
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -139,6 +139,19 @@ class Settings(BaseSettings):
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
         return v
 
+    @model_validator(mode="after")
+    def validate_production_trusted_hosts(self) -> "Settings":
+        """Refuse to start in production without an explicit TRUSTED_HOSTS.
+
+        A silently-wildcarded Host header check is worse than no deployment at
+        all, so this fails startup the same way champagnefestival and daynest
+        require their production-critical settings, instead of only logging
+        a warning and leaving Host validation disabled.
+        """
+        if self.ENVIRONMENT == "production" and self.TRUSTED_HOSTS.strip() in ("", "*"):
+            raise ValueError("TRUSTED_HOSTS must be set in production.")
+        return self
+
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
         
@@ -169,16 +182,12 @@ class Settings(BaseSettings):
 
         Returns:
             List of allowed hostnames. Falls back to ["*"] (no restriction) when
-            empty or wildcard, logging a warning in production since that
-            disables Host-header validation.
+            empty or wildcard — only reachable in development, since
+            validate_production_trusted_hosts() refuses to start in production
+            with an empty or wildcard value.
         """
         trusted = self.TRUSTED_HOSTS.strip()
         if not trusted or trusted == "*":
-            if self.ENVIRONMENT == "production":
-                logger.warning(
-                    "⚠️  TRUSTED_HOSTS is not set in production - Host header "
-                    "validation is disabled. Set TRUSTED_HOSTS to your production hostname(s)."
-                )
             return ["*"]
         return [host.strip() for host in trusted.split(",") if host.strip()]
 

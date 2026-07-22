@@ -51,10 +51,11 @@ def test_custom_settings():
         os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@dbhost/mydb"
         os.environ["DATABASE_ECHO"] = "true"
         os.environ["OIDC_ISSUER_URL"] = "https://auth.example.com/application/o/worktime"
-        
+        os.environ["TRUSTED_HOSTS"] = "worktime.tjor.im"
+
         # Create new settings instance
         settings = Settings()
-        
+
         assert settings.ENVIRONMENT == "production"
         assert settings.HOST == "127.0.0.1"
         assert settings.PORT == 9000
@@ -66,6 +67,7 @@ def test_custom_settings():
         assert settings.DATABASE_URL == "postgresql+asyncpg://user:pass@dbhost/mydb"
         assert settings.DATABASE_ECHO is True
         assert settings.OIDC_ISSUER_URL == "https://auth.example.com/application/o/worktime"
+        assert settings.TRUSTED_HOSTS == "worktime.tjor.im"
     finally:
         # Restore original environment
         os.environ.clear()
@@ -107,9 +109,10 @@ def test_cors_origins_wildcard_production():
     settings = Settings(
         ENVIRONMENT="production",
         CORS_ORIGINS="*",
+        TRUSTED_HOSTS="worktime.tjor.im",
     )
     origins = settings.get_cors_origins_list()
-    
+
     # Wildcard should be rejected in production
     assert origins == []
 
@@ -119,8 +122,8 @@ def test_environment_validation():
     # Valid environments
     settings_dev = Settings(ENVIRONMENT="development")
     assert settings_dev.ENVIRONMENT == "development"
-    
-    settings_prod = Settings(ENVIRONMENT="production")
+
+    settings_prod = Settings(ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
     assert settings_prod.ENVIRONMENT == "production"
     
     # Invalid environment should raise error
@@ -292,10 +295,23 @@ def test_trusted_hosts_parses_comma_separated_list():
     assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "api.worktime.tjor.im"]
 
 
-def test_trusted_hosts_wildcard_in_production_still_returns_wildcard():
-    """Wildcard TRUSTED_HOSTS in production only warns, it doesn't lock out all hosts."""
-    settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="*")
-    assert settings.get_trusted_hosts_list() == ["*"]
+def test_trusted_hosts_wildcard_in_production_raises():
+    """A wildcard TRUSTED_HOSTS refuses to start in production rather than silently
+    leaving Host-header validation disabled."""
+    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set in production"):
+        Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="*")
+
+
+def test_trusted_hosts_empty_in_production_raises():
+    """An empty TRUSTED_HOSTS refuses to start in production, same as a wildcard."""
+    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set in production"):
+        Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="")
+
+
+def test_trusted_hosts_explicit_in_production_succeeds():
+    """An explicit TRUSTED_HOSTS value starts normally in production."""
+    settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
+    assert settings.get_trusted_hosts_list() == ["worktime.tjor.im"]
 
 
 def test_log_configuration_never_logs_the_password(caplog):
