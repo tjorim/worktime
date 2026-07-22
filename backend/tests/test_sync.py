@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -11,7 +12,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app.utils.sse_manager import SyncEventManager
+from app.utils.sse_manager import SyncEventManager, _redact_credentials
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1667,6 +1668,40 @@ class TestSyncEventManager:
             conn=MagicMock(), pid=12345, channel="worktime_sync_changed", payload="not-an-int"
         )
         assert queue.empty()
+
+    async def test_start_pg_listener_does_not_log_password_for_empty_url(self, caplog) -> None:
+        """An empty db_url is rejected without ever logging a password."""
+        manager = SyncEventManager()
+        with caplog.at_level(logging.WARNING):
+            await manager.start_pg_listener("")
+        assert "hunter2" not in caplog.text
+
+    async def test_start_pg_listener_does_not_log_password_for_wrong_scheme(self, caplog) -> None:
+        """A malformed URL with embedded credentials is rejected without leaking the password."""
+        manager = SyncEventManager()
+        with caplog.at_level(logging.WARNING):
+            await manager.start_pg_listener("postgresql://user:hunter2@host:5432/db")
+        assert "hunter2" not in caplog.text
+        assert "does not start with" in caplog.text
+
+
+class TestRedactCredentials:
+    """Unit tests for the _redact_credentials logging helper."""
+
+    def test_redacts_password_from_url(self) -> None:
+        redacted = _redact_credentials("postgresql+asyncpg://user:hunter2@host:5432/db")
+        assert "hunter2" not in redacted
+        assert redacted == "postgresql+asyncpg://user:***@host:5432/db"
+
+    def test_passes_through_url_without_credentials(self) -> None:
+        assert _redact_credentials("postgresql+asyncpg://host:5432/db") == "postgresql+asyncpg://host:5432/db"
+
+    def test_handles_non_string_input(self) -> None:
+        assert _redact_credentials(None) == "None"
+
+    def test_handles_unparseable_input(self) -> None:
+        # A lone '[' is invalid per RFC 3986 bracket-matching and raises in urlparse.
+        assert _redact_credentials("postgresql://[") == "<unparseable>"
 
 
 class TestSyncEventsEndpoint:

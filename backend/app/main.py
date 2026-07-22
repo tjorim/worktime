@@ -18,6 +18,7 @@ from fastapi.responses import PlainTextResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .cache.warm_cache import warm_cache
 from .config import settings
@@ -148,7 +149,7 @@ async def lifespan(app: FastAPI):
             raise
 
         # Start Postgres LISTEN/NOTIFY for cross-process SSE broadcast
-        await sync_event_manager.start_pg_listener(settings.DATABASE_URL)
+        await sync_event_manager.start_pg_listener(settings.resolved_database_url())
     else:
         logger.info("Database initialization skipped (DATABASE_ENABLED=false)")
 
@@ -240,10 +241,15 @@ else:
 
 # TimingMiddleware records metrics and sets X-Total-Ms.
 app.add_middleware(TimingMiddleware)
-# RequestIdMiddleware is outermost: it sets/echoes X-Request-ID and emits structured
-# access logs after every response, with user_id included for authenticated requests.
+# RequestIdMiddleware sets/echoes X-Request-ID and emits structured access logs
+# after every response, with user_id included for authenticated requests.
 app.add_middleware(RequestIdMiddleware)
 
+# TrustedHostMiddleware is outermost: it rejects requests with an unrecognized
+# Host header before any other middleware runs. TRUSTED_HOSTS="*" (development
+# default) disables validation; production should set explicit hostnames.
+trusted_hosts = settings.get_trusted_hosts_list()
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
 
 # Register API routers — all backend routes are served under /api
 app.include_router(auth_router, prefix="/api")

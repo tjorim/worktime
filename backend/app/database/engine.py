@@ -21,7 +21,7 @@ def _build_engine():
     if _engine is None:
         logger.info("Creating PostgreSQL async engine")
         _engine = create_async_engine(
-            settings.DATABASE_URL,
+            settings.resolved_database_url(),
             echo=settings.DATABASE_ECHO,
             # Pool defaults: size=5, max_overflow=10, timeout=30s.
             # Override via DATABASE_POOL_SIZE / DATABASE_POOL_MAX_OVERFLOW env vars if needed.

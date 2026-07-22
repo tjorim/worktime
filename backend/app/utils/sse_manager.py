@@ -26,6 +26,24 @@ logger = logging.getLogger(__name__)
 _NOTIFY_CHANNEL = "worktime_sync_changed"
 
 
+def _redact_credentials(db_url: object) -> str:
+    """Return db_url with any embedded userinfo credentials redacted, safe to log."""
+    if not isinstance(db_url, str):
+        return repr(db_url)
+    try:
+        parsed = urlparse(db_url)
+    except ValueError:
+        return "<unparseable>"
+    if not (parsed.username or parsed.password):
+        return db_url
+    netloc = parsed.hostname or ""
+    if parsed.port:
+        netloc = f"{netloc}:{parsed.port}"
+    if parsed.username:
+        netloc = f"{parsed.username}:***@{netloc}"
+    return urlunparse(parsed._replace(netloc=netloc))
+
+
 def _build_sse_message(event: str, data: dict) -> str:
     """Format a single SSE frame: ``event: <name>\\ndata: <json>\\n\\n``."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
@@ -187,14 +205,14 @@ class SyncEventManager:
         if not isinstance(db_url, str) or not db_url:
             logger.warning(
                 "SSE: DATABASE_URL is not a valid string (%r); LISTEN/NOTIFY will not be started",
-                db_url,
+                _redact_credentials(db_url),
             )
             return
         parsed = urlparse(db_url)
         if parsed.scheme != "postgresql+asyncpg":
             logger.warning(
                 "SSE: DATABASE_URL does not start with 'postgresql+asyncpg://' (%r); LISTEN/NOTIFY will not be started",
-                db_url,
+                _redact_credentials(db_url),
             )
             return
         asyncpg_url = urlunparse(parsed._replace(scheme="postgresql"))

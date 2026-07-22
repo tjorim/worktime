@@ -6,8 +6,9 @@ settings with sensible defaults for development and production environments.
 
 import logging
 from pathlib import Path
+from urllib.parse import quote
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,12 @@ class Settings(BaseSettings):
     
     # CORS configuration
     CORS_ORIGINS: str = "http://localhost:5173"
-    
+
+    # Trusted hosts for Host-header validation (TrustedHostMiddleware).
+    # Comma-separated hostnames, e.g. "worktime.tjor.im". "*" (the development
+    # default) disables validation — production should set this explicitly.
+    TRUSTED_HOSTS: str = "*"
+
     # Environment mode
     ENVIRONMENT: str = "development"
     
@@ -49,12 +55,25 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = True
     HOLIDAY_CACHE_TTL: int = 86400  # 24 hours — holiday data doesn't change intra-year
 
-    # Database configuration
-    DATABASE_URL: str = "postgresql+asyncpg://worktime:worktime@localhost/worktime"
+    # Database configuration.
+    # DATABASE_URL is a full-URL override kept for local dev convenience. When
+    # unset (the default), the URL is built from DB_HOST/DB_PORT/DB_NAME/DB_USER
+    # + the resolved password below — the preferred production pattern, since
+    # DB_PASSWORD_FILE keeps the actual secret out of the plaintext env file.
+    DATABASE_URL: str = ""
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
     DATABASE_POOL_SIZE: int = 5
     DATABASE_POOL_MAX_OVERFLOW: int = 10
+
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_NAME: str = "worktime"
+    DB_USER: str = "worktime"
+    # DB_PASSWORD is a local-dev convenience default (matches docker-compose.yml).
+    # Production should use DB_PASSWORD_FILE to point at a Docker secret instead.
+    DB_PASSWORD: str = "worktime"
+    DB_PASSWORD_FILE: str = ""
 
     # HMAC secret for the /api/metrics endpoint.
     # When empty the metrics endpoint returns 404 so it stays invisible to scanners.
@@ -86,10 +105,8 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
-        """Validate DATABASE_URL uses the postgresql+asyncpg async driver."""
-        if not v or not v.strip():
-            raise ValueError("DATABASE_URL cannot be empty")
-        if not v.startswith("postgresql+asyncpg://"):
+        """Validate DATABASE_URL uses the postgresql+asyncpg async driver, if set."""
+        if v and not v.startswith("postgresql+asyncpg://"):
             raise ValueError(
                 "DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://..."
             )
@@ -122,6 +139,23 @@ class Settings(BaseSettings):
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
         return v
 
+    @model_validator(mode="after")
+    def validate_production_trusted_hosts(self) -> "Settings":
+        """Refuse to start in production without a real TRUSTED_HOSTS allowlist.
+
+        A silently-wildcarded Host header check is worse than no deployment at
+        all, so this fails startup the same way champagnefestival and daynest
+        require their production-critical settings, instead of only logging
+        a warning and leaving Host validation disabled. Checks the *parsed*
+        value rather than the raw string: a separator-only value like ","
+        passes a raw non-empty check but parses down to zero real hostnames,
+        which would otherwise silently lock out all production traffic once
+        TrustedHostMiddleware is wired up with an effectively empty allowlist.
+        """
+        if self.ENVIRONMENT == "production" and self._parse_trusted_hosts() == ["*"]:
+            raise ValueError("TRUSTED_HOSTS must be set to a real hostname allowlist in production.")
+        return self
+
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
         
@@ -147,6 +181,73 @@ class Settings(BaseSettings):
         origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
         return origins
     
+    def _parse_trusted_hosts(self) -> list[str]:
+        """Parse the raw TRUSTED_HOSTS value into real hostnames.
+
+        Returns ["*"] when unset, wildcarded, or when the comma-separated
+        value parses down to zero real hostnames (e.g. a separator-only value
+        like ",") — all three mean "no allowlist configured".
+        """
+        trusted = self.TRUSTED_HOSTS.strip()
+        if not trusted or trusted == "*":
+            return ["*"]
+        hosts = [host.strip() for host in trusted.split(",") if host.strip()]
+        return hosts or ["*"]
+
+    def get_trusted_hosts_list(self) -> list[str]:
+        """Parse TRUSTED_HOSTS into the effective allowlist for TrustedHostMiddleware.
+
+        Returns:
+            List of allowed hostnames. Falls back to ["*"] (no restriction) when
+            empty, wildcarded, or unparseable — only reachable in development,
+            since validate_production_trusted_hosts() refuses to start in
+            production with such a value. Otherwise always includes
+            "localhost": Docker's own HEALTHCHECK curls
+            http://localhost:PORT/health from inside the container, and that
+            must keep working regardless of the configured production
+            allowlist.
+        """
+        hosts = self._parse_trusted_hosts()
+        if hosts != ["*"] and "localhost" not in hosts:
+            hosts = [*hosts, "localhost"]
+        return hosts
+
+    def resolved_db_password(self) -> str:
+        """Resolve the database password, preferring DB_PASSWORD_FILE when set.
+
+        DB_PASSWORD_FILE is expected to point at a Docker/Compose secret file
+        containing just the password, so the real value never has to sit in a
+        plaintext env file.
+        """
+        if self.DB_PASSWORD_FILE:
+            try:
+                return Path(self.DB_PASSWORD_FILE).read_text(encoding="utf-8").strip()
+            except OSError as e:
+                raise ValueError(
+                    f"Could not read DB_PASSWORD_FILE at {self.DB_PASSWORD_FILE}: {e}"
+                ) from e
+        return self.DB_PASSWORD
+
+    def resolved_database_url(self) -> str:
+        """Return the effective database URL.
+
+        DATABASE_URL, when set, is used verbatim (local dev convenience — matches
+        docker-compose.yml). Otherwise the URL is built from DB_HOST/DB_PORT/
+        DB_NAME/DB_USER plus the resolved password, which is the preferred
+        pattern in production since it keeps the password out of the plaintext
+        env file via DB_PASSWORD_FILE.
+        """
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        user = quote(self.DB_USER, safe="")
+        password = quote(self.resolved_db_password(), safe="")
+        host = self.DB_HOST
+        if ":" in host and not host.startswith("["):
+            # Bracket IPv6 literals (e.g. "::1") — otherwise the host can't be
+            # told apart from the following ":<port>" in the URL authority.
+            host = f"[{host}]"
+        return f"postgresql+asyncpg://{user}:{password}@{host}:{self.DB_PORT}/{self.DB_NAME}"
+
     def get_share_dir_path(self) -> Path:
         """Get SHARE_DIR as a Path object."""
         return Path(self.SHARE_DIR).resolve()
@@ -186,20 +287,29 @@ class Settings(BaseSettings):
             )
         else:
             logger.info(f"CORS Origins:    {', '.join(cors_origins)}")
-        
+
+        # Log trusted hosts configuration. Deliberately not logging the
+        # configured value itself: CodeQL's clear-text-logging query treats
+        # TRUSTED_HOSTS as a sensitive name (substring match on "TRUST",
+        # likely inherited from Java's truststore/keystore naming
+        # conventions) even though a hostname allowlist isn't actually
+        # secret. Logging only a status avoids that false positive.
+        if self.TRUSTED_HOSTS.strip() in ("", "*"):
+            logger.info("Trusted Hosts:   * (Host header validation disabled)")
+        else:
+            logger.info("Trusted Hosts:   configured (Host header validation enabled)")
+
         # Log cache configuration
         cache_status = "enabled" if self.CACHE_ENABLED else "disabled"
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
 
         db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
-        # Mask credentials from DATABASE_URL before logging.
-        try:
-            from sqlalchemy.engine.url import make_url
-            parsed = make_url(self.DATABASE_URL)
-            safe_url = parsed.render_as_string(hide_password=True)
-        except Exception:
-            safe_url = "<unparseable>"
-        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {safe_url})")
+        # Deliberately not logging any form of the database URL/host, even
+        # redacted — DB_HOST/DB_PORT/DB_NAME/DB_USER are logged individually
+        # below, but never anything derived from DB_PASSWORD/DB_PASSWORD_FILE.
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO})")
+        if self.DATABASE_ENABLED and not self.DATABASE_URL:
+            logger.info(f"  DB Host:       {self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME} (user: {self.DB_USER})")
         logger.info(f"OIDC Issuer:     {self.OIDC_ISSUER_URL}")
         sentry_status = f"enabled (traces_sample_rate={self.SENTRY_TRACES_SAMPLE_RATE})" if self.SENTRY_DSN else "disabled"
         logger.info(f"Sentry:          {sentry_status}")
