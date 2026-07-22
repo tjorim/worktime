@@ -9,6 +9,7 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from importlib.metadata import version as _pkg_version
 from typing import Any
 
 from fastapi import FastAPI
@@ -188,7 +189,7 @@ _lifespan = combine_lifespans(lifespan, _mcp_app.lifespan) if _mcp_app is not No
 app = FastAPI(
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
-    version="4.7.1",
+    version=_pkg_version("worktime-backend"),
     lifespan=_lifespan
 )
 
