@@ -21,13 +21,15 @@ def test_default_settings():
     assert settings.CACHE_ENABLED is True
     assert settings.CACHE_TTL == 10
     assert settings.DATABASE_ENABLED is True
-    assert settings.DATABASE_URL.startswith("postgresql+asyncpg://")
+    assert settings.DATABASE_URL == ""
+    assert settings.resolved_database_url().startswith("postgresql+asyncpg://")
     assert settings.DATABASE_ECHO is False
     assert settings.OIDC_ISSUER_URL == "http://localhost:9000/application/o/worktime"
     assert settings.OIDC_AUDIENCE == ""
     assert settings.OIDC_ALGORITHMS == "RS256"
     assert settings.RATE_LIMIT_ENABLED is True
     assert settings.RATE_LIMIT_DEFAULT == "200/minute"
+    assert settings.TRUSTED_HOSTS == "*"
 
 
 def test_custom_settings():
@@ -211,3 +213,85 @@ def test_oidc_custom_values() -> None:
     assert settings.OIDC_ISSUER_URL == "https://auth.example.com/application/o/worktime"
     assert settings.OIDC_AUDIENCE == "worktime"
     assert settings.OIDC_ALGORITHMS == "RS256,RS512"
+
+
+def test_resolved_database_url_uses_database_url_override_when_set():
+    """DATABASE_URL, when set, takes precedence over the DB_* fields."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="postgresql+asyncpg://user:pass@dbhost/mydb",
+        DB_HOST="ignored-host",
+    )
+    assert settings.resolved_database_url() == "postgresql+asyncpg://user:pass@dbhost/mydb"
+
+
+def test_resolved_database_url_builds_from_db_fields_when_unset():
+    """Without DATABASE_URL, the URL is built from DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="",
+        DB_HOST="dbhost",
+        DB_PORT=5433,
+        DB_NAME="mydb",
+        DB_USER="user",
+        DB_PASSWORD="pass",
+    )
+    assert settings.resolved_database_url() == "postgresql+asyncpg://user:pass@dbhost:5433/mydb"
+
+
+def test_resolved_database_url_reads_db_password_file(tmp_path):
+    """DB_PASSWORD_FILE takes precedence over DB_PASSWORD when both are set."""
+    password_file = tmp_path / "db_password"
+    password_file.write_text("secret-from-file\n")
+
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="",
+        DB_HOST="dbhost",
+        DB_NAME="mydb",
+        DB_USER="user",
+        DB_PASSWORD="unused",
+        DB_PASSWORD_FILE=str(password_file),
+    )
+    assert settings.resolved_db_password() == "secret-from-file"
+    assert settings.resolved_database_url() == "postgresql+asyncpg://user:secret-from-file@dbhost:5432/mydb"
+
+
+def test_resolved_db_password_file_missing_raises(tmp_path):
+    """A DB_PASSWORD_FILE pointing at a missing file raises instead of silently falling back."""
+    settings = Settings(
+        _env_file=None,
+        DB_PASSWORD_FILE=str(tmp_path / "does-not-exist"),
+    )
+    with pytest.raises(ValueError, match="Could not read DB_PASSWORD_FILE"):
+        settings.resolved_db_password()
+
+
+def test_database_url_validation_allows_empty():
+    """DATABASE_URL may be left empty (falls back to DB_* fields)."""
+    settings = Settings(_env_file=None, DATABASE_URL="")
+    assert settings.DATABASE_URL == ""
+
+
+def test_database_url_validation_rejects_wrong_driver():
+    """A non-empty DATABASE_URL must still use the asyncpg driver."""
+    with pytest.raises(ValueError, match="must use the asyncpg driver"):
+        Settings(_env_file=None, DATABASE_URL="postgresql://user:pass@host/db")
+
+
+def test_trusted_hosts_default_wildcard():
+    """TRUSTED_HOSTS defaults to '*' (no Host-header restriction)."""
+    settings = Settings(_env_file=None)
+    assert settings.get_trusted_hosts_list() == ["*"]
+
+
+def test_trusted_hosts_parses_comma_separated_list():
+    """TRUSTED_HOSTS parses a comma-separated hostname list."""
+    settings = Settings(_env_file=None, TRUSTED_HOSTS="worktime.tjor.im, api.worktime.tjor.im")
+    assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "api.worktime.tjor.im"]
+
+
+def test_trusted_hosts_wildcard_in_production_still_returns_wildcard():
+    """Wildcard TRUSTED_HOSTS in production only warns, it doesn't lock out all hosts."""
+    settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="*")
+    assert settings.get_trusted_hosts_list() == ["*"]
