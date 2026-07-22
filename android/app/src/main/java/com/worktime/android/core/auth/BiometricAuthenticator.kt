@@ -1,6 +1,5 @@
 package com.worktime.android.core.auth
 
-import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
@@ -19,12 +18,25 @@ sealed interface BiometricAvailability {
     data class Unavailable(val message: String) : BiometricAvailability
 }
 
+/** Arbitrary single-byte input; only whether the cipher accepts it, not the output, matters. */
+private val CRYPTO_VERIFICATION_PAYLOAD = ByteArray(1)
+
+/**
+ * A successful [BiometricPrompt] callback only reflects a real keystore-verified unlock once we
+ * perform an operation through the returned cipher — a non-null [BiometricPrompt.CryptoObject]
+ * alone isn't proof the key was actually unlocked by the biometric hardware.
+ */
+internal fun BiometricPrompt.CryptoObject?.isVerifiedUnlock(): Boolean {
+    val cipher = this?.cipher ?: return false
+    return runCatching { cipher.doFinal(CRYPTO_VERIFICATION_PAYLOAD) }.isSuccess
+}
+
 /**
  * Wraps the system `BiometricPrompt` and binds a successful prompt to a real
  * AndroidKeyStore-backed [Cipher] operation, so a successful callback reflects an actual
  * cryptographic unlock rather than a boolean flag that could be forged by a compromised caller.
- * If the key was invalidated (e.g. the user changed their enrolled biometrics), falls back to a
- * plain prompt rather than crashing.
+ * If the keystore key was invalidated (e.g. the user changed their enrolled biometrics), a fresh
+ * key is generated transparently rather than crashing.
  */
 class BiometricAuthenticator(private val activity: FragmentActivity) {
     private val allowedAuthenticators =
@@ -49,39 +61,13 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
 
     fun authenticate(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val executor = ContextCompat.getMainExecutor(activity)
-
-        // Crypto-backed auth combined with the DEVICE_CREDENTIAL fallback is only supported
-        // from API 30 onward; below that, fall back to a non-crypto prompt so unlocking via
-        // device credential doesn't crash on older devices.
-        val cipher =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                runCatching { getOrCreateAuthenticationCipher() }.getOrNull()
-            } else {
-                null
-            }
-        val isCryptoBacked = cipher != null
-
         val callback =
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    if (isCryptoBacked) {
-                        val authenticatedCipher = result.cryptoObject?.cipher
-                        if (authenticatedCipher == null) {
-                            onError("Authentication succeeded but no cryptographic proof was returned.")
-                            return
-                        }
-
-                        val cryptoVerified =
-                            runCatching {
-                                authenticatedCipher.doFinal("worktime-auth".toByteArray())
-                            }.isSuccess
-
-                        if (!cryptoVerified) {
-                            onError("Authentication could not be cryptographically verified.")
-                            return
-                        }
+                    if (!result.cryptoObject.isVerifiedUnlock()) {
+                        onError("Authentication could not be cryptographically verified.")
+                        return
                     }
-
                     onSuccess()
                 }
 
@@ -97,11 +83,12 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
                 .setAllowedAuthenticators(allowedAuthenticators)
                 .build()
 
-        if (cipher != null) {
-            prompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
-        } else {
-            prompt.authenticate(promptInfo)
+        val cipher = runCatching { getOrCreateAuthenticationCipher() }.getOrNull()
+        if (cipher == null) {
+            onError("Secure authentication is unavailable on this device.")
+            return
         }
+        prompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
     }
 
     private fun getOrCreateAuthenticationCipher(): Cipher {
