@@ -1,5 +1,6 @@
 """Tests for configuration settings."""
 
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -297,20 +298,13 @@ def test_trusted_hosts_wildcard_in_production_still_returns_wildcard():
     assert settings.get_trusted_hosts_list() == ["*"]
 
 
-def test_masked_database_url_redacts_password_from_database_url_override():
-    """masked_database_url() never reveals the password from a DATABASE_URL override."""
-    settings = Settings(
-        _env_file=None,
-        DATABASE_URL="postgresql+asyncpg://user:supersecret@dbhost/mydb",
-    )
-    masked = settings.masked_database_url()
-    assert "supersecret" not in masked
-    assert masked.startswith("postgresql+asyncpg://user:")
-    assert "@dbhost/mydb" in masked
+def test_log_configuration_never_logs_the_password(caplog):
+    """log_configuration() must never emit DB_PASSWORD or a DATABASE_URL containing it.
 
-
-def test_masked_database_url_redacts_password_from_db_fields():
-    """masked_database_url() never resolves or reveals DB_PASSWORD/DB_PASSWORD_FILE."""
+    Matches daynest's approach: never log any form of the database URL, masked
+    or otherwise — only the individual non-secret DB_HOST/DB_PORT/DB_NAME/DB_USER
+    fields are logged.
+    """
     settings = Settings(
         _env_file=None,
         DATABASE_URL="",
@@ -320,6 +314,17 @@ def test_masked_database_url_redacts_password_from_db_fields():
         DB_USER="user",
         DB_PASSWORD="supersecret",
     )
-    masked = settings.masked_database_url()
-    assert "supersecret" not in masked
-    assert masked == "postgresql+asyncpg://user:***@dbhost:5433/mydb"
+    with caplog.at_level(logging.INFO):
+        settings.log_configuration()
+    assert "supersecret" not in caplog.text
+
+
+def test_log_configuration_never_logs_password_from_database_url_override(caplog):
+    """A DATABASE_URL override containing a password must not appear in the logs either."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="postgresql+asyncpg://user:supersecret@dbhost/mydb",
+    )
+    with caplog.at_level(logging.INFO):
+        settings.log_configuration()
+    assert "supersecret" not in caplog.text

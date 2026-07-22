@@ -213,23 +213,6 @@ class Settings(BaseSettings):
         password = quote(self.resolved_db_password(), safe="")
         return f"postgresql+asyncpg://{user}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
-    def masked_database_url(self) -> str:
-        """Return the effective database URL with the password redacted, safe to log.
-
-        Never reads DB_PASSWORD/DB_PASSWORD_FILE — the redacted placeholder is
-        substituted directly instead of resolving and then masking the real
-        secret, so the actual password is never assembled on this code path.
-        """
-        if self.DATABASE_URL:
-            try:
-                from sqlalchemy.engine.url import make_url
-
-                return make_url(self.DATABASE_URL).render_as_string(hide_password=True)
-            except Exception:
-                return "<unparseable>"
-        user = quote(self.DB_USER, safe="")
-        return f"postgresql+asyncpg://{user}:***@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-
     def get_share_dir_path(self) -> Path:
         """Get SHARE_DIR as a Path object."""
         return Path(self.SHARE_DIR).resolve()
@@ -279,8 +262,12 @@ class Settings(BaseSettings):
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
 
         db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
-        safe_url = self.masked_database_url()
-        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {safe_url})")
+        # Deliberately not logging any form of the database URL/host, even
+        # redacted — DB_HOST/DB_PORT/DB_NAME/DB_USER are logged individually
+        # below, but never anything derived from DB_PASSWORD/DB_PASSWORD_FILE.
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO})")
+        if self.DATABASE_ENABLED and not self.DATABASE_URL:
+            logger.info(f"  DB Host:       {self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME} (user: {self.DB_USER})")
         logger.info(f"OIDC Issuer:     {self.OIDC_ISSUER_URL}")
         sentry_status = f"enabled (traces_sample_rate={self.SENTRY_TRACES_SAMPLE_RATE})" if self.SENTRY_DSN else "disabled"
         logger.info(f"Sentry:          {sentry_status}")
