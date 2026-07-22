@@ -49,9 +49,39 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
 
     fun authenticate(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val executor = ContextCompat.getMainExecutor(activity)
+
+        // Crypto-backed auth combined with the DEVICE_CREDENTIAL fallback is only supported
+        // from API 30 onward; below that, fall back to a non-crypto prompt so unlocking via
+        // device credential doesn't crash on older devices.
+        val cipher =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                runCatching { getOrCreateAuthenticationCipher() }.getOrNull()
+            } else {
+                null
+            }
+        val isCryptoBacked = cipher != null
+
         val callback =
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (isCryptoBacked) {
+                        val authenticatedCipher = result.cryptoObject?.cipher
+                        if (authenticatedCipher == null) {
+                            onError("Authentication succeeded but no cryptographic proof was returned.")
+                            return
+                        }
+
+                        val cryptoVerified =
+                            runCatching {
+                                authenticatedCipher.doFinal("worktime-auth".toByteArray())
+                            }.isSuccess
+
+                        if (!cryptoVerified) {
+                            onError("Authentication could not be cryptographically verified.")
+                            return
+                        }
+                    }
+
                     onSuccess()
                 }
 
@@ -67,15 +97,6 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
                 .setAllowedAuthenticators(allowedAuthenticators)
                 .build()
 
-        // Crypto-backed auth combined with the DEVICE_CREDENTIAL fallback is only supported
-        // from API 30 onward; below that, fall back to a non-crypto prompt so unlocking via
-        // device credential doesn't crash on older devices.
-        val cipher =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                runCatching { getOrCreateAuthenticationCipher() }.getOrNull()
-            } else {
-                null
-            }
         if (cipher != null) {
             prompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
         } else {
