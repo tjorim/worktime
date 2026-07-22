@@ -38,6 +38,7 @@ uv run alembic upgrade head
 
 ## Source Of Truth
 
+- `VERSION` (repo root) for the current app release version — `frontend/package.json`, `backend/pyproject.toml`, and the Android `versionName`/`versionCode` all derive from it (see `frontend/scripts/check-version-consistency.ts`, `backend/pyproject.toml`'s `[tool.hatch.version]`, and `android/app/build.gradle.kts`'s `versionCodeFor()`). Bump `VERSION`, then run `pnpm run sync-version` (from `frontend/`) to sync `package.json`.
 - `frontend/src/data/rosters.ts` for roster and schedule definitions
 - `frontend/src/utils/shiftCalculations.ts` for shift logic
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations

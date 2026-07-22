@@ -1,5 +1,4 @@
 import com.worktime.buildlogic.CertPinning
-import groovy.json.JsonSlurper
 import java.util.Properties
 
 plugins {
@@ -110,19 +109,18 @@ if (releaseArtifactRequested) {
     CertPinning.requireHostConfiguredForPins(resolvedReleaseCertificatePinHost, resolvedReleaseCertificatePins)
 }
 
-// Single source of truth for the app version: frontend/package.json, kept in
-// lockstep with the web release version instead of a hand-maintained literal here.
+// Single source of truth for the app version: the repo-root VERSION file, kept in
+// lockstep with frontend/package.json and backend/pyproject.toml (see
+// frontend/scripts/check-version-consistency.ts and backend/pyproject.toml's
+// [tool.hatch.version]) instead of a hand-maintained literal here.
 // Read via providers.fileContents (not File.readText()) so the file is tracked
 // as a build configuration input and this stays Configuration Cache-compatible.
 val appVersion =
     providers
-        .fileContents(layout.projectDirectory.file("../../frontend/package.json"))
+        .fileContents(layout.projectDirectory.file("../../VERSION"))
         .asText
-        .map { jsonText ->
-            val json = JsonSlurper().parseText(jsonText) as Map<*, *>
-            json["version"] as? String
-                ?: error("Could not find a \"version\" field in frontend/package.json")
-        }.get()
+        .map { it.trim() }
+        .get()
 
 fun versionCodeFor(version: String): Int {
     val parts = version.substringBefore("-").substringBefore("+").split(".")

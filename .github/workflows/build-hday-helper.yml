@@ -33,10 +33,10 @@ jobs:
         with:
           bun-version: "1"
 
-      - name: Extract version from frontend package.json
+      - name: Extract version from VERSION file
         id: version
         run: |
-          VERSION=$(node -p "require('./frontend/package.json').version")
+          VERSION="$(cat VERSION | tr -d '[:space:]')"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build Windows EXE

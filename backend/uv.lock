@@ -1670,7 +1670,6 @@ wheels = [
 
 [[package]]
 name = "worktime-backend"
-version = "4.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

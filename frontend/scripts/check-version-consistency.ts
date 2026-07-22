@@ -64,12 +64,19 @@ function getLatestTsRelease(changelog: ChangelogVersion[]): ChangelogVersion {
 const pkgRaw = readFileSync(resolve(root, "package.json"), "utf8");
 const pkg = JSON.parse(pkgRaw) as { version: string };
 const changelogMd = readFileSync(resolve(root, "../CHANGELOG.md"), "utf8");
+const rootVersion = readFileSync(resolve(root, "../VERSION"), "utf8").trim();
 
 const packageVersion = pkg.version;
 const markdownRelease = getLatestMarkdownRelease(changelogMd);
 const tsRelease = getLatestTsRelease(changelogData);
 
 const failures: string[] = [];
+
+if (packageVersion !== rootVersion) {
+  failures.push(
+    `package.json version (${packageVersion}) does not match the repo-root VERSION file (${rootVersion}). Run "pnpm run sync-version" after bumping VERSION.`,
+  );
+}
 
 if (packageVersion !== markdownRelease.version) {
   failures.push(
