@@ -16,11 +16,13 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Resolve the database URL the same way the app does (DATABASE_URL override,
-# or DB_HOST/DB_PORT/DB_NAME/DB_USER + DB_PASSWORD(_FILE)), falling back to
-# alembic.ini's sqlalchemy.url only if that resolution is unavailable.
-# Replace the async driver with psycopg3 (sync) for migrations.
-_raw_url = settings.resolved_database_url() or config.get_main_option("sqlalchemy.url")
+# Resolve the database URL the same way the app does. An explicit DATABASE_URL
+# override wins first; otherwise prefer alembic.ini's sqlalchemy.url when a
+# caller has configured one explicitly, since resolved_database_url() always
+# returns a URL (built from DB_HOST/DB_PORT/DB_NAME/DB_USER defaults when
+# nothing else is set) and would otherwise make that alembic.ini setting
+# unreachable. Replace the async driver with psycopg3 (sync) for migrations.
+_raw_url = settings.DATABASE_URL or config.get_main_option("sqlalchemy.url") or settings.resolved_database_url()
 if _raw_url:
     _parsed = make_url(_raw_url)
     _sync_drivername = _parsed.drivername.replace("+asyncpg", "+psycopg")

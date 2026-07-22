@@ -141,15 +141,19 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_trusted_hosts(self) -> "Settings":
-        """Refuse to start in production without an explicit TRUSTED_HOSTS.
+        """Refuse to start in production without a real TRUSTED_HOSTS allowlist.
 
         A silently-wildcarded Host header check is worse than no deployment at
         all, so this fails startup the same way champagnefestival and daynest
         require their production-critical settings, instead of only logging
-        a warning and leaving Host validation disabled.
+        a warning and leaving Host validation disabled. Checks the *parsed*
+        value rather than the raw string: a separator-only value like ","
+        passes a raw non-empty check but parses down to zero real hostnames,
+        which would otherwise silently lock out all production traffic once
+        TrustedHostMiddleware is wired up with an effectively empty allowlist.
         """
-        if self.ENVIRONMENT == "production" and self.TRUSTED_HOSTS.strip() in ("", "*"):
-            raise ValueError("TRUSTED_HOSTS must be set in production.")
+        if self.ENVIRONMENT == "production" and self._parse_trusted_hosts() == ["*"]:
+            raise ValueError("TRUSTED_HOSTS must be set to a real hostname allowlist in production.")
         return self
 
     def get_cors_origins_list(self) -> list[str]:
@@ -177,19 +181,36 @@ class Settings(BaseSettings):
         origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
         return origins
     
-    def get_trusted_hosts_list(self) -> list[str]:
-        """Parse TRUSTED_HOSTS into a list of allowed hostnames for TrustedHostMiddleware.
+    def _parse_trusted_hosts(self) -> list[str]:
+        """Parse the raw TRUSTED_HOSTS value into real hostnames.
 
-        Returns:
-            List of allowed hostnames. Falls back to ["*"] (no restriction) when
-            empty or wildcard — only reachable in development, since
-            validate_production_trusted_hosts() refuses to start in production
-            with an empty or wildcard value.
+        Returns ["*"] when unset, wildcarded, or when the comma-separated
+        value parses down to zero real hostnames (e.g. a separator-only value
+        like ",") — all three mean "no allowlist configured".
         """
         trusted = self.TRUSTED_HOSTS.strip()
         if not trusted or trusted == "*":
             return ["*"]
-        return [host.strip() for host in trusted.split(",") if host.strip()]
+        hosts = [host.strip() for host in trusted.split(",") if host.strip()]
+        return hosts or ["*"]
+
+    def get_trusted_hosts_list(self) -> list[str]:
+        """Parse TRUSTED_HOSTS into the effective allowlist for TrustedHostMiddleware.
+
+        Returns:
+            List of allowed hostnames. Falls back to ["*"] (no restriction) when
+            empty, wildcarded, or unparseable — only reachable in development,
+            since validate_production_trusted_hosts() refuses to start in
+            production with such a value. Otherwise always includes
+            "localhost": Docker's own HEALTHCHECK curls
+            http://localhost:PORT/health from inside the container, and that
+            must keep working regardless of the configured production
+            allowlist.
+        """
+        hosts = self._parse_trusted_hosts()
+        if hosts != ["*"] and "localhost" not in hosts:
+            hosts = [*hosts, "localhost"]
+        return hosts
 
     def resolved_db_password(self) -> str:
         """Resolve the database password, preferring DB_PASSWORD_FILE when set.
@@ -220,7 +241,12 @@ class Settings(BaseSettings):
             return self.DATABASE_URL
         user = quote(self.DB_USER, safe="")
         password = quote(self.resolved_db_password(), safe="")
-        return f"postgresql+asyncpg://{user}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        host = self.DB_HOST
+        if ":" in host and not host.startswith("["):
+            # Bracket IPv6 literals (e.g. "::1") — otherwise the host can't be
+            # told apart from the following ":<port>" in the URL authority.
+            host = f"[{host}]"
+        return f"postgresql+asyncpg://{user}:{password}@{host}:{self.DB_PORT}/{self.DB_NAME}"
 
     def get_share_dir_path(self) -> Path:
         """Get SHARE_DIR as a Path object."""

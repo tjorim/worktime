@@ -243,6 +243,35 @@ def test_resolved_database_url_builds_from_db_fields_when_unset():
     assert settings.resolved_database_url() == "postgresql+asyncpg://user:pass@dbhost:5433/mydb"
 
 
+def test_resolved_database_url_brackets_ipv6_host():
+    """An IPv6 literal DB_HOST must be bracketed, or the host can't be told
+    apart from the trailing ":<port>" in the URL authority."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="",
+        DB_HOST="::1",
+        DB_PORT=5432,
+        DB_NAME="mydb",
+        DB_USER="user",
+        DB_PASSWORD="pass",
+    )
+    assert settings.resolved_database_url() == "postgresql+asyncpg://user:pass@[::1]:5432/mydb"
+
+
+def test_resolved_database_url_does_not_double_bracket_ipv6_host():
+    """An already-bracketed IPv6 DB_HOST is left as-is."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="",
+        DB_HOST="[::1]",
+        DB_PORT=5432,
+        DB_NAME="mydb",
+        DB_USER="user",
+        DB_PASSWORD="pass",
+    )
+    assert settings.resolved_database_url() == "postgresql+asyncpg://user:pass@[::1]:5432/mydb"
+
+
 def test_resolved_database_url_reads_db_password_file(tmp_path):
     """DB_PASSWORD_FILE takes precedence over DB_PASSWORD when both are set."""
     password_file = tmp_path / "db_password"
@@ -290,28 +319,45 @@ def test_trusted_hosts_default_wildcard():
 
 
 def test_trusted_hosts_parses_comma_separated_list():
-    """TRUSTED_HOSTS parses a comma-separated hostname list."""
+    """TRUSTED_HOSTS parses a comma-separated hostname list, plus the always-allowed localhost."""
     settings = Settings(_env_file=None, TRUSTED_HOSTS="worktime.tjor.im, api.worktime.tjor.im")
-    assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "api.worktime.tjor.im"]
+    assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "api.worktime.tjor.im", "localhost"]
+
+
+def test_trusted_hosts_always_allows_localhost_for_healthcheck():
+    """get_trusted_hosts_list() always allows "localhost" so Docker's own
+    HEALTHCHECK (curling http://localhost:PORT/health from inside the
+    container) keeps working regardless of the configured production allowlist."""
+    settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
+    assert "localhost" in settings.get_trusted_hosts_list()
 
 
 def test_trusted_hosts_wildcard_in_production_raises():
     """A wildcard TRUSTED_HOSTS refuses to start in production rather than silently
     leaving Host-header validation disabled."""
-    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set in production"):
+    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set"):
         Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="*")
 
 
 def test_trusted_hosts_empty_in_production_raises():
     """An empty TRUSTED_HOSTS refuses to start in production, same as a wildcard."""
-    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set in production"):
+    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set"):
         Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="")
+
+
+def test_trusted_hosts_separator_only_in_production_raises():
+    """A separator-only TRUSTED_HOSTS (e.g. ",") parses down to zero real
+    hostnames and must refuse to start in production — otherwise
+    TrustedHostMiddleware would be wired up with an empty allowlist and
+    silently reject all production traffic instead of failing at startup."""
+    with pytest.raises(ValueError, match="TRUSTED_HOSTS must be set"):
+        Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS=",")
 
 
 def test_trusted_hosts_explicit_in_production_succeeds():
     """An explicit TRUSTED_HOSTS value starts normally in production."""
     settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
-    assert settings.get_trusted_hosts_list() == ["worktime.tjor.im"]
+    assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "localhost"]
 
 
 def test_log_configuration_never_logs_the_password(caplog):
