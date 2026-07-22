@@ -295,3 +295,31 @@ def test_trusted_hosts_wildcard_in_production_still_returns_wildcard():
     """Wildcard TRUSTED_HOSTS in production only warns, it doesn't lock out all hosts."""
     settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="*")
     assert settings.get_trusted_hosts_list() == ["*"]
+
+
+def test_masked_database_url_redacts_password_from_database_url_override():
+    """masked_database_url() never reveals the password from a DATABASE_URL override."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="postgresql+asyncpg://user:supersecret@dbhost/mydb",
+    )
+    masked = settings.masked_database_url()
+    assert "supersecret" not in masked
+    assert masked.startswith("postgresql+asyncpg://user:")
+    assert "@dbhost/mydb" in masked
+
+
+def test_masked_database_url_redacts_password_from_db_fields():
+    """masked_database_url() never resolves or reveals DB_PASSWORD/DB_PASSWORD_FILE."""
+    settings = Settings(
+        _env_file=None,
+        DATABASE_URL="",
+        DB_HOST="dbhost",
+        DB_PORT=5433,
+        DB_NAME="mydb",
+        DB_USER="user",
+        DB_PASSWORD="supersecret",
+    )
+    masked = settings.masked_database_url()
+    assert "supersecret" not in masked
+    assert masked == "postgresql+asyncpg://user:***@dbhost:5433/mydb"
