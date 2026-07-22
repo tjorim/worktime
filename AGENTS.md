@@ -36,9 +36,28 @@ uv run alembic upgrade head
 > Tests default to `postgresql+asyncpg://worktime:worktime@localhost/worktime_test`;
 > override via the `TEST_DATABASE_URL` environment variable.
 
+## Versioning
+
+The app uses CalVer: `YYYY.MM.MICRO` (e.g. `2026.7.1`), where `MICRO` is a counter
+that resets to `1` at the start of each new month.
+
+The root `VERSION` file is the single source of truth. Everything else derives
+from it — nothing else should be hand-edited:
+
+- `backend/pyproject.toml` reads it dynamically via `[tool.hatch.version]`'s regex
+  source; `backend/app/main.py` picks it up transparently through
+  `importlib.metadata.version("worktime-backend")`.
+- `frontend/package.json`'s `version` field is synced from it via
+  `pnpm run sync-version` (`frontend/scripts/sync-version.ts`); `check-version-consistency.ts`
+  fails CI if it drifts.
+- `android/app/build.gradle.kts` reads it directly to compute `versionName`/`versionCode`.
+
+After bumping `VERSION`, run `pnpm run sync-version`, add a `frontend/src/data/changelog.ts`
+entry for the new version, then `pnpm run generate-changelog` to regenerate `CHANGELOG.md`.
+
 ## Source Of Truth
 
-- `VERSION` (repo root) for the current app release version — `frontend/package.json`, `backend/pyproject.toml`, and the Android `versionName`/`versionCode` all derive from it (see `frontend/scripts/check-version-consistency.ts`, `backend/pyproject.toml`'s `[tool.hatch.version]`, and `android/app/build.gradle.kts`'s `versionCodeFor()`). Bump `VERSION`, then run `pnpm run sync-version` (from `frontend/`) to sync `package.json`.
+- `VERSION` (repo root) for the app version — see "Versioning" above
 - `frontend/src/data/rosters.ts` for roster and schedule definitions
 - `frontend/src/utils/shiftCalculations.ts` for shift logic
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
