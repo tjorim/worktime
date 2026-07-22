@@ -188,7 +188,7 @@ _lifespan = combine_lifespans(lifespan, _mcp_app.lifespan) if _mcp_app is not No
 app = FastAPI(
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
-    version="1.0.0",
+    version="4.7.1",
     lifespan=_lifespan
 )
 

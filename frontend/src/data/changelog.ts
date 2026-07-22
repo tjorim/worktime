@@ -14,9 +14,46 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.7.1",
+    date: "2026-07-22",
+    status: "current",
+    added: [
+      "Roster Calendar as Default: The purpose-built shift-roster view is the default Calendar tab again; the Schedule-X unified calendar is now an opt-in feature under Settings > Features (#958)",
+      "Flexible 9-5 Finish Time: Configurable finish time for the 9-5 day shift status (#968)",
+      "Keyboard Shortcuts Overlay: Global '?' shortcut opens a keyboard shortcuts overlay (#971)",
+      "Undo Toasts: Destructive deletes now show an undo toast instead of deleting immediately (#972)",
+      "PWA Foundation: Web app manifest and service worker added (#975)",
+      "Gantt Task Picker: Time-tracking entries can now link to a Gantt task via a searchable picker, gated on task existence (#977, #978)",
+      "Gantt Logged Time: Logged time now surfaces in the Gantt table column and chart popup, with editing/unlinking from the task modal (#981, #982)",
+      "Unlinked Entry Warning: Deleting a Gantt task now warns about time-tracking entries still linked to it (#979)",
+      "Per-Client-IP API Rate Limiting: Configurable via RATE_LIMIT_ENABLED/RATE_LIMIT_DEFAULT",
+    ],
+    changed: [
+      "Main Tab Navigation: Icon-only on phone-width screens (#974)",
+      "User Registration: POST /users/register now requires admin auth, closing a username-squatting hole",
+    ],
+    fixed: [
+      "SSE Live Sync: Fixed live sync being silently broken since startup due to a cookie/Bearer auth contract mismatch; switched to a maintained SSE client library",
+      "Sync Push Hardening: Fixed several sync push bugs that could 500 or silently corrupt data (label collisions, dangling Gantt references, cross-user UUID collisions, clock-skew timestamps, negative-duration tasks)",
+      "Cursor-Advance Race: Fixed a race after push that could permanently skip another device's concurrent edit",
+      "Outbox Retry Timer: A failed background sync push now correctly surfaces a sync error and schedules a retry",
+      "Toast Announcements: Toasts are now announced to screen readers and can be dismissed manually (#970)",
+      "Keyboard Shortcuts: Fixed shortcuts colliding with browser-reserved key combos (#973)",
+      "Duplicate Landmarks: Fixed nested duplicate main landmarks on the home route (#967)",
+      "Gantt Progress Bar: Fixed invisible 0% progress bar and unlocalized dates in the Gantt table view (#980)",
+      "Time Off Table: Fixed a duplicated holiday flag (#983)",
+      "Username Enumeration: GET /users/by-username/{username} now returns 404 instead of 403 for another user's username",
+    ],
+    technicalDetails: {
+      title: "Sync, Account Safety, and API Hardening",
+      description:
+        "A hardening-focused release: fixes a pull-cursor race that could permanently drop concurrent pushes, a label-delete conflict loop, and silent reverts of REST/MCP edits; caps and auto-chunks oversized sync push batches; coalesces the offline outbox by natural key; and centralizes sync_changed SSE broadcasting so MCP and REST writes notify connected clients. MCP audit logging now never raises and dispatches to a background thread; MCP summary/list tools are bounded so an unfiltered call can't dump a user's entire history into the model's context. Added pagination to the time-tracking/work-locations/gantt-tasks list endpoints, enabled pool_pre_ping so dead pooled connections recover after a Postgres restart, added composite indexes matching actual sync/query shapes, and refreshed the OIDC JWKS cache hourly in the background.",
+    },
+  },
+  {
     version: "4.7.0",
     date: "2026-02-21",
-    status: "current",
+    status: "released",
     added: [
       "Cross-Border Work Tracking: Configure home and office countries to track where you work each day directly from the calendar context menu",
       "Work Location Indicators: Home and office icons on calendar day cells for days with an explicit location set",
