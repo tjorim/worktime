@@ -253,9 +253,16 @@ class Settings(BaseSettings):
         else:
             logger.info(f"CORS Origins:    {', '.join(cors_origins)}")
 
-        # Log trusted hosts configuration
-        trusted_hosts = self.get_trusted_hosts_list()
-        logger.info(f"Trusted Hosts:   {', '.join(trusted_hosts)}")
+        # Log trusted hosts configuration. Deliberately not logging the
+        # configured value itself: CodeQL's clear-text-logging query treats
+        # TRUSTED_HOSTS as a sensitive name (substring match on "TRUST",
+        # likely inherited from Java's truststore/keystore naming
+        # conventions) even though a hostname allowlist isn't actually
+        # secret. Logging only a status avoids that false positive.
+        if self.TRUSTED_HOSTS.strip() in ("", "*"):
+            logger.info("Trusted Hosts:   * (Host header validation disabled)")
+        else:
+            logger.info("Trusted Hosts:   configured (Host header validation enabled)")
 
         # Log cache configuration
         cache_status = "enabled" if self.CACHE_ENABLED else "disabled"

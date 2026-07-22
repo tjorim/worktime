@@ -328,3 +328,26 @@ def test_log_configuration_never_logs_password_from_database_url_override(caplog
     with caplog.at_level(logging.INFO):
         settings.log_configuration()
     assert "supersecret" not in caplog.text
+
+
+def test_log_configuration_never_logs_configured_trusted_hosts(caplog):
+    """log_configuration() must never emit the configured TRUSTED_HOSTS value itself.
+
+    Only a status ("configured" / disabled) is logged — CodeQL's clear-text
+    logging heuristic flags TRUSTED_HOSTS as sensitive-by-name even though a
+    hostname allowlist is not a secret.
+    """
+    settings = Settings(_env_file=None, TRUSTED_HOSTS="worktime.tjor.im,internal.example.com")
+    with caplog.at_level(logging.INFO):
+        settings.log_configuration()
+    assert "worktime.tjor.im" not in caplog.text
+    assert "internal.example.com" not in caplog.text
+    assert "Trusted Hosts:   configured (Host header validation enabled)" in caplog.text
+
+
+def test_log_configuration_reports_disabled_trusted_hosts(caplog):
+    """A wildcard TRUSTED_HOSTS is reported as disabled, not as a hostname list."""
+    settings = Settings(_env_file=None, TRUSTED_HOSTS="*")
+    with caplog.at_level(logging.INFO):
+        settings.log_configuration()
+    assert "Trusted Hosts:   * (Host header validation disabled)" in caplog.text
