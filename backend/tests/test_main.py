@@ -30,7 +30,7 @@ def test_root_endpoint(client):
     
     assert response.status_code == 200
     assert "Worktime Backend API" in response.text
-    assert "v1.0.0" in response.text
+    assert f"v{app.version}" in response.text
     assert response.headers["content-type"] == "text/plain; charset=utf-8"
 
 
@@ -43,7 +43,7 @@ def test_openapi_docs(client):
     
     assert data["openapi"] == "3.1.0"
     assert data["info"]["title"] == "Worktime Backend API"
-    assert data["info"]["version"] == "1.0.0"
+    assert data["info"]["version"] == app.version
     assert "/api/health" in data["paths"]
     assert "/" in data["paths"]
 
