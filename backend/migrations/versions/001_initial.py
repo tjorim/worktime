@@ -1,4 +1,17 @@
-"""Initial schema — all tables at final state, including OIDC integration.
+"""Initial schema — all tables at final state.
+
+Squashed from the original 001 (initial schema, OIDC integration),
+002 (link time_tracking_tasks to gantt_tasks), and 003 (composite sync
+indexes) into a single migration. The end schema is identical to running
+all three in sequence; only the build path is simplified — the
+gantt_task_id column/FK and the composite indexes are now part of each
+table's own CREATE TABLE instead of separate ALTER-based migrations, so
+there's no need for SQLite's batch-mode ALTER workaround at all.
+
+IMPORTANT: an already-deployed database that has run the old 001/002/003
+chain must be stamped at this migration's revision (not re-run), since its
+schema already matches this one exactly:
+    uv run alembic stamp 001
 
 Revision ID: 001
 Revises:
@@ -14,6 +27,15 @@ revision: str = "001"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+_SYNCED_TABLES = (
+    "time_tracking_labels",
+    "time_tracking_tasks",
+    "time_tracking_templates",
+    "work_locations",
+    "gantt_tasks",
+    "time_off_entries",
+)
 
 
 def upgrade() -> None:
@@ -53,6 +75,25 @@ def upgrade() -> None:
     )
 
     op.create_table(
+        "gantt_tasks",
+        sa.Column("id", sa.String(), primary_key=True),
+        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("start_date", sa.Date(), nullable=False),
+        sa.Column("end_date", sa.Date(), nullable=False),
+        sa.Column("progress", sa.Integer(), nullable=False, server_default=sa.text("0")),
+        sa.Column("dependencies", sa.String(), nullable=True),
+        sa.Column("notes", sa.String(), nullable=True),
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+    )
+    op.create_index("ix_gantt_tasks_user_id", "gantt_tasks", ["user_id"])
+    op.create_index("ix_gantt_tasks_updated_at", "gantt_tasks", ["updated_at"])
+    op.create_index("ix_gantt_tasks_deleted_at", "gantt_tasks", ["deleted_at"])
+
+    op.create_table(
         "time_tracking_tasks",
         sa.Column("id", sa.String(), primary_key=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
@@ -65,11 +106,18 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "gantt_task_id",
+            sa.String(),
+            sa.ForeignKey("gantt_tasks.id", name="fk_time_tracking_tasks_gantt_task_id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
     op.create_index("ix_time_tracking_tasks_user_id", "time_tracking_tasks", ["user_id"])
     op.create_index("ix_time_tracking_tasks_label_id", "time_tracking_tasks", ["label_id"])
     op.create_index("ix_time_tracking_tasks_updated_at", "time_tracking_tasks", ["updated_at"])
     op.create_index("ix_time_tracking_tasks_deleted_at", "time_tracking_tasks", ["deleted_at"])
+    op.create_index("ix_time_tracking_tasks_gantt_task_id", "time_tracking_tasks", ["gantt_task_id"])
 
     op.create_table(
         "time_tracking_templates",
@@ -112,25 +160,6 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
-
-    op.create_table(
-        "gantt_tasks",
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("start_date", sa.Date(), nullable=False),
-        sa.Column("end_date", sa.Date(), nullable=False),
-        sa.Column("progress", sa.Integer(), nullable=False, server_default=sa.text("0")),
-        sa.Column("dependencies", sa.String(), nullable=True),
-        sa.Column("notes", sa.String(), nullable=True),
-        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-    )
-    op.create_index("ix_gantt_tasks_user_id", "gantt_tasks", ["user_id"])
-    op.create_index("ix_gantt_tasks_updated_at", "gantt_tasks", ["updated_at"])
-    op.create_index("ix_gantt_tasks_deleted_at", "gantt_tasks", ["deleted_at"])
 
     op.create_table(
         "user_preferences",
@@ -211,9 +240,10 @@ def upgrade() -> None:
             server_default=sa.func.now(),
         ),
     )
-    # NULLS NOT DISTINCT is Postgres-only syntax (no SQLite equivalent) — under
-    # SQLite (local dev only, no Postgres container needed) fall back to a
-    # plain UNIQUE constraint, which treats NULLs as distinct. That's a looser
+    # NULLS NOT DISTINCT is Postgres-only syntax (no SQLite equivalent, and
+    # not expressible as a plain sa.UniqueConstraint either) — under SQLite
+    # (local dev only, no Postgres container needed) fall back to a plain
+    # UNIQUE constraint, which treats NULLs as distinct. That's a looser
     # guarantee than production gets, but acceptable for local dev.
     if op.get_bind().dialect.name == "postgresql":
         op.execute(
@@ -233,51 +263,33 @@ def upgrade() -> None:
                 ["holiday_type", "country", "year", "subdivision", "language"],
             )
 
+    # Composite indexes for the hot sync-pull and task-listing queries.
+    # pull_changes filters every synced table on (user_id, updated_at > since);
+    # list_tasks additionally sorts by start_time within a user_id filter.
+    for table in _SYNCED_TABLES:
+        op.create_index(
+            f"ix_{table}_user_id_updated_at",
+            table,
+            ["user_id", "updated_at"],
+        )
+    op.create_index(
+        "ix_time_tracking_tasks_user_id_start_time",
+        "time_tracking_tasks",
+        ["user_id", "start_time"],
+    )
+
 
 def downgrade() -> None:
-    # No separate drop_constraint needed: dropping the table removes its
-    # constraints too (true on every dialect, including SQLite, which has no
-    # standalone "drop constraint" operation).
+    # No separate drop_constraint/drop_index calls needed for constraints or
+    # indexes defined on a table: dropping the table removes them too (true
+    # on every dialect, including SQLite, which has no standalone "drop
+    # constraint" operation).
     op.drop_table("cached_holidays")
-    # No separate drop_constraint calls needed for the ck_time_off_* checks:
-    # they're defined inline on the table (see upgrade()), and drop_table
-    # below removes them along with everything else.
-    op.drop_index("uq_time_off_user_entry_id", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_deleted_at", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_updated_at", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_weekday", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_end_date", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_start_date", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_date", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_user_id", table_name="time_off_entries")
     op.drop_table("time_off_entries")
-    op.drop_index("ix_user_preferences_updated_at", table_name="user_preferences")
     op.drop_table("user_preferences")
-    op.drop_index("ix_gantt_tasks_deleted_at", table_name="gantt_tasks")
-    op.drop_index("ix_gantt_tasks_updated_at", table_name="gantt_tasks")
-    op.drop_index("ix_gantt_tasks_user_id", table_name="gantt_tasks")
-    op.drop_table("gantt_tasks")
-    op.drop_index("uq_active_work_location_user_date", table_name="work_locations")
-    op.drop_index("ix_work_locations_deleted_at", table_name="work_locations")
-    op.drop_index("ix_work_locations_updated_at", table_name="work_locations")
-    op.drop_index("ix_work_locations_date", table_name="work_locations")
-    op.drop_index("ix_work_locations_user_id", table_name="work_locations")
     op.drop_table("work_locations")
-    op.drop_index("ix_time_tracking_templates_deleted_at", table_name="time_tracking_templates")
-    op.drop_index("ix_time_tracking_templates_updated_at", table_name="time_tracking_templates")
-    op.drop_index("ix_time_tracking_templates_label_id", table_name="time_tracking_templates")
-    op.drop_index("ix_time_tracking_templates_user_id", table_name="time_tracking_templates")
     op.drop_table("time_tracking_templates")
-    op.drop_index("ix_time_tracking_tasks_deleted_at", table_name="time_tracking_tasks")
-    op.drop_index("ix_time_tracking_tasks_updated_at", table_name="time_tracking_tasks")
-    op.drop_index("ix_time_tracking_tasks_label_id", table_name="time_tracking_tasks")
-    op.drop_index("ix_time_tracking_tasks_user_id", table_name="time_tracking_tasks")
     op.drop_table("time_tracking_tasks")
-    op.drop_index("uq_active_label_user_name", table_name="time_tracking_labels")
-    op.drop_index("ix_time_tracking_labels_deleted_at", table_name="time_tracking_labels")
-    op.drop_index("ix_time_tracking_labels_updated_at", table_name="time_tracking_labels")
-    op.drop_index("ix_time_tracking_labels_user_id", table_name="time_tracking_labels")
+    op.drop_table("gantt_tasks")
     op.drop_table("time_tracking_labels")
-    op.drop_index("ix_users_oidc_subject", table_name="users")
-    op.drop_index("ix_users_username", table_name="users")
     op.drop_table("users")
