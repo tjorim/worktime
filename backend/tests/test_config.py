@@ -366,6 +366,23 @@ def test_trusted_hosts_explicit_in_production_succeeds():
     assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "localhost"]
 
 
+def test_dev_auth_bypass_token_rejected_in_production():
+    """DEV_AUTH_BYPASS_TOKEN must never be combined with ENVIRONMENT=production."""
+    with pytest.raises(ValueError, match="DEV_AUTH_BYPASS_TOKEN must not be set outside ENVIRONMENT=development"):
+        Settings(
+            _env_file=None,
+            ENVIRONMENT="production",
+            TRUSTED_HOSTS="worktime.tjor.im",
+            DEV_AUTH_BYPASS_TOKEN="some-token",
+        )
+
+
+def test_dev_auth_bypass_token_allowed_in_development():
+    """DEV_AUTH_BYPASS_TOKEN is accepted when ENVIRONMENT=development."""
+    settings = Settings(_env_file=None, ENVIRONMENT="development", DEV_AUTH_BYPASS_TOKEN="some-token")
+    assert settings.DEV_AUTH_BYPASS_TOKEN == "some-token"
+
+
 def test_log_configuration_never_logs_the_password(caplog):
     """log_configuration() must never emit DB_PASSWORD or a DATABASE_URL containing it.
 

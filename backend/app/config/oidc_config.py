@@ -16,6 +16,7 @@ Token subject claim (``sub``) is used as the stable external identity key.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 from typing import Any
 
@@ -28,6 +29,18 @@ from app.config import settings
 from app.services.db_service import ConflictError, create_user
 
 logger = logging.getLogger(__name__)
+
+# Fixed claims returned for DEV_AUTH_BYPASS_TOKEN (see decode_token below) —
+# shaped like a real Keycloak-issued token so downstream code (username
+# derivation, realm role extraction) needs no bypass-specific handling.
+_DEV_BYPASS_CLAIMS: dict[str, Any] = {
+    "sub": "dev-bypass-user",
+    "preferred_username": "devuser",
+    "name": "Dev User",
+    "email": "dev@localhost",
+    "email_verified": True,
+    "realm_access": {"roles": ["admin"]},
+}
 
 # Pre-parsed at import time — avoids repeated string splitting on every request.
 _OIDC_ALGORITHMS: list[str] = [a.strip() for a in settings.OIDC_ALGORITHMS.split(",") if a.strip()]
@@ -164,6 +177,9 @@ async def decode_token(token: str) -> dict[str, Any]:
     Raises:
         OIDCTokenError: When the token is missing, expired, or otherwise invalid.
     """
+    if settings.DEV_AUTH_BYPASS_TOKEN and hmac.compare_digest(token, settings.DEV_AUTH_BYPASS_TOKEN):
+        return dict(_DEV_BYPASS_CLAIMS)
+
     options: Options = {
         "verify_aud": _OIDC_AUDIENCE is not None,
         "verify_iss": _OIDC_ISSUER is not None,

@@ -39,6 +39,11 @@ uv run alembic upgrade head
 > For just running the app locally (`uv run uvicorn ...`), Postgres isn't required —
 > set `DATABASE_URL=sqlite+aiosqlite:///./dev.db` (no container needed) and run
 > `uv run alembic upgrade head` once against it first.
+>
+> Auth doesn't require a local Keycloak/IdP either — set `DEV_AUTH_BYPASS_TOKEN`
+> to any string and pass it as `Authorization: Bearer <value>`; it's treated as
+> a fixed admin dev user, auto-provisioned on first use. Refuses to start if
+> set outside `ENVIRONMENT=development`.
 
 ## Source Of Truth
 

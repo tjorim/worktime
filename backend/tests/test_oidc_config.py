@@ -22,6 +22,36 @@ def test_derive_username_and_display_name_from_preferred_username() -> None:
     assert display_name == "Alice Smith"
 
 
+@pytest.mark.asyncio
+async def test_decode_token_dev_bypass_returns_fixed_claims(monkeypatch) -> None:
+    monkeypatch.setattr(oidc_config.settings, "DEV_AUTH_BYPASS_TOKEN", "test-bypass-token")
+
+    claims = await oidc_config.decode_token("test-bypass-token")
+
+    assert claims == oidc_config._DEV_BYPASS_CLAIMS
+    assert claims["realm_access"]["roles"] == ["admin"]
+
+
+@pytest.mark.asyncio
+async def test_decode_token_wrong_token_does_not_trigger_bypass(monkeypatch) -> None:
+    monkeypatch.setattr(oidc_config.settings, "DEV_AUTH_BYPASS_TOKEN", "test-bypass-token")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "")
+
+    with pytest.raises(oidc_config.OIDCTokenError):
+        await oidc_config.decode_token("not-the-bypass-token")
+
+
+@pytest.mark.asyncio
+async def test_decode_token_bypass_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.setattr(oidc_config.settings, "DEV_AUTH_BYPASS_TOKEN", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_ISSUER_URL", "")
+    monkeypatch.setattr(oidc_config.settings, "OIDC_JWKS_URI", "")
+
+    with pytest.raises(oidc_config.OIDCTokenError):
+        await oidc_config.decode_token("test-bypass-token")
+
+
 def _mock_discovery_client(handler):
     """Return a factory producing an httpx client backed by a mock transport."""
     return lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
