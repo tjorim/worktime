@@ -45,8 +45,29 @@ uv run alembic upgrade head
 > a fixed admin dev user, auto-provisioned on first use. Refuses to start if
 > set outside `ENVIRONMENT=development`.
 
+## Versioning
+
+The app uses CalVer: `YYYY.MM.MICRO` (e.g. `2026.7.1`), where `MICRO` is a counter
+that resets to `1` at the start of each new month.
+
+The root `VERSION` file is the single source of truth. Everything else derives
+from it — nothing else should be hand-edited:
+
+- `backend/app/version.py` reads it at runtime (`APP_VERSION`), used by
+  `app/main.py`. `backend/pyproject.toml`'s `version` field is frozen at
+  `0.0.0` — it's packaging metadata only, never read at runtime since the
+  project is run from source, not installed as a wheel.
+- `frontend/package.json`'s `version` field is synced from it via
+  `pnpm run sync-version` (`frontend/scripts/sync-version.ts`); `check-version-consistency.ts`
+  fails CI if it drifts.
+- `android/app/build.gradle.kts` reads it directly to compute `versionName`/`versionCode`.
+
+After bumping `VERSION`, run `pnpm run sync-version`, add a `frontend/src/data/changelog.ts`
+entry for the new version, then `pnpm run generate-changelog` to regenerate `CHANGELOG.md`.
+
 ## Source Of Truth
 
+- `VERSION` (repo root) for the app version — see "Versioning" above
 - `frontend/src/data/rosters.ts` for roster and schedule definitions
 - `frontend/src/utils/shiftCalculations.ts` for shift logic
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations

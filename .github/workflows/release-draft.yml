@@ -35,40 +35,28 @@ jobs:
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Validate frontend/package.json version
+      - name: Validate VERSION file
         env:
           EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
         run: |
           set -euo pipefail
-          FRONTEND_VERSION="$(node -p "require('./frontend/package.json').version")"
-          if [[ "$FRONTEND_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::frontend/package.json version '$FRONTEND_VERSION' does not match '$EXPECTED_VERSION'"
+          ROOT_VERSION="$(cat VERSION | tr -d '[:space:]')"
+          if [[ "$ROOT_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "::error::VERSION file '$ROOT_VERSION' does not match tag '$EXPECTED_VERSION'"
             exit 1
           fi
 
-      # Android versionName/versionCode are no longer hand-maintained literals —
-      # android/app/build.gradle.kts computes both from frontend/package.json's
-      # version at build time (see versionCodeFor()), which is already validated
-      # above, so there's nothing left here that could independently drift.
-
-      - name: Validate backend version metadata
-        env:
-          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
-        run: |
-          set -euo pipefail
-          BACKEND_PROJECT_VERSION="$(grep -E '^version = "[^"]+"$' backend/pyproject.toml | head -n 1 | cut -d '"' -f 2)"
-          if [[ -z "$BACKEND_PROJECT_VERSION" ]]; then
-            echo "::error::Could not read backend version metadata."
-            exit 1
-          fi
-          if [[ "$BACKEND_PROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::backend/pyproject.toml version '$BACKEND_PROJECT_VERSION' does not match '$EXPECTED_VERSION'"
-            exit 1
-          fi
-          # backend/app/main.py no longer hardcodes a version literal — it reads
-          # it from the installed package's own metadata at runtime (see
-          # backend/app/main.py, backend/tests/test_main.py), so it can't drift
-          # from backend/pyproject.toml independently of this check.
+      # frontend/package.json and Android versionName/versionCode are no
+      # longer hand-maintained literals — they all derive from the repo-root
+      # VERSION file validated above:
+      #   - frontend/package.json is checked against VERSION by
+      #     `pnpm run check-version-consistency` (frontend-checks job below).
+      #   - android/app/build.gradle.kts reads VERSION directly (see
+      #     versionCodeFor()).
+      # backend/pyproject.toml's version field is frozen at "0.0.0" — it's
+      # packaging metadata only, never read at runtime (see
+      # backend/app/version.py, which app/main.py reads directly), so there's
+      # nothing further to independently validate for the backend.
 
       - name: Validate CHANGELOG entry
         env:

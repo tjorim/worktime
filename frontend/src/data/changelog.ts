@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "4.7.1",
+    version: "2026.7.1",
     date: "2026-07-22",
     status: "current",
+    added: [],
+    changed: [
+      "Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and backend/pyproject.toml; Android's versionName/versionCode are derived from it at build time (#993)",
+    ],
+    fixed: [],
+  },
+  {
+    version: "4.7.1",
+    date: "2026-07-22",
+    status: "released",
     added: [
       "Roster Calendar as Default: The purpose-built shift-roster view is the default Calendar tab again; the Schedule-X unified calendar is now an opt-in feature under Settings > Features (#958)",
       "Flexible 9-5 Finish Time: Configurable finish time for the 9-5 day shift status (#968)",

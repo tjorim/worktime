@@ -2,8 +2,11 @@
 
 All notable changes to Worktime will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+Starting with the first `YYYY.MM.MICRO` release, the version scheme is CalVer
+rather than SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries
+below predate that switch.
 
 ## [Unreleased] - Future Enhancements
 
@@ -12,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Calendar export (.ics format)
 - Notification system
 - Cross-schedule transfer view
+
+## [2026.7.1] - 2026-07-22
+
+### Changed
+
+- Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and backend/pyproject.toml; Android's versionName/versionCode are derived from it at build time (#993)
 
 ## [4.7.1] - 2026-07-22
 
@@ -640,7 +649,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v4.7.1...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.7.1...HEAD
+[2026.7.1]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.1
 [4.7.1]: https://github.com/tjorim/worktime/compare/v4.7.0...v4.7.1
 [4.7.0]: https://github.com/tjorim/worktime/compare/v4.6.1...v4.7.0
 [4.6.1]: https://github.com/tjorim/worktime/compare/v4.6.0...v4.6.1

@@ -9,7 +9,6 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
-from importlib.metadata import version as _pkg_version
 from typing import Any
 
 from fastapi import FastAPI
@@ -34,6 +33,7 @@ from .routers.holidays import router as holidays_router
 from .routers.metrics import router as metrics_router
 from .routers.team import router as team_router
 from .utils.sse_manager import sync_event_manager
+from .version import APP_VERSION
 
 # Configure logging
 logging.basicConfig(
@@ -190,7 +190,7 @@ _lifespan = combine_lifespans(lifespan, _mcp_app.lifespan) if _mcp_app is not No
 app = FastAPI(
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
-    version=_pkg_version("worktime-backend"),
+    version=APP_VERSION,
     lifespan=_lifespan
 )
 

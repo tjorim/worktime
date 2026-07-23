@@ -4,7 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "worktime-backend"
-version = "4.7.1"
+# This is packaging metadata only, never read at runtime — the project runs
+# from source (uv run / the Docker image), never installed as a distributable
+# wheel, so nothing reads this field. The real version lives in /VERSION
+# (see app/version.py) and is what app/main.py, the frontend, and Android use.
+version = "0.0.0"
 description = "FastAPI backend for the Worktime shift tracker and time-off management system"
 requires-python = ">=3.13"
 dependencies = [
