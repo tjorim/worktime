@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "worktime-backend"
 version = "4.7.1"
 description = "FastAPI backend for the Worktime shift tracker and time-off management system"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
   "alembic==1.18.5",
   "asyncpg==0.31.0",
