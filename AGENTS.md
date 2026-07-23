@@ -46,7 +46,10 @@ from it — nothing else should be hand-edited:
 
 - `backend/pyproject.toml` reads it dynamically via `[tool.hatch.version]`'s regex
   source; `backend/app/main.py` picks it up transparently through
-  `importlib.metadata.version("worktime-backend")`.
+  `importlib.metadata.version("worktime-backend")`. The backend Docker build
+  context is `backend/` only, so `VERSION` isn't reachable there — pass
+  `--build-arg APP_VERSION="$(cat VERSION)"` when building the image, or it
+  falls back to a placeholder version rather than failing the build.
 - `frontend/package.json`'s `version` field is synced from it via
   `pnpm run sync-version` (`frontend/scripts/sync-version.ts`); `check-version-consistency.ts`
   fails CI if it drifts.
