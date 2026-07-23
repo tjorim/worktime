@@ -4,33 +4,18 @@ FROM python:3.14-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.14-slim
 
-COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
-
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
-COPY . .
-
-# backend/pyproject.toml's [tool.hatch.version] reads the repo-root VERSION
-# file via a path relative to pyproject.toml — but this image's build context
-# is backend/ only, so that file isn't reachable here. Accept it as a build
-# arg instead (pass --build-arg APP_VERSION="$(cat VERSION)" when building);
-# falls back to an obviously-fake version rather than failing the build if
-# omitted. Writing it to /VERSION (one level above WORKDIR) is what
-# pyproject.toml's "../VERSION" then resolves to.
-#
-# The builder stage above installs dependencies only (--no-install-project) so
-# that layer stays cached across source-code changes; this stage installs the
-# actual worktime-backend project on top of it now that the source is present,
-# which is required for app/main.py's importlib.metadata.version() lookup to
-# find anything at all.
-ARG APP_VERSION=0.0.0
-RUN echo "$APP_VERSION" > /VERSION && uv sync --frozen --no-dev
+COPY backend/ .
+# Single source of truth for the app version (see app/version.py) — this build
+# needs repo-root context (not just backend/) to reach it.
+COPY VERSION ./VERSION
 
 ENV PATH="/app/.venv/bin:$PATH"
 

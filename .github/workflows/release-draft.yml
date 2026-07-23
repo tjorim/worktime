@@ -46,17 +46,17 @@ jobs:
             exit 1
           fi
 
-      # frontend/package.json, backend/pyproject.toml, and Android
-      # versionName/versionCode are no longer hand-maintained literals — they
-      # all derive from the repo-root VERSION file validated above:
+      # frontend/package.json and Android versionName/versionCode are no
+      # longer hand-maintained literals — they all derive from the repo-root
+      # VERSION file validated above:
       #   - frontend/package.json is checked against VERSION by
       #     `pnpm run check-version-consistency` (frontend-checks job below).
-      #   - backend/pyproject.toml reads VERSION dynamically via
-      #     [tool.hatch.version] (see backend-checks job below, which verifies
-      #     the installed package metadata resolves to the expected version).
       #   - android/app/build.gradle.kts reads VERSION directly (see
       #     versionCodeFor()).
-      # so none of them can independently drift from VERSION.
+      # backend/pyproject.toml's version field is frozen at "0.0.0" — it's
+      # packaging metadata only, never read at runtime (see
+      # backend/app/version.py, which app/main.py reads directly), so there's
+      # nothing further to independently validate for the backend.
 
       - name: Validate CHANGELOG entry
         env:
@@ -105,17 +105,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --frozen
-
-      - name: Validate backend version metadata
-        env:
-          EXPECTED_VERSION: ${{ needs.validate-release-metadata.outputs.version }}
-        run: |
-          set -euo pipefail
-          BACKEND_VERSION="$(uv run python -c "from importlib.metadata import version; print(version('worktime-backend'))")"
-          if [[ "$BACKEND_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::backend package version '$BACKEND_VERSION' does not match '$EXPECTED_VERSION'"
-            exit 1
-          fi
 
       - name: Lint (ruff check)
         run: uv run ruff check app

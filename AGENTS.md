@@ -44,12 +44,10 @@ that resets to `1` at the start of each new month.
 The root `VERSION` file is the single source of truth. Everything else derives
 from it — nothing else should be hand-edited:
 
-- `backend/pyproject.toml` reads it dynamically via `[tool.hatch.version]`'s regex
-  source; `backend/app/main.py` picks it up transparently through
-  `importlib.metadata.version("worktime-backend")`. The backend Docker build
-  context is `backend/` only, so `VERSION` isn't reachable there — pass
-  `--build-arg APP_VERSION="$(cat VERSION)"` when building the image, or it
-  falls back to a placeholder version rather than failing the build.
+- `backend/app/version.py` reads it at runtime (`APP_VERSION`), used by
+  `app/main.py`. `backend/pyproject.toml`'s `version` field is frozen at
+  `0.0.0` — it's packaging metadata only, never read at runtime since the
+  project is run from source, not installed as a wheel.
 - `frontend/package.json`'s `version` field is synced from it via
   `pnpm run sync-version` (`frontend/scripts/sync-version.ts`); `check-version-consistency.ts`
   fails CI if it drifts.
