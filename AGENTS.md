@@ -31,10 +31,14 @@ uv run pytest
 uv run alembic upgrade head
 ```
 
-> **Prerequisites:** Backend development and tests require a running PostgreSQL instance.
-> Start one with `docker compose -f backend/docker-compose.yml up db -d` from the repo root.
-> Tests default to `postgresql+asyncpg://worktime:worktime@localhost/worktime_test`;
+> **Prerequisites:** Tests require a running PostgreSQL instance — start one with
+> `docker compose -f backend/docker-compose.yml up db -d` from the repo root. They
+> default to `postgresql+asyncpg://worktime:worktime@localhost/worktime_test`;
 > override via the `TEST_DATABASE_URL` environment variable.
+>
+> For just running the app locally (`uv run uvicorn ...`), Postgres isn't required —
+> set `DATABASE_URL=sqlite+aiosqlite:///./dev.db` (no container needed) and run
+> `uv run alembic upgrade head` once against it first.
 
 ## Source Of Truth
 

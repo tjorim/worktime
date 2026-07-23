@@ -6,6 +6,7 @@ import logging
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 from app.config import settings
 
@@ -19,21 +20,35 @@ def _build_engine():
     global _engine, _session_factory
 
     if _engine is None:
-        logger.info("Creating PostgreSQL async engine")
-        _engine = create_async_engine(
-            settings.resolved_database_url(),
-            echo=settings.DATABASE_ECHO,
-            # Pool defaults: size=5, max_overflow=10, timeout=30s.
-            # Override via DATABASE_POOL_SIZE / DATABASE_POOL_MAX_OVERFLOW env vars if needed.
-            pool_size=settings.DATABASE_POOL_SIZE,
-            max_overflow=settings.DATABASE_POOL_MAX_OVERFLOW,
-            # Test each pooled connection with a lightweight ping before handing
-            # it out. Without this, connections dropped by a Postgres restart
-            # (or an idle-connection reaper) sit in the pool until first use,
-            # so the first requests after such an event fail instead of
-            # transparently reconnecting.
-            pool_pre_ping=True,
-        )
+        db_url = settings.resolved_database_url()
+        if db_url.startswith("sqlite"):
+            # SQLite (local dev only, no Postgres container needed): a single
+            # shared in-process connection via StaticPool, since SQLite has no
+            # notion of a server-side connection pool and QueuePool's
+            # pool_size/max_overflow kwargs don't apply to it.
+            logger.info("Creating SQLite async engine (local dev)")
+            _engine = create_async_engine(
+                db_url,
+                echo=settings.DATABASE_ECHO,
+                poolclass=StaticPool,
+                connect_args={"check_same_thread": False},
+            )
+        else:
+            logger.info("Creating PostgreSQL async engine")
+            _engine = create_async_engine(
+                db_url,
+                echo=settings.DATABASE_ECHO,
+                # Pool defaults: size=5, max_overflow=10, timeout=30s.
+                # Override via DATABASE_POOL_SIZE / DATABASE_POOL_MAX_OVERFLOW env vars if needed.
+                pool_size=settings.DATABASE_POOL_SIZE,
+                max_overflow=settings.DATABASE_POOL_MAX_OVERFLOW,
+                # Test each pooled connection with a lightweight ping before handing
+                # it out. Without this, connections dropped by a Postgres restart
+                # (or an idle-connection reaper) sit in the pool until first use,
+                # so the first requests after such an event fail instead of
+                # transparently reconnecting.
+                pool_pre_ping=True,
+            )
         _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 
     return _engine, _session_factory

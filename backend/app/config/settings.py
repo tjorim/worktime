@@ -105,10 +105,17 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
-        """Validate DATABASE_URL uses the postgresql+asyncpg async driver, if set."""
-        if v and not v.startswith("postgresql+asyncpg://"):
+        """Validate DATABASE_URL uses an async driver, if set.
+
+        postgresql+asyncpg:// is the production driver. sqlite+aiosqlite:// is
+        accepted too, purely as a local-dev convenience so contributors can run
+        the backend without a Postgres container; nothing else about the app
+        depends on which one is in use.
+        """
+        if v and not v.startswith(("postgresql+asyncpg://", "sqlite+aiosqlite://")):
             raise ValueError(
-                "DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://..."
+                "DATABASE_URL must use an async driver: postgresql+asyncpg://... "
+                "(production) or sqlite+aiosqlite://... (local dev only)"
             )
         return v
 

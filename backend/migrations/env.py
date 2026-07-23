@@ -21,11 +21,12 @@ target_metadata = Base.metadata
 # caller has configured one explicitly, since resolved_database_url() always
 # returns a URL (built from DB_HOST/DB_PORT/DB_NAME/DB_USER defaults when
 # nothing else is set) and would otherwise make that alembic.ini setting
-# unreachable. Replace the async driver with psycopg3 (sync) for migrations.
+# unreachable. Replace the async driver with a sync one for migrations:
+# psycopg3 for Postgres, the stdlib sqlite3 driver for SQLite (local dev only).
 _raw_url = settings.DATABASE_URL or config.get_main_option("sqlalchemy.url") or settings.resolved_database_url()
 if _raw_url:
     _parsed = make_url(_raw_url)
-    _sync_drivername = _parsed.drivername.replace("+asyncpg", "+psycopg")
+    _sync_drivername = _parsed.drivername.replace("+asyncpg", "+psycopg").replace("+aiosqlite", "")
     sync_url: str | None = _parsed.set(drivername=_sync_drivername).render_as_string(hide_password=False)
 else:
     sync_url = None

@@ -22,6 +22,7 @@ dependencies = [
   "sqlalchemy==2.0.51",
   "uvicorn[standard]==0.51.0",
   "slowapi==0.1.10",
+  "aiosqlite>=0.22.1",
 ]
 
 [dependency-groups]

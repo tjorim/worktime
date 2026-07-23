@@ -307,9 +307,15 @@ def test_database_url_validation_allows_empty():
 
 
 def test_database_url_validation_rejects_wrong_driver():
-    """A non-empty DATABASE_URL must still use the asyncpg driver."""
-    with pytest.raises(ValueError, match="must use the asyncpg driver"):
+    """A non-empty DATABASE_URL must use one of the two accepted async drivers."""
+    with pytest.raises(ValueError, match="must use an async driver"):
         Settings(_env_file=None, DATABASE_URL="postgresql://user:pass@host/db")
+
+
+def test_database_url_validation_accepts_sqlite():
+    """sqlite+aiosqlite:// is accepted as a local-dev convenience (no Postgres container needed)."""
+    settings = Settings(_env_file=None, DATABASE_URL="sqlite+aiosqlite:///./dev.db")
+    assert settings.DATABASE_URL == "sqlite+aiosqlite:///./dev.db"
 
 
 def test_trusted_hosts_default_wildcard():

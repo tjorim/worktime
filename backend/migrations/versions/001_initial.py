@@ -159,6 +159,27 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        # Defined inline (rather than via op.create_check_constraint after the
+        # table already exists) so this table creates cleanly on SQLite too:
+        # SQLite has no ALTER TABLE ADD CONSTRAINT at all, only batch mode's
+        # copy-and-move — pointless right after a fresh CREATE TABLE, and
+        # inline constraints need no such workaround on any dialect.
+        sa.CheckConstraint("entry_kind IN ('date', 'range', 'weekly')", name="ck_time_off_entry_kind"),
+        sa.CheckConstraint(
+            "entry_type IN ('vacation','business','course','in','weekend','birthday','ill','other')",
+            name="ck_time_off_entry_type",
+        ),
+        sa.CheckConstraint(
+            "entry_flag IN ('full_day','half_am','half_pm','onsite','no_fly','can_fly')",
+            name="ck_time_off_entry_flag",
+        ),
+        sa.CheckConstraint("weekday BETWEEN 1 AND 7 OR weekday IS NULL", name="ck_time_off_weekday_range"),
+        sa.CheckConstraint(
+            "(entry_kind = 'date' AND date IS NOT NULL AND start_date IS NULL AND end_date IS NULL AND weekday IS NULL)"
+            " OR (entry_kind = 'range' AND start_date IS NOT NULL AND end_date IS NOT NULL AND start_date < end_date AND date IS NULL AND weekday IS NULL)"
+            " OR (entry_kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL)",
+            name="ck_time_off_shape",
+        ),
     )
     op.create_index("ix_time_off_entries_user_id", "time_off_entries", ["user_id"])
     op.create_index("ix_time_off_entries_date", "time_off_entries", ["date"])
@@ -172,25 +193,6 @@ def upgrade() -> None:
         "time_off_entries",
         ["user_id", "entry_id"],
         unique=True,
-    )
-    op.create_check_constraint("ck_time_off_entry_kind", "time_off_entries", "entry_kind IN ('date', 'range', 'weekly')")
-    op.create_check_constraint(
-        "ck_time_off_entry_type",
-        "time_off_entries",
-        "entry_type IN ('vacation','business','course','in','weekend','birthday','ill','other')",
-    )
-    op.create_check_constraint(
-        "ck_time_off_entry_flag",
-        "time_off_entries",
-        "entry_flag IN ('full_day','half_am','half_pm','onsite','no_fly','can_fly')",
-    )
-    op.create_check_constraint("ck_time_off_weekday_range", "time_off_entries", "weekday BETWEEN 1 AND 7 OR weekday IS NULL")
-    op.create_check_constraint(
-        "ck_time_off_shape",
-        "time_off_entries",
-        "(entry_kind = 'date' AND date IS NOT NULL AND start_date IS NULL AND end_date IS NULL AND weekday IS NULL)"
-        " OR (entry_kind = 'range' AND start_date IS NOT NULL AND end_date IS NOT NULL AND start_date < end_date AND date IS NULL AND weekday IS NULL)"
-        " OR (entry_kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL)",
     )
 
     op.create_table(
@@ -209,23 +211,37 @@ def upgrade() -> None:
             server_default=sa.func.now(),
         ),
     )
-    op.execute(
-        """
-        ALTER TABLE cached_holidays
-        ADD CONSTRAINT uq_cached_holiday
-        UNIQUE NULLS NOT DISTINCT (holiday_type, country, year, subdivision, language)
-        """
-    )
+    # NULLS NOT DISTINCT is Postgres-only syntax (no SQLite equivalent) — under
+    # SQLite (local dev only, no Postgres container needed) fall back to a
+    # plain UNIQUE constraint, which treats NULLs as distinct. That's a looser
+    # guarantee than production gets, but acceptable for local dev.
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute(
+            """
+            ALTER TABLE cached_holidays
+            ADD CONSTRAINT uq_cached_holiday
+            UNIQUE NULLS NOT DISTINCT (holiday_type, country, year, subdivision, language)
+            """
+        )
+    else:
+        # SQLite has no standalone ALTER TABLE ADD CONSTRAINT — batch mode's
+        # copy-and-move strategy is required even right after a fresh
+        # CREATE TABLE.
+        with op.batch_alter_table("cached_holidays") as batch_op:
+            batch_op.create_unique_constraint(
+                "uq_cached_holiday",
+                ["holiday_type", "country", "year", "subdivision", "language"],
+            )
 
 
 def downgrade() -> None:
-    op.drop_constraint("uq_cached_holiday", "cached_holidays", type_="unique")
+    # No separate drop_constraint needed: dropping the table removes its
+    # constraints too (true on every dialect, including SQLite, which has no
+    # standalone "drop constraint" operation).
     op.drop_table("cached_holidays")
-    op.drop_constraint("ck_time_off_shape", "time_off_entries", type_="check")
-    op.drop_constraint("ck_time_off_weekday_range", "time_off_entries", type_="check")
-    op.drop_constraint("ck_time_off_entry_flag", "time_off_entries", type_="check")
-    op.drop_constraint("ck_time_off_entry_type", "time_off_entries", type_="check")
-    op.drop_constraint("ck_time_off_entry_kind", "time_off_entries", type_="check")
+    # No separate drop_constraint calls needed for the ck_time_off_* checks:
+    # they're defined inline on the table (see upgrade()), and drop_table
+    # below removes them along with everything else.
     op.drop_index("uq_time_off_user_entry_id", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_deleted_at", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_updated_at", table_name="time_off_entries")

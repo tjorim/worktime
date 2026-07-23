@@ -17,15 +17,19 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("time_tracking_tasks", sa.Column("gantt_task_id", sa.String(), nullable=True))
-    op.create_foreign_key(
-        "fk_time_tracking_tasks_gantt_task_id",
-        "time_tracking_tasks",
-        "gantt_tasks",
-        ["gantt_task_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
+    # batch_alter_table: adding a foreign key to an existing table is a plain
+    # ALTER TABLE on Postgres, but SQLite has no such operation at all — batch
+    # mode recreates the table there instead, transparently, so this works on
+    # both dialects (SQLite is local dev only, no Postgres container needed).
+    with op.batch_alter_table("time_tracking_tasks") as batch_op:
+        batch_op.add_column(sa.Column("gantt_task_id", sa.String(), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_time_tracking_tasks_gantt_task_id",
+            "gantt_tasks",
+            ["gantt_task_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
     op.create_index(
         "ix_time_tracking_tasks_gantt_task_id",
         "time_tracking_tasks",
@@ -35,7 +39,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_time_tracking_tasks_gantt_task_id", table_name="time_tracking_tasks")
-    op.drop_constraint(
-        "fk_time_tracking_tasks_gantt_task_id", "time_tracking_tasks", type_="foreignkey"
-    )
-    op.drop_column("time_tracking_tasks", "gantt_task_id")
+    with op.batch_alter_table("time_tracking_tasks") as batch_op:
+        batch_op.drop_constraint("fk_time_tracking_tasks_gantt_task_id", type_="foreignkey")
+        batch_op.drop_column("gantt_task_id")
