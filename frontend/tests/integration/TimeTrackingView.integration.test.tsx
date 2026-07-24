@@ -247,7 +247,7 @@ describe("TimeTrackingView Integration Tests", () => {
   });
 
   describe("View Navigation & Persistence", () => {
-    it("switches between daily, weekly, and config views", async () => {
+    it("switches between daily and weekly views", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
@@ -262,14 +262,9 @@ describe("TimeTrackingView Integration Tests", () => {
       // Verify view changed
       expect(screen.getByText(/Weekly Overview/i)).toBeInTheDocument();
 
-      // Switch to config view
-      fireEvent.click(screen.getByRole("button", { name: /Config/i }));
-
-      // Verify view changed
-      expect(screen.getByText(/Time Tracking Configuration/i)).toBeInTheDocument();
-
-      // Switch back to daily
-      fireEvent.click(screen.getByRole("button", { name: /Daily Log/i }));
+      // Switch back to daily (exact match to avoid the weekly empty state's
+      // "Go to Daily Log" CTA button, which also matches /Daily Log/i)
+      fireEvent.click(screen.getByRole("button", { name: "Daily Log" }));
 
       // Verify view changed back
       expect(screen.getByText(/Daily Time Tracking/i)).toBeInTheDocument();
@@ -279,7 +274,45 @@ describe("TimeTrackingView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
-      // Set localStorage to config view
+      // Set localStorage to weekly view
+      localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 2,
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: true,
+          },
+          lastUsed: {
+            activeTab: "timetracking",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "weekly",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      renderWithSettings();
+
+      // Should start in weekly view (from localStorage)
+      expect(screen.getByText(/Weekly Overview/i)).toBeInTheDocument();
+    });
+
+    it("falls back to the default view for a stale/removed view key in localStorage", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
+
+      // "config" was a valid timeTrackingView value before the Config tab was removed;
+      // stored state from an older app version may still contain it.
       localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
@@ -308,8 +341,8 @@ describe("TimeTrackingView Integration Tests", () => {
 
       renderWithSettings();
 
-      // Should start in config view (from localStorage)
-      expect(screen.getByText(/Time Tracking Configuration/i)).toBeInTheDocument();
+      // Should fall back to the default daily view
+      expect(screen.getByText(/Daily Time Tracking/i)).toBeInTheDocument();
     });
   });
 

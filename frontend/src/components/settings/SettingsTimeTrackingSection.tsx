@@ -1,9 +1,12 @@
-import type { Label } from "./constants";
-import { LabelsPanel } from "./LabelsPanel";
-import { TemplatesPanel } from "./TemplatesPanel";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
+import { LabelsPanel } from "@/components/timeTracking/LabelsPanel";
+import { TemplatesPanel } from "@/components/timeTracking/TemplatesPanel";
+import type { Label } from "@/components/timeTracking/constants";
+import type {
+  StoredTimeTrackingTask,
+  TimeTrackingTemplate,
+} from "@/components/timeTracking/types";
 
-type TimeTrackingConfigViewProps = {
+type SettingsTimeTrackingSectionProps = {
   labels: Label[];
   templates: TimeTrackingTemplate[];
   tasks: StoredTimeTrackingTask[];
@@ -14,7 +17,7 @@ type TimeTrackingConfigViewProps = {
   onUpdateLabels: (labels: Label[]) => void;
 };
 
-export function TimeTrackingConfigView({
+export function SettingsTimeTrackingSection({
   labels,
   templates,
   tasks,
@@ -23,9 +26,9 @@ export function TimeTrackingConfigView({
   onDeleteTemplate,
   onUpdateTemplates,
   onUpdateLabels,
-}: TimeTrackingConfigViewProps) {
+}: SettingsTimeTrackingSectionProps) {
   return (
-    <div className="d-flex flex-column gap-3">
+    <div className="p-3 d-flex flex-column gap-3">
       <LabelsPanel
         labels={labels}
         templates={templates}

@@ -709,6 +709,18 @@ describe("SettingsPage General Section", () => {
   });
 });
 
+describe("SettingsPage Time Tracking Section", () => {
+  it("renders the labels and templates panels", () => {
+    labelsCollection.insert({ id: "label-1", name: "Urgent", color: "#ff0000" });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="timeTracking" />);
+
+    expect(screen.getByText(m.tt_labels_heading())).toBeInTheDocument();
+    expect(screen.getByText(m.tt_templates_heading())).toBeInTheDocument();
+    expect(screen.getByText("Urgent")).toBeInTheDocument();
+  });
+});
+
 describe("SettingsPage Features Section", () => {
   it("toggles features and shows cross-border setup when enabled", async () => {
     const user = userEvent.setup();
