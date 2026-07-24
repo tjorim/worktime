@@ -21,11 +21,14 @@ const settingsRoute = createRoute({
   path: "/settings",
   validateSearch: (
     search: Record<string, unknown>,
-  ): { section?: "general" | "features" | "account" | "sync" | "data" | "about" } => {
+  ): {
+    section?: "general" | "features" | "timeTracking" | "account" | "sync" | "data" | "about";
+  } => {
     const section = typeof search.section === "string" ? search.section : undefined;
     if (
       section === "general" ||
       section === "features" ||
+      section === "timeTracking" ||
       section === "account" ||
       section === "sync" ||
       section === "data" ||

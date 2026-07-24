@@ -23,8 +23,10 @@ import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection
 import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
 import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
 import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSection";
+import { SettingsTimeTrackingSection } from "@/components/settings/SettingsTimeTrackingSection";
 import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
@@ -39,6 +41,7 @@ const SETTINGS_SECTIONS: Array<{
 }> = [
   { key: "general", icon: "bi-sliders", label: m.preferences_title },
   { key: "features", icon: "bi-grid", label: m.features_title },
+  { key: "timeTracking", icon: "bi-clock-history", label: m.time_tracking_section_title },
   { key: "account", icon: "bi-person-circle", label: m.account_section_title },
   { key: "sync", icon: "bi-cloud-check", label: m.sync_section_title },
   { key: "data", icon: "bi-database", label: m.quick_actions_title },
@@ -124,6 +127,7 @@ export function SettingsPage() {
 export type SettingsSection =
   | "general"
   | "features"
+  | "timeTracking"
   | "account"
   | "sync"
   | "data"
@@ -178,6 +182,16 @@ export function SettingsContent({
     updateOfficeCountry,
     resetSettings,
   } = useSettings();
+  const {
+    tasks: timeTrackingTasks,
+    templates: timeTrackingTemplates,
+    labels: timeTrackingLabels,
+    addTemplate,
+    updateTemplate,
+    deleteTemplate,
+    updateTemplates,
+    updateLabels,
+  } = useTimeTrackingStorage();
   const {
     accountProfile,
     profileDraft,
@@ -348,6 +362,18 @@ export function SettingsContent({
         onToggleUnifiedCalendar={updateUnifiedCalendarEnabled}
         onUpdateHomeCountry={updateHomeCountry}
         onUpdateOfficeCountry={updateOfficeCountry}
+      />
+    ),
+    timeTracking: () => (
+      <SettingsTimeTrackingSection
+        labels={timeTrackingLabels}
+        templates={timeTrackingTemplates}
+        tasks={timeTrackingTasks}
+        onAddTemplate={addTemplate}
+        onUpdateTemplate={updateTemplate}
+        onDeleteTemplate={deleteTemplate}
+        onUpdateTemplates={updateTemplates}
+        onUpdateLabels={updateLabels}
       />
     ),
     about: () => (

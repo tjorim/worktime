@@ -1,6 +1,5 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Card from "react-bootstrap/Card";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/contexts/LastUsedContext";
@@ -10,14 +9,13 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { calculateWeeklyShiftTarget } from "@/utils/shiftCalculations";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
-import { TimeTrackingConfigView } from "./TimeTrackingConfigView";
 import { TimeTrackingDailyView } from "./TimeTrackingDailyView";
 import { TimeTrackingWeeklyView } from "./TimeTrackingWeeklyView";
 
 /**
  * Valid time tracking view modes. Source of truth for all available views.
  */
-const TIME_TRACKING_VIEWS = ["daily", "weekly", "config"] as const;
+const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
 
 /**
  * Default time tracking view mode when no preference is stored or when stored value is invalid.
@@ -37,20 +35,8 @@ export function TimeTrackingView({
   const { myTeam, scheduleType } = useSettings();
   const { lastUsed, updateLastTimeTrackingView } = useLastUsed();
   const toast = useToast();
-  const {
-    tasks,
-    templates,
-    labels,
-    addTask,
-    updateTaskTimes,
-    toggleBreak,
-    removeTask,
-    addTemplate,
-    updateTemplate,
-    deleteTemplate,
-    updateTemplates,
-    updateLabels,
-  } = useTimeTrackingStorage();
+  const { tasks, templates, labels, addTask, updateTaskTimes, toggleBreak, removeTask } =
+    useTimeTrackingStorage();
 
   // Delete immediately, then offer undo. Re-adding restores the same task id
   // via the existing store API, so sync sees a restore rather than a duplicate.
@@ -124,15 +110,6 @@ export function TimeTrackingView({
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             {m.tt_weekly_summary()}
           </Button>
-          <Button
-            variant={viewMode === "config" ? "primary" : "outline-primary"}
-            size="sm"
-            aria-pressed={viewMode === "config"}
-            onClick={() => setViewMode("config")}
-          >
-            <i className="bi bi-gear me-1" aria-hidden="true"></i>
-            {m.tt_config()}
-          </Button>
         </ButtonGroup>
       </div>
 
@@ -165,27 +142,6 @@ export function TimeTrackingView({
             setViewMode("daily");
           }}
         />
-      )}
-
-      {viewMode === "config" && (
-        <Card className="shadow-sm">
-          <Card.Header className="fw-semibold">
-            <i className="bi bi-gear me-2" aria-hidden="true"></i>
-            {m.tt_config_heading()}
-          </Card.Header>
-          <Card.Body>
-            <TimeTrackingConfigView
-              labels={labels}
-              templates={templates}
-              tasks={tasks}
-              onAddTemplate={addTemplate}
-              onUpdateTemplate={updateTemplate}
-              onDeleteTemplate={deleteTemplate}
-              onUpdateTemplates={updateTemplates}
-              onUpdateLabels={updateLabels}
-            />
-          </Card.Body>
-        </Card>
       )}
     </div>
   );

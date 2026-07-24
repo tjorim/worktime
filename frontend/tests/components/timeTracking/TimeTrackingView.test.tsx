@@ -55,11 +55,9 @@ describe("TimeTrackingView", () => {
 
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
-      const configButton = screen.getByRole("button", { name: /Config/i });
 
       expect(dailyButton).toBeInTheDocument();
       expect(weeklyButton).toBeInTheDocument();
-      expect(configButton).toBeInTheDocument();
     });
 
     it("should show daily view by default", () => {
@@ -73,15 +71,12 @@ describe("TimeTrackingView", () => {
 
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
-      const configButton = screen.getByRole("button", { name: /Config/i });
 
       const dailyIcon = dailyButton.querySelector("i");
       const weeklyIcon = weeklyButton.querySelector("i");
-      const configIcon = configButton.querySelector("i");
 
       expect(dailyIcon).toHaveClass("bi-list-check");
       expect(weeklyIcon).toHaveClass("bi-bar-chart-line");
-      expect(configIcon).toHaveClass("bi-gear");
     });
   });
 
@@ -204,40 +199,6 @@ describe("TimeTrackingView", () => {
       expect(screen.getByRole("button", { name: /Go to previous week/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Go to current week/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Go to next week/i })).toBeInTheDocument();
-    });
-  });
-
-  describe("Config View", () => {
-    it("should render configuration panel when config view is selected", () => {
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify({
-          version: 2,
-          hasCompletedOnboarding: true,
-          myTeam: null,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "24h",
-            theme: "auto",
-            notifications: "off",
-            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: false,
-            enableTimeTracking: true,
-          },
-          lastUsed: {
-            activeTab: "timetracking",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "config",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      renderWithSettings();
-
-      expect(screen.getByText("Time Tracking Configuration")).toBeInTheDocument();
     });
   });
 

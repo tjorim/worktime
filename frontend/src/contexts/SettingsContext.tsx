@@ -21,7 +21,7 @@ export type TabKey =
   | "gantt";
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
-export type TimeTrackingViewKey = "daily" | "weekly" | "config";
+export type TimeTrackingViewKey = "daily" | "weekly";
 export type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 export type GanttViewKey = "chart" | "table";
 
@@ -133,7 +133,7 @@ const validTabKeys = new Set<TabKey>([
 ]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
-const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
+const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
 const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Year"]);
 const validGanttViewKeys = new Set<GanttViewKey>(["chart", "table"]);
 
