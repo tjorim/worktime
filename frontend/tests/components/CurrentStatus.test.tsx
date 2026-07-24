@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentStatus } from "@/components/CurrentStatus";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import * as useCountdownHook from "@/hooks/useCountdown";
 import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
@@ -326,6 +326,154 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Up Next")).toBeInTheDocument();
       expect(screen.getByText(/2024-01-15.*Evening/)).toBeInTheDocument();
       expect(screen.getByText("15:00–23:00")).toBeInTheDocument();
+    });
+  });
+
+  describe("Single-team schedule (9-5)", () => {
+    const defaultSettingsValue = {
+      settings: {
+        timeFormat: "24h" as const,
+        theme: "auto" as const,
+        notifications: "off" as const,
+        vacationAllowance: { yearlyAmounts: {}, unit: "days" as const, hoursPerDay: 8 },
+        enableTimeOff: false,
+        enableTimeTracking: false,
+      },
+      lastUsed: {
+        activeTab: "calendar" as const,
+        scheduleView: "today" as const,
+        otherSchedule: null,
+        timeOffView: "table" as const,
+        timeTrackingView: "daily" as const,
+        otherTeam: null,
+      },
+      scheduleType: "5-shift" as const,
+      myTeam: null,
+    };
+
+    afterEach(() => {
+      // Restore the file-wide default ("5-shift") so later tests aren't affected.
+      vi.mocked(useSettings).mockReturnValue(
+        defaultSettingsValue as ReturnType<typeof useSettings>,
+      );
+    });
+
+    it("should hide the redundant Up Next tile and let Today take the full width", () => {
+      vi.mocked(useSettings).mockReturnValue({
+        ...defaultSettingsValue,
+        scheduleType: "9-5",
+      } as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Today")).toBeInTheDocument();
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+
+      const todayCard = screen.getByText("Today").closest(".col-md-12");
+      expect(todayCard).toBeInTheDocument();
+    });
+
+    it("should keep the Up Next tile hidden for 9-5 even when an explicit team is provided", () => {
+      // 9-5 is a single-team schedule, but CurrentStatus may still pass an
+      // explicit myTeam through (e.g. effectiveTeam resolves to 1). The tile
+      // should stay hidden regardless of the team value.
+      vi.mocked(useSettings).mockReturnValue({
+        ...defaultSettingsValue,
+        scheduleType: "9-5",
+      } as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+      const todayCard = screen.getByText("Today").closest(".col-md-12");
+      expect(todayCard).toBeInTheDocument();
+    });
+
+    it("should not fall back to the 'No Next Shift' empty state for 9-5 even when there is no next shift", () => {
+      // Guards against a regression where the hasTeams check is dropped and
+      // the Up Next tile reappears (in its empty state) whenever nextShift is null.
+      vi.mocked(shiftCalculations.getNextShift).mockReturnValue(null);
+      vi.mocked(useSettings).mockReturnValue({
+        ...defaultSettingsValue,
+        scheduleType: "9-5",
+      } as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+      expect(screen.queryByText("No Next Shift")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("No upcoming shifts found for your team."),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Multi-team schedules (regression for Up Next tile)", () => {
+    afterEach(() => {
+      // Restore the file-wide default ("5-shift") so later tests aren't affected.
+      vi.mocked(useSettings).mockReturnValue({
+        settings: {
+          timeFormat: "24h",
+          theme: "auto",
+          notifications: "off",
+          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+          enableTimeOff: false,
+          enableTimeTracking: false,
+        },
+        lastUsed: {
+          activeTab: "calendar",
+          scheduleView: "today",
+          otherSchedule: null,
+          timeOffView: "table",
+          timeTrackingView: "daily",
+          otherTeam: null,
+        },
+        scheduleType: "5-shift",
+        myTeam: null,
+      } as unknown as ReturnType<typeof useSettings>);
+    });
+
+    it("should keep showing the Up Next tile at half width alongside Today for 5-shift", () => {
+      // Default mocked scheduleType is "5-shift" (teamCount 5), so hasTeams is true.
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Today")).toBeInTheDocument();
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+
+      const todayCard = screen.getByText("Today").closest(".col-md-6");
+      const upNextCard = screen.getByText("Up Next").closest(".col-md-6");
+      expect(todayCard).toBeInTheDocument();
+      expect(upNextCard).toBeInTheDocument();
+      // Neither tile should claim the full-width column reserved for single-team schedules.
+      expect(screen.getByText("Today").closest(".col-md-12")).not.toBeInTheDocument();
+    });
+
+    it("should show the Up Next tile for other multi-team schedules (weekend-shift)", () => {
+      vi.mocked(useSettings).mockReturnValue({
+        settings: {
+          timeFormat: "24h",
+          theme: "auto",
+          notifications: "off",
+          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+          enableTimeOff: false,
+          enableTimeTracking: false,
+        },
+        lastUsed: {
+          activeTab: "calendar",
+          scheduleView: "today",
+          otherSchedule: null,
+          timeOffView: "table",
+          timeTrackingView: "daily",
+          otherTeam: null,
+        },
+        scheduleType: "weekend-shift",
+        myTeam: null,
+      } as unknown as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+      expect(screen.getByText("Today").closest(".col-md-6")).toBeInTheDocument();
     });
   });
 
