@@ -1,17 +1,4 @@
-"""Initial schema — all tables at final state.
-
-Squashed from the original 001 (initial schema, OIDC integration),
-002 (link time_tracking_tasks to gantt_tasks), and 003 (composite sync
-indexes) into a single migration. The end schema is identical to running
-all three in sequence; only the build path is simplified — the
-gantt_task_id column/FK and the composite indexes are now part of each
-table's own CREATE TABLE instead of separate ALTER-based migrations, so
-there's no need for SQLite's batch-mode ALTER workaround at all.
-
-IMPORTANT: an already-deployed database that has run the old 001/002/003
-chain must be stamped at this migration's revision (not re-run), since its
-schema already matches this one exactly:
-    uv run alembic stamp 001
+"""Initial schema — all tables at final state, including OIDC integration.
 
 Revision ID: 001
 Revises:
