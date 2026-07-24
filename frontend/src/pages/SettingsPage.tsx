@@ -183,16 +183,6 @@ export function SettingsContent({
     resetSettings,
   } = useSettings();
   const {
-    tasks: timeTrackingTasks,
-    templates: timeTrackingTemplates,
-    labels: timeTrackingLabels,
-    addTemplate,
-    updateTemplate,
-    deleteTemplate,
-    updateTemplates,
-    updateLabels,
-  } = useTimeTrackingStorage();
-  const {
     accountProfile,
     profileDraft,
     setProfileDraft,
@@ -364,18 +354,7 @@ export function SettingsContent({
         onUpdateOfficeCountry={updateOfficeCountry}
       />
     ),
-    timeTracking: () => (
-      <SettingsTimeTrackingSection
-        labels={timeTrackingLabels}
-        templates={timeTrackingTemplates}
-        tasks={timeTrackingTasks}
-        onAddTemplate={addTemplate}
-        onUpdateTemplate={updateTemplate}
-        onDeleteTemplate={deleteTemplate}
-        onUpdateTemplates={updateTemplates}
-        onUpdateLabels={updateLabels}
-      />
-    ),
+    timeTracking: () => <SettingsTimeTrackingSectionContainer />,
     about: () => (
       <SettingsAboutSection
         isDevMode={isDevMode}
@@ -449,5 +428,36 @@ export function SettingsContent({
         onChangeClearTimeOffData={setClearTimeOffData}
       />
     </>
+  );
+}
+
+/**
+ * Mounts `useTimeTrackingStorage` only while the Time Tracking settings
+ * section is active, so opening unrelated sections doesn't trigger the
+ * labels/templates/tasks sync collections' network pulls.
+ */
+function SettingsTimeTrackingSectionContainer() {
+  const {
+    tasks,
+    templates,
+    labels,
+    addTemplate,
+    updateTemplate,
+    deleteTemplate,
+    updateTemplates,
+    updateLabels,
+  } = useTimeTrackingStorage();
+
+  return (
+    <SettingsTimeTrackingSection
+      labels={labels}
+      templates={templates}
+      tasks={tasks}
+      onAddTemplate={addTemplate}
+      onUpdateTemplate={updateTemplate}
+      onDeleteTemplate={deleteTemplate}
+      onUpdateTemplates={updateTemplates}
+      onUpdateLabels={updateLabels}
+    />
   );
 }
