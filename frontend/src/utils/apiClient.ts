@@ -45,6 +45,23 @@ export function getRequestId(response: Response): string | null {
  * @param clientOptions - Error callbacks.
  * @returns The fetch Response on success (non-401/403 status).
  */
+/**
+ * Extract the `detail` field from a JSON error response body, if present.
+ *
+ * Returns null when the body isn't JSON or has no non-empty `detail` string,
+ * so callers can fall back to a generic error message.
+ */
+export async function readErrorDetail(response: Response): Promise<string | null> {
+  try {
+    const payload = (await response.json()) as { detail?: unknown };
+    return typeof payload.detail === "string" && payload.detail.trim() !== ""
+      ? payload.detail
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function apiFetch(
   url: string,
   init: RequestInit = {},

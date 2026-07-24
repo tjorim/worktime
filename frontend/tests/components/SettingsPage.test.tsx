@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
 import { SettingsContent } from "@/pages/SettingsPage";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -15,6 +16,7 @@ import { server } from "@/mocks/server";
 import { labelsCollection } from "@/db/collections";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
+import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
 import * as m from "@/paraglide/messages.js";
 
 // Stub <Link> so tests don't need a RouterProvider context.
@@ -123,12 +125,6 @@ function renderSettingsAccountHarness({
       hasProfileChanges,
       resolvedDisplayName,
       handleSaveProfile,
-      adminUsers,
-      isAdminUsersLoading,
-      adminUsersError,
-      adminUsersDeleteError,
-      deletingAdminUserId,
-      handleDeleteAdminUser,
       isDeletingAccount,
       deleteAccountError,
       handleDeleteAccount,
@@ -154,20 +150,56 @@ function renderSettingsAccountHarness({
         profileDraft={profileDraft}
         isProfileSaving={isProfileSaving}
         hasProfileChanges={hasProfileChanges}
+        isDeletingAccount={isDeletingAccount}
+        deleteAccountError={deleteAccountError}
+        onProfileDraftChange={setProfileDraft}
+        onSaveProfile={() => void handleSaveProfile()}
+        onDeleteAccount={() => void handleDeleteAccount()}
+        onLogout={vi.fn()}
+        onSignup={vi.fn()}
+        onLogin={vi.fn()}
+      />
+    );
+  }
+
+  render(<Harness />);
+  return { showSuccessToast };
+}
+
+function renderSettingsAdminUsersHarness({
+  fetchFn,
+  showSuccessToast = vi.fn(),
+  currentAccountId = null,
+}: {
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+  showSuccessToast?: (message: string, icon?: string) => void;
+  currentAccountId?: number | null;
+}) {
+  function Harness() {
+    const {
+      adminUsers,
+      isAdminUsersLoading,
+      adminUsersError,
+      adminUsersDeleteError,
+      deletingAdminUserId,
+      handleDeleteAdminUser,
+    } = useSettingsAdminUsers({
+      isAuthenticated: true,
+      isAdmin: true,
+      currentAccountId,
+      fetchFn,
+      showSuccessToast,
+    });
+
+    return (
+      <SettingsAdminUsersSection
+        currentAccountId={currentAccountId}
         adminUsers={adminUsers}
         isAdminUsersLoading={isAdminUsersLoading}
         adminUsersError={adminUsersError}
         adminUsersDeleteError={adminUsersDeleteError}
         deletingAdminUserId={deletingAdminUserId}
-        isDeletingAccount={isDeletingAccount}
-        deleteAccountError={deleteAccountError}
-        onProfileDraftChange={setProfileDraft}
-        onSaveProfile={() => void handleSaveProfile()}
         onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
-        onDeleteAccount={() => void handleDeleteAccount()}
-        onLogout={vi.fn()}
-        onSignup={vi.fn()}
-        onLogin={vi.fn()}
       />
     );
   }
@@ -250,211 +282,6 @@ describe("SettingsPage Account Section", () => {
 
     expect(await screen.findByText(/trusted-server model/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Learn more" })).toHaveAttribute("href", "/privacy");
-  });
-
-  it("does not fetch admin users or render user management for non-admin accounts", async () => {
-    let adminUsersRequestCount = 0;
-    server.use(
-      http.get("*/api/users/", () => {
-        adminUsersRequestCount += 1;
-        return HttpResponse.json({ items: [], total: 0 });
-      }),
-    );
-
-    mockAuthenticatedUser("Alice");
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
-
-    expect(await screen.findByDisplayValue("Dev User")).toBeInTheDocument();
-    expect(screen.queryByText("User management")).not.toBeInTheDocument();
-    expect(adminUsersRequestCount).toBe(0);
-  });
-
-  it("renders admin-only user management list for admin accounts", async () => {
-    let usersCalled = false;
-    server.use(
-      http.get("*/api/me", () =>
-        HttpResponse.json({
-          id: 1,
-          username: "admin-user",
-          display_name: "Admin User",
-          is_admin: true,
-          capabilities: { backup_enabled: true },
-        }),
-      ),
-      http.get(/.*\/api\/users\/?$/, () => {
-        usersCalled = true;
-        return HttpResponse.json({ items: [], total: 0 });
-      }),
-    );
-
-    mockAuthenticatedUser("Alice");
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
-
-    expect(await screen.findByText("User management")).toBeInTheDocument();
-    expect(screen.getByText("No users found.")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(usersCalled).toBe(true);
-    });
-  });
-
-  it("deletes another user from the admin user management table after confirmation", async () => {
-    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
-      if (input === "/api/me") {
-        return jsonResponse({
-          id: 1,
-          username: "admin-user",
-          display_name: "Admin User",
-          is_admin: true,
-          capabilities: { backup_enabled: true },
-        });
-      }
-      if (input === "/api/users/?limit=100") {
-        return jsonResponse({
-          items: [
-            {
-              id: 1,
-              username: "admin-user",
-              display_name: "Admin User",
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-02T00:00:00Z",
-            },
-            {
-              id: 2,
-              username: "member-user",
-              display_name: "Member User",
-              created_at: "2026-01-03T00:00:00Z",
-              updated_at: "2026-01-04T00:00:00Z",
-            },
-          ],
-          total: 2,
-        });
-      }
-      if (input === "/api/users/2" && init?.method === "DELETE") {
-        return new Response(null, { status: 204 });
-      }
-      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
-    });
-    const showSuccessToast = vi.fn();
-
-    const user = userEvent.setup();
-    renderSettingsAccountHarness({ fetchFn, showSuccessToast });
-
-    const memberRow = (await screen.findByText("member-user")).closest("tr");
-    expect(memberRow).not.toBeNull();
-
-    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
-
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Delete account?")).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(
-        "This permanently deletes the account for Member User (@member-user). This action cannot be undone.",
-      ),
-    ).toBeInTheDocument();
-
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
-
-    await waitFor(() => {
-      expect(screen.queryByText("member-user")).not.toBeInTheDocument();
-    });
-    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", "bi-trash");
-    expect(fetchFn).toHaveBeenCalledWith("/api/users/2", { method: "DELETE" });
-  });
-
-  it("shows an inline error when deleting a managed user fails", async () => {
-    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
-      if (input === "/api/me") {
-        return jsonResponse({
-          id: 1,
-          username: "admin-user",
-          display_name: "Admin User",
-          is_admin: true,
-          capabilities: { backup_enabled: true },
-        });
-      }
-      if (input === "/api/users/?limit=100") {
-        return jsonResponse({
-          items: [
-            {
-              id: 1,
-              username: "admin-user",
-              display_name: "Admin User",
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-02T00:00:00Z",
-            },
-            {
-              id: 2,
-              username: "member-user",
-              display_name: "Member User",
-              created_at: "2026-01-03T00:00:00Z",
-              updated_at: "2026-01-04T00:00:00Z",
-            },
-          ],
-          total: 2,
-        });
-      }
-      if (input === "/api/users/2" && init?.method === "DELETE") {
-        return jsonResponse({ detail: "Could not delete user." }, { status: 500 });
-      }
-      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
-    });
-
-    const user = userEvent.setup();
-    renderSettingsAccountHarness({ fetchFn });
-
-    const memberRow = (await screen.findByText("member-user")).closest("tr");
-    expect(memberRow).not.toBeNull();
-
-    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
-    const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
-
-    expect(await screen.findByText("Could not delete user.")).toBeInTheDocument();
-    expect(screen.getByText("member-user")).toBeInTheDocument();
-  });
-
-  it("disables self-delete for the current admin in the user management table", async () => {
-    const fetchFn = vi.fn(async (input: string) => {
-      if (input === "/api/me") {
-        return jsonResponse({
-          id: 1,
-          username: "admin-user",
-          display_name: "Admin User",
-          is_admin: true,
-          capabilities: { backup_enabled: true },
-        });
-      }
-      if (input === "/api/users/?limit=100") {
-        return jsonResponse({
-          items: [
-            {
-              id: 1,
-              username: "admin-user",
-              display_name: "Admin User",
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-02T00:00:00Z",
-            },
-            {
-              id: 2,
-              username: "member-user",
-              display_name: "Member User",
-              created_at: "2026-01-03T00:00:00Z",
-              updated_at: "2026-01-04T00:00:00Z",
-            },
-          ],
-          total: 2,
-        });
-      }
-      throw new Error(`Unexpected request: GET ${input}`);
-    });
-
-    renderSettingsAccountHarness({ fetchFn });
-
-    const adminRow = (await screen.findAllByRole("row")).find((row) =>
-      within(row).queryByText("admin-user"),
-    );
-    expect(adminRow).not.toBeNull();
-    expect(within(adminRow!).getByRole("button", { name: "Delete" })).toBeDisabled();
   });
 
   it("renders a self-service account deletion danger zone", async () => {
@@ -604,16 +431,14 @@ describe("SettingsPage Account Section", () => {
     expect(screen.getByText("Automatic cloud backup")).toBeInTheDocument();
     expect(screen.getByText("Cross-device access")).toBeInTheDocument();
   });
-});
 
-describe("SettingsPage Sync Section", () => {
-  it("shows signed-out messaging when unauthenticated", () => {
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="sync" />);
+  it("shows signed-out sync messaging when unauthenticated", () => {
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText(m.sync_signed_out_description())).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: m.sync_manual_pull_btn() })).not.toBeInTheDocument();
   });
 
-  it("renders signed-in status and calls pull action when button is enabled", async () => {
+  it("renders sync status alongside the account profile and calls pull action when enabled", async () => {
     const triggerPullMock = vi.fn();
     mockAuthenticatedUser("Alice");
     useOngoingSyncContextSpy = vi
@@ -627,8 +452,9 @@ describe("SettingsPage Sync Section", () => {
       );
 
     const user = userEvent.setup();
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="sync" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
 
+    expect(await screen.findByDisplayValue("Dev User")).toBeInTheDocument();
     expect(screen.getByText(/Last synced:/i)).toBeInTheDocument();
     const pullButton = screen.getByRole("button", { name: m.sync_manual_pull_btn() });
     expect(pullButton).toBeEnabled();
@@ -642,8 +468,191 @@ describe("SettingsPage Sync Section", () => {
       .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
       .mockReturnValue(createMockSyncContext({ isSyncing: true }));
 
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="sync" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByRole("button", { name: m.sync_manual_pull_busy() })).toBeDisabled();
+  });
+});
+
+describe("SettingsPage Admin Section", () => {
+  it("does not fetch admin users or render user management for non-admin accounts", async () => {
+    let adminUsersRequestCount = 0;
+    server.use(
+      http.get("*/api/users/", () => {
+        adminUsersRequestCount += 1;
+        return HttpResponse.json({ items: [], total: 0 });
+      }),
+    );
+
+    mockAuthenticatedUser("Alice");
+    // useSettingsAdminUsers mounts regardless of activeSection, so rendering the
+    // account section (whose profile-loaded state we can await) is enough to
+    // prove a non-admin viewing Settings never triggers the admin users fetch.
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+
+    expect(await screen.findByDisplayValue("Dev User")).toBeInTheDocument();
+    expect(screen.queryByText("User management")).not.toBeInTheDocument();
+    expect(adminUsersRequestCount).toBe(0);
+  });
+
+  it("renders the user management list for admin accounts", async () => {
+    let usersCalled = false;
+    server.use(
+      http.get("*/api/me", () =>
+        HttpResponse.json({
+          id: 1,
+          username: "admin-user",
+          display_name: "Admin User",
+          is_admin: true,
+          capabilities: { backup_enabled: true },
+        }),
+      ),
+      http.get(/.*\/api\/users\/?$/, () => {
+        usersCalled = true;
+        return HttpResponse.json({ items: [], total: 0 });
+      }),
+    );
+
+    mockAuthenticatedUser("Alice");
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="admin" />);
+
+    expect(await screen.findByText("User management")).toBeInTheDocument();
+    expect(await screen.findByText("No users found.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(usersCalled).toBe(true);
+    });
+  });
+
+  it("deletes another user from the admin user management table after confirmation", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/users/?limit=100") {
+        return jsonResponse({
+          items: [
+            {
+              id: 1,
+              username: "admin-user",
+              display_name: "Admin User",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+            },
+            {
+              id: 2,
+              username: "member-user",
+              display_name: "Member User",
+              created_at: "2026-01-03T00:00:00Z",
+              updated_at: "2026-01-04T00:00:00Z",
+            },
+          ],
+          total: 2,
+        });
+      }
+      if (input === "/api/users/2" && init?.method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const showSuccessToast = vi.fn();
+
+    const user = userEvent.setup();
+    renderSettingsAdminUsersHarness({ fetchFn, showSuccessToast, currentAccountId: 1 });
+
+    const memberRow = (await screen.findByText("member-user")).closest("tr");
+    expect(memberRow).not.toBeNull();
+
+    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Delete account?")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "This permanently deletes the account for Member User (@member-user). This action cannot be undone.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("member-user")).not.toBeInTheDocument();
+    });
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", "bi-trash");
+    expect(fetchFn).toHaveBeenCalledWith("/api/users/2", { method: "DELETE" });
+  });
+
+  it("shows an inline error when deleting a managed user fails", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/users/?limit=100") {
+        return jsonResponse({
+          items: [
+            {
+              id: 1,
+              username: "admin-user",
+              display_name: "Admin User",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+            },
+            {
+              id: 2,
+              username: "member-user",
+              display_name: "Member User",
+              created_at: "2026-01-03T00:00:00Z",
+              updated_at: "2026-01-04T00:00:00Z",
+            },
+          ],
+          total: 2,
+        });
+      }
+      if (input === "/api/users/2" && init?.method === "DELETE") {
+        return jsonResponse({ detail: "Could not delete user." }, { status: 500 });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderSettingsAdminUsersHarness({ fetchFn, currentAccountId: 1 });
+
+    const memberRow = (await screen.findByText("member-user")).closest("tr");
+    expect(memberRow).not.toBeNull();
+
+    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByText("Could not delete user.")).toBeInTheDocument();
+    expect(screen.getByText("member-user")).toBeInTheDocument();
+  });
+
+  it("disables self-delete for the current admin in the user management table", async () => {
+    const fetchFn = vi.fn(async (input: string) => {
+      if (input === "/api/users/?limit=100") {
+        return jsonResponse({
+          items: [
+            {
+              id: 1,
+              username: "admin-user",
+              display_name: "Admin User",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+            },
+            {
+              id: 2,
+              username: "member-user",
+              display_name: "Member User",
+              created_at: "2026-01-03T00:00:00Z",
+              updated_at: "2026-01-04T00:00:00Z",
+            },
+          ],
+          total: 2,
+        });
+      }
+      throw new Error(`Unexpected request: GET ${input}`);
+    });
+
+    renderSettingsAdminUsersHarness({ fetchFn, currentAccountId: 1 });
+
+    const adminRow = (await screen.findAllByRole("row")).find((row) =>
+      within(row).queryByText("admin-user"),
+    );
+    expect(adminRow).not.toBeNull();
+    expect(within(adminRow!).getByRole("button", { name: "Delete" })).toBeDisabled();
   });
 });
 

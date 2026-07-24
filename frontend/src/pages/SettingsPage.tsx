@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { useVersionClickEasterEgg } from "@/pages/settings/hooks/useVersionClickEasterEgg";
 import Button from "react-bootstrap/Button";
@@ -19,6 +19,7 @@ import { ChangelogModal } from "@/components/ChangelogModal";
 import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
 import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
 import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
@@ -29,6 +30,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
+import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
 import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
 import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
 import * as m from "@/paraglide/messages.js";
@@ -38,12 +40,13 @@ const SETTINGS_SECTIONS: Array<{
   key: SettingsSection;
   icon: string;
   label: () => string;
+  adminOnly?: boolean;
 }> = [
   { key: "general", icon: "bi-sliders", label: m.preferences_title },
   { key: "features", icon: "bi-grid", label: m.features_title },
   { key: "timeTracking", icon: "bi-clock-history", label: m.time_tracking_section_title },
   { key: "account", icon: "bi-person-circle", label: m.account_section_title },
-  { key: "sync", icon: "bi-cloud-check", label: m.sync_section_title },
+  { key: "admin", icon: "bi-people", label: m.account_admin_users_title, adminOnly: true },
   { key: "data", icon: "bi-database", label: m.quick_actions_title },
   { key: "about", icon: "bi-info-circle", label: m.information_title },
 ];
@@ -53,6 +56,21 @@ export function SettingsPage() {
   const search = useSearch({ from: "/settings" });
   const { openAbout, openShortcuts } = useAppShellContext();
   const activeSection = search.section ?? "general";
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // validateSearch remaps the deprecated ?section=sync value to "account" internally,
+    // but that doesn't rewrite the address bar — do that explicitly so copied
+    // links/bookmarks point at the canonical URL going forward.
+    if (new URLSearchParams(window.location.search).get("section") === "sync") {
+      void navigate({ to: "/settings", search: { section: "account" }, replace: true });
+    }
+  }, [navigate]);
+
+  const visibleSections = useMemo(
+    () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
+    [isAdmin],
+  );
 
   const sectionMeta = useMemo(() => {
     const matchedSection = SETTINGS_SECTIONS.find((section) => section.key === activeSection);
@@ -87,7 +105,7 @@ export function SettingsPage() {
                 </div>
               </div>
               <div className="p-2 d-grid gap-2">
-                {SETTINGS_SECTIONS.map((section) => {
+                {visibleSections.map((section) => {
                   const isActive = section.key === activeSection;
                   return (
                     <Button
@@ -116,6 +134,7 @@ export function SettingsPage() {
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
               onShowShortcuts={openShortcuts}
+              onAdminStatusChange={setIsAdmin}
             />
           </div>
         </div>
@@ -129,7 +148,7 @@ export type SettingsSection =
   | "features"
   | "timeTracking"
   | "account"
-  | "sync"
+  | "admin"
   | "data"
   | "about";
 
@@ -147,11 +166,13 @@ export function SettingsContent({
   onShowAbout,
   onShowShortcuts,
   activeSection = "general",
+  onAdminStatusChange,
 }: {
   onHide: () => void;
   onShowAbout?: () => void;
   onShowShortcuts?: () => void;
   activeSection?: SettingsSection;
+  onAdminStatusChange?: (isAdmin: boolean) => void;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showDevOptions, setShowDevOptions] = useState(false);
@@ -192,12 +213,6 @@ export function SettingsContent({
     hasProfileChanges,
     resolvedDisplayName,
     handleSaveProfile,
-    adminUsers,
-    isAdminUsersLoading,
-    adminUsersError,
-    adminUsersDeleteError,
-    deletingAdminUserId,
-    handleDeleteAdminUser,
     isDeletingAccount,
     deleteAccountError,
     handleDeleteAccount,
@@ -208,6 +223,25 @@ export function SettingsContent({
     showSuccessToast: toast.showSuccess,
     onAccountDeleted: logout,
   });
+  const isAdmin = accountProfile?.is_admin ?? false;
+  const {
+    adminUsers,
+    isAdminUsersLoading,
+    adminUsersError,
+    adminUsersDeleteError,
+    deletingAdminUserId,
+    handleDeleteAdminUser,
+  } = useSettingsAdminUsers({
+    isAuthenticated,
+    isAdmin,
+    currentAccountId: accountProfile?.id ?? null,
+    fetchFn,
+    showSuccessToast: toast.showSuccess,
+  });
+
+  useEffect(() => {
+    onAdminStatusChange?.(isAdmin);
+  }, [isAdmin, onAdminStatusChange]);
   const { syncStatus, retryInSeconds, lastSyncedLabel, backupStatusLabel } = useSettingsSyncStatus({
     isAuthenticated,
     hasSyncError,
@@ -279,49 +313,55 @@ export function SettingsContent({
 
   const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
     account: () => (
-      <SettingsAccountSection
-        isValidating={isValidating}
-        isAuthenticated={isAuthenticated}
-        resolvedDisplayName={resolvedDisplayName}
-        username={accountProfile?.username ?? null}
-        accountId={accountProfile?.id ?? null}
-        userId={userId}
-        isAdmin={accountProfile?.is_admin ?? false}
-        profileError={profileError}
-        isProfileLoading={isProfileLoading}
-        profileDraft={profileDraft}
-        isProfileSaving={isProfileSaving}
-        hasProfileChanges={hasProfileChanges}
-        onProfileDraftChange={setProfileDraft}
-        onSaveProfile={() => void handleSaveProfile()}
-        adminUsers={adminUsers}
-        isAdminUsersLoading={isAdminUsersLoading}
-        adminUsersError={adminUsersError}
-        adminUsersDeleteError={adminUsersDeleteError}
-        deletingAdminUserId={deletingAdminUserId}
-        onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
-        isDeletingAccount={isDeletingAccount}
-        deleteAccountError={deleteAccountError}
-        onDeleteAccount={() => void handleDeleteAccount()}
-        onLogout={logout}
-        onSignup={triggerSignup}
-        onLogin={triggerLogin}
-      />
+      <>
+        <SettingsAccountSection
+          isValidating={isValidating}
+          isAuthenticated={isAuthenticated}
+          resolvedDisplayName={resolvedDisplayName}
+          username={accountProfile?.username ?? null}
+          accountId={accountProfile?.id ?? null}
+          userId={userId}
+          isAdmin={isAdmin}
+          profileError={profileError}
+          isProfileLoading={isProfileLoading}
+          profileDraft={profileDraft}
+          isProfileSaving={isProfileSaving}
+          hasProfileChanges={hasProfileChanges}
+          onProfileDraftChange={setProfileDraft}
+          onSaveProfile={() => void handleSaveProfile()}
+          isDeletingAccount={isDeletingAccount}
+          deleteAccountError={deleteAccountError}
+          onDeleteAccount={() => void handleDeleteAccount()}
+          onLogout={logout}
+          onSignup={triggerSignup}
+          onLogin={triggerLogin}
+        />
+        <SettingsSyncSection
+          isAuthenticated={isAuthenticated}
+          isSyncing={isSyncing}
+          syncStatus={syncStatus}
+          lastSyncedLabel={lastSyncedLabel}
+          outboxCount={outboxCount}
+          conflictCount={conflictCount}
+          backupStatusLabel={backupStatusLabel}
+          hasSyncError={hasSyncError}
+          retryInSeconds={retryInSeconds}
+          onTriggerPull={triggerPull}
+        />
+      </>
     ),
-    sync: () => (
-      <SettingsSyncSection
-        isAuthenticated={isAuthenticated}
-        isSyncing={isSyncing}
-        syncStatus={syncStatus}
-        lastSyncedLabel={lastSyncedLabel}
-        outboxCount={outboxCount}
-        conflictCount={conflictCount}
-        backupStatusLabel={backupStatusLabel}
-        hasSyncError={hasSyncError}
-        retryInSeconds={retryInSeconds}
-        onTriggerPull={triggerPull}
-      />
-    ),
+    admin: () =>
+      isAdmin ? (
+        <SettingsAdminUsersSection
+          currentAccountId={accountProfile?.id ?? null}
+          adminUsers={adminUsers}
+          isAdminUsersLoading={isAdminUsersLoading}
+          adminUsersError={adminUsersError}
+          adminUsersDeleteError={adminUsersDeleteError}
+          deletingAdminUserId={deletingAdminUserId}
+          onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
+        />
+      ) : null,
     general: () => (
       <SettingsGeneralSection
         scheduleType={scheduleType}
