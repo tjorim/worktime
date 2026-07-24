@@ -5,7 +5,7 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
 import { dayjs } from "@/utils/dateTimeUtils";
-import type { TimeTrackingLabel } from "./constants";
+import type { Label } from "./constants";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
@@ -27,7 +27,7 @@ export type TaskEditForm = {
 
 type TaskEditModalProps = {
   show: boolean;
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   ganttTasks?: GanttTask[];
   showGanttPicker?: boolean;
   value: TaskEditForm;

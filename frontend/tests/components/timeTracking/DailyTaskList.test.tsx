@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { DailyTaskList } from "@/components/timeTracking/DailyTaskList";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import { dayjs } from "@/utils/dateTimeUtils";
 
-const TEST_LABELS: TimeTrackingLabel[] = [
+const TEST_LABELS: Label[] = [
   { id: "Support", name: "Support", color: "#c82333" },
   { id: "Development", name: "Development", color: "#198754" },
 ];

@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { buildLabelNameMap, type TimeTrackingLabel } from "@/components/timeTracking/constants";
+import { buildLabelNameMap, type Label } from "@/components/timeTracking/constants";
 import { effectiveDurationHours } from "@/components/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
 
@@ -43,7 +43,7 @@ function buildWeekDays(startIso: string): WeekDay[] {
 
 interface UseWeeklyTimeTrackingSummaryParams {
   tasks: StoredTimeTrackingTask[];
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   liveTime: Dayjs;
   start: string;
   end: string;

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 
 export type LabelOption = { value: string; label: string };
 
 export function useSelectedLabelOption(
-  labels: TimeTrackingLabel[],
+  labels: Label[],
   labelId: string | undefined | null,
 ): LabelOption | null {
   return useMemo(() => {

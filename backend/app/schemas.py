@@ -727,7 +727,7 @@ class UserExportSummary(BaseModel):
 class UserDataExport(BaseModel):
     exported_at: dt_datetime
     user: UserExportSummary
-    time_tracking_labels: list[LabelSyncRead]
+    labels: list[LabelSyncRead]
     time_tracking_tasks: list[TaskSyncRead]
     time_tracking_templates: list[TemplateSyncRead]
     work_locations: list[WorkLocationSyncRead]

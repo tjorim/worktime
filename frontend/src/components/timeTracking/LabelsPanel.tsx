@@ -13,7 +13,7 @@ import {
   isHexColor,
   normalizeLabelName,
   sanitizeLabels,
-  type TimeTrackingLabel,
+  type Label,
 } from "./constants";
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
@@ -26,13 +26,13 @@ type LabelFormState = {
 };
 
 type LabelsPanelProps = {
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   templates: TimeTrackingTemplate[];
   tasks: StoredTimeTrackingTask[];
-  onUpdateLabels: (labels: TimeTrackingLabel[]) => void;
+  onUpdateLabels: (labels: Label[]) => void;
 };
 
-const EXAMPLE_LABELS: TimeTrackingLabel[] = [
+const EXAMPLE_LABELS: Label[] = [
   { id: "label-1", name: "Support", color: "#3B82F6" },
   { id: "label-2", name: "Project", color: "#10B981" },
   { id: "label-3", name: "Meetings", color: "#F59E0B" },
@@ -54,7 +54,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
   const [labelsJson, setLabelsJson] = useState(JSON.stringify({ labels }, null, 2));
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editLabelId, setEditLabelId] = useState<string | null>(null);
-  const [pendingDeleteLabel, setPendingDeleteLabel] = useState<TimeTrackingLabel | null>(null);
+  const [pendingDeleteLabel, setPendingDeleteLabel] = useState<Label | null>(null);
   const [labelForm, setLabelForm] = useState<LabelFormState>({
     name: "",
     color: labels[0]?.color ?? "#3B82F6",
@@ -118,7 +118,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     }
   };
 
-  const handleEdit = (label: TimeTrackingLabel) => {
+  const handleEdit = (label: Label) => {
     setError("");
     setEditLabelId(label.id);
     setLabelForm({

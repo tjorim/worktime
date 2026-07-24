@@ -1,17 +1,17 @@
-import type { TimeTrackingLabel } from "./constants";
+import type { Label } from "./constants";
 import { LabelsPanel } from "./LabelsPanel";
 import { TemplatesPanel } from "./TemplatesPanel";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 
 type TimeTrackingConfigViewProps = {
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   templates: TimeTrackingTemplate[];
   tasks: StoredTimeTrackingTask[];
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
   onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void;
-  onUpdateLabels: (labels: TimeTrackingLabel[]) => void;
+  onUpdateLabels: (labels: Label[]) => void;
 };
 
 export function TimeTrackingConfigView({

@@ -9,7 +9,7 @@ import {
   buildLabelColorMap,
   getContrastingTextColor,
   getDefaultLabelColor,
-  type TimeTrackingLabel,
+  type Label,
 } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import {
@@ -22,7 +22,7 @@ const DEFAULT_TARGET_HOURS = 8;
 
 type TimelineProgressBarProps = {
   tasks: StoredTimeTrackingTask[];
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   targetHours?: number;
   liveTime?: Dayjs;
   /** Whether the selected date is today. Shows the Now line when true. */

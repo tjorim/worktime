@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     GanttTask,
+    Label,
     TimeOffEntry,
-    TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     UserPreferences,
@@ -406,7 +406,7 @@ async def test_delete_user_removes_all_user_scoped_rows(db_session: AsyncSession
     user_scoped_models = (
         TimeTrackingTask,
         TimeTrackingTemplate,
-        TimeTrackingLabel,
+        Label,
         WorkLocation,
         GanttTask,
         UserPreferences,
@@ -578,7 +578,7 @@ async def test_soft_deleted_entities_are_tombstoned_and_hidden(db_session: Async
     await delete_gantt_task(db_session, user.id, gantt_task.id)
 
     for model, entity_id in (
-        (TimeTrackingLabel, label.id),
+        (Label, label.id),
         (TimeTrackingTask, task.id),
         (TimeTrackingTemplate, template.id),
         (WorkLocation, location.id),

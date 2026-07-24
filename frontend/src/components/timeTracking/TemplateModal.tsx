@@ -4,7 +4,7 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
 import { useForm, useStore } from "@tanstack/react-form";
-import type { TimeTrackingLabel } from "./constants";
+import type { Label } from "./constants";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
@@ -20,7 +20,7 @@ type TemplateModalProps = {
   show: boolean;
   title: string;
   submitLabel: string;
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   initialValue: TemplateForm;
   error?: string;
   onClose: () => void;

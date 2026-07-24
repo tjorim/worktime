@@ -13,7 +13,7 @@ import {
   buildLabelNameMap,
   getContrastingTextColor,
   getDefaultLabelColor,
-  type TimeTrackingLabel,
+  type Label,
 } from "./constants";
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
@@ -34,7 +34,7 @@ type NowPosition =
 
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   ganttTasks: GanttTask[];
   showGanttPicker: boolean;
   editRequest?: EditRequest | null;

@@ -6,14 +6,14 @@ import ListGroup from "react-bootstrap/ListGroup";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
-import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, type Label } from "./constants";
 import { TemplateModal, type TemplateForm } from "./TemplateModal";
 import { isValidRange, isValidTimeString } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
 import * as m from "@/paraglide/messages.js";
 
 type TemplatesPanelProps = {
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   templates: TimeTrackingTemplate[];
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;

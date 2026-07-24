@@ -7,7 +7,7 @@ import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import type { ReactElement } from "react";
 import ReactSelect from "react-select";
-import type { TimeTrackingLabel } from "./constants";
+import type { Label } from "./constants";
 import type { GanttTask } from "@/types/gantt";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
@@ -18,7 +18,7 @@ import {
 import * as m from "@/paraglide/messages.js";
 
 type TaskEntryFormProps = {
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   text: string;
   onTextChange: (text: string) => void;
   label: string;

@@ -12,7 +12,7 @@
 
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
 import {
@@ -644,7 +644,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 
   // Labels — filter out rows with missing/invalid required fields so that a
   // single corrupted label cannot cause the entire first-sync push to fail.
-  const rawLabels = labelsCollection.toArray as TimeTrackingLabel[];
+  const rawLabels = labelsCollection.toArray as Label[];
   const labels: LabelSyncItem[] = rawLabels
     .filter(
       (l) =>

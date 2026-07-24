@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 
-export type TimeTrackingLabel = {
+export type Label = {
   id: string;
   name: string;
   color: string;
 };
 
-export type TimeTrackingLabelInput = Omit<TimeTrackingLabel, "id"> & { id?: string };
+export type LabelInput = Omit<Label, "id"> & { id?: string };
 
-export const DEFAULT_TIME_TRACKING_LABEL_NAME = "General";
+export const DEFAULT_LABEL_NAME = "General";
 
-export function createDefaultTimeTrackingLabel(): TimeTrackingLabel {
+export function createDefaultLabel(): Label {
   return {
     id: crypto.randomUUID(),
-    name: DEFAULT_TIME_TRACKING_LABEL_NAME,
+    name: DEFAULT_LABEL_NAME,
     color: getDefaultLabelColor(),
   };
 }
@@ -24,7 +24,7 @@ export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_RE.test(value);
 }
 
-export function isTimeTrackingLabelInput(value: unknown): value is TimeTrackingLabelInput {
+export function isLabelInput(value: unknown): value is LabelInput {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -153,12 +153,12 @@ export function getContrastingTextColor(backgroundColor?: string): string {
   return luminance > 0.6 ? "#000" : "#fff";
 }
 
-export function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
+export function sanitizeLabels(labels: unknown[]): Label[] {
   const seen = new Set<string>();
-  const sanitized: TimeTrackingLabel[] = [];
+  const sanitized: Label[] = [];
 
   labels.forEach((label) => {
-    if (!isTimeTrackingLabelInput(label)) {
+    if (!isLabelInput(label)) {
       return;
     }
     const name = normalizeLabelName(label.name);
@@ -180,14 +180,14 @@ export function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   return sanitized;
 }
 
-export function buildLabelNameMap(labels: TimeTrackingLabel[]): Record<string, string> {
+export function buildLabelNameMap(labels: Label[]): Record<string, string> {
   return labels.reduce<Record<string, string>>((map, label) => {
     map[label.id] = label.name;
     return map;
   }, {});
 }
 
-export function buildLabelColorMap(labels: TimeTrackingLabel[]): Record<string, string> {
+export function buildLabelColorMap(labels: Label[]): Record<string, string> {
   return labels.reduce<Record<string, string>>((map, label) => {
     map[label.id] = label.color;
     return map;

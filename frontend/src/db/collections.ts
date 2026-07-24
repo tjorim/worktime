@@ -36,7 +36,7 @@ import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { queryClient } from "@/lib/queryClient";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
@@ -337,7 +337,7 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
 // Internal sync-item → domain-type converters
 // ---------------------------------------------------------------------------
 
-function syncLabelToLabel(l: LabelSyncRead): TimeTrackingLabel {
+function syncLabelToLabel(l: LabelSyncRead): Label {
   return { id: l.id, name: l.name, color: l.color };
 }
 
@@ -435,14 +435,14 @@ function _syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry
 // ---------------------------------------------------------------------------
 
 export const labelsCollection = createCollection(
-  queryCollectionOptions<TimeTrackingLabel>({
+  queryCollectionOptions<Label>({
     id: "worktime/labels",
     queryKey: ["sync", "labels"],
     queryClient,
     getKey: (label) => label.id,
     staleTime: Infinity,
-    queryFn: async (): Promise<TimeTrackingLabel[]> => {
-      if (!_currentUserId) return labelsCollection.toArray as TimeTrackingLabel[];
+    queryFn: async (): Promise<Label[]> => {
+      if (!_currentUserId) return labelsCollection.toArray as Label[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;

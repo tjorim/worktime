@@ -36,8 +36,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     GanttTask,
+    Label,
     TimeOffEntry,
-    TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     UserPreferences,
@@ -122,7 +122,7 @@ async def _validate_task_label_reference(
     if label_id is None:
         return
 
-    label = await session.get(TimeTrackingLabel, label_id)
+    label = await session.get(Label, label_id)
     if label is None or label.user_id != user_id or label.deleted_at is not None:
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
@@ -140,13 +140,13 @@ async def _label_name_taken(
     just the offending label.
     """
     conditions = [
-        TimeTrackingLabel.user_id == user_id,
-        TimeTrackingLabel.name == name,
-        TimeTrackingLabel.deleted_at.is_(None),
+        Label.user_id == user_id,
+        Label.name == name,
+        Label.deleted_at.is_(None),
     ]
     if exclude_id is not None:
-        conditions.append(TimeTrackingLabel.id != exclude_id)
-    result = await session.execute(select(TimeTrackingLabel.id).where(*conditions).limit(1))
+        conditions.append(Label.id != exclude_id)
+    result = await session.execute(select(Label.id).where(*conditions).limit(1))
     return result.scalar_one_or_none() is not None
 
 
@@ -154,7 +154,7 @@ async def _push_label(
     session: AsyncSession, user_id: int, item: LabelSyncItem
 ) -> SyncRecordResult:
     now = _now()
-    label: TimeTrackingLabel | None = await session.get(TimeTrackingLabel, item.id)
+    label: Label | None = await session.get(Label, item.id)
 
     if item.action == "delete":
         if label is None or label.user_id != user_id or label.deleted_at is not None:
@@ -207,7 +207,7 @@ async def _push_label(
                 status="conflict",
                 conflict_reason="a label with this name already exists",
             )
-        label = TimeTrackingLabel(
+        label = Label(
             id=item.id,
             user_id=user_id,
             name=item.name,
@@ -681,7 +681,7 @@ async def _push_gantt_task(
 
 
 type SyncEntityModel = (
-    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
+    Label | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
 )
 
 
@@ -754,7 +754,7 @@ async def pull_changes(
     """Return all records (including soft-deleted) modified after *since*."""
     since_utc = as_utc(since)
 
-    labels = await _get_synced_entities(session, TimeTrackingLabel, user_id, since_utc)
+    labels = await _get_synced_entities(session, Label, user_id, since_utc)
     tasks = await _get_synced_entities(session, TimeTrackingTask, user_id, since_utc)
     templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_utc)
     work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_utc)
@@ -775,7 +775,7 @@ async def pull_changes(
 type _StatusEntityModel = SyncEntityModel | UserPreferences
 
 _STATUS_ENTITY_MODELS: tuple[tuple[str, type[_StatusEntityModel]], ...] = (
-    ("labels", TimeTrackingLabel),
+    ("labels", Label),
     ("tasks", TimeTrackingTask),
     ("templates", TimeTrackingTemplate),
     ("work_locations", WorkLocation),
