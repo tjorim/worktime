@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentStatus } from "@/components/CurrentStatus";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import * as useCountdownHook from "@/hooks/useCountdown";
 import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
@@ -326,6 +326,102 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Up Next")).toBeInTheDocument();
       expect(screen.getByText(/2024-01-15.*Evening/)).toBeInTheDocument();
       expect(screen.getByText("15:00–23:00")).toBeInTheDocument();
+    });
+  });
+
+  describe("Single-team schedule (9-5)", () => {
+    const defaultSettingsValue = {
+      settings: {
+        timeFormat: "24h" as const,
+        theme: "auto" as const,
+        notifications: "off" as const,
+        vacationAllowance: { yearlyAmounts: {}, unit: "days" as const, hoursPerDay: 8 },
+        enableTimeOff: false,
+        enableTimeTracking: false,
+      },
+      lastUsed: {
+        activeTab: "calendar" as const,
+        scheduleView: "today" as const,
+        otherSchedule: null,
+        timeOffView: "table" as const,
+        timeTrackingView: "daily" as const,
+        otherTeam: null,
+      },
+      scheduleType: "5-shift" as const,
+      myTeam: null,
+    };
+
+    afterEach(() => {
+      // Restore the file-wide default ("5-shift") so later tests aren't affected.
+      vi.mocked(useSettings).mockReturnValue(
+        defaultSettingsValue as ReturnType<typeof useSettings>,
+      );
+    });
+
+    it("should hide the redundant Up Next tile and let Today take the full width", () => {
+      vi.mocked(useSettings).mockReturnValue({
+        ...defaultSettingsValue,
+        scheduleType: "9-5",
+      } as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Today")).toBeInTheDocument();
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+
+      const todayCard = screen.getByText("Today").closest(".col-md-12");
+      expect(todayCard).toBeInTheDocument();
+    });
+
+    it("should not display the per-team badge in the Today tile for single-team schedules", () => {
+      vi.mocked(useSettings).mockReturnValue({
+        ...defaultSettingsValue,
+        scheduleType: "9-5",
+      } as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      // "Team {n}:" is only meaningful when there are multiple teams to disambiguate.
+      expect(screen.queryByText(/^Team \d+:$/)).not.toBeInTheDocument();
+    });
+
+    it("should not render the 'no next shift' empty state for single-team schedules even when there is no next shift", () => {
+      vi.mocked(shiftCalculations.getNextShift).mockReturnValue(null);
+      vi.mocked(useSettings).mockReturnValue({
+        ...defaultSettingsValue,
+        scheduleType: "9-5",
+      } as ReturnType<typeof useSettings>);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      // The whole "Up Next" tile (including its empty state) is dropped, not just its contents.
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+      expect(screen.queryByText("No Next Shift")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("No upcoming shifts found for your team."),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Today")).toBeInTheDocument();
+    });
+
+    it("should keep showing the Up Next tile at half width for multi-team schedules", () => {
+      // Default mock scheduleType is "5-shift" (multi-team) at this point in the suite.
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+
+      const todayCard = screen.getByText("Today").closest(".col-md-6");
+      expect(todayCard).toBeInTheDocument();
+      expect(screen.queryByText("Today")?.closest(".col-md-12")).not.toBeInTheDocument();
+    });
+
+    it("should still show the 'no next shift' empty state for multi-team schedules when there is no next shift", () => {
+      vi.mocked(shiftCalculations.getNextShift).mockReturnValue(null);
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+      expect(screen.getByText("No Next Shift")).toBeInTheDocument();
+      expect(screen.getByText("No upcoming shifts found for your team.")).toBeInTheDocument();
     });
   });
 
