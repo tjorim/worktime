@@ -82,7 +82,7 @@
     "@vitest/ui": "^4.1.10",
     "canvas": "^3.2.3",
     "happy-dom": "^20.10.6",
-    "lightningcss": "^1.31.1",
+    "lightningcss": "^1.33.0",
     "msw": "^2.15.0",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",
