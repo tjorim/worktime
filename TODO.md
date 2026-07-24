@@ -157,6 +157,7 @@ To-do list and development roadmap for Worktime. Audited against the codebase on
 
 - **Zustand migration** — Replace Context API + useReducer with Zustand for structural sharing, undo/redo middleware, and granular subscriptions. +15 KB bundle (Zustand + Immer). Consider when adding a second store.
 - **User account system** — Optional cloud sync on top of the current localStorage-first approach; hybrid model preserving offline capability.
+- **Pebble companion app** — A Today/shift-glance companion app for Pebble Time 2, built with Alloy (Pebble's JS/TS SDK, out of developer preview April 2026). Not planned yet; revisit once the daynest Pebble app (`tjorim/daynest#676`) ships and proves the pattern is worth it. GitHub issue: #996.
 
 ---
 
