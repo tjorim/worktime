@@ -8,6 +8,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import { getLoggedMinutes, formatLoggedDuration } from "@/utils/ganttLoggedTime";
 import * as m from "@/paraglide/messages.js";
 
@@ -34,6 +35,7 @@ function createInitialValue(task?: GanttTask): FormState {
   if (task) {
     return {
       name: task.name,
+      label: task.label,
       start: task.start,
       end: task.end,
       progress: task.progress,
@@ -44,6 +46,7 @@ function createInitialValue(task?: GanttTask): FormState {
   const today = dayjs().format(DATE_FORMAT);
   return {
     name: "",
+    label: "",
     start: today,
     end: today,
     progress: 0,
@@ -108,6 +111,13 @@ export function GanttTaskModal({
 
   const modalTitle = task ? m.gantt_task_modal_edit() : m.gantt_task_modal_add();
   const submitLabel = task ? m.tt_save_changes() : m.gantt_task_modal_add();
+
+  const isLabelSelectionDisabled = timeTrackingLabels.length === 0;
+  const labelOptions = useMemo(
+    () => timeTrackingLabels.map((l) => ({ value: l.id, label: l.name })),
+    [timeTrackingLabels],
+  );
+  const selectedLabelOption = useSelectedLabelOption(timeTrackingLabels, form.label);
 
   // Options: all tasks except self
   const depOptions = useMemo(
@@ -175,6 +185,10 @@ export function GanttTaskModal({
     onSave({
       ...form,
       name: form.name.trim(),
+      // Always send an explicit string (never undefined) so a cleared label
+      // reliably overwrites an existing one — updateTask only applies a
+      // field when it is present, and this form always submits full state.
+      label: form.label ?? "",
       dependencies: selectedDeps.length > 0 ? selectedDeps.join(", ") : undefined,
       notes: form.notes?.trim() || undefined,
       progress: form.progress ?? 0,
@@ -200,6 +214,28 @@ export function GanttTaskModal({
             <Form.Control.Feedback type="invalid">
               {m.gantt_task_name_required()}
             </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group className="mb-3" controlId="ganttTaskLabel">
+            <Form.Label>{m.form_label()}</Form.Label>
+            <ReactSelect<LabelOption>
+              unstyled
+              isClearable
+              isSearchable
+              inputId="ganttTaskLabel"
+              isDisabled={isLabelSelectionDisabled}
+              placeholder={isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()}
+              aria-describedby={isLabelSelectionDisabled ? "ganttTaskLabelHelp" : undefined}
+              options={labelOptions}
+              value={selectedLabelOption}
+              onChange={(selected) => setForm((prev) => ({ ...prev, label: selected?.value ?? "" }))}
+              classNames={bootstrapSelectClassNames}
+            />
+            {isLabelSelectionDisabled ? (
+              <Form.Text id="ganttTaskLabelHelp" muted>
+                {m.tt_add_labels_first_help()}
+              </Form.Text>
+            ) : null}
           </Form.Group>
 
           <div className="d-flex gap-3 mb-3">

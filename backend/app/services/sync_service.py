@@ -178,12 +178,17 @@ async def _push_label(
             .select_from(TimeTrackingTemplate)
             .where(TimeTrackingTemplate.label_id == item.id, TimeTrackingTemplate.deleted_at.is_(None))
         )
-        if task_count or template_count:
+        gantt_task_count = await session.scalar(
+            select(sql_func.count())
+            .select_from(GanttTask)
+            .where(GanttTask.label_id == item.id, GanttTask.deleted_at.is_(None))
+        )
+        if task_count or template_count or gantt_task_count:
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=label.updated_at,
-                conflict_reason="label is in use by tasks or templates and cannot be deleted",
+                conflict_reason="label is in use by tasks, templates, or gantt tasks and cannot be deleted",
             )
         label.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         label.deleted_at = now
@@ -620,9 +625,11 @@ async def _push_gantt_task(
         if item.name is None or item.start_date is None or item.end_date is None:
             from app.services.db_service import ValidationError
             raise ValidationError("name, start_date and end_date are required for gantt task create")
+        await _validate_task_label_reference(session, user_id, item.label_id)
         task = GanttTask(
             id=item.id,
             user_id=user_id,
+            label_id=item.label_id,
             name=item.name,
             start_date=item.start_date,
             end_date=item.end_date,
@@ -652,6 +659,9 @@ async def _push_gantt_task(
     provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
     if "name" in provided_fields and item.name is not None:
         task.name = item.name
+    if "label_id" in provided_fields:
+        await _validate_task_label_reference(session, user_id, item.label_id)
+        task.label_id = item.label_id
     if "start_date" in provided_fields and item.start_date is not None:
         task.start_date = item.start_date
     if "end_date" in provided_fields and item.end_date is not None:

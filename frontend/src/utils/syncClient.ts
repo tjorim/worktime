@@ -94,6 +94,7 @@ export interface GanttTaskSyncItem {
   action: SyncAction;
   client_updated_at: string;
   name?: string | null;
+  label_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   progress?: number | null;
@@ -190,6 +191,7 @@ export interface GanttTaskSyncRead {
   id: string;
   user_id: number;
   name: string;
+  label_id: string | null;
   start_date: string;
   end_date: string;
   progress: number;
@@ -759,6 +761,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     action: "create" as const,
     client_updated_at: now,
     name: t.name,
+    label_id: t.label ?? null,
     start_date: t.start,
     end_date: t.end,
     progress: t.progress ?? 0,

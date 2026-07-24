@@ -379,6 +379,7 @@ function syncGanttTaskToGanttTask(g: GanttTaskSyncRead): GanttTask {
     start: g.start_date,
     end: g.end_date,
     progress: g.progress,
+    ...(g.label_id ? { label: g.label_id } : {}),
     ...(g.dependencies ? { dependencies: g.dependencies } : {}),
     ...(g.notes ? { notes: g.notes } : {}),
   };
@@ -784,6 +785,7 @@ export const ganttTasksCollection = createCollection(
           action: "create",
           client_updated_at: now,
           name: m.modified.name,
+          label_id: m.modified.label ?? null,
           start_date: m.modified.start,
           end_date: m.modified.end,
           progress: m.modified.progress,
@@ -806,6 +808,7 @@ export const ganttTasksCollection = createCollection(
           action: "update",
           client_updated_at: now,
           name: m.modified.name,
+          label_id: m.modified.label ?? null,
           start_date: m.modified.start,
           end_date: m.modified.end,
           progress: m.modified.progress,

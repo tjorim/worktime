@@ -6,6 +6,8 @@ declare module "frappe-gantt" {
     end: string;
     progress: number;
     dependencies?: string;
+    /** custom field passed through from our GanttTask; sets the bar's fill color */
+    color?: string;
     /** frappe-gantt computed start Date */
     _start?: Date;
     /** frappe-gantt computed end Date */

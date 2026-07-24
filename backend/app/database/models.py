@@ -197,6 +197,9 @@ class GanttTask(ClientTimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    label_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("time_tracking_labels.id"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String)
     start_date: Mapped[dt_date] = mapped_column(Date)
     end_date: Mapped[dt_date] = mapped_column(Date)

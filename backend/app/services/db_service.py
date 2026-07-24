@@ -307,8 +307,13 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> No
         .select_from(TimeTrackingTemplate)
         .where(TimeTrackingTemplate.label_id == label_id, TimeTrackingTemplate.deleted_at.is_(None))
     )
-    if task_count or template_count:
-        raise ConflictError("label is in use by tasks or templates and cannot be deleted")
+    gantt_task_count = await session.scalar(
+        select(sql_func.count())
+        .select_from(GanttTask)
+        .where(GanttTask.label_id == label_id, GanttTask.deleted_at.is_(None))
+    )
+    if task_count or template_count or gantt_task_count:
+        raise ConflictError("label is in use by tasks, templates, or gantt tasks and cannot be deleted")
 
     now = datetime.now(UTC)
     label.deleted_at = now
@@ -626,6 +631,7 @@ async def create_gantt_task(
     session: AsyncSession, user_id: int, payload: GanttTaskCreate
 ) -> GanttTask:
     await _ensure_user_exists(session, user_id)
+    await _validate_task_label_reference(session, user_id, payload.label_id)
     if payload.end_date < payload.start_date:
         raise ValidationError("end_date cannot be earlier than start_date")
 
@@ -659,6 +665,8 @@ async def update_gantt_task(
     task = await get_gantt_task(session, user_id, task_id)
 
     data = payload.model_dump(exclude_unset=True)
+    if "label_id" in data:
+        await _validate_task_label_reference(session, user_id, data["label_id"])
     candidate_start = data.get("start_date", task.start_date)
     candidate_end = data.get("end_date", task.end_date)
     if candidate_end < candidate_start:

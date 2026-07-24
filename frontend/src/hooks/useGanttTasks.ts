@@ -26,6 +26,7 @@ function toTask(raw: RawGanttTask | GanttTask): GanttTask {
     start: raw.start,
     end: raw.end,
     progress: raw.progress ?? 0,
+    ...(raw.label ? { label: raw.label } : {}),
     ...(raw.dependencies ? { dependencies: raw.dependencies } : {}),
     ...(raw.notes ? { notes: raw.notes } : {}),
   };
@@ -46,6 +47,7 @@ export function useGanttTasks() {
       start: payload.start,
       end: payload.end,
       progress: payload.progress ?? 0,
+      ...(payload.label ? { label: payload.label } : {}),
       ...(payload.dependencies ? { dependencies: payload.dependencies } : {}),
       ...(payload.notes ? { notes: payload.notes } : {}),
     };
@@ -71,6 +73,7 @@ export function useGanttTasks() {
             ? {
                 ...task,
                 ...(changes.name !== undefined ? { name: changes.name } : {}),
+                ...(changes.label !== undefined ? { label: changes.label || undefined } : {}),
                 ...(changes.start !== undefined ? { start: changes.start } : {}),
                 ...(changes.end !== undefined ? { end: changes.end } : {}),
                 progress: changes.progress ?? task.progress ?? 0,
@@ -87,6 +90,7 @@ export function useGanttTasks() {
 
       ganttTasksCollection.update(id, (d) => {
         if (changes.name !== undefined) d.name = changes.name;
+        if (changes.label !== undefined) d.label = changes.label || undefined;
         if (changes.start !== undefined) d.start = changes.start;
         if (changes.end !== undefined) d.end = changes.end;
         d.progress = changes.progress ?? d.progress ?? 0;

@@ -7,6 +7,12 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
 import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import {
+  buildLabelColorMap,
+  buildLabelNameMap,
+  getContrastingTextColor,
+  getDefaultLabelColor,
+} from "@/components/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -29,7 +35,9 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
   const [sortColumn, setSortColumn] = useState<SortColumn>("start");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [deletingTask, setDeletingTask] = useState<GanttTask | null>(null);
-  const { tasks: timeTrackingTasks } = useTimeTrackingStorage();
+  const { tasks: timeTrackingTasks, labels } = useTimeTrackingStorage();
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const labelColorById = useMemo(() => buildLabelColorMap(labels), [labels]);
   const taskNames = useMemo(() => new Map(tasks.map((task) => [task.id, task.name])), [tasks]);
   const loggedMinutesByTaskId = useMemo(
     () => getLoggedMinutesByTaskId(timeTrackingTasks),
@@ -121,6 +129,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
               </Button>
             </th>
             <th scope="col">{m.gantt_table_end()}</th>
+            <th scope="col">{m.form_label()}</th>
             <th scope="col">{m.gantt_table_progress()}</th>
             <th scope="col">{m.gantt_table_logged()}</th>
             <th scope="col">{m.gantt_table_dependencies()}</th>
@@ -133,58 +142,81 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
         <tbody>
           {sortedTasks.length === 0 ? (
             <tr>
-              <td colSpan={8} className="text-center text-muted py-4">
+              <td colSpan={9} className="text-center text-muted py-4">
                 {m.gantt_table_empty()}
               </td>
             </tr>
           ) : (
-            sortedTasks.map((task) => (
-              <tr key={task.id}>
-                <td>
-                  <Button
-                    variant="link"
-                    className="p-0 text-start fw-semibold text-decoration-none text-body"
-                    onClick={() => onTaskClick(task.id)}
-                  >
-                    {task.name}
-                  </Button>
-                </td>
-                <td>{formatDate(task.start)}</td>
-                <td>{formatDate(task.end)}</td>
-                <td style={{ minWidth: "8rem" }}>
-                  <div className="d-flex align-items-center gap-2">
-                    <ProgressBar now={task.progress} className="border flex-grow-1" />
-                    <span className="small text-muted text-nowrap">{task.progress}%</span>
-                  </div>
-                </td>
-                <td className="text-nowrap">{getLoggedLabel(task.id)}</td>
-                <td>{getDependencies(task.dependencies)}</td>
-                <td title={task.notes}>{task.notes || "—"}</td>
-                <td className="text-end text-nowrap">
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="text-body"
-                    aria-label={m.gantt_table_edit_aria({ name: task.name })}
-                    onClick={() => onTaskClick(task.id)}
-                  >
-                    <i className="bi bi-pencil" aria-hidden="true"></i>
-                  </Button>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="text-danger"
-                    aria-label={m.gantt_table_delete_aria({ name: task.name })}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDeletingTask(task);
-                    }}
-                  >
-                    <i className="bi bi-trash" aria-hidden="true"></i>
-                  </Button>
-                </td>
-              </tr>
-            ))
+            sortedTasks.map((task) => {
+              const labelBackground = task.label
+                ? (labelColorById[task.label] ?? getDefaultLabelColor())
+                : null;
+              const labelTextColor = labelBackground
+                ? getContrastingTextColor(labelBackground)
+                : null;
+              return (
+                <tr key={task.id}>
+                  <td>
+                    <Button
+                      variant="link"
+                      className="p-0 text-start fw-semibold text-decoration-none text-body"
+                      onClick={() => onTaskClick(task.id)}
+                    >
+                      {task.name}
+                    </Button>
+                  </td>
+                  <td>{formatDate(task.start)}</td>
+                  <td>{formatDate(task.end)}</td>
+                  <td>
+                    {task.label ? (
+                      <span
+                        className="time-tracking-label"
+                        style={{
+                          backgroundColor: labelBackground ?? undefined,
+                          color: labelTextColor ?? undefined,
+                        }}
+                      >
+                        {labelNameById[task.label] ?? m.tt_unknown_label()}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td style={{ minWidth: "8rem" }}>
+                    <div className="d-flex align-items-center gap-2">
+                      <ProgressBar now={task.progress} className="border flex-grow-1" />
+                      <span className="small text-muted text-nowrap">{task.progress}%</span>
+                    </div>
+                  </td>
+                  <td className="text-nowrap">{getLoggedLabel(task.id)}</td>
+                  <td>{getDependencies(task.dependencies)}</td>
+                  <td title={task.notes}>{task.notes || "—"}</td>
+                  <td className="text-end text-nowrap">
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-body"
+                      aria-label={m.gantt_table_edit_aria({ name: task.name })}
+                      onClick={() => onTaskClick(task.id)}
+                    >
+                      <i className="bi bi-pencil" aria-hidden="true"></i>
+                    </Button>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-danger"
+                      aria-label={m.gantt_table_delete_aria({ name: task.name })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDeletingTask(task);
+                      }}
+                    >
+                      <i className="bi bi-trash" aria-hidden="true"></i>
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </Table>

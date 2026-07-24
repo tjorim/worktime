@@ -10,6 +10,7 @@ function isValidISODate(value: string): boolean {
 export interface GanttTask {
   id: string;
   name: string;
+  label?: string;
   start: string;
   end: string;
   progress: number;
@@ -57,6 +58,10 @@ export function isValidRawGanttTask(value: unknown): value is RawGanttTask {
   }
 
   if (task.dependencies !== undefined && typeof task.dependencies !== "string") {
+    return false;
+  }
+
+  if (task.label !== undefined && typeof task.label !== "string") {
     return false;
   }
 

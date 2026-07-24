@@ -12,6 +12,7 @@ import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
 import { getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import { buildLabelColorMap } from "@/components/timeTracking/constants";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "@/components/gantt/GanttChart";
 import { GanttTableView } from "@/components/gantt/GanttTableView";
@@ -31,7 +32,8 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   const { publicHolidayMap } = usePublicHolidays(currentYear);
   const holidayDates = useMemo(() => [...publicHolidayMap.keys()], [publicHolidayMap]);
   const { entries: timeOffEntries } = useEventStore();
-  const { tasks: timeTrackingTasks } = useTimeTrackingStorage();
+  const { tasks: timeTrackingTasks, labels: timeTrackingLabels } = useTimeTrackingStorage();
+  const labelColorById = useMemo(() => buildLabelColorMap(timeTrackingLabels), [timeTrackingLabels]);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -156,6 +158,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
           holidays={holidayDates}
           timeOffDates={timeOffDates}
           loggedMinutesByTaskId={loggedMinutesByTaskId}
+          labelColorById={labelColorById}
           onTaskClick={handleTaskClick}
           onDateChange={handleDateChange}
           onProgressChange={handleProgressChange}

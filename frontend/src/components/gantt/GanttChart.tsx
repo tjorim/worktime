@@ -30,11 +30,15 @@ interface GanttChartProps {
   timeOffDates?: string[];
   /** Total logged time per task, in minutes. Shown as an extra detail in the hover popup. */
   loggedMinutesByTaskId?: Map<string, number>;
+  /** Label id -> color, used to tint each task's bar with its label's color. */
+  labelColorById?: Record<string, string>;
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
   onViewModeChange?: (mode: GanttViewMode) => void;
 }
+
+const EMPTY_LABEL_COLOR_MAP: Record<string, string> = {};
 
 function getTaskId(task: unknown): string | null {
   if (typeof task !== "object" || task === null) {
@@ -56,6 +60,7 @@ export function GanttChart({
   holidays = EMPTY_ARRAY,
   timeOffDates = EMPTY_ARRAY,
   loggedMinutesByTaskId = EMPTY_MAP,
+  labelColorById = EMPTY_LABEL_COLOR_MAP,
   onTaskClick,
   onDateChange,
   onProgressChange,
@@ -63,8 +68,17 @@ export function GanttChart({
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
-  const tasksRef = useRef(tasks);
-  const prevTasksRef = useRef<GanttTask[]>([]);
+  const coloredTasks = useMemo(
+    () =>
+      tasks.map((task) => ({
+        ...task,
+        color: task.label ? labelColorById[task.label] : undefined,
+      })),
+    [tasks, labelColorById],
+  );
+  type ColoredGanttTask = (typeof coloredTasks)[number];
+  const tasksRef = useRef(coloredTasks);
+  const prevTasksRef = useRef<ColoredGanttTask[]>([]);
   const initialViewModeRef = useRef(initialViewMode);
   const loggedMinutesByTaskIdRef = useRef(loggedMinutesByTaskId);
   const onTaskClickRef = useRef(onTaskClick);
@@ -72,7 +86,7 @@ export function GanttChart({
   const onProgressChangeRef = useRef(onProgressChange);
   const onViewModeChangeRef = useRef(onViewModeChange);
 
-  tasksRef.current = tasks;
+  tasksRef.current = coloredTasks;
   initialViewModeRef.current = initialViewMode;
   loggedMinutesByTaskIdRef.current = loggedMinutesByTaskId;
   onTaskClickRef.current = onTaskClick;
@@ -193,37 +207,43 @@ export function GanttChart({
     };
   }, [hasAnyTasks, holidaysKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- date arrays are intentionally omitted; holidaysKey is their stable, content-derived key and is sufficient to trigger re-initialization
 
-  // Effect 2 — refresh on task changes, deps: [tasks]
+  // Effect 2 — refresh on task changes, deps: [coloredTasks]
   useEffect(() => {
     const prev = prevTasksRef.current;
-    prevTasksRef.current = tasks;
+    prevTasksRef.current = coloredTasks;
 
-    if (!ganttRef.current || tasks.length === 0) {
+    if (!ganttRef.current || coloredTasks.length === 0) {
       return;
     }
 
     // Full refresh if task count changed (add/remove)
-    if (tasks.length !== prev.length) {
-      ganttRef.current.refresh(tasks);
+    if (coloredTasks.length !== prev.length) {
+      ganttRef.current.refresh(coloredTasks);
       return;
     }
 
     // Build a lookup of previous tasks by id
     const prevById = new Map(prev.map((t) => [t.id, t]));
-    const idsReordered = tasks.some((task, index) => {
+    const idsReordered = coloredTasks.some((task, index) => {
       const previousTask = prev[index];
       return !previousTask || previousTask.id !== task.id;
     });
 
     if (idsReordered) {
-      ganttRef.current.refresh(tasks);
+      ganttRef.current.refresh(coloredTasks);
       return;
     }
 
-    // Find tasks whose start, end, or progress changed
-    const changed = tasks.filter((task) => {
+    // Find tasks whose start, end, progress, or bar color changed
+    const changed = coloredTasks.filter((task) => {
       const p = prevById.get(task.id);
-      return !p || task.start !== p.start || task.end !== p.end || task.progress !== p.progress;
+      return (
+        !p ||
+        task.start !== p.start ||
+        task.end !== p.end ||
+        task.progress !== p.progress ||
+        task.color !== p.color
+      );
     });
 
     // Single-task mutation — use update_task for a lightweight in-place update
@@ -233,14 +253,15 @@ export function GanttChart({
         start: task.start,
         end: task.end,
         progress: task.progress,
+        color: task.color,
       });
       return;
     }
 
     if (changed.length > 0) {
-      ganttRef.current.refresh(tasks);
+      ganttRef.current.refresh(coloredTasks);
     }
-  }, [tasks]);
+  }, [coloredTasks]);
 
   if (tasks.length === 0) {
     return (
