@@ -31,7 +31,7 @@ import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
 import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
-import { createDefaultTimeTrackingLabel } from "@/components/timeTracking/constants";
+import { createDefaultLabel } from "@/components/timeTracking/constants";
 import * as m from "@/paraglide/messages.js";
 
 export type WizardCompletionPayload = {
@@ -176,7 +176,7 @@ export function WelcomeWizard({
 
   const handleTimeTrackingComplete = () => {
     if (isTimeTrackingEnabled && labelsCollection.toArray.length === 0) {
-      updateLabels([createDefaultTimeTrackingLabel()]);
+      updateLabels([createDefaultLabel()]);
     }
     nextStep();
   };

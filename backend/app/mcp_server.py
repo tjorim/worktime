@@ -916,6 +916,7 @@ class WorktimeMcpBackend:
         progress: int = 0,
         dependencies: str | None = None,
         notes: str | None = None,
+        label_id: str | None = None,
     ) -> dict[str, Any]:
         """Create a personal Gantt task.
 
@@ -929,6 +930,7 @@ class WorktimeMcpBackend:
                 progress=progress,
                 dependencies=dependencies,
                 notes=notes,
+                label_id=label_id,
             )
             task = await create_gantt_task(db, context.user_id, payload)
             audit.append(
@@ -948,8 +950,13 @@ class WorktimeMcpBackend:
         progress: int | None = None,
         dependencies: str | None = None,
         notes: str | None = None,
+        label_id: str | None = None,
+        clear_label_id: bool = False,
     ) -> dict[str, Any]:
         """Update a personal Gantt task.
+
+        Omit any parameter to leave it unchanged. Set clear_label_id=True to
+        unlink its label; this takes precedence over label_id when true.
 
         Side effects: updates the specified GanttTask row.  The task must
         belong to the authenticated user.  Returns the updated task.
@@ -960,6 +967,10 @@ class WorktimeMcpBackend:
             update_data: dict[str, Any] = {}
             if name is not None:
                 update_data["name"] = name
+            if clear_label_id:
+                update_data["label_id"] = None
+            elif label_id is not None:
+                update_data["label_id"] = label_id
             if start_date is not None:
                 update_data["start_date"] = start_date
             if end_date is not None:

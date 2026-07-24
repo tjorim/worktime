@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { sanitizeLabels, type TimeTrackingLabel } from "@/components/timeTracking/constants";
+import { sanitizeLabels, type Label } from "@/components/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import {
   labelsCollection,
@@ -105,7 +105,7 @@ export function useTimeTrackingStorage() {
   );
 
   const labels = useMemo(
-    () => sanitizeLabels((rawLabelData ?? []) as TimeTrackingLabel[]),
+    () => sanitizeLabels((rawLabelData ?? []) as Label[]),
     [rawLabelData],
   );
 
@@ -248,10 +248,10 @@ export function useTimeTrackingStorage() {
     });
   }, []);
 
-  const updateLabels = useCallback((nextLabels: TimeTrackingLabel[]) => {
+  const updateLabels = useCallback((nextLabels: Label[]) => {
     const sanitized = sanitizeLabels(nextLabels);
     const nextIds = new Set(sanitized.map((l) => l.id));
-    const toDelete = (labelsCollection.toArray as TimeTrackingLabel[]).filter(
+    const toDelete = (labelsCollection.toArray as Label[]).filter(
       (l) => !nextIds.has(l.id),
     );
     const hasWork = sanitized.length > 0 || toDelete.length > 0;

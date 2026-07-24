@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.models import (
     Base,
     GanttTask,
+    Label,
     TimeOffEntry,
-    TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     User,
@@ -102,7 +102,7 @@ async def get_user_export_data(
     session: AsyncSession, user_id: int
 ) -> tuple[
     User,
-    list[TimeTrackingLabel],
+    list[Label],
     list[TimeTrackingTask],
     list[TimeTrackingTemplate],
     list[WorkLocation],
@@ -121,7 +121,7 @@ async def get_user_export_data(
         )
         return list(result.scalars().all())
 
-    labels = await _list_rows(TimeTrackingLabel, TimeTrackingLabel.created_at, TimeTrackingLabel.id)
+    labels = await _list_rows(Label, Label.created_at, Label.id)
     tasks = await _list_rows(TimeTrackingTask, TimeTrackingTask.created_at, TimeTrackingTask.id)
     templates = await _list_rows(
         TimeTrackingTemplate,
@@ -205,7 +205,7 @@ async def delete_user_uncommitted(session: AsyncSession, user_id: int) -> None:
 
     await session.execute(delete(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id))
     await session.execute(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
-    await session.execute(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))
+    await session.execute(delete(Label).where(Label.user_id == user_id))
     await session.execute(delete(WorkLocation).where(WorkLocation.user_id == user_id))
     await session.execute(delete(GanttTask).where(GanttTask.user_id == user_id))
     await session.execute(delete(TimeOffEntry).where(TimeOffEntry.user_id == user_id))
@@ -220,26 +220,26 @@ async def _ensure_user_exists(session: AsyncSession, user_id: int) -> User:
     return await get_user(session, user_id)
 
 
-async def _ensure_label_for_user(session: AsyncSession, user_id: int, label_id: str) -> TimeTrackingLabel:
-    label = await session.get(TimeTrackingLabel, label_id)
+async def _ensure_label_for_user(session: AsyncSession, user_id: int, label_id: str) -> Label:
+    label = await session.get(Label, label_id)
     if label is None or label.user_id != user_id or label.deleted_at is not None:
         raise NotFoundError("label not found")
     return label
 
 
-async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate) -> TimeTrackingLabel:
+async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate) -> Label:
     await _ensure_user_exists(session, user_id)
     result = await session.execute(
-        select(TimeTrackingLabel).where(
-            TimeTrackingLabel.user_id == user_id,
-            TimeTrackingLabel.name == payload.name,
-            TimeTrackingLabel.deleted_at.is_(None),
+        select(Label).where(
+            Label.user_id == user_id,
+            Label.name == payload.name,
+            Label.deleted_at.is_(None),
         )
     )
     if result.scalar_one_or_none() is not None:
         raise ConflictError("label name must be unique per user")
 
-    label = TimeTrackingLabel(user_id=user_id, **payload.model_dump())
+    label = Label(user_id=user_id, **payload.model_dump())
     session.add(label)
     await session.commit()
     await session.refresh(label)
@@ -247,36 +247,36 @@ async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate
     return label
 
 
-async def get_label(session: AsyncSession, user_id: int, label_id: str) -> TimeTrackingLabel:
+async def get_label(session: AsyncSession, user_id: int, label_id: str) -> Label:
     """Get a label scoped to a specific user to prevent cross-user access."""
     return await _ensure_label_for_user(session, user_id, label_id)
 
 
-async def list_labels_for_user(session: AsyncSession, user_id: int) -> list[TimeTrackingLabel]:
+async def list_labels_for_user(session: AsyncSession, user_id: int) -> list[Label]:
     result = await session.execute(
-        select(TimeTrackingLabel)
+        select(Label)
         .where(
-            TimeTrackingLabel.user_id == user_id,
-            TimeTrackingLabel.deleted_at.is_(None),
+            Label.user_id == user_id,
+            Label.deleted_at.is_(None),
         )
-        .order_by(TimeTrackingLabel.created_at.desc())
+        .order_by(Label.created_at.desc())
     )
     return list(result.scalars().all())
 
 
 async def update_label(
     session: AsyncSession, user_id: int, label_id: str, payload: LabelUpdate
-) -> TimeTrackingLabel:
+) -> Label:
     label = await _ensure_label_for_user(session, user_id, label_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "name" in data:
         dup_result = await session.execute(
-            select(TimeTrackingLabel).where(
-                TimeTrackingLabel.user_id == user_id,
-                TimeTrackingLabel.name == data["name"],
-                TimeTrackingLabel.id != label_id,
-                TimeTrackingLabel.deleted_at.is_(None),
+            select(Label).where(
+                Label.user_id == user_id,
+                Label.name == data["name"],
+                Label.id != label_id,
+                Label.deleted_at.is_(None),
             )
         )
         if dup_result.scalar_one_or_none() is not None:
@@ -307,8 +307,13 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> No
         .select_from(TimeTrackingTemplate)
         .where(TimeTrackingTemplate.label_id == label_id, TimeTrackingTemplate.deleted_at.is_(None))
     )
-    if task_count or template_count:
-        raise ConflictError("label is in use by tasks or templates and cannot be deleted")
+    gantt_task_count = await session.scalar(
+        select(sql_func.count())
+        .select_from(GanttTask)
+        .where(GanttTask.label_id == label_id, GanttTask.deleted_at.is_(None))
+    )
+    if task_count or template_count or gantt_task_count:
+        raise ConflictError("label is in use by tasks, templates, or gantt tasks and cannot be deleted")
 
     now = datetime.now(UTC)
     label.deleted_at = now
@@ -626,6 +631,7 @@ async def create_gantt_task(
     session: AsyncSession, user_id: int, payload: GanttTaskCreate
 ) -> GanttTask:
     await _ensure_user_exists(session, user_id)
+    await _validate_task_label_reference(session, user_id, payload.label_id)
     if payload.end_date < payload.start_date:
         raise ValidationError("end_date cannot be earlier than start_date")
 
@@ -659,6 +665,8 @@ async def update_gantt_task(
     task = await get_gantt_task(session, user_id, task_id)
 
     data = payload.model_dump(exclude_unset=True)
+    if "label_id" in data:
+        await _validate_task_label_reference(session, user_id, data["label_id"])
     candidate_start = data.get("start_date", task.start_date)
     candidate_end = data.get("end_date", task.end_date)
     if candidate_end < candidate_start:

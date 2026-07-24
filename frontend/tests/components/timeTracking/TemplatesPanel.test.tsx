@@ -5,10 +5,10 @@ import "@testing-library/jest-dom";
 import { TemplatesPanel } from "@/components/timeTracking/TemplatesPanel";
 
 import { ToastProvider } from "@/contexts/ToastContext";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { TimeTrackingTemplate } from "@/components/timeTracking/types";
 
-const TEST_LABELS: TimeTrackingLabel[] = [
+const TEST_LABELS: Label[] = [
   { id: "lbl-1", name: "Support", color: "#3B82F6" },
   { id: "lbl-2", name: "Development", color: "#10B981" },
 ];

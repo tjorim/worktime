@@ -16,7 +16,6 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _SYNCED_TABLES = (
-    "time_tracking_labels",
     "time_tracking_tasks",
     "time_tracking_templates",
     "work_locations",
@@ -40,22 +39,31 @@ def upgrade() -> None:
     op.create_index("ix_users_oidc_subject", "users", ["oidc_subject"], unique=True)
 
     op.create_table(
-        "time_tracking_labels",
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
+        "labels",
+        # Explicit id/user_id constraint names below match what's already in
+        # production: this table was renamed from time_tracking_labels, and a
+        # table RENAME does not carry over to dependent constraint names.
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", name="time_tracking_labels_user_id_fkey"),
+            nullable=False,
+        ),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("color", sa.String(), nullable=False),
         sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id", name="time_tracking_labels_pkey"),
     )
-    op.create_index("ix_time_tracking_labels_user_id", "time_tracking_labels", ["user_id"])
-    op.create_index("ix_time_tracking_labels_updated_at", "time_tracking_labels", ["updated_at"])
-    op.create_index("ix_time_tracking_labels_deleted_at", "time_tracking_labels", ["deleted_at"])
+    op.create_index("ix_time_tracking_labels_user_id", "labels", ["user_id"])
+    op.create_index("ix_time_tracking_labels_updated_at", "labels", ["updated_at"])
+    op.create_index("ix_time_tracking_labels_deleted_at", "labels", ["deleted_at"])
     op.create_index(
         "uq_active_label_user_name",
-        "time_tracking_labels",
+        "labels",
         ["user_id", "name"],
         unique=True,
         postgresql_where=sa.text("deleted_at IS NULL"),
@@ -75,8 +83,15 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "label_id",
+            sa.String(),
+            sa.ForeignKey("labels.id", name="fk_gantt_tasks_label_id"),
+            nullable=True,
+        ),
     )
     op.create_index("ix_gantt_tasks_user_id", "gantt_tasks", ["user_id"])
+    op.create_index("ix_gantt_tasks_label_id", "gantt_tasks", ["label_id"])
     op.create_index("ix_gantt_tasks_updated_at", "gantt_tasks", ["updated_at"])
     op.create_index("ix_gantt_tasks_deleted_at", "gantt_tasks", ["deleted_at"])
 
@@ -84,7 +99,7 @@ def upgrade() -> None:
         "time_tracking_tasks",
         sa.Column("id", sa.String(), primary_key=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("label_id", sa.String(), sa.ForeignKey("time_tracking_labels.id"), nullable=True),
+        sa.Column("label_id", sa.String(), sa.ForeignKey("labels.id"), nullable=True),
         sa.Column("text", sa.String(), nullable=False),
         sa.Column("start_time", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("stop_time", sa.DateTime(timezone=True), nullable=True),
@@ -110,7 +125,7 @@ def upgrade() -> None:
         "time_tracking_templates",
         sa.Column("id", sa.String(), primary_key=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("label_id", sa.String(), sa.ForeignKey("time_tracking_labels.id"), nullable=True),
+        sa.Column("label_id", sa.String(), sa.ForeignKey("labels.id"), nullable=True),
         sa.Column("text", sa.String(), nullable=False),
         sa.Column("start_time", sa.Time(), nullable=False),
         sa.Column("stop_time", sa.Time(), nullable=False),
@@ -253,6 +268,11 @@ def upgrade() -> None:
     # Composite indexes for the hot sync-pull and task-listing queries.
     # pull_changes filters every synced table on (user_id, updated_at > since);
     # list_tasks additionally sorts by start_time within a user_id filter.
+    # "labels" is handled separately below: it was renamed from
+    # time_tracking_labels in production, and a table RENAME does not carry
+    # over to dependent index/constraint names, so this keeps the pre-existing
+    # index name instead of deriving one from the table's current name.
+    op.create_index("ix_time_tracking_labels_user_id_updated_at", "labels", ["user_id", "updated_at"])
     for table in _SYNCED_TABLES:
         op.create_index(
             f"ix_{table}_user_id_updated_at",
@@ -278,5 +298,5 @@ def downgrade() -> None:
     op.drop_table("time_tracking_templates")
     op.drop_table("time_tracking_tasks")
     op.drop_table("gantt_tasks")
-    op.drop_table("time_tracking_labels")
+    op.drop_table("labels")
     op.drop_table("users")

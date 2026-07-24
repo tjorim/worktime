@@ -130,7 +130,7 @@ async def export_user_endpoint(
     response = UserDataExport(
         exported_at=datetime.now(UTC),
         user=UserExportSummary.model_validate(user, from_attributes=True),
-        time_tracking_labels=[LabelSyncRead.model_validate(item, from_attributes=True) for item in labels],
+        labels=[LabelSyncRead.model_validate(item, from_attributes=True) for item in labels],
         time_tracking_tasks=[TaskSyncRead.model_validate(item, from_attributes=True) for item in tasks],
         time_tracking_templates=[
             TemplateSyncRead.model_validate(item, from_attributes=True) for item in templates

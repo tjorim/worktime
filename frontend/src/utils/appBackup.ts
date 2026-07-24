@@ -21,7 +21,7 @@ import {
 } from "@/db/collections";
 import { normalizeTimeOffEntries } from "@/lib/timeOff/storage";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
@@ -97,7 +97,7 @@ function toPlainTemplate(template: TimeTrackingTemplate): TimeTrackingTemplate {
   };
 }
 
-function toPlainLabel(label: TimeTrackingLabel): TimeTrackingLabel {
+function toPlainLabel(label: Label): Label {
   return {
     id: label.id,
     name: label.name,
@@ -189,7 +189,7 @@ export function checkBackupDataPresence(): BackupDataPresence {
   );
   const hasTemplates = templatesData.length > 0;
 
-  const labelsData = (labelsCollection.toArray as TimeTrackingLabel[]).map(toPlainLabel);
+  const labelsData = (labelsCollection.toArray as Label[]).map(toPlainLabel);
   const hasLabels = labelsData.length > 0;
 
   const hasWorkLocations = (workLocationsCollection.toArray as WorkLocationEntry[]).length > 0;
@@ -254,7 +254,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   }
 
   if (include.labels) {
-    const labels = (labelsCollection.toArray as TimeTrackingLabel[]).map(toPlainLabel);
+    const labels = (labelsCollection.toArray as Label[]).map(toPlainLabel);
     if (labels.length > 0) payload.labels = labels;
   }
 
@@ -471,13 +471,13 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
   if (Array.isArray(payload.labels)) {
     replaceCollectionContents(
       labelsCollection as unknown as {
-        toArray: TimeTrackingLabel[];
+        toArray: Label[];
         has: (id: string) => boolean;
-        insert: (item: TimeTrackingLabel) => void;
-        update: (id: string, cb: (draft: TimeTrackingLabel) => void) => void;
+        insert: (item: Label) => void;
+        update: (id: string, cb: (draft: Label) => void) => void;
         delete: (id: string) => void;
       },
-      payload.labels as TimeTrackingLabel[],
+      payload.labels as Label[],
       (label) => label.id,
     );
   }

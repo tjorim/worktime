@@ -36,8 +36,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     GanttTask,
+    Label,
     TimeOffEntry,
-    TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     UserPreferences,
@@ -122,7 +122,7 @@ async def _validate_task_label_reference(
     if label_id is None:
         return
 
-    label = await session.get(TimeTrackingLabel, label_id)
+    label = await session.get(Label, label_id)
     if label is None or label.user_id != user_id or label.deleted_at is not None:
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
@@ -140,13 +140,13 @@ async def _label_name_taken(
     just the offending label.
     """
     conditions = [
-        TimeTrackingLabel.user_id == user_id,
-        TimeTrackingLabel.name == name,
-        TimeTrackingLabel.deleted_at.is_(None),
+        Label.user_id == user_id,
+        Label.name == name,
+        Label.deleted_at.is_(None),
     ]
     if exclude_id is not None:
-        conditions.append(TimeTrackingLabel.id != exclude_id)
-    result = await session.execute(select(TimeTrackingLabel.id).where(*conditions).limit(1))
+        conditions.append(Label.id != exclude_id)
+    result = await session.execute(select(Label.id).where(*conditions).limit(1))
     return result.scalar_one_or_none() is not None
 
 
@@ -154,7 +154,7 @@ async def _push_label(
     session: AsyncSession, user_id: int, item: LabelSyncItem
 ) -> SyncRecordResult:
     now = _now()
-    label: TimeTrackingLabel | None = await session.get(TimeTrackingLabel, item.id)
+    label: Label | None = await session.get(Label, item.id)
 
     if item.action == "delete":
         if label is None or label.user_id != user_id or label.deleted_at is not None:
@@ -178,12 +178,17 @@ async def _push_label(
             .select_from(TimeTrackingTemplate)
             .where(TimeTrackingTemplate.label_id == item.id, TimeTrackingTemplate.deleted_at.is_(None))
         )
-        if task_count or template_count:
+        gantt_task_count = await session.scalar(
+            select(sql_func.count())
+            .select_from(GanttTask)
+            .where(GanttTask.label_id == item.id, GanttTask.deleted_at.is_(None))
+        )
+        if task_count or template_count or gantt_task_count:
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=label.updated_at,
-                conflict_reason="label is in use by tasks or templates and cannot be deleted",
+                conflict_reason="label is in use by tasks, templates, or gantt tasks and cannot be deleted",
             )
         label.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         label.deleted_at = now
@@ -202,7 +207,7 @@ async def _push_label(
                 status="conflict",
                 conflict_reason="a label with this name already exists",
             )
-        label = TimeTrackingLabel(
+        label = Label(
             id=item.id,
             user_id=user_id,
             name=item.name,
@@ -620,9 +625,11 @@ async def _push_gantt_task(
         if item.name is None or item.start_date is None or item.end_date is None:
             from app.services.db_service import ValidationError
             raise ValidationError("name, start_date and end_date are required for gantt task create")
+        await _validate_task_label_reference(session, user_id, item.label_id)
         task = GanttTask(
             id=item.id,
             user_id=user_id,
+            label_id=item.label_id,
             name=item.name,
             start_date=item.start_date,
             end_date=item.end_date,
@@ -652,6 +659,9 @@ async def _push_gantt_task(
     provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
     if "name" in provided_fields and item.name is not None:
         task.name = item.name
+    if "label_id" in provided_fields:
+        await _validate_task_label_reference(session, user_id, item.label_id)
+        task.label_id = item.label_id
     if "start_date" in provided_fields and item.start_date is not None:
         task.start_date = item.start_date
     if "end_date" in provided_fields and item.end_date is not None:
@@ -671,7 +681,7 @@ async def _push_gantt_task(
 
 
 type SyncEntityModel = (
-    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
+    Label | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
 )
 
 
@@ -744,7 +754,7 @@ async def pull_changes(
     """Return all records (including soft-deleted) modified after *since*."""
     since_utc = as_utc(since)
 
-    labels = await _get_synced_entities(session, TimeTrackingLabel, user_id, since_utc)
+    labels = await _get_synced_entities(session, Label, user_id, since_utc)
     tasks = await _get_synced_entities(session, TimeTrackingTask, user_id, since_utc)
     templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_utc)
     work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_utc)
@@ -765,7 +775,7 @@ async def pull_changes(
 type _StatusEntityModel = SyncEntityModel | UserPreferences
 
 _STATUS_ENTITY_MODELS: tuple[tuple[str, type[_StatusEntityModel]], ...] = (
-    ("labels", TimeTrackingLabel),
+    ("labels", Label),
     ("tasks", TimeTrackingTask),
     ("templates", TimeTrackingTemplate),
     ("work_locations", WorkLocation),

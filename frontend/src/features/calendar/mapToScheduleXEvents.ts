@@ -1,6 +1,6 @@
 import type { CalendarEvent, CalendarType } from "@schedule-x/calendar";
 import { Temporal } from "temporal-polyfill";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
 import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/timeOff/types";
 import type { Shift, ShiftResult } from "@/utils/shiftCalculations";
@@ -22,7 +22,7 @@ function createCalendarColors(color: string): CalendarType {
 }
 
 /** Build the Schedule-X calendar configuration for shifts, time-off, and task labels. */
-export function buildCalendarConfig(labels: TimeTrackingLabel[]): Record<string, CalendarType> {
+export function buildCalendarConfig(labels: Label[]): Record<string, CalendarType> {
   return {
     shift: createCalendarColors(CALENDAR_COLORS.shift),
     "time-off": createCalendarColors(CALENDAR_COLORS["time-off"]),

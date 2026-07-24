@@ -251,6 +251,7 @@ class WorkLocationListResponse(ListResponse[WorkLocationRead]):
 
 class GanttTaskCreate(BaseModel):
     name: str
+    label_id: str | None = None
     start_date: dt_date
     end_date: dt_date
     progress: int = Field(default=0, ge=0, le=100)
@@ -267,6 +268,7 @@ class GanttTaskCreate(BaseModel):
 class GanttTaskRead(BaseModel):
     id: str
     user_id: int
+    label_id: str | None
     name: str
     start_date: dt_date
     end_date: dt_date
@@ -278,6 +280,7 @@ class GanttTaskRead(BaseModel):
 
 class GanttTaskUpdate(BaseModel):
     name: str | None = None
+    label_id: str | None = None
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     progress: int | None = Field(default=None, ge=0, le=100)
@@ -683,6 +686,7 @@ class GanttTaskSyncItem(BaseModel):
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     name: str | None = None
+    label_id: str | None = None
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     progress: int | None = Field(default=None, ge=0, le=100)
@@ -701,6 +705,7 @@ class GanttTaskSyncItem(BaseModel):
 class GanttTaskSyncRead(BaseModel):
     id: str
     user_id: int
+    label_id: str | None
     name: str
     start_date: dt_date
     end_date: dt_date
@@ -722,7 +727,7 @@ class UserExportSummary(BaseModel):
 class UserDataExport(BaseModel):
     exported_at: dt_datetime
     user: UserExportSummary
-    time_tracking_labels: list[LabelSyncRead]
+    labels: list[LabelSyncRead]
     time_tracking_tasks: list[TaskSyncRead]
     time_tracking_templates: list[TemplateSyncRead]
     work_locations: list[WorkLocationSyncRead]

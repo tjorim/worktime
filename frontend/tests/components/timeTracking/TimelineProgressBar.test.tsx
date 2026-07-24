@@ -4,10 +4,10 @@ import "@testing-library/jest-dom";
 import { TimelineProgressBar } from "@/components/timeTracking/TimelineProgressBar";
 import { BREAK_DURATION_MINUTES } from "@/components/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import { dayjs } from "@/utils/dateTimeUtils";
 
-const TEST_LABELS: TimeTrackingLabel[] = [{ id: "Support", name: "Support", color: "#c82333" }];
+const TEST_LABELS: Label[] = [{ id: "Support", name: "Support", color: "#c82333" }];
 
 function makeTask(overrides: Partial<StoredTimeTrackingTask> = {}): StoredTimeTrackingTask {
   return {

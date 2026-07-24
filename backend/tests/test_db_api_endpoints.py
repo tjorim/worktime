@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     GanttTask,
+    Label,
     TimeOffEntry,
-    TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     UserPreferences,
@@ -321,7 +321,7 @@ async def test_db_user_export_endpoint(
     ).json()["id"]
 
     timestamp = datetime(2026, 1, 1, 9, 0, tzinfo=UTC)
-    label = TimeTrackingLabel(
+    label = Label(
         id="label-export",
         user_id=owner_id,
         name="Focus",
@@ -419,7 +419,7 @@ async def test_db_user_export_endpoint(
     assert "settings" not in body["user"]
     assert "oidc_subject" not in body["user"]
     assert body["preferences"] == {"theme": "dark", "notifications": "off"}
-    assert body["time_tracking_labels"][0]["id"] == "label-export"
+    assert body["labels"][0]["id"] == "label-export"
     assert body["time_tracking_tasks"] == []
     assert body["time_tracking_templates"][0]["id"] == "template-export"
     assert body["work_locations"] == []

@@ -1908,6 +1908,77 @@ class TestSyncCorrectnessFixes:
         assert result["status"] == "conflict"
         assert "in use" in result["conflict_reason"]
 
+    def test_sync_label_delete_conflicts_on_active_gantt_task_reference(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A label with an *active* referencing Gantt task must still refuse deletion."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "label-gantt-ref-user")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        gantt_id = str(uuid4())
+
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Still Used By Gantt",
+                        "color": "#AABBCC",
+                    }
+                ],
+                "gantt_tasks": [
+                    {
+                        "id": gantt_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Project referencing label",
+                        "label_id": label_id,
+                        "start_date": "2026-02-01",
+                        "end_date": "2026-02-28",
+                        "progress": 0,
+                    }
+                ],
+            },
+            headers=headers,
+        )
+
+        delete_label_resp = db_client.post(
+            "/api/sync/push",
+            json={"labels": [{"id": label_id, "action": "delete", "client_updated_at": _ts(-5)}]},
+            headers=headers,
+        )
+        assert delete_label_resp.status_code == 200
+        result = delete_label_resp.json()["results"]["labels"][0]
+        assert result["status"] == "conflict"
+        assert "in use" in result["conflict_reason"]
+
+        # And the reverse: creating/updating a Gantt task with a bogus label_id
+        # via sync push must fail as a validation error, not a 500.
+        bad_gantt_resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "gantt_tasks": [
+                    {
+                        "id": str(uuid4()),
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "Bad label ref",
+                        "label_id": "does-not-exist",
+                        "start_date": "2026-02-01",
+                        "end_date": "2026-02-28",
+                        "progress": 0,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert bad_gantt_resp.status_code == 400
+
     def test_push_task_create_rejects_stop_time_before_start_time(
         self, db_client: TestClient, auth_headers
     ) -> None:

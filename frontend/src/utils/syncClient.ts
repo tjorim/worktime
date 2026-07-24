@@ -12,7 +12,7 @@
 
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { Label } from "@/components/timeTracking/constants";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
 import {
@@ -94,6 +94,7 @@ export interface GanttTaskSyncItem {
   action: SyncAction;
   client_updated_at: string;
   name?: string | null;
+  label_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   progress?: number | null;
@@ -190,6 +191,7 @@ export interface GanttTaskSyncRead {
   id: string;
   user_id: number;
   name: string;
+  label_id: string | null;
   start_date: string;
   end_date: string;
   progress: number;
@@ -642,7 +644,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 
   // Labels — filter out rows with missing/invalid required fields so that a
   // single corrupted label cannot cause the entire first-sync push to fail.
-  const rawLabels = labelsCollection.toArray as TimeTrackingLabel[];
+  const rawLabels = labelsCollection.toArray as Label[];
   const labels: LabelSyncItem[] = rawLabels
     .filter(
       (l) =>
@@ -759,6 +761,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     action: "create" as const,
     client_updated_at: now,
     name: t.name,
+    label_id: t.label ?? null,
     start_date: t.start,
     end_date: t.end,
     progress: t.progress ?? 0,

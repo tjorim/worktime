@@ -62,10 +62,10 @@ class User(Base):
     )
 
 
-class TimeTrackingLabel(ClientTimestampMixin, Base):
+class Label(ClientTimestampMixin, Base):
     """Time tracking label for categorizing tasks and templates."""
 
-    __tablename__ = "time_tracking_labels"
+    __tablename__ = "labels"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
@@ -101,7 +101,7 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
     label_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("time_tracking_labels.id"), nullable=True, index=True
+        String, ForeignKey("labels.id"), nullable=True, index=True
     )
     gantt_task_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("gantt_tasks.id", ondelete="SET NULL"), nullable=True, index=True
@@ -136,7 +136,7 @@ class TimeTrackingTemplate(ClientTimestampMixin, Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
     label_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("time_tracking_labels.id"), nullable=True, index=True
+        String, ForeignKey("labels.id"), nullable=True, index=True
     )
     text: Mapped[str] = mapped_column(String)
     start_time: Mapped[dt_time] = mapped_column(Time)
@@ -196,6 +196,9 @@ class GanttTask(ClientTimestampMixin, Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    label_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("labels.id"), nullable=True, index=True
     )
     name: Mapped[str] = mapped_column(String)
     start_date: Mapped[dt_date] = mapped_column(Date)

@@ -9,7 +9,7 @@ import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import { useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
+import { useDefaultLabelColor, type Label } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { WeeklyDataView } from "./WeeklyDataView";
 import {
@@ -19,7 +19,7 @@ import {
 
 type TimeTrackingWeeklyViewProps = {
   tasks: StoredTimeTrackingTask[];
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   weeklyTargetHours?: number;

@@ -19,7 +19,7 @@ import {
   buildLabelColorMap,
   buildLabelNameMap,
   useDefaultLabelColor,
-  type TimeTrackingLabel,
+  type Label,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
@@ -27,7 +27,7 @@ import { useDailyTaskSummary } from "./hooks/useDailyTaskSummary";
 
 type TimeTrackingDailyViewProps = {
   tasks: StoredTimeTrackingTask[];
-  labels: TimeTrackingLabel[];
+  labels: Label[];
   templates: TimeTrackingTemplate[];
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
