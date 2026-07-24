@@ -230,6 +230,81 @@ async def test_delete_label_blocked_when_in_use(db_session: AsyncSession) -> Non
         await delete_label(db_session, user.id, label.id)
 
 
+async def test_delete_label_blocked_when_referenced_by_gantt_task(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="bob-gantt", display_name="Bob Gantt"))
+    label = await create_label(db_session, user.id, LabelCreate(name="Launch", color="#334455"))
+
+    await create_gantt_task(
+        db_session,
+        user.id,
+        GanttTaskCreate(
+            name="Launch prep",
+            label_id=label.id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 8),
+        ),
+    )
+
+    with pytest.raises(ConflictError, match="label is in use"):
+        await delete_label(db_session, user.id, label.id)
+
+
+async def test_delete_label_succeeds_when_only_referenced_by_deleted_gantt_task(
+    db_session: AsyncSession,
+) -> None:
+    user = await create_user(db_session, UserCreate(username="bob-gantt2", display_name="Bob Gantt 2"))
+    label = await create_label(db_session, user.id, LabelCreate(name="Launch2", color="#556677"))
+    task = await create_gantt_task(
+        db_session,
+        user.id,
+        GanttTaskCreate(
+            name="Launch prep 2",
+            label_id=label.id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 8),
+        ),
+    )
+    await delete_gantt_task(db_session, user.id, task.id)
+
+    await delete_label(db_session, user.id, label.id)
+
+    labels = await list_labels_for_user(db_session, user.id)
+    assert not any(item.id == label.id for item in labels)
+
+
+async def test_gantt_task_label_reference_is_validated(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="bob-gantt3", display_name="Bob Gantt 3"))
+
+    with pytest.raises(NotFoundError, match="label not found"):
+        await create_gantt_task(
+            db_session,
+            user.id,
+            GanttTaskCreate(
+                name="Bad label",
+                label_id="does-not-exist",
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 8),
+            ),
+        )
+
+    task = await create_gantt_task(
+        db_session,
+        user.id,
+        GanttTaskCreate(
+            name="Retitle me",
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 8),
+        ),
+    )
+    with pytest.raises(NotFoundError, match="label not found"):
+        await update_gantt_task(
+            db_session,
+            user.id,
+            task.id,
+            GanttTaskUpdate(label_id="does-not-exist"),
+        )
+
+
 async def test_delete_label_succeeds_when_unused(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="bob2", display_name="Bob2"))
     label = await create_label(db_session, user.id, LabelCreate(name="Unused", color="#aabbcc"))
