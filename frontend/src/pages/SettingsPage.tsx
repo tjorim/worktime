@@ -58,6 +58,15 @@ export function SettingsPage() {
   const activeSection = search.section ?? "general";
   const [isAdmin, setIsAdmin] = useState(false);
 
+  useEffect(() => {
+    // validateSearch remaps the deprecated ?section=sync value to "account" internally,
+    // but that doesn't rewrite the address bar — do that explicitly so copied
+    // links/bookmarks point at the canonical URL going forward.
+    if (new URLSearchParams(window.location.search).get("section") === "sync") {
+      void navigate({ to: "/settings", search: { section: "account" }, replace: true });
+    }
+  }, [navigate]);
+
   const visibleSections = useMemo(
     () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
     [isAdmin],
