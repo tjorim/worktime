@@ -22,6 +22,7 @@ import { buildCalendarConfig } from "@/features/calendar/mapToScheduleXEvents";
 import { useCalendarRangeData, type CalendarRange } from "@/features/calendar/useCalendarRangeData";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import "@schedule-x/theme-default/dist/index.css";
 import "@/features/calendar/calendar.css";
 
@@ -71,6 +72,9 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
   const [range, setRange] = useState<CalendarRange>(currentMonthRange);
   const events = useCalendarRangeData(range);
   const { scheduleType, myTeam } = useSettings();
+  // Mirrors useCalendarRangeData's own effective-team check so single-user schedules
+  // (e.g. "9-5", teamCount === 1) don't trigger a false "no roster configured" warning.
+  const effectiveTeam = scheduleType ? getEffectiveTeam(myTeam, scheduleType) : null;
   const toast = useToast();
   const { tasks, labels, addTask, updateTaskTimes } = useTimeTrackingStorage();
   const [selectedTask, setSelectedTask] = useState<StoredTimeTrackingTask | null>(null);
@@ -258,7 +262,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
         Shifts, time off, and time tracking are shown together. Drag a time-tracking task to
         reschedule it.
       </Alert>
-      {(!scheduleType || myTeam === null) && (
+      {effectiveTeam === null && (
         <Alert variant="warning" className="d-flex align-items-center gap-2 py-2">
           <i className="bi bi-exclamation-triangle" aria-hidden="true"></i>
           <span>
