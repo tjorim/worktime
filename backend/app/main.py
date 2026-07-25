@@ -261,6 +261,7 @@ if settings.LEGACY_FILESHARE_ENABLED:
     app.include_router(team_router, prefix="/api")
 
 if settings.DATABASE_ENABLED:
+    from .routers.access_tokens import router as access_tokens_router
     from .routers.account_router import router as account_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_preferences import router as db_preferences_router
@@ -273,6 +274,7 @@ if settings.DATABASE_ENABLED:
     from .routers.registration import router as registration_router
 
     app.include_router(account_router, prefix="/api")
+    app.include_router(access_tokens_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(db_users_router, prefix="/api")
     app.include_router(db_time_tracking_router, prefix="/api")

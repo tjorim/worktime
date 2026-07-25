@@ -115,9 +115,27 @@ To-do list and development roadmap for Worktime. Audited against the codebase on
 
 ---
 
+## Backlog — Integrations
+
+### 11. Pebble Companion App — Device Testing & Scoped Tokens
+
+- **What exists**: `pebble/` — an Alloy watch app for clock in/out + active-task glance (issue #996), talking
+  to the existing time-tracking endpoints via a phone-side (`pkjs`) companion. Auth is a new personal access
+  token system (`/api/access-tokens`, Settings > Account > API tokens) rather than OIDC, since the watch's
+  JS runtime has no practical way to run an OAuth PKCE flow.
+- **What's missing**: Real device/emulator testing — written against the published Alloy docs, but this repo
+  has no Pebble SDK/CLI, so nothing here has actually been built or run on hardware yet. Also worth
+  considering: a reduced-scope token type (time-tracking-only, rather than full account access) once there's
+  a second companion-app use case to justify the complexity.
+- **Files**: `pebble/`, `backend/app/routers/access_tokens.py`, `backend/app/services/access_token_service.py`,
+  `frontend/src/components/settings/account/SettingsApiTokensSection.tsx`, `frontend/public/pebble-config.html`
+- **Status**: 🟡 MVP built, untested on hardware
+
+---
+
 ## Aspirational — Long-Term
 
-### 11. Real-Time Team Collaboration (shared time-off)
+### 12. Real-Time Team Collaboration (shared time-off)
 
 - **What exists**: Backend REST API for time-off CRUD is complete (auth, DB, GET/POST/PATCH/DELETE). `EventStoreContext` is ready to receive `syncWithBackend()` and `subscribeToUpdates()` methods.
 - **What's missing**: The sync layer — frontend calling the backend API — and then real-time broadcast.
@@ -157,7 +175,6 @@ To-do list and development roadmap for Worktime. Audited against the codebase on
 
 - **Zustand migration** — Replace Context API + useReducer with Zustand for structural sharing, undo/redo middleware, and granular subscriptions. +15 KB bundle (Zustand + Immer). Consider when adding a second store.
 - **User account system** — Optional cloud sync on top of the current localStorage-first approach; hybrid model preserving offline capability.
-- **Pebble companion app** — A Today/shift-glance companion app for Pebble Time 2, built with Alloy (Pebble's JS/TS SDK, out of developer preview April 2026). Not planned yet; revisit once the daynest Pebble app (`tjorim/daynest#676`) ships and proves the pattern is worth it. GitHub issue: #996.
 
 ---
 

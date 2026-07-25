@@ -4,6 +4,8 @@
 
 - `frontend/` contains the web app
 - `backend/` contains the FastAPI service
+- `pebble/` contains the Pebble (Alloy) companion watch app — see `pebble/README.md`. Not built or tested
+  in CI; requires the Pebble SDK/CLI, which isn't vendored in this repo.
 - Production hosting for `worktime.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
 - Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/worktime`
 
@@ -44,6 +46,11 @@ uv run alembic upgrade head
 > to any string and pass it as `Authorization: Bearer <value>`; it's treated as
 > a fixed admin dev user, auto-provisioned on first use. Refuses to start if
 > set outside `ENVIRONMENT=development`.
+
+Besides OIDC sessions, non-interactive clients (currently just the Pebble companion app) authenticate with
+a personal access token (`wtpat_...`, `/api/access-tokens`, managed from Settings > Account > API tokens).
+`get_authenticated_principal` (`backend/app/routers/auth.py`) accepts either; `require_oidc_principal` gates
+endpoints — account deletion and token management itself — that a leaked token must not be able to reach.
 
 ## Versioning
 

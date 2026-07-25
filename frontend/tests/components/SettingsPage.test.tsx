@@ -2,10 +2,11 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
 import { SettingsContent } from "@/pages/SettingsPage";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
@@ -16,6 +17,7 @@ import { server } from "@/mocks/server";
 import { labelsCollection } from "@/db/collections";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
+import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
 import * as m from "@/paraglide/messages.js";
 
@@ -470,6 +472,159 @@ describe("SettingsPage Account Section", () => {
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByRole("button", { name: m.sync_manual_pull_busy() })).toBeDisabled();
+  });
+});
+
+function renderSettingsApiTokensHarness({
+  fetchFn,
+}: {
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+}) {
+  function Harness() {
+    const {
+      apiTokens,
+      isApiTokensLoading,
+      apiTokensError,
+      isCreatingApiToken,
+      createApiTokenError,
+      createdApiToken,
+      dismissCreatedApiToken,
+      handleCreateApiToken,
+      revokingApiTokenId,
+      revokeApiTokenError,
+      handleRevokeApiToken,
+    } = useSettingsApiTokens({ isAuthenticated: true, fetchFn });
+
+    return (
+      <SettingsApiTokensSection
+        apiTokens={apiTokens}
+        isApiTokensLoading={isApiTokensLoading}
+        apiTokensError={apiTokensError}
+        isCreatingApiToken={isCreatingApiToken}
+        createApiTokenError={createApiTokenError}
+        createdApiToken={createdApiToken}
+        onDismissCreatedApiToken={dismissCreatedApiToken}
+        onCreateApiToken={handleCreateApiToken}
+        revokingApiTokenId={revokingApiTokenId}
+        revokeApiTokenError={revokeApiTokenError}
+        onRevokeApiToken={handleRevokeApiToken}
+      />
+    );
+  }
+
+  render(
+    <ToastProvider>
+      <Harness />
+    </ToastProvider>,
+  );
+}
+
+describe("SettingsPage API Tokens Section", () => {
+  beforeEach(() => {
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+  });
+
+  it("shows an empty state when there are no tokens", async () => {
+    const fetchFn = vi.fn(async (input: string) => {
+      if (input === "/api/access-tokens") {
+        return jsonResponse({ items: [], total: 0 });
+      }
+      throw new Error(`Unexpected request: ${input}`);
+    });
+
+    renderSettingsApiTokensHarness({ fetchFn });
+
+    expect(await screen.findByText("No API tokens yet.")).toBeInTheDocument();
+  });
+
+  it("generates a token, reveals it once, and copies it to the clipboard", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/access-tokens" && init?.method === "POST") {
+        return jsonResponse(
+          { id: "tok-1", name: "Pebble watch", token: "wtpat_secret-value", created_at: "2026-07-24T00:00:00Z" },
+          { status: 201 },
+        );
+      }
+      if (input === "/api/access-tokens") {
+        return jsonResponse({
+          items: [
+            {
+              id: "tok-1",
+              name: "Pebble watch",
+              token_preview: "alue",
+              created_at: "2026-07-24T00:00:00Z",
+              last_used_at: null,
+            },
+          ],
+          total: 1,
+        });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderSettingsApiTokensHarness({ fetchFn });
+
+    await screen.findByText("Pebble watch");
+    await user.type(screen.getByLabelText("Token name"), "Pebble watch");
+    await user.click(screen.getByRole("button", { name: "Generate token" }));
+
+    expect(await screen.findByText("Token created")).toBeInTheDocument();
+    expect(screen.getByText("wtpat_secret-value")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+    expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith("wtpat_secret-value");
+
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByText("Token created")).not.toBeInTheDocument();
+    expect(await screen.findByText("Pebble watch")).toBeInTheDocument();
+  });
+
+  it("revokes a token after confirmation", async () => {
+    let tokenRevoked = false;
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/access-tokens/tok-1" && init?.method === "DELETE") {
+        tokenRevoked = true;
+        return new Response(null, { status: 204 });
+      }
+      if (input === "/api/access-tokens") {
+        return jsonResponse({
+          items: tokenRevoked
+            ? []
+            : [
+                {
+                  id: "tok-1",
+                  name: "Pebble watch",
+                  token_preview: "alue",
+                  created_at: "2026-07-24T00:00:00Z",
+                  last_used_at: null,
+                },
+              ],
+          total: tokenRevoked ? 0 : 1,
+        });
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderSettingsApiTokensHarness({ fetchFn });
+
+    await user.click(await screen.findByRole("button", { name: "Revoke" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() => {
+      expect(fetchFn).toHaveBeenCalledWith("/api/access-tokens/tok-1", { method: "DELETE" });
+    });
+    expect(await screen.findByText("No API tokens yet.")).toBeInTheDocument();
+  });
+
+  it("shows an error message when loading tokens fails", async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 500 }));
+
+    renderSettingsApiTokensHarness({ fetchFn });
+
+    expect(await screen.findByText("Could not load your API tokens right now.")).toBeInTheDocument();
   });
 });
 

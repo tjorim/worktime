@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.testclient import TestClient
 from sqlalchemy import text as sql_text
@@ -119,12 +119,16 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def _test_auth_principal(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> AuthenticatedPrincipal:
     """Test-only override for ``get_authenticated_principal``.
 
     Expects a test token in the format ``test.<user_id>.admin`` or
-    ``test.<user_id>.user`` (produced by the ``auth_headers`` fixture).
+    ``test.<user_id>.user`` (produced by the ``auth_headers`` fixture), with
+    an optional trailing ``.pat`` segment to simulate a personal-access-token
+    session (for exercising ``require_oidc_principal``); otherwise the
+    simulated auth type is ``oidc``.
     """
     if credentials is None:
         raise HTTPException(
@@ -132,7 +136,7 @@ def _test_auth_principal(
             detail="Authentication required",
         )
     parts = credentials.credentials.split(".")
-    if len(parts) != 3 or parts[0] != "test":
+    if len(parts) not in (3, 4) or parts[0] != "test":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token format",
@@ -149,6 +153,12 @@ def _test_auth_principal(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token: role must be 'admin' or 'user'",
         )
+    if len(parts) == 4 and parts[3] != "pat":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token: unknown auth type suffix",
+        )
+    request.state.auth_type = "pat" if len(parts) == 4 else "oidc"
     return AuthenticatedPrincipal(
         user_id=user_id,
         is_admin=parts[2] == "admin",
@@ -183,9 +193,9 @@ def auth_headers() -> Callable[..., dict[str, str]]:
     ``db_client``.
     """
 
-    def _headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
+    def _headers(user_id: int, *, is_admin: bool = False, via_pat: bool = False) -> dict[str, str]:
         role = "admin" if is_admin else "user"
-        token = f"test.{user_id}.{role}"
+        token = f"test.{user_id}.{role}" + (".pat" if via_pat else "")
         return {"Authorization": f"Bearer {token}"}
 
     return _headers

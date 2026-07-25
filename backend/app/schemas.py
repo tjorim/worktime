@@ -229,6 +229,35 @@ class WorkLocationUpdate(BaseModel):
     )
 
 
+class AccessTokenCreate(BaseModel):
+    """Payload for minting a new personal access token."""
+
+    name: str = Field(min_length=1, max_length=100)
+
+
+class AccessTokenCreated(BaseModel):
+    """Response returned once, at creation time, including the raw token value."""
+
+    id: str
+    name: str
+    token: str
+    created_at: dt_datetime
+
+
+class AccessTokenRead(BaseModel):
+    """A previously issued token, without its raw secret value."""
+
+    id: str
+    name: str
+    token_preview: str
+    created_at: dt_datetime
+    last_used_at: dt_datetime | None
+
+
+class AccessTokenListResponse(ListResponse[AccessTokenRead]):
+    pass
+
+
 class TaskListResponse(ListResponse[TaskRead]):
     pass
 

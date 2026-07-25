@@ -1,0 +1,23 @@
+{
+  "name": "Worktime",
+  "author": "tjorim",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Worktime",
+    "uuid": "59355118-49f0-4b06-9b73-a9b5ac156395",
+    "projectType": "moddable",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery", "gabbro"],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": ["REQUEST", "RUNNING", "TASK_TEXT", "START_TIME", "ERROR"],
+    "resources": {
+      "media": []
+    }
+  }
+}

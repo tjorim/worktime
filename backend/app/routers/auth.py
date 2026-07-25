@@ -20,6 +20,8 @@ from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
 from app.database.engine import get_session
 from app.schemas import OidcDiscoveryConfig
+from app.services.access_token_service import TOKEN_PREFIX as _PAT_PREFIX
+from app.services.access_token_service import authenticate_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -86,18 +88,42 @@ async def oidc_config() -> OidcDiscoveryConfig:
     return config
 
 
+async def _authenticate_pat(request: Request, token: str, session: AsyncSession) -> AuthenticatedPrincipal:
+    """Authenticate a personal access token (e.g. from the Pebble companion app).
+
+    A PAT always authenticates as a non-admin principal, regardless of the
+    underlying user's actual role, since it's a long-lived credential with a
+    larger exposure window than an interactive OIDC session.
+    """
+    record = await authenticate_access_token(session, token)
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or revoked access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    request.state.user_id = record.user_id
+    request.state.auth_type = "pat"
+    return AuthenticatedPrincipal(user_id=record.user_id, is_admin=False)
+
+
 async def get_authenticated_principal(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     session: AsyncSession = Depends(get_session),
 ) -> AuthenticatedPrincipal:
-    """Validate a Bearer JWT and return the authenticated principal.
+    """Validate a Bearer credential and return the authenticated principal.
 
-    Decodes the OIDC access token, looks up (or auto-provisions) the local
-    user record by the token ``sub`` claim, and derives ``is_admin`` from the
-    ``realm_access.roles`` claim (Keycloak realm role ``admin``).
+    Accepts either an OIDC access token (decoded and validated against the
+    provider's JWKS) or a personal access token (``wtpat_...``, looked up by
+    hash) — see ``_authenticate_pat``. For OIDC, it looks up (or
+    auto-provisions) the local user record by the token ``sub`` claim, and
+    derives ``is_admin`` from the ``realm_access.roles`` claim (Keycloak
+    realm role ``admin``).
     """
     token = credentials.credentials
+    if token.startswith(_PAT_PREFIX):
+        return await _authenticate_pat(request, token, session)
     try:
         claims = await decode_token(token)
     except OIDCTokenError as exc:
@@ -177,3 +203,21 @@ def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal)
         return
     if principal.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
+def require_oidc_principal(
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+) -> AuthenticatedPrincipal:
+    """Require an interactive OIDC session, rejecting personal access tokens.
+
+    Used for sensitive, account-level operations (managing tokens themselves,
+    deleting the account) that a long-lived companion-app credential should
+    not be able to perform on its own.
+    """
+    if getattr(request.state, "auth_type", None) != "oidc":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint requires an interactive session, not a personal access token",
+        )
+    return principal
