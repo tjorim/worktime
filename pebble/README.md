@@ -1,22 +1,25 @@
 # Worktime for Pebble
 
 A companion watch app for [Pebble Time 2 / Pebble Round 2](https://developer.repebble.com/), built with
-[Alloy](https://developer.repebble.com/guides/alloy/) (Pebble's JS/TS SDK). Scope for this first version:
-clock in/out and a glance at the currently running time-tracking task — see the "Time Tracking" feature in
-the main Worktime app.
+[Alloy](https://developer.repebble.com/guides/alloy/) (Pebble's JS/TS SDK). It shows today's or the next
+configured shift, provides an active-task glance, and supports clocking in/out.
 
 ## How it works
 
-Pebble apps can't reach the internet directly; only the phone-side JS (`pkjs`) can. So:
+Alloy's `fetch()` API runs on the watch and reaches the internet through the
+official phone-side `@moddable/pebbleproxy` package. So:
 
-- **`src/embeddedjs/main.js`** — runs on the watch. Renders status/timer, and sends a small `REQUEST`
-  AppMessage (refresh / start / stop) when SELECT is pressed.
-- **`src/pkjs/index.js`** — runs on the phone, inside the Pebble mobile app. Owns all HTTP calls to the
-  Worktime backend (`GET/POST/PUT /api/time-tracking/tasks...`) and relays the result back to the watch as
-  `RUNNING` / `TASK_TEXT` / `START_TIME` (or `ERROR`).
+- **`src/embeddedjs/main.js`** — runs on the watch. Renders status/timer and
+  calls the Worktime backend (`GET /api/read-models/dashboard` plus the
+  time-tracking endpoints) with watch-side `fetch()`.
+- **`src/pkjs/index.js`** — runs on the phone, inside the Pebble mobile app.
+  Hosts the Alloy network proxy and relays runtime configuration to the
+  watch via AppMessage.
 - **`frontend/public/pebble-config.html`** — the configuration webview, opened via `Pebble.openURL()` when
-  the user taps the app's settings in the Pebble mobile app. Collects the Worktime server URL and a personal
-  access token, and hands them back to `pkjs` by navigating to `pebblejs://close#<data>`.
+  the user taps the app's settings in the Pebble mobile app. Collects the
+  Worktime server URL and a personal access token, and hands them back to
+  `pkjs` by navigating to `pebblejs://close#<data>`. The watch persists both
+  values in `localStorage`.
 
 Authentication uses a **personal access token** (`Settings > Account > API tokens` in the Worktime web app),
 not the OIDC session the web app uses — Pebble's constrained JS runtime has no good way to run an OAuth
@@ -46,7 +49,7 @@ self-hosting elsewhere, change it to your deployment's URL before building.
 ## Known limitations
 
 - Not build- or device-tested: this environment has no Pebble SDK/emulator, so the Alloy APIs used here
-  (Piu, `pebble/message`, `pebble/button`) are implemented against the published
+  (Piu, `pebble/message`, `pebble/button`, `fetch()`) are implemented against the published
   [Pebble Developer docs](https://developer.repebble.com/guides/alloy/) but haven't been run on real
   hardware or the emulator. Expect some iteration once tested on-device.
 - Layout is a simple centered stack (`left: 0, right: 0`); it isn't tuned separately for the round Gabbro
