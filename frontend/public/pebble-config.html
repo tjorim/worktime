@@ -118,7 +118,7 @@
         document.getElementById("save").addEventListener("click", function () {
           var apiBaseUrl = apiBaseUrlInput.value.trim().replace(/\/$/, "");
           var token = tokenInput.value.trim();
-          if (!apiBaseUrl || !/^https?:\/\//i.test(apiBaseUrl)) {
+          if (!apiBaseUrl || !/^https:\/\//i.test(apiBaseUrl)) {
             showError("Enter a valid server URL, starting with https://");
             return;
           }

@@ -28,9 +28,7 @@ def _fake_request() -> Request:
 async def test_service_create_authenticate_and_revoke_round_trip(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="pat-owner", display_name="Pat Owner"))
 
-    token, raw_token = await create_access_token(
-        db_session, user_id=user.id, payload=AccessTokenCreate(name="Pebble")
-    )
+    token, raw_token = await create_access_token(db_session, user_id=user.id, payload=AccessTokenCreate(name="Pebble"))
     assert raw_token.startswith("wtpat_")
     assert token.token_preview == raw_token[-4:]
     assert token.last_used_at is None
@@ -59,14 +57,10 @@ async def test_service_revoke_rejects_other_users_token(db_session: AsyncSession
 
 async def test_get_authenticated_principal_accepts_valid_pat(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="pat-http-user", display_name="Pat User"))
-    _token, raw_token = await create_access_token(
-        db_session, user_id=user.id, payload=AccessTokenCreate(name="Pebble")
-    )
+    _token, raw_token = await create_access_token(db_session, user_id=user.id, payload=AccessTokenCreate(name="Pebble"))
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=raw_token)
 
-    principal = await get_authenticated_principal(
-        request=_fake_request(), credentials=credentials, session=db_session
-    )
+    principal = await get_authenticated_principal(request=_fake_request(), credentials=credentials, session=db_session)
 
     assert principal.user_id == user.id
     assert principal.is_admin is False
@@ -76,9 +70,7 @@ async def test_get_authenticated_principal_rejects_unknown_pat(db_session: Async
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wtpat_does-not-exist")
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_authenticated_principal(
-            request=_fake_request(), credentials=credentials, session=db_session
-        )
+        await get_authenticated_principal(request=_fake_request(), credentials=credentials, session=db_session)
 
     assert exc_info.value.status_code == 401
 
@@ -156,3 +148,16 @@ def test_delete_account_rejects_pat_auth(
     pat_headers = auth_headers(owner_id, via_pat=True)
 
     assert db_client.delete("/api/me", headers=pat_headers).status_code == 403
+
+
+def test_legacy_user_delete_rejects_pat_auth(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "pat-delete-legacy")
+    pat_headers = auth_headers(owner_id, via_pat=True)
+
+    assert db_client.delete(f"/api/users/{owner_id}", headers=pat_headers).status_code == 403
+    assert db_client.get(f"/api/users/{owner_id}", headers=admin_headers).status_code == 200
