@@ -11,6 +11,7 @@ const requiredFiles = [
   "src/embeddedjs/manifest.json",
   "src/pkjs/index.js",
   "scripts/mock-server.py",
+  "scripts/check-screenshot.py",
 ];
 
 for (const file of requiredFiles) {
@@ -69,6 +70,12 @@ if (!watchSource.includes("runExclusive(toggleClock)")) {
 }
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
+}
+if (/,\s*[)\]]/.test(phoneSource)) {
+  throw new Error("Trailing comma in src/pkjs/index.js: the SDK's PKJS bundler cannot parse it");
+}
+if (/Pebble\.sendAppMessage\s*\(/.test(phoneSource)) {
+  throw new Error("Use moddableProxy.sendAppMessage() so sends are queued behind proxy traffic");
 }
 if (!phoneSource.includes("/pebble-pair") || !pairingSource.includes("pebblejs://close")) {
   throw new Error("Phone and web code must use the authenticated Pebble pairing flow");

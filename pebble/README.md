@@ -34,8 +34,9 @@ The watch uses this narrow API surface:
 
 ## Building and installing
 
-Requires the [Alloy-enabled Pebble SDK/CLI](https://developer.repebble.com/sdk/). This repo does not vendor
-that tooling, so it isn't run in CI:
+Requires the [Alloy-enabled Pebble SDK/CLI](https://developer.repebble.com/sdk/).
+The repo does not vendor it; Pebble CI installs it with `uv`, builds the `.pbw`,
+boots Emery, and checks a screenshot:
 
 ```bash
 cd pebble
@@ -43,12 +44,12 @@ pebble build
 pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 ```
 
-The checks that do run without the SDK (and in CI) are:
+The checks that also run without the SDK are:
 
 ```bash
 cd pebble
 node scripts/validate.mjs         # package contract
-node --test "tests/*.test.mjs"    # watch-app logic against stubbed Alloy globals
+npm test                         # watch-app logic against stubbed Alloy globals
 ```
 
 Without a watch, [`EMULATOR.md`](EMULATOR.md) covers the Emery QEMU emulator — what it can
@@ -73,13 +74,14 @@ The watch caches the **last successful dashboard read** (`lastDashboard` in the 
 the read). While the phone link is down — or a request fails — the app keeps showing that
 glance, with the bottom line replaced by the reason and the time it was read, for example
 `Phone offline · 08:12`. The elapsed timer keeps counting from the cached start time, so it
-is an estimate rather than a confirmed value. Snapshots older than 12 hours — or stamped in
-the future, after the watch clock moves back — are discarded instead of displayed.
+is an estimate rather than a confirmed value. Snapshots older than 12 hours —
+or stamped in the future after the watch clock moves back — are discarded.
 
-Pairing a new credential clears the snapshot, since it may belong to a different account. A
-read still in flight from the previous credential is discarded when it lands rather than
-being cached or rendered, and the refresh owed to the new credential runs once the in-flight
-request finishes, so the two accounts' state cannot mix.
+A new credential or server URL clears the snapshot because it may select a
+different account or deployment. A read still in flight for the previous
+identity is discarded when it lands rather than being cached or rendered, and
+the refresh owed to the new identity runs once the in-flight request finishes,
+so state cannot mix across accounts or deployments.
 
 The cache is **display-only** — clocking in and out remains online-only, and there is no
 offline queue:
@@ -102,16 +104,14 @@ Three layers, none of which substitutes for the next:
 
 | Layer | Covers | Where |
 |-------|--------|-------|
-| CI (no SDK) | Package contract; the app's request, caching, and replay logic against stubbed Alloy globals, including four tests driving it over real HTTP against the mock backend | `scripts/validate.mjs`, `tests/` |
-| Emulator | Build, startup, Piu layout, fonts, `localStorage`, AppMessage configuration. **Not** anything needing HTTP — watch-side `fetch()` never completes under QEMU | [`EMULATOR.md`](EMULATOR.md) |
+| CI logic | Package contract; the app's request, caching, and replay logic against stubbed Alloy globals, including four tests driving it over real HTTP against the mock backend | `scripts/validate.mjs`, `tests/` |
+| CI emulator | SDK build, startup, Piu layout/fonts, and a rendered-screen check. **Not** anything needing HTTP — watch-side `fetch()` never completes under QEMU | `.github/workflows/pebble.yml`, [`EMULATOR.md`](EMULATOR.md) |
 | Hardware | Everything at once, and the only place the phone proxy runs for real | — |
 
-**The app has not been compiled, installed, or run on a Pebble Time 2 or in the emulator
-yet** (tracked in [#1025](https://github.com/tjorim/worktime/issues/1025)). The Alloy APIs
-used here (Piu, `pebble/message`, `pebble/button`, `fetch()`, watch-side `localStorage`)
-follow the published [Pebble Developer docs](https://developer.repebble.com/guides/alloy/);
-expect some iteration once someone runs through the list below. Record any SDK
-compatibility changes here as they are found.
+The CI workflow now performs the build/emulator portion automatically, but a
+Pebble Time 2 run is still open (tracked in
+[#1025](https://github.com/tjorim/worktime/issues/1025)). Record any additional
+SDK or hardware compatibility changes here as they are found.
 
 Doable in the emulator ([`EMULATOR.md`](EMULATOR.md) has the commands):
 

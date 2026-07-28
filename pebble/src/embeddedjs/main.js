@@ -359,18 +359,22 @@ const message = new Message({
     const payload = this.read();
     const baseUrl = payload.get("API_BASE_URL");
     const token = payload.get("AUTH_TOKEN");
+    const nextBaseUrl = baseUrl ? baseUrl.replace(/\/$/, "") : apiBaseUrl;
+    const identityChanged =
+      nextBaseUrl !== apiBaseUrl || (token && token !== authToken);
+    if (identityChanged) {
+      // Either value can select a different account or deployment.
+      credentialGeneration += 1;
+      clearSnapshot();
+      dashboardIsLive = false;
+    }
     if (baseUrl) {
-      apiBaseUrl = baseUrl.replace(/\/$/, "");
+      apiBaseUrl = nextBaseUrl;
       localStorage.setItem("apiBaseUrl", apiBaseUrl);
     }
     if (token && token !== authToken) {
       authToken = token;
       localStorage.setItem("authToken", authToken);
-      // The credential may belong to a different account than the cached
-      // glance, and than any read still in flight.
-      credentialGeneration += 1;
-      clearSnapshot();
-      dashboardIsLive = false;
     }
     requestRefresh();
   },

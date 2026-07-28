@@ -357,3 +357,19 @@ test("a new pairing credential clears the cached glance", async () => {
   assert.equal(harness.requests[0].url, "https://other.test/api/pebble/dashboard");
   assert.equal(harness.requests[0].headers.Authorization, "Bearer wtpat_other");
 });
+
+test("a changed server clears a snapshot from the previous deployment", async () => {
+  const harness = createHarness({
+    connected: false,
+    storage: {
+      ...TOKEN,
+      lastDashboard: snapshot({ task: RUNNING }),
+    },
+  });
+  await harness.display();
+
+  await harness.configure({ API_BASE_URL: "https://other.test/" });
+
+  assert.equal(harness.stored.lastDashboard, undefined);
+  assert.equal(harness.labels.STATUS.string, "Phone offline");
+});

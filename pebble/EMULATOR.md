@@ -4,10 +4,9 @@ A runbook for the Emery QEMU emulator.
 
 **Provenance:** the toolchain findings here come from the sibling Daynest Pebble
 companion's emulator work — same SDK, same Alloy runtime, same emulator — and
-transfer directly. Worktime's own watchapp **has not been run in the emulator
-yet**; the checklist in [`README.md`](README.md) is still open. Treat everything
-below as "how to run it", not "results of running it", except where it says
-otherwise.
+transfer directly. Pebble CI now performs the build, install, screenshot, and
+rendered-screen check on every relevant change; the commands below are also
+useful for local diagnosis.
 
 ## What the emulator can and cannot prove
 
@@ -22,7 +21,7 @@ written after a successful read), and the mutation-replay guards. Watch-side
 `fetch()` never completes under QEMU. See [The `fetch()` dead
 end](#the-fetch-dead-end) for why, and don't spend a day rediscovering it.
 
-That gap is why [`tests/`](tests) exists: `node --test "tests/*.test.mjs"` runs
+That gap is why [`tests/`](tests) exists: `npm test` runs
 `src/embeddedjs/main.js` against stubbed Alloy globals — including four tests
 that drive it over real HTTP against [`scripts/mock-server.py`](scripts/mock-server.py) —
 and covers exactly the request, caching, and replay logic the emulator cannot

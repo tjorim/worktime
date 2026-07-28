@@ -15,7 +15,15 @@ import { createHarness } from "./harness.mjs";
 
 const SERVER = resolve(import.meta.dirname, "../scripts/mock-server.py");
 const TOKEN = "wtpat_test";
-const hasPython = spawnSync("python3", ["--version"]).status === 0;
+const python = [
+  process.env.PYTHON,
+  "python3",
+  resolve(import.meta.dirname, "../../backend/.venv/Scripts/python.exe"),
+  "python",
+]
+  .filter(Boolean)
+  .find((candidate) => spawnSync(candidate, ["--version"]).status === 0);
+const hasPython = Boolean(python);
 
 let server;
 let port;
@@ -54,7 +62,7 @@ before(async () => {
   if (!hasPython) return;
   workdir = mkdtempSync(join(tmpdir(), "pebble-live-"));
   port = await freePort();
-  server = spawn("python3", [SERVER, String(port), "--log", join(workdir, "requests.log")], {
+  server = spawn(python, [SERVER, String(port), "--log", join(workdir, "requests.log")], {
     stdio: "ignore",
   });
   for (let attempt = 0; attempt < 50; attempt += 1) {
