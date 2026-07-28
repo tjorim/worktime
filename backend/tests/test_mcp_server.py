@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from fastmcp.server.auth import AccessToken
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app.mcp_server import (
     McpAuthError,
     WorktimeMcpBackend,
+    _build_auth_provider,
     create_mcp_server,
 )
 from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
@@ -36,6 +38,23 @@ def _token_for_user(user_id: int, *, is_admin: bool = False) -> AccessToken:
 
 def _make_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(engine, expire_on_commit=False)
+
+
+def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monkeypatch) -> None:
+    monkeypatch.setenv("WORKTIME_MCP_BASE_URL", "https://api.example/mcp")
+    monkeypatch.setenv("WORKTIME_MCP_KEYCLOAK_REALM_URL", "https://auth.example/realms/worktime")
+    monkeypatch.setattr("app.mcp_server.settings.OIDC_AUDIENCE", "worktime")
+
+    with patch("app.mcp_server.KeycloakAuthProvider") as provider:
+        auth = _build_auth_provider()
+
+    assert auth is provider.return_value
+    provider.assert_called_once_with(
+        realm_url="https://auth.example/realms/worktime",
+        base_url="https://api.example/mcp",
+        required_scopes=[],
+        audience="worktime",
+    )
 
 
 async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) -> None:
