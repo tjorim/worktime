@@ -11,6 +11,8 @@ const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
 const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
 const mockAddAccessTokenExpiring = vi.fn();
 const mockRemoveAccessTokenExpiring = vi.fn();
+const mockAddAccessTokenExpired = vi.fn();
+const mockRemoveAccessTokenExpired = vi.fn();
 const mockAddSilentRenewError = vi.fn();
 const mockRemoveSilentRenewError = vi.fn();
 let mockOidcAuth: Record<string, unknown> = {
@@ -23,6 +25,8 @@ let mockOidcAuth: Record<string, unknown> = {
   events: {
     addAccessTokenExpiring: mockAddAccessTokenExpiring,
     removeAccessTokenExpiring: mockRemoveAccessTokenExpiring,
+    addAccessTokenExpired: mockAddAccessTokenExpired,
+    removeAccessTokenExpired: mockRemoveAccessTokenExpired,
     addSilentRenewError: mockAddSilentRenewError,
     removeSilentRenewError: mockRemoveSilentRenewError,
   },
@@ -78,6 +82,8 @@ describe("AuthContext", () => {
       events: {
         addAccessTokenExpiring: mockAddAccessTokenExpiring,
         removeAccessTokenExpiring: mockRemoveAccessTokenExpiring,
+        addAccessTokenExpired: mockAddAccessTokenExpired,
+        removeAccessTokenExpired: mockRemoveAccessTokenExpired,
         addSilentRenewError: mockAddSilentRenewError,
         removeSilentRenewError: mockRemoveSilentRenewError,
       },
@@ -224,7 +230,9 @@ describe("AuthContext", () => {
       expect(screen.getAllByText("Sign-in failed: Silent renew failed")).toHaveLength(2);
     });
 
-    it("warns when the access token is about to expire", async () => {
+    it("stays silent while a token is merely approaching expiry", async () => {
+      // automaticSilentRenew re-arms this event once per token, so toasting here
+      // would nag for the whole session while nothing is actually wrong.
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
 
       renderWithProviders(<AuthStatusDisplay />);
@@ -233,12 +241,29 @@ describe("AuthContext", () => {
       expect(handler).toBeTypeOf("function");
       handler();
 
-      expect(
-        await screen.findByText("Your session will expire soon. Please save your work and sign in again if prompted."),
-      ).toBeInTheDocument();
+      expect(await screen.findByTestId("is-authenticated")).toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
-    it("shows an error when silent token renewal fails", async () => {
+    it("warns with a sign-in action once the access token has expired", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+
+      renderWithProviders(<AuthStatusDisplay />);
+
+      const handler = mockAddAccessTokenExpired.mock.calls.at(-1)?.[0];
+      expect(handler).toBeTypeOf("function");
+      handler();
+
+      expect(
+        await screen.findByText("Your session has expired. Please sign in again."),
+      ).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Sign In" }));
+      expect(mockSigninRedirect).toHaveBeenCalled();
+    });
+
+    it("warns when silent token renewal fails", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
 
       renderWithProviders(<AuthStatusDisplay />);
@@ -257,11 +282,13 @@ describe("AuthContext", () => {
 
       const { unmount } = renderWithProviders(<AuthStatusDisplay />);
       const expiringHandler = mockAddAccessTokenExpiring.mock.calls.at(-1)?.[0];
+      const expiredHandler = mockAddAccessTokenExpired.mock.calls.at(-1)?.[0];
       const renewErrorHandler = mockAddSilentRenewError.mock.calls.at(-1)?.[0];
 
       unmount();
 
       expect(mockRemoveAccessTokenExpiring).toHaveBeenCalledWith(expiringHandler);
+      expect(mockRemoveAccessTokenExpired).toHaveBeenCalledWith(expiredHandler);
       expect(mockRemoveSilentRenewError).toHaveBeenCalledWith(renewErrorHandler);
     });
   });

@@ -973,7 +973,6 @@
   "login_error_rate_limited": "Too many login attempts. Please try again later.",
   "login_error_generic": "Login failed. Please try again.",
   "auth_session_expired": "Your session has expired. Please sign in again.",
-  "auth_access_token_expiring": "Your session will expire soon. Please save your work and sign in again if prompted.",
   "auth_silent_renew_failed": "Your session could not be refreshed. Please sign in again to keep syncing changes.",
   "auth_error_forbidden": "Access denied. You do not have permission to perform this action.",
   "auth_error_oidc": "Sign-in failed: {message}",
@@ -1182,6 +1181,7 @@
   "auth_callback_description": "Please wait while Worktime finishes connecting your account.",
   "pebble_pair_title": "Pair Pebble Watch",
   "pebble_pair_description": "Sign in to link your Pebble companion app to your account.",
+  "pebble_pair_signing_in": "Taking you to sign in...",
   "pebble_pair_connecting": "Connecting your watch...",
   "pebble_pair_retry": "Retry pairing",
   "pebble_pair_close_instruction": "You can close this window and return to your watch."

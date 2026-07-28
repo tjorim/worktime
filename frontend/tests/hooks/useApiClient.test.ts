@@ -76,7 +76,10 @@ describe("useApiClient", () => {
     expect(auth.logout).not.toHaveBeenCalled();
   });
 
-  it("logs out and shows an error when a request is forbidden", async () => {
+  it("reports a forbidden request without ending the session", async () => {
+    // 403 is a permission boundary (admin-only endpoints, user-id mismatch, the
+    // OIDC-only surfaces a Pebble token cannot reach), not an invalid session —
+    // signing the user out of the whole app would be the wrong remedy.
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onForbidden();
       throw new Error("Forbidden");
@@ -85,8 +88,8 @@ describe("useApiClient", () => {
 
     await expect(result.current("/api/data")).rejects.toThrow("Forbidden");
 
-    expect(auth.logout).toHaveBeenCalledOnce();
     expect(toast.showError).toHaveBeenCalledOnce();
+    expect(auth.logout).not.toHaveBeenCalled();
     expect(auth.triggerLogin).not.toHaveBeenCalled();
   });
 });

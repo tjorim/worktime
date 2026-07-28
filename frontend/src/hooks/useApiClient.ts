@@ -20,14 +20,14 @@ export interface AuthenticatedRequestInit extends RequestInit {
  * - Injects the OIDC Bearer token into the `Authorization` header.
  * - Redirects to the login page on 401 Unauthorized and shows a session-expired toast.
  *   This avoids also starting logout, so only one OIDC navigation is triggered.
- * - Shows an error toast and clears auth on 403 Forbidden.
+ * - Shows an error toast on 403 Forbidden, keeping the session intact.
  *
  * Must be used inside AuthProvider and ToastProvider.
  *
  * @returns `apiFetch(url, init?)` — a fetch wrapper with error handling.
  */
 export function useApiClient() {
-  const { triggerLogin, logout, getAccessToken } = useAuth();
+  const { triggerLogin, getAccessToken } = useAuth();
   const { showError, showWarning } = useToast();
 
   const authenticatedFetch = useCallback(
@@ -51,14 +51,18 @@ export function useApiClient() {
               triggerLogin();
             }
           },
+          // 403 is an authorization boundary, not a broken session: the backend
+          // returns it for admin-only endpoints, user-id mismatches, and the
+          // OIDC-only surfaces a Pebble token cannot reach. The session is still
+          // valid, so signing the user out of the whole app is the wrong remedy —
+          // report the denial and leave them where they are.
           onForbidden: () => {
-            logout();
             showError(m.auth_error_forbidden());
           },
         },
       );
     },
-    [triggerLogin, logout, getAccessToken, showError, showWarning],
+    [triggerLogin, getAccessToken, showError, showWarning],
   );
 
   return authenticatedFetch;
