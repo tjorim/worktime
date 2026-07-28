@@ -5,7 +5,8 @@ on:
     paths:
       - "pebble/**"
       - "frontend/src/pages/PebblePairPage.tsx"
-      - "backend/app/routers/pebble.py"
+      - "frontend/src/router.tsx"
+      - "backend/app/routers/access_tokens.py"
       - "backend/app/services/access_token_service.py"
       - ".github/workflows/pebble.yml"
   push:
@@ -13,7 +14,8 @@ on:
     paths:
       - "pebble/**"
       - "frontend/src/pages/PebblePairPage.tsx"
-      - "backend/app/routers/pebble.py"
+      - "frontend/src/router.tsx"
+      - "backend/app/routers/access_tokens.py"
       - "backend/app/services/access_token_service.py"
       - ".github/workflows/pebble.yml"
 

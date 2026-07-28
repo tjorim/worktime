@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import AccessToken
+from app.database.models import AccessToken, User
 from app.schemas import AccessTokenCreate
 from app.services.db_service import NotFoundError
 
@@ -46,6 +46,11 @@ async def rotate_pebble_access_token(
     user_id: int,
 ) -> tuple[AccessToken, str]:
     """Replace the auto-paired Pebble token and return its raw value once."""
+    # Serialize rotations for one user. Without this lock, overlapping
+    # transactions can both delete before either inserts its replacement.
+    await session.execute(
+        select(User.id).where(User.id == user_id).with_for_update()
+    )
     await session.execute(
         delete(AccessToken).where(
             AccessToken.user_id == user_id,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -12,7 +13,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.requests import Request
 
 from app.database.models import AccessToken
@@ -111,6 +112,43 @@ async def test_rotate_pebble_access_token_replaces_previous_pairing(
     )
     assert [token.id for token in tokens.scalars()] == [second.id]
     assert first.id != second.id
+
+
+async def test_concurrent_pebble_rotations_leave_one_active_token(
+    test_db: AsyncEngine,
+) -> None:
+    session_factory = async_sessionmaker(test_db, expire_on_commit=False)
+    async with session_factory() as setup_session:
+        user = await create_user(
+            setup_session,
+            UserCreate(
+                username="concurrent-pebble-pair-owner",
+                display_name="Concurrent Pebble Pair Owner",
+            ),
+        )
+        user_id = user.id
+
+    async def rotate() -> str:
+        async with session_factory() as session:
+            _token, raw_token = await rotate_pebble_access_token(session, user_id)
+            return raw_token
+
+    raw_tokens = await asyncio.gather(rotate(), rotate())
+
+    async with session_factory() as verification_session:
+        tokens = await verification_session.execute(
+            select(AccessToken).where(
+                AccessToken.user_id == user_id,
+                AccessToken.name == "Pebble watch",
+            )
+        )
+        assert len(list(tokens.scalars())) == 1
+
+        authenticated = [
+            await authenticate_access_token(verification_session, raw_token)
+            for raw_token in raw_tokens
+        ]
+        assert sum(token is not None for token in authenticated) == 1
 
 
 async def test_get_bearer_principal_accepts_scoped_delegated_token(db_session: AsyncSession) -> None:
