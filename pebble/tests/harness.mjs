@@ -9,6 +9,8 @@ import { createContext, runInContext } from "node:vm";
 
 const MAIN_PATH = resolve(import.meta.dirname, "../src/embeddedjs/main.js");
 
+const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+
 // The watch bundle imports Alloy modules by bare specifier; the stubs below
 // stand in for them, so the import statements are dropped before evaluation.
 function stripImports(source) {
@@ -18,6 +20,7 @@ function stripImports(source) {
 export function createHarness({ connected = true, storage = {} } = {}) {
   const store = new Map(Object.entries(storage));
   const requests = [];
+  const inFlight = new Set();
   const listeners = new Map();
   const hooks = {};
   let respond = () => ({ status: 200, body: {} });
@@ -61,14 +64,21 @@ export function createHarness({ connected = true, storage = {} } = {}) {
       connected: { pebblekit: connected },
       addEventListener: (type, handler) => listeners.set(type, handler),
     },
-    fetch: async (url, options = {}) => {
+    fetch: (url, options = {}) => {
       requests.push({ url, method: options.method, headers: options.headers });
-      const { status, body } = respond(url, options);
-      return {
-        status,
-        ok: status >= 200 && status < 300,
-        json: async () => body,
-      };
+      const work = (async () => {
+        // Awaited so a responder can proxy to a real server (see live.test.mjs).
+        const { status, body } = await respond(url, options);
+        return {
+          status,
+          ok: status >= 200 && status < 300,
+          json: async () => body,
+        };
+      })();
+      inFlight.add(work);
+      const forget = () => inFlight.delete(work);
+      work.then(forget, forget);
+      return work;
     },
     Button: class Button {
       constructor(dict) {
@@ -89,10 +99,22 @@ export function createHarness({ connected = true, storage = {} } = {}) {
     filename: "main.js",
   });
 
-  // Alloy resolves and dispatches on its own event loop; here every stubbed
-  // response is already settled, so draining the microtask queue is enough.
-  const settle = async () => {
-    for (let i = 0; i < 50; i += 1) await Promise.resolve();
+  // Alloy resolves and dispatches on its own event loop. Wait for the app to
+  // go quiet: no request outstanding, and nothing new started after a full
+  // turn. The deadline only guards a responder that never answers.
+  const settle = async (timeoutMs = 2000) => {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      if (inFlight.size) {
+        await Promise.race([Promise.allSettled([...inFlight]), pause(5)]);
+      }
+      for (let i = 0; i < 20; i += 1) await Promise.resolve();
+      if (!inFlight.size) {
+        await pause(0);
+        if (!inFlight.size) return;
+      }
+      if (Date.now() > deadline) return;
+    }
   };
 
   return {
