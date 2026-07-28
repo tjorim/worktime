@@ -20,6 +20,7 @@ from app.services.access_token_service import (
     create_access_token,
     list_access_tokens_for_user,
     revoke_access_token,
+    rotate_pebble_access_token,
 )
 from app.services.db_service import NotFoundError
 
@@ -35,6 +36,28 @@ async def create_access_token_endpoint(
 ) -> AccessTokenCreated:
     response.headers["Cache-Control"] = "no-store"
     token, raw_token = await create_access_token(session, principal.user_id, payload)
+    return AccessTokenCreated(
+        id=token.id,
+        name=token.name,
+        token=raw_token,
+        scopes=cast(list[AccessTokenScope], token.scopes),
+        created_at=token.created_at,
+    )
+
+
+@router.post(
+    "/pebble",
+    response_model=AccessTokenCreated,
+    status_code=status.HTTP_201_CREATED,
+)
+async def pair_pebble_endpoint(
+    response: Response,
+    principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
+    session: AsyncSession = Depends(get_session),
+) -> AccessTokenCreated:
+    """Rotate the user's narrowly scoped Pebble credential for the pairing webview."""
+    response.headers["Cache-Control"] = "no-store"
+    token, raw_token = await rotate_pebble_access_token(session, principal.user_id)
     return AccessTokenCreated(
         id=token.id,
         name=token.name,

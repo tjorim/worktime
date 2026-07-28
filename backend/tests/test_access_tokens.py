@@ -11,9 +11,11 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from app.database.models import AccessToken
 from app.routers.auth import (
     PEBBLE_READ_SCOPE,
     PEBBLE_WRITE_SCOPE,
@@ -26,6 +28,7 @@ from app.services.access_token_service import (
     authenticate_access_token,
     create_access_token,
     revoke_access_token,
+    rotate_pebble_access_token,
 )
 from app.services.db_service import NotFoundError, create_user
 
@@ -82,6 +85,32 @@ async def test_service_revoke_rejects_other_users_token(db_session: AsyncSession
     )
     with pytest.raises(NotFoundError):
         await revoke_access_token(db_session, user_id=other.id, token_id=token.id)
+
+
+async def test_rotate_pebble_access_token_replaces_previous_pairing(
+    db_session: AsyncSession,
+) -> None:
+    user = await create_user(
+        db_session,
+        UserCreate(username="pebble-pair-owner", display_name="Pebble Pair Owner"),
+    )
+
+    first, first_raw = await rotate_pebble_access_token(db_session, user.id)
+    second, second_raw = await rotate_pebble_access_token(db_session, user.id)
+
+    assert second_raw != first_raw
+    assert second.scopes == [PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE]
+    assert await authenticate_access_token(db_session, first_raw) is None
+    assert await authenticate_access_token(db_session, second_raw) is not None
+
+    tokens = await db_session.execute(
+        select(AccessToken).where(
+            AccessToken.user_id == user.id,
+            AccessToken.name == "Pebble watch",
+        )
+    )
+    assert [token.id for token in tokens.scalars()] == [second.id]
+    assert first.id != second.id
 
 
 async def test_get_bearer_principal_accepts_scoped_delegated_token(db_session: AsyncSession) -> None:
@@ -228,6 +257,29 @@ def test_access_token_endpoint_persists_explicit_pebble_scopes(
         PEBBLE_READ_SCOPE,
         PEBBLE_WRITE_SCOPE,
     ]
+
+
+def test_pebble_pairing_endpoint_rotates_scoped_credential(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "pebble-pair-http")
+    headers = auth_headers(owner_id)
+
+    first = db_client.post("/api/access-tokens/pebble", headers=headers)
+    second = db_client.post("/api/access-tokens/pebble", headers=headers)
+
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
+    assert first.headers["cache-control"] == "no-store"
+    assert second.json()["token"] != first.json()["token"]
+    assert second.json()["scopes"] == [PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE]
+
+    listed = db_client.get("/api/access-tokens", headers=headers).json()
+    assert listed["total"] == 1
+    assert listed["items"][0]["name"] == "Pebble watch"
 
 
 def test_access_token_endpoint_rejects_empty_or_unknown_scopes(

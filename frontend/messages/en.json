@@ -1179,5 +1179,10 @@
   "gantt_logged_unlink_entry_aria": "Unlink {name} from this task",
   "auth_callback_spinner": "Completing sign-in...",
   "auth_callback_title": "Completing sign-in",
-  "auth_callback_description": "Please wait while Worktime finishes connecting your account."
+  "auth_callback_description": "Please wait while Worktime finishes connecting your account.",
+  "pebble_pair_title": "Pair Pebble Watch",
+  "pebble_pair_description": "Sign in to link your Pebble companion app to your account.",
+  "pebble_pair_connecting": "Connecting your watch...",
+  "pebble_pair_retry": "Retry pairing",
+  "pebble_pair_close_instruction": "You can close this window and return to your watch."
 }

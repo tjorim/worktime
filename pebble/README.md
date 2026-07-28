@@ -14,11 +14,10 @@ official phone-side `@moddable/pebbleproxy` package. So:
 - **`src/pkjs/index.js`** — runs on the phone, inside the Pebble mobile app.
   Hosts the Alloy network proxy and relays runtime configuration to the
   watch via AppMessage.
-- **`frontend/public/pebble-config.html`** — the configuration webview, opened via `Pebble.openURL()` when
-  the user taps the app's settings in the Pebble mobile app. Collects the
-  Worktime server URL and a personal access token, and hands them back to
-  `pkjs` by navigating to `pebblejs://close#<data>`. The watch persists both
-  values in `localStorage`.
+- **`frontend/src/pages/PebblePairPage.tsx`** — the authenticated
+  configuration webview opened via `Pebble.openURL()` when the user taps the
+  app's settings in the Pebble mobile app. It rotates a dedicated Pebble
+  credential and returns it to `pkjs` through `pebblejs://close#<data>`.
 
 Authentication uses a **personal access token** (`Settings > Account > API tokens` in the Worktime web app),
 not the OIDC session the web app uses — Pebble's constrained JS runtime has no good way to run an OAuth
@@ -46,14 +45,14 @@ pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 
 ## Configuration
 
-1. In the Worktime web app: **Settings > Account > API tokens** > generate a
-   Pebble token (for example, name it "Pebble"). The web app requests both
-   required scopes: `pebble:read` and `pebble:write`.
-2. On the phone, open the Worktime app's settings from the Pebble mobile app.
-3. Enter your Worktime server URL and paste the token, then save.
+1. On the phone, open the Worktime app's settings from the Pebble mobile app.
+2. Sign in to Worktime in the configuration webview.
+3. Worktime rotates a credential containing only `pebble:read` and
+   `pebble:write`, closes the webview, and relays it to the watch.
 
-`CONFIG_URL` in `src/pkjs/index.js` defaults to `https://worktime.tjor.im/pebble-config.html`. If
-self-hosting elsewhere, change it to your deployment's URL before building.
+`CONFIG_URL` in `src/pkjs/index.js` defaults to
+`https://worktime.tjor.im/pebble-pair`. If self-hosting elsewhere, change it to
+your deployment's URL before building.
 
 ## Known limitations
 

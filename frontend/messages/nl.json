@@ -1157,5 +1157,10 @@
   "gantt_logged_hours_minutes": "{hours} u {minutes} min",
   "auth_callback_spinner": "Aanmelden afronden...",
   "auth_callback_title": "Aanmelden afronden",
-  "auth_callback_description": "Even geduld terwijl Worktime klaar is met het verbinden van uw account."
+  "auth_callback_description": "Even geduld terwijl Worktime klaar is met het verbinden van uw account.",
+  "pebble_pair_title": "Pebble-horloge koppelen",
+  "pebble_pair_description": "Meld u aan om de Pebble-companion-app aan uw account te koppelen.",
+  "pebble_pair_connecting": "Uw horloge wordt verbonden...",
+  "pebble_pair_retry": "Opnieuw koppelen",
+  "pebble_pair_close_instruction": "U kunt dit venster sluiten en teruggaan naar uw horloge."
 }

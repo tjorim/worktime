@@ -35,8 +35,12 @@ if (manifest.modules?.["*"] !== "./main") throw new Error("Embedded main module 
 
 const watchSource = readFileSync(resolve(root, "src/embeddedjs/main.js"), "utf8");
 const phoneSource = readFileSync(resolve(root, "src/pkjs/index.js"), "utf8");
-const configSource = readFileSync(
-  resolve(repoRoot, "frontend/public/pebble-config.html"),
+const pairingSource = readFileSync(
+  resolve(repoRoot, "frontend/src/pages/PebblePairPage.tsx"),
+  "utf8",
+);
+const tokenServiceSource = readFileSync(
+  resolve(repoRoot, "backend/app/services/access_token_service.py"),
   "utf8",
 );
 if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy fetch()");
@@ -52,12 +56,12 @@ for (const path of [
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
 }
-if (!configSource.includes("!/^https:\\/\\//i.test(apiBaseUrl)")) {
-  throw new Error("Configuration must reject plaintext HTTP server URLs");
+if (!phoneSource.includes("/pebble-pair") || !pairingSource.includes("pebblejs://close")) {
+  throw new Error("Phone and web code must use the authenticated Pebble pairing flow");
 }
 for (const scope of ["pebble:read", "pebble:write"]) {
-  if (!configSource.includes(scope)) {
-    throw new Error(`Configuration must document required scope: ${scope}`);
+  if (!tokenServiceSource.includes(scope)) {
+    throw new Error(`Pairing token must include required scope: ${scope}`);
   }
 }
 
