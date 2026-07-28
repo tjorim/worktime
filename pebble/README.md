@@ -34,14 +34,27 @@ The watch uses this narrow API surface:
 
 ## Building and installing
 
-Requires the [Alloy-enabled Pebble SDK/CLI](https://developer.repebble.com/sdk/). This repo does not vendor
-that tooling, so it isn't run in CI:
+Requires the [Alloy-enabled Pebble SDK/CLI](https://developer.repebble.com/sdk/).
+The repo does not vendor it; Pebble CI installs it with `uv`, builds the `.pbw`,
+boots Emery, and checks a screenshot:
 
 ```bash
 cd pebble
 pebble build
 pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 ```
+
+The checks that also run without the SDK are:
+
+```bash
+cd pebble
+node scripts/validate.mjs         # package contract
+npm test                         # watch-app logic against stubbed Alloy globals
+```
+
+Without a watch, [`EMULATOR.md`](EMULATOR.md) covers the Emery QEMU emulator — what it can
+and cannot prove, how to drive the app, and the mock backend in
+[`scripts/mock-server.py`](scripts/mock-server.py).
 
 ## Configuration
 
@@ -54,13 +67,82 @@ pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 `https://worktime.tjor.im/pebble-pair`. If self-hosting elsewhere, change it to
 your deployment's URL before building.
 
+## Offline behavior
+
+The watch caches the **last successful dashboard read** (`lastDashboard` in the watch's
+`localStorage`: the shift line, the running task's label and start time, and the time of
+the read). While the phone link is down — or a request fails — the app keeps showing that
+glance, with the bottom line replaced by the reason and the time it was read, for example
+`Phone offline · 08:12`. The elapsed timer keeps counting from the cached start time, so it
+is an estimate rather than a confirmed value. Snapshots older than 12 hours —
+or stamped in the future after the watch clock moves back — are discarded.
+
+A new credential or server URL clears the snapshot because it may select a
+different account or deployment. A read still in flight for the previous
+identity is discarded when it lands rather than being cached or rendered, and
+the refresh owed to the new identity runs once the in-flight request finishes,
+so state cannot mix across accounts or deployments.
+
+The cache is **display-only** — clocking in and out remains online-only, and there is no
+offline queue:
+
+- SELECT while the phone is disconnected shows the cached glance and does nothing else.
+- If the rendered state came from the cache (or from a failed read), SELECT re-reads
+  `/api/pebble/dashboard` first and acts only on that fresh result, so a stale task can
+  never decide between clock-in and clock-out.
+- After a mutation, the cached state is marked non-authoritative until the follow-up read
+  lands, so a reconnect never replays a request that already succeeded.
+- A `409` from either action means the server moved on (clocked in or out elsewhere); the
+  watch re-reads the dashboard rather than retrying the mutation.
+
+All watch → server work is serialized by a single in-flight guard, so repeated SELECT
+presses are dropped while a clock mutation is running rather than queued behind it.
+
+## Validation status
+
+Three layers, none of which substitutes for the next:
+
+| Layer | Covers | Where |
+|-------|--------|-------|
+| CI logic | Package contract; the app's request, caching, and replay logic against stubbed Alloy globals, including four tests driving it over real HTTP against the mock backend | `scripts/validate.mjs`, `tests/` |
+| CI emulator | SDK build, startup, Piu layout/fonts, and a rendered-screen check. **Not** anything needing HTTP — watch-side `fetch()` never completes under QEMU | `.github/workflows/pebble.yml`, [`EMULATOR.md`](EMULATOR.md) |
+| Hardware | Everything at once, and the only place the phone proxy runs for real | — |
+
+The CI workflow now performs the build/emulator portion automatically, but a
+Pebble Time 2 run is still open (tracked in
+[#1025](https://github.com/tjorim/worktime/issues/1025)). Record any additional
+SDK or hardware compatibility changes here as they are found.
+
+Doable in the emulator ([`EMULATOR.md`](EMULATOR.md) has the commands):
+
+- [ ] `pebble build` succeeds against the current SDK.
+- [ ] The watchapp launches and stays running on Emery.
+- [ ] Shift, status, timer, and hint labels render and fit; the `Gothic` styles resolve.
+- [ ] `pebble send-app-message` configuration is stored and survives a restart.
+- [ ] Disconnecting Bluetooth shows the `Phone offline` path (seed a cached snapshot first
+      to see the stale glance — `fetch()` never populates one under QEMU).
+
+Hardware only:
+
+- [ ] App installs and starts on a Pebble Time 2.
+- [ ] Configuration opens from the stock Pebble phone app, and the paired credential reaches
+      the watch.
+- [ ] `GET /api/pebble/dashboard` loads through the phone proxy with a `pebble:read` token.
+- [ ] The elapsed timer counts from the task's `start_time` (a `Date` parse failure on the
+      backend's `+00:00` offsets would show up here).
+- [ ] UP refreshes; SELECT clocks in and out.
+- [ ] Repeated SELECT presses do not submit overlapping mutations — point the watch at
+      `scripts/mock-server.py --latency 3 --host <lan-ip>` and check `requests.log` shows one
+      `POST clock-in`.
+- [ ] 401/403 shows `Sign-in needed`; 429/5xx shows `Try again later (<status>)` and stays
+      retryable (`--fail-with 503`).
+- [ ] Airplane mode shows the cached glance with its timestamp, and SELECT is a no-op until
+      the phone reconnects.
+
 ## Known limitations
 
-- Not build- or device-tested: this environment has no Pebble SDK/emulator, so the Alloy APIs used here
-  (Piu, `pebble/message`, `pebble/button`, `fetch()`) are implemented against the published
-  [Pebble Developer docs](https://developer.repebble.com/guides/alloy/) but haven't been run on real
-  hardware or the emulator. Expect some iteration once tested on-device.
-- Layout is a simple centered stack (`left: 0, right: 0`); it isn't tuned separately for the round Gabbro
-  (Pebble Round 2) display.
+- Layout is a simple centered stack (`left: 4, right: 4`); it isn't tuned separately for the round
+  Gabbro (Pebble Round 2) display.
 - Clock actions use server time and the fixed task label "Working". Configure
   labels or edit task details later in the web or Android app.
+- No offline queue: see "Offline behavior" above.

@@ -10,6 +10,8 @@ const requiredFiles = [
   "src/embeddedjs/main.js",
   "src/embeddedjs/manifest.json",
   "src/pkjs/index.js",
+  "scripts/mock-server.py",
+  "scripts/check-screenshot.py",
 ];
 
 for (const file of requiredFiles) {
@@ -43,18 +45,37 @@ const tokenServiceSource = readFileSync(
   resolve(repoRoot, "backend/app/services/access_token_service.py"),
   "utf8",
 );
+const mockSource = readFileSync(resolve(root, "scripts/mock-server.py"), "utf8");
+const routerSource = readFileSync(resolve(repoRoot, "backend/app/routers/pebble.py"), "utf8");
+
 if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy fetch()");
-if (!watchSource.includes("/api/pebble/dashboard")) {
-  throw new Error("Watch code must use the scoped Pebble dashboard");
-}
-for (const path of [
-  "/api/pebble/actions/clock-in",
-  "/api/pebble/actions/clock-out",
+// The watch, the mock backend used for emulator/hardware runs, and the router
+// must agree on every path; a silent drift there is invisible until a device test.
+for (const [path, routerPath] of [
+  ["/api/pebble/dashboard", '"/dashboard"'],
+  ["/api/pebble/actions/clock-in", '"/actions/clock-in"'],
+  ["/api/pebble/actions/clock-out", '"/actions/clock-out"'],
 ]) {
-  if (!watchSource.includes(path)) throw new Error(`Missing clock action: ${path}`);
+  if (!watchSource.includes(path)) throw new Error(`Watch code is missing ${path}`);
+  if (!mockSource.includes(path)) throw new Error(`Mock server is missing ${path}`);
+  if (!routerSource.includes(routerPath)) {
+    throw new Error(`Pebble router no longer declares ${routerPath}`);
+  }
+}
+if (!watchSource.includes("localStorage.setItem(SNAPSHOT_KEY") || !watchSource.includes("loadSnapshot(")) {
+  throw new Error("Watch code must persist and restore the offline dashboard snapshot");
+}
+if (!watchSource.includes("runExclusive(toggleClock)")) {
+  throw new Error("Clock actions must go through the exclusive-action guard");
 }
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
+}
+if (/,\s*[)\]]/.test(phoneSource)) {
+  throw new Error("Trailing comma in src/pkjs/index.js: the SDK's PKJS bundler cannot parse it");
+}
+if (/Pebble\.sendAppMessage\s*\(/.test(phoneSource)) {
+  throw new Error("Use moddableProxy.sendAppMessage() so sends are queued behind proxy traffic");
 }
 if (!phoneSource.includes("/pebble-pair") || !pairingSource.includes("pebblejs://close")) {
   throw new Error("Phone and web code must use the authenticated Pebble pairing flow");

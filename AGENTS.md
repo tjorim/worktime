@@ -4,8 +4,9 @@
 
 - `frontend/` contains the web app
 - `backend/` contains the FastAPI service
-- `pebble/` contains the Pebble (Alloy) companion watch app — see `pebble/README.md`. Not built or tested
-  in CI; requires the Pebble SDK/CLI, which isn't vendored in this repo.
+- `pebble/` contains the Pebble (Alloy) companion watch app — see `pebble/README.md`.
+  CI installs the Pebble SDK, builds the package, boots it on Emery, checks a
+  screenshot, and runs the watch-logic tests.
 - Production hosting for `worktime.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
 - Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/worktime`
 
