@@ -26,7 +26,6 @@ interface SettingsAccountSectionProps {
   onSaveProfile: () => void;
   onDeleteAccount: () => void;
   onLogout: () => void;
-  onSignup: () => void;
   onLogin: () => void;
 }
 
@@ -49,7 +48,6 @@ export function SettingsAccountSection({
   onSaveProfile,
   onDeleteAccount,
   onLogout,
-  onSignup,
   onLogin,
 }: SettingsAccountSectionProps) {
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
@@ -195,11 +193,7 @@ export function SettingsAccountSection({
                 </div>
               </div>
               <div className="d-flex gap-2 flex-wrap">
-                <Button variant="primary" size="sm" onClick={onSignup}>
-                  <i className="bi bi-person-plus me-1"></i>
-                  {m.account_connect_btn()}
-                </Button>
-                <Button variant="outline-primary" size="sm" onClick={onLogin}>
+                <Button variant="primary" size="sm" onClick={onLogin}>
                   <i className="bi bi-box-arrow-in-right me-1"></i>
                   {m.account_sign_in_btn()}
                 </Button>

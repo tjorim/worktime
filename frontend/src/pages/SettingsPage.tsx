@@ -184,8 +184,7 @@ export function SettingsContent({
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
-  const { isAuthenticated, isValidating, userId, displayName, triggerLogin, triggerSignup, logout } =
-    useAuth();
+  const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
   const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter, triggerPull } =
     useOngoingSyncContext();
   const {
@@ -351,7 +350,6 @@ export function SettingsContent({
           deleteAccountError={deleteAccountError}
           onDeleteAccount={() => void handleDeleteAccount()}
           onLogout={logout}
-          onSignup={triggerSignup}
           onLogin={triggerLogin}
         />
         <SettingsSyncSection
