@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,7 @@ from app.services.db_service import NotFoundError
 
 TOKEN_PREFIX = "wtpat_"
 _TOKEN_PREVIEW_LENGTH = 4
+_LAST_USED_UPDATE_INTERVAL = timedelta(minutes=15)
 
 
 def _hash_token(raw_token: str) -> str:
@@ -63,6 +64,13 @@ async def authenticate_access_token(session: AsyncSession, raw_token: str) -> Ac
     token = result.scalar_one_or_none()
     if token is None:
         return None
-    token.last_used_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    last_used_at = token.last_used_at
+    if last_used_at is not None:
+        if last_used_at.tzinfo is None:
+            last_used_at = last_used_at.replace(tzinfo=UTC)
+        if now - last_used_at < _LAST_USED_UPDATE_INTERVAL:
+            return token
+    token.last_used_at = now
     await session.commit()
     return token

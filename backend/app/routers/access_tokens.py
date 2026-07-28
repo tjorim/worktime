@@ -21,9 +21,11 @@ router = APIRouter(prefix="/access-tokens", tags=["Access Tokens"])
 @router.post("", response_model=AccessTokenCreated, status_code=status.HTTP_201_CREATED)
 async def create_access_token_endpoint(
     payload: AccessTokenCreate,
+    response: Response,
     principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
     session: AsyncSession = Depends(get_session),
 ) -> AccessTokenCreated:
+    response.headers["Cache-Control"] = "no-store"
     token, raw_token = await create_access_token(session, principal.user_id, payload)
     return AccessTokenCreated(
         id=token.id, name=token.name, token=raw_token, created_at=token.created_at

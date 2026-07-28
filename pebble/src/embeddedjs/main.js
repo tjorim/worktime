@@ -130,6 +130,9 @@ async function apiRequest(method, path, body) {
   if (response.status === 401 || response.status === 403) {
     throw new Error("Sign-in needed");
   }
+  if (response.status === 429 || response.status >= 500) {
+    throw new Error(`Try again later (${response.status})`);
+  }
   if (!response.ok) throw new Error(`Error ${response.status}`);
   return response.status === 204 ? null : response.json();
 }

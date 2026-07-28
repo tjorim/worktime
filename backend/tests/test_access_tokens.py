@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -25,6 +28,20 @@ def _fake_request() -> Request:
     return Request(scope={"type": "http", "headers": []})
 
 
+async def test_authentication_throttles_recent_activity_write() -> None:
+    token = SimpleNamespace(last_used_at=datetime.now(UTC))
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = token
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=result)
+    session.commit = AsyncMock()
+
+    authenticated = await authenticate_access_token(session, "wtpat_token")
+
+    assert authenticated is token
+    session.commit.assert_not_awaited()
+
+
 async def test_service_create_authenticate_and_revoke_round_trip(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="pat-owner", display_name="Pat Owner"))
 
@@ -37,6 +54,11 @@ async def test_service_create_authenticate_and_revoke_round_trip(db_session: Asy
     assert authenticated is not None
     assert authenticated.id == token.id
     assert authenticated.last_used_at is not None
+    first_used_at = authenticated.last_used_at
+
+    authenticated_again = await authenticate_access_token(db_session, raw_token)
+    assert authenticated_again is not None
+    assert authenticated_again.last_used_at == first_used_at
 
     assert await authenticate_access_token(db_session, "wtpat_not-a-real-token") is None
 
@@ -115,6 +137,7 @@ def test_access_token_lifecycle_over_http(
 
     created = db_client.post("/api/access-tokens", json={"name": "Pebble"}, headers=headers)
     assert created.status_code == 201, created.text
+    assert created.headers["cache-control"] == "no-store"
     body = created.json()
     assert body["token"].startswith("wtpat_")
     assert body["name"] == "Pebble"
