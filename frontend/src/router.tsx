@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter } from "@tanstack/react-rout
 import { AppLayout } from "@/components/AppLayout";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { HomePage } from "@/pages/HomePage";
+import { PebblePairPage } from "@/pages/PebblePairPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
@@ -52,6 +53,12 @@ const privacyRoute = createRoute({
   component: PrivacyPage,
 });
 
+const pebblePairRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/pebble-pair",
+  component: PebblePairPage,
+});
+
 const authCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/auth/callback",
@@ -68,6 +75,7 @@ const routeTree = rootRoute.addChildren([
   homeRoute,
   settingsRoute,
   privacyRoute,
+  pebblePairRoute,
   authCallbackRoute,
   silentRenewCallbackRoute,
 ]);

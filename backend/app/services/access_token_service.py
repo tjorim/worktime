@@ -6,14 +6,15 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import AccessToken
+from app.database.models import AccessToken, User
 from app.schemas import AccessTokenCreate
 from app.services.db_service import NotFoundError
 
 TOKEN_PREFIX = "wtpat_"
+PEBBLE_PAIR_TOKEN_NAME = "Pebble watch"
 _TOKEN_PREVIEW_LENGTH = 4
 _LAST_USED_UPDATE_INTERVAL = timedelta(minutes=15)
 
@@ -35,9 +36,36 @@ async def create_access_token(
         scopes=list(payload.scopes),
     )
     session.add(token)
-    await session.commit()
+    await session.flush()
     await session.refresh(token)
+    await session.commit()
     return token, raw_token
+
+
+async def rotate_pebble_access_token(
+    session: AsyncSession,
+    user_id: int,
+) -> tuple[AccessToken, str]:
+    """Replace the auto-paired Pebble token and return its raw value once."""
+    # Serialize rotations for one user. Without this lock, overlapping
+    # transactions can both delete before either inserts its replacement.
+    await session.execute(
+        select(User.id).where(User.id == user_id).with_for_update()
+    )
+    await session.execute(
+        delete(AccessToken).where(
+            AccessToken.user_id == user_id,
+            AccessToken.name == PEBBLE_PAIR_TOKEN_NAME,
+        )
+    )
+    return await create_access_token(
+        session,
+        user_id,
+        AccessTokenCreate(
+            name=PEBBLE_PAIR_TOKEN_NAME,
+            scopes=["pebble:read", "pebble:write"],
+        ),
+    )
 
 
 async def list_access_tokens_for_user(session: AsyncSession, user_id: int) -> list[AccessToken]:

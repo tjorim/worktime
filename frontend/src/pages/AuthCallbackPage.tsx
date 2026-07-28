@@ -9,7 +9,7 @@ export function AuthCallbackPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isValidating) {
+    if (!isValidating && window.location.pathname === "/auth/callback") {
       navigate({ to: "/", replace: true });
     }
   }, [isValidating, navigate]);

@@ -5,13 +5,105 @@ import Button from "pebble/button";
 import Message from "pebble/message";
 
 const DEFAULT_API_BASE_URL = "https://worktime.tjor.im";
+// Last successful dashboard, kept so the watch still shows shift and task
+// information while the phone is out of range. Display-only: clock actions
+// never act on it (see toggleClock).
+const SNAPSHOT_KEY = "lastDashboard";
+const SNAPSHOT_VERSION = 1;
+// Beyond this the cached glance is more misleading than useful (an elapsed
+// timer that ran overnight is worse than no timer at all).
+const SNAPSHOT_MAX_AGE_SECONDS = 12 * 60 * 60;
+const CLOCK_HINT = "SELECT: clock in/out";
+
+const pad = (value) => (value < 10 ? `0${value}` : String(value));
+// Alloy's font lookup only matches the Pebble system font table exactly:
+// Gothic-Bold exists at 18px only, while Gothic-Regular exists at
+// 9/14/18/24/28/36px. Unsupported combinations throw during Style
+// construction and crash the app before it paints a frame.
+const shiftStyle = new Style({ font: "18px Gothic", color: "gray" });
+const statusStyle = new Style({ font: "bold 18px Gothic", color: "black" });
+const timerStyle = new Style({ font: "28px Gothic", color: "black" });
+const hintStyle = new Style({ font: "14px Gothic", color: "gray" });
 
 function formatElapsed(totalSeconds) {
-  const pad = (value) => (value < 10 ? `0${value}` : String(value));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
+function formatClock(epochSeconds) {
+  const date = new Date(epochSeconds * 1000);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function shiftLine(dashboard) {
+  const current = dashboard?.current_status?.current_shift;
+  const next = dashboard?.next_shifts?.items?.[0];
+  if (current?.shift) return `Today: ${current.shift.name || current.shift.code}`;
+  if (next?.shift) return `Next: ${next.shift.name || next.shift.code} ${next.date}`;
+  return "No shift configured";
+}
+
+function runningTaskOf(dashboard) {
+  const task = dashboard?.running_task;
+  if (!task || task.stop_time) return null;
+  return { text: task.text || "Working", start_time: task.start_time };
+}
+
+function snapshotOf(dashboard) {
+  return {
+    version: SNAPSHOT_VERSION,
+    fetchedAt: Math.floor(Date.now() / 1000),
+    shift: shiftLine(dashboard),
+    task: runningTaskOf(dashboard),
+  };
+}
+
+function saveSnapshot(snapshot) {
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    // A full or unavailable store only costs the offline glance.
+  }
+}
+
+function clearSnapshot() {
+  try {
+    localStorage.removeItem(SNAPSHOT_KEY);
+  } catch (error) {
+    // Nothing to do: the stale snapshot is display-only.
+  }
+}
+
+function loadSnapshot() {
+  let stored;
+  try {
+    stored = localStorage.getItem(SNAPSHOT_KEY);
+  } catch (error) {
+    return null;
+  }
+  if (!stored) return null;
+  let snapshot;
+  try {
+    snapshot = JSON.parse(stored);
+  } catch (error) {
+    clearSnapshot();
+    return null;
+  }
+  if (!snapshot || snapshot.version !== SNAPSHOT_VERSION || !snapshot.fetchedAt) {
+    clearSnapshot();
+    return null;
+  }
+  const age = Math.floor(Date.now() / 1000) - snapshot.fetchedAt;
+  // A negative age means the watch clock moved back since the read; that
+  // snapshot is as untrustworthy as an expired one, and its "as of" time would
+  // be in the future.
+  if (age < 0 || age > SNAPSHOT_MAX_AGE_SECONDS) {
+    clearSnapshot();
+    return null;
+  }
+  return snapshot;
 }
 
 const WorktimeApplication = Application.template(($) => ({
@@ -23,7 +115,7 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       top: 10,
       height: 24,
-      style: new Style({ font: "18px Gothic", color: "gray" }),
+      style: shiftStyle,
       string: "Shift: loading…",
     }),
     Label($, {
@@ -32,7 +124,7 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       top: 40,
       height: 40,
-      style: new Style({ font: "bold 24px Gothic", color: "black" }),
+      style: statusStyle,
       string: "Loading…",
     }),
     Label($, {
@@ -41,16 +133,17 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       top: 90,
       height: 36,
-      style: new Style({ font: "28px Gothic", color: "black" }),
+      style: timerStyle,
       string: "",
     }),
     Label($, {
+      anchor: "HINT",
       left: 4,
       right: 4,
       bottom: 12,
       height: 20,
-      style: new Style({ font: "16px Gothic", color: "gray" }),
-      string: "SELECT: clock in/out",
+      style: hintStyle,
+      string: CLOCK_HINT,
     }),
   ],
   Behavior: class extends Behavior {
@@ -62,40 +155,46 @@ const WorktimeApplication = Application.template(($) => ({
 
     onDisplaying(application) {
       application.start();
-      refreshStatus();
+      // Paint the cached glance first so a cold start out of range shows
+      // something better than "Loading…" while the fetch is attempted.
+      const snapshot = loadSnapshot();
+      if (snapshot) this.showSnapshot(snapshot, "Last known");
+      runExclusive(refreshStatus);
+    }
+
+    setHint(hint) {
+      this.data.HINT.string = hint;
     }
 
     showTask(task) {
-      this.runningTask = task && !task.stop_time ? task : null;
-      this.data.STATUS.string = this.runningTask
-        ? this.runningTask.text || "Working"
-        : "Not clocked in";
-      if (!this.runningTask) {
+      this.runningTask = task;
+      this.data.STATUS.string = task ? task.text || "Working" : "Not clocked in";
+      if (!task) {
         this.data.TIMER.string = "";
         this.lastTick = -1;
+        return;
       }
+      this.lastTick = -1;
+      this.onTimeChanged();
     }
 
-    showShift(dashboard) {
-      const current = dashboard?.current_status?.current_shift;
-      const next = dashboard?.next_shifts?.items?.[0];
-      if (current?.shift) {
-        this.data.SHIFT.string = `Today: ${current.shift.name || current.shift.code}`;
-      } else if (next?.shift) {
-        this.data.SHIFT.string = `Next: ${next.shift.name || next.shift.code} ${next.date}`;
-      } else {
-        this.data.SHIFT.string = "No shift configured";
-      }
-    }
-
-    showShiftError() {
-      this.data.SHIFT.string = "Shift unavailable";
+    // `staleReason` is null for a live dashboard, otherwise the reason the
+    // watch is showing cached values (offline, server error, …).
+    showSnapshot(snapshot, staleReason) {
+      this.data.SHIFT.string = snapshot.shift || "Shift unavailable";
+      this.showTask(snapshot.task);
+      this.setHint(
+        staleReason ? `${staleReason} · ${formatClock(snapshot.fetchedAt)}` : CLOCK_HINT,
+      );
     }
 
     showError(message) {
       this.runningTask = null;
+      this.data.SHIFT.string = "Shift unavailable";
       this.data.STATUS.string = message;
       this.data.TIMER.string = "";
+      this.lastTick = -1;
+      this.setHint(CLOCK_HINT);
     }
 
     onTimeChanged() {
@@ -112,13 +211,53 @@ const WorktimeApplication = Application.template(($) => ({
 const application = new WorktimeApplication(null, {});
 let apiBaseUrl = localStorage.getItem("apiBaseUrl") || DEFAULT_API_BASE_URL;
 let authToken = localStorage.getItem("authToken");
-let pending = false;
+// True only while the rendered task state came from a dashboard read that has
+// not been superseded by a mutation or a failure.
+let dashboardIsLive = false;
+let busy = false;
+// Bumped whenever the paired credential changes. A response authorized with
+// the previous token must not be displayed, cached, or used to pick a mutation
+// once it lands, since it describes a different account.
+let credentialGeneration = 0;
+// Set when a lifecycle refresh (reconnect, new credential) arrives while the
+// watch is busy. Dropping a button press is intended; dropping one of these
+// would leave the watch on state it knows is out of date.
+let refreshOwed = false;
+
+// Serializes every watch → server interaction: a second SELECT press while a
+// clock mutation is in flight is dropped instead of queued, so repeated
+// presses cannot submit overlapping mutations.
+async function runExclusive(action) {
+  if (busy) return;
+  busy = true;
+  try {
+    await action();
+    while (refreshOwed) {
+      refreshOwed = false;
+      await refreshStatus();
+    }
+  } finally {
+    busy = false;
+  }
+}
+
+// A refresh that must happen even if it cannot happen now.
+function requestRefresh() {
+  if (busy) refreshOwed = true;
+  else runExclusive(refreshStatus);
+}
 
 function authorizationHeaders() {
   return {
     Authorization: `Bearer ${authToken}`,
     "Content-Type": "application/json",
   };
+}
+
+function apiError(message, status) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
 }
 
 async function apiRequest(method, path, body) {
@@ -128,52 +267,97 @@ async function apiRequest(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (response.status === 401 || response.status === 403) {
-    throw new Error("Sign-in needed");
+    throw apiError("Sign-in needed", response.status);
+  }
+  if (response.status === 409) {
+    throw apiError("Out of sync", response.status);
   }
   if (response.status === 429 || response.status >= 500) {
-    throw new Error(`Try again later (${response.status})`);
+    throw apiError(`Try again later (${response.status})`, response.status);
   }
-  if (!response.ok) throw new Error(`Error ${response.status}`);
+  if (!response.ok) throw apiError(`Error ${response.status}`, response.status);
   return response.status === 204 ? null : response.json();
 }
 
+// Renders the cached glance labeled with why it is stale, or the bare reason
+// when there is nothing cached. Never marks the dashboard live.
+function showStale(reason) {
+  dashboardIsLive = false;
+  const snapshot = loadSnapshot();
+  if (snapshot) application.behavior.showSnapshot(snapshot, reason);
+  else application.behavior.showError(reason);
+}
+
+// Resolves true when the rendered state came from a fresh server read.
 async function refreshStatus() {
   if (!authToken) {
+    dashboardIsLive = false;
     application.behavior.showError("Not configured");
-    return;
+    return false;
   }
   if (!watch.connected.pebblekit) {
-    application.behavior.showError("Phone offline");
-    return;
+    showStale("Phone offline");
+    return false;
   }
+  const generation = credentialGeneration;
   try {
     const dashboard = await apiRequest("GET", "/api/pebble/dashboard");
-    application.behavior.showTask(dashboard.running_task);
-    application.behavior.showShift(dashboard);
+    // Paired to a different account while this was in flight: this response
+    // belongs to the previous one. Discard it; a refresh is already owed.
+    if (generation !== credentialGeneration) return false;
+    const snapshot = snapshotOf(dashboard);
+    saveSnapshot(snapshot);
+    dashboardIsLive = true;
+    application.behavior.showSnapshot(snapshot, null);
+    return true;
   } catch (error) {
-    application.behavior.showError(String(error.message || error));
-    application.behavior.showShiftError();
+    if (generation !== credentialGeneration) return false;
+    showStale(String(error.message || error));
+    return false;
   }
 }
 
 async function toggleClock() {
-  if (pending || !authToken) return;
-  pending = true;
-  const runningTask = application.behavior.runningTask;
-  application.behavior.data.STATUS.string = runningTask
-    ? "Clocking out…"
-    : "Clocking in…";
+  if (!authToken) {
+    application.behavior.showError("Not configured");
+    return;
+  }
+  // Clocking is online-only: without the phone link there is no way to reach
+  // the server, and queueing the action would replay it on reconnect.
+  if (!watch.connected.pebblekit) {
+    showStale("Phone offline");
+    return;
+  }
+  const generation = credentialGeneration;
   try {
-    if (runningTask) {
-      await apiRequest("POST", "/api/pebble/actions/clock-out");
-    } else {
-      await apiRequest("POST", "/api/pebble/actions/clock-in");
+    // Cached state is display-only: re-read the dashboard before deciding
+    // between clock-in and clock-out so a stale task can never be replayed
+    // into a mutation. The read also fails closed while offline.
+    if (!dashboardIsLive) {
+      application.behavior.setHint("Checking…");
+      if (!(await refreshStatus())) return;
     }
+    // Never send a mutation authorized with a new credential but decided from
+    // the previously paired account's state.
+    if (generation !== credentialGeneration) return;
+    const runningTask = application.behavior.runningTask;
+    application.behavior.data.STATUS.string = runningTask ? "Clocking out…" : "Clocking in…";
+    // The server view is about to change; only the follow-up read is authoritative.
+    dashboardIsLive = false;
+    await apiRequest(
+      "POST",
+      runningTask ? "/api/pebble/actions/clock-out" : "/api/pebble/actions/clock-in",
+    );
     await refreshStatus();
   } catch (error) {
-    application.behavior.showError(String(error.message || error));
-  } finally {
-    pending = false;
+    if (generation !== credentialGeneration) return;
+    // 409 means the server state moved under us (clocked in or out elsewhere);
+    // re-reading resolves it instead of retrying the mutation.
+    if (error.status === 409) {
+      await refreshStatus();
+      return;
+    }
+    showStale(String(error.message || error));
   }
 }
 
@@ -183,25 +367,34 @@ const message = new Message({
     const payload = this.read();
     const baseUrl = payload.get("API_BASE_URL");
     const token = payload.get("AUTH_TOKEN");
+    const nextBaseUrl = baseUrl ? baseUrl.replace(/\/$/, "") : apiBaseUrl;
+    const identityChanged =
+      nextBaseUrl !== apiBaseUrl || (token && token !== authToken);
+    if (identityChanged) {
+      // Either value can select a different account or deployment.
+      credentialGeneration += 1;
+      clearSnapshot();
+      dashboardIsLive = false;
+    }
     if (baseUrl) {
-      apiBaseUrl = baseUrl.replace(/\/$/, "");
+      apiBaseUrl = nextBaseUrl;
       localStorage.setItem("apiBaseUrl", apiBaseUrl);
     }
-    if (token) {
+    if (token && token !== authToken) {
       authToken = token;
       localStorage.setItem("authToken", authToken);
     }
-    refreshStatus();
+    requestRefresh();
   },
 });
 
-watch.addEventListener("connected", refreshStatus);
+watch.addEventListener("connected", requestRefresh);
 
 new Button({
   types: ["up", "select"],
   onPush(down, type) {
     if (!down) return;
-    if (type === "up") refreshStatus();
-    else if (type === "select") toggleClock();
+    if (type === "up") runExclusive(refreshStatus);
+    else if (type === "select") runExclusive(toggleClock);
   },
 });

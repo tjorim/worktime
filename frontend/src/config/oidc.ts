@@ -20,6 +20,13 @@ const OIDC_SILENT_REDIRECT_URI =
   import.meta.env.VITE_OIDC_SILENT_REDIRECT_URI ?? `${window.location.origin}/auth/silent-callback`;
 const OIDC_SCOPE = import.meta.env.VITE_OIDC_SCOPE ?? "openid profile email";
 
+export function getPostSigninReturnTo(state: unknown): string {
+  const returnTo = (state as { returnTo?: unknown } | undefined)?.returnTo;
+  return typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
+    ? returnTo
+    : "/";
+}
+
 export const oidcConfig: AuthProviderProps = {
   authority: OIDC_AUTHORITY,
   client_id: OIDC_CLIENT_ID,
@@ -36,7 +43,6 @@ export const oidcConfig: AuthProviderProps = {
    * Callers must pass `state: { returnTo: window.location.pathname }` to signinRedirect.
    */
   onSigninCallback: (user) => {
-    const returnTo = (user?.state as { returnTo?: string } | undefined)?.returnTo ?? "/";
-    window.history.replaceState({}, document.title, returnTo);
+    window.location.replace(getPostSigninReturnTo(user?.state));
   },
 };
