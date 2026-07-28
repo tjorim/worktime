@@ -4,13 +4,15 @@ on:
   pull_request:
     paths:
       - "pebble/**"
-      - "frontend/public/pebble-config.html"
+      - "frontend/src/pages/PebblePairPage.tsx"
+      - "backend/app/services/access_token_service.py"
       - ".github/workflows/pebble.yml"
   push:
     branches: [main]
     paths:
       - "pebble/**"
-      - "frontend/public/pebble-config.html"
+      - "frontend/src/pages/PebblePairPage.tsx"
+      - "backend/app/services/access_token_service.py"
       - ".github/workflows/pebble.yml"
 
 permissions:
@@ -29,3 +31,8 @@ jobs:
       - name: Validate Alloy package contract
         working-directory: pebble
         run: node scripts/validate.mjs
+      # Watch-app logic against stubbed Alloy globals. This is not an Alloy
+      # build — CI has no Pebble SDK, so on-device behavior is still unverified.
+      - name: Test watch app logic
+        working-directory: pebble
+        run: node --test "tests/*.test.mjs"

@@ -122,7 +122,9 @@ To-do list and development roadmap for Worktime. Audited against the codebase on
 - **What exists**: `pebble/` — an Alloy watch app for clock in/out + active-task glance (issue #996), talking
   to the existing time-tracking endpoints via a phone-side (`pkjs`) companion. Its `/pebble-pair` webview
   authenticates the user with OIDC, then rotates a Pebble-only personal access token; the watch never
-  receives the OIDC access or refresh token.
+  receives the OIDC access or refresh token. The watch keeps a display-only cache of the last dashboard
+  read so shift/task info survives a phone disconnect; clocking stays online-only with no offline queue
+  (issue #1025).
 - **What's missing**: Real device/emulator testing — written against the published Alloy docs, but this repo
   has no Pebble SDK/CLI, so nothing here has actually been built or run on hardware yet. Tokens are already
   scoped to `pebble:read`/`pebble:write` (not full account access), and sensitive account/token-management

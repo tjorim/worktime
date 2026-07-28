@@ -53,6 +53,12 @@ for (const path of [
 ]) {
   if (!watchSource.includes(path)) throw new Error(`Missing clock action: ${path}`);
 }
+if (!watchSource.includes("localStorage.setItem(SNAPSHOT_KEY") || !watchSource.includes("loadSnapshot(")) {
+  throw new Error("Watch code must persist and restore the offline dashboard snapshot");
+}
+if (!watchSource.includes("runExclusive(toggleClock)")) {
+  throw new Error("Clock actions must go through the exclusive-action guard");
+}
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
 }

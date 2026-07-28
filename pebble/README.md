@@ -43,6 +43,14 @@ pebble build
 pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 ```
 
+The checks that do run without the SDK (and in CI) are:
+
+```bash
+cd pebble
+node scripts/validate.mjs         # package contract
+node --test "tests/*.test.mjs"    # watch-app logic against stubbed Alloy globals
+```
+
 ## Configuration
 
 1. On the phone, open the Worktime app's settings from the Pebble mobile app.
@@ -54,13 +62,64 @@ pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 `https://worktime.tjor.im/pebble-pair`. If self-hosting elsewhere, change it to
 your deployment's URL before building.
 
+## Offline behavior
+
+The watch caches the **last successful dashboard read** (`lastDashboard` in the watch's
+`localStorage`: the shift line, the running task's label and start time, and the time of
+the read). While the phone link is down — or a request fails — the app keeps showing that
+glance, with the bottom line replaced by the reason and the time it was read, for example
+`Phone offline · 08:12`. The elapsed timer keeps counting from the cached start time, so it
+is an estimate rather than a confirmed value. Snapshots older than 12 hours are discarded
+instead of displayed, and the snapshot is cleared whenever a new pairing credential arrives
+(it may belong to a different account).
+
+The cache is **display-only** — clocking in and out remains online-only, and there is no
+offline queue:
+
+- SELECT while the phone is disconnected shows the cached glance and does nothing else.
+- If the rendered state came from the cache (or from a failed read), SELECT re-reads
+  `/api/pebble/dashboard` first and acts only on that fresh result, so a stale task can
+  never decide between clock-in and clock-out.
+- After a mutation, the cached state is marked non-authoritative until the follow-up read
+  lands, so a reconnect never replays a request that already succeeded.
+- A `409` from either action means the server moved on (clocked in or out elsewhere); the
+  watch re-reads the dashboard rather than retrying the mutation.
+
+All watch → server work is serialized by a single in-flight guard, so repeated SELECT
+presses are dropped while a clock mutation is running rather than queued behind it.
+
+## On-device validation
+
+CI checks the package contract (`node scripts/validate.mjs`) and runs the watch app's logic —
+caching, staleness, and clock-action serialization — against stubbed Alloy globals
+(`node --test "tests/*.test.mjs"`, harness in `tests/harness.mjs`). Both are deliberately
+separate from an actual Alloy build: CI has no Pebble SDK, and neither one exercises Piu,
+AppMessage, or the phone proxy. **The app has not been compiled, installed, or run on a
+Pebble Time 2 or in the emulator yet** (tracked in
+[#1025](https://github.com/tjorim/worktime/issues/1025)). The Alloy APIs used here (Piu,
+`pebble/message`, `pebble/button`, `fetch()`, watch-side `localStorage`) follow the published
+[Pebble Developer docs](https://developer.repebble.com/guides/alloy/); expect some iteration
+once someone with the hardware runs through:
+
+- [ ] `pebble build` succeeds against the current SDK.
+- [ ] App installs and starts on a Pebble Time 2 (Emery).
+- [ ] Configuration opens from the stock Pebble phone app, and the paired credential reaches
+      the watch.
+- [ ] `GET /api/pebble/dashboard` loads through the phone proxy with a `pebble:read` token.
+- [ ] Shift, task, and elapsed timer render correctly.
+- [ ] UP refreshes; SELECT clocks in and out.
+- [ ] Repeated SELECT presses do not submit overlapping mutations.
+- [ ] 401/403 shows `Sign-in needed`; 429/5xx shows `Try again later (<status>)` and stays
+      retryable.
+- [ ] Airplane mode shows the cached glance with its timestamp, and SELECT is a no-op until
+      the phone reconnects.
+
+Record any SDK compatibility changes here as they are found.
+
 ## Known limitations
 
-- Not build- or device-tested: this environment has no Pebble SDK/emulator, so the Alloy APIs used here
-  (Piu, `pebble/message`, `pebble/button`, `fetch()`) are implemented against the published
-  [Pebble Developer docs](https://developer.repebble.com/guides/alloy/) but haven't been run on real
-  hardware or the emulator. Expect some iteration once tested on-device.
-- Layout is a simple centered stack (`left: 0, right: 0`); it isn't tuned separately for the round Gabbro
-  (Pebble Round 2) display.
+- Layout is a simple centered stack (`left: 4, right: 4`); it isn't tuned separately for the round
+  Gabbro (Pebble Round 2) display.
 - Clock actions use server time and the fixed task label "Working". Configure
   labels or edit task details later in the web or Android app.
+- No offline queue: see "Offline behavior" above.
