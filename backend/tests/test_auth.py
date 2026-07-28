@@ -1,7 +1,7 @@
 """Tests for OIDC-based authentication helpers.
 
 The OIDC provider is not available in the test environment, so these
-tests exercise the ``get_authenticated_principal`` dependency through the
+tests exercise the ``get_bearer_principal`` dependency through the
 ``_test_auth_principal`` override registered by the ``db_client`` fixture.
 
 Unit tests for the realm_access.roles-based ``is_admin`` logic patch
@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 
-from app.routers.auth import get_authenticated_principal
+from app.routers.auth import get_bearer_principal
 
 
 def test_unauthenticated_request_returns_401(
@@ -122,12 +122,12 @@ _FAKE_CREDENTIALS = HTTPAuthorizationCredentials(scheme="Bearer", credentials="f
 
 
 async def _call_principal(claims: dict) -> bool:
-    """Helper: call get_authenticated_principal with patched dependencies."""
+    """Helper: call get_bearer_principal with patched dependencies."""
     with (
         patch("app.routers.auth.decode_token", new=AsyncMock(return_value=claims)),
         patch("app.routers.auth.get_or_create_local_user", new=AsyncMock(return_value=_FAKE_USER)),
     ):
-        principal = await get_authenticated_principal(
+        principal = await get_bearer_principal(
             request=MagicMock(),
             credentials=_FAKE_CREDENTIALS,
             session=AsyncMock(),
@@ -163,6 +163,7 @@ async def test_is_admin_false_with_non_dict_realm_access() -> None:
     """is_admin must be False when realm_access is not an object."""
     claims = {"sub": "user-sub", "realm_access": "admin"}
     assert await _call_principal(claims) is False
+
 
 async def test_is_admin_false_with_empty_roles() -> None:
     """is_admin must be False when realm_access.roles is an empty list."""
