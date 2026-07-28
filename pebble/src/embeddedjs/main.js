@@ -87,7 +87,11 @@ function loadSnapshot() {
     clearSnapshot();
     return null;
   }
-  if (Math.floor(Date.now() / 1000) - snapshot.fetchedAt > SNAPSHOT_MAX_AGE_SECONDS) {
+  const age = Math.floor(Date.now() / 1000) - snapshot.fetchedAt;
+  // A negative age means the watch clock moved back since the read; that
+  // snapshot is as untrustworthy as an expired one, and its "as of" time would
+  // be in the future.
+  if (age < 0 || age > SNAPSHOT_MAX_AGE_SECONDS) {
     clearSnapshot();
     return null;
   }
@@ -203,6 +207,14 @@ let authToken = localStorage.getItem("authToken");
 // not been superseded by a mutation or a failure.
 let dashboardIsLive = false;
 let busy = false;
+// Bumped whenever the paired credential changes. A response authorized with
+// the previous token must not be displayed, cached, or used to pick a mutation
+// once it lands, since it describes a different account.
+let credentialGeneration = 0;
+// Set when a lifecycle refresh (reconnect, new credential) arrives while the
+// watch is busy. Dropping a button press is intended; dropping one of these
+// would leave the watch on state it knows is out of date.
+let refreshOwed = false;
 
 // Serializes every watch → server interaction: a second SELECT press while a
 // clock mutation is in flight is dropped instead of queued, so repeated
@@ -212,9 +224,19 @@ async function runExclusive(action) {
   busy = true;
   try {
     await action();
+    while (refreshOwed) {
+      refreshOwed = false;
+      await refreshStatus();
+    }
   } finally {
     busy = false;
   }
+}
+
+// A refresh that must happen even if it cannot happen now.
+function requestRefresh() {
+  if (busy) refreshOwed = true;
+  else runExclusive(refreshStatus);
 }
 
 function authorizationHeaders() {
@@ -269,14 +291,19 @@ async function refreshStatus() {
     showStale("Phone offline");
     return false;
   }
+  const generation = credentialGeneration;
   try {
     const dashboard = await apiRequest("GET", "/api/pebble/dashboard");
+    // Paired to a different account while this was in flight: this response
+    // belongs to the previous one. Discard it; a refresh is already owed.
+    if (generation !== credentialGeneration) return false;
     const snapshot = snapshotOf(dashboard);
     saveSnapshot(snapshot);
     dashboardIsLive = true;
     application.behavior.showSnapshot(snapshot, null);
     return true;
   } catch (error) {
+    if (generation !== credentialGeneration) return false;
     showStale(String(error.message || error));
     return false;
   }
@@ -293,6 +320,7 @@ async function toggleClock() {
     showStale("Phone offline");
     return;
   }
+  const generation = credentialGeneration;
   try {
     // Cached state is display-only: re-read the dashboard before deciding
     // between clock-in and clock-out so a stale task can never be replayed
@@ -301,6 +329,9 @@ async function toggleClock() {
       application.behavior.setHint("Checking…");
       if (!(await refreshStatus())) return;
     }
+    // Never send a mutation authorized with a new credential but decided from
+    // the previously paired account's state.
+    if (generation !== credentialGeneration) return;
     const runningTask = application.behavior.runningTask;
     application.behavior.data.STATUS.string = runningTask ? "Clocking out…" : "Clocking in…";
     // The server view is about to change; only the follow-up read is authoritative.
@@ -311,6 +342,7 @@ async function toggleClock() {
     );
     await refreshStatus();
   } catch (error) {
+    if (generation !== credentialGeneration) return;
     // 409 means the server state moved under us (clocked in or out elsewhere);
     // re-reading resolves it instead of retrying the mutation.
     if (error.status === 409) {
@@ -334,15 +366,17 @@ const message = new Message({
     if (token && token !== authToken) {
       authToken = token;
       localStorage.setItem("authToken", authToken);
-      // The credential may belong to a different account than the cached glance.
+      // The credential may belong to a different account than the cached
+      // glance, and than any read still in flight.
+      credentialGeneration += 1;
       clearSnapshot();
       dashboardIsLive = false;
     }
-    runExclusive(refreshStatus);
+    requestRefresh();
   },
 });
 
-watch.addEventListener("connected", () => runExclusive(refreshStatus));
+watch.addEventListener("connected", requestRefresh);
 
 new Button({
   types: ["up", "select"],

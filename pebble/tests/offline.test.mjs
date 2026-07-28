@@ -238,6 +238,108 @@ test("an unconfigured watch asks for pairing", async () => {
   assert.deepEqual(paths(harness), []);
 });
 
+// A held response leaves the app mid-request: fetch has resolved, so the
+// harness stops waiting, but the app is still awaiting the body.
+function heldResponder(resolveWith) {
+  let release;
+  const responder = () => ({
+    status: 200,
+    body: new Promise((resolve) => {
+      release = () => resolve(resolveWith);
+    }),
+  });
+  return [responder, () => release()];
+}
+
+test("a snapshot stamped in the future is discarded", async () => {
+  const harness = createHarness({
+    connected: false,
+    // The watch clock moved back after the read.
+    storage: { ...TOKEN, lastDashboard: snapshot({ task: RUNNING, ageSeconds: -600 }) },
+  });
+
+  await harness.display();
+
+  assert.equal(harness.labels.STATUS.string, "Phone offline");
+  assert.equal(harness.stored.lastDashboard, undefined);
+});
+
+test("a reconnect during another request is serviced, not dropped", async () => {
+  const harness = createHarness({ storage: TOKEN });
+  const [held, release] = heldResponder(dashboardBody());
+  harness.setResponder(held);
+
+  await harness.display(); // the read's body is still held, so the app is busy
+  harness.emit("connected"); // dropped by the in-flight guard…
+  release();
+  await harness.settle();
+
+  // …and made good once the first request finishes.
+  assert.deepEqual(paths(harness), [DASHBOARD_PATH, DASHBOARD_PATH]);
+});
+
+test("a credential change mid-read does not adopt the old account's state", async () => {
+  const harness = createHarness({ storage: TOKEN });
+  const [held, release] = heldResponder(
+    dashboardBody({ task: RUNNING, shift: { name: "Morning", code: "M" } }),
+  );
+  harness.setResponder(held);
+  await harness.display(); // read in flight, authorized with the old token
+
+  await harness.configure({ AUTH_TOKEN: "wtpat_other" });
+  // The newly paired account has no running task.
+  harness.setResponder(ok(dashboardBody()));
+  release(); // the old account's response lands after the swap
+  await harness.settle();
+
+  assert.equal(harness.labels.STATUS.string, "Not clocked in");
+  assert.equal(JSON.parse(harness.stored.lastDashboard).task, null);
+  assert.equal(harness.requests.at(-1).headers.Authorization, "Bearer wtpat_other");
+});
+
+test("an old account's response is never cached under a new credential", async () => {
+  const harness = createHarness({ storage: TOKEN });
+  const [held, release] = heldResponder(
+    dashboardBody({ task: RUNNING, shift: { name: "Morning", code: "M" } }),
+  );
+  harness.setResponder(held);
+  await harness.display();
+
+  await harness.configure({ AUTH_TOKEN: "wtpat_other" });
+  // The refresh owed to the new credential fails, so anything the old-token
+  // response managed to cache would be rendered in its place.
+  harness.setResponder(() => ({ status: 503, body: {} }));
+  release();
+  await harness.settle();
+
+  assert.equal(harness.labels.STATUS.string, "Try again later (503)");
+  assert.equal(harness.stored.lastDashboard, undefined);
+});
+
+test("a mutation after a credential change uses the new account's state", async () => {
+  const harness = createHarness({ storage: TOKEN });
+  const [held, release] = heldResponder(
+    dashboardBody({ task: RUNNING, shift: { name: "Morning", code: "M" } }),
+  );
+  harness.setResponder(held);
+  await harness.display();
+
+  await harness.configure({ AUTH_TOKEN: "wtpat_other" });
+  harness.setResponder((url) =>
+    url.endsWith(DASHBOARD_PATH)
+      ? { status: 200, body: dashboardBody() }
+      : { status: 201, body: {} },
+  );
+  release();
+  await harness.settle();
+  harness.requests.length = 0;
+
+  await harness.press("select");
+
+  // The old account was clocked in; the new one is not, so this must clock in.
+  assert.deepEqual(paths(harness), [CLOCK_IN_PATH, DASHBOARD_PATH]);
+});
+
 test("a new pairing credential clears the cached glance", async () => {
   const harness = createHarness({
     storage: { ...TOKEN, lastDashboard: snapshot({ task: RUNNING }) },

@@ -151,6 +151,11 @@ export function createHarness({ connected = true, storage = {} } = {}) {
       listeners.get("connected")?.();
       await settle();
     },
+    // Fires a watch event without waiting for the app to go quiet, so a test
+    // can deliver it while an earlier request is still in flight.
+    emit(type) {
+      listeners.get(type)?.();
+    },
     async settle() {
       await settle();
     },

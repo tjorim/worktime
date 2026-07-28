@@ -73,9 +73,13 @@ The watch caches the **last successful dashboard read** (`lastDashboard` in the 
 the read). While the phone link is down — or a request fails — the app keeps showing that
 glance, with the bottom line replaced by the reason and the time it was read, for example
 `Phone offline · 08:12`. The elapsed timer keeps counting from the cached start time, so it
-is an estimate rather than a confirmed value. Snapshots older than 12 hours are discarded
-instead of displayed, and the snapshot is cleared whenever a new pairing credential arrives
-(it may belong to a different account).
+is an estimate rather than a confirmed value. Snapshots older than 12 hours — or stamped in
+the future, after the watch clock moves back — are discarded instead of displayed.
+
+Pairing a new credential clears the snapshot, since it may belong to a different account. A
+read still in flight from the previous credential is discarded when it lands rather than
+being cached or rendered, and the refresh owed to the new credential runs once the in-flight
+request finishes, so the two accounts' state cannot mix.
 
 The cache is **display-only** — clocking in and out remains online-only, and there is no
 offline queue:
