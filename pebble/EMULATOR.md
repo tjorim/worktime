@@ -71,10 +71,15 @@ normal way to restart it.
 
 **Watch-side `console.log` does not reach `pebble logs` in a release build.**
 Only PKJS output does. A watchapp that throws during startup therefore shows a
-blank screen and produces no diagnostic whatsoever — on Daynest that is exactly
-how a bad font specifier presented, so if Worktime's `18px Gothic` /
-`bold 24px Gothic` / `28px Gothic` styles are not valid on Emery, expect a blank
-screen rather than an error.
+blank white screen (`pebble screenshot` reports `rgb(255, 255, 255)`, 0% ink)
+and produces no diagnostic whatsoever.
+
+One concrete cause is an invalid system-font specification. Alloy resolves a
+`Style` font against the SDK's fixed table with no nearby-size fallback:
+Gothic-Bold exists at 18px only, while Gothic-Regular exists at
+9/14/18/24/28/36px. Worktime previously used `bold 24px Gothic` and
+`16px Gothic`; either value throws during `Style` construction and crashes the
+app before its first paint. `scripts/validate.mjs` now checks these combinations.
 
 The technique that worked is to treat the screen as the console: render
 diagnostics into a Piu `Text` and take a screenshot.

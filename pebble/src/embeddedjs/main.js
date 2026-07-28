@@ -16,6 +16,14 @@ const SNAPSHOT_MAX_AGE_SECONDS = 12 * 60 * 60;
 const CLOCK_HINT = "SELECT: clock in/out";
 
 const pad = (value) => (value < 10 ? `0${value}` : String(value));
+// Alloy's font lookup only matches the Pebble system font table exactly:
+// Gothic-Bold exists at 18px only, while Gothic-Regular exists at
+// 9/14/18/24/28/36px. Unsupported combinations throw during Style
+// construction and crash the app before it paints a frame.
+const shiftStyle = new Style({ font: "18px Gothic", color: "gray" });
+const statusStyle = new Style({ font: "bold 18px Gothic", color: "black" });
+const timerStyle = new Style({ font: "28px Gothic", color: "black" });
+const hintStyle = new Style({ font: "14px Gothic", color: "gray" });
 
 function formatElapsed(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600);
@@ -107,7 +115,7 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       top: 10,
       height: 24,
-      style: new Style({ font: "18px Gothic", color: "gray" }),
+      style: shiftStyle,
       string: "Shift: loading…",
     }),
     Label($, {
@@ -116,7 +124,7 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       top: 40,
       height: 40,
-      style: new Style({ font: "bold 24px Gothic", color: "black" }),
+      style: statusStyle,
       string: "Loading…",
     }),
     Label($, {
@@ -125,7 +133,7 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       top: 90,
       height: 36,
-      style: new Style({ font: "28px Gothic", color: "black" }),
+      style: timerStyle,
       string: "",
     }),
     Label($, {
@@ -134,7 +142,7 @@ const WorktimeApplication = Application.template(($) => ({
       right: 4,
       bottom: 12,
       height: 20,
-      style: new Style({ font: "16px Gothic", color: "gray" }),
+      style: hintStyle,
       string: CLOCK_HINT,
     }),
   ],

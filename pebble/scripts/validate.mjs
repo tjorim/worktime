@@ -49,6 +49,17 @@ const mockSource = readFileSync(resolve(root, "scripts/mock-server.py"), "utf8")
 const routerSource = readFileSync(resolve(repoRoot, "backend/app/routers/pebble.py"), "utf8");
 
 if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy fetch()");
+// The SDK does not fall back to a nearby system-font size. An unsupported
+// combination throws while constructing the Style and leaves a blank watchapp.
+const gothicRegularSizes = new Set([9, 14, 18, 24, 28, 36]);
+for (const match of watchSource.matchAll(/font:\s*"(?:(bold)\s+)?(\d+)px Gothic"/g)) {
+  const [, weight, rawSize] = match;
+  const size = Number(rawSize);
+  const supported = weight ? size === 18 : gothicRegularSizes.has(size);
+  if (!supported) {
+    throw new Error(`Unsupported Pebble system font: ${weight ? "bold " : ""}${size}px Gothic`);
+  }
+}
 // The watch, the mock backend used for emulator/hardware runs, and the router
 // must agree on every path; a silent drift there is invisible until a device test.
 for (const [path, routerPath] of [
