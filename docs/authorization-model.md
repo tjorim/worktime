@@ -10,9 +10,10 @@ scopes. Regular application endpoints require a Keycloak user principal.
 
 Pebble pairing is initiated from an interactive Keycloak session, but the watch
 receives a revocable delegated credential rather than Keycloak refresh tokens.
-That credential has only `pebble:read` and is accepted only by the Pebble
-dashboard read model. Account, administration, sync, and token-management
-operations remain Keycloak-only.
+That credential may carry `pebble:read` and/or `pebble:write`: `pebble:read`
+grants the Pebble dashboard read model, and `pebble:write` grants the
+clock-in/clock-out actions. Account, administration, sync, and token-management
+operations remain Keycloak-only regardless of the credential's scopes.
 
 Service-to-service MCP access uses a dedicated Keycloak confidential client and
 service account. Because Worktime data is user-owned, its access token must

@@ -305,6 +305,13 @@ def require_oidc_principal(
 
     Used for sensitive, account-level operations (managing tokens themselves,
     deleting the account) that a long-lived companion-app credential should
-    not be able to perform on its own.
+    not be able to perform on its own. Asserts the auth type independently of
+    ``get_authenticated_principal`` so this specific boundary can't silently
+    weaken if that dependency's policy changes later.
     """
+    if principal.auth_type != AuthType.KEYCLOAK_USER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This operation requires an interactive Keycloak user session",
+        )
     return principal

@@ -1,18 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { useToast } from "@/contexts/ToastContext";
-import type { ApiToken } from "@/pages/settings/hooks/useSettingsApiTokens";
+import type { ApiToken, CreatedApiToken } from "@/pages/settings/hooks/useSettingsApiTokens";
+import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
 
-interface CreatedApiToken {
-  id: string;
-  name: string;
-  token: string;
-  scopes: Array<"pebble:read" | "pebble:write">;
+function formatTokenDate(iso: string): string {
+  return new Intl.DateTimeFormat(getLocale()).format(new Date(iso));
 }
 
 interface SettingsApiTokensSectionProps {
@@ -48,8 +46,13 @@ export function SettingsApiTokensSection({
 
   const handleGenerate = () => {
     onCreateApiToken(nameDraft);
-    setNameDraft("");
   };
+
+  useEffect(() => {
+    if (createdApiToken) {
+      setNameDraft("");
+    }
+  }, [createdApiToken]);
 
   const handleCopy = async () => {
     if (!createdApiToken) return;
@@ -142,10 +145,8 @@ export function SettingsApiTokensSection({
                     <div className="fw-medium">{token.name}</div>
                     <div className="text-muted small">
                       •••• {token.token_preview} · {m.api_tokens_created_at_label()}{" "}
-                      {new Date(token.created_at).toLocaleDateString()} · {m.api_tokens_last_used_label()}{" "}
-                      {token.last_used_at
-                        ? new Date(token.last_used_at).toLocaleDateString()
-                        : m.api_tokens_last_used_never()}
+                      {formatTokenDate(token.created_at)} · {m.api_tokens_last_used_label()}{" "}
+                      {token.last_used_at ? formatTokenDate(token.last_used_at) : m.api_tokens_last_used_never()}
                     </div>
                     <div className="text-muted small">
                       {m.api_tokens_scopes_label()}: {token.scopes.join(", ")}

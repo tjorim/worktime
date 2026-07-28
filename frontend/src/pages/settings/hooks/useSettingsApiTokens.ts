@@ -12,7 +12,7 @@ export interface ApiToken {
   last_used_at: string | null;
 }
 
-interface CreatedApiToken {
+export interface CreatedApiToken {
   id: string;
   name: string;
   token: string;

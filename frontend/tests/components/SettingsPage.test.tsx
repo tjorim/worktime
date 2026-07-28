@@ -538,8 +538,10 @@ describe("SettingsPage API Tokens Section", () => {
   });
 
   it("generates a token, reveals it once, and copies it to the clipboard", async () => {
+    let tokenCreated = false;
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/access-tokens" && init?.method === "POST") {
+        tokenCreated = true;
         return jsonResponse(
           {
             id: "tok-1",
@@ -553,17 +555,19 @@ describe("SettingsPage API Tokens Section", () => {
       }
       if (input === "/api/access-tokens") {
         return jsonResponse({
-          items: [
-            {
-              id: "tok-1",
-              name: "Pebble watch",
-              token_preview: "alue",
-              scopes: ["pebble:read", "pebble:write"],
-              created_at: "2026-07-24T00:00:00Z",
-              last_used_at: null,
-            },
-          ],
-          total: 1,
+          items: tokenCreated
+            ? [
+                {
+                  id: "tok-1",
+                  name: "Pebble watch",
+                  token_preview: "alue",
+                  scopes: ["pebble:read", "pebble:write"],
+                  created_at: "2026-07-24T00:00:00Z",
+                  last_used_at: null,
+                },
+              ]
+            : [],
+          total: tokenCreated ? 1 : 0,
         });
       }
       throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
@@ -572,7 +576,7 @@ describe("SettingsPage API Tokens Section", () => {
     const user = userEvent.setup();
     renderSettingsApiTokensHarness({ fetchFn });
 
-    await screen.findByText("Pebble watch");
+    await screen.findByText("No API tokens yet.");
     await user.type(screen.getByLabelText("Token name"), "Pebble watch");
     await user.click(screen.getByRole("button", { name: "Generate token" }));
 
