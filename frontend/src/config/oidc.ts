@@ -26,6 +26,9 @@ export const oidcConfig: AuthProviderProps = {
   redirect_uri: OIDC_REDIRECT_URI,
   silent_redirect_uri: OIDC_SILENT_REDIRECT_URI,
   scope: OIDC_SCOPE,
+  automaticSilentRenew: true,
+  monitorSession: true,
+  revokeTokensOnSignout: true,
   post_logout_redirect_uri: window.location.origin,
   /**
    * Restore the pre-login URL from the OIDC state parameter after callback.

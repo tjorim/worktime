@@ -141,6 +141,22 @@ def test_dashboard_handles_missing_work_context(
     assert body["team_status"]["items"] == []
 
 
+def test_delegated_pebble_token_is_limited_to_scoped_dashboard(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "pebble-scope-user")
+    pebble_headers = auth_headers(user_id, via_pat=True)
+
+    dashboard = db_client.get("/api/read-models/dashboard", headers=pebble_headers)
+    regular_api = db_client.get("/api/read-models/current-status", headers=pebble_headers)
+
+    assert dashboard.status_code == 200
+    assert regular_api.status_code == 403
+
+
 def test_next_shifts_endpoint_respects_limit(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],

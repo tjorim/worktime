@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from app.routers.auth import get_authenticated_principal
+from app.routers.auth import PEBBLE_READ_SCOPE, AuthType, get_bearer_principal
 from app.schemas import AccessTokenCreate, UserCreate
 from app.services.access_token_service import (
     authenticate_access_token,
@@ -55,24 +55,53 @@ async def test_service_revoke_rejects_other_users_token(db_session: AsyncSession
         await revoke_access_token(db_session, user_id=other.id, token_id=token.id)
 
 
-async def test_get_authenticated_principal_accepts_valid_pat(db_session: AsyncSession) -> None:
+async def test_get_bearer_principal_accepts_scoped_delegated_token(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="pat-http-user", display_name="Pat User"))
     _token, raw_token = await create_access_token(db_session, user_id=user.id, payload=AccessTokenCreate(name="Pebble"))
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=raw_token)
 
-    principal = await get_authenticated_principal(request=_fake_request(), credentials=credentials, session=db_session)
+    principal = await get_bearer_principal(request=_fake_request(), credentials=credentials, session=db_session)
 
     assert principal.user_id == user.id
     assert principal.is_admin is False
+    assert principal.auth_type == AuthType.DELEGATED
+    assert principal.client_id == "pebble"
+    assert principal.scopes == frozenset({PEBBLE_READ_SCOPE})
 
 
-async def test_get_authenticated_principal_rejects_unknown_pat(db_session: AsyncSession) -> None:
+async def test_get_bearer_principal_rejects_unknown_pat(db_session: AsyncSession) -> None:
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wtpat_does-not-exist")
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_authenticated_principal(request=_fake_request(), credentials=credentials, session=db_session)
+        await get_bearer_principal(request=_fake_request(), credentials=credentials, session=db_session)
 
     assert exc_info.value.status_code == 401
+
+
+async def test_user_rest_auth_rejects_keycloak_service_account(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _decode(_token: str) -> dict[str, object]:
+        return {
+            "sub": "service-subject",
+            "preferred_username": "service-account-worktime-mcp",
+            "azp": "worktime-mcp",
+        }
+
+    monkeypatch.setattr("app.routers.auth.decode_token", _decode)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_bearer_principal(
+            request=_fake_request(),
+            credentials=HTTPAuthorizationCredentials(
+                scheme="Bearer",
+                credentials="service-token",
+            ),
+            session=db_session,
+        )
+
+    assert exc_info.value.status_code == 403
 
 
 def test_access_token_lifecycle_over_http(

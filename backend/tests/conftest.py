@@ -19,7 +19,7 @@ from app.cache.store import get_cache
 from app.database.engine import get_session
 from app.database.models import Base
 from app.main import app
-from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
+from app.routers.auth import AuthenticatedPrincipal, AuthType, get_authenticated_principal, get_bearer_principal
 
 _TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -162,6 +162,8 @@ def _test_auth_principal(
     return AuthenticatedPrincipal(
         user_id=user_id,
         is_admin=parts[2] == "admin",
+        auth_type=AuthType.DELEGATED if len(parts) == 4 else AuthType.KEYCLOAK_USER,
+        scopes=frozenset({"pebble:read"}) if len(parts) == 4 else frozenset(),
     )
 
 
@@ -176,12 +178,14 @@ def db_client(test_db: AsyncEngine) -> Generator[TestClient, None, None]:
 
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_authenticated_principal] = _test_auth_principal
+    app.dependency_overrides[get_bearer_principal] = _test_auth_principal
     try:
         with TestClient(app) as client:
             yield client
     finally:
         app.dependency_overrides.pop(get_session, None)
         app.dependency_overrides.pop(get_authenticated_principal, None)
+        app.dependency_overrides.pop(get_bearer_principal, None)
 
 
 @pytest.fixture()
