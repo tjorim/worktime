@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Worktime — Pebble setup</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 24px 16px;
+        color: #212529;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+      }
+      p.hint {
+        color: #6c757d;
+        font-size: 0.9rem;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-top: 1.25rem;
+        margin-bottom: 0.25rem;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.5rem;
+        font-size: 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+      }
+      .actions {
+        margin-top: 1.5rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      button {
+        flex: 1;
+        padding: 0.6rem;
+        font-size: 1rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+      }
+      #save {
+        background: #0d6efd;
+        color: white;
+      }
+      #cancel {
+        background: #e9ecef;
+        color: #212529;
+      }
+      #error {
+        color: #dc3545;
+        font-size: 0.9rem;
+        margin-top: 0.75rem;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Connect Worktime</h1>
+    <p class="hint">
+      Generate a token in the Worktime web app under
+      <strong>Settings &rsaquo; Account &rsaquo; API tokens</strong>. The Pebble
+      credential requires <code>pebble:read</code> and <code>pebble:write</code>.
+      Paste it below and treat it like a password.
+    </p>
+
+    <label for="apiBaseUrl">Worktime server URL</label>
+    <input id="apiBaseUrl" type="url" placeholder="https://worktime.tjor.im" autocapitalize="off" autocorrect="off" />
+
+    <label for="token">API token</label>
+    <input id="token" type="text" placeholder="wtpat_…" autocapitalize="off" autocorrect="off" />
+
+    <div id="error"></div>
+
+    <div class="actions">
+      <button id="cancel" type="button">Cancel</button>
+      <button id="save" type="button">Save</button>
+    </div>
+
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var prefilledBaseUrl = params.get("apiBaseUrl");
+        var apiBaseUrlInput = document.getElementById("apiBaseUrl");
+        var tokenInput = document.getElementById("token");
+        var errorEl = document.getElementById("error");
+
+        if (prefilledBaseUrl) {
+          apiBaseUrlInput.value = prefilledBaseUrl;
+        } else if (window.location.origin && window.location.origin !== "null") {
+          apiBaseUrlInput.value = window.location.origin;
+        }
+
+        function showError(message) {
+          errorEl.textContent = message;
+          errorEl.style.display = "block";
+        }
+
+        // The Pebble app intercepts navigation to "pebblejs://close#<data>" to
+        // close this webview and hand the payload back to pkjs's
+        // "webviewclosed" handler.
+        function closeWith(payload) {
+          var encoded = payload ? encodeURIComponent(JSON.stringify(payload)) : "";
+          window.location.href = "pebblejs://close#" + encoded;
+        }
+
+        document.getElementById("cancel").addEventListener("click", function () {
+          closeWith(null);
+        });
+
+        document.getElementById("save").addEventListener("click", function () {
+          var apiBaseUrl = apiBaseUrlInput.value.trim().replace(/\/$/, "");
+          var token = tokenInput.value.trim();
+          if (!apiBaseUrl || !/^https:\/\//i.test(apiBaseUrl)) {
+            showError("Enter a valid server URL, starting with https://");
+            return;
+          }
+          if (!token) {
+            showError("Enter your API token.");
+            return;
+          }
+          closeWith({ apiBaseUrl: apiBaseUrl, token: token });
+        });
+      })();
+    </script>
+  </body>
+</html>

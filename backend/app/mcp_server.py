@@ -160,7 +160,9 @@ def _build_auth_provider() -> KeycloakAuthProvider | MultiAuth:
     base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "http://localhost:8000/mcp")
     realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL)
     required_scopes_env = os.environ.get("WORKTIME_MCP_REQUIRED_SCOPES", "").strip()
-    required_scopes = [scope.strip() for scope in required_scopes_env.split(",") if scope.strip()] or ["openid", "offline_access"]
+    required_scopes = [
+        scope.strip() for scope in required_scopes_env.split(",") if scope.strip()
+    ] or ["openid", "offline_access"]
     audience = settings.OIDC_AUDIENCE or None
 
     keycloak = KeycloakAuthProvider(
@@ -236,19 +238,30 @@ class WorktimeMcpBackend:
         raw_user_id = claims.get("worktime_user_id")
         subject = claims.get("sub")
         auth_type = str(claims.get("auth_type") or "oidc")
+        preferred_username = claims.get("preferred_username")
+        is_service_account = (
+            isinstance(preferred_username, str)
+            and preferred_username.startswith("service-account-")
+        )
 
         if raw_user_id is not None:
             try:
                 user_id = int(raw_user_id)
             except (TypeError, ValueError) as exc:
                 raise McpAuthError("Invalid authenticated user context") from exc
-        elif subject:
+            if is_service_account:
+                auth_type = "keycloak_service"
+        elif subject and not is_service_account:
             from app.config.oidc_config import get_or_create_local_user
 
             user = await get_or_create_local_user(str(subject), claims, db)
             user_id = user.id
         else:
-            raise McpAuthError("Missing token subject")
+            raise McpAuthError(
+                "Keycloak service accounts require a worktime_user_id protocol mapper"
+                if is_service_account
+                else "Missing token subject"
+            )
 
         user = await get_user(db, user_id)
         realm_access = claims.get("realm_access")

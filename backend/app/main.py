@@ -261,6 +261,7 @@ if settings.LEGACY_FILESHARE_ENABLED:
     app.include_router(team_router, prefix="/api")
 
 if settings.DATABASE_ENABLED:
+    from .routers.access_tokens import router as access_tokens_router
     from .routers.account_router import router as account_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_preferences import router as db_preferences_router
@@ -269,10 +270,12 @@ if settings.DATABASE_ENABLED:
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
+    from .routers.pebble import router as pebble_router
     from .routers.read_models import router as read_models_router
     from .routers.registration import router as registration_router
 
     app.include_router(account_router, prefix="/api")
+    app.include_router(access_tokens_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(db_users_router, prefix="/api")
     app.include_router(db_time_tracking_router, prefix="/api")
@@ -281,6 +284,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(db_sync_router, prefix="/api")
     app.include_router(db_preferences_router, prefix="/api")
     app.include_router(read_models_router, prefix="/api")
+    app.include_router(pebble_router, prefix="/api")
     app.include_router(db_time_off_router, prefix="/api")
     logger.info("✓ Database API endpoints enabled")
 else:

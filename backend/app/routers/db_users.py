@@ -13,6 +13,7 @@ from app.database.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
     get_authenticated_principal,
+    require_oidc_principal,
     require_user_or_admin_match,
 )
 from app.schemas import (
@@ -132,16 +133,10 @@ async def export_user_endpoint(
         user=UserExportSummary.model_validate(user, from_attributes=True),
         labels=[LabelSyncRead.model_validate(item, from_attributes=True) for item in labels],
         time_tracking_tasks=[TaskSyncRead.model_validate(item, from_attributes=True) for item in tasks],
-        time_tracking_templates=[
-            TemplateSyncRead.model_validate(item, from_attributes=True) for item in templates
-        ],
-        work_locations=[
-            WorkLocationSyncRead.model_validate(item, from_attributes=True) for item in work_locations
-        ],
+        time_tracking_templates=[TemplateSyncRead.model_validate(item, from_attributes=True) for item in templates],
+        work_locations=[WorkLocationSyncRead.model_validate(item, from_attributes=True) for item in work_locations],
         gantt_tasks=[GanttTaskSyncRead.model_validate(item, from_attributes=True) for item in gantt_tasks],
-        time_off_entries=[
-            TimeOffEntrySyncRead.model_validate(item, from_attributes=True) for item in time_off_entries
-        ],
+        time_off_entries=[TimeOffEntrySyncRead.model_validate(item, from_attributes=True) for item in time_off_entries],
         preferences=preferences,
     )
     return JSONResponse(
@@ -189,7 +184,7 @@ async def update_user_endpoint(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_endpoint(
     user_id: int,
-    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     if principal.is_admin and principal.user_id == user_id:

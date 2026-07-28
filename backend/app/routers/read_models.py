@@ -16,7 +16,10 @@ from app.read_models import (
     TeamStatusReadModel,
     TimeOffSummaryReadModel,
 )
-from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
+from app.routers.auth import (
+    AuthenticatedPrincipal,
+    get_authenticated_principal,
+)
 from app.services.db_service import NotFoundError
 from app.services.read_models_service import build_dashboard_read_model
 

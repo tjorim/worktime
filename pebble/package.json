@@ -1,0 +1,28 @@
+{
+  "name": "worktime-pebble",
+  "author": "tjorim",
+  "version": "0.1.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "scripts": {
+    "validate": "node scripts/validate.mjs"
+  },
+  "dependencies": {
+    "@moddable/pebbleproxy": "^0.1.0"
+  },
+  "pebble": {
+    "displayName": "Worktime",
+    "uuid": "59355118-49f0-4b06-9b73-a9b5ac156395",
+    "projectType": "moddable",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery", "gabbro"],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": ["API_BASE_URL", "AUTH_TOKEN"],
+    "resources": {
+      "media": []
+    }
+  }
+}

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
+from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal, require_oidc_principal
 from app.schemas import AccountCapabilities, AccountProfile
 from app.services.db_service import NotFoundError, delete_user_uncommitted, get_user
 
@@ -61,17 +61,19 @@ async def get_account_profile(
     },
 )
 async def delete_account(
-    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Permanently delete the authenticated user's account and user-scoped data.
 
     Unlike the admin-facing ``DELETE /api/users/{id}`` endpoint, this is
     self-service and intentionally does not block admins from deleting their
-    own account.
+    own account. Requires an interactive OIDC session — a leaked personal
+    access token (e.g. from the Pebble companion app) cannot delete the account.
 
     Raises 401 when no valid session is present (handled by
     ``get_authenticated_principal``).
+    Raises 403 if authenticated via a personal access token instead of OIDC.
     Raises 404 if the session maps to a local user id that no longer exists.
     """
     try:

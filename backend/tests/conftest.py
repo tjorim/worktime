@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.testclient import TestClient
 from sqlalchemy import text as sql_text
@@ -19,7 +19,7 @@ from app.cache.store import get_cache
 from app.database.engine import get_session
 from app.database.models import Base
 from app.main import app
-from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
+from app.routers.auth import AuthenticatedPrincipal, AuthType, get_bearer_principal
 
 _TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -119,12 +119,16 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def _test_auth_principal(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> AuthenticatedPrincipal:
-    """Test-only override for ``get_authenticated_principal``.
+    """Test-only override for ``get_bearer_principal``.
 
     Expects a test token in the format ``test.<user_id>.admin`` or
-    ``test.<user_id>.user`` (produced by the ``auth_headers`` fixture).
+    ``test.<user_id>.user`` (produced by the ``auth_headers`` fixture), with
+    an optional trailing ``.pat`` segment to simulate a personal-access-token
+    session (for exercising ``require_oidc_principal``); otherwise the
+    simulated auth type is ``oidc``.
     """
     if credentials is None:
         raise HTTPException(
@@ -132,7 +136,7 @@ def _test_auth_principal(
             detail="Authentication required",
         )
     parts = credentials.credentials.split(".")
-    if len(parts) != 3 or parts[0] != "test":
+    if len(parts) not in (3, 4) or parts[0] != "test":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token format",
@@ -149,9 +153,22 @@ def _test_auth_principal(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token: role must be 'admin' or 'user'",
         )
+    if len(parts) == 4 and parts[3] not in ("pat", "pat-write"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token: unknown auth type suffix",
+        )
+    request.state.auth_type = "pat" if len(parts) == 4 else "oidc"
+    delegated_scopes = (
+        frozenset({"pebble:read", "pebble:write"})
+        if len(parts) == 4 and parts[3] == "pat-write"
+        else frozenset({"pebble:read"})
+    )
     return AuthenticatedPrincipal(
         user_id=user_id,
         is_admin=parts[2] == "admin",
+        auth_type=AuthType.DELEGATED if len(parts) == 4 else AuthType.KEYCLOAK_USER,
+        scopes=delegated_scopes if len(parts) == 4 else frozenset(),
     )
 
 
@@ -165,13 +182,13 @@ def db_client(test_db: AsyncEngine) -> Generator[TestClient, None, None]:
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
-    app.dependency_overrides[get_authenticated_principal] = _test_auth_principal
+    app.dependency_overrides[get_bearer_principal] = _test_auth_principal
     try:
         with TestClient(app) as client:
             yield client
     finally:
         app.dependency_overrides.pop(get_session, None)
-        app.dependency_overrides.pop(get_authenticated_principal, None)
+        app.dependency_overrides.pop(get_bearer_principal, None)
 
 
 @pytest.fixture()
@@ -183,9 +200,18 @@ def auth_headers() -> Callable[..., dict[str, str]]:
     ``db_client``.
     """
 
-    def _headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
+    def _headers(
+        user_id: int,
+        *,
+        is_admin: bool = False,
+        via_pat: bool = False,
+        pat_write: bool = False,
+    ) -> dict[str, str]:
         role = "admin" if is_admin else "user"
-        token = f"test.{user_id}.{role}"
+        if pat_write and not via_pat:
+            raise ValueError("pat_write requires via_pat=True")
+        suffix = ".pat-write" if pat_write else ".pat" if via_pat else ""
+        token = f"test.{user_id}.{role}{suffix}"
         return {"Authorization": f"Bearer {token}"}
 
     return _headers

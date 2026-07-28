@@ -251,6 +251,60 @@ async def test_resolve_context_missing_user_raises_not_found(
             await backend.resolve_context(session)
 
 
+async def test_keycloak_service_account_requires_user_protocol_mapper(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+    token = AccessToken(
+        token="service-token",
+        client_id="worktime-mcp",
+        scopes=["worktime:mcp"],
+        claims={
+            "sub": "service-subject",
+            "preferred_username": "service-account-worktime-mcp",
+            "azp": "worktime-mcp",
+        },
+    )
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: token)
+
+    async with session_factory() as session:
+        with pytest.raises(McpAuthError, match="worktime_user_id protocol mapper"):
+            await backend.resolve_context(session)
+
+
+async def test_keycloak_service_account_uses_mapped_user(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session,
+            UserCreate(username="mapped-service", display_name="Mapped Service"),
+        )
+    token = AccessToken(
+        token="service-token",
+        client_id="worktime-mcp",
+        scopes=["worktime:mcp"],
+        claims={
+            "sub": "service-subject",
+            "preferred_username": "service-account-worktime-mcp",
+            "azp": "worktime-mcp",
+            "worktime_user_id": user.id,
+        },
+    )
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: token)
+
+    async with session_factory() as session:
+        context = await backend.resolve_context(session)
+
+    assert context.user_id == user.id
+    assert context.auth_type == "keycloak_service"
+
+
 # ---------------------------------------------------------------------------
 # Write tool tests
 # ---------------------------------------------------------------------------

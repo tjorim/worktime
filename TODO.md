@@ -115,9 +115,28 @@ To-do list and development roadmap for Worktime. Audited against the codebase on
 
 ---
 
+## Backlog — Integrations
+
+### 11. Pebble Companion App — Device Testing & Scoped Tokens
+
+- **What exists**: `pebble/` — an Alloy watch app for clock in/out + active-task glance (issue #996), talking
+  to the existing time-tracking endpoints via a phone-side (`pkjs`) companion. Auth is a new personal access
+  token system (`/api/access-tokens`, Settings > Account > API tokens) rather than OIDC, since the watch's
+  JS runtime has no practical way to run an OAuth PKCE flow.
+- **What's missing**: Real device/emulator testing — written against the published Alloy docs, but this repo
+  has no Pebble SDK/CLI, so nothing here has actually been built or run on hardware yet. Tokens are already
+  scoped to `pebble:read`/`pebble:write` (not full account access), and sensitive account/token-management
+  operations require an interactive OIDC session regardless of token scope. Worth revisiting later: even
+  more granular Pebble permissions (e.g. a clock-only scope) once there's a second companion-app use case.
+- **Files**: `pebble/`, `backend/app/routers/access_tokens.py`, `backend/app/services/access_token_service.py`,
+  `frontend/src/components/settings/account/SettingsApiTokensSection.tsx`, `frontend/public/pebble-config.html`
+- **Status**: 🟡 MVP built, untested on hardware
+
+---
+
 ## Aspirational — Long-Term
 
-### 11. Real-Time Team Collaboration (shared time-off)
+### 12. Real-Time Team Collaboration (shared time-off)
 
 - **What exists**: Backend REST API for time-off CRUD is complete (auth, DB, GET/POST/PATCH/DELETE). `EventStoreContext` is ready to receive `syncWithBackend()` and `subscribeToUpdates()` methods.
 - **What's missing**: The sync layer — frontend calling the backend API — and then real-time broadcast.

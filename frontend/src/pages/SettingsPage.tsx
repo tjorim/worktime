@@ -19,6 +19,7 @@ import { ChangelogModal } from "@/components/ChangelogModal";
 import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
 import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
@@ -30,6 +31,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
+import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
 import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
 import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
@@ -225,6 +227,22 @@ export function SettingsContent({
   });
   const isAdmin = accountProfile?.is_admin ?? false;
   const {
+    apiTokens,
+    isApiTokensLoading,
+    apiTokensError,
+    isCreatingApiToken,
+    createApiTokenError,
+    createdApiToken,
+    dismissCreatedApiToken,
+    handleCreateApiToken,
+    revokingApiTokenId,
+    revokeApiTokenError,
+    handleRevokeApiToken,
+  } = useSettingsApiTokens({
+    isAuthenticated,
+    fetchFn,
+  });
+  const {
     adminUsers,
     isAdminUsersLoading,
     adminUsersError,
@@ -348,6 +366,21 @@ export function SettingsContent({
           retryInSeconds={retryInSeconds}
           onTriggerPull={triggerPull}
         />
+        {isAuthenticated ? (
+          <SettingsApiTokensSection
+            apiTokens={apiTokens}
+            isApiTokensLoading={isApiTokensLoading}
+            apiTokensError={apiTokensError}
+            isCreatingApiToken={isCreatingApiToken}
+            createApiTokenError={createApiTokenError}
+            createdApiToken={createdApiToken}
+            onDismissCreatedApiToken={dismissCreatedApiToken}
+            onCreateApiToken={handleCreateApiToken}
+            revokingApiTokenId={revokingApiTokenId}
+            revokeApiTokenError={revokeApiTokenError}
+            onRevokeApiToken={handleRevokeApiToken}
+          />
+        ) : null}
       </>
     ),
     admin: () =>
