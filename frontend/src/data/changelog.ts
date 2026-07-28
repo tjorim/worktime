@@ -14,9 +14,27 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.7.2",
+    date: "2026-07-28",
+    status: "current",
+    added: [
+      "Pebble Time 2 companion app for shift and active-task glances plus clock in/out, paired through an authenticated web flow using revocable pebble:read/pebble:write credentials (#1005, #1026)",
+      "Pebble emulator, offline-state, credential-rotation, and live HTTP validation coverage, with a display-only cache that keeps the last dashboard visible while the phone is offline (#1026)",
+    ],
+    changed: [
+      "Account and sync settings are combined, user management has its own section, and time-tracking configuration now lives under Settings (#1002, #1003)",
+      "Gantt tasks can be linked to time-tracking labels (#998)",
+    ],
+    fixed: [
+      "MCP now accepts dedicated Keycloak service-account tokens alongside interactive user tokens",
+      "Unified Calendar no longer reports that no roster is configured when a roster is available (#1004)",
+      "Pebble account changes, delayed responses, repeated actions, expired cached state, and reconnect refreshes no longer leak or replay stale data across credentials (#1026)",
+    ],
+  },
+  {
     version: "2026.7.1",
     date: "2026-07-22",
-    status: "current",
+    status: "released",
     added: [],
     changed: [
       "Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and backend/pyproject.toml; Android's versionName/versionCode are derived from it at build time (#993)",
