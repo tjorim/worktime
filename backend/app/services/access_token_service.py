@@ -36,8 +36,9 @@ async def create_access_token(
         scopes=list(payload.scopes),
     )
     session.add(token)
-    await session.commit()
+    await session.flush()
     await session.refresh(token)
+    await session.commit()
     return token, raw_token
 
 
