@@ -317,6 +317,12 @@ class AccessToken(Base):
     name: Mapped[str] = mapped_column(String)
     token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
     token_preview: Mapped[str] = mapped_column(String)
+    scopes: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=lambda: ["pebble:read"],
+        server_default='["pebble:read"]',
+    )
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )

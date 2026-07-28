@@ -14,7 +14,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from app.routers.auth import PEBBLE_READ_SCOPE, AuthType, get_bearer_principal
+from app.routers.auth import (
+    PEBBLE_READ_SCOPE,
+    PEBBLE_WRITE_SCOPE,
+    AuthType,
+    get_bearer_principal,
+    has_required_scopes,
+)
 from app.schemas import AccessTokenCreate, UserCreate
 from app.services.access_token_service import (
     authenticate_access_token,
@@ -48,6 +54,7 @@ async def test_service_create_authenticate_and_revoke_round_trip(db_session: Asy
     token, raw_token = await create_access_token(db_session, user_id=user.id, payload=AccessTokenCreate(name="Pebble"))
     assert raw_token.startswith("wtpat_")
     assert token.token_preview == raw_token[-4:]
+    assert token.scopes == [PEBBLE_READ_SCOPE]
     assert token.last_used_at is None
 
     authenticated = await authenticate_access_token(db_session, raw_token)
@@ -89,6 +96,42 @@ async def test_get_bearer_principal_accepts_scoped_delegated_token(db_session: A
     assert principal.auth_type == AuthType.DELEGATED
     assert principal.client_id == "pebble"
     assert principal.scopes == frozenset({PEBBLE_READ_SCOPE})
+
+
+async def test_get_bearer_principal_uses_persisted_token_scopes(
+    db_session: AsyncSession,
+) -> None:
+    user = await create_user(
+        db_session,
+        UserCreate(username="pat-scoped-user", display_name="Scoped User"),
+    )
+    _token, raw_token = await create_access_token(
+        db_session,
+        user_id=user.id,
+        payload=AccessTokenCreate(
+            name="Pebble",
+            scopes=[PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE],
+        ),
+    )
+
+    principal = await get_bearer_principal(
+        request=_fake_request(),
+        credentials=HTTPAuthorizationCredentials(scheme="Bearer", credentials=raw_token),
+        session=db_session,
+    )
+
+    assert principal.scopes == frozenset({PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE})
+
+
+def test_scope_helper_supports_namespace_wildcards() -> None:
+    assert has_required_scopes(
+        frozenset({"pebble:*"}),
+        frozenset({PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE}),
+    )
+    assert not has_required_scopes(
+        frozenset({PEBBLE_READ_SCOPE}),
+        frozenset({PEBBLE_WRITE_SCOPE}),
+    )
 
 
 async def test_get_bearer_principal_rejects_unknown_pat(db_session: AsyncSession) -> None:
@@ -141,6 +184,7 @@ def test_access_token_lifecycle_over_http(
     body = created.json()
     assert body["token"].startswith("wtpat_")
     assert body["name"] == "Pebble"
+    assert body["scopes"] == [PEBBLE_READ_SCOPE]
     token_id = body["id"]
 
     listed = db_client.get("/api/access-tokens", headers=headers)
@@ -150,12 +194,64 @@ def test_access_token_lifecycle_over_http(
     assert listed_item["id"] == token_id
     assert "token" not in listed_item
     assert listed_item["token_preview"] == body["token"][-4:]
+    assert listed_item["scopes"] == [PEBBLE_READ_SCOPE]
 
     revoked = db_client.delete(f"/api/access-tokens/{token_id}", headers=headers)
     assert revoked.status_code == 204
 
     revoked_again = db_client.delete(f"/api/access-tokens/{token_id}", headers=headers)
     assert revoked_again.status_code == 404
+
+
+def test_access_token_endpoint_persists_explicit_pebble_scopes(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "pat-explicit-scopes")
+    headers = auth_headers(owner_id)
+
+    created = db_client.post(
+        "/api/access-tokens",
+        json={
+            "name": "Pebble",
+            "scopes": [PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE],
+        },
+        headers=headers,
+    )
+
+    assert created.status_code == 201, created.text
+    assert created.json()["scopes"] == [PEBBLE_READ_SCOPE, PEBBLE_WRITE_SCOPE]
+    listed = db_client.get("/api/access-tokens", headers=headers)
+    assert listed.json()["items"][0]["scopes"] == [
+        PEBBLE_READ_SCOPE,
+        PEBBLE_WRITE_SCOPE,
+    ]
+
+
+def test_access_token_endpoint_rejects_empty_or_unknown_scopes(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "pat-invalid-scopes")
+    headers = auth_headers(owner_id)
+
+    empty = db_client.post(
+        "/api/access-tokens",
+        json={"name": "Empty", "scopes": []},
+        headers=headers,
+    )
+    unknown = db_client.post(
+        "/api/access-tokens",
+        json={"name": "Unknown", "scopes": ["mcp:*"]},
+        headers=headers,
+    )
+
+    assert empty.status_code == 422
+    assert unknown.status_code == 422
 
 
 def test_access_token_endpoints_reject_pat_auth(

@@ -153,17 +153,22 @@ def _test_auth_principal(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token: role must be 'admin' or 'user'",
         )
-    if len(parts) == 4 and parts[3] != "pat":
+    if len(parts) == 4 and parts[3] not in ("pat", "pat-write"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token: unknown auth type suffix",
         )
     request.state.auth_type = "pat" if len(parts) == 4 else "oidc"
+    delegated_scopes = (
+        frozenset({"pebble:read", "pebble:write"})
+        if len(parts) == 4 and parts[3] == "pat-write"
+        else frozenset({"pebble:read"})
+    )
     return AuthenticatedPrincipal(
         user_id=user_id,
         is_admin=parts[2] == "admin",
         auth_type=AuthType.DELEGATED if len(parts) == 4 else AuthType.KEYCLOAK_USER,
-        scopes=frozenset({"pebble:read"}) if len(parts) == 4 else frozenset(),
+        scopes=delegated_scopes if len(parts) == 4 else frozenset(),
     )
 
 
@@ -195,9 +200,18 @@ def auth_headers() -> Callable[..., dict[str, str]]:
     ``db_client``.
     """
 
-    def _headers(user_id: int, *, is_admin: bool = False, via_pat: bool = False) -> dict[str, str]:
+    def _headers(
+        user_id: int,
+        *,
+        is_admin: bool = False,
+        via_pat: bool = False,
+        pat_write: bool = False,
+    ) -> dict[str, str]:
         role = "admin" if is_admin else "user"
-        token = f"test.{user_id}.{role}" + (".pat" if via_pat else "")
+        if pat_write and not via_pat:
+            raise ValueError("pat_write requires via_pat=True")
+        suffix = ".pat-write" if pat_write else ".pat" if via_pat else ""
+        token = f"test.{user_id}.{role}{suffix}"
         return {"Authorization": f"Bearer {token}"}
 
     return _headers

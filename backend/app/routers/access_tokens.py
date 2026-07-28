@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
-from app.schemas import AccessTokenCreate, AccessTokenCreated, AccessTokenListResponse, AccessTokenRead
+from app.schemas import (
+    AccessTokenCreate,
+    AccessTokenCreated,
+    AccessTokenListResponse,
+    AccessTokenRead,
+    AccessTokenScope,
+)
 from app.services.access_token_service import (
     create_access_token,
     list_access_tokens_for_user,
@@ -28,7 +36,11 @@ async def create_access_token_endpoint(
     response.headers["Cache-Control"] = "no-store"
     token, raw_token = await create_access_token(session, principal.user_id, payload)
     return AccessTokenCreated(
-        id=token.id, name=token.name, token=raw_token, created_at=token.created_at
+        id=token.id,
+        name=token.name,
+        token=raw_token,
+        scopes=cast(list[AccessTokenScope], token.scopes),
+        created_at=token.created_at,
     )
 
 

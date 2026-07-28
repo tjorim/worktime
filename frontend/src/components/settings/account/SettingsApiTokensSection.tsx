@@ -12,6 +12,7 @@ interface CreatedApiToken {
   id: string;
   name: string;
   token: string;
+  scopes: Array<"pebble:read" | "pebble:write">;
 }
 
 interface SettingsApiTokensSectionProps {
@@ -73,6 +74,7 @@ export function SettingsApiTokensSection({
           <Alert variant="success" className="d-flex flex-column gap-2">
             <div className="fw-medium">{m.api_tokens_created_title()}</div>
             <div className="small">{m.api_tokens_created_warning()}</div>
+            <div className="small">{m.api_tokens_pebble_guidance()}</div>
             <code className="user-select-all d-block p-2 bg-body-secondary rounded text-break">
               {createdApiToken.token}
             </code>
@@ -144,6 +146,9 @@ export function SettingsApiTokensSection({
                       {token.last_used_at
                         ? new Date(token.last_used_at).toLocaleDateString()
                         : m.api_tokens_last_used_never()}
+                    </div>
+                    <div className="text-muted small">
+                      {m.api_tokens_scopes_label()}: {token.scopes.join(", ")}
                     </div>
                   </div>
                   <Button

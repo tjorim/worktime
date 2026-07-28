@@ -32,6 +32,7 @@ async def create_access_token(
         name=payload.name,
         token_hash=_hash_token(raw_token),
         token_preview=raw_token[-_TOKEN_PREVIEW_LENGTH:],
+        scopes=list(payload.scopes),
     )
     session.add(token)
     await session.commit()

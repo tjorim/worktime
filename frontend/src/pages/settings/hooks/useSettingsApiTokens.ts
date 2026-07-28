@@ -7,6 +7,7 @@ export interface ApiToken {
   id: string;
   name: string;
   token_preview: string;
+  scopes: Array<"pebble:read" | "pebble:write">;
   created_at: string;
   last_used_at: string | null;
 }
@@ -15,6 +16,7 @@ interface CreatedApiToken {
   id: string;
   name: string;
   token: string;
+  scopes: Array<"pebble:read" | "pebble:write">;
 }
 
 interface UseSettingsApiTokensParams {
@@ -73,7 +75,10 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       const response = await fetchFn("/api/access-tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmedName }),
+        body: JSON.stringify({
+          name: trimmedName,
+          scopes: ["pebble:read", "pebble:write"],
+        }),
       });
       if (!response.ok) {
         throw new Error((await readErrorDetail(response)) ?? m.api_tokens_create_failed());

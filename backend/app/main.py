@@ -270,6 +270,7 @@ if settings.DATABASE_ENABLED:
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
+    from .routers.pebble import router as pebble_router
     from .routers.read_models import router as read_models_router
     from .routers.registration import router as registration_router
 
@@ -283,6 +284,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(db_sync_router, prefix="/api")
     app.include_router(db_preferences_router, prefix="/api")
     app.include_router(read_models_router, prefix="/api")
+    app.include_router(pebble_router, prefix="/api")
     app.include_router(db_time_off_router, prefix="/api")
     logger.info("✓ Database API endpoints enabled")
 else:

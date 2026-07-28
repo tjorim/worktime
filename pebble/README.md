@@ -10,8 +10,7 @@ Alloy's `fetch()` API runs on the watch and reaches the internet through the
 official phone-side `@moddable/pebbleproxy` package. So:
 
 - **`src/embeddedjs/main.js`** — runs on the watch. Renders status/timer and
-  calls the Worktime backend (`GET /api/read-models/dashboard` plus the
-  time-tracking endpoints) with watch-side `fetch()`.
+  calls the dedicated Worktime Pebble endpoints with watch-side `fetch()`.
 - **`src/pkjs/index.js`** — runs on the phone, inside the Pebble mobile app.
   Hosts the Alloy network proxy and relays runtime configuration to the
   watch via AppMessage.
@@ -23,8 +22,16 @@ official phone-side `@moddable/pebbleproxy` package. So:
 
 Authentication uses a **personal access token** (`Settings > Account > API tokens` in the Worktime web app),
 not the OIDC session the web app uses — Pebble's constrained JS runtime has no good way to run an OAuth
-Authorization Code + PKCE flow, and a static, revocable token is simpler and no less secure. Revoke the
-token from the web app at any time to disconnect the watch.
+Authorization Code + PKCE flow. The generated companion credential carries only
+`pebble:read` and `pebble:write`; it cannot access the ordinary web/Android API,
+account management, token management, or MCP. Revoke it from the web app at any
+time to disconnect the watch.
+
+The watch uses this narrow API surface:
+
+- `GET /api/pebble/dashboard` (`pebble:read`) — current task and shift glance.
+- `POST /api/pebble/actions/clock-in` (`pebble:write`) — start a "Working" task.
+- `POST /api/pebble/actions/clock-out` (`pebble:write`) — stop the current task.
 
 ## Building and installing
 
@@ -39,7 +46,9 @@ pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 
 ## Configuration
 
-1. In the Worktime web app: **Settings > Account > API tokens** > generate a token (e.g. name it "Pebble").
+1. In the Worktime web app: **Settings > Account > API tokens** > generate a
+   Pebble token (for example, name it "Pebble"). The web app requests both
+   required scopes: `pebble:read` and `pebble:write`.
 2. On the phone, open the Worktime app's settings from the Pebble mobile app.
 3. Enter your Worktime server URL and paste the token, then save.
 
@@ -54,6 +63,5 @@ self-hosting elsewhere, change it to your deployment's URL before building.
   hardware or the emulator. Expect some iteration once tested on-device.
 - Layout is a simple centered stack (`left: 0, right: 0`); it isn't tuned separately for the round Gabbro
   (Pebble Round 2) display.
-- A personal access token authenticates as the user for the same endpoints their own OIDC session can
-  reach (minus account/token management, see `require_oidc_principal` in the backend) — there's no
-  reduced-scope "time-tracking only" token type yet.
+- Clock actions use server time and the fixed task label "Working". Configure
+  labels or edit task details later in the web or Android app.

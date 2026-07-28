@@ -541,7 +541,13 @@ describe("SettingsPage API Tokens Section", () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/access-tokens" && init?.method === "POST") {
         return jsonResponse(
-          { id: "tok-1", name: "Pebble watch", token: "wtpat_secret-value", created_at: "2026-07-24T00:00:00Z" },
+          {
+            id: "tok-1",
+            name: "Pebble watch",
+            token: "wtpat_secret-value",
+            scopes: ["pebble:read", "pebble:write"],
+            created_at: "2026-07-24T00:00:00Z",
+          },
           { status: 201 },
         );
       }
@@ -552,6 +558,7 @@ describe("SettingsPage API Tokens Section", () => {
               id: "tok-1",
               name: "Pebble watch",
               token_preview: "alue",
+              scopes: ["pebble:read", "pebble:write"],
               created_at: "2026-07-24T00:00:00Z",
               last_used_at: null,
             },
@@ -571,6 +578,17 @@ describe("SettingsPage API Tokens Section", () => {
 
     expect(await screen.findByText("Token created")).toBeInTheDocument();
     expect(screen.getByText("wtpat_secret-value")).toBeInTheDocument();
+    expect(screen.getByText("Scopes: pebble:read, pebble:write")).toBeInTheDocument();
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/api/access-tokens",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          name: "Pebble watch",
+          scopes: ["pebble:read", "pebble:write"],
+        }),
+      }),
+    );
 
     await user.click(screen.getByRole("button", { name: "Copy" }));
     expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith("wtpat_secret-value");
@@ -596,6 +614,7 @@ describe("SettingsPage API Tokens Section", () => {
                   id: "tok-1",
                   name: "Pebble watch",
                   token_preview: "alue",
+                  scopes: ["pebble:read", "pebble:write"],
                   created_at: "2026-07-24T00:00:00Z",
                   last_used_at: null,
                 },

@@ -147,16 +147,11 @@ async function refreshStatus() {
     return;
   }
   try {
-    const task = await apiRequest("GET", "/api/time-tracking/tasks/running");
-    application.behavior.showTask(task);
-  } catch (error) {
-    application.behavior.showError(String(error.message || error));
-  }
-  try {
-    const dashboard = await apiRequest("GET", "/api/read-models/dashboard");
+    const dashboard = await apiRequest("GET", "/api/pebble/dashboard");
+    application.behavior.showTask(dashboard.running_task);
     application.behavior.showShift(dashboard);
   } catch (error) {
-    console.log(`Worktime shift refresh failed: ${error}`);
+    application.behavior.showError(String(error.message || error));
     application.behavior.showShiftError();
   }
 }
@@ -170,14 +165,9 @@ async function toggleClock() {
     : "Clocking in…";
   try {
     if (runningTask) {
-      await apiRequest("PUT", `/api/time-tracking/tasks/${runningTask.id}`, {
-        stop_time: new Date().toISOString(),
-      });
+      await apiRequest("POST", "/api/pebble/actions/clock-out");
     } else {
-      await apiRequest("POST", "/api/time-tracking/tasks", {
-        text: "Working",
-        start_time: new Date().toISOString(),
-      });
+      await apiRequest("POST", "/api/pebble/actions/clock-in");
     }
     await refreshStatus();
   } catch (error) {

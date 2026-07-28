@@ -9,6 +9,7 @@ validated Bearer JWT so that existing endpoint code does not need to change.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -48,6 +49,7 @@ class AuthenticatedPrincipal:
 
 
 PEBBLE_READ_SCOPE = "pebble:read"
+PEBBLE_WRITE_SCOPE = "pebble:write"
 
 
 # Discovery results are stable for the lifetime of the process, like the JWKS
@@ -129,7 +131,7 @@ async def _authenticate_pat(request: Request, token: str, session: AsyncSession)
         is_admin=False,
         client_id="pebble",
         auth_type=AuthType.DELEGATED,
-        scopes=frozenset({PEBBLE_READ_SCOPE}),
+        scopes=frozenset(record.scopes),
     )
 
 
@@ -222,15 +224,41 @@ def get_authenticated_principal(
     return principal
 
 
-def require_pebble_read_principal(
-    principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
-) -> AuthenticatedPrincipal:
-    """Allow Keycloak users or a delegated Pebble token with read scope."""
-    if principal.auth_type == AuthType.KEYCLOAK_USER:
-        return principal
-    if principal.auth_type == AuthType.DELEGATED and PEBBLE_READ_SCOPE in principal.scopes:
-        return principal
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing pebble:read scope")
+def has_required_scopes(granted: frozenset[str], required: frozenset[str]) -> bool:
+    """Return whether all required scopes are granted, including namespace wildcards."""
+    for scope in required:
+        namespace = scope.partition(":")[0]
+        if scope not in granted and f"{namespace}:*" not in granted:
+            return False
+    return True
+
+
+def require_scoped_principal(
+    *required_scopes: str,
+) -> Callable[..., AuthenticatedPrincipal]:
+    """Allow interactive users or delegated credentials with all required scopes."""
+    required = frozenset(required_scopes)
+
+    def dependency(
+        principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
+    ) -> AuthenticatedPrincipal:
+        if principal.auth_type == AuthType.KEYCLOAK_USER:
+            return principal
+        if principal.auth_type == AuthType.DELEGATED and has_required_scopes(
+            principal.scopes, required
+        ):
+            return principal
+        missing = ", ".join(sorted(required))
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Missing required scope: {missing}",
+        )
+
+    return dependency
+
+
+require_pebble_read_principal = require_scoped_principal(PEBBLE_READ_SCOPE)
+require_pebble_write_principal = require_scoped_principal(PEBBLE_WRITE_SCOPE)
 
 
 def get_authenticated_user_id(

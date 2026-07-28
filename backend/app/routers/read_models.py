@@ -19,7 +19,6 @@ from app.read_models import (
 from app.routers.auth import (
     AuthenticatedPrincipal,
     get_authenticated_principal,
-    require_pebble_read_principal,
 )
 from app.services.db_service import NotFoundError
 from app.services.read_models_service import build_dashboard_read_model
@@ -58,7 +57,7 @@ async def _load_dashboard(
 async def get_dashboard_read_model(
     as_of: dt_datetime | None = Query(default=None),
     timezone: str = Query(default="UTC"),
-    principal: AuthenticatedPrincipal = Depends(require_pebble_read_principal),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> DashboardReadModel:
     return await _load_dashboard(principal, session, as_of=as_of, timezone=timezone)

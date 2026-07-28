@@ -40,17 +40,25 @@ const configSource = readFileSync(
   "utf8",
 );
 if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy fetch()");
-if (!watchSource.includes("/api/read-models/dashboard")) {
-  throw new Error("Watch code must include the shift glance read model");
+if (!watchSource.includes("/api/pebble/dashboard")) {
+  throw new Error("Watch code must use the scoped Pebble dashboard");
 }
-for (const method of ['apiRequest("POST"', 'apiRequest("PUT"']) {
-  if (!watchSource.includes(method)) throw new Error(`Missing clock action: ${method}`);
+for (const path of [
+  "/api/pebble/actions/clock-in",
+  "/api/pebble/actions/clock-out",
+]) {
+  if (!watchSource.includes(path)) throw new Error(`Missing clock action: ${path}`);
 }
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
 }
 if (!configSource.includes("!/^https:\\/\\//i.test(apiBaseUrl)")) {
   throw new Error("Configuration must reject plaintext HTTP server URLs");
+}
+for (const scope of ["pebble:read", "pebble:write"]) {
+  if (!configSource.includes(scope)) {
+    throw new Error(`Configuration must document required scope: ${scope}`);
+  }
 }
 
 for (const file of ["src/embeddedjs/main.js", "src/pkjs/index.js"]) {
