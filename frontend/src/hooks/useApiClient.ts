@@ -76,8 +76,11 @@ export function useApiClient() {
         if (await renewSession()) {
           try {
             return await attempt();
-          } catch {
-            // Renewal reported success but the retry still failed — fall through
+          } catch (retryError: unknown) {
+            if (!(retryError instanceof Error) || !retryError.message.startsWith("Unauthorized")) {
+              throw retryError;
+            }
+            // Renewal reported success but the retry still hit a 401 — fall through
             // to the same session-expired handling as a failed renewal.
           }
         }
