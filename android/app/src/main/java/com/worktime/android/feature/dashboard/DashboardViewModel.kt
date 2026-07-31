@@ -1,5 +1,6 @@
 package com.worktime.android.feature.dashboard
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -16,10 +17,14 @@ import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -52,6 +57,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private val _actionsState = MutableStateFlow(MobileActionsUiState())
     val actionsState: StateFlow<MobileActionsUiState> = _actionsState.asStateFlow()
+    private val _logoutIntent = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
+
+    /** Emits the provider end-session intent for the UI to launch via an activity result launcher. */
+    val logoutIntent: SharedFlow<Intent> = _logoutIntent.asSharedFlow()
     private var refreshJob: Job? = null
 
     init {
@@ -207,11 +216,36 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         submitMutation { repository.deleteTemplate(templateId) }
     }
 
+    /**
+     * Starts an interactive sign-out. If there is a provider session to end, this only emits
+     * [logoutIntent] for the UI to launch and waits for [onLogoutFlowFinished] before clearing
+     * local state — clearing it here (before the browser round trip even started) would report
+     * signed-out while the provider session is still alive, and the next sign-in would then
+     * silently succeed via SSO with no credential prompt. When there is nothing to end at the
+     * provider, it completes immediately.
+     */
     fun logout() {
         viewModelScope.launch {
-            repository.logout()
-            _uiState.value = DashboardUiState.LoggedOut
+            val intent =
+                runCatching { repository.buildLogoutIntent() }
+                    .onFailure { if (it is CancellationException) throw it }
+                    .getOrNull()
+            if (intent != null) {
+                _logoutIntent.emit(intent)
+            } else {
+                completeLogout()
+            }
         }
+    }
+
+    /** Called once the launched end-session activity returns control to the app, whatever the outcome. */
+    fun onLogoutFlowFinished() {
+        viewModelScope.launch { completeLogout() }
+    }
+
+    private fun completeLogout() {
+        repository.completeLogout()
+        _uiState.value = DashboardUiState.LoggedOut
     }
 
     fun deleteAccount() {

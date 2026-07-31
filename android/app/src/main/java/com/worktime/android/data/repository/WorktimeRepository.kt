@@ -1,5 +1,6 @@
 package com.worktime.android.data.repository
 
+import android.content.Intent
 import com.worktime.android.core.auth.SessionController
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.data.api.WorktimeApi
@@ -166,7 +167,14 @@ interface DashboardRepository {
 
     suspend fun deleteAccount(): MutationResult<Unit>
 
-    suspend fun logout()
+    /**
+     * Builds the provider end-session intent for an interactive sign-out, without
+     * clearing local state. See [SessionController.buildLogoutIntent].
+     */
+    suspend fun buildLogoutIntent(): Intent?
+
+    /** Clears local session state. Pairs with [buildLogoutIntent] once its flow returns. */
+    fun completeLogout()
 }
 
 @Suppress("TooManyFunctions") // implements the single-facade DashboardRepository
@@ -479,8 +487,10 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         currentUserId = null
     }
 
-    override suspend fun logout() {
-        sessionController.logout()
+    override suspend fun buildLogoutIntent(): Intent? = sessionController.buildLogoutIntent()
+
+    override fun completeLogout() {
+        sessionController.completeLogout()
         currentUserId = null
     }
 

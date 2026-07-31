@@ -18,16 +18,19 @@ export interface AuthenticatedRequestInit extends RequestInit {
  *
  * The returned function automatically:
  * - Injects the OIDC Bearer token into the `Authorization` header.
- * - Redirects to the login page on 401 Unauthorized and shows a session-expired toast.
- *   This avoids also starting logout, so only one OIDC navigation is triggered.
- * - Shows an error toast and clears auth on 403 Forbidden.
+ * - On 401 Unauthorized, tries one silent token renewal before giving up — a 401
+ *   usually means the access token aged out while the Keycloak session is still
+ *   valid, since `automaticSilentRenew`'s proactive timer isn't the only way a
+ *   token goes stale. Only redirects to the login page (with a session-expired
+ *   toast) if that renewal also fails.
+ * - Shows an error toast on 403 Forbidden, keeping the session intact.
  *
  * Must be used inside AuthProvider and ToastProvider.
  *
  * @returns `apiFetch(url, init?)` — a fetch wrapper with error handling.
  */
 export function useApiClient() {
-  const { triggerLogin, logout, getAccessToken } = useAuth();
+  const { triggerLogin, getAccessToken, renewSession } = useAuth();
   const { showError, showWarning } = useToast();
 
   const authenticatedFetch = useCallback(
@@ -36,29 +39,60 @@ export function useApiClient() {
       init: AuthenticatedRequestInit = {},
     ): Promise<Response> => {
       const { suppressUnauthorizedRedirect = false, ...requestInit } = init;
-      const token = getAccessToken();
-      const headers = new Headers(requestInit.headers);
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return apiFetch(
-        url,
-        { ...requestInit, headers },
-        {
-          onUnauthorized: () => {
-            showWarning(m.auth_session_expired());
-            if (!suppressUnauthorizedRedirect) {
-              triggerLogin();
+
+      const attempt = () => {
+        const token = getAccessToken();
+        const headers = new Headers(requestInit.headers);
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+        return apiFetch(
+          url,
+          { ...requestInit, headers },
+          {
+            // Handled below instead: a bare 401 here might still be recoverable
+            // via a silent renewal, so nothing is reported as a session failure
+            // until that attempt has actually failed.
+            onUnauthorized: () => {},
+            // 403 is an authorization boundary, not a broken session: the backend
+            // returns it for admin-only endpoints, user-id mismatches, and the
+            // OIDC-only surfaces a Pebble token cannot reach. The session is still
+            // valid, so signing the user out of the whole app is the wrong remedy —
+            // report the denial and leave them where they are.
+            onForbidden: () => {
+              showError(m.auth_error_forbidden());
+            },
+          },
+        );
+      };
+
+      try {
+        return await attempt();
+      } catch (error: unknown) {
+        if (!(error instanceof Error) || !error.message.startsWith("Unauthorized")) {
+          throw error;
+        }
+
+        if (await renewSession()) {
+          try {
+            return await attempt();
+          } catch (retryError: unknown) {
+            if (!(retryError instanceof Error) || !retryError.message.startsWith("Unauthorized")) {
+              throw retryError;
             }
-          },
-          onForbidden: () => {
-            logout();
-            showError(m.auth_error_forbidden());
-          },
-        },
-      );
+            // Renewal reported success but the retry still hit a 401 — fall through
+            // to the same session-expired handling as a failed renewal.
+          }
+        }
+
+        showWarning(m.auth_session_expired());
+        if (!suppressUnauthorizedRedirect) {
+          triggerLogin();
+        }
+        throw error;
+      }
     },
-    [triggerLogin, logout, getAccessToken, showError, showWarning],
+    [triggerLogin, getAccessToken, renewSession, showError, showWarning],
   );
 
   return authenticatedFetch;

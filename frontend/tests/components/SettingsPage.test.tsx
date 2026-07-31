@@ -158,7 +158,6 @@ function renderSettingsAccountHarness({
         onSaveProfile={() => void handleSaveProfile()}
         onDeleteAccount={() => void handleDeleteAccount()}
         onLogout={vi.fn()}
-        onSignup={vi.fn()}
         onLogin={vi.fn()}
       />
     );
@@ -211,10 +210,13 @@ function renderSettingsAdminUsersHarness({
 }
 
 describe("SettingsPage Account Section", () => {
-  it("renders connect account and sign in buttons when not authenticated", () => {
+  it("renders only the sign in button when not authenticated", () => {
+    // Worktime has no self-service registration (tjorim/apps#168): the realm
+    // rejects it, so a separate "Connect Account" action promised a path that
+    // does not exist. Sign In is the only entry point.
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
-    expect(screen.getByText("Connect Account")).toBeInTheDocument();
     expect(screen.getByText("Sign In")).toBeInTheDocument();
+    expect(screen.queryByText("Connect Account")).not.toBeInTheDocument();
   });
 
   it("shows sync benefits description when not authenticated", () => {
@@ -235,22 +237,6 @@ describe("SettingsPage Account Section", () => {
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     await user.click(screen.getByText("Sign In"));
-    expect(mockSigninRedirect).toHaveBeenCalled();
-  });
-
-  it("calls signinRedirect when Connect Account is clicked", async () => {
-    useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
-      isAuthenticated: false,
-      isLoading: false,
-      user: null,
-      signinRedirect: mockSigninRedirect,
-      removeUser: mockRemoveUser,
-      signoutRedirect: mockSignoutRedirect,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
-    const user = userEvent.setup();
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
-    await user.click(screen.getByText("Connect Account"));
     expect(mockSigninRedirect).toHaveBeenCalled();
   });
 

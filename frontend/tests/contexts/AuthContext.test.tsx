@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
@@ -9,8 +10,11 @@ import { ToastProvider } from "@/contexts/ToastContext";
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
 const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
 const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
+const mockSigninSilent = vi.fn();
 const mockAddAccessTokenExpiring = vi.fn();
 const mockRemoveAccessTokenExpiring = vi.fn();
+const mockAddAccessTokenExpired = vi.fn();
+const mockRemoveAccessTokenExpired = vi.fn();
 const mockAddSilentRenewError = vi.fn();
 const mockRemoveSilentRenewError = vi.fn();
 let mockOidcAuth: Record<string, unknown> = {
@@ -20,9 +24,12 @@ let mockOidcAuth: Record<string, unknown> = {
   signinRedirect: mockSigninRedirect,
   removeUser: mockRemoveUser,
   signoutRedirect: mockSignoutRedirect,
+  signinSilent: mockSigninSilent,
   events: {
     addAccessTokenExpiring: mockAddAccessTokenExpiring,
     removeAccessTokenExpiring: mockRemoveAccessTokenExpiring,
+    addAccessTokenExpired: mockAddAccessTokenExpired,
+    removeAccessTokenExpired: mockRemoveAccessTokenExpired,
     addSilentRenewError: mockAddSilentRenewError,
     removeSilentRenewError: mockRemoveSilentRenewError,
   },
@@ -57,6 +64,23 @@ function AuthActions() {
   );
 }
 
+function RenewSessionProbe() {
+  const { renewSession } = useAuth();
+  const [result, setResult] = useState<string>("idle");
+  return (
+    <div>
+      <span data-testid="renew-result">{result}</span>
+      <button
+        onClick={() => {
+          void renewSession().then((renewed) => setResult(String(renewed)));
+        }}
+      >
+        renewSession
+      </button>
+    </div>
+  );
+}
+
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <ToastProvider>
@@ -75,13 +99,17 @@ describe("AuthContext", () => {
       signinRedirect: mockSigninRedirect,
       removeUser: mockRemoveUser,
       signoutRedirect: mockSignoutRedirect,
+      signinSilent: mockSigninSilent,
       events: {
         addAccessTokenExpiring: mockAddAccessTokenExpiring,
         removeAccessTokenExpiring: mockRemoveAccessTokenExpiring,
+        addAccessTokenExpired: mockAddAccessTokenExpired,
+        removeAccessTokenExpired: mockRemoveAccessTokenExpired,
         addSilentRenewError: mockAddSilentRenewError,
         removeSilentRenewError: mockRemoveSilentRenewError,
       },
     };
+    mockSigninSilent.mockReset().mockResolvedValue({ access_token: "renewed-token" });
   });
 
   afterEach(() => {
@@ -224,7 +252,9 @@ describe("AuthContext", () => {
       expect(screen.getAllByText("Sign-in failed: Silent renew failed")).toHaveLength(2);
     });
 
-    it("warns when the access token is about to expire", async () => {
+    it("stays silent while a token is merely approaching expiry", async () => {
+      // automaticSilentRenew re-arms this event once per token, so toasting here
+      // would nag for the whole session while nothing is actually wrong.
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
 
       renderWithProviders(<AuthStatusDisplay />);
@@ -233,12 +263,29 @@ describe("AuthContext", () => {
       expect(handler).toBeTypeOf("function");
       handler();
 
-      expect(
-        await screen.findByText("Your session will expire soon. Please save your work and sign in again if prompted."),
-      ).toBeInTheDocument();
+      expect(await screen.findByTestId("is-authenticated")).toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
-    it("shows an error when silent token renewal fails", async () => {
+    it("warns with a sign-in action once the access token has expired", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+
+      renderWithProviders(<AuthStatusDisplay />);
+
+      const handler = mockAddAccessTokenExpired.mock.calls.at(-1)?.[0];
+      expect(handler).toBeTypeOf("function");
+      handler();
+
+      expect(
+        await screen.findByText("Your session has expired. Please sign in again."),
+      ).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Sign In" }));
+      expect(mockSigninRedirect).toHaveBeenCalled();
+    });
+
+    it("warns when silent token renewal fails", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
 
       renderWithProviders(<AuthStatusDisplay />);
@@ -257,11 +304,13 @@ describe("AuthContext", () => {
 
       const { unmount } = renderWithProviders(<AuthStatusDisplay />);
       const expiringHandler = mockAddAccessTokenExpiring.mock.calls.at(-1)?.[0];
+      const expiredHandler = mockAddAccessTokenExpired.mock.calls.at(-1)?.[0];
       const renewErrorHandler = mockAddSilentRenewError.mock.calls.at(-1)?.[0];
 
       unmount();
 
       expect(mockRemoveAccessTokenExpiring).toHaveBeenCalledWith(expiringHandler);
+      expect(mockRemoveAccessTokenExpired).toHaveBeenCalledWith(expiredHandler);
       expect(mockRemoveSilentRenewError).toHaveBeenCalledWith(renewErrorHandler);
     });
   });
@@ -306,6 +355,41 @@ describe("AuthContext", () => {
       );
       await user.click(screen.getByText("logout"));
       expect(mockSignoutRedirect).toHaveBeenCalled();
+    });
+  });
+
+  describe("renewSession", () => {
+    it("resolves true when signinSilent returns a renewed user", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+      const user = userEvent.setup();
+      renderWithProviders(<RenewSessionProbe />);
+
+      await user.click(screen.getByText("renewSession"));
+
+      expect(await screen.findByTestId("renew-result")).toHaveTextContent("true");
+      expect(mockSigninSilent).toHaveBeenCalledOnce();
+    });
+
+    it("resolves false when the IdP session is gone", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+      mockSigninSilent.mockResolvedValue(null);
+      const user = userEvent.setup();
+      renderWithProviders(<RenewSessionProbe />);
+
+      await user.click(screen.getByText("renewSession"));
+
+      expect(await screen.findByTestId("renew-result")).toHaveTextContent("false");
+    });
+
+    it("resolves false when signinSilent throws", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+      mockSigninSilent.mockRejectedValue(new Error("login_required"));
+      const user = userEvent.setup();
+      renderWithProviders(<RenewSessionProbe />);
+
+      await user.click(screen.getByText("renewSession"));
+
+      expect(await screen.findByTestId("renew-result")).toHaveTextContent("false");
     });
   });
 

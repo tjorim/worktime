@@ -1,5 +1,6 @@
 package com.worktime.android.feature.dashboard
 
+import android.content.Intent
 import app.cash.turbine.test
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.data.model.CurrentStatus
@@ -21,6 +22,7 @@ import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.TimeOffDraft
 import com.worktime.android.data.repository.WorkLocationPreferences
+import io.mockk.mockk
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.CompletableDeferred
@@ -33,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -164,6 +167,81 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun logoutKeepsLocalSessionUntilTheProviderFlowReturns() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                logoutIntentResult = mockk<Intent>()
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.logout()
+        advanceUntilIdle()
+
+        // The browser is still open. Reporting "signed out" here would leave the provider
+        // session alive behind a signed-out UI, and the next sign-in would then complete
+        // with no credential prompt.
+        assertNotEquals(DashboardUiState.LoggedOut, viewModel.uiState.value)
+        assertEquals(0, repository.completeLogoutCallCount)
+    }
+
+    @Test
+    fun logoutEmitsTheProviderIntentForTheUiToLaunch() = runTest(dispatcher) {
+        val intent = mockk<Intent>()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                logoutIntentResult = intent
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.logoutIntent.test {
+            viewModel.logout()
+            advanceUntilIdle()
+            assertEquals(intent, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun logoutCompletesOnceTheFlowFinishesRegardlessOfOutcome() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                logoutIntentResult = mockk<Intent>()
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.logout()
+        advanceUntilIdle()
+        viewModel.onLogoutFlowFinished()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.LoggedOut, viewModel.uiState.value)
+        assertEquals(1, repository.completeLogoutCallCount)
+    }
+
+    @Test
+    fun logoutCompletesImmediatelyWhenThereIsNoProviderFlowToRun() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                logoutIntentResult = null
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.logout()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.LoggedOut, viewModel.uiState.value)
+        assertEquals(1, repository.completeLogoutCallCount)
+    }
+
+    @Test
     fun refreshActionsPopulatesLabelsAndTemplates() = runTest(dispatcher) {
         val repository =
             FakeDashboardRepository(
@@ -285,9 +363,12 @@ class DashboardViewModelTest {
         private val workLocationPreferencesResult: MutationResult<WorkLocationPreferences> =
             MutationResult.Success(WorkLocationPreferences()),
         private val createLabelResult: MutationResult<LabelRecord> = MutationResult.Success(sampleLabel()),
-        private val deleteAccountResult: MutationResult<Unit> = MutationResult.Success(Unit)
+        private val deleteAccountResult: MutationResult<Unit> = MutationResult.Success(Unit),
+        private val logoutIntentResult: Intent? = null
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
+        var completeLogoutCallCount = 0
+            private set
         var updatedLabelId: String? = null
             private set
         var updatedLabelName: String? = null
@@ -316,7 +397,10 @@ class DashboardViewModelTest {
             return result
         }
 
-        override suspend fun logout() {
+        override suspend fun buildLogoutIntent(): Intent? = logoutIntentResult
+
+        override fun completeLogout() {
+            completeLogoutCallCount++
             sessionState.value = SessionState.LoggedOut
         }
 

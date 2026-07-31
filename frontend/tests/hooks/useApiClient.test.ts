@@ -7,6 +7,7 @@ const auth = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
   logout: vi.fn(),
   triggerLogin: vi.fn(),
+  renewSession: vi.fn(),
 }));
 
 const toast = vi.hoisted(() => ({
@@ -30,6 +31,7 @@ describe("useApiClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.getAccessToken.mockReturnValue("token-123");
+    auth.renewSession.mockResolvedValue(false);
     vi.mocked(apiFetch).mockResolvedValue(new Response(null, { status: 200 }));
   });
 
@@ -76,7 +78,47 @@ describe("useApiClient", () => {
     expect(auth.logout).not.toHaveBeenCalled();
   });
 
-  it("logs out and shows an error when a request is forbidden", async () => {
+  it("retries once after a successful silent renewal instead of ending the session", async () => {
+    auth.renewSession.mockResolvedValue(true);
+    let calls = 0;
+    vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
+      calls += 1;
+      if (calls === 1) {
+        options.onUnauthorized();
+        throw new Error("Unauthorized");
+      }
+      return new Response(null, { status: 200 });
+    });
+    const { result } = renderHook(() => useApiClient());
+
+    const response = await result.current("/api/data");
+
+    expect(response.status).toBe(200);
+    expect(calls).toBe(2);
+    expect(auth.renewSession).toHaveBeenCalledOnce();
+    expect(toast.showWarning).not.toHaveBeenCalled();
+    expect(auth.triggerLogin).not.toHaveBeenCalled();
+  });
+
+  it("ends the session when the retried request is unauthorized again after renewal", async () => {
+    auth.renewSession.mockResolvedValue(true);
+    vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
+      options.onUnauthorized();
+      throw new Error("Unauthorized");
+    });
+    const { result } = renderHook(() => useApiClient());
+
+    await expect(result.current("/api/data")).rejects.toThrow("Unauthorized");
+
+    expect(vi.mocked(apiFetch)).toHaveBeenCalledTimes(2);
+    expect(toast.showWarning).toHaveBeenCalledOnce();
+    expect(auth.triggerLogin).toHaveBeenCalledOnce();
+  });
+
+  it("reports a forbidden request without ending the session", async () => {
+    // 403 is a permission boundary (admin-only endpoints, user-id mismatch, the
+    // OIDC-only surfaces a Pebble token cannot reach), not an invalid session —
+    // signing the user out of the whole app would be the wrong remedy.
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onForbidden();
       throw new Error("Forbidden");
@@ -85,8 +127,8 @@ describe("useApiClient", () => {
 
     await expect(result.current("/api/data")).rejects.toThrow("Forbidden");
 
-    expect(auth.logout).toHaveBeenCalledOnce();
     expect(toast.showError).toHaveBeenCalledOnce();
+    expect(auth.logout).not.toHaveBeenCalled();
     expect(auth.triggerLogin).not.toHaveBeenCalled();
   });
 });

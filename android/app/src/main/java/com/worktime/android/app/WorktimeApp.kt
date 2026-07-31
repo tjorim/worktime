@@ -182,6 +182,18 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
             }
         }
 
+    // Fires whatever the end-session activity's outcome is (completed or cancelled): the
+    // point is only to stop reporting "signed out" before the browser step has run, not to
+    // gate sign-out on the provider's result.
+    val logoutLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            dashboardViewModel.onLogoutFlowFinished()
+        }
+
+    LaunchedEffect(dashboardViewModel) {
+        dashboardViewModel.logoutIntent.collect { intent -> logoutLauncher.launch(intent) }
+    }
+
     WorktimeTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             if (isLocked && sessionState is SessionState.Authenticated) {

@@ -32,6 +32,7 @@ import com.worktime.android.data.model.WorkContext
 import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
+import io.mockk.mockk
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -200,6 +201,42 @@ class WorktimeRepositoryTest {
 
         assertEquals(MutationResult.Error("Request failed (500)"), result)
         assertEquals(SessionState.Authenticated(hasRefreshToken = true), sessionController.sessionState.value)
+    }
+
+    @Test
+    fun buildLogoutIntentDelegatesToSessionControllerWithoutClearingState() = runTest {
+        val intent = mockk<android.content.Intent>()
+        val sessionController = FakeSessionController(token = "token-123", logoutIntent = intent)
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = sessionController)
+        repository.loadDashboard()
+
+        val result = repository.buildLogoutIntent()
+
+        assertEquals(intent, result)
+        // Building the intent must not itself end the local session — only completeLogout does.
+        assertEquals(SessionState.Authenticated(hasRefreshToken = true), sessionController.sessionState.value)
+        assertEquals(0, sessionController.completeLogoutCallCount)
+    }
+
+    @Test
+    fun buildLogoutIntentReturnsNullWhenThereIsNothingToEndAtTheProvider() = runTest {
+        val sessionController = FakeSessionController(token = "token-123", logoutIntent = null)
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = sessionController)
+        repository.loadDashboard()
+
+        assertEquals(null, repository.buildLogoutIntent())
+    }
+
+    @Test
+    fun completeLogoutDelegatesToSessionController() = runTest {
+        val sessionController = FakeSessionController(token = "token-123")
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = sessionController)
+        repository.loadDashboard()
+
+        repository.completeLogout()
+
+        assertEquals(1, sessionController.completeLogoutCallCount)
+        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
     }
 
     @Test
@@ -812,8 +849,11 @@ class WorktimeRepositoryTest {
         }
     }
 
-    private class FakeSessionController(token: String?) : SessionController {
+    private class FakeSessionController(token: String?, private val logoutIntent: android.content.Intent? = null) :
+        SessionController {
         private var currentToken: String? = token
+        var completeLogoutCallCount = 0
+            private set
         override val sessionState =
             MutableStateFlow<SessionState>(
                 if (token == null) SessionState.LoggedOut else SessionState.Authenticated(hasRefreshToken = true)
@@ -826,6 +866,14 @@ class WorktimeRepositoryTest {
         override suspend fun getFreshAccessToken(): String? = currentToken
 
         override suspend fun logout() {
+            currentToken = null
+            sessionState.value = SessionState.LoggedOut
+        }
+
+        override suspend fun buildLogoutIntent(): android.content.Intent? = logoutIntent
+
+        override fun completeLogout() {
+            completeLogoutCallCount++
             currentToken = null
             sessionState.value = SessionState.LoggedOut
         }

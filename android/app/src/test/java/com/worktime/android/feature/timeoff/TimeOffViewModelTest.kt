@@ -234,7 +234,9 @@ class TimeOffViewModelTest {
 
         override suspend fun deleteAccount(): MutationResult<Unit> = throw UnsupportedOperationException()
 
-        override suspend fun logout() {
+        override suspend fun buildLogoutIntent(): android.content.Intent? = null
+
+        override fun completeLogout() {
             sessionState.value = SessionState.LoggedOut
         }
     }
