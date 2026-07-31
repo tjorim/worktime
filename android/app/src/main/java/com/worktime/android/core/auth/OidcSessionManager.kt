@@ -123,24 +123,41 @@ class OidcSessionManager @Inject constructor(
     }
 
     override suspend fun logout() {
-        val stateToEnd = authState
         runCatching {
-            val configuration = fetchAuthorizationServiceConfiguration()
-            if (configuration.endSessionEndpoint == null) return@runCatching
-            val builder =
-                EndSessionRequest
-                    .Builder(configuration)
-                    .setPostLogoutRedirectUri(oidcConfig.redirectUri)
-            stateToEnd?.idToken?.let(builder::setIdTokenHint)
-            val request = builder.build()
-            val service = AuthorizationService(context)
-            val intent = service.getEndSessionRequestIntent(request).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-            service.dispose()
+            // No Activity is available from this (possibly non-interactive) caller, so this
+            // fires the end-session screen into a new task best-effort and does not wait for
+            // it: there is nothing to defer clearing local state for.
+            buildEndSessionIntent()?.let { intent ->
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
         }.onFailure { exception ->
             if (exception is CancellationException) throw exception
         }
         clearLocalSession()
+    }
+
+    override suspend fun buildLogoutIntent(): Intent? = runCatching { buildEndSessionIntent() }
+        .onFailure { exception ->
+            if (exception is CancellationException) throw exception
+        }.getOrNull()
+
+    override fun completeLogout() = clearLocalSession()
+
+    /** Builds the provider end-session intent, or null if there is nothing to end remotely. */
+    private suspend fun buildEndSessionIntent(): Intent? {
+        val stateToEnd = authState
+        val configuration = fetchAuthorizationServiceConfiguration()
+        if (configuration.endSessionEndpoint == null) return null
+        val builder =
+            EndSessionRequest
+                .Builder(configuration)
+                .setPostLogoutRedirectUri(oidcConfig.redirectUri)
+        stateToEnd?.idToken?.let(builder::setIdTokenHint)
+        val request = builder.build()
+        val service = AuthorizationService(context)
+        val intent = service.getEndSessionRequestIntent(request)
+        service.dispose()
+        return intent
     }
 
     private fun clearLocalSession() {

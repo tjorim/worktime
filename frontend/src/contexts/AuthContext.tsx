@@ -22,6 +22,12 @@ export interface AuthContextType {
   triggerSignup: () => void;
   /** Sign out from the OIDC provider and clear the local session. */
   logout: () => void;
+  /**
+   * Attempts a silent token renewal against the IdP session, resolving true when
+   * a fresh token was obtained. Lets callers recover from a single 401 instead of
+   * throwing the user out to the login screen.
+   */
+  renewSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -159,6 +165,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }, [oidcAuth, showError]);
 
+  const renewSession = useCallback(async (): Promise<boolean> => {
+    try {
+      // Resolves null when the IdP session is genuinely gone, which is a normal
+      // outcome here rather than an error worth surfacing — the caller decides
+      // what to do next.
+      return (await oidcAuth.signinSilent()) != null;
+    } catch (error: unknown) {
+      logger.error("signinSilent failed:", error);
+      return false;
+    }
+  }, [oidcAuth]);
+
   const contextValue = useMemo<AuthContextType>(
     () => ({
       isAuthenticated,
@@ -169,8 +187,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       triggerLogin,
       triggerSignup,
       logout,
+      renewSession,
     }),
-    [isAuthenticated, isValidating, userId, displayName, getAccessToken, triggerLogin, triggerSignup, logout],
+    [
+      isAuthenticated,
+      isValidating,
+      userId,
+      displayName,
+      getAccessToken,
+      triggerLogin,
+      triggerSignup,
+      logout,
+      renewSession,
+    ],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
