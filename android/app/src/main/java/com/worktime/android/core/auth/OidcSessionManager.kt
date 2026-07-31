@@ -112,7 +112,7 @@ class OidcSessionManager @Inject constructor(
             currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
                 service.dispose()
                 if (exception != null || accessToken.isNullOrBlank()) {
-                    clearLocalSession()
+                    completeLogout()
                     continuation.resume(null)
                     return@performActionWithFreshTokens
                 }
@@ -133,7 +133,7 @@ class OidcSessionManager @Inject constructor(
         }.onFailure { exception ->
             if (exception is CancellationException) throw exception
         }
-        clearLocalSession()
+        completeLogout()
     }
 
     override suspend fun buildLogoutIntent(): Intent? = runCatching { buildEndSessionIntent() }
@@ -141,7 +141,11 @@ class OidcSessionManager @Inject constructor(
             if (exception is CancellationException) throw exception
         }.getOrNull()
 
-    override fun completeLogout() = clearLocalSession()
+    override fun completeLogout() {
+        authState = null
+        sessionStore.clear()
+        _sessionState.value = SessionState.LoggedOut
+    }
 
     /** Builds the provider end-session intent, or null if there is nothing to end remotely. */
     private suspend fun buildEndSessionIntent(): Intent? {
@@ -158,12 +162,6 @@ class OidcSessionManager @Inject constructor(
         val intent = service.getEndSessionRequestIntent(request)
         service.dispose()
         return intent
-    }
-
-    private fun clearLocalSession() {
-        authState = null
-        sessionStore.clear()
-        _sessionState.value = SessionState.LoggedOut
     }
 
     private suspend fun fetchAuthorizationServiceConfiguration(): AuthorizationServiceConfiguration {
