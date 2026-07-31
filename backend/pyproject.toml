@@ -15,7 +15,7 @@ dependencies = [
   "alembic==1.18.5",
   "asyncpg==0.31.0",
   "fastapi==0.139.2",
-  "fastmcp==3.4.4",
+  "fastmcp==3.4.5",
   "httpx==0.28.1",
   "psycopg[binary]==3.3.4",
   "pycountry==26.2.16",
