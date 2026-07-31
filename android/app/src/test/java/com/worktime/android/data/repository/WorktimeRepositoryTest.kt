@@ -849,10 +849,8 @@ class WorktimeRepositoryTest {
         }
     }
 
-    private class FakeSessionController(
-        token: String?,
-        private val logoutIntent: android.content.Intent? = null
-    ) : SessionController {
+    private class FakeSessionController(token: String?, private val logoutIntent: android.content.Intent? = null) :
+        SessionController {
         private var currentToken: String? = token
         var completeLogoutCallCount = 0
             private set
