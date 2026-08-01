@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "2026.8.1",
+    version: "2026.8.2",
     date: "2026-08-01",
     status: "current",
+    added: [],
+    changed: [],
+    fixed: [
+      "Android release builds now authenticate with the dedicated Worktime Android OIDC client (#1039)",
+    ],
+  },
+  {
+    version: "2026.8.1",
+    date: "2026-08-01",
+    status: "released",
     added: [],
     changed: [
       "Settings now presents one unambiguous Sign In action while self-service registration remains disabled (#1029)",

@@ -80,7 +80,7 @@ val releaseOidcClientId =
         "ANDROID_OIDC_CLIENT_ID",
         "ANDROID_OIDC_CLIENT_ID",
         required = false,
-        default = "worktime"
+        default = "worktime-android"
     )
 val oidcScope =
     resolveConfigValue(
