@@ -14,9 +14,24 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.8.1",
+    date: "2026-08-01",
+    status: "current",
+    added: [],
+    changed: [
+      "Settings now presents one unambiguous Sign In action while self-service registration remains disabled (#1029)",
+    ],
+    fixed: [
+      "Permission-denied (403) responses no longer destroy a valid OIDC session; only authentication failures trigger session recovery (#1029)",
+      "Successful silent renewal no longer produces recurring session-expiry warnings, while real expiry and renewal failures offer a durable Sign In action (#1029)",
+      "Pebble pairing distinguishes sign-in from watch connection and recovers from failed login attempts inside the configuration webview (#1029)",
+      "Android interactive logout waits for the Keycloak end-session flow before clearing local state (#1029)",
+    ],
+  },
+  {
     version: "2026.7.2",
     date: "2026-07-28",
-    status: "current",
+    status: "released",
     added: [
       "Pebble Time 2 companion app for shift and active-task glances plus clock in/out, paired through an authenticated web flow using revocable pebble:read/pebble:write credentials (#1005, #1026)",
       "Pebble emulator, offline-state, credential-rotation, and live HTTP validation coverage, with a display-only cache that keeps the last dashboard visible while the phone is offline (#1026)",

@@ -16,6 +16,19 @@ below predate that switch.
 - Notification system
 - Cross-schedule transfer view
 
+## [2026.8.1] - 2026-08-01
+
+### Changed
+
+- Settings now presents one unambiguous Sign In action while self-service registration remains disabled (#1029)
+
+### Fixed
+
+- Permission-denied (403) responses no longer destroy a valid OIDC session; only authentication failures trigger session recovery (#1029)
+- Successful silent renewal no longer produces recurring session-expiry warnings, while real expiry and renewal failures offer a durable Sign In action (#1029)
+- Pebble pairing distinguishes sign-in from watch connection and recovers from failed login attempts inside the configuration webview (#1029)
+- Android interactive logout waits for the Keycloak end-session flow before clearing local state (#1029)
+
 ## [2026.7.2] - 2026-07-28
 
 ### Added
@@ -667,7 +680,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.7.2...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.1...HEAD
+[2026.8.1]: https://github.com/tjorim/worktime/compare/v2026.7.2...v2026.8.1
 [2026.7.2]: https://github.com/tjorim/worktime/compare/v2026.7.1...v2026.7.2
 [2026.7.1]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.1
 [4.7.1]: https://github.com/tjorim/worktime/compare/v4.7.0...v4.7.1
