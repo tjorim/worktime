@@ -65,6 +65,7 @@ function AppContent() {
     phase: syncPhase,
     isSyncEstablished,
     resolveConflict,
+    conflictCounts: syncConflictCounts,
     dismiss: dismissSync,
   } = useFirstSyncFlow(isAuthenticated, userId, fetchFnOrNull);
 
@@ -302,6 +303,7 @@ function AppContent() {
             onHideTeamModal: handleTeamModalHide,
             onDeferTeamWizard: handleWizardDefer,
             syncConflictShow: syncPhase === "conflict",
+            syncConflictCounts: syncConflictCounts,
             onResolveSyncConflict: resolveConflict,
             onDismissSyncConflict: dismissSync,
           }}

@@ -4,6 +4,30 @@ How Worktime tries to make it safe to put a user's data in the cloud, what is
 deliberately guarded against, and what is still open. Read alongside
 `backend/app/services/sync_service.py` and `frontend/src/hooks/useFirstSyncFlow.ts`.
 
+## Resolving a first-sync conflict
+
+When both sides hold entities, the user picks one of three options
+(`FirstSyncConflictDialog`, screenshot in `docs/screenshots/sync-conflict-dialogs.png`):
+
+| Option | Effect | Destructive? |
+|---|---|---|
+| **Keep everything** (default) | Push local records as creates, delete nothing, pull the union back | No |
+| Keep my local data | Local records as creates + a delete for every server-only record | Yes — server side |
+| Use server data | Replace the local collections with the server's contents | Yes — local side |
+
+`keep-both` is the default because it is the only option that cannot lose data.
+Every entity is keyed by a client-generated id, so the union is unambiguous: a
+duplicate is visible and removable, a deleted record is not recoverable. Two
+edges worth knowing — work locations are keyed by `(user_id, date)`, so a
+same-date collision resolves by last-write-wins on that one row, and two devices
+holding a same-named label collide on `uq_active_label_user_name` and come back
+as a per-record conflict. Neither destroys a record.
+
+The dialog shows how many records each side holds, so the destructive options
+are not chosen blind. The counts come from the Branch C pull, which happens
+before the dialog is raised — every branch needs that data anyway, so it costs
+no extra request and is reused by whichever option the user picks.
+
 ## The failure that matters most
 
 Everything below exists to prevent one outcome: **a user signs in on a second
@@ -95,6 +119,11 @@ These are real and not addressed here:
 - **No quarantine UI.** `quarantineCount` is exposed on the sync state and the
   batches are preserved, but nothing shows the user what was rejected or offers
   to retry it.
+- **Conflict dialogs show counts, not contents.** Neither dialog shows the
+  actual conflicting values, so "keep mine" and the two replace options are
+  still judged on record counts alone.
+- **No way to defer an ongoing conflict.** The dialog requires a choice; there
+  is no "decide later" that leaves the conflict pending.
 - **Local data is memory-only.** Nothing persists the sync-backed collections;
   a signed-out user's records do not survive a reload, and a signed-in user who
   opens the app offline sees an empty app until a pull succeeds.

@@ -40,6 +40,7 @@ import {
   reconcilePreferences,
   storeSyncCursor,
   syncStatusHasEntityData,
+  type SyncPullResponse,
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
@@ -62,7 +63,22 @@ export type FirstSyncPhase =
   /** An error occurred; local data is unchanged. */
   | "error";
 
-export type ConflictChoice = "keep-local" | "use-server";
+/**
+ * How the user chose to resolve a first-sync conflict.
+ *
+ * `keep-both` is the only non-destructive option, and the one the dialog
+ * defaults to.  Every syncable entity is keyed by a client-generated id
+ * (or, for work locations, by date), so merging the two sides is well defined:
+ * push the local records as creates, delete nothing, then pull.  Duplicates
+ * end up visible and removable; records do not end up gone.
+ */
+export type ConflictChoice = "keep-both" | "keep-local" | "use-server";
+
+/** Record counts for each side of a first-sync conflict, for the dialog to show. */
+export interface FirstSyncConflictCounts {
+  local: number;
+  server: number;
+}
 
 export interface UseFirstSyncFlowResult {
   /** Current phase of the first-sync flow. */
@@ -75,19 +91,44 @@ export interface UseFirstSyncFlowResult {
   isSyncEstablished: boolean;
   /** When `phase === "conflict"`, call this with the user's choice to proceed. */
   resolveConflict: (choice: ConflictChoice) => void;
+  /**
+   * When `phase === "conflict"`, how many records each side holds — so the
+   * user can see what the destructive options would remove instead of
+   * choosing blind.  Null in every other phase.
+   */
+  conflictCounts: FirstSyncConflictCounts | null;
   /** Dismiss the flow (valid in "conflict" or "error" phases). Sets phase back to "idle". */
   dismiss: () => void;
 }
 
+/** Total number of records across every entity list in a push payload. */
+function countPayloadRecords(payload: SyncPushPayload): number {
+  return (
+    payload.labels.length +
+    payload.tasks.length +
+    payload.templates.length +
+    payload.work_locations.length +
+    payload.time_off_entries.length +
+    payload.gantt_tasks.length
+  );
+}
+
 /** Returns true when the push payload contains at least one syncable record. */
 function payloadHasData(payload: SyncPushPayload): boolean {
+  return countPayloadRecords(payload) > 0;
+}
+
+/** Total number of *live* records in a pull response (tombstones excluded). */
+function countServerRecords(data: SyncPullResponse): number {
+  const live = <T extends { deleted_at: string | null }>(rows: T[] | undefined) =>
+    (rows ?? []).filter((row) => row.deleted_at === null).length;
   return (
-    payload.labels.length > 0 ||
-    payload.tasks.length > 0 ||
-    payload.templates.length > 0 ||
-    payload.work_locations.length > 0 ||
-    payload.time_off_entries.length > 0 ||
-    payload.gantt_tasks.length > 0
+    live(data.labels) +
+    live(data.tasks) +
+    live(data.templates) +
+    live(data.work_locations) +
+    live(data.time_off_entries) +
+    live(data.gantt_tasks)
   );
 }
 
@@ -162,6 +203,10 @@ export function useFirstSyncFlow(
   // Status captured when the flow reaches Branch C; reused by resolveConflict
   // to avoid an extra /db/sync/status round-trip on "keep-local".
   const capturedStatusRef = useRef<SyncStatusResponse | null>(null);
+  // Server state pulled when the flow reached Branch C, reused by
+  // resolveConflict so no branch has to re-fetch it.
+  const capturedServerDataRef = useRef<SyncPullResponse | null>(null);
+  const [conflictCounts, setConflictCounts] = useState<FirstSyncConflictCounts | null>(null);
   // Tracks whether the hook is still active. Set to false on unmount so
   // in-flight async operations do not call setPhase on a stale instance.
   const mountedRef = useRef(true);
@@ -271,6 +316,23 @@ export function useFirstSyncFlow(
       // Capture the status so resolveConflict can use it as a cursor fallback
       // without an extra /db/sync/status call.
       capturedStatusRef.current = status;
+
+      // Pull the server side now rather than after the user chooses. Every
+      // branch of the dialog needs this data anyway (keep-both and use-server
+      // apply it; keep-local needs it to know what to tombstone), so fetching
+      // it up front costs no extra request — and it is the only way to tell
+      // the user how much data each option would discard before they commit.
+      const serverData = await pullSyncData(fetch);
+      if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+      if (!serverData) {
+        setPhase("error");
+        return;
+      }
+      capturedServerDataRef.current = serverData;
+      setConflictCounts({
+        local: countPayloadRecords(localPayload),
+        server: countServerRecords(serverData),
+      });
       setPhase("conflict");
     },
     [],
@@ -289,11 +351,46 @@ export function useFirstSyncFlow(
         // Lock the conflict resolution to this user.
         conflictResolutionForUserRef.current = uid;
         try {
-          if (choice === "keep-local") {
-            // Pull the current server state so we can tombstone server-only rows.
+          if (choice === "keep-both") {
+            // The non-destructive merge: upload the local records and delete
+            // nothing, then take the server's union back down. Every entity is
+            // keyed by a client-generated id, so neither side can clobber the
+            // other — at worst the user ends up with duplicates they can see
+            // and remove, rather than records they cannot get back.
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            setPhase("pushing");
+            const localPayload = await readLocalSyncPayload();
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!localPayload) {
+              setPhase("error");
+              return;
+            }
+            const pushed = await pushSyncPayload(fetch, localPayload);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!pushed) {
+              setPhase("error");
+              return;
+            }
+            setPhase("pulling");
+            const merged = await pullSyncData(fetch);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!merged) {
+              setPhase("error");
+              return;
+            }
+            applyPullToCollections(merged);
+            // Neither side was chosen over the other, so preferences fall back
+            // to their own last-write-wins reconciliation.
+            await reconcilePreferences(fetch);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            storeSyncCursor(uid, merged.server_timestamp);
+            setPhase("done");
+          } else if (choice === "keep-local") {
+            // Server state was already pulled when the dialog was raised; fall
+            // back to a fresh pull only if that is somehow missing.
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             setPhase("pulling");
-            const serverData = await pullSyncData(fetch);
+            const serverData = capturedServerDataRef.current ?? (await pullSyncData(fetch));
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!serverData) {
               setPhase("error");
@@ -347,7 +444,8 @@ export function useFirstSyncFlow(
           } else {
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             setPhase("pulling");
-            const pullResult = await pullSyncData(fetch);
+            // Reuse the snapshot taken when the dialog was raised.
+            const pullResult = capturedServerDataRef.current ?? (await pullSyncData(fetch));
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!pullResult) {
               setPhase("error");
@@ -379,6 +477,8 @@ export function useFirstSyncFlow(
   const dismiss = useCallback(() => {
     setPhase("idle");
     capturedStatusRef.current = null;
+    capturedServerDataRef.current = null;
+    setConflictCounts(null);
     // Reset so the flow can re-run on next sign-in or page reload.
     // It will not re-trigger automatically in the current session.
     flowStartedForUser.current = null;
@@ -392,6 +492,8 @@ export function useFirstSyncFlow(
       setPhase("idle");
       flowStartedForUser.current = null;
       conflictResolutionForUserRef.current = null;
+      capturedServerDataRef.current = null;
+      setConflictCounts(null);
     }
   }, [isAuthenticated]);
 
@@ -410,5 +512,5 @@ export function useFirstSyncFlow(
   const isSyncEstablished =
     phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId));
 
-  return { phase, isSyncEstablished, resolveConflict, dismiss };
+  return { phase, isSyncEstablished, resolveConflict, conflictCounts, dismiss };
 }

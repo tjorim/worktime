@@ -48,11 +48,13 @@ export function OngoingConflictDialog({
     setSelected(null);
   };
 
-  // Treat backdrop/Escape dismissal as accepting the server version so the
-  // parent can clear the conflict state and actually close the modal.
+  // Backdrop and Escape are disabled below, so this only runs if react-bootstrap
+  // closes the modal some other way. It deliberately does *not* resolve the
+  // conflict: dismissal used to be mapped to "keep-server", which meant a stray
+  // Escape keypress silently discarded the user's local edits for every
+  // conflicted record. Discarding data has to be something the user picked.
   const handleHide = () => {
     setSelected(null);
-    onResolve("keep-server");
   };
 
   // Map each entity key to a localized display label.
@@ -82,7 +84,16 @@ export function OngoingConflictDialog({
     : [];
 
   return (
-    <Modal show={show} onHide={handleHide} centered aria-describedby={bodyId}>
+    <Modal
+      show={show}
+      onHide={handleHide}
+      centered
+      // Both outcomes discard one side's version, so the dialog requires an
+      // explicit choice rather than letting a click-away decide.
+      backdrop="static"
+      keyboard={false}
+      aria-describedby={bodyId}
+    >
       <Modal.Header>
         <Modal.Title>
           <i className="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>
