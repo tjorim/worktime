@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   COLLECTION_SCHEMA_VERSION,
+  guardStartupMarkReady,
   purgePersistedDataOnOwnerChange,
   resetPersistenceForTests,
   syncCollectionPersistence,
@@ -96,6 +97,68 @@ describe("degrading when the local store cannot be opened", () => {
     await expect(
       syncCollectionPersistence.adapter.getStreamPosition?.("worktime/tasks"),
     ).resolves.toEqual({ latestTerm: 0, latestSeq: 0, latestRowVersion: 0 });
+  });
+});
+
+describe("guardStartupMarkReady", () => {
+  /** Build the options shape the guard wraps, capturing what the inner sync sees. */
+  function wrap(markReady: () => void) {
+    let captured: (() => void) | undefined;
+    const guarded = guardStartupMarkReady({
+      id: "worktime/tasks",
+      sync: {
+        rowUpdateMode: "partial",
+        sync: (params: { markReady: () => void }) => {
+          captured = params.markReady;
+        },
+      },
+    });
+    (guarded.sync as { sync: (p: { markReady: () => void }) => unknown }).sync({ markReady });
+    return () => captured?.();
+  }
+
+  function transitionError(from: string): Error {
+    const err = new Error(
+      `Invalid collection status transition from "${from}" to "ready" for collection "worktime/tasks"`,
+    );
+    err.name = "CollectionStateError";
+    return err;
+  }
+
+  it("passes a normal markReady straight through", () => {
+    const markReady = vi.fn();
+    wrap(markReady)();
+    expect(markReady).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the rest of the sync config", () => {
+    const guarded = guardStartupMarkReady({ sync: { rowUpdateMode: "partial", sync: () => {} } });
+    expect((guarded.sync as { rowUpdateMode: string }).rowUpdateMode).toBe("partial");
+  });
+
+  it("swallows a markReady on a collection cleaned up mid-startup", () => {
+    // The persisted wrapper defers markReady behind its async startup without
+    // re-checking whether the collection was torn down. Unguarded this escapes
+    // as an unhandled rejection and fails the whole run even though every
+    // assertion passed.
+    const run = wrap(() => {
+      throw transitionError("cleaned-up");
+    });
+    expect(run).not.toThrow();
+  });
+
+  it("rethrows any other invalid transition", () => {
+    const run = wrap(() => {
+      throw transitionError("error");
+    });
+    expect(run).toThrow(/from "error" to "ready"/);
+  });
+
+  it("rethrows unrelated errors", () => {
+    const run = wrap(() => {
+      throw new TypeError("something else broke");
+    });
+    expect(run).toThrow(TypeError);
   });
 });
 

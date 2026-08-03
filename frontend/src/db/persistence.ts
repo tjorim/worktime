@@ -275,6 +275,66 @@ export const syncCollectionPersistence: PersistedCollectionPersistence = {
 };
 
 // ---------------------------------------------------------------------------
+// Startup race guard
+// ---------------------------------------------------------------------------
+
+/** The one transition this guard is allowed to swallow. */
+function isCleanedUpBeforeReady(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    err.name === "CollectionStateError" &&
+    err.message.startsWith(`Invalid collection status transition from "cleaned-up" to "ready"`)
+  );
+}
+
+interface SyncParamsLike {
+  markReady: () => void;
+}
+
+interface SyncConfigLike {
+  sync: (params: SyncParamsLike) => unknown;
+}
+
+/**
+ * Make a persisted collection safe to tear down while it is still starting up.
+ *
+ * `persistedCollectionOptions` defers the collection's `markReady` behind its
+ * asynchronous persisted startup, but does not re-check whether the collection
+ * was cleaned up while that was in flight — it holds a `cleanedUp` flag and
+ * consults it everywhere *except* there. A collection torn down mid-startup (a
+ * component unmounting, a test file finishing) therefore throws
+ * `InvalidCollectionStatusTransitionError` out of a floating promise, which
+ * surfaces as an unhandled rejection and fails the whole test run even though
+ * every assertion passed.
+ *
+ * The library never exposes that promise, so the callback it eventually invokes
+ * is the only place this can be caught. Only the cleaned-up transition is
+ * swallowed; anything else still throws.
+ */
+export function guardStartupMarkReady<TOptions extends { sync: unknown }>(
+  options: TOptions,
+): TOptions {
+  const inner = options.sync as SyncConfigLike;
+  return {
+    ...options,
+    sync: {
+      ...inner,
+      sync: (params: SyncParamsLike) =>
+        inner.sync({
+          ...params,
+          markReady: () => {
+            try {
+              params.markReady();
+            } catch (err) {
+              if (!isCleanedUpBeforeReady(err)) throw err;
+            }
+          },
+        }),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Ownership
 // ---------------------------------------------------------------------------
 
