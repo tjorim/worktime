@@ -166,10 +166,23 @@ async function fetchSyncSnapshot(): Promise<SyncPullResponse> {
 async function fetchWithSnapshotFallback<T>(
   name: string,
   select: (data: SyncPullResponse) => T[],
+  current: () => T[],
 ): Promise<T[]> {
   try {
     return select(await fetchSyncSnapshot());
   } catch (err) {
+    // What the collection already holds beats the snapshot: the snapshot is
+    // the cold-start seed, frozen at load, while the collection includes
+    // everything written since. Returning the snapshot over a populated
+    // collection would roll back the user's offline edits on screen — they
+    // are still queued in the outbox and would come back on the next
+    // successful pull, but watching entries vanish is exactly the "the app
+    // lost my work" moment this is all meant to prevent.
+    const live = current();
+    if (live.length > 0) {
+      logger.error(`sync pull for "${name}" failed; keeping the current local rows:`, err);
+      return live;
+    }
     const snapshot = getLoadedSnapshot<T>(name);
     if (snapshot) {
       logger.error(`sync pull for "${name}" failed; showing the last saved copy:`, err);
@@ -564,8 +577,10 @@ export const labelsCollection = createCollection(
         // in front of the user.
         return items.length > 0 ? items : (getLoadedSnapshot<Label>("labels") ?? items);
       }
-      return fetchWithSnapshotFallback("labels", (data) =>
-        data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
+      return fetchWithSnapshotFallback(
+        "labels",
+        (data) => data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
+        () => labelsCollection.toArray as Label[],
       );
     },
     onInsert: async ({ transaction }) => {
@@ -643,8 +658,10 @@ export const tasksCollection = createCollection(
         // in front of the user.
         return items.length > 0 ? items : (getLoadedSnapshot<StoredTimeTrackingTask>("tasks") ?? items);
       }
-      return fetchWithSnapshotFallback("tasks", (data) =>
-        data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
+      return fetchWithSnapshotFallback(
+        "tasks",
+        (data) => data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
+        () => tasksCollection.toArray as StoredTimeTrackingTask[],
       );
     },
     onInsert: async ({ transaction }) => {
@@ -730,8 +747,10 @@ export const templatesCollection = createCollection(
         // in front of the user.
         return items.length > 0 ? items : (getLoadedSnapshot<TimeTrackingTemplate>("templates") ?? items);
       }
-      return fetchWithSnapshotFallback("templates", (data) =>
-        data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
+      return fetchWithSnapshotFallback(
+        "templates",
+        (data) => data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
+        () => templatesCollection.toArray as TimeTrackingTemplate[],
       );
     },
     onInsert: async ({ transaction }) => {
@@ -813,8 +832,10 @@ export const timeOffCollection = createCollection(
         // in front of the user.
         return items.length > 0 ? items : (getLoadedSnapshot<TimeOffEntry>("time-off-entries") ?? items);
       }
-      return fetchWithSnapshotFallback("time-off-entries", (data) =>
-        _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+      return fetchWithSnapshotFallback(
+        "time-off-entries",
+        (data) => _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+        () => timeOffCollection.toArray as TimeOffEntry[],
       );
     },
     onInsert: async ({ transaction }) => {
@@ -910,8 +931,11 @@ export const ganttTasksCollection = createCollection(
         // in front of the user.
         return items.length > 0 ? items : (getLoadedSnapshot<GanttTask>("gantt-tasks") ?? items);
       }
-      return fetchWithSnapshotFallback("gantt-tasks", (data) =>
-        (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
+      return fetchWithSnapshotFallback(
+        "gantt-tasks",
+        (data) =>
+          (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
+        () => ganttTasksCollection.toArray as GanttTask[],
       );
     },
     onInsert: async ({ transaction }) => {
@@ -1004,8 +1028,11 @@ export const workLocationsCollection = createCollection(
         // in front of the user.
         return items.length > 0 ? items : (getLoadedSnapshot<WorkLocationEntry>("work-locations") ?? items);
       }
-      return fetchWithSnapshotFallback("work-locations", (data) =>
-        data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
+      return fetchWithSnapshotFallback(
+        "work-locations",
+        (data) =>
+          data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
+        () => workLocationsCollection.toArray as WorkLocationEntry[],
       );
     },
     onInsert: async ({ transaction }) => {
