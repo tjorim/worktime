@@ -34,9 +34,13 @@
  *
  * `BrowserCollectionCoordinator` does leader election over BroadcastChannel and
  * Web Locks so exactly one tab owns the SQLite writer, and followers route
- * their writes through it. This is what the previous hand-rolled snapshot layer
- * could not do: it wrote whole arrays per tab, so two tabs editing offline
- * would clobber each other's local rows.
+ * their writes through it.
+ *
+ * That closes the two-tab gap when signed *in*. Signed out it does not: with no
+ * server to pull from, each tab's `queryFn` returns its own memory and the query
+ * collection applies that as the collection's complete state, truncating rows
+ * another tab persisted in the same instant. See the "Known gap" section in
+ * `docs/sync-data-safety.md` and issue #1045.
  *
  * ## Degrading
  *
@@ -54,7 +58,10 @@ import {
   openBrowserWASQLiteOPFSDatabase,
   type PersistedCollectionPersistence,
 } from "@tanstack/browser-db-sqlite-persistence";
-import { PERSISTED_COLLECTION_OWNER_KEY } from "@/constants/storageKeys";
+import {
+  PERSISTED_COLLECTION_OWNER_KEY,
+  PERSISTED_COLLECTION_PURGE_PENDING_KEY,
+} from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
 
 /**
@@ -161,12 +168,6 @@ let openedDatabase: { close?: () => Promise<void> | void } | null = null;
 let openPromise: Promise<PersistedCollectionPersistence | null> | null = null;
 
 /**
- * Open the OPFS database once, resolving to `null` when persistence is not
- * available in this runtime.
- *
- * Never rejects: a failure here must degrade the app, not break it.
- */
-/**
  * Ask the browser to exempt our storage from eviction under pressure.
  *
  * OPFS is best-effort by default: the browser may clear it whenever it wants
@@ -185,9 +186,27 @@ function requestPersistentStorage(): void {
     });
 }
 
+/**
+ * Open the OPFS database once, resolving to `null` when persistence is not
+ * available in this runtime — or when a store that must be discarded still
+ * cannot be deleted.
+ *
+ * Never rejects: a failure here must degrade the app, not break it.
+ */
 function openPersistence(): Promise<PersistedCollectionPersistence | null> {
   openPromise ??= (async () => {
     if (!supportsOpfsPersistence()) return null;
+    // A purge that could not delete the file leaves this set — most often
+    // because another tab still held the store open. Retry now that this load
+    // owns nothing, and if it still cannot be removed, run from memory rather
+    // than hydrate rows belonging to a different account.
+    if (isPurgePending()) {
+      if (!(await removeDatabaseFile())) {
+        logger.error("Refusing to open the local store: it is still pending deletion.");
+        return null;
+      }
+      setPurgePending(false);
+    }
     requestPersistentStorage();
     try {
       const database = await openBrowserWASQLiteOPFSDatabase({
@@ -374,13 +393,57 @@ function writeOwner(owner: string): void {
   }
 }
 
+function isPurgePending(): boolean {
+  try {
+    return localStorage.getItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function setPurgePending(pending: boolean): void {
+  try {
+    if (pending) {
+      localStorage.setItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY, "1");
+    } else {
+      localStorage.removeItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY);
+    }
+  } catch (err) {
+    logger.error("Failed to record the pending purge:", err);
+  }
+}
+
 /**
- * Close the database and delete its OPFS file.
+ * Remove the OPFS file, reporting whether it is gone afterwards.
+ *
+ * Kept separate from closing the database because the open path calls this
+ * while nothing is open — and resetting `openPromise` from inside the open
+ * would null out the very promise being assigned.
+ */
+async function removeDatabaseFile(): Promise<boolean> {
+  if (!supportsOpfsPersistence()) return true;
+  try {
+    const root = await navigator.storage.getDirectory();
+    await root.removeEntry(DATABASE_NAME);
+    return true;
+  } catch (err) {
+    // A file that was never written is already in the desired state.
+    if ((err as { name?: string }).name === "NotFoundError") return true;
+    // Anything else leaves the previous account's rows on disk, which is the
+    // case this whole mechanism exists to prevent. Most likely another tab of
+    // this origin still holds a sync access handle on the file.
+    logger.error("Failed to delete the persisted collection database:", err);
+    return false;
+  }
+}
+
+/**
+ * Close the database and delete its OPFS file, reporting whether it is gone.
  *
  * The file cannot be removed while the worker holds sync access handles on it,
  * so the close (which terminates the worker) has to come first.
  */
-async function deletePersistedDatabase(): Promise<void> {
+async function deletePersistedDatabase(): Promise<boolean> {
   try {
     await openedDatabase?.close?.();
   } catch (err) {
@@ -391,17 +454,7 @@ async function deletePersistedDatabase(): Promise<void> {
   // next open to start over. Callers reload the page rather than continue.
   openPromise = null;
 
-  if (!supportsOpfsPersistence()) return;
-  try {
-    const root = await navigator.storage.getDirectory();
-    await root.removeEntry(DATABASE_NAME);
-  } catch (err) {
-    // A file that was never written is already in the desired state, so only a
-    // real failure is worth reporting — that one leaves the previous account's
-    // rows on disk, which is the case this whole function exists to prevent.
-    if ((err as { name?: string }).name === "NotFoundError") return;
-    logger.error("Failed to delete the persisted collection database:", err);
-  }
+  return removeDatabaseFile();
 }
 
 /**
@@ -422,8 +475,24 @@ async function deletePersistedDatabase(): Promise<void> {
  * | user A → user B | yes |
  * | user A → anonymous (sign-out) | yes — do not leave A's records on a signed-out device |
  *
- * Returns whether a purge happened. A purge closes the database, so the caller
- * must reload rather than keep using collections bound to it.
+ * Returns whether a purge was required. A purge closes the database, so the
+ * caller must reload rather than keep using collections bound to it — that is
+ * true whether or not the deletion itself succeeded.
+ *
+ * ## When the file cannot be deleted
+ *
+ * `removeEntry` fails if another tab of this origin still holds a sync access
+ * handle on the store. Recording the new owner anyway would be the worst
+ * possible outcome: the surviving database is reopened on the next load and
+ * hydrated under the new owner. Worse, a failed *sign-out* purge would leave
+ * the store labelled `anonymous`, and anonymous → user B is the one exempt
+ * transition — so the previous user's rows would be handed to first sync as B's
+ * local data and uploaded into B's account.
+ *
+ * So a failed deletion leaves the owner untouched (the transition is retried on
+ * the next auth change) and sets a pending-purge flag. `openPersistence` retries
+ * the deletion before opening and refuses to open at all while the flag is still
+ * set, so the surviving rows are never read even if they cannot yet be removed.
  */
 export async function purgePersistedDataOnOwnerChange(userId: string | null): Promise<boolean> {
   const owner = userId ?? ANONYMOUS_OWNER;
@@ -432,7 +501,11 @@ export async function purgePersistedDataOnOwnerChange(userId: string | null): Pr
 
   const purge = previous !== null && previous !== ANONYMOUS_OWNER;
   if (purge) {
-    await deletePersistedDatabase();
+    // Set before attempting, so a crash or a closed tab mid-delete still leaves
+    // the store marked as one that must not be hydrated.
+    setPurgePending(true);
+    if (!(await deletePersistedDatabase())) return true;
+    setPurgePending(false);
   }
   writeOwner(owner);
   return purge;
@@ -442,4 +515,5 @@ export async function purgePersistedDataOnOwnerChange(userId: string | null): Pr
 export function resetPersistenceForTests(): void {
   openPromise = null;
   openedDatabase = null;
+  setPurgePending(false);
 }

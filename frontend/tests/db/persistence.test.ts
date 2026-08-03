@@ -7,7 +7,10 @@ import {
   syncCollectionPersistence,
   whenPersistenceReady,
 } from "@/db/persistence";
-import { PERSISTED_COLLECTION_OWNER_KEY } from "@/constants/storageKeys";
+import {
+  PERSISTED_COLLECTION_OWNER_KEY,
+  PERSISTED_COLLECTION_PURGE_PENDING_KEY,
+} from "@/constants/storageKeys";
 
 /**
  * The methods `validatePersistenceAdapter` requires before it will accept an
@@ -216,6 +219,61 @@ describe("purgePersistedDataOnOwnerChange", () => {
 
     // Nothing on disk is already the desired end state — the caller still has
     // to reload, because user-1's rows are in memory either way.
+    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
+    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-2");
+    expect(localStorage.getItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY)).toBeNull();
+  });
+});
+
+describe("purge when the store cannot be deleted", () => {
+  // `removeEntry` fails while another tab of this origin still holds a sync
+  // access handle on the file. Treating that as success would reopen the
+  // previous account's rows under the new owner on the next load.
+  const locked = () =>
+    stubOpfs(() =>
+      Promise.reject(Object.assign(new Error("locked"), { name: "NoModificationAllowedError" })),
+    );
+
+  it("does not hand the store to the new owner", async () => {
+    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
+    locked();
+
+    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
+    // Still user-1, so the transition is retried on the next auth change
+    // instead of being silently marked done.
+    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-1");
+  });
+
+  it("marks the store as pending deletion", async () => {
+    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
+    locked();
+
+    await purgePersistedDataOnOwnerChange("user-2");
+
+    expect(localStorage.getItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY)).not.toBeNull();
+  });
+
+  it("does not let a failed sign-out purge become an anonymous store", async () => {
+    // The worst case, and the reason the owner is left untouched: sign-out
+    // recording "anonymous" would make the *next* sign-in an anonymous → user
+    // transition, which is the one exempt case — so user-1's rows would be
+    // handed to first sync as the new user's local data and uploaded into
+    // their account.
+    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
+    locked();
+
+    expect(await purgePersistedDataOnOwnerChange(null)).toBe(true);
+    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).not.toBe("anonymous");
+
+    // A later sign-in as somebody else must still be seen as user-1 → user-2.
+    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
+  });
+
+  it("still reports the purge so the caller reloads", async () => {
+    // The rows are in memory regardless of what happened on disk.
+    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
+    locked();
+
     expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
   });
 });
