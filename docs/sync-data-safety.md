@@ -178,8 +178,16 @@ Closing it properly means running the signed-out collections in
 persists *pending mutations* and routes them through the leader rather than
 re-deriving whole-collection state from a query. That is a different collection
 configuration, chosen before auth is known at module load, so it is a separate
-change. A union of memory and disk is **not** a fix — it would resurrect
-deleted rows, which currently delete correctly.
+change — tracked in #1045, which records the prototype measurements.
+
+Two things that look like fixes but are not. A union of memory and disk would
+resurrect deleted rows, which currently delete correctly. And suppressing the
+post-mutation refetch to stop the clobber would also stop rows persisting at
+all: the same refetch does both jobs.
+
+`sync-absent` mode is itself a trade rather than a clean win — it fixed the
+concurrent-write loss in every prototype trial, but follower tabs then showed a
+stale view until reloaded, matching open upstream issue TanStack/db#1486.
 
 ### The outbox is kept, not retired
 
