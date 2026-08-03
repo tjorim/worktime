@@ -96,6 +96,29 @@ than 401/403/408/429) moves the batch to `worktime_sync_quarantine_<userId>` and
 clears it from the outbox. Retrying forever blocks every later change behind it;
 dropping it loses data silently. Quarantining does neither.
 
+## Local durability
+
+The sync-backed collections are snapshotted to IndexedDB
+(`src/db/persistence.ts`), so the last known state survives a reload and an
+offline launch of the installed PWA.
+
+- Snapshots are written on any change — local mutation, server pull, or SSE
+  direct write — via `subscribeChanges`, debounced.
+- They are read back at module load, before any collection can be queried, and
+  returned *as the `queryFn` result*. Seeding with `utils.writeInsert` instead
+  populates `toArray` but `useLiveQuery` subscribers never render those rows —
+  the query result is what the collection treats as its state.
+- When the server is unreachable on a cold start, `fetchWithSnapshotFallback`
+  serves the snapshot rather than an empty app. It rethrows when there is no
+  snapshot, so an error keeps the collection empty and retrying instead of
+  asserting the account is empty.
+- Snapshots are purged when they stop belonging to the current user — see the
+  ownership table in `persistence.ts`. Signing in from anonymous is exempt:
+  that data is the signing-in user's, and first sync uploads it.
+
+Local durability is a convenience, not the backup. The server is the backup;
+IndexedDB can be cleared by the browser at any time.
+
 ## Recovery primitives
 
 - **Deletes are soft.** Every sync delete sets `deleted_at`; nothing purges
@@ -124,9 +147,6 @@ These are real and not addressed here:
   still judged on record counts alone.
 - **No way to defer an ongoing conflict.** The dialog requires a choice; there
   is no "decide later" that leaves the conflict pending.
-- **Local data is memory-only.** Nothing persists the sync-backed collections;
-  a signed-out user's records do not survive a reload, and a signed-in user who
-  opens the app offline sees an empty app until a pull succeeds.
 - **Preferences are whole-blob last-write-wins.** Changing a setting on two
   devices means one device's entire settings document silently loses.
 - **Database backups are not configured in this repo.** Production hosting lives

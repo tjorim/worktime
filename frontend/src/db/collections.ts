@@ -35,6 +35,14 @@
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { queryClient } from "@/lib/queryClient";
+import {
+  getLoadedSnapshot,
+  hydrateSyncCollections,
+  purgeSnapshotsOnOwnerChange,
+  startPersistingSyncCollections,
+  whenHydrated,
+  type PersistableCollection,
+} from "@/db/persistence";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import type { Label } from "@/components/timeTracking/constants";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
@@ -54,6 +62,7 @@ import {
   type WorkLocationSyncRead,
 } from "@/utils/syncClient";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Module-level auth state — set by setSyncCollectionAuth
@@ -72,8 +81,25 @@ export function setSyncCollectionAuth(userId: string | null, accessToken: string
   if (_currentUserId === userId && _currentAccessToken === accessToken) {
     return;
   }
+  const userChanged = _currentUserId !== userId;
   _currentUserId = userId;
   _currentAccessToken = accessToken;
+
+  if (userChanged) {
+    // The persisted cache is one per-device store. If it belongs to a
+    // different account, drop it — both so the new user is not shown the
+    // previous one's records, and so the first-sync flow does not read them as
+    // "local data" to upload into the new account. Signing *in* from anonymous
+    // is exempt: that data is the signing-in user's own.
+    void purgeSnapshotsOnOwnerChange(userId, Object.keys(SYNC_COLLECTIONS)).then((purged) => {
+      if (purged) {
+        queryClient.removeQueries({ queryKey: ["sync"] });
+      }
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+    });
+    return;
+  }
+
   // QueryCollections use staleTime=Infinity, so an auth transition from
   // "unknown" to "authenticated" would otherwise leave already-mounted
   // collections stuck on their initial empty snapshot until some later local
@@ -121,6 +147,36 @@ async function fetchSyncSnapshot(): Promise<SyncPullResponse> {
     throw new Error(`sync pull failed: ${response.status}`);
   }
   return (await response.json()) as SyncPullResponse;
+}
+
+/**
+ * Fetch a collection's server rows, falling back to its persisted snapshot.
+ *
+ * TanStack Query keeps the last good data when a refetch throws, which covers
+ * a *warm* failure. It cannot cover a cold start: after a reload there is no
+ * last-good data in memory, so an unreachable server (offline, a deploy, an
+ * expired token) would render an empty app over a full local history. The
+ * snapshot is that history, so it is what the user sees until the server is
+ * reachable again.
+ *
+ * Rethrows when there is no snapshot — an error keeps the collection empty and
+ * retrying, which is honest, where returning `[]` would assert the account is
+ * empty.
+ */
+async function fetchWithSnapshotFallback<T>(
+  name: string,
+  select: (data: SyncPullResponse) => T[],
+): Promise<T[]> {
+  try {
+    return select(await fetchSyncSnapshot());
+  } catch (err) {
+    const snapshot = getLoadedSnapshot<T>(name);
+    if (snapshot) {
+      logger.error(`sync pull for "${name}" failed; showing the last saved copy:`, err);
+      return snapshot;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -500,9 +556,17 @@ export const labelsCollection = createCollection(
     getKey: (label) => label.id,
     staleTime: Infinity,
     queryFn: async (): Promise<Label[]> => {
-      if (!_currentUserId) return labelsCollection.toArray as Label[];
-      const data = await fetchSyncSnapshot();
-      return data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel);
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = labelsCollection.toArray as Label[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<Label>("labels") ?? items);
+      }
+      return fetchWithSnapshotFallback("labels", (data) =>
+        data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
+      );
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -571,9 +635,17 @@ export const tasksCollection = createCollection(
     getKey: (task) => task.id,
     staleTime: Infinity,
     queryFn: async (): Promise<StoredTimeTrackingTask[]> => {
-      if (!_currentUserId) return tasksCollection.toArray as StoredTimeTrackingTask[];
-      const data = await fetchSyncSnapshot();
-      return data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask);
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = tasksCollection.toArray as StoredTimeTrackingTask[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<StoredTimeTrackingTask>("tasks") ?? items);
+      }
+      return fetchWithSnapshotFallback("tasks", (data) =>
+        data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
+      );
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -650,9 +722,17 @@ export const templatesCollection = createCollection(
     getKey: (template) => template.id,
     staleTime: Infinity,
     queryFn: async (): Promise<TimeTrackingTemplate[]> => {
-      if (!_currentUserId) return templatesCollection.toArray as TimeTrackingTemplate[];
-      const data = await fetchSyncSnapshot();
-      return data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate);
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = templatesCollection.toArray as TimeTrackingTemplate[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<TimeTrackingTemplate>("templates") ?? items);
+      }
+      return fetchWithSnapshotFallback("templates", (data) =>
+        data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
+      );
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -725,9 +805,17 @@ export const timeOffCollection = createCollection(
     getKey: (entry) => entry.id,
     staleTime: Infinity,
     queryFn: async (): Promise<TimeOffEntry[]> => {
-      if (!_currentUserId) return timeOffCollection.toArray as TimeOffEntry[];
-      const data = await fetchSyncSnapshot();
-      return _syncItemsToTimeOffEntries(data.time_off_entries ?? []);
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = timeOffCollection.toArray as TimeOffEntry[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<TimeOffEntry>("time-off-entries") ?? items);
+      }
+      return fetchWithSnapshotFallback("time-off-entries", (data) =>
+        _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+      );
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -814,11 +902,17 @@ export const ganttTasksCollection = createCollection(
     getKey: (task) => task.id,
     staleTime: Infinity,
     queryFn: async (): Promise<GanttTask[]> => {
-      if (!_currentUserId) return ganttTasksCollection.toArray as GanttTask[];
-      const data = await fetchSyncSnapshot();
-      return (data.gantt_tasks ?? [])
-        .filter((g) => g.deleted_at === null)
-        .map(syncGanttTaskToGanttTask);
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = ganttTasksCollection.toArray as GanttTask[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<GanttTask>("gantt-tasks") ?? items);
+      }
+      return fetchWithSnapshotFallback("gantt-tasks", (data) =>
+        (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
+      );
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -902,11 +996,17 @@ export const workLocationsCollection = createCollection(
     getKey: (entry) => entry.date,
     staleTime: Infinity,
     queryFn: async (): Promise<WorkLocationEntry[]> => {
-      if (!_currentUserId) return workLocationsCollection.toArray as WorkLocationEntry[];
-      const data = await fetchSyncSnapshot();
-      return data.work_locations
-        .filter((wl) => wl.deleted_at === null)
-        .map(syncWorkLocationToEntry);
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = workLocationsCollection.toArray as WorkLocationEntry[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<WorkLocationEntry>("work-locations") ?? items);
+      }
+      return fetchWithSnapshotFallback("work-locations", (data) =>
+        data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
+      );
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -962,3 +1062,50 @@ export const workLocationsCollection = createCollection(
     },
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Local persistence
+// ---------------------------------------------------------------------------
+
+/**
+ * The sync-backed collections by snapshot name.
+ *
+ * Names are stable storage keys — renaming one orphans that collection's
+ * snapshot and the next reload looks like data loss for that domain.
+ */
+export const SYNC_COLLECTIONS = {
+  labels: labelsCollection,
+  tasks: tasksCollection,
+  templates: templatesCollection,
+  "time-off-entries": timeOffCollection,
+  "gantt-tasks": ganttTasksCollection,
+  "work-locations": workLocationsCollection,
+} as unknown as Record<string, PersistableCollection<never>>;
+
+/**
+ * Seed the collections from their IndexedDB snapshots and keep persisting.
+ *
+ * Called once during app startup, before anything reads a collection. Every
+ * `queryFn` awaits `whenHydrated()`, so a slow hydration delays the first fetch
+ * rather than racing it.
+ */
+// Started at module load, not from an app entry point: a collection can be
+// queried the moment anything imports this module, and `whenHydrated()` only
+// blocks a queryFn if the hydration promise already exists. Registering it any
+// later leaves a window where the first query resolves against an unloaded
+// snapshot and commits an empty collection.
+const hydrationStarted =
+  typeof indexedDB === "undefined"
+    ? Promise.resolve()
+    : hydrateSyncCollections(Object.keys(SYNC_COLLECTIONS));
+
+/**
+ * Begin persisting collection changes to IndexedDB.
+ *
+ * Hydration has already started by the time this runs (see above); this only
+ * attaches the change subscriptions, which nothing depends on for ordering.
+ */
+export function initSyncCollectionPersistence(): Promise<void> {
+  startPersistingSyncCollections(SYNC_COLLECTIONS);
+  return hydrationStarted;
+}
