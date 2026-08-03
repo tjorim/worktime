@@ -108,26 +108,103 @@ dropping it loses data silently. Quarantining does neither.
 
 ## Local durability
 
-The sync-backed collections are snapshotted to IndexedDB
-(`src/db/persistence.ts`), so the last known state survives a reload and an
+The sync-backed collections are persisted with TanStack DB's
+`persistedCollectionOptions` (`src/db/persistence.ts`), backed by WA-SQLite over
+OPFS in a dedicated Web Worker, so the last known state survives a reload and an
 offline launch of the installed PWA.
 
-- Snapshots are written on any change — local mutation, server pull, or SSE
-  direct write — via `subscribeChanges`, debounced.
-- They are read back at module load, before any collection can be queried, and
-  returned *as the `queryFn` result*. Seeding with `utils.writeInsert` instead
-  populates `toArray` but `useLiveQuery` subscribers never render those rows —
-  the query result is what the collection treats as its state.
-- When the server is unreachable on a cold start, `fetchWithSnapshotFallback`
-  serves the snapshot rather than an empty app. It rethrows when there is no
-  snapshot, so an error keeps the collection empty and retrying instead of
-  asserting the account is empty.
-- Snapshots are purged when they stop belonging to the current user — see the
-  ownership table in `persistence.ts`. Signing in from anonymous is exempt:
-  that data is the signing-in user's, and first sync uploads it.
+- Persistence sits *inside* the sync pipe: the wrapper intercepts the sync layer
+  and writes rows as part of the sync commit, rather than mirroring the
+  collection from the side. There is no write window in which a change is in the
+  collection but not yet on disk.
+- Hydration is ordered, not raced. The wrapper runs its persisted startup — and
+  defers the collection's `markReady` — before it invokes the query collection's
+  sync, so persisted rows are in place before a query result can commit over
+  them. Every `queryFn` also awaits `whenPersistenceReady()`.
+- When the server is unreachable on a cold start, `fetchWithLocalFallback`
+  returns the collection's own (hydrated) rows rather than an empty app. It
+  rethrows when the collection is empty, so an error keeps it empty and retrying
+  instead of asserting the account is empty — an empty result would be
+  replicated back to the server as a delete-everything.
+- **Multi-tab writes are coordinated at the store.**
+  `BrowserCollectionCoordinator` elects a leader over BroadcastChannel plus Web
+  Locks, so exactly one tab owns the SQLite writer, the others route through it,
+  and a committed write is broadcast to the other tabs. Signed in, this closes
+  the two-tabs-editing gap: each tab's write round-trips through the server and
+  every tab's pull asserts the same state. Signed out, it does **not** — see
+  below.
+- `schemaVersion` (`COLLECTION_SCHEMA_VERSION`) handles shape changes: a
+  mismatch resets the store instead of migrating it, which is safe because every
+  collection here is sync-present and the server re-supplies the rows.
+- The store is deleted when it stops belonging to the current user — see the
+  ownership table in `persistence.ts`. Signing in from anonymous is exempt: that
+  data is the signing-in user's, and first sync uploads it. A purge closes the
+  database, so it is followed by a reload; that is also what guarantees the
+  previous account's rows do not survive in memory.
+- Persistence degrades rather than breaking. Where OPFS, Web Workers or Web
+  Locks are unavailable (older iOS Safari, private browsing, non-secure
+  contexts, the test environment) the collections fall back to a no-op adapter
+  and run from memory, exactly as they did before any persistence existed.
 
 Local durability is a convenience, not the backup. The server is the backup;
-IndexedDB can be cleared by the browser at any time.
+OPFS storage can be cleared by the browser at any time.
+
+### Known gap: two signed-out tabs writing in the same instant
+
+Signed out, a row written in one tab can still be dropped if another tab writes
+within roughly the same few hundred milliseconds. This is narrower than the
+snapshot layer it replaced — which clobbered on any overlap inside its 500 ms
+debounce, regardless of timing — but it is not closed.
+
+The cause is not the coordinator, which serializes the SQLite writes correctly.
+It is that **the query collection treats a `queryFn` result as the complete
+state of the collection**. With no sync auth there is no server to pull from, so
+the `queryFn` returns `collection.toArray` — this tab's memory — and that is
+applied as a full replace, truncating anything another tab persisted since. Once
+the coordinator's broadcast has reached the tab (measured at well under 300 ms
+locally), its `toArray` already contains the other tab's row and the assertion
+is harmless; the loss only happens inside that window.
+
+Measured in Chromium, signed out, API unreachable:
+
+| two tabs write | outcome |
+|---|---|
+| simultaneously | one row lost |
+| 300 ms apart | both survive |
+| 3000 ms apart | both survive |
+
+Closing it properly means running the signed-out collections in
+`persistedCollectionOptions`' local-only (`sync-absent`) mode, where the library
+persists *pending mutations* and routes them through the leader rather than
+re-deriving whole-collection state from a query. That is a different collection
+configuration, chosen before auth is known at module load, so it is a separate
+change. A union of memory and disk is **not** a fix — it would resurrect
+deleted rows, which currently delete correctly.
+
+### The outbox is kept, not retired
+
+TanStack's persisted **pending mutations** would in principle replace
+`worktime_sync_outbox_<userId>`, but they are only wired up in
+`persistedCollectionOptions`' local-only mode, which wraps `onInsert` /
+`onUpdate` / `onDelete` to persist mutations. Every collection here is
+sync-present, where the wrapper leaves those handlers alone and persists only
+rows. So the outbox remains the mechanism that survives a failed push, and the
+"Queued, not lost" guarantees above are unchanged.
+
+### Bundle cost
+
+Measured on the migration commit (`pnpm build`, production):
+
+| | before | after | delta |
+|---|---|---|---|
+| `dist/` total | 2,702,952 B | 4,473,349 B | +1,770,397 B (+65%) |
+| PWA precache | 2610.54 KiB, 34 entries | 4339.39 KiB, 35 entries | +1728.85 KiB (+66%) |
+| OPFS worker chunk | — | 1,698,339 B (705,058 B gzip) | new entry |
+| main-thread chunk (`useLocalStorage-*`) | 67.39 kB (18.79 kB gzip) | 139.55 kB (35.88 kB gzip) | +72.16 kB (+17.09 kB gzip) |
+
+The bulk is the WA-SQLite WASM, inlined as base64 into the worker chunk. It runs
+off the main thread, but `vite-plugin-pwa` precaches it, so it is downloaded on
+install rather than lazily on first use.
 
 ## Recovery primitives
 

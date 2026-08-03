@@ -6,7 +6,6 @@ import { getLocale } from "./paraglide/runtime.js";
 import { logger } from "@/utils/logger";
 import { initSyncCollectionPersistence } from "@/db/collections";
 
-
 // Set the HTML lang attribute based on the current locale
 document.documentElement.lang = getLocale();
 
@@ -41,12 +40,12 @@ async function startApp(): Promise<void> {
     logger.error("MSW failed to start:", error);
   }
 
-  // Seed the sync-backed collections from their IndexedDB snapshots before the
-  // first render, so a reload (or an offline launch of the installed PWA) shows
-  // the user's data immediately instead of an empty app. Started here rather
-  // than awaited: every collection's queryFn awaits `whenHydrated()` itself, so
-  // hydration cannot be raced by a fetch, and a slow IndexedDB does not hold up
-  // painting the shell.
+  // Open the local collection store before the first render, so a reload (or an
+  // offline launch of the installed PWA) shows the user's data immediately
+  // instead of an empty app. Started here rather than awaited: every
+  // collection's queryFn awaits `whenPersistenceReady()` itself, so hydration
+  // cannot be raced by a fetch, and a slow OPFS open does not hold up painting
+  // the shell.
   void initSyncCollectionPersistence();
 
   const root = createRoot(rootContainer);
@@ -58,4 +57,3 @@ async function startApp(): Promise<void> {
 }
 
 void startApp();
-
