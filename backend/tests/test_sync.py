@@ -2768,3 +2768,157 @@ class TestSyncCorrectnessFixes:
             )
             assert resp.status_code == 201
             mock_bc.assert_called_once_with(user_id)
+
+
+class TestBulkDeleteGuard:
+    """A push must not be able to silently erase an account's data.
+
+    The first-sync "keep local data" path turns every server record without a
+    local counterpart into a delete, so a client whose local collections have
+    not finished loading asks the server to remove everything.  Nothing in the
+    payload distinguishes that from a user who genuinely cleared their data, so
+    the deliberate case has to opt in with ``allow_bulk_delete``.
+    """
+
+    @staticmethod
+    def _seed_labels(client: TestClient, headers: dict, count: int) -> list[str]:
+        label_ids = [str(uuid4()) for _ in range(count)]
+        resp = client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": f"Label {index}",
+                        "color": "#123456",
+                    }
+                    for index, label_id in enumerate(label_ids)
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        return label_ids
+
+    @staticmethod
+    def _delete_payload(label_ids: list[str], **extra) -> dict:
+        return {
+            "labels": [
+                {"id": label_id, "action": "delete", "client_updated_at": _ts(5)}
+                for label_id in label_ids
+            ],
+            **extra,
+        }
+
+    def test_refuses_a_push_that_would_wipe_the_account(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-guard-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 30)
+
+        resp = db_client.post(
+            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
+        )
+        assert resp.status_code == 409, resp.text
+
+        # Nothing was applied: the guard runs before any record is touched.
+        pull = db_client.get("/api/sync/pull", headers=headers)
+        assert pull.status_code == 200
+        assert all(label["deleted_at"] is None for label in pull.json()["labels"])
+
+    def test_allows_the_same_push_when_the_client_opts_in(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-optin-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 30)
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json=self._delete_payload(label_ids, allow_bulk_delete=True),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        assert all(r["status"] == "ok" for r in resp.json()["results"]["labels"])
+
+        pull = db_client.get("/api/sync/pull", headers=headers)
+        assert all(label["deleted_at"] is not None for label in pull.json()["labels"])
+
+    def test_allows_deleting_a_minority_of_records(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Ordinary pruning stays well under the guard's threshold."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-minority-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 60)
+
+        resp = db_client.post(
+            "/api/sync/push", json=self._delete_payload(label_ids[:30]), headers=headers
+        )
+        assert resp.status_code == 200, resp.text
+
+    def test_allows_deleting_everything_in_a_small_account(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Below BULK_DELETE_MIN_RECORDS the blast radius is small enough not to gate."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-small-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 5)
+
+        resp = db_client.post(
+            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
+        )
+        assert resp.status_code == 200, resp.text
+
+    def test_replayed_deletes_do_not_trip_the_guard(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A re-flushed outbox is full of already-applied deletes.
+
+        Counting those would let a client deadlock against its own earlier
+        success: the retry would be refused forever even though it is a no-op.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-replay-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 30)
+
+        applied = db_client.post(
+            "/api/sync/push",
+            json=self._delete_payload(label_ids, allow_bulk_delete=True),
+            headers=headers,
+        )
+        assert applied.status_code == 200, applied.text
+
+        # Same batch again, this time without the opt-in — every delete is now a
+        # no-op against an already-tombstoned row, so nothing is at risk.
+        replay = db_client.post(
+            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
+        )
+        assert replay.status_code == 200, replay.text
+
+    def test_guard_ignores_another_user_s_records(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """The active-record count is per user, not global."""
+        admin_h = auth_headers(1, is_admin=True)
+        other_id = _create_user(db_client, admin_h, "bulk-delete-bystander")
+        self._seed_labels(db_client, auth_headers(other_id), 100)
+
+        user_id = _create_user(db_client, admin_h, "bulk-delete-scoped-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 30)
+
+        # 30 of this user's 30 records — a wipe, regardless of how much data
+        # the unrelated account happens to hold.
+        resp = db_client.post(
+            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
+        )
+        assert resp.status_code == 409, resp.text

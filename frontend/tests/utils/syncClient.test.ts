@@ -9,6 +9,7 @@ import {
   clearSyncOutbox,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
+  EmptyLocalReplaceError,
   extractConflictedItems,
   fetchPreferences,
   fetchSyncStatus,
@@ -910,7 +911,8 @@ describe("syncClient", () => {
     });
 
     it("adds delete entries for server-only labels not present locally", () => {
-      localStorage.clear(); // no local labels
+      localStorage.clear(); // no local labels beyond the anchor
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -926,6 +928,9 @@ describe("syncClient", () => {
 
     it("does not re-delete already soft-deleted server labels", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -938,6 +943,9 @@ describe("syncClient", () => {
 
     it("adds delete entries for server-only tasks", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -950,6 +958,9 @@ describe("syncClient", () => {
 
     it("does not re-delete already soft-deleted server tasks", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -962,6 +973,9 @@ describe("syncClient", () => {
 
     it("adds delete entries for server-only templates", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -992,6 +1006,9 @@ describe("syncClient", () => {
 
     it("adds delete entries for server-only work locations", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -1004,6 +1021,9 @@ describe("syncClient", () => {
 
     it("does not re-delete already soft-deleted work locations", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -1012,6 +1032,36 @@ describe("syncClient", () => {
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
       expect(result.work_locations.find((wl) => wl.date === "2026-01-10")).toBeUndefined();
+    });
+
+    it("refuses to build a replace payload when the local side is empty", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("server-lbl")],
+        tasks: [makeServerTask("server-task")],
+      };
+
+      // An empty local snapshot would turn "keep my local data" into a batch
+      // that deletes every server record. It is far more likely to mean the
+      // local collections have not loaded than that the user wants their
+      // account emptied, so it must not be silently turned into deletes.
+      expect(() => buildKeepLocalReplacePayload(localPayload, serverData)).toThrow(
+        EmptyLocalReplaceError,
+      );
+    });
+
+    it("opts in to the server's bulk-delete guard for a confirmed replace", () => {
+      labelsCollection.insert({ id: "local-lbl", name: "Local", color: "#FFFFFF" });
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("server-only-lbl")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.allow_bulk_delete).toBe(true);
     });
   });
 

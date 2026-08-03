@@ -104,6 +104,64 @@ async function collectionFetch(url: string, init?: RequestInit): Promise<Respons
 }
 
 /**
+ * Fetch the full sync snapshot for the signed-in user.
+ *
+ * Throws on any non-ok response so TanStack Query keeps the collection's last
+ * good data and retries.  Returning `[]` here instead (as this used to) makes
+ * a expired token, a 502 during a deploy, or any other transient server error
+ * indistinguishable from "this account has no records": every collection
+ * empties out, the user is shown an app with their history apparently wiped,
+ * and — worse — anything that reads `collection.toArray` as the local truth
+ * (see `buildLocalSyncPushPayload`) would treat that empty snapshot as the
+ * state to replicate back to the server.
+ */
+async function fetchSyncSnapshot(): Promise<SyncPullResponse> {
+  const response = await collectionFetch("/api/sync/pull");
+  if (!response.ok) {
+    throw new Error(`sync pull failed: ${response.status}`);
+  }
+  return (await response.json()) as SyncPullResponse;
+}
+
+/**
+ * Every collection backed by the sync API, in no particular order.
+ *
+ * Declared as a getter rather than a module-level array because the
+ * collections are defined further down this file.
+ */
+function allSyncCollections() {
+  return [
+    labelsCollection,
+    tasksCollection,
+    templatesCollection,
+    timeOffCollection,
+    ganttTasksCollection,
+    workLocationsCollection,
+  ];
+}
+
+/**
+ * Wait until every sync-backed collection has loaded its initial data.
+ *
+ * Collections start lazily, when a component that reads them first renders, so
+ * `collection.toArray` on a collection nobody has mounted yet is empty — and
+ * indistinguishable from a genuinely empty collection.  Any code path that
+ * treats local state as the truth to push (the first-sync flow) must await this
+ * first, or it can ask the server to delete records that only *look* absent.
+ *
+ * Rejects if any collection fails to load, so callers can refuse to proceed
+ * rather than acting on a partial picture.
+ */
+export async function preloadSyncCollections(): Promise<void> {
+  await Promise.all(allSyncCollections().map((collection) => collection.preload()));
+}
+
+/** True when every sync-backed collection has finished its initial load. */
+export function areSyncCollectionsReady(): boolean {
+  return allSyncCollections().every((collection) => collection.isReady());
+}
+
+/**
  * Push a single-domain sync payload to the server.
  * On failure (network error or non-ok response), enqueues to the per-user
  * outbox so the change is retried on the next sync flush.
@@ -443,9 +501,7 @@ export const labelsCollection = createCollection(
     staleTime: Infinity,
     queryFn: async (): Promise<Label[]> => {
       if (!_currentUserId) return labelsCollection.toArray as Label[];
-      const response = await collectionFetch("/api/sync/pull");
-      if (!response.ok) return [];
-      const data = (await response.json()) as SyncPullResponse;
+      const data = await fetchSyncSnapshot();
       return data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel);
     },
     onInsert: async ({ transaction }) => {
@@ -516,9 +572,7 @@ export const tasksCollection = createCollection(
     staleTime: Infinity,
     queryFn: async (): Promise<StoredTimeTrackingTask[]> => {
       if (!_currentUserId) return tasksCollection.toArray as StoredTimeTrackingTask[];
-      const response = await collectionFetch("/api/sync/pull");
-      if (!response.ok) return [];
-      const data = (await response.json()) as SyncPullResponse;
+      const data = await fetchSyncSnapshot();
       return data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask);
     },
     onInsert: async ({ transaction }) => {
@@ -597,9 +651,7 @@ export const templatesCollection = createCollection(
     staleTime: Infinity,
     queryFn: async (): Promise<TimeTrackingTemplate[]> => {
       if (!_currentUserId) return templatesCollection.toArray as TimeTrackingTemplate[];
-      const response = await collectionFetch("/api/sync/pull");
-      if (!response.ok) return [];
-      const data = (await response.json()) as SyncPullResponse;
+      const data = await fetchSyncSnapshot();
       return data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate);
     },
     onInsert: async ({ transaction }) => {
@@ -674,9 +726,7 @@ export const timeOffCollection = createCollection(
     staleTime: Infinity,
     queryFn: async (): Promise<TimeOffEntry[]> => {
       if (!_currentUserId) return timeOffCollection.toArray as TimeOffEntry[];
-      const response = await collectionFetch("/api/sync/pull");
-      if (!response.ok) return [];
-      const data = (await response.json()) as SyncPullResponse;
+      const data = await fetchSyncSnapshot();
       return _syncItemsToTimeOffEntries(data.time_off_entries ?? []);
     },
     onInsert: async ({ transaction }) => {
@@ -765,9 +815,7 @@ export const ganttTasksCollection = createCollection(
     staleTime: Infinity,
     queryFn: async (): Promise<GanttTask[]> => {
       if (!_currentUserId) return ganttTasksCollection.toArray as GanttTask[];
-      const response = await collectionFetch("/api/sync/pull");
-      if (!response.ok) return [];
-      const data = (await response.json()) as SyncPullResponse;
+      const data = await fetchSyncSnapshot();
       return (data.gantt_tasks ?? [])
         .filter((g) => g.deleted_at === null)
         .map(syncGanttTaskToGanttTask);
@@ -855,9 +903,7 @@ export const workLocationsCollection = createCollection(
     staleTime: Infinity,
     queryFn: async (): Promise<WorkLocationEntry[]> => {
       if (!_currentUserId) return workLocationsCollection.toArray as WorkLocationEntry[];
-      const response = await collectionFetch("/api/sync/pull");
-      if (!response.ok) return [];
-      const data = (await response.json()) as SyncPullResponse;
+      const data = await fetchSyncSnapshot();
       return data.work_locations
         .filter((wl) => wl.deleted_at === null)
         .map(syncWorkLocationToEntry);

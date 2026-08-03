@@ -789,6 +789,17 @@ MAX_SYNC_PUSH_ITEMS = 1000
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 
+    # Opt-in acknowledgement that this batch is *meant* to remove a large share
+    # of the account's data (the first-sync "keep local data" replace is the
+    # only flow that legitimately does so, and only after the user confirms it
+    # in a dialog).  Left false, ``push_changes`` refuses batches that would
+    # tombstone most of the account — see BULK_DELETE_* in
+    # ``app/services/sync_service.py``.  A client bug that pushes an empty
+    # local snapshot as the new truth is by far the most damaging thing this
+    # endpoint can be asked to do, and it is indistinguishable from a genuine
+    # replace without this flag.
+    allow_bulk_delete: bool = False
+
     labels: list[LabelSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     tasks: list[TaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     templates: list[TemplateSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)

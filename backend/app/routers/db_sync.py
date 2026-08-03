@@ -19,7 +19,12 @@ from app.schemas import (
     SyncStatusResponse,
 )
 from app.services.db_service import NotFoundError, ValidationError
-from app.services.sync_service import get_sync_status, pull_changes, push_changes
+from app.services.sync_service import (
+    BulkDeleteGuardError,
+    get_sync_status,
+    pull_changes,
+    push_changes,
+)
 from app.utils.sse_manager import notify_sync_changed, sync_event_manager
 from app.utils.timing import time_operation
 
@@ -52,6 +57,16 @@ async def push_endpoint(
     try:
         with time_operation("sync", timings):
             result = await push_changes(session, authenticated_user_id, payload)
+    except BulkDeleteGuardError as error:
+        # 409, not 400: the batch is well-formed and the client may legitimately
+        # retry it verbatim with allow_bulk_delete once the user has confirmed
+        # that erasing the account's data is what they meant.
+        logger.warning(
+            "sync push refused by bulk-delete guard for user %d: %s",
+            authenticated_user_id,
+            error,
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     except (ValidationError, NotFoundError) as error:
         # NotFoundError surfaces from _validate_task_gantt_reference (a task
         # or template linking to a gantt_task_id that doesn't exist, or was

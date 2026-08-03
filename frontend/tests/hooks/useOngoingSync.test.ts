@@ -2,7 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
 import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/syncClient";
-import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
+import {
+  getSyncCursorKey,
+  getSyncOutboxKey,
+  getSyncQuarantineKey,
+} from "@/constants/storageKeys";
 
 const mockFetch = vi.fn();
 
@@ -294,6 +298,138 @@ describe("useOngoingSync", () => {
       expect(result.current.hasSyncError).toBe(true);
       expect(result.current.retryAfter).not.toBeNull();
       expect(result.current.retryAfter).toBeGreaterThan(Date.now());
+    });
+
+    it("still queues the change when the hook unmounts mid-push", async () => {
+      // Regression test: the failure path used to bail on the unmounted check
+      // *before* writing to the outbox, so a push that failed while the tab
+      // was closing (or auth was changing) discarded the change outright —
+      // nothing was queued, so nothing ever retried it and the write never
+      // reached the server.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      let rejectPush: (() => void) | null = null;
+      mockFetch.mockImplementation((url: string) => {
+        if (url === "/api/sync/push") {
+          return new Promise((resolve) => {
+            rejectPush = () => {
+              resolve({ ok: false });
+            };
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+      });
+
+      const { result, unmount } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      const change = emptySyncPayload();
+      change.tasks.push({
+        id: "task-unmount",
+        action: "create",
+        client_updated_at: "2026-01-02T00:00:00.000Z",
+        text: "Written as the tab closed",
+        label_id: null,
+        start_time: "2026-01-02T08:00:00.000Z",
+        stop_time: null,
+        includes_break: false,
+      });
+
+      act(() => {
+        result.current.enqueueChange(change);
+      });
+      await waitFor(() => {
+        expect(rejectPush).not.toBeNull();
+      });
+
+      // The provider goes away while the push is still in flight.
+      unmount();
+      await act(async () => {
+        rejectPush!();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(getSyncOutboxSize("user-1")).toBe(1);
+      });
+      const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey("user-1"))!);
+      expect(outbox[0].tasks[0].id).toBe("task-unmount");
+    });
+  });
+
+  describe("permanently rejected batches", () => {
+    it("quarantines a batch the server refuses instead of retrying it forever", async () => {
+      // A 4xx will never succeed on replay. Leaving it in the outbox wedges
+      // every later change behind it; dropping it loses data silently. It gets
+      // set aside so sync keeps flowing and the records stay recoverable.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const queued = emptySyncPayload();
+      queued.tasks.push({
+        id: "task-rejected",
+        action: "create",
+        client_updated_at: "2026-01-02T00:00:00.000Z",
+        text: "Rejected task",
+        label_id: null,
+        start_time: "2026-01-02T08:00:00.000Z",
+        stop_time: null,
+        includes_break: false,
+      });
+      appendToSyncOutbox("user-1", queued);
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url === "/api/sync/push") {
+          return Promise.resolve({ ok: false, status: 409, json: async () => null });
+        }
+        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+      });
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.quarantineCount).toBe(1);
+      });
+      // Outbox drained, so later changes are not stuck behind the bad batch.
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+      expect(result.current.hasSyncError).toBe(true);
+
+      const quarantined = JSON.parse(
+        localStorage.getItem(getSyncQuarantineKey("user-1"))!,
+      );
+      expect(quarantined[0].status).toBe(409);
+      expect(quarantined[0].payload.tasks[0].id).toBe("task-rejected");
+    });
+
+    it("keeps a transiently failed batch queued for retry", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const queued = emptySyncPayload();
+      queued.tasks.push({
+        id: "task-retryable",
+        action: "create",
+        client_updated_at: "2026-01-02T00:00:00.000Z",
+        text: "Retryable task",
+        label_id: null,
+        start_time: "2026-01-02T08:00:00.000Z",
+        stop_time: null,
+        includes_break: false,
+      });
+      appendToSyncOutbox("user-1", queued);
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url === "/api/sync/push") {
+          return Promise.resolve({ ok: false, status: 503, json: async () => null });
+        }
+        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+      });
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+      // A 5xx is worth retrying, so the batch stays put and is not quarantined.
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      expect(result.current.quarantineCount).toBe(0);
     });
   });
 

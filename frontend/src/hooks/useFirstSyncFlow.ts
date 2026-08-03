@@ -37,12 +37,14 @@ import {
   pullSyncData,
   pushPreferences,
   pushSyncPayload,
+  reconcilePreferences,
   storeSyncCursor,
-  syncStatusHasData,
+  syncStatusHasEntityData,
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
-import { applyPullToCollections } from "@/db/collections";
+import { applyPullToCollections, preloadSyncCollections } from "@/db/collections";
+import { logger } from "@/utils/logger";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -89,18 +91,28 @@ function payloadHasData(payload: SyncPushPayload): boolean {
   );
 }
 
-function buildSafeLocalSyncPushPayload(): SyncPushPayload {
+/**
+ * Read the local collections as a push payload, after making sure they have
+ * actually finished loading.
+ *
+ * Returns null when the collections could not be loaded.  Callers must treat
+ * that as "the local state is unknown" and refuse to act, never as "there is
+ * no local data": the two are identical in `collection.toArray`, and acting on
+ * the wrong one is what turns a failed fetch into a request to delete the
+ * account's records.
+ */
+async function readLocalSyncPayload(): Promise<SyncPushPayload | null> {
+  try {
+    await preloadSyncCollections();
+  } catch (err) {
+    logger.error("useFirstSyncFlow: local collections failed to load:", err);
+    return null;
+  }
   try {
     return buildLocalSyncPushPayload();
-  } catch {
-    return {
-      labels: [],
-      tasks: [],
-      templates: [],
-      work_locations: [],
-      time_off_entries: [],
-      gantt_tasks: [],
-    };
+  } catch (err) {
+    logger.error("useFirstSyncFlow: failed to build the local sync payload:", err);
+    return null;
   }
 }
 
@@ -181,15 +193,30 @@ export function useFirstSyncFlow(
         return;
       }
 
-      const serverHasData = syncStatusHasData(status);
+      // Preferences are deliberately excluded from both sides of this
+      // comparison. They are a single last-write-wins blob that reconciles by
+      // timestamp on its own, so they can never require the user to choose
+      // between local and server data — while counting them would drag nearly
+      // every sign-in into the conflict branch, since the settings blob exists
+      // on every device that has ever opened the app. The conflict question is
+      // only ever about entities.
+      const serverHasData = syncStatusHasEntityData(status);
       // Build the push payload once so both the localHasData check and Branch A
       // use the same filtered dataset (malformed rows are excluded by the builder).
-      const localPayload = buildSafeLocalSyncPushPayload();
-      const localPrefsPayload = buildLocalPreferencesPayload();
-      const localHasData = payloadHasData(localPayload) || localPrefsPayload !== null;
+      const localPayload = await readLocalSyncPayload();
+      if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+      if (!localPayload) {
+        // The local side is unknown, so every branch below would be a guess.
+        setPhase("error");
+        return;
+      }
+      const localHasData = payloadHasData(localPayload);
 
-      // Branch D — nothing anywhere
+      // Branch D — no entities anywhere. Preferences may still exist on either
+      // side, so reconcile them rather than leaving local settings unsynced.
       if (!localHasData && !serverHasData) {
+        await reconcilePreferences(fetch);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         storeSyncCursor(uid, status.server_timestamp);
         setPhase("done");
         return;
@@ -204,16 +231,12 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
-        // Also push local preferences (user state) to the server.
-        const prefsPushed = await pushLocalPreferencesIfPresent(
-          fetch,
-          () => mountedRef.current && flowStartedForUser.current === uid,
-        );
-        if (!prefsPushed) {
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          setPhase("error");
-          return;
-        }
+        // Preferences follow their own last-write-wins reconciliation rather
+        // than the entity branch: an account with no entities can still hold
+        // newer settings from another device, and pushing this device's copy
+        // unconditionally would overwrite them.
+        await reconcilePreferences(fetch);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
         // timestamp (still a valid server timestamp) if the re-fetch fails.
@@ -234,12 +257,11 @@ export function useFirstSyncFlow(
           return;
         }
         applyPullToCollections(pullResult);
-        // Also pull preferences from the server and apply to unified user state storage.
-        const stillMounted = await pullAndApplyServerPreferencesIfPresent(
-          fetch,
-          () => mountedRef.current && flowStartedForUser.current === uid,
-        );
-        if (!stillMounted) return;
+        // Reconcile preferences by timestamp rather than taking the server's
+        // copy outright: this device having no entities says nothing about
+        // whether its settings are older than the account's.
+        await reconcilePreferences(fetch);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         storeSyncCursor(uid, pullResult.server_timestamp);
         setPhase("done");
         return;
@@ -278,9 +300,25 @@ export function useFirstSyncFlow(
               return;
             }
             setPhase("pushing");
-            const localPayload = buildSafeLocalSyncPushPayload();
-            // Build a replace payload: local creates + delete entries for server-only rows.
-            const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+            const localPayload = await readLocalSyncPayload();
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!localPayload) {
+              setPhase("error");
+              return;
+            }
+            // Build a replace payload: local creates + delete entries for
+            // server-only rows.  Throws EmptyLocalReplaceError if the local
+            // side turned out to be empty after all, which would make this a
+            // pure delete-everything batch — surfaced as an error rather than
+            // sent.
+            let replacePayload: SyncPushPayload;
+            try {
+              replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+            } catch (err) {
+              logger.error("useFirstSyncFlow: refusing to replace server data:", err);
+              setPhase("error");
+              return;
+            }
             const result = await pushSyncPayload(fetch, replacePayload);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!result) {

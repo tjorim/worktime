@@ -28,11 +28,13 @@ removing the row, so pull queries can propagate the deletion to other clients.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
 from sqlalchemy import literal, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute
 
 from app.database.models import (
     GanttTask,
@@ -101,6 +103,111 @@ _MAX_CLOCK_SKEW = timedelta(minutes=5)
 def _clamp_client_timestamp(client_updated_at: datetime) -> datetime:
     """Clamp a client-supplied timestamp to at most _MAX_CLOCK_SKEW into the future."""
     return min(as_utc(client_updated_at), _now() + _MAX_CLOCK_SKEW)
+
+
+# ---------------------------------------------------------------------------
+# Bulk-delete circuit breaker
+# ---------------------------------------------------------------------------
+
+# A push is refused when it would tombstone at least BULK_DELETE_MIN_RECORDS
+# currently-active rows *and* that is at least BULK_DELETE_FRACTION of
+# everything the account still has, unless the client sets
+# ``allow_bulk_delete`` on the request.
+#
+# The failure this guards against is a client that pushes an *empty* local
+# snapshot as the new truth: the first-sync "keep local data" path turns every
+# server row that has no local counterpart into a delete, so a device whose
+# in-memory collections have not finished loading asks the server to erase the
+# whole account.  Nothing in the wire format distinguishes that from a user who
+# genuinely cleared their data, so the deliberate case has to say so explicitly.
+#
+# Thresholds are set so only an effective account wipe trips the guard: a user
+# pruning even most of their history stays under BULK_DELETE_FRACTION, and
+# small accounts stay under BULK_DELETE_MIN_RECORDS where the blast radius is
+# small anyway.
+BULK_DELETE_MIN_RECORDS = 25
+BULK_DELETE_FRACTION = 0.9
+
+
+class BulkDeleteGuardError(Exception):
+    """A push would remove most of the account's data without opting in."""
+
+    def __init__(self, deleted: int, active: int) -> None:
+        self.deleted = deleted
+        self.active = active
+        super().__init__(
+            f"refusing to delete {deleted} of {active} records in one push; "
+            "resend with allow_bulk_delete once the user has confirmed"
+        )
+
+
+async def _count_active(
+    session: AsyncSession, model: type[SyncEntityModel], user_id: int
+) -> int:
+    return (
+        await session.scalar(
+            select(sql_func.count())
+            .select_from(model)
+            .where(model.user_id == user_id, model.deleted_at.is_(None))
+        )
+    ) or 0
+
+
+async def _count_active_in(
+    session: AsyncSession,
+    model: type[SyncEntityModel],
+    user_id: int,
+    column: InstrumentedAttribute[Any],
+    keys: list[Any],
+) -> int:
+    """Count the user's active rows whose key is in *keys* (0 for an empty list)."""
+    if not keys:
+        return 0
+    return (
+        await session.scalar(
+            select(sql_func.count())
+            .select_from(model)
+            .where(model.user_id == user_id, model.deleted_at.is_(None), column.in_(keys))
+        )
+    ) or 0
+
+
+async def _assert_not_bulk_delete(
+    session: AsyncSession, user_id: int, changes: SyncPushRequest
+) -> None:
+    """Raise BulkDeleteGuardError when *changes* would wipe most of the account.
+
+    Only deletes that would actually tombstone a currently-active row are
+    counted.  Replayed deletes for rows that are already gone (a re-flushed
+    outbox is full of them) must not count towards the threshold, or a client
+    that legitimately retries would deadlock against its own earlier success.
+    """
+    if changes.allow_bulk_delete:
+        return
+
+    scopes = (
+        (Label, Label.id, changes.labels, "id"),
+        (GanttTask, GanttTask.id, changes.gantt_tasks, "id"),
+        (TimeTrackingTask, TimeTrackingTask.id, changes.tasks, "id"),
+        (TimeTrackingTemplate, TimeTrackingTemplate.id, changes.templates, "id"),
+        (WorkLocation, WorkLocation.date, changes.work_locations, "date"),
+        (TimeOffEntry, TimeOffEntry.entry_id, changes.time_off_entries, "id"),
+    )
+
+    deleted = 0
+    for model, column, items, key_attr in scopes:
+        keys = [getattr(item, key_attr) for item in items if item.action == "delete"]
+        deleted += await _count_active_in(session, model, user_id, column, keys)
+
+    if deleted < BULK_DELETE_MIN_RECORDS:
+        return
+
+    active = 0
+    for model, _column, _items, _key_attr in scopes:
+        active += await _count_active(session, model, user_id)
+
+    if active > 0 and deleted >= BULK_DELETE_FRACTION * active:
+        raise BulkDeleteGuardError(deleted, active)
 
 
 # ---------------------------------------------------------------------------
@@ -614,9 +721,17 @@ async def _push_gantt_task(
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
+        # Scoped to this user's still-active tasks: an unscoped update would
+        # also rewrite rows the deleting user does not own, and re-stamping
+        # already-tombstoned tasks pushes them back down to every client on the
+        # next pull for no reason.
         await session.execute(
             update(TimeTrackingTask)
-            .where(TimeTrackingTask.gantt_task_id == task.id)
+            .where(
+                TimeTrackingTask.gantt_task_id == task.id,
+                TimeTrackingTask.user_id == user_id,
+                TimeTrackingTask.deleted_at.is_(None),
+            )
             .values(gantt_task_id=None, client_updated_at=now, updated_at=now)
         )
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -720,6 +835,10 @@ async def push_changes(
         "time_off_entries": [],
         "gantt_tasks": [],
     }
+
+    # Checked before anything is mutated so a refused batch leaves no partial
+    # state behind.
+    await _assert_not_bulk_delete(session, user_id, changes)
 
     # Referenced entities are processed before the entities that link to them:
     # labels and gantt tasks must exist before tasks/templates that reference
