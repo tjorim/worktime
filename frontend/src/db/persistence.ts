@@ -166,9 +166,29 @@ let openPromise: Promise<PersistedCollectionPersistence | null> | null = null;
  *
  * Never rejects: a failure here must degrade the app, not break it.
  */
+/**
+ * Ask the browser to exempt our storage from eviction under pressure.
+ *
+ * OPFS is best-effort by default: the browser may clear it whenever it wants
+ * space back, which for this app means an offline launch showing an empty
+ * screen — the exact failure persistence exists to prevent. Granting is at the
+ * browser's discretion (Chrome decides from engagement signals, Firefox may
+ * prompt), so this is a request, not a guarantee, and never blocks the open.
+ */
+function requestPersistentStorage(): void {
+  if (typeof navigator.storage?.persist !== "function") return;
+  void navigator.storage
+    .persisted()
+    .then((already) => (already ? true : navigator.storage.persist()))
+    .catch((err: unknown) => {
+      logger.error("Failed to request persistent storage:", err);
+    });
+}
+
 function openPersistence(): Promise<PersistedCollectionPersistence | null> {
   openPromise ??= (async () => {
     if (!supportsOpfsPersistence()) return null;
+    requestPersistentStorage();
     try {
       const database = await openBrowserWASQLiteOPFSDatabase({
         databaseName: DATABASE_NAME,

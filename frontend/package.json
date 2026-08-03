@@ -46,7 +46,7 @@
     "@schedule-x/event-modal": "^4.6.1",
     "@schedule-x/react": "^4.1.0",
     "@schedule-x/theme-default": "^4.6.1",
-    "@tanstack/browser-db-sqlite-persistence": "^0.2.9",
+    "@tanstack/browser-db-sqlite-persistence": "0.2.9",
     "@tanstack/query-db-collection": "^1.2.1",
     "@tanstack/react-db": "^0.1.95",
     "@tanstack/react-form": "^1.33.2",

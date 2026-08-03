@@ -193,18 +193,35 @@ rows. So the outbox remains the mechanism that survives a failed push, and the
 
 ### Bundle cost
 
-Measured on the migration commit (`pnpm build`, production):
+Measured with `pnpm build` (production):
 
 | | before | after | delta |
 |---|---|---|---|
-| `dist/` total | 2,702,952 B | 4,473,349 B | +1,770,397 B (+65%) |
-| PWA precache | 2610.54 KiB, 34 entries | 4339.39 KiB, 35 entries | +1728.85 KiB (+66%) |
-| OPFS worker chunk | — | 1,698,339 B (705,058 B gzip) | new entry |
+| **PWA precache** | 2610.54 KiB, 34 entries | 2681.35 KiB, 34 entries | **+70.81 KiB (+2.7%)** |
+| `dist/` total | 2,702,952 B | 4,480,377 B | +1,777,425 B (+66%) |
+| OPFS worker chunk | — | 1,698,339 B (705,058 B gzip) | runtime-cached, not precached |
 | main-thread chunk (`useLocalStorage-*`) | 67.39 kB (18.79 kB gzip) | 139.55 kB (35.88 kB gzip) | +72.16 kB (+17.09 kB gzip) |
 
-The bulk is the WA-SQLite WASM, inlined as base64 into the worker chunk. It runs
-off the main thread, but `vite-plugin-pwa` precaches it, so it is downloaded on
-install rather than lazily on first use.
+Almost all of the on-disk growth is the WA-SQLite WASM, inlined as base64 into
+the OPFS worker chunk. Precaching it would have grown the install payload by 66%
+for a file that only the persistence layer loads, so `workbox.globIgnores`
+excludes it and a `CacheFirst` runtime rule caches it instead. Persistence
+starts at app startup, which is necessarily online, so the worker is fetched and
+cached on the first page load — well before any offline launch. Its filename is
+content-hashed, so a new build fetches a new URL rather than serving a stale
+worker.
+
+Precache is the number that matters for install cost, and it grows by 2.7%.
+
+### Eviction
+
+OPFS is best-effort storage: the browser may clear it under storage pressure,
+which for this app means an offline launch showing an empty screen — the exact
+failure this layer exists to prevent. `requestPersistentStorage()` asks for an
+exemption via `navigator.storage.persist()` at startup. Granting is at the
+browser's discretion (Chrome decides from engagement signals, including whether
+the PWA is installed; Firefox may prompt), so it is a request rather than a
+guarantee, and it never blocks the database open.
 
 ## Recovery primitives
 

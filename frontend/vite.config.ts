@@ -60,8 +60,18 @@ export default defineConfig({
       workbox: {
         // App-shell precache: build output plus static assets copied from public/.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        // MSW's mock worker is dev-only tooling; it has no place in the production precache.
-        globIgnores: ["mockServiceWorker.js"],
+        globIgnores: [
+          // MSW's mock worker is dev-only tooling; it has no place in the production precache.
+          "mockServiceWorker.js",
+          // The OPFS persistence worker carries the WA-SQLite WASM inlined as
+          // base64 — ~1.7 MB, two thirds of the precache on its own. Precaching
+          // it would make every install pay for it up front. It is fetched on
+          // the first page load anyway (persistence starts at app startup, which
+          // is necessarily online), so the CacheFirst rule below has it cached
+          // well before any offline launch. Its filename is content-hashed, so
+          // a new build fetches a new URL rather than serving a stale worker.
+          "assets/js/opfs-worker-*.js",
+        ],
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
@@ -70,6 +80,19 @@ export default defineConfig({
             options: {
               cacheName: "api-cache",
               networkTimeoutSeconds: 10,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Content-hashed and immutable, so CacheFirst is safe: a changed
+            // worker arrives under a different URL.
+            urlPattern: ({ url }) => /^\/assets\/js\/opfs-worker-/.test(url.pathname),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "opfs-worker-cache",
+              // Two, so a deploy can keep the outgoing worker alive for tabs
+              // still running the previous build.
+              expiration: { maxEntries: 2 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
