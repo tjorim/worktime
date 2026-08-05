@@ -2803,7 +2803,7 @@ class TestBulkDeleteGuard:
         return label_ids
 
     @staticmethod
-    def _delete_payload(label_ids: list[str], **extra) -> dict:
+    def _delete_payload(label_ids: list[str], **extra) -> dict:  # noqa: ANN003
         return {
             "labels": [
                 {"id": label_id, "action": "delete", "client_updated_at": _ts(5)}
@@ -2922,3 +2922,62 @@ class TestBulkDeleteGuard:
             "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
         )
         assert resp.status_code == 409, resp.text
+
+    def test_declared_total_refuses_the_first_chunk_of_a_split_wipe(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """A chunked destructive push must be refused before its first chunk lands.
+
+        Each chunk is its own transaction, so a per-chunk view of 1500 deletes
+        split as 1000 + 500 lets the first through (1000 of 1500 active is under
+        the fraction) and only refuses the second — leaving the account
+        two-thirds erased. The client declares the logical total so every chunk
+        is judged against it.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-declared-user")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 40)
+
+        # A first chunk that on its own information looks like an ordinary
+        # partial delete: 20 of 40 active rows, half the account.
+        first_chunk = self._delete_payload(label_ids[:20], declared_delete_total=40)
+        resp = db_client.post("/api/sync/push", json=first_chunk, headers=headers)
+        assert resp.status_code == 409, resp.text
+
+        # Nothing was applied.
+        pull = db_client.get("/api/sync/pull", headers=headers)
+        assert all(label["deleted_at"] is None for label in pull.json()["labels"])
+
+    def test_declared_total_is_ignored_when_the_client_opted_in(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-declared-optin")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 40)
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json=self._delete_payload(
+                label_ids[:20], declared_delete_total=40, allow_bulk_delete=True
+            ),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+    def test_a_modest_declared_total_still_passes(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Declaring a total only tightens the guard where it should."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "bulk-delete-declared-modest")
+        headers = auth_headers(user_id)
+        label_ids = self._seed_labels(db_client, headers, 100)
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json=self._delete_payload(label_ids[:20], declared_delete_total=40),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text

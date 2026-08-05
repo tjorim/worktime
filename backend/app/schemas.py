@@ -800,6 +800,21 @@ class SyncPushRequest(BaseModel):
     # replace without this flag.
     allow_bulk_delete: bool = False
 
+    # Total number of delete actions in the *logical* push this request is part
+    # of. Clients split an oversized payload into several requests, and each is
+    # its own transaction, so a per-request guard sees only its own slice: 1500
+    # deletes chunked as 1000 + 500 lets the first chunk through (1000 of 1500
+    # active is under the fraction) and only refuses the second, leaving the
+    # account two-thirds erased. No per-request rule can catch that first chunk
+    # — on its own information it is an ordinary partial delete — so the client
+    # states the total up front and every chunk is judged against it.
+    #
+    # Advisory, and deliberately so: it can only make the guard stricter, and
+    # the thing being guarded against is our own client pushing an empty local
+    # snapshot as truth. Such a client computes deletes for every server row,
+    # so it declares the real total and is refused on the first chunk.
+    declared_delete_total: int | None = Field(default=None, ge=0)
+
     labels: list[LabelSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     tasks: list[TaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     templates: list[TemplateSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)

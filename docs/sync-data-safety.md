@@ -70,13 +70,23 @@ payload holds nothing at all, because that can only produce a batch of deletes.
 more of everything the user still has, the push is refused with **409** unless
 the request sets `allow_bulk_delete`. Only the user-confirmed replace sets it.
 
-Two properties keep this from becoming its own problem:
+Three properties keep this from becoming its own problem:
 
 - Only deletes that would hit an **active** row count. A re-flushed outbox is
   full of already-applied deletes; counting those would let a client deadlock
   against its own earlier success.
 - The check runs **before** any record is mutated, so a refused batch leaves no
   partial state.
+- A payload larger than `MAX_SYNC_PUSH_ITEMS` is split across requests, and each
+  request is its own transaction. A per-request guard would see only its slice:
+  1500 deletes chunked as 1000 + 500 passes the first (1000 of 1500 active is
+  under the fraction) and refuses only the second, leaving the account
+  two-thirds erased. No per-request rule catches that first chunk — on its own
+  information it is an ordinary partial delete — so the client sets
+  `declared_delete_total` and every chunk is judged against the logical push.
+  It is advisory and can only tighten the guard; the client it protects against
+  computes deletes for every server row, so it declares the real total and is
+  refused on the first chunk.
 
 ## Supporting invariants
 

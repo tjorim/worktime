@@ -9,6 +9,7 @@ import {
   clearSyncOutbox,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
+  countPayloadDeletes,
   EmptyLocalReplaceError,
   extractConflictedItems,
   fetchPreferences,
@@ -1032,6 +1033,58 @@ describe("syncClient", () => {
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
       expect(result.work_locations.find((wl) => wl.date === "2026-01-10")).toBeUndefined();
+    });
+
+    it("declares the whole delete total on every chunk of a split push", async () => {
+      // Each chunk is its own server transaction. Without a declared total the
+      // bulk-delete guard sees only its own slice, so the first chunk of a
+      // destructive batch commits before a later one is refused — leaving the
+      // account partly erased.
+      const payload = {
+        ...emptyPayload(),
+        labels: Array.from({ length: MAX_SYNC_PUSH_ITEMS + 200 }, (_, i) => ({
+          id: `lbl-${i}`,
+          action: "delete" as const,
+          client_updated_at: "2026-01-01T00:00:00.000Z",
+        })),
+      };
+      expect(countPayloadDeletes(payload)).toBe(MAX_SYNC_PUSH_ITEMS + 200);
+
+      mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+      await pushSyncPayload(mockFetch, payload);
+
+      const bodies = mockFetch.mock.calls
+        .filter(([url]: [string]) => url === "/api/sync/push")
+        .map(([, init]: [string, RequestInit]) => JSON.parse(String(init.body)));
+
+      expect(bodies.length).toBeGreaterThan(1);
+      for (const body of bodies) {
+        expect(body.declared_delete_total).toBe(MAX_SYNC_PUSH_ITEMS + 200);
+      }
+    });
+
+    it("omits the delete total when a split push deletes nothing", async () => {
+      const payload = {
+        ...emptyPayload(),
+        labels: Array.from({ length: MAX_SYNC_PUSH_ITEMS + 5 }, (_, i) => ({
+          id: `lbl-${i}`,
+          action: "create" as const,
+          client_updated_at: "2026-01-01T00:00:00.000Z",
+          name: `Label ${i}`,
+          color: "#123456",
+        })),
+      };
+
+      mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+      await pushSyncPayload(mockFetch, payload);
+
+      const bodies = mockFetch.mock.calls
+        .filter(([url]: [string]) => url === "/api/sync/push")
+        .map(([, init]: [string, RequestInit]) => JSON.parse(String(init.body)));
+      expect(bodies.length).toBeGreaterThan(1);
+      for (const body of bodies) {
+        expect(body.declared_delete_total).toBeUndefined();
+      }
     });
 
     it("refuses to build a replace payload when the local side is empty", () => {

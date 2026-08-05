@@ -111,6 +111,15 @@ export interface SyncPushPayload {
    * `BULK_DELETE_MIN_RECORDS` in the backend sync service).
    */
   allow_bulk_delete?: boolean;
+  /**
+   * Total delete actions in the logical push this request belongs to.
+   *
+   * Set automatically when a payload is split across requests. Each chunk is
+   * its own server transaction, so without this the bulk-delete guard sees
+   * only its own slice and lets the first chunk of a destructive batch commit
+   * before refusing a later one. Never set by hand.
+   */
+  declared_delete_total?: number;
   labels: LabelSyncItem[];
   tasks: TaskSyncItem[];
   templates: TemplateSyncItem[];
@@ -426,8 +435,20 @@ export const MAX_SYNC_PUSH_ITEMS = 1000;
  * that server-side reference validation succeeds across chunk boundaries.
  * Mirrors the processing order of push_changes in the backend sync service.
  */
-/** The entity list keys of a push payload (everything but `allow_bulk_delete`). */
-type SyncPushEntityKey = Exclude<keyof SyncPushPayload, "allow_bulk_delete">;
+/** The entity list keys of a push payload (everything but the scalar flags). */
+type SyncPushEntityKey = Exclude<
+  keyof SyncPushPayload,
+  "allow_bulk_delete" | "declared_delete_total"
+>;
+
+/** Count delete actions across every entity list in a payload. */
+export function countPayloadDeletes(payload: SyncPushPayload): number {
+  return PUSH_ENTITY_ORDER.reduce(
+    (total, key) =>
+      total + (payload[key] ?? []).filter((item) => item.action === "delete").length,
+    0,
+  );
+}
 
 const PUSH_ENTITY_ORDER: readonly SyncPushEntityKey[] = [
   "labels",
@@ -455,6 +476,7 @@ function emptyPushPayload(): SyncPushPayload {
  */
 function chunkPushPayload(payload: SyncPushPayload): SyncPushPayload[] {
   const chunks: SyncPushPayload[] = [];
+  const deleteTotal = countPayloadDeletes(payload);
   for (const key of PUSH_ENTITY_ORDER) {
     const items = payload[key] ?? [];
     for (let i = 0; i < items.length; i += MAX_SYNC_PUSH_ITEMS) {
@@ -462,6 +484,9 @@ function chunkPushPayload(payload: SyncPushPayload): SyncPushPayload[] {
       // Carry the opt-in across the split, or a chunked keep-local replace
       // would be rejected by the server's bulk-delete guard.
       if (payload.allow_bulk_delete) chunk.allow_bulk_delete = true;
+      // Tell every chunk how large the whole destructive batch is, so the
+      // guard judges the logical push rather than this slice of it.
+      if (deleteTotal > 0) chunk.declared_delete_total = deleteTotal;
       (chunk[key] as unknown[]) = items.slice(i, i + MAX_SYNC_PUSH_ITEMS);
       chunks.push(chunk);
     }
@@ -1132,7 +1157,7 @@ export function quarantineSyncChange(
   userId: string,
   payload: SyncPushPayload,
   status: number | null,
-): void {
+): boolean {
   try {
     const existing = readSyncQuarantine(userId);
     existing.push({ quarantinedAt: dayjs().toISOString(), status, payload });
@@ -1140,8 +1165,13 @@ export function quarantineSyncChange(
       getSyncQuarantineKey(userId),
       JSON.stringify(existing.slice(-MAX_QUARANTINED_CHANGES)),
     );
+    return true;
   } catch (err) {
+    // Reported rather than swallowed: the caller clears the outbox once this
+    // succeeds, so a silent failure here would drop the batch from both
+    // durable stores at once.
     logger.error("Failed to quarantine a rejected sync change:", err);
+    return false;
   }
 }
 

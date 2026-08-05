@@ -274,7 +274,9 @@ export function useOngoingSync(
 
         // --- Flush outbox ---
         let flushConflicts = 0;
-        let quarantinedThisCycle = false;
+        // Set when this cycle hit a failure the pull cannot vindicate, so a
+        // successful pull afterwards does not clear the error state.
+        let suppressErrorReset = false;
         const dequeued = dequeueAndMergeSyncOutbox(userId);
         if (dequeued) {
           const { merged, commit } = dequeued;
@@ -300,14 +302,27 @@ export function useOngoingSync(
               "useOngoingSync: outbox batch permanently rejected; quarantining",
               { userId, status: outcome.status },
             );
-            quarantineSyncChange(userId, merged, outcome.status);
-            commit();
+            // Only drop it from the outbox once it is safely somewhere else.
+            // Quarantining and committing are the two halves of a move: if the
+            // quarantine write fails (quota, private browsing) and the outbox
+            // is cleared anyway, the batch exists in neither store and the
+            // user's changes are simply gone. A wedged outbox is recoverable;
+            // this is not, so the batch stays put when the move fails.
+            suppressErrorReset = true;
+            if (quarantineSyncChange(userId, merged, outcome.status)) {
+              commit();
+            } else {
+              logger.error(
+                "useOngoingSync: could not quarantine a rejected batch; leaving it in the outbox",
+                { userId, status: outcome.status },
+              );
+              scheduleBackOff();
+            }
             setOutboxCount(getSyncOutboxSize(userId));
             setQuarantineCount(getSyncQuarantineSize(userId));
             setHasSyncError(true);
-            quarantinedThisCycle = true;
-            // Deliberately no back-off: the failure is not transient, and the
-            // outbox is empty now, so the next cycle has real work to do.
+            // No back-off on the success path: the failure is not transient,
+            // and the outbox is empty now, so the next cycle has real work.
           } else if (!outcome.ok) {
             // Transient failure — outbox stays intact for the next retry.
             setOutboxCount(getSyncOutboxSize(userId));
@@ -349,10 +364,11 @@ export function useOngoingSync(
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
           // A pull succeeding says nothing about the batch that was just
-          // refused: those records are not on the server and will not get
-          // there on their own, so the error state has to survive this cycle
-          // rather than being cleared by unrelated progress.
-          if (!quarantinedThisCycle) setHasSyncError(false);
+          // refused — quarantined or still stuck in the outbox, those records
+          // are not on the server and will not get there on their own. The
+          // error state has to survive this cycle rather than being cleared by
+          // unrelated progress.
+          if (!suppressErrorReset) setHasSyncError(false);
           // Reset back-off on success.
           clearBackOff();
           if (flushConflicts === 0 && conflictedPayloadRef.current === null) {

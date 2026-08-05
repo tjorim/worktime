@@ -399,6 +399,57 @@ describe("useOngoingSync", () => {
       expect(quarantined[0].payload.tasks[0].id).toBe("task-rejected");
     });
 
+    it("keeps the batch in the outbox when the quarantine write fails", async () => {
+      // Quarantining and committing are two halves of a move. If the
+      // quarantine write fails and the outbox is cleared anyway, the batch is
+      // in neither store and the user's changes are gone. A wedged outbox is
+      // recoverable; that is not.
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const queued = emptySyncPayload();
+      queued.tasks.push({
+        id: "task-unquarantinable",
+        action: "create",
+        client_updated_at: "2026-01-02T00:00:00.000Z",
+        text: "Must not vanish",
+        label_id: null,
+        start_time: "2026-01-02T08:00:00.000Z",
+        stop_time: null,
+        includes_break: false,
+      });
+      appendToSyncOutbox("user-1", queued);
+
+      // Fail only the quarantine write, so the outbox read/write still works.
+      // Spy on the instance: jsdom's localStorage does not inherit setItem
+      // from Storage.prototype, so a prototype spy never fires.
+      const realSetItem = localStorage.setItem.bind(localStorage);
+      vi.spyOn(localStorage, "setItem").mockImplementation((key: string, value: string) => {
+        if (key.startsWith("worktime_sync_quarantine_")) {
+          throw new DOMException("QuotaExceededError");
+        }
+        realSetItem(key, value);
+      });
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url === "/api/sync/push") {
+          return Promise.resolve({ ok: false, status: 409, json: async () => null });
+        }
+        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+      });
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+
+      // Nothing was quarantined, so the batch must still be in the outbox.
+      expect(result.current.quarantineCount).toBe(0);
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey("user-1"))!);
+      expect(outbox[0].tasks[0].id).toBe("task-unquarantinable");
+    });
+
     it("keeps a transiently failed batch queued for retry", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 

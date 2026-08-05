@@ -128,6 +128,18 @@ export function getLoadedSnapshot<T>(name: string): T[] | null {
 }
 
 /**
+ * Forget the snapshots held in memory.
+ *
+ * The IndexedDB keys and this map are two copies of the same data, so purging
+ * one without the other leaves the previous account's records reachable: a
+ * failed pull for the *new* account falls back to `getLoadedSnapshot`, which
+ * would still be serving the old one's rows.
+ */
+export function clearLoadedSnapshots(): void {
+  loadedSnapshots.clear();
+}
+
+/**
  * Read every collection's snapshot into memory.
  *
  * Safe to call more than once — subsequent calls return the original promise.
@@ -223,6 +235,9 @@ export function resetHydrationForTests(): void {
  * | user A → user A | no |
  * | user A → user B | yes |
  * | user A → anonymous (sign-out) | yes — do not leave A's records on a signed-out device |
+ *
+ * A purge clears the in-memory snapshots as well as the stored ones. They are
+ * two copies of the same records and the pull fallback reads the in-memory one.
  */
 export async function purgeSnapshotsOnOwnerChange(
   userId: string | null,
@@ -235,6 +250,10 @@ export async function purgeSnapshotsOnOwnerChange(
 
     const purge = previous !== undefined && previous !== ANONYMOUS_OWNER;
     if (purge) {
+      // Both copies, or neither: the in-memory map is what the pull fallback
+      // reads, so leaving it populated would let the previous account's rows
+      // render in this one's session the first time a pull fails.
+      clearLoadedSnapshots();
       await Promise.all(collectionNames.map((name) => del(snapshotKey(name))));
     }
     await set(OWNER_KEY, owner);

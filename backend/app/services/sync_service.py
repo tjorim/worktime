@@ -199,6 +199,13 @@ async def _assert_not_bulk_delete(
         keys = [getattr(item, key_attr) for item in items if item.action == "delete"]
         deleted += await _count_active_in(session, model, user_id, column, keys)
 
+    # Judge against the whole logical push when the client declared one. A
+    # chunked destructive batch would otherwise slip its first chunk past the
+    # guard and only be refused partway through, leaving the account partly
+    # erased — see declared_delete_total in app/schemas.py.
+    if changes.declared_delete_total is not None:
+        deleted = max(deleted, changes.declared_delete_total)
+
     if deleted < BULK_DELETE_MIN_RECORDS:
         return
 

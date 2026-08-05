@@ -147,6 +147,33 @@ describe("purgeSnapshotsOnOwnerChange", () => {
     expect(await get(OWNER_KEY)).toBe("user-1");
   });
 
+  it("clears the in-memory snapshots too when purging", async () => {
+    // The stored keys and the in-memory map are two copies of the same
+    // records, and the pull fallback reads the in-memory one. Purging only
+    // IndexedDB would let user A's rows render in user B's session the first
+    // time a pull fails for B.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "a-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "a-task" }]);
+    await set(OWNER_KEY, "user-a");
+
+    expect(await purgeSnapshotsOnOwnerChange("user-b", ["tasks"])).toBe(true);
+
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+  });
+
+  it("keeps the in-memory snapshots when there is nothing to purge", async () => {
+    // anonymous -> signed in: the data belongs to the person signing in, so it
+    // must survive for first sync to upload it.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "own-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+    await set(OWNER_KEY, "anonymous");
+
+    expect(await purgeSnapshotsOnOwnerChange("user-a", ["tasks"])).toBe(false);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "own-task" }]);
+  });
+
   it("purges when a different user signs in on the same device", async () => {
     await set(OWNER_KEY, "user-1");
     await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
