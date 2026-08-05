@@ -7,7 +7,7 @@ import {
   labelsCollection,
   hasSyncCollectionAuth,
   replaceCollectionContents,
-  runWriteBatch,
+  runMutationBatch,
   tasksCollection,
   templatesCollection,
 } from "@/db/collections";
@@ -104,10 +104,7 @@ export function useTimeTrackingStorage() {
     [rawTemplateData],
   );
 
-  const labels = useMemo(
-    () => sanitizeLabels((rawLabelData ?? []) as Label[]),
-    [rawLabelData],
-  );
+  const labels = useMemo(() => sanitizeLabels((rawLabelData ?? []) as Label[]), [rawLabelData]);
 
   const addTask = useCallback(
     async (payload: StoredTimeTrackingTask): Promise<boolean> => {
@@ -230,7 +227,7 @@ export function useTimeTrackingStorage() {
       (t) => !nextIds.has(t.id),
     );
     const hasWork = nextTemplates.length > 0 || toDelete.length > 0;
-    runWriteBatch(templatesCollection, hasWork, () => {
+    runMutationBatch(templatesCollection, hasWork, () => {
       // Upsert all templates in the new list
       for (const t of nextTemplates) {
         if (templatesCollection.has(t.id)) {
@@ -251,11 +248,9 @@ export function useTimeTrackingStorage() {
   const updateLabels = useCallback((nextLabels: Label[]) => {
     const sanitized = sanitizeLabels(nextLabels);
     const nextIds = new Set(sanitized.map((l) => l.id));
-    const toDelete = (labelsCollection.toArray as Label[]).filter(
-      (l) => !nextIds.has(l.id),
-    );
+    const toDelete = (labelsCollection.toArray as Label[]).filter((l) => !nextIds.has(l.id));
     const hasWork = sanitized.length > 0 || toDelete.length > 0;
-    runWriteBatch(labelsCollection, hasWork, () => {
+    runMutationBatch(labelsCollection, hasWork, () => {
       // Upsert all labels in the new list
       for (const l of sanitized) {
         if (labelsCollection.has(l.id)) {

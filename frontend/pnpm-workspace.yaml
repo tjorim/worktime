@@ -4,3 +4,10 @@ allowBuilds:
   canvas: true
   esbuild: true
   msw: true
+ignoredBuiltDependencies:
+  # Its postinstall downloads the PowerSync dynamic core. We reach wa-sqlite
+  # only through @tanstack/browser-db-sqlite-persistence, which ships its own
+  # OPFS worker with the WASM inlined, so that download is a network round-trip
+  # on every install for a file nothing loads. Listed rather than left to the
+  # default so the choice is recorded and pnpm stops warning about it.
+  - '@journeyapps/wa-sqlite'
