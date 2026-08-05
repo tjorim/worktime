@@ -35,7 +35,12 @@
  *   account.
  */
 
-import { del, get, set, update } from "idb-keyval";
+import { del, get, getMany, set, setMany, update } from "idb-keyval";
+import {
+  SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
+  SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX,
+  SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
+} from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
 
 /**
@@ -44,15 +49,10 @@ import { logger } from "@/utils/logger";
  */
 const SNAPSHOT_VERSION = 1;
 
-const SNAPSHOT_KEY_PREFIX = "worktime_collection_snapshot_";
-
-/**
- * IndexedDB key recording which account the snapshots belong to
- * (`ANONYMOUS_OWNER` for local-only use).
- */
-const OWNER_KEY = "worktime_collection_snapshot_owner";
-
 const ANONYMOUS_OWNER = "anonymous";
+
+/** Namespace used by snapshots created before owner generations were added. */
+const LEGACY_GENERATION = "legacy";
 
 /** How long to coalesce rapid changes before writing a snapshot. */
 const WRITE_DEBOUNCE_MS = 500;
@@ -72,8 +72,17 @@ export interface PersistableCollection<T> {
 
 export type SnapshotItemKey = (collectionName: string, item: unknown) => string;
 
-function snapshotKey(name: string): string {
-  return `${SNAPSHOT_KEY_PREFIX}${name}`;
+let activeGeneration = LEGACY_GENERATION;
+
+function snapshotKey(name: string, generation = activeGeneration): string {
+  const generationPrefix = generation === LEGACY_GENERATION ? "" : `${generation}_`;
+  return `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generationPrefix}${name}`;
+}
+
+function createSnapshotGeneration(): string {
+  return typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 async function readSnapshot(name: string): Promise<unknown[] | null> {
@@ -139,6 +148,13 @@ export function clearLoadedSnapshots(): void {
  */
 export function hydrateSyncCollections(collectionNames: string[]): Promise<void> {
   hydrationPromise ??= (async () => {
+    try {
+      activeGeneration =
+        (await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY)) ?? LEGACY_GENERATION;
+    } catch (err) {
+      logger.error("Failed to read the snapshot generation:", err);
+      activeGeneration = LEGACY_GENERATION;
+    }
     await Promise.all(
       collectionNames.map(async (name) => {
         const items = await readSnapshot(name);
@@ -174,6 +190,7 @@ async function mergeSnapshotChanges(
   items: unknown[],
   getItemKey: SnapshotItemKey,
 ): Promise<void> {
+  const generation = activeGeneration;
   const previous = baselines.get(name) ?? new Map<string, string>();
   const current = new Map(items.map((item) => [getItemKey(name, item), item]));
   const currentFingerprints = fingerprints(name, items, getItemKey);
@@ -185,7 +202,7 @@ async function mergeSnapshotChanges(
   );
 
   let mergedItems = items;
-  await update<StoredSnapshot>(snapshotKey(name), (stored) => {
+  await update<StoredSnapshot>(snapshotKey(name, generation), (stored) => {
     const persisted =
       stored?.version === SNAPSHOT_VERSION && Array.isArray(stored.items) ? stored.items : [];
     const merged = new Map(persisted.map((item) => [getItemKey(name, item), item]));
@@ -197,7 +214,7 @@ async function mergeSnapshotChanges(
 
   baselines.set(name, currentFingerprints);
   loadedSnapshots.set(name, mergedItems);
-  snapshotChannel?.postMessage({ type: "snapshot_changed", name });
+  snapshotChannel?.postMessage({ type: "snapshot_changed", name, generation });
 }
 
 function openSnapshotChannel(): void {
@@ -211,7 +228,9 @@ function openSnapshotChannel(): void {
       !("type" in message) ||
       message.type !== "snapshot_changed" ||
       !("name" in message) ||
-      typeof message.name !== "string"
+      typeof message.name !== "string" ||
+      !("generation" in message) ||
+      message.generation !== activeGeneration
     ) {
       return;
     }
@@ -241,6 +260,9 @@ function scheduleSnapshot(
           // the app keeps working from memory — but a silent failure here means
           // the next reload looks like data loss, so it is always logged.
           logger.error(`Failed to write the "${name}" snapshot:`, err);
+        })
+        .finally(() => {
+          if (pendingWrites.get(name) === queued) pendingWrites.delete(name);
         });
       pendingWrites.set(name, queued);
     }, WRITE_DEBOUNCE_MS),
@@ -277,13 +299,14 @@ export function startPersistingSyncCollections(
   }
 }
 
-/** Stop persisting and cancel pending writes. Intended for tests. */
-export function stopPersistingSyncCollections(): void {
+/** Stop persisting, cancel timers, and drain writes already in progress. */
+export async function stopPersistingSyncCollections(): Promise<void> {
   for (const subscription of subscriptions.splice(0)) {
     subscription.unsubscribe();
   }
   for (const timer of timers.values()) clearTimeout(timer);
   timers.clear();
+  await Promise.allSettled([...pendingWrites.values()]);
   baselines.clear();
   pendingWrites.clear();
   snapshotChannel?.close();
@@ -294,6 +317,7 @@ export function stopPersistingSyncCollections(): void {
 export function resetHydrationForTests(): void {
   hydrationPromise = null;
   loadedSnapshots.clear();
+  activeGeneration = LEGACY_GENERATION;
 }
 
 // ---------------------------------------------------------------------------
@@ -327,18 +351,46 @@ export async function purgeSnapshotsOnOwnerChange(
 ): Promise<boolean> {
   const owner = userId ?? ANONYMOUS_OWNER;
   try {
-    const previous = await get<string>(OWNER_KEY);
-    if (previous === owner) return false;
+    const [previous, storedGeneration] = await getMany<string>([
+      SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
+      SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
+    ]);
+    const persistedGeneration = storedGeneration ?? LEGACY_GENERATION;
+    if (previous === owner) {
+      if (persistedGeneration === activeGeneration) return false;
+
+      // Another tab already completed this owner transition. Stop using this
+      // tab's stale namespace and force the same reload used by the initiating
+      // tab so its retained live collection rows are discarded too.
+      await stopPersistingSyncCollections();
+      clearLoadedSnapshots();
+      activeGeneration = persistedGeneration;
+      return true;
+    }
 
     const purge = previous !== undefined && previous !== ANONYMOUS_OWNER;
     if (purge) {
+      // Stop this tab before changing namespaces. Writes already running finish
+      // against the old generation and are deleted below; other tabs retain
+      // that generation and therefore cannot write into the new owner's keys.
+      await stopPersistingSyncCollections();
       // Both copies, or neither: the in-memory map is what the pull fallback
       // reads, so leaving it populated would let the previous account's rows
       // render in this one's session the first time a pull fails.
       clearLoadedSnapshots();
-      await Promise.all(collectionNames.map((name) => del(snapshotKey(name))));
+      const previousGeneration = activeGeneration;
+      const nextGeneration = createSnapshotGeneration();
+      await Promise.all(
+        collectionNames.map((name) => del(snapshotKey(name, previousGeneration))),
+      );
+      await setMany([
+        [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, owner],
+        [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, nextGeneration],
+      ]);
+      activeGeneration = nextGeneration;
+      return true;
     }
-    await set(OWNER_KEY, owner);
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, owner);
     return purge;
   } catch (err) {
     logger.error("Failed to check the snapshot owner:", err);

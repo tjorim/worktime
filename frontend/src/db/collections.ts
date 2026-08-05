@@ -81,7 +81,8 @@ export function setSyncCollectionAuth(userId: string | null, accessToken: string
   if (_currentUserId === userId && _currentAccessToken === accessToken) {
     return;
   }
-  const userChanged = _currentUserId !== userId;
+  const previousUserId = _currentUserId;
+  const userChanged = previousUserId !== userId;
   _currentUserId = userId;
   _currentAccessToken = accessToken;
 
@@ -91,12 +92,29 @@ export function setSyncCollectionAuth(userId: string | null, accessToken: string
     // previous one's records, and so the first-sync flow does not read them as
     // "local data" to upload into the new account. Signing *in* from anonymous
     // is exempt: that data is the signing-in user's own.
-    void purgeSnapshotsOnOwnerChange(userId, Object.keys(SYNC_COLLECTIONS)).then((purged) => {
-      if (purged) {
-        queryClient.removeQueries({ queryKey: ["sync"] });
-      }
-      void queryClient.invalidateQueries({ queryKey: ["sync"] });
-    });
+    const liveRowsBelongToPreviousUser = previousUserId !== null;
+    void purgeSnapshotsOnOwnerChange(userId, Object.keys(SYNC_COLLECTIONS))
+      .then((purged) => {
+        if (purged || liveRowsBelongToPreviousUser) {
+          // Query-cache removal does not clear QueryCollection.toArray. Reload
+          // so no live row from the previous owner can be returned by a failed
+          // pull or observed while the new account starts. A signed-in user
+          // transition always reloads, even if storage was unavailable.
+          window.location.reload();
+          return;
+        }
+        void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      })
+      .catch((err: unknown) => {
+        logger.error("Failed to prepare sync snapshots for an owner change:", err);
+        if (liveRowsBelongToPreviousUser) {
+          window.location.reload();
+          return;
+        }
+        // No previous signed-in user's live rows exist; keep the initial
+        // anonymous → signed-in transition retryable.
+        void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      });
     return;
   }
 

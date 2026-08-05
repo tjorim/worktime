@@ -129,7 +129,10 @@ offline launch of the installed PWA.
   asserting the account is empty.
 - Snapshots are purged when they stop belonging to the current user — see the
   ownership table in `persistence.ts`. Signing in from anonymous is exempt:
-  that data is the signing-in user's, and first sync uploads it.
+  that data is the signing-in user's, and first sync uploads it. A real owner
+  change assigns a fresh snapshot generation and reloads the app: retained live
+  rows are discarded, while stale tabs remain fenced into the old generation
+  and cannot recreate snapshots under the new owner.
 
 Local durability is a convenience, not the backup. The server is the backup;
 IndexedDB can be cleared by the browser at any time.
