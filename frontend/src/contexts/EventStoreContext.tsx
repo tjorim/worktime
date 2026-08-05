@@ -16,13 +16,7 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { TimeOffImportResult } from "@/lib/timeOff/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
-import {
-  hasSyncCollectionAuth,
-  replaceCollectionContents,
-  runMutationBatch,
-  runWriteBatch,
-  timeOffCollection,
-} from "@/db/collections";
+import { hasSyncCollectionAuth, runWriteBatch, timeOffCollection } from "@/db/collections";
 import { logger } from "@/utils/logger";
 
 interface EventStoreContextType {
@@ -58,18 +52,17 @@ function cloneEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   return entries.map((entry) => structuredClone(entry));
 }
 
-/**
- * Replace the collection's contents in local-only mode.
- *
- * Delegates rather than driving `utils.writeBatch` itself: the direct-write API
- * requires a collection that has reached "ready", which a persisted collection
- * only does once its local store has opened and hydrated. Local-only writes
- * have to land synchronously — the UI reads them back on the next render — so
- * this takes the plain-mutation path `replaceCollectionContents` already uses
- * when there is no sync auth.
- */
-function writeLocalSnapshot(target: TimeOffEntry[]): void {
-  replaceCollectionContents(timeOffCollection, target, (entry) => entry.id);
+function writeLocalSnapshot(current: TimeOffEntry[], target: TimeOffEntry[]): void {
+  const targetIds = new Set(target.map((entry) => entry.id));
+  const toDelete = current.map((entry) => entry.id).filter((id) => !targetIds.has(id));
+  timeOffCollection.utils.writeBatch(() => {
+    if (toDelete.length > 0) {
+      timeOffCollection.utils.writeDelete(toDelete);
+    }
+    if (target.length > 0) {
+      timeOffCollection.utils.writeUpsert(target);
+    }
+  });
 }
 
 export function EventStoreProvider({ children }: EventStoreProviderProps) {
@@ -112,7 +105,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     const nextEntries = sortEntries([...nextEntriesMap.values()]);
     sortedEntriesRef.current = nextEntries;
     if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(nextEntries);
+      writeLocalSnapshot(currentEntries, nextEntries);
       return;
     }
     for (const entry of newEntries) {
@@ -131,7 +124,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     sortedEntriesRef.current = sortEntries(cloneEntries(newEntries));
     // Server-pushed data: write directly without pushing back to server.
     const existingKeys = timeOffCollection.toArray.map((e) => e.id);
-    runWriteBatch(timeOffCollection, existingKeys.length > 0 || newEntries.length > 0, () => {
+    timeOffCollection.utils.writeBatch(() => {
       if (existingKeys.length > 0) timeOffCollection.utils.writeDelete(existingKeys);
       if (newEntries.length > 0) timeOffCollection.utils.writeInsert(newEntries);
     });
@@ -150,7 +143,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     );
     sortedEntriesRef.current = nextEntries;
     if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(nextEntries);
+      writeLocalSnapshot(currentEntries, nextEntries);
       return;
     }
     timeOffCollection.update(id, (d) => {
@@ -169,7 +162,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     const nextEntries = currentEntries.filter((entry) => entry.id !== id);
     sortedEntriesRef.current = nextEntries;
     if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(nextEntries);
+      writeLocalSnapshot(currentEntries, nextEntries);
       return;
     }
     if ((timeOffCollection.toArray as TimeOffEntry[]).some((entry) => entry.id === id)) {
@@ -190,7 +183,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     const nextEntries = currentEntries.filter((entry) => !valid.includes(entry.id));
     sortedEntriesRef.current = nextEntries;
     if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(nextEntries);
+      writeLocalSnapshot(currentEntries, nextEntries);
       return;
     }
     const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
@@ -207,7 +200,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     const nextEntries = sortEntries(cloneEntries(result.entries));
     sortedEntriesRef.current = nextEntries;
     if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(nextEntries);
+      writeLocalSnapshot(currentEntries, nextEntries);
     } else {
       const currentMap = new Map(currentEntries.map((e) => [e.id, e]));
       const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
@@ -215,7 +208,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         (id) => !result.entries.some((e) => e.id === id),
       );
       const hasWork = toDelete.length > 0 || result.entries.length > 0;
-      runMutationBatch(timeOffCollection, hasWork, () => {
+      runWriteBatch(timeOffCollection, hasWork, () => {
         for (const id of toDelete) {
           if (collectionIds.has(id)) timeOffCollection.delete(id);
         }
@@ -239,10 +232,10 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     if (current.length === 0) return;
     sortedEntriesRef.current = [];
     if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot([]);
+      writeLocalSnapshot(current, []);
       return;
     }
-    runMutationBatch(timeOffCollection, current.length > 0, () => {
+    runWriteBatch(timeOffCollection, current.length > 0, () => {
       for (const entry of current) {
         timeOffCollection.delete(entry.id);
       }

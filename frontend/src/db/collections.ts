@@ -28,28 +28,20 @@
  * (`utils.writeUpsert` / `utils.writeDelete`) to apply server data without
  * triggering new push operations.
  *
- * **Local persistence**
- * Every collection is additionally wrapped in `persistedCollectionOptions`, so
- * its rows are written to and hydrated from a local SQLite store as part of the
- * sync commit — see `@/db/persistence`. The practical consequence for this file
- * is that a collection reaches "ready" asynchronously: use `runWriteBatch` for
- * direct writes (it waits) and `runMutationBatch` for ordinary local mutations
- * (it does not need to).
- *
  * Do NOT add a standalone useQuery alongside a QueryCollection for the same
  * domain — that creates a competing cache.
  */
 
 import { createCollection } from "@tanstack/react-db";
-import { persistedCollectionOptions } from "@tanstack/browser-db-sqlite-persistence";
-import { queryCollectionOptions, type QueryCollectionUtils } from "@tanstack/query-db-collection";
+import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { queryClient } from "@/lib/queryClient";
 import {
-  COLLECTION_SCHEMA_VERSION,
-  guardStartupMarkReady,
-  purgePersistedDataOnOwnerChange,
-  syncCollectionPersistence,
-  whenPersistenceReady,
+  getLoadedSnapshot,
+  hydrateSyncCollections,
+  purgeSnapshotsOnOwnerChange,
+  startPersistingSyncCollections,
+  whenHydrated,
+  type PersistableCollection,
 } from "@/db/persistence";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import type { Label } from "@/components/timeTracking/constants";
@@ -72,27 +64,6 @@ import {
 import { dayjs } from "@/utils/dateTimeUtils";
 import { logger } from "@/utils/logger";
 
-/**
- * The key type `queryCollectionOptions` settles on for these collections.
- *
- * Every collection here is keyed by a string, but the option builder widens to
- * its `string | number` default rather than narrowing from `getKey`, and the
- * two type arguments have to agree for the wrapper below to accept the spread.
- */
-type CollectionKey = string | number;
-
-/**
- * The direct-write utils a query collection contributes to the wrapped options.
- *
- * Named because `persistedCollectionOptions` has to be called with all four of
- * its type arguments or none: supplying the item type alone (which is needed —
- * inference through its intersection option type collapses the item to
- * `Record<string, unknown>`) also forces `TUtils`, and the default there is a
- * bare `UtilsRecord`. That silently drops `writeBatch` / `writeUpsert` /
- * `writeDelete`, which the SSE and first-sync paths are built on.
- */
-type SyncCollectionUtils<T extends object> = QueryCollectionUtils<T, CollectionKey, T>;
-
 // ---------------------------------------------------------------------------
 // Module-level auth state — set by setSyncCollectionAuth
 // ---------------------------------------------------------------------------
@@ -106,10 +77,7 @@ let _currentAccessToken: string | null = null;
  * Must be called whenever the user's authentication state changes — typically
  * from `OngoingSyncProvider`.
  */
-export function setSyncCollectionAuth(
-  userId: string | null,
-  accessToken: string | null = null,
-): void {
+export function setSyncCollectionAuth(userId: string | null, accessToken: string | null = null): void {
   if (_currentUserId === userId && _currentAccessToken === accessToken) {
     return;
   }
@@ -118,13 +86,16 @@ export function setSyncCollectionAuth(
   _currentAccessToken = accessToken;
 
   if (userChanged) {
-    // The persisted store is one per-device store. If it belongs to a
+    // The persisted cache is one per-device store. If it belongs to a
     // different account, drop it — both so the new user is not shown the
     // previous one's records, and so the first-sync flow does not read them as
     // "local data" to upload into the new account. Signing *in* from anonymous
     // is exempt: that data is the signing-in user's own.
-    void prepareSyncCollectionsForOwner(userId).then((ready) => {
-      if (ready) void queryClient.invalidateQueries({ queryKey: ["sync"] });
+    void purgeSnapshotsOnOwnerChange(userId, Object.keys(SYNC_COLLECTIONS)).then((purged) => {
+      if (purged) {
+        queryClient.removeQueries({ queryKey: ["sync"] });
+      }
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
     });
     return;
   }
@@ -134,23 +105,6 @@ export function setSyncCollectionAuth(
   // collections stuck on their initial empty snapshot until some later local
   // mutation or manual refresh forces a pull.
   void queryClient.invalidateQueries({ queryKey: ["sync"] });
-}
-
-/**
- * Ensure persisted rows belong to this owner before any sync flow reads them.
- *
- * Returns false when a reload was required. Both auth setup and first sync call
- * this function; the persistence layer deduplicates their concurrent request.
- */
-export async function prepareSyncCollectionsForOwner(userId: string | null): Promise<boolean> {
-  const purged = await purgePersistedDataOnOwnerChange(userId);
-  if (!purged) return true;
-
-  // Purging closes the SQLite database, and the previous account's rows are
-  // still in the in-memory collections. Reloading is the only way to be sure
-  // neither survives; clearing the query cache alone would leave both.
-  window.location.reload();
-  return false;
 }
 
 export function hasSyncCollectionAuth(): boolean {
@@ -196,21 +150,20 @@ async function fetchSyncSnapshot(): Promise<SyncPullResponse> {
 }
 
 /**
- * Fetch a collection's server rows, falling back to what is already local.
+ * Fetch a collection's server rows, falling back to its persisted snapshot.
  *
  * TanStack Query keeps the last good data when a refetch throws, which covers
  * a *warm* failure. It cannot cover a cold start: after a reload there is no
  * last-good data in memory, so an unreachable server (offline, a deploy, an
  * expired token) would render an empty app over a full local history. The
- * persistence layer hydrates that history back into the collection, so
- * returning the collection's own rows is what keeps them on screen until the
- * server is reachable again.
+ * snapshot is that history, so it is what the user sees until the server is
+ * reachable again.
  *
- * Rethrows when the collection is empty — an error keeps it empty and retrying,
- * which is honest, where returning `[]` would assert the account is empty and
- * be replicated back to the server as a delete-everything.
+ * Rethrows when there is no snapshot — an error keeps the collection empty and
+ * retrying, which is honest, where returning `[]` would assert the account is
+ * empty.
  */
-async function fetchWithLocalFallback<T>(
+async function fetchWithSnapshotFallback<T>(
   name: string,
   select: (data: SyncPullResponse) => T[],
   current: () => T[],
@@ -218,16 +171,22 @@ async function fetchWithLocalFallback<T>(
   try {
     return select(await fetchSyncSnapshot());
   } catch (err) {
-    // Returning the persisted rows over a populated collection would roll back
-    // the user's offline edits on screen — they are still queued in the outbox
-    // and would come back on the next successful pull, but watching entries
-    // vanish is exactly the "the app lost my work" moment this is all meant to
-    // prevent. The collection already holds both: the hydrated rows and
-    // everything written since.
+    // What the collection already holds beats the snapshot: the snapshot is
+    // the cold-start seed, frozen at load, while the collection includes
+    // everything written since. Returning the snapshot over a populated
+    // collection would roll back the user's offline edits on screen — they
+    // are still queued in the outbox and would come back on the next
+    // successful pull, but watching entries vanish is exactly the "the app
+    // lost my work" moment this is all meant to prevent.
     const live = current();
     if (live.length > 0) {
       logger.error(`sync pull for "${name}" failed; keeping the current local rows:`, err);
       return live;
+    }
+    const snapshot = getLoadedSnapshot<T>(name);
+    if (snapshot) {
+      logger.error(`sync pull for "${name}" failed; showing the last saved copy:`, err);
+      return snapshot;
     }
     throw err;
   }
@@ -327,89 +286,23 @@ function utcIsoToLocalTime(utcIso: string): string {
  * push handlers fire and no server round-trip is triggered.
  */
 /**
- * Batches queued against a collection that was not ready yet, newest last.
+ * Run a batch write only when there are actual operations to perform.
  *
- * Keyed by collection so writes to one domain cannot be reordered behind a
- * slower one, and weak so a collection is not retained by its own queue.
+ * Calling `collection.utils.writeBatch(...)` throws `SyncNotInitializedError`
+ * if the collection has not been started yet (e.g. the component that mounts
+ * it isn't rendered in the current test / environment). Skip the batch safely
+ * when the operation set is empty, and start the collection if needed when
+ * there are real writes to apply.
  */
-const deferredWriteBatches = new WeakMap<object, Promise<void>>();
-
-interface BatchableCollection {
-  utils: { writeBatch: (cb: () => void) => void };
-}
-
-/** The lifecycle surface `createCollection` provides but does not type publicly. */
-function lifecycleOf(collection: BatchableCollection) {
-  return collection as unknown as {
-    startSyncImmediate: () => void;
-    isReady: () => boolean;
-    preload: () => Promise<void>;
-  };
-}
-
-/**
- * Run a batch of *direct writes* (`utils.writeUpsert` / `writeDelete` /
- * `writeInsert`) only when there are actual operations to perform.
- *
- * The direct-write API needs a collection in the "ready" state, and readiness
- * is asynchronous now that the collections are persisted: the wrapper hydrates
- * from the local store before marking a collection ready, so on a cold start a
- * server write can arrive first. Rather than throw that write away, queue it
- * behind `preload()` — per collection, so batches still land in call order.
- *
- * Every caller is a server-driven path (an incremental pull, a first-sync
- * apply) that is already asynchronous, so the deferral is not observable. Use
- * `runMutationBatch` for batches of ordinary local mutations, which must stay
- * synchronous because the UI reads them back on the next render.
- */
-export function runWriteBatch<T extends BatchableCollection>(
+export function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void } }>(
   collection: T,
   hasWork: boolean,
   callback: () => void,
 ): void {
   if (!hasWork) return;
   // Ensure the collection is started so that writeBatch can access its sync context.
-  const lifecycle = lifecycleOf(collection);
-  lifecycle.startSyncImmediate();
-  if (lifecycle.isReady()) {
-    collection.utils.writeBatch(callback);
-    return;
-  }
-
-  const queued = (deferredWriteBatches.get(collection) ?? Promise.resolve())
-    .then(() => lifecycle.preload())
-    .then(() => {
-      collection.utils.writeBatch(callback);
-    })
-    .catch((err: unknown) => {
-      logger.error("Deferred collection write failed:", err);
-    });
-  deferredWriteBatches.set(collection, queued);
-}
-
-/**
- * Group a set of ordinary local mutations (`insert` / `update` / `delete`) into
- * one transaction, so they produce a single push instead of one per row.
- *
- * Unlike `runWriteBatch` this never defers. These are user actions — the UI
- * reads the result back on the very next render — and plain mutations do not
- * need the manual-sync context that `writeBatch` requires, so before the
- * collection is ready the callback simply runs ungrouped. The mutations all
- * still apply; they just push individually.
- */
-export function runMutationBatch<T extends BatchableCollection>(
-  collection: T,
-  hasWork: boolean,
-  callback: () => void,
-): void {
-  if (!hasWork) return;
-  const lifecycle = lifecycleOf(collection);
-  lifecycle.startSyncImmediate();
-  if (lifecycle.isReady()) {
-    collection.utils.writeBatch(callback);
-    return;
-  }
-  callback();
+  (collection as unknown as { startSyncImmediate: () => void }).startSyncImmediate();
+  collection.utils.writeBatch(callback);
 }
 
 export function replaceCollectionContents<
@@ -669,85 +562,80 @@ function _syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry
 // ---------------------------------------------------------------------------
 
 export const labelsCollection = createCollection(
-  guardStartupMarkReady(
-    persistedCollectionOptions<Label, CollectionKey, never, SyncCollectionUtils<Label>>({
-      ...queryCollectionOptions<Label>({
-        id: "worktime/labels",
-        queryKey: ["sync", "labels"],
-        queryClient,
-        getKey: (label) => label.id,
-        staleTime: Infinity,
-        queryFn: async (): Promise<Label[]> => {
-          await whenPersistenceReady();
-          if (!_currentUserId) {
-            // Local-only: nothing to pull, and the persistence layer writes the
-            // previous session's rows into the collection itself. Echoing the
-            // collection back is what stops this result from truncating them.
-            return labelsCollection.toArray as Label[];
-          }
-          return fetchWithLocalFallback(
-            "labels",
-            (data) => data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
-            () => labelsCollection.toArray as Label[],
-          );
-        },
-        onInsert: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "create",
-              client_updated_at: now,
-              name: m.modified.name,
-              color: m.modified.color,
-            })),
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onUpdate: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "update",
-              client_updated_at: now,
-              name: m.modified.name,
-              color: m.modified.color,
-            })),
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onDelete: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: transaction.mutations.map((m) => ({
-              id: m.original.id,
-              action: "delete",
-              client_updated_at: now,
-            })),
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-      }),
-      persistence: syncCollectionPersistence,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-  ),
+  queryCollectionOptions<Label>({
+    id: "worktime/labels",
+    queryKey: ["sync", "labels"],
+    queryClient,
+    getKey: (label) => label.id,
+    staleTime: Infinity,
+    queryFn: async (): Promise<Label[]> => {
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = labelsCollection.toArray as Label[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<Label>("labels") ?? items);
+      }
+      return fetchWithSnapshotFallback(
+        "labels",
+        (data) => data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
+        () => labelsCollection.toArray as Label[],
+      );
+    },
+    onInsert: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "create",
+          client_updated_at: now,
+          name: m.modified.name,
+          color: m.modified.color,
+        })),
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onUpdate: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "update",
+          client_updated_at: now,
+          name: m.modified.name,
+          color: m.modified.color,
+        })),
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onDelete: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: transaction.mutations.map((m) => ({
+          id: m.original.id,
+          action: "delete",
+          client_updated_at: now,
+        })),
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -755,98 +643,88 @@ export const labelsCollection = createCollection(
 // ---------------------------------------------------------------------------
 
 export const tasksCollection = createCollection(
-  guardStartupMarkReady(
-    persistedCollectionOptions<
-      StoredTimeTrackingTask,
-      CollectionKey,
-      never,
-      SyncCollectionUtils<StoredTimeTrackingTask>
-    >({
-      ...queryCollectionOptions<StoredTimeTrackingTask>({
-        id: "worktime/tasks",
-        queryKey: ["sync", "tasks"],
-        queryClient,
-        getKey: (task) => task.id,
-        staleTime: Infinity,
-        queryFn: async (): Promise<StoredTimeTrackingTask[]> => {
-          await whenPersistenceReady();
-          if (!_currentUserId) {
-            // Local-only: nothing to pull, and the persistence layer writes the
-            // previous session's rows into the collection itself. Echoing the
-            // collection back is what stops this result from truncating them.
-            return tasksCollection.toArray as StoredTimeTrackingTask[];
-          }
-          return fetchWithLocalFallback(
-            "tasks",
-            (data) => data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
-            () => tasksCollection.toArray as StoredTimeTrackingTask[],
-          );
-        },
-        onInsert: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "create",
-              client_updated_at: now,
-              label_id: m.modified.label || null,
-              gantt_task_id: m.modified.ganttTaskId || null,
-              text: m.modified.text,
-              start_time: dayjs(m.modified.startTime).toISOString(),
-              stop_time: m.modified.stopTime ? dayjs(m.modified.stopTime).toISOString() : null,
-              includes_break: m.modified.includesBreak ?? false,
-            })),
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onUpdate: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "update",
-              client_updated_at: now,
-              label_id: m.modified.label || null,
-              gantt_task_id: m.modified.ganttTaskId || null,
-              text: m.modified.text,
-              start_time: dayjs(m.modified.startTime).toISOString(),
-              stop_time: m.modified.stopTime ? dayjs(m.modified.stopTime).toISOString() : null,
-              includes_break: m.modified.includesBreak ?? false,
-            })),
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onDelete: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: transaction.mutations.map((m) => ({
-              id: m.original.id,
-              action: "delete",
-              client_updated_at: now,
-            })),
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-      }),
-      persistence: syncCollectionPersistence,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-  ),
+  queryCollectionOptions<StoredTimeTrackingTask>({
+    id: "worktime/tasks",
+    queryKey: ["sync", "tasks"],
+    queryClient,
+    getKey: (task) => task.id,
+    staleTime: Infinity,
+    queryFn: async (): Promise<StoredTimeTrackingTask[]> => {
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = tasksCollection.toArray as StoredTimeTrackingTask[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<StoredTimeTrackingTask>("tasks") ?? items);
+      }
+      return fetchWithSnapshotFallback(
+        "tasks",
+        (data) => data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
+        () => tasksCollection.toArray as StoredTimeTrackingTask[],
+      );
+    },
+    onInsert: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "create",
+          client_updated_at: now,
+          label_id: m.modified.label || null,
+          gantt_task_id: m.modified.ganttTaskId || null,
+          text: m.modified.text,
+          start_time: dayjs(m.modified.startTime).toISOString(),
+          stop_time: m.modified.stopTime ? dayjs(m.modified.stopTime).toISOString() : null,
+          includes_break: m.modified.includesBreak ?? false,
+        })),
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onUpdate: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "update",
+          client_updated_at: now,
+          label_id: m.modified.label || null,
+          gantt_task_id: m.modified.ganttTaskId || null,
+          text: m.modified.text,
+          start_time: dayjs(m.modified.startTime).toISOString(),
+          stop_time: m.modified.stopTime ? dayjs(m.modified.stopTime).toISOString() : null,
+          includes_break: m.modified.includesBreak ?? false,
+        })),
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onDelete: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: transaction.mutations.map((m) => ({
+          id: m.original.id,
+          action: "delete",
+          client_updated_at: now,
+        })),
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -854,95 +732,84 @@ export const tasksCollection = createCollection(
 // ---------------------------------------------------------------------------
 
 export const templatesCollection = createCollection(
-  guardStartupMarkReady(
-    persistedCollectionOptions<
-      TimeTrackingTemplate,
-      CollectionKey,
-      never,
-      SyncCollectionUtils<TimeTrackingTemplate>
-    >({
-      ...queryCollectionOptions<TimeTrackingTemplate>({
-        id: "worktime/templates",
-        queryKey: ["sync", "templates"],
-        queryClient,
-        getKey: (template) => template.id,
-        staleTime: Infinity,
-        queryFn: async (): Promise<TimeTrackingTemplate[]> => {
-          await whenPersistenceReady();
-          if (!_currentUserId) {
-            // Local-only: nothing to pull, and the persistence layer writes the
-            // previous session's rows into the collection itself. Echoing the
-            // collection back is what stops this result from truncating them.
-            return templatesCollection.toArray as TimeTrackingTemplate[];
-          }
-          return fetchWithLocalFallback(
-            "templates",
-            (data) =>
-              data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
-            () => templatesCollection.toArray as TimeTrackingTemplate[],
-          );
-        },
-        onInsert: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "create",
-              client_updated_at: now,
-              label_id: m.modified.label || null,
-              text: m.modified.text,
-              start_time: `${m.modified.start}:00`,
-              stop_time: `${m.modified.stop}:00`,
-            })),
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onUpdate: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "update",
-              client_updated_at: now,
-              label_id: m.modified.label || null,
-              text: m.modified.text,
-              start_time: `${m.modified.start}:00`,
-              stop_time: `${m.modified.stop}:00`,
-            })),
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onDelete: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: transaction.mutations.map((m) => ({
-              id: m.original.id,
-              action: "delete",
-              client_updated_at: now,
-            })),
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-      }),
-      persistence: syncCollectionPersistence,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-  ),
+  queryCollectionOptions<TimeTrackingTemplate>({
+    id: "worktime/templates",
+    queryKey: ["sync", "templates"],
+    queryClient,
+    getKey: (template) => template.id,
+    staleTime: Infinity,
+    queryFn: async (): Promise<TimeTrackingTemplate[]> => {
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = templatesCollection.toArray as TimeTrackingTemplate[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<TimeTrackingTemplate>("templates") ?? items);
+      }
+      return fetchWithSnapshotFallback(
+        "templates",
+        (data) => data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
+        () => templatesCollection.toArray as TimeTrackingTemplate[],
+      );
+    },
+    onInsert: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "create",
+          client_updated_at: now,
+          label_id: m.modified.label || null,
+          text: m.modified.text,
+          start_time: `${m.modified.start}:00`,
+          stop_time: `${m.modified.stop}:00`,
+        })),
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onUpdate: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "update",
+          client_updated_at: now,
+          label_id: m.modified.label || null,
+          text: m.modified.text,
+          start_time: `${m.modified.start}:00`,
+          stop_time: `${m.modified.stop}:00`,
+        })),
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onDelete: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: transaction.mutations.map((m) => ({
+          id: m.original.id,
+          action: "delete",
+          client_updated_at: now,
+        })),
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -950,108 +817,98 @@ export const templatesCollection = createCollection(
 // ---------------------------------------------------------------------------
 
 export const timeOffCollection = createCollection(
-  guardStartupMarkReady(
-    persistedCollectionOptions<
-      TimeOffEntry,
-      CollectionKey,
-      never,
-      SyncCollectionUtils<TimeOffEntry>
-    >({
-      ...queryCollectionOptions<TimeOffEntry>({
-        id: "worktime/time-off-entries",
-        queryKey: ["sync", "time-off-entries"],
-        queryClient,
-        getKey: (entry) => entry.id,
-        staleTime: Infinity,
-        queryFn: async (): Promise<TimeOffEntry[]> => {
-          await whenPersistenceReady();
-          if (!_currentUserId) {
-            // Local-only: nothing to pull, and the persistence layer writes the
-            // previous session's rows into the collection itself. Echoing the
-            // collection back is what stops this result from truncating them.
-            return timeOffCollection.toArray as TimeOffEntry[];
-          }
-          return fetchWithLocalFallback(
-            "time-off-entries",
-            (data) => _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
-            () => timeOffCollection.toArray as TimeOffEntry[],
-          );
-        },
-        onInsert: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: transaction.mutations.map((m) => {
-              const entry = m.modified;
-              return {
-                id: entry.id,
-                action: "create",
-                client_updated_at: now,
-                entry_kind: entry.entryKind,
-                date: entry.entryKind === "date" ? entry.date : null,
-                start_date: entry.entryKind === "range" ? entry.start : null,
-                end_date: entry.entryKind === "range" ? entry.end : null,
-                weekday: entry.entryKind === "weekly" ? entry.weekday : null,
-                entry_type: entry.entryType,
-                entry_flag: entry.entryFlag,
-                note: entry.note ?? null,
-              };
-            }),
-            gantt_tasks: [],
+  queryCollectionOptions<TimeOffEntry>({
+    id: "worktime/time-off-entries",
+    queryKey: ["sync", "time-off-entries"],
+    queryClient,
+    getKey: (entry) => entry.id,
+    staleTime: Infinity,
+    queryFn: async (): Promise<TimeOffEntry[]> => {
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = timeOffCollection.toArray as TimeOffEntry[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<TimeOffEntry>("time-off-entries") ?? items);
+      }
+      return fetchWithSnapshotFallback(
+        "time-off-entries",
+        (data) => _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+        () => timeOffCollection.toArray as TimeOffEntry[],
+      );
+    },
+    onInsert: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: transaction.mutations.map((m) => {
+          const entry = m.modified;
+          return {
+            id: entry.id,
+            action: "create",
+            client_updated_at: now,
+            entry_kind: entry.entryKind,
+            date: entry.entryKind === "date" ? entry.date : null,
+            start_date: entry.entryKind === "range" ? entry.start : null,
+            end_date: entry.entryKind === "range" ? entry.end : null,
+            weekday: entry.entryKind === "weekly" ? entry.weekday : null,
+            entry_type: entry.entryType,
+            entry_flag: entry.entryFlag,
+            note: entry.note ?? null,
           };
-          await pushAndQueue(payload);
-        },
-        onUpdate: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: transaction.mutations.map((m) => {
-              const entry = m.modified;
-              return {
-                id: entry.id,
-                action: "update",
-                client_updated_at: now,
-                entry_kind: entry.entryKind,
-                date: entry.entryKind === "date" ? entry.date : null,
-                start_date: entry.entryKind === "range" ? entry.start : null,
-                end_date: entry.entryKind === "range" ? entry.end : null,
-                weekday: entry.entryKind === "weekly" ? entry.weekday : null,
-                entry_type: entry.entryType,
-                entry_flag: entry.entryFlag,
-                note: entry.note ?? null,
-              };
-            }),
-            gantt_tasks: [],
+        }),
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onUpdate: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: transaction.mutations.map((m) => {
+          const entry = m.modified;
+          return {
+            id: entry.id,
+            action: "update",
+            client_updated_at: now,
+            entry_kind: entry.entryKind,
+            date: entry.entryKind === "date" ? entry.date : null,
+            start_date: entry.entryKind === "range" ? entry.start : null,
+            end_date: entry.entryKind === "range" ? entry.end : null,
+            weekday: entry.entryKind === "weekly" ? entry.weekday : null,
+            entry_type: entry.entryType,
+            entry_flag: entry.entryFlag,
+            note: entry.note ?? null,
           };
-          await pushAndQueue(payload);
-        },
-        onDelete: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: transaction.mutations.map((m) => ({
-              id: m.original.id,
-              action: "delete",
-              client_updated_at: now,
-            })),
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-      }),
-      persistence: syncCollectionPersistence,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-  ),
+        }),
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onDelete: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: transaction.mutations.map((m) => ({
+          id: m.original.id,
+          action: "delete",
+          client_updated_at: now,
+        })),
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -1059,98 +916,91 @@ export const timeOffCollection = createCollection(
 // ---------------------------------------------------------------------------
 
 export const ganttTasksCollection = createCollection(
-  guardStartupMarkReady(
-    persistedCollectionOptions<GanttTask, CollectionKey, never, SyncCollectionUtils<GanttTask>>({
-      ...queryCollectionOptions<GanttTask>({
-        id: "worktime/gantt-tasks",
-        queryKey: ["sync", "gantt-tasks"],
-        queryClient,
-        getKey: (task) => task.id,
-        staleTime: Infinity,
-        queryFn: async (): Promise<GanttTask[]> => {
-          await whenPersistenceReady();
-          if (!_currentUserId) {
-            // Local-only: nothing to pull, and the persistence layer writes the
-            // previous session's rows into the collection itself. Echoing the
-            // collection back is what stops this result from truncating them.
-            return ganttTasksCollection.toArray as GanttTask[];
-          }
-          return fetchWithLocalFallback(
-            "gantt-tasks",
-            (data) =>
-              (data.gantt_tasks ?? [])
-                .filter((g) => g.deleted_at === null)
-                .map(syncGanttTaskToGanttTask),
-            () => ganttTasksCollection.toArray as GanttTask[],
-          );
-        },
-        onInsert: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "create",
-              client_updated_at: now,
-              name: m.modified.name,
-              label_id: m.modified.label ?? null,
-              start_date: m.modified.start,
-              end_date: m.modified.end,
-              progress: m.modified.progress,
-              dependencies: m.modified.dependencies ?? null,
-              notes: m.modified.notes ?? null,
-            })),
-          };
-          await pushAndQueue(payload);
-        },
-        onUpdate: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: transaction.mutations.map((m) => ({
-              id: m.modified.id,
-              action: "update",
-              client_updated_at: now,
-              name: m.modified.name,
-              label_id: m.modified.label ?? null,
-              start_date: m.modified.start,
-              end_date: m.modified.end,
-              progress: m.modified.progress,
-              dependencies: m.modified.dependencies ?? null,
-              notes: m.modified.notes ?? null,
-            })),
-          };
-          await pushAndQueue(payload);
-        },
-        onDelete: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: [],
-            time_off_entries: [],
-            gantt_tasks: transaction.mutations.map((m) => ({
-              id: m.original.id,
-              action: "delete",
-              client_updated_at: now,
-            })),
-          };
-          await pushAndQueue(payload);
-        },
-      }),
-      persistence: syncCollectionPersistence,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-  ),
+  queryCollectionOptions<GanttTask>({
+    id: "worktime/gantt-tasks",
+    queryKey: ["sync", "gantt-tasks"],
+    queryClient,
+    getKey: (task) => task.id,
+    staleTime: Infinity,
+    queryFn: async (): Promise<GanttTask[]> => {
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = ganttTasksCollection.toArray as GanttTask[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<GanttTask>("gantt-tasks") ?? items);
+      }
+      return fetchWithSnapshotFallback(
+        "gantt-tasks",
+        (data) =>
+          (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
+        () => ganttTasksCollection.toArray as GanttTask[],
+      );
+    },
+    onInsert: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "create",
+          client_updated_at: now,
+          name: m.modified.name,
+          label_id: m.modified.label ?? null,
+          start_date: m.modified.start,
+          end_date: m.modified.end,
+          progress: m.modified.progress,
+          dependencies: m.modified.dependencies ?? null,
+          notes: m.modified.notes ?? null,
+        })),
+      };
+      await pushAndQueue(payload);
+    },
+    onUpdate: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: transaction.mutations.map((m) => ({
+          id: m.modified.id,
+          action: "update",
+          client_updated_at: now,
+          name: m.modified.name,
+          label_id: m.modified.label ?? null,
+          start_date: m.modified.start,
+          end_date: m.modified.end,
+          progress: m.modified.progress,
+          dependencies: m.modified.dependencies ?? null,
+          notes: m.modified.notes ?? null,
+        })),
+      };
+      await pushAndQueue(payload);
+    },
+    onDelete: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: transaction.mutations.map((m) => ({
+          id: m.original.id,
+          action: "delete",
+          client_updated_at: now,
+        })),
+      };
+      await pushAndQueue(payload);
+    },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -1163,93 +1013,81 @@ export const ganttTasksCollection = createCollection(
 // ---------------------------------------------------------------------------
 
 export const workLocationsCollection = createCollection(
-  guardStartupMarkReady(
-    persistedCollectionOptions<
-      WorkLocationEntry,
-      CollectionKey,
-      never,
-      SyncCollectionUtils<WorkLocationEntry>
-    >({
-      ...queryCollectionOptions<WorkLocationEntry>({
-        id: "worktime/work-locations",
-        queryKey: ["sync", "work-locations"],
-        queryClient,
-        getKey: (entry) => entry.date,
-        staleTime: Infinity,
-        queryFn: async (): Promise<WorkLocationEntry[]> => {
-          await whenPersistenceReady();
-          if (!_currentUserId) {
-            // Local-only: nothing to pull, and the persistence layer writes the
-            // previous session's rows into the collection itself. Echoing the
-            // collection back is what stops this result from truncating them.
-            return workLocationsCollection.toArray as WorkLocationEntry[];
-          }
-          return fetchWithLocalFallback(
-            "work-locations",
-            (data) =>
-              data.work_locations
-                .filter((wl) => wl.deleted_at === null)
-                .map(syncWorkLocationToEntry),
-            () => workLocationsCollection.toArray as WorkLocationEntry[],
-          );
-        },
-        onInsert: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: transaction.mutations.map((m) => ({
-              date: m.modified.date,
-              action: "create",
-              client_updated_at: now,
-              country_code: m.modified.countryCode,
-              label: m.modified.label ?? null,
-            })),
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onUpdate: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: transaction.mutations.map((m) => ({
-              date: m.modified.date,
-              action: "update",
-              client_updated_at: now,
-              country_code: m.modified.countryCode,
-              label: m.modified.label ?? null,
-            })),
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-        onDelete: async ({ transaction }) => {
-          const now = dayjs().toISOString();
-          const payload: SyncPushPayload = {
-            labels: [],
-            tasks: [],
-            templates: [],
-            work_locations: transaction.mutations.map((m) => ({
-              date: m.original.date,
-              action: "delete",
-              client_updated_at: now,
-            })),
-            time_off_entries: [],
-            gantt_tasks: [],
-          };
-          await pushAndQueue(payload);
-        },
-      }),
-      persistence: syncCollectionPersistence,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-  ),
+  queryCollectionOptions<WorkLocationEntry>({
+    id: "worktime/work-locations",
+    queryKey: ["sync", "work-locations"],
+    queryClient,
+    getKey: (entry) => entry.date,
+    staleTime: Infinity,
+    queryFn: async (): Promise<WorkLocationEntry[]> => {
+      await whenHydrated();
+      if (!_currentUserId) {
+        const items = workLocationsCollection.toArray as WorkLocationEntry[];
+        // Cold start: the collection is empty but a previous session's
+        // rows are on disk. Returning them here is what puts them back
+        // in front of the user.
+        return items.length > 0 ? items : (getLoadedSnapshot<WorkLocationEntry>("work-locations") ?? items);
+      }
+      return fetchWithSnapshotFallback(
+        "work-locations",
+        (data) =>
+          data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
+        () => workLocationsCollection.toArray as WorkLocationEntry[],
+      );
+    },
+    onInsert: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: transaction.mutations.map((m) => ({
+          date: m.modified.date,
+          action: "create",
+          client_updated_at: now,
+          country_code: m.modified.countryCode,
+          label: m.modified.label ?? null,
+        })),
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onUpdate: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: transaction.mutations.map((m) => ({
+          date: m.modified.date,
+          action: "update",
+          client_updated_at: now,
+          country_code: m.modified.countryCode,
+          label: m.modified.label ?? null,
+        })),
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+    onDelete: async ({ transaction }) => {
+      const now = dayjs().toISOString();
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: transaction.mutations.map((m) => ({
+          date: m.original.date,
+          action: "delete",
+          client_updated_at: now,
+        })),
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      await pushAndQueue(payload);
+    },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -1257,14 +1095,44 @@ export const workLocationsCollection = createCollection(
 // ---------------------------------------------------------------------------
 
 /**
- * Open the local store so the collections can hydrate from it.
+ * The sync-backed collections by snapshot name.
  *
- * `persistedCollectionOptions` drives hydration itself — it runs the persisted
- * startup before it even calls the query collection's sync — so this only
- * starts the OPFS/SQLite open early rather than leaving the first collection
- * to pay for it. Every `queryFn` awaits `whenPersistenceReady()` regardless, so
- * a slow open delays the first fetch instead of racing it.
+ * Names are stable storage keys — renaming one orphans that collection's
+ * snapshot and the next reload looks like data loss for that domain.
+ */
+export const SYNC_COLLECTIONS = {
+  labels: labelsCollection,
+  tasks: tasksCollection,
+  templates: templatesCollection,
+  "time-off-entries": timeOffCollection,
+  "gantt-tasks": ganttTasksCollection,
+  "work-locations": workLocationsCollection,
+} as unknown as Record<string, PersistableCollection<never>>;
+
+/**
+ * Seed the collections from their IndexedDB snapshots and keep persisting.
+ *
+ * Called once during app startup, before anything reads a collection. Every
+ * `queryFn` awaits `whenHydrated()`, so a slow hydration delays the first fetch
+ * rather than racing it.
+ */
+// Started at module load, not from an app entry point: a collection can be
+// queried the moment anything imports this module, and `whenHydrated()` only
+// blocks a queryFn if the hydration promise already exists. Registering it any
+// later leaves a window where the first query resolves against an unloaded
+// snapshot and commits an empty collection.
+const hydrationStarted =
+  typeof indexedDB === "undefined"
+    ? Promise.resolve()
+    : hydrateSyncCollections(Object.keys(SYNC_COLLECTIONS));
+
+/**
+ * Begin persisting collection changes to IndexedDB.
+ *
+ * Hydration has already started by the time this runs (see above); this only
+ * attaches the change subscriptions, which nothing depends on for ordering.
  */
 export function initSyncCollectionPersistence(): Promise<void> {
-  return whenPersistenceReady();
+  startPersistingSyncCollections(SYNC_COLLECTIONS);
+  return hydrationStarted;
 }

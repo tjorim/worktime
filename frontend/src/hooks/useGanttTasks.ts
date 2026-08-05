@@ -5,7 +5,7 @@ import {
   ganttTasksCollection,
   hasSyncCollectionAuth,
   replaceCollectionContents,
-  runMutationBatch,
+  runWriteBatch,
 } from "@/db/collections";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
@@ -128,7 +128,7 @@ export function useGanttTasks() {
         const original = tasks.find((t) => t.id === task.id);
         return original && original.dependencies !== task.dependencies;
       });
-      runMutationBatch(ganttTasksCollection, true, () => {
+      runWriteBatch(ganttTasksCollection, true, () => {
         ganttTasksCollection.delete(id);
         // Update dependency strings in affected tasks using proper mutation API
         for (const task of depUpdates) {
