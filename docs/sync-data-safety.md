@@ -113,7 +113,12 @@ The sync-backed collections are snapshotted to IndexedDB
 offline launch of the installed PWA.
 
 - Snapshots are written on any change — local mutation, server pull, or SSE
-  direct write — via `subscribeChanges`, debounced.
+  direct write — via `subscribeChanges`, debounced. Each tab records only the
+  rows it changed and applies that delta in an atomic IndexedDB update, so a
+  stale tab cannot replace another tab's additions or resurrect its deletions.
+- A `BroadcastChannel` notifies the other tabs after each commit. They re-read
+  the stored snapshot so their offline fallback is current before their next
+  write; browsers without `BroadcastChannel` still get the atomic merge.
 - They are read back at module load, before any collection can be queried, and
   returned *as the `queryFn` result*. Seeding with `utils.writeInsert` instead
   populates `toArray` but `useLiveQuery` subscribers never render those rows —
@@ -159,6 +164,11 @@ These are real and not addressed here:
   is no "decide later" that leaves the conflict pending.
 - **Preferences are whole-blob last-write-wins.** Changing a setting on two
   devices means one device's entire settings document silently loses.
+- **A signed-out follower tab does not live-render another tab's changes.** The
+  shared snapshot is safe and a reload shows the merged data, but applying a
+  remote full snapshot to a live query collection would race local mutations
+  and could resurrect deletions. Cross-tab live rendering remains deliberately
+  separate from cross-tab durability.
 - **Database backups are not configured in this repo.** Production hosting lives
   in a separate infra stack; soft deletes only help if the database itself
   survives.

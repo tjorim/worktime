@@ -35,7 +35,7 @@
  *   account.
  */
 
-import { del, get, set } from "idb-keyval";
+import { del, get, set, update } from "idb-keyval";
 import { logger } from "@/utils/logger";
 
 /**
@@ -57,6 +57,8 @@ const ANONYMOUS_OWNER = "anonymous";
 /** How long to coalesce rapid changes before writing a snapshot. */
 const WRITE_DEBOUNCE_MS = 500;
 
+const SNAPSHOT_CHANNEL_NAME = "worktime_collection_snapshots";
+
 interface StoredSnapshot {
   version: number;
   items: unknown[];
@@ -67,6 +69,8 @@ export interface PersistableCollection<T> {
   readonly toArray: T[];
   subscribeChanges(callback: () => void): { unsubscribe: () => void };
 }
+
+export type SnapshotItemKey = (collectionName: string, item: unknown) => string;
 
 function snapshotKey(name: string): string {
   return `${SNAPSHOT_KEY_PREFIX}${name}`;
@@ -82,17 +86,6 @@ async function readSnapshot(name: string): Promise<unknown[] | null> {
   } catch (err) {
     logger.error(`Failed to read the "${name}" snapshot:`, err);
     return null;
-  }
-}
-
-async function writeSnapshot(name: string, items: unknown[]): Promise<void> {
-  try {
-    await set(snapshotKey(name), { version: SNAPSHOT_VERSION, items } satisfies StoredSnapshot);
-  } catch (err) {
-    // Storage unavailable or over quota. Persistence is an enhancement — the
-    // app keeps working from memory — but a silent failure here means the next
-    // reload looks like data loss, so it is always logged.
-    logger.error(`Failed to write the "${name}" snapshot:`, err);
   }
 }
 
@@ -162,15 +155,94 @@ export function hydrateSyncCollections(collectionNames: string[]): Promise<void>
 
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 const subscriptions: Array<{ unsubscribe: () => void }> = [];
+const baselines = new Map<string, Map<string, string>>();
+const pendingWrites = new Map<string, Promise<void>>();
+let snapshotChannel: BroadcastChannel | null = null;
 
-function scheduleSnapshot(name: string, read: () => unknown[]): void {
+function fingerprints(
+  name: string,
+  items: unknown[],
+  getItemKey: SnapshotItemKey,
+): Map<string, string> {
+  return new Map(
+    items.map((item) => [getItemKey(name, item), JSON.stringify(item) ?? "undefined"]),
+  );
+}
+
+async function mergeSnapshotChanges(
+  name: string,
+  items: unknown[],
+  getItemKey: SnapshotItemKey,
+): Promise<void> {
+  const previous = baselines.get(name) ?? new Map<string, string>();
+  const current = new Map(items.map((item) => [getItemKey(name, item), item]));
+  const currentFingerprints = fingerprints(name, items, getItemKey);
+  const deletions = new Set([...previous.keys()].filter((key) => !current.has(key)));
+  const upserts = new Map(
+    [...current].filter(
+      ([key, item]) => previous.get(key) !== (JSON.stringify(item) ?? "undefined"),
+    ),
+  );
+
+  let mergedItems = items;
+  await update<StoredSnapshot>(snapshotKey(name), (stored) => {
+    const persisted =
+      stored?.version === SNAPSHOT_VERSION && Array.isArray(stored.items) ? stored.items : [];
+    const merged = new Map(persisted.map((item) => [getItemKey(name, item), item]));
+    for (const key of deletions) merged.delete(key);
+    for (const [key, item] of upserts) merged.set(key, item);
+    mergedItems = [...merged.values()];
+    return { version: SNAPSHOT_VERSION, items: mergedItems };
+  });
+
+  baselines.set(name, currentFingerprints);
+  loadedSnapshots.set(name, mergedItems);
+  snapshotChannel?.postMessage({ type: "snapshot_changed", name });
+}
+
+function openSnapshotChannel(): void {
+  if (snapshotChannel || typeof BroadcastChannel === "undefined") return;
+  snapshotChannel = new BroadcastChannel(SNAPSHOT_CHANNEL_NAME);
+  snapshotChannel.onmessage = (event: MessageEvent<unknown>) => {
+    const message = event.data;
+    if (
+      !message ||
+      typeof message !== "object" ||
+      !("type" in message) ||
+      message.type !== "snapshot_changed" ||
+      !("name" in message) ||
+      typeof message.name !== "string"
+    ) {
+      return;
+    }
+    const name = message.name;
+    void readSnapshot(name).then((items) => {
+      if (items) loadedSnapshots.set(name, items);
+      else loadedSnapshots.delete(name);
+    });
+  };
+}
+
+function scheduleSnapshot(
+  name: string,
+  read: () => unknown[],
+  getItemKey: SnapshotItemKey,
+): void {
   const pending = timers.get(name);
   if (pending) clearTimeout(pending);
   timers.set(
     name,
     setTimeout(() => {
       timers.delete(name);
-      void writeSnapshot(name, read());
+      const queued = (pendingWrites.get(name) ?? Promise.resolve())
+        .then(() => mergeSnapshotChanges(name, read(), getItemKey))
+        .catch((err: unknown) => {
+          // Storage unavailable or over quota. Persistence is an enhancement —
+          // the app keeps working from memory — but a silent failure here means
+          // the next reload looks like data loss, so it is always logged.
+          logger.error(`Failed to write the "${name}" snapshot:`, err);
+        });
+      pendingWrites.set(name, queued);
     }, WRITE_DEBOUNCE_MS),
   );
 }
@@ -184,13 +256,19 @@ function scheduleSnapshot(name: string, read: () => unknown[]): void {
  */
 export function startPersistingSyncCollections(
   collections: Record<string, PersistableCollection<never>>,
+  getItemKey: SnapshotItemKey,
 ): void {
   if (subscriptions.length > 0) return;
+  openSnapshotChannel();
   for (const [name, collection] of Object.entries(collections)) {
+    baselines.set(
+      name,
+      fingerprints(name, loadedSnapshots.get(name) ?? [], getItemKey),
+    );
     try {
       subscriptions.push(
         collection.subscribeChanges(() => {
-          scheduleSnapshot(name, () => collection.toArray);
+          scheduleSnapshot(name, () => collection.toArray, getItemKey);
         }),
       );
     } catch (err) {
@@ -206,6 +284,10 @@ export function stopPersistingSyncCollections(): void {
   }
   for (const timer of timers.values()) clearTimeout(timer);
   timers.clear();
+  baselines.clear();
+  pendingWrites.clear();
+  snapshotChannel?.close();
+  snapshotChannel = null;
 }
 
 /** Reset hydration state. Intended for tests. */

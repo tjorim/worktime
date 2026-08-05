@@ -1109,6 +1109,13 @@ export const SYNC_COLLECTIONS = {
   "work-locations": workLocationsCollection,
 } as unknown as Record<string, PersistableCollection<never>>;
 
+function getSyncCollectionItemKey(collectionName: string, item: unknown): string {
+  if (collectionName === "work-locations") {
+    return (item as WorkLocationEntry).date;
+  }
+  return (item as { id: string }).id;
+}
+
 /**
  * Seed the collections from their IndexedDB snapshots and keep persisting.
  *
@@ -1133,6 +1140,6 @@ const hydrationStarted =
  * attaches the change subscriptions, which nothing depends on for ordering.
  */
 export function initSyncCollectionPersistence(): Promise<void> {
-  startPersistingSyncCollections(SYNC_COLLECTIONS);
+  startPersistingSyncCollections(SYNC_COLLECTIONS, getSyncCollectionItemKey);
   return hydrationStarted;
 }

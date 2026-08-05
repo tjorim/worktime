@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clear, get, set } from "idb-keyval";
 import {
   getLoadedSnapshot,
@@ -14,6 +14,19 @@ import {
 
 const OWNER_KEY = "worktime_collection_snapshot_owner";
 const snapshotKey = (name: string) => `worktime_collection_snapshot_${name}`;
+const getItemKey = (_name: string, item: unknown) => (item as { id: string }).id;
+
+class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+
+  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+  postMessage = vi.fn();
+  close = vi.fn();
+
+  constructor(readonly name: string) {
+    FakeBroadcastChannel.instances.push(this);
+  }
+}
 
 /** Stand-in for a TanStack DB collection with a controllable change stream. */
 function fakeCollection<T>(items: T[] = []) {
@@ -40,6 +53,11 @@ beforeEach(async () => {
   resetHydrationForTests();
   stopPersistingSyncCollections();
   vi.useRealTimers();
+  FakeBroadcastChannel.instances = [];
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("hydrateSyncCollections", () => {
@@ -84,10 +102,10 @@ describe("startPersistingSyncCollections", () => {
   it("writes a snapshot after a change settles", async () => {
     vi.useFakeTimers();
     const tasks = fakeCollection<{ id: string }>([]);
-    startPersistingSyncCollections({ tasks } as unknown as Record<
-      string,
-      PersistableCollection<never>
-    >);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
 
     tasks.setItems([{ id: "t1" }]);
     await vi.advanceTimersByTimeAsync(600);
@@ -101,10 +119,10 @@ describe("startPersistingSyncCollections", () => {
   it("coalesces a burst of changes into one write", async () => {
     vi.useFakeTimers();
     const tasks = fakeCollection<{ id: string }>([]);
-    startPersistingSyncCollections({ tasks } as unknown as Record<
-      string,
-      PersistableCollection<never>
-    >);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
 
     tasks.setItems([{ id: "t1" }]);
     tasks.setItems([{ id: "t1" }, { id: "t2" }]);
@@ -118,6 +136,82 @@ describe("startPersistingSyncCollections", () => {
       version: 1,
       items: [{ id: "t1" }, { id: "t2" }, { id: "t3" }],
     });
+  });
+
+  it("merges a local addition with a snapshot written by another tab", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "original" }] });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection([{ id: "original" }]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "original" }, { id: "other-tab" }],
+    });
+    vi.useFakeTimers();
+    tasks.setItems([{ id: "original" }, { id: "this-tab" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "original" }, { id: "other-tab" }, { id: "this-tab" }],
+    });
+  });
+
+  it("applies local deletions without resurrecting rows added by another tab", async () => {
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "keep" }, { id: "delete" }],
+    });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection([{ id: "keep" }, { id: "delete" }]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "keep" }, { id: "delete" }, { id: "other-tab" }],
+    });
+    vi.useFakeTimers();
+    tasks.setItems([{ id: "keep" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "keep" }, { id: "other-tab" }],
+    });
+  });
+
+  it("notifies other tabs after writing and refreshes its persisted fallback", async () => {
+    vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+    const channel = FakeBroadcastChannel.instances[0];
+
+    tasks.setItems([{ id: "local" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(channel.postMessage).toHaveBeenCalledWith({ type: "snapshot_changed", name: "tasks" });
+
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "remote" }] });
+    channel.onmessage?.({
+      data: { type: "snapshot_changed", name: "tasks" },
+    } as MessageEvent<unknown>);
+    await vi.waitFor(() => expect(getLoadedSnapshot("tasks")).toEqual([{ id: "remote" }]));
   });
 });
 
