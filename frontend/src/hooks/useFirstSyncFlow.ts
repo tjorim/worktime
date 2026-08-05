@@ -44,7 +44,11 @@ import {
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
-import { applyPullToCollections, preloadSyncCollections } from "@/db/collections";
+import {
+  applyPullToCollections,
+  preloadSyncCollections,
+  prepareSyncCollectionsForOwner,
+} from "@/db/collections";
 import { logger } from "@/utils/logger";
 
 export type FirstSyncPhase =
@@ -197,6 +201,7 @@ export function useFirstSyncFlow(
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
+  const [preparedOwner, setPreparedOwner] = useState<string | null>(null);
 
   // Guard against running the flow more than once per mount when deps change.
   const flowStartedForUser = useRef<string | null>(null);
@@ -224,11 +229,24 @@ export function useFirstSyncFlow(
     async (uid: string, fetch: (url: string, init?: RequestInit) => Promise<Response>) => {
       // Skip if we already ran for this user in this session.
       if (flowStartedForUser.current === uid) return;
-      // Skip if a sync cursor already exists for this user.
-      if (hasSyncCursor(uid)) return;
 
       flowStartedForUser.current = uid;
       setPhase("checking");
+
+      // Auth wiring and this parent hook mount independently. Wait for the
+      // shared owner check before reading persisted rows, or a new account can
+      // preload the previous account's store while its purge is still running.
+      const ownerReady = await prepareSyncCollectionsForOwner(uid);
+      if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+      if (!ownerReady) return; // The owner change triggered a full reload.
+      setPreparedOwner(uid);
+
+      // An existing cursor skips data reconciliation, but not owner
+      // preparation: ongoing sync must not start over another account's rows.
+      if (hasSyncCursor(uid)) {
+        setPhase("idle");
+        return;
+      }
 
       const status = await fetchSyncStatus(fetch);
       // Bail if the component unmounted or auth changed while we were awaiting.
@@ -494,6 +512,7 @@ export function useFirstSyncFlow(
       conflictResolutionForUserRef.current = null;
       capturedServerDataRef.current = null;
       setConflictCounts(null);
+      setPreparedOwner(null);
     }
   }, [isAuthenticated]);
 
@@ -510,7 +529,8 @@ export function useFirstSyncFlow(
   //  a) The first-sync flow just finished (phase === "done"), OR
   //  b) A cursor already existed when the component mounted (phase === "idle" with cursor present)
   const isSyncEstablished =
-    phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId));
+    preparedOwner === userId &&
+    (phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId)));
 
   return { phase, isSyncEstablished, resolveConflict, conflictCounts, dismiss };
 }

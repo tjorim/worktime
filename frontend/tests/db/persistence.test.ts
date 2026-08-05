@@ -203,6 +203,28 @@ describe("purgePersistedDataOnOwnerChange", () => {
     expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-2");
   });
 
+  it("shares one purge when auth setup and first sync check the same owner", async () => {
+    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
+    let finishDelete: (() => void) | undefined;
+    const removeEntry = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDelete = resolve;
+        }),
+    );
+    stubOpfs(removeEntry);
+
+    const authTransition = purgePersistedDataOnOwnerChange("user-2");
+    const firstSyncTransition = purgePersistedDataOnOwnerChange("user-2");
+
+    expect(firstSyncTransition).toBe(authTransition);
+    await vi.waitFor(() => expect(removeEntry).toHaveBeenCalledOnce());
+    finishDelete?.();
+    await expect(authTransition).resolves.toBe(true);
+    await expect(firstSyncTransition).resolves.toBe(true);
+    expect(removeEntry).toHaveBeenCalledOnce();
+  });
+
   it("deletes the store on sign-out so a signed-out device keeps no one's records", async () => {
     localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
     const removeEntry = vi.fn(() => Promise.resolve());

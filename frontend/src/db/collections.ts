@@ -123,17 +123,8 @@ export function setSyncCollectionAuth(
     // previous one's records, and so the first-sync flow does not read them as
     // "local data" to upload into the new account. Signing *in* from anonymous
     // is exempt: that data is the signing-in user's own.
-    void purgePersistedDataOnOwnerChange(userId).then((purged) => {
-      if (purged) {
-        // Purging closes the SQLite database, and the previous account's rows
-        // are still in the in-memory collections. Reloading is the only way to
-        // be sure neither survives; clearing the query cache alone would leave
-        // both. Sign-out and account switches already reset the app, so this
-        // is not a surprising place to land.
-        window.location.reload();
-        return;
-      }
-      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+    void prepareSyncCollectionsForOwner(userId).then((ready) => {
+      if (ready) void queryClient.invalidateQueries({ queryKey: ["sync"] });
     });
     return;
   }
@@ -143,6 +134,23 @@ export function setSyncCollectionAuth(
   // collections stuck on their initial empty snapshot until some later local
   // mutation or manual refresh forces a pull.
   void queryClient.invalidateQueries({ queryKey: ["sync"] });
+}
+
+/**
+ * Ensure persisted rows belong to this owner before any sync flow reads them.
+ *
+ * Returns false when a reload was required. Both auth setup and first sync call
+ * this function; the persistence layer deduplicates their concurrent request.
+ */
+export async function prepareSyncCollectionsForOwner(userId: string | null): Promise<boolean> {
+  const purged = await purgePersistedDataOnOwnerChange(userId);
+  if (!purged) return true;
+
+  // Purging closes the SQLite database, and the previous account's rows are
+  // still in the in-memory collections. Reloading is the only way to be sure
+  // neither survives; clearing the query cache alone would leave both.
+  window.location.reload();
+  return false;
 }
 
 export function hasSyncCollectionAuth(): boolean {

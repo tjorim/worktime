@@ -85,11 +85,35 @@ describe("useFirstSyncFlow", () => {
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
-    // Should stay idle since cursor already exists
+    // The cursor skips network reconciliation, but persisted ownership is
+    // still prepared before ongoing sync is allowed to start.
     await waitFor(() => {
       expect(result.current.phase).toBe("idle");
+      expect(result.current.isSyncEstablished).toBe(true);
     });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("does not read or sync collections until persisted ownership is ready", async () => {
+    let finishOwnerCheck: ((ready: boolean) => void) | undefined;
+    const ownerSpy = vi
+      .spyOn(collections, "prepareSyncCollectionsForOwner")
+      .mockReturnValue(
+        new Promise<boolean>((resolve) => {
+          finishOwnerCheck = resolve;
+        }),
+      );
+    mockFetch.mockResolvedValue({ ok: true, json: async () => emptyStatus });
+
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
+
+    await waitFor(() => expect(result.current.phase).toBe("checking"));
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    finishOwnerCheck?.(false);
+    await waitFor(() => expect(ownerSpy).toHaveBeenCalledWith("user-1"));
+    expect(mockFetch).not.toHaveBeenCalled();
+    ownerSpy.mockRestore();
   });
 
   it("Branch D: completes immediately when neither side has data", async () => {

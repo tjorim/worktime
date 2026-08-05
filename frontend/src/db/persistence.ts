@@ -414,6 +414,18 @@ function setPurgePending(pending: boolean): void {
 }
 
 /**
+ * The owner transition currently touching the shared OPFS file.
+ *
+ * Auth setup and first sync live in different React components, so both may
+ * ask about the same owner during one mount. They must share one operation:
+ * two concurrent close/delete attempts can race each other, and first sync
+ * must not continue while the auth-side purge is still in flight.
+ */
+let ownerTransitionTarget: string | null = null;
+let ownerTransitionPromise: Promise<boolean> | null = null;
+let ownerTransitionQueue: Promise<void> = Promise.resolve();
+
+/**
  * Remove the OPFS file, reporting whether it is gone afterwards.
  *
  * Kept separate from closing the database because the open path calls this
@@ -494,8 +506,7 @@ async function deletePersistedDatabase(): Promise<boolean> {
  * the deletion before opening and refuses to open at all while the flag is still
  * set, so the surviving rows are never read even if they cannot yet be removed.
  */
-export async function purgePersistedDataOnOwnerChange(userId: string | null): Promise<boolean> {
-  const owner = userId ?? ANONYMOUS_OWNER;
+async function performOwnerTransition(owner: string): Promise<boolean> {
   const previous = readOwner();
   if (previous === owner) return false;
 
@@ -511,9 +522,34 @@ export async function purgePersistedDataOnOwnerChange(userId: string | null): Pr
   return purge;
 }
 
+export function purgePersistedDataOnOwnerChange(userId: string | null): Promise<boolean> {
+  const owner = userId ?? ANONYMOUS_OWNER;
+  if (ownerTransitionTarget === owner && ownerTransitionPromise) {
+    return ownerTransitionPromise;
+  }
+
+  const transition = ownerTransitionQueue.then(() => performOwnerTransition(owner));
+  ownerTransitionQueue = transition.then(
+    () => undefined,
+    () => undefined,
+  );
+  ownerTransitionTarget = owner;
+  ownerTransitionPromise = transition;
+  void transition.finally(() => {
+    if (ownerTransitionPromise === transition) {
+      ownerTransitionTarget = null;
+      ownerTransitionPromise = null;
+    }
+  });
+  return transition;
+}
+
 /** Reset module state. Intended for tests. */
 export function resetPersistenceForTests(): void {
   openPromise = null;
   openedDatabase = null;
+  ownerTransitionTarget = null;
+  ownerTransitionPromise = null;
+  ownerTransitionQueue = Promise.resolve();
   setPurgePending(false);
 }
