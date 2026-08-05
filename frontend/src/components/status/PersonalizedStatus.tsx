@@ -157,9 +157,11 @@ export function PersonalizedStatusContent({
   // Tooltip details for current shift badge
   const shiftTooltipDetails = `${currentShift.shift.emoji} ${currentShift.shift.name} shift (${formattedShiftTime})`;
 
+  // Single-team schedules (e.g. 9-5) have nothing meaningful to show in "Up Next" —
+  // it's the same shift every day. Drop that tile and let "Today" take the full width.
   return (
     <Row>
-      <Col md={6}>
+      <Col md={hasTeams ? 6 : 12}>
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
@@ -324,44 +326,50 @@ export function PersonalizedStatusContent({
           </Card.Body>
         </Card>
       </Col>
-      <Col md={6}>
-        <Card className="h-100">
-          <Card.Body className="d-flex flex-column">
-            <Card.Title as="h6" className="mb-2 text-success">
-              <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
-              {m.personalized_status_up_next()}
-            </Card.Title>
-            <div className="text-muted flex-grow-1">
-              {nextShift ? (
-                <div>
-                  <div className="fw-semibold">
-                    {nextShift.date.isSame(today, "day")
-                      ? m.today()
-                      : nextShift.date.isSame(today.add(1, "day"), "day")
-                        ? m.personalized_status_tomorrow()
-                        : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
-                          ? weekdayDateFormatter.format(
-                              (nextShift.date as { toDate: () => Date }).toDate(),
-                            )
-                          : nextShift.date.format("ddd, MMM D")}{" "}
-                    - {nextShift.shift.name}
+      {hasTeams && (
+        <Col md={6}>
+          <Card className="h-100">
+            <Card.Body className="d-flex flex-column">
+              <Card.Title as="h6" className="mb-2 text-success">
+                <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
+                {m.personalized_status_up_next()}
+              </Card.Title>
+              <div className="text-muted flex-grow-1">
+                {nextShift ? (
+                  <div>
+                    <div className="fw-semibold">
+                      {nextShift.date.isSame(today, "day")
+                        ? m.today()
+                        : nextShift.date.isSame(today.add(1, "day"), "day")
+                          ? m.personalized_status_tomorrow()
+                          : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
+                            ? weekdayDateFormatter.format(
+                                (nextShift.date as { toDate: () => Date }).toDate(),
+                              )
+                            : nextShift.date.format("ddd, MMM D")}{" "}
+                      - {nextShift.shift.name}
+                    </div>
+                    <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
+                    {shiftStartCountdown.isExpired && shiftEndCountdown.isExpired && (
+                      <CountdownBadge
+                        countdown={countdown}
+                        startTime={nextShiftStartTime}
+                        urgency
+                      />
+                    )}
                   </div>
-                  <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
-                  {shiftStartCountdown.isExpired && shiftEndCountdown.isExpired && (
-                    <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} urgency />
-                  )}
-                </div>
-              ) : (
-                <EmptyState
-                  icon="bi-calendar-x"
-                  title={m.personalized_status_no_next_title()}
-                  description={m.personalized_status_no_next_desc()}
-                />
-              )}
-            </div>
-          </Card.Body>
-        </Card>
-      </Col>
+                ) : (
+                  <EmptyState
+                    icon="bi-calendar-x"
+                    title={m.personalized_status_no_next_title()}
+                    description={m.personalized_status_no_next_desc()}
+                  />
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      )}
     </Row>
   );
 }
