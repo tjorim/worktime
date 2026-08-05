@@ -168,7 +168,8 @@ These are real and not addressed here:
   shared snapshot is safe and a reload shows the merged data, but applying a
   remote full snapshot to a live query collection would race local mutations
   and could resurrect deletions. Cross-tab live rendering remains deliberately
-  separate from cross-tab durability.
+  separate from cross-tab durability; see the related upstream coordination
+  limitation in [TanStack DB #1486](https://github.com/TanStack/db/issues/1486).
 - **Database backups are not configured in this repo.** Production hosting lives
   in a separate infra stack; soft deletes only help if the database itself
   survives.
