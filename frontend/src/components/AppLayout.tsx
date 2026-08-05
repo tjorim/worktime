@@ -54,6 +54,7 @@ export function AppLayout() {
         />
         <FirstSyncConflictDialog
           show={shell.syncConflictShow}
+          counts={shell.syncConflictCounts}
           onResolve={shell.onResolveSyncConflict}
           onDismiss={shell.onDismissSyncConflict}
         />

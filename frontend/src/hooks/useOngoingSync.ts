@@ -27,23 +27,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  applyPreferencesPull,
   appendToSyncOutbox,
-  buildLocalPreferencesPayload,
   bumpClientTimestamps,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
   extractConflictedItems,
-  fetchPreferences,
   getSyncOutboxSize,
+  getSyncQuarantineSize,
   maxConflictServerTimestamp,
   pullSyncData,
-  pushPreferences,
   pushSyncPayload,
+  pushSyncPayloadDetailed,
+  quarantineSyncChange,
+  reconcilePreferences,
   storeSyncCursor,
+  type PushOutcome,
   type SyncPullResponse,
   type SyncPushPayload,
-  type SyncPushResponse,
 } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
@@ -68,6 +68,12 @@ export interface OngoingSyncState {
   lastSyncedAt: string | null;
   /** Number of changes waiting in the outbox queue. */
   outboxCount: number;
+  /**
+   * Number of batches the server permanently refused and that were set aside
+   * so they could not wedge the outbox.  Non-zero means some local changes are
+   * not on the server and never will be without intervention.
+   */
+  quarantineCount: number;
   /** True when the last flush-and-pull cycle failed (server/network error). */
   hasSyncError: boolean;
   /**
@@ -113,41 +119,6 @@ export type ResolveOngoingConflictsFn = (
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
 
-function parseTimestampMs(ts: string | null | undefined): number {
-  if (!ts) return 0;
-  const ms = Date.parse(ts);
-  return Number.isFinite(ms) ? ms : 0;
-}
-
-async function reconcilePreferences(fetchFn: FetchFn): Promise<string | null> {
-  const [localPrefs, serverPrefs] = await Promise.all([
-    Promise.resolve(buildLocalPreferencesPayload()),
-    fetchPreferences(fetchFn),
-  ]);
-
-  const localTimestamp = localPrefs?.clientUpdatedAt ?? null;
-  const serverTimestamp = serverPrefs?.client_updated_at ?? null;
-
-  const localMs = parseTimestampMs(localTimestamp);
-  const serverMs = parseTimestampMs(serverTimestamp);
-
-  if (localPrefs && (!serverPrefs || localMs > serverMs)) {
-    const pushed = await pushPreferences(
-      fetchFn,
-      localPrefs.data,
-      localPrefs.clientUpdatedAt,
-    );
-    return pushed ? localPrefs.clientUpdatedAt : serverTimestamp;
-  }
-
-  if (serverPrefs && (!localPrefs || serverMs > localMs)) {
-    applyPreferencesPull(serverPrefs.data);
-    return serverPrefs.client_updated_at;
-  }
-
-  return localTimestamp ?? serverTimestamp;
-}
-
 /**
  * Hook that manages ongoing write-through sync and incremental pulls after the
  * first-sync flow has completed.
@@ -177,6 +148,10 @@ export function useOngoingSync(
   const [outboxCount, setOutboxCount] = useState<number>(() => {
     if (!userId) return 0;
     return getSyncOutboxSize(userId);
+  });
+  const [quarantineCount, setQuarantineCount] = useState<number>(() => {
+    if (!userId) return 0;
+    return getSyncQuarantineSize(userId);
   });
   const [hasSyncError, setHasSyncError] = useState(false);
   const [conflictCount, setConflictCount] = useState(0);
@@ -299,12 +274,15 @@ export function useOngoingSync(
 
         // --- Flush outbox ---
         let flushConflicts = 0;
+        // Set when this cycle hit a failure the pull cannot vindicate, so a
+        // successful pull afterwards does not clear the error state.
+        let suppressErrorReset = false;
         const dequeued = dequeueAndMergeSyncOutbox(userId);
         if (dequeued) {
           const { merged, commit } = dequeued;
-          let pushResult: SyncPushResponse | null;
+          let outcome: PushOutcome;
           try {
-            pushResult = await pushSyncPayload(syncFetch, merged);
+            outcome = await pushSyncPayloadDetailed(syncFetch, merged);
           } catch (err) {
             // Push threw (e.g. network error) — outbox stays intact for next retry.
             logger.error("useOngoingSync: outbox push threw:", err);
@@ -315,25 +293,57 @@ export function useOngoingSync(
             return;
           }
           if (!mountedRef.current) return;
-          if (!pushResult) {
-            // Push returned falsy — outbox stays intact for next retry.
+          if (!outcome.ok && outcome.permanent) {
+            // The server will never accept this batch (a validation rejection,
+            // or the bulk-delete guard). Leaving it queued would wedge the
+            // outbox forever and block every later change behind it, so move
+            // it aside — preserved and inspectable — and let sync carry on.
+            logger.error(
+              "useOngoingSync: outbox batch permanently rejected; quarantining",
+              { userId, status: outcome.status },
+            );
+            // Only drop it from the outbox once it is safely somewhere else.
+            // Quarantining and committing are the two halves of a move: if the
+            // quarantine write fails (quota, private browsing) and the outbox
+            // is cleared anyway, the batch exists in neither store and the
+            // user's changes are simply gone. A wedged outbox is recoverable;
+            // this is not, so the batch stays put when the move fails.
+            suppressErrorReset = true;
+            if (quarantineSyncChange(userId, merged, outcome.status)) {
+              commit();
+            } else {
+              logger.error(
+                "useOngoingSync: could not quarantine a rejected batch; leaving it in the outbox",
+                { userId, status: outcome.status },
+              );
+              scheduleBackOff();
+            }
+            setOutboxCount(getSyncOutboxSize(userId));
+            setQuarantineCount(getSyncQuarantineSize(userId));
+            setHasSyncError(true);
+            // No back-off on the success path: the failure is not transient,
+            // and the outbox is empty now, so the next cycle has real work.
+          } else if (!outcome.ok) {
+            // Transient failure — outbox stays intact for the next retry.
             setOutboxCount(getSyncOutboxSize(userId));
             setHasSyncError(true);
             scheduleBackOff();
             return;
           }
-          // Push succeeded — commit (clear) the outbox and continue to pull.
-          commit();
-          setOutboxCount(getSyncOutboxSize(userId));
-          // Surface any conflicts from the outbox flush.
-          flushConflicts = countPushConflicts(pushResult);
-          if (flushConflicts > 0) {
-            const extracted = extractConflictedItems(merged, pushResult);
-            conflictedPayloadRef.current = extracted;
-            conflictServerTimestampRef.current =
-              maxConflictServerTimestamp(pushResult);
-            setConflictedPayload(extracted);
-            setConflictCount(flushConflicts);
+          if (outcome.ok) {
+            const pushResult = outcome.response;
+            // Push succeeded — commit (clear) the outbox and continue to pull.
+            commit();
+            setOutboxCount(getSyncOutboxSize(userId));
+            // Surface any conflicts from the outbox flush.
+            flushConflicts = countPushConflicts(pushResult);
+            if (flushConflicts > 0) {
+              const extracted = extractConflictedItems(merged, pushResult);
+              conflictedPayloadRef.current = extracted;
+              conflictServerTimestampRef.current = maxConflictServerTimestamp(pushResult);
+              setConflictedPayload(extracted);
+              setConflictCount(flushConflicts);
+            }
           }
         }
 
@@ -353,7 +363,12 @@ export function useOngoingSync(
           if (!mountedRef.current) return;
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
-          setHasSyncError(false);
+          // A pull succeeding says nothing about the batch that was just
+          // refused — quarantined or still stuck in the outbox, those records
+          // are not on the server and will not get there on their own. The
+          // error state has to survive this cycle rather than being cleared by
+          // unrelated progress.
+          if (!suppressErrorReset) setHasSyncError(false);
           // Reset back-off on success.
           clearBackOff();
           if (flushConflicts === 0 && conflictedPayloadRef.current === null) {
@@ -434,6 +449,7 @@ export function useOngoingSync(
       userId ? localStorage.getItem(getSyncCursorKey(userId)) : null,
     );
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
+    setQuarantineCount(userId ? getSyncQuarantineSize(userId) : 0);
     setHasSyncError(false);
     setConflictCount(0);
     conflictedPayloadRef.current = null;
@@ -484,8 +500,34 @@ export function useOngoingSync(
         const cursorBeforePush = localStorage.getItem(getSyncCursorKey(userId)) ?? undefined;
         // Attempt an immediate push.
         const result = await pushSyncPayload(fetchFn, change);
+        if (!result) {
+          // Queue *before* the mounted check. Bailing out first (as this used
+          // to) silently discarded the change whenever the provider unmounted
+          // while the push was in flight — a tab closed or a sign-out landing
+          // mid-request — and nothing would ever retry it: the outbox was
+          // empty, so the write existed only in this device's memory and never
+          // reached the server. Persisting first costs nothing when we are
+          // still mounted (the flush path clears it) and is the whole reason
+          // the outbox exists when we are not.
+          const queued = appendToSyncOutbox(userId, change);
+          if (!mountedRef.current) return;
+          setOutboxCount(getSyncOutboxSize(userId));
+          setHasSyncError(true);
+          if (queued) {
+            scheduleBackOff();
+          } else {
+            // localStorage rejected the write (quota, private browsing). The
+            // change is now only in memory; say so rather than showing a
+            // healthy sync state over data that will never be uploaded.
+            logger.error(
+              "useOngoingSync: change could not be persisted to the outbox",
+              { userId },
+            );
+          }
+          return;
+        }
         if (!mountedRef.current) return;
-        if (result) {
+        {
           // Detect conflicts — if any records were rejected, do a full pull (no
           // `since`) so that conflicted records are always included regardless of
           // where the local cursor sits relative to the server's `updated_at`.
@@ -575,19 +617,6 @@ export function useOngoingSync(
               setHasSyncError(true);
             }
           }
-        } else {
-          // Push failed — queue for later flush. Without setHasSyncError and
-          // scheduleBackOff here, this failure was invisible to the rest of
-          // the hook: hasSyncError stayed false (no UI indication anything
-          // was wrong) and nothing scheduled a retry — the change would sit
-          // in the outbox until some *unrelated* trigger (the next
-          // enqueueChange, a visibility/online event) happened to run
-          // flushAndPull. Now it drives the same back-off retry timer every
-          // other failure path in this file already uses.
-          appendToSyncOutbox(userId, change);
-          setOutboxCount(getSyncOutboxSize(userId));
-          setHasSyncError(true);
-          scheduleBackOff();
         }
       };
 
@@ -644,6 +673,7 @@ export function useOngoingSync(
       isSyncing: false,
       lastSyncedAt: null,
       outboxCount: 0,
+      quarantineCount: 0,
       hasSyncError: false,
       conflictCount: 0,
       conflictedPayload: null,
@@ -658,6 +688,7 @@ export function useOngoingSync(
     isSyncing,
     lastSyncedAt,
     outboxCount,
+    quarantineCount,
     hasSyncError,
     conflictCount,
     conflictedPayload,

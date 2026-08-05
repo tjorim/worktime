@@ -164,7 +164,7 @@ describe("OngoingConflictDialog", () => {
       expect(onResolve).toHaveBeenCalledWith("keep-mine");
     });
 
-    it("clicking Dismiss calls onResolve('keep-server') without requiring a selection", async () => {
+    it("clicking 'Discard my changes' calls onResolve('keep-server') without requiring a selection", async () => {
       const user = userEvent.setup();
       const onResolve = vi.fn();
       render(
@@ -175,8 +175,38 @@ describe("OngoingConflictDialog", () => {
           onResolve={onResolve}
         />,
       );
-      await user.click(screen.getByRole("button", { name: /dismiss/i }));
+      // The button used to read "Dismiss", which hid the fact that it
+      // permanently discards the local edits for every conflicted record.
+      await user.click(screen.getByRole("button", { name: /discard my changes/i }));
       expect(onResolve).toHaveBeenCalledWith("keep-server");
+    });
+
+    it("does not resolve the conflict when the modal is closed without a choice", async () => {
+      const onResolve = vi.fn();
+      const { rerender } = render(
+        <OngoingConflictDialog
+          show={true}
+          conflictCount={1}
+          conflictedPayload={emptyPayload()}
+          onResolve={onResolve}
+        />,
+      );
+
+      // Escape and backdrop clicks are disabled, but even if react-bootstrap
+      // closes the modal some other way it must not silently pick a side —
+      // onHide used to be wired straight to "keep-server", so a stray Escape
+      // threw away the user's local version of every conflicted record.
+      await userEvent.setup().keyboard("{Escape}");
+      rerender(
+        <OngoingConflictDialog
+          show={false}
+          conflictCount={1}
+          conflictedPayload={emptyPayload()}
+          onResolve={onResolve}
+        />,
+      );
+
+      expect(onResolve).not.toHaveBeenCalled();
     });
   });
 });

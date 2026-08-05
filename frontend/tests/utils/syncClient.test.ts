@@ -9,6 +9,8 @@ import {
   clearSyncOutbox,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
+  countPayloadDeletes,
+  EmptyLocalReplaceError,
   extractConflictedItems,
   fetchPreferences,
   fetchSyncStatus,
@@ -910,7 +912,8 @@ describe("syncClient", () => {
     });
 
     it("adds delete entries for server-only labels not present locally", () => {
-      localStorage.clear(); // no local labels
+      localStorage.clear(); // no local labels beyond the anchor
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -926,6 +929,9 @@ describe("syncClient", () => {
 
     it("does not re-delete already soft-deleted server labels", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -938,6 +944,9 @@ describe("syncClient", () => {
 
     it("adds delete entries for server-only tasks", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -950,6 +959,9 @@ describe("syncClient", () => {
 
     it("does not re-delete already soft-deleted server tasks", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -962,6 +974,9 @@ describe("syncClient", () => {
 
     it("adds delete entries for server-only templates", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -992,6 +1007,9 @@ describe("syncClient", () => {
 
     it("adds delete entries for server-only work locations", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -1004,6 +1022,9 @@ describe("syncClient", () => {
 
     it("does not re-delete already soft-deleted work locations", () => {
       localStorage.clear();
+      // buildKeepLocalReplacePayload refuses a wholly empty local side, so
+      // anchor it with one unrelated local record.
+      labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -1012,6 +1033,88 @@ describe("syncClient", () => {
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
       expect(result.work_locations.find((wl) => wl.date === "2026-01-10")).toBeUndefined();
+    });
+
+    it("declares the whole delete total on every chunk of a split push", async () => {
+      // Each chunk is its own server transaction. Without a declared total the
+      // bulk-delete guard sees only its own slice, so the first chunk of a
+      // destructive batch commits before a later one is refused — leaving the
+      // account partly erased.
+      const payload = {
+        ...emptyPayload(),
+        labels: Array.from({ length: MAX_SYNC_PUSH_ITEMS + 200 }, (_, i) => ({
+          id: `lbl-${i}`,
+          action: "delete" as const,
+          client_updated_at: "2026-01-01T00:00:00.000Z",
+        })),
+      };
+      expect(countPayloadDeletes(payload)).toBe(MAX_SYNC_PUSH_ITEMS + 200);
+
+      mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+      await pushSyncPayload(mockFetch, payload);
+
+      const bodies = mockFetch.mock.calls
+        .filter(([url]: [string]) => url === "/api/sync/push")
+        .map(([, init]: [string, RequestInit]) => JSON.parse(String(init.body)));
+
+      expect(bodies.length).toBeGreaterThan(1);
+      for (const body of bodies) {
+        expect(body.declared_delete_total).toBe(MAX_SYNC_PUSH_ITEMS + 200);
+      }
+    });
+
+    it("omits the delete total when a split push deletes nothing", async () => {
+      const payload = {
+        ...emptyPayload(),
+        labels: Array.from({ length: MAX_SYNC_PUSH_ITEMS + 5 }, (_, i) => ({
+          id: `lbl-${i}`,
+          action: "create" as const,
+          client_updated_at: "2026-01-01T00:00:00.000Z",
+          name: `Label ${i}`,
+          color: "#123456",
+        })),
+      };
+
+      mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+      await pushSyncPayload(mockFetch, payload);
+
+      const bodies = mockFetch.mock.calls
+        .filter(([url]: [string]) => url === "/api/sync/push")
+        .map(([, init]: [string, RequestInit]) => JSON.parse(String(init.body)));
+      expect(bodies.length).toBeGreaterThan(1);
+      for (const body of bodies) {
+        expect(body.declared_delete_total).toBeUndefined();
+      }
+    });
+
+    it("refuses to build a replace payload when the local side is empty", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("server-lbl")],
+        tasks: [makeServerTask("server-task")],
+      };
+
+      // An empty local snapshot would turn "keep my local data" into a batch
+      // that deletes every server record. It is far more likely to mean the
+      // local collections have not loaded than that the user wants their
+      // account emptied, so it must not be silently turned into deletes.
+      expect(() => buildKeepLocalReplacePayload(localPayload, serverData)).toThrow(
+        EmptyLocalReplaceError,
+      );
+    });
+
+    it("opts in to the server's bulk-delete guard for a confirmed replace", () => {
+      labelsCollection.insert({ id: "local-lbl", name: "Local", color: "#FFFFFF" });
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("server-only-lbl")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.allow_bulk_delete).toBe(true);
     });
   });
 

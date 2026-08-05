@@ -5,7 +5,7 @@ import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
 import type { WizardStep } from "@/components/wizardStepConfig";
 import type { ScheduleOption } from "@/data/rosters";
 import type { TabKey } from "@/contexts/SettingsContext";
-import type { ConflictChoice } from "@/hooks/useFirstSyncFlow";
+import type { ConflictChoice, FirstSyncConflictCounts } from "@/hooks/useFirstSyncFlow";
 
 export interface FeatureAnnouncement {
   name: string;
@@ -44,6 +44,7 @@ export interface AppShellContextType {
   onDeferTeamWizard: () => void;
   // First-sync conflict dialog state
   syncConflictShow: boolean;
+  syncConflictCounts: FirstSyncConflictCounts | null;
   onResolveSyncConflict: (choice: ConflictChoice) => void;
   onDismissSyncConflict: () => void;
 }

@@ -91,6 +91,22 @@ const emptyPullResponse = {
   server_timestamp: "2026-01-02T00:00:00.000Z",
 };
 
+/** A server side holding one live label, matching `populatedStatus`. */
+const populatedPullResponse = {
+  ...emptyPullResponse,
+  labels: [
+    {
+      id: "server-label-1",
+      user_id: 1,
+      name: "Server label",
+      color: "#123456",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+      deleted_at: null,
+    },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -141,7 +157,7 @@ interface SyncHarnessProps {
 }
 
 function SyncHarness({ isAuthenticated, userId, fetchFn }: SyncHarnessProps) {
-  const { phase, resolveConflict, dismiss } = useFirstSyncFlow(
+  const { phase, resolveConflict, conflictCounts, dismiss } = useFirstSyncFlow(
     isAuthenticated,
     userId,
     fetchFn as (url: string, init?: RequestInit) => Promise<Response>,
@@ -151,6 +167,7 @@ function SyncHarness({ isAuthenticated, userId, fetchFn }: SyncHarnessProps) {
       <div data-testid="sync-phase">{phase}</div>
       <FirstSyncConflictDialog
         show={phase === "conflict"}
+        counts={conflictCounts}
         onResolve={resolveConflict}
         onDismiss={dismiss}
       />
@@ -433,6 +450,9 @@ describe("§2 Branch C / §5 — conflict handling", () => {
 
     const mockFetch = buildFetchMock({
       "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      // Branch C pulls the server side up front so the dialog can show how
+      // many records each option would discard.
+      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -446,6 +466,61 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       },
       { timeout: 5000 },
     );
+
+    // Both sides' counts are shown, and the non-destructive option is offered.
+    expect(screen.getByText(/This device has 1 entries; your account has 1\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Keep everything/i)).toBeInTheDocument();
+  });
+
+  it("resolves conflict with 'keep both': pushes local records and deletes nothing", async () => {
+    const user = userEvent.setup();
+    seedLocalTask();
+
+    let statusCalls = 0;
+    const pushBodies: string[] = [];
+    const smartFetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes("/api/sync/status")) {
+        statusCalls++;
+        return statusCalls === 1
+          ? { ok: true, json: async () => populatedStatus }
+          : { ok: true, json: async () => emptyStatus };
+      }
+      if (url.includes("/api/sync/push")) {
+        pushBodies.push(String(init?.body ?? ""));
+        return { ok: true, json: async () => emptyPushResponse };
+      }
+      if (url.includes("/api/sync/pull")) {
+        return { ok: true, json: async () => populatedPullResponse };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    }) as unknown as FetchFn;
+
+    renderSync(true, TEST_USER_ID, smartFetch);
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("sync-phase")).toHaveTextContent("conflict");
+      },
+      { timeout: 5000 },
+    );
+
+    // "Keep everything" is preselected, so confirming directly takes it.
+    await user.click(screen.getByRole("button", { name: /Apply/i }));
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("sync-phase")).toHaveTextContent("done");
+      },
+      { timeout: 5000 },
+    );
+
+    // The whole point of this path: no record on either side is removed.
+    expect(pushBodies.length).toBeGreaterThan(0);
+    for (const body of pushBodies) {
+      expect(body).not.toContain('"delete"');
+      expect(body).not.toContain("allow_bulk_delete");
+    }
+    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
   });
 
   it("resolves conflict with 'keep local': pulls server state then pushes local as replace", async () => {
@@ -550,6 +625,7 @@ describe("§2 Branch C / §5 — conflict handling", () => {
 
     const mockFetch = buildFetchMock({
       "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);

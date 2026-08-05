@@ -789,6 +789,32 @@ MAX_SYNC_PUSH_ITEMS = 1000
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 
+    # Opt-in acknowledgement that this batch is *meant* to remove a large share
+    # of the account's data (the first-sync "keep local data" replace is the
+    # only flow that legitimately does so, and only after the user confirms it
+    # in a dialog).  Left false, ``push_changes`` refuses batches that would
+    # tombstone most of the account — see BULK_DELETE_* in
+    # ``app/services/sync_service.py``.  A client bug that pushes an empty
+    # local snapshot as the new truth is by far the most damaging thing this
+    # endpoint can be asked to do, and it is indistinguishable from a genuine
+    # replace without this flag.
+    allow_bulk_delete: bool = False
+
+    # Total number of delete actions in the *logical* push this request is part
+    # of. Clients split an oversized payload into several requests, and each is
+    # its own transaction, so a per-request guard sees only its own slice: 1500
+    # deletes chunked as 1000 + 500 lets the first chunk through (1000 of 1500
+    # active is under the fraction) and only refuses the second, leaving the
+    # account two-thirds erased. No per-request rule can catch that first chunk
+    # — on its own information it is an ordinary partial delete — so the client
+    # states the total up front and every chunk is judged against it.
+    #
+    # Advisory, and deliberately so: it can only make the guard stricter, and
+    # the thing being guarded against is our own client pushing an empty local
+    # snapshot as truth. Such a client computes deletes for every server row,
+    # so it declares the real total and is refused on the first chunk.
+    declared_delete_total: int | None = Field(default=None, ge=0)
+
     labels: list[LabelSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     tasks: list[TaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     templates: list[TemplateSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
