@@ -61,6 +61,7 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024; // 10 MiB
 
 // ---------------------------------------------------------------------------
 // Per-user write mutex — serializes concurrent writes to the same .hday file
@@ -109,6 +110,13 @@ class TeamNotFoundError extends Error {
   constructor(detail: string) {
     super(detail);
     this.name = "TeamNotFoundError";
+  }
+}
+
+class PayloadTooLargeError extends Error {
+  constructor() {
+    super("Request body exceeds the maximum allowed size");
+    this.name = "PayloadTooLargeError";
   }
 }
 
@@ -416,6 +424,42 @@ function jsonResponse(
 }
 
 // ---------------------------------------------------------------------------
+// Request body helpers
+// ---------------------------------------------------------------------------
+
+// Reads the request body as UTF-8 text, aborting once more than `maxBytes` have
+// actually been received. Content-Length is client-supplied and not trustworthy
+// on its own — a client that omits it or lies about it can otherwise stream an
+// unbounded amount of data into memory via req.json()/req.text(). This caps the
+// real byte count regardless of what the header claims.
+async function readBodyTextWithLimit(req: Request, maxBytes: number): Promise<string> {
+  if (!req.body) return "";
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new PayloadTooLargeError();
+    }
+    chunks.push(value);
+  }
+
+  const combined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8").decode(combined);
+}
+
+// ---------------------------------------------------------------------------
 // Request handler
 // ---------------------------------------------------------------------------
 
@@ -497,14 +541,27 @@ async function handleRequest(req: Request): Promise<Response> {
 
     // PUT /hday/:username
     if (req.method === "PUT") {
-      const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-      if (Number.isNaN(contentLength) || contentLength > 10 * 1024 * 1024) {
+      // Fast-path rejection when the client declares an oversized body up front.
+      // readBodyTextWithLimit() below is the authoritative cap regardless — this
+      // just avoids reading anything at all from an honestly-labeled huge request.
+      const declaredLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+      if (!Number.isNaN(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES) {
         return jsonResponse({ detail: "Payload too large" }, 413, corsHeaders);
+      }
+
+      let bodyText: string;
+      try {
+        bodyText = await readBodyTextWithLimit(req, MAX_REQUEST_BODY_BYTES);
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          return jsonResponse({ detail: "Payload too large" }, 413, corsHeaders);
+        }
+        return jsonResponse({ detail: "Invalid request body" }, 400, corsHeaders);
       }
 
       let body: { raw?: string; events?: HdayEvent[]; etag?: string | null };
       try {
-        body = (await req.json()) as { raw?: string; events?: HdayEvent[]; etag?: string | null };
+        body = JSON.parse(bodyText) as { raw?: string; events?: HdayEvent[]; etag?: string | null };
       } catch {
         return jsonResponse({ detail: "Invalid JSON body" }, 400, corsHeaders);
       }
