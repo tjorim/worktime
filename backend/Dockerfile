@@ -19,22 +19,14 @@ COPY VERSION ./VERSION
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Data directory — mount a named volume here on the VPS to persist the hday files.
-RUN mkdir -p /var/data/worktime/hday_files
-
 # Run as non-root user for security hardening.
-# chown must happen BEFORE the VOLUME declaration so initial volume content
-# inherits the correct ownership when Docker initialises a new named volume.
 RUN groupadd --gid 1000 appgroup \
     && useradd --uid 1000 --gid appgroup --shell /bin/bash --no-create-home appuser \
-    && chown -R appuser:appgroup /app /var/data/worktime
-
-VOLUME ["/var/data/worktime"]
+    && chown -R appuser:appgroup /app
 
 USER appuser
 
 ENV ENVIRONMENT=production
-ENV SHARE_DIR=/var/data/worktime/hday_files
 # DATABASE_URL must be provided at runtime via environment variables or secrets.
 # Example: postgresql+asyncpg://<user>:<password>@<host>/<database>
 

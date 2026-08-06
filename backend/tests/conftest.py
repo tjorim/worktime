@@ -63,8 +63,6 @@ def _assert_test_database_url(url: str) -> None:
 def reset_cache() -> Generator[None, None, None]:
     """Clear cache before each test to ensure test isolation."""
     cache = get_cache()
-    cache._hday_entries.clear()
-    cache._team_entries.clear()
     cache._holiday_entries.clear()
     yield
 

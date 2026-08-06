@@ -1,7 +1,7 @@
-"""In-memory cache store for .hday files and team configurations.
+"""In-memory cache store for holiday data.
 
 This module provides a singleton FileCache class that manages cached data
-with TTL expiry and mtime validation support.
+with TTL expiry support.
 """
 
 from __future__ import annotations
@@ -9,56 +9,53 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from app.cache.models import HdayCacheEntry, HolidayCacheEntry, TeamConfigCacheEntry
+from app.cache.models import HolidayCacheEntry
 from app.config.settings import settings
-from app.models.hday import HdayEvent
 
 logger = logging.getLogger(__name__)
 
 
 class FileCache:
-    """Singleton in-memory cache for .hday files and team configurations.
-    
-    This cache provides fast access to frequently-accessed file data with
-    TTL-based expiry and mtime validation support for detecting external changes.
-    When CACHE_ENABLED=False, all operations become no-ops that return cache misses.
+    """Singleton in-memory cache for holiday data.
+
+    This cache provides fast access to frequently-accessed data with
+    TTL-based expiry. When CACHE_ENABLED=False, all operations become
+    no-ops that return cache misses.
     """
-    
+
     _instance: FileCache | None = None
-    
+
     def __new__(cls):
         """Ensure singleton pattern."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         """Initialize cache storage if not already initialized."""
         if self._initialized:
             return
-            
-        self._hday_entries: dict[str, HdayCacheEntry] = {}
-        self._team_entries: dict[str, TeamConfigCacheEntry] = {}
+
         self._holiday_entries: dict[str, HolidayCacheEntry] = {}
         self._initialized = True
         logger.info("FileCache initialized")
-    
+
     def _is_enabled(self) -> bool:
         """Check if caching is enabled in settings.
-        
+
         Returns:
             True if caching is enabled, False otherwise
         """
         return settings.CACHE_ENABLED
-    
+
     def _is_fresh(self, cached_at: float, ttl: int | None = None) -> bool:
         """Check if a cache entry is fresh based on TTL.
-        
+
         Args:
             cached_at: Timestamp when the entry was cached
             ttl: Optional TTL override in seconds. Defaults to settings.CACHE_TTL.
-            
+
         Returns:
             True if the entry is within TTL, False if stale
         """
@@ -66,274 +63,6 @@ class FileCache:
         age = current_time - cached_at
         effective_ttl = ttl if ttl is not None else settings.CACHE_TTL
         return age < effective_ttl
-    
-    # .hday cache operations
-    
-    def get_hday(self, username: str) -> HdayCacheEntry | None:
-        """Get cached .hday entry for a username.
-        
-        Returns the cached entry if it exists and is fresh (within TTL),
-        or None if the entry is missing or stale.
-        
-        Args:
-            username: The username to lookup
-            
-        Returns:
-            Cached entry if fresh, None otherwise
-        """
-        if not self._is_enabled():
-            return None
-            
-        entry = self._hday_entries.get(username)
-        if entry is None:
-            return None
-            
-        if not self._is_fresh(entry.cached_at):
-            # Entry is stale, remove it
-            del self._hday_entries[username]
-            return None
-            
-        return entry
-    
-    def set_hday(
-        self,
-        username: str,
-        raw: str,
-        events: list[HdayEvent],
-        etag: str,
-        mtime: float
-    ) -> None:
-        """Store .hday entry in cache.
-        
-        Args:
-            username: The username to cache
-            raw: Raw .hday file content
-            events: List of parsed HdayEvent objects
-            etag: Precomputed SHA-256 etag
-            mtime: File modification timestamp
-        """
-        if not self._is_enabled():
-            return
-            
-        entry = HdayCacheEntry(
-            raw=raw,
-            events=events,
-            etag=etag,
-            mtime=mtime,
-            cached_at=datetime.now().timestamp()
-        )
-        self._hday_entries[username] = entry
-        logger.debug(f"Cached .hday entry (TTL: {settings.CACHE_TTL}s)")
-    
-    def invalidate_hday(self, username: str) -> None:
-        """Remove .hday entry from cache.
-        
-        Args:
-            username: The username to invalidate
-        """
-        if not self._is_enabled():
-            return
-            
-        if username in self._hday_entries:
-            del self._hday_entries[username]
-            logger.debug("Invalidated .hday cache entry")
-    
-    def needs_mtime_check(self, username: str) -> bool:
-        """Check if an entry exists but may need mtime validation.
-        
-        This signals when a cache entry is stale (beyond TTL) but may still
-        be valid if the file's mtime hasn't changed.
-        
-        Args:
-            username: The username to check
-            
-        Returns:
-            True if entry exists but is stale, False otherwise
-        """
-        if not self._is_enabled():
-            return False
-            
-        entry = self._hday_entries.get(username)
-        if entry is None:
-            return False
-            
-        # Entry exists but is stale
-        return not self._is_fresh(entry.cached_at)
-    
-    def get_hday_stale(self, username: str) -> HdayCacheEntry | None:
-        """Get cached .hday entry even if stale (beyond TTL).
-        
-        Unlike get_hday(), this does not remove stale entries. Use this when
-        you want to check if a stale entry might still be valid via mtime.
-        
-        Args:
-            username: The username to lookup
-            
-        Returns:
-            Cached entry (fresh or stale) if exists, None otherwise
-        """
-        if not self._is_enabled():
-            return None
-            
-        return self._hday_entries.get(username)
-    
-    def refresh_hday_ttl(self, username: str) -> bool:
-        """Refresh the TTL of a cached .hday entry.
-        
-        Updates the cached_at timestamp to current time, effectively
-        extending the entry's TTL without re-reading the file.
-        
-        Args:
-            username: The username whose entry to refresh
-            
-        Returns:
-            True if entry was refreshed, False if entry doesn't exist
-        """
-        if not self._is_enabled():
-            return False
-            
-        entry = self._hday_entries.get(username)
-        if entry is None:
-            return False
-            
-        # Update cached_at to extend TTL
-        entry.cached_at = datetime.now().timestamp()
-        logger.debug("Refreshed .hday cache TTL")
-        return True
-    
-    # Team config cache operations
-    
-    def get_team_config(self, team_id: str) -> TeamConfigCacheEntry | None:
-        """Get cached team configuration entry.
-        
-        Returns the cached entry if it exists and is fresh (within TTL),
-        or None if the entry is missing or stale.
-        
-        Args:
-            team_id: The team identifier to lookup
-            
-        Returns:
-            Cached entry if fresh, None otherwise
-        """
-        if not self._is_enabled():
-            return None
-            
-        entry = self._team_entries.get(team_id)
-        if entry is None:
-            return None
-            
-        if not self._is_fresh(entry.cached_at):
-            # Entry is stale, remove it
-            del self._team_entries[team_id]
-            return None
-            
-        return entry
-    
-    def set_team_config(
-        self,
-        team_id: str,
-        name: str,
-        members: list[dict],
-        config_mtime: float,
-        people_mtime: float
-    ) -> None:
-        """Store team configuration entry in cache.
-        
-        Args:
-            team_id: The team identifier
-            name: Team name from config file
-            members: List of team member dicts with username and display_name
-            config_mtime: Modification timestamp of config file
-            people_mtime: Modification timestamp of people file
-        """
-        if not self._is_enabled():
-            return
-            
-        entry = TeamConfigCacheEntry(
-            name=name,
-            members=members,
-            config_mtime=config_mtime,
-            people_mtime=people_mtime,
-            cached_at=datetime.now().timestamp()
-        )
-        self._team_entries[team_id] = entry
-        logger.debug(f"Cached team config entry (TTL: {settings.CACHE_TTL}s)")
-    
-    def invalidate_team_config(self, team_id: str) -> None:
-        """Remove team configuration entry from cache.
-        
-        Args:
-            team_id: The team identifier to invalidate
-        """
-        if not self._is_enabled():
-            return
-            
-        if team_id in self._team_entries:
-            del self._team_entries[team_id]
-            logger.debug("Invalidated team config cache entry")
-    
-    def get_team_config_stale(self, team_id: str) -> TeamConfigCacheEntry | None:
-        """Get cached team config entry even if stale (beyond TTL).
-        
-        Unlike get_team_config(), this does not remove stale entries. Use this when
-        you want to check if a stale entry might still be valid via mtime.
-        
-        Args:
-            team_id: The team identifier to lookup
-            
-        Returns:
-            Cached entry (fresh or stale) if exists, None otherwise
-        """
-        if not self._is_enabled():
-            return None
-            
-        return self._team_entries.get(team_id)
-    
-    def refresh_team_config_ttl(self, team_id: str) -> bool:
-        """Refresh the TTL of a cached team config entry.
-        
-        Updates the cached_at timestamp to current time, effectively
-        extending the entry's TTL without re-reading the files.
-        
-        Args:
-            team_id: The team identifier whose entry to refresh
-            
-        Returns:
-            True if entry was refreshed, False if entry doesn't exist
-        """
-        if not self._is_enabled():
-            return False
-            
-        entry = self._team_entries.get(team_id)
-        if entry is None:
-            return False
-            
-        # Update cached_at to extend TTL
-        entry.cached_at = datetime.now().timestamp()
-        logger.debug("Refreshed team config cache TTL")
-        return True
-    
-    def needs_team_config_mtime_check(self, team_id: str) -> bool:
-        """Check if a team config entry exists but may need mtime validation.
-        
-        This signals when a cache entry is stale (beyond TTL) but may still
-        be valid if the files' mtimes haven't changed.
-        
-        Args:
-            team_id: The team identifier to check
-            
-        Returns:
-            True if entry exists but is stale, False otherwise
-        """
-        if not self._is_enabled():
-            return False
-            
-        entry = self._team_entries.get(team_id)
-        if entry is None:
-            return False
-            
-        # Entry exists but is stale
-        return not self._is_fresh(entry.cached_at)
 
     # Holiday cache operations
 

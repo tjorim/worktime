@@ -1,6 +1,8 @@
 # Worktime Backend - Quick Start
 
-This is the Python/FastAPI backend for Worktime, serving as a bridge between the web frontend and .hday files on a shared network drive.
+This is the Python/FastAPI backend for Worktime, providing database-backed APIs for the web frontend
+(users, time tracking, work locations, sync, and personal Gantt tasks). Local `.hday` file/team access
+is handled separately by `hday-helper/`, not by this backend.
 
 ## Requirements
 
@@ -30,9 +32,8 @@ cp .env.example .env
 | `ENVIRONMENT`   | `development`           | Environment mode: `development` or `production` |
 | `HOST`          | `0.0.0.0`               | Server bind address                             |
 | `PORT`          | `8000`                  | Server port                                     |
-| `SHARE_DIR`     | `./data/hday_files`     | Path to .hday files directory                   |
 | `CORS_ORIGINS`  | `http://localhost:5173` | Comma-separated list of allowed CORS origins    |
-| `CACHE_ENABLED` | `true`                  | Enable/disable caching                          |
+| `CACHE_ENABLED` | `true`                  | Enable/disable holiday-response caching         |
 | `CACHE_TTL`     | `10`                    | Cache TTL in seconds                            |
 
 ## Running the Server
@@ -83,8 +84,6 @@ backend/
 │   ├── routers/             # API route handlers
 │   ├── services/            # Business logic
 │   └── audit/               # Audit logging
-├── data/
-│   └── hday_files/          # .hday files (created automatically)
 ├── pyproject.toml           # Python dependencies and tool configuration
 ├── .env.example             # Example environment file
 └── run.sh                   # Quick start script
@@ -104,18 +103,6 @@ In **production**:
 - Always use explicit origin list: `CORS_ORIGINS=https://example.com,https://app.example.com`
 - Wildcard (`*`) is rejected for security
 
-### Share Directory
-
-In **development**:
-
-- Uses local directory `./data/hday_files`
-- Created automatically if it doesn't exist
-
-In **production**:
-
-- Set `SHARE_DIR` to mounted network share path (NFS/SMB)
-- Example: `SHARE_DIR=/mnt/worktime_share`
-
 ## Startup Logging
 
 The server logs configuration at startup:
@@ -127,7 +114,6 @@ Worktime Backend Configuration
 Environment:     development
 Host:            0.0.0.0
 Port:            8000
-Share Directory: /path/to/data/hday_files
 CORS Origins:    http://localhost:5173
 Cache:           enabled (TTL: 10s)
 ============================================================

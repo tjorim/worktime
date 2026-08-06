@@ -6,20 +6,20 @@ This file is intended to replace the old phase-summary documents with one up-to-
 
 ## Purpose
 
-The backend has two responsibilities:
-
-- expose the shared `.hday` file APIs used for team and personal time-off data
-- expose authenticated PostgreSQL-backed APIs for Worktime's database features
+The backend's responsibility is to expose authenticated PostgreSQL-backed APIs for Worktime's
+database features.
 
 The service is built with FastAPI and currently combines:
 
-- shared-file access under `SHARE_DIR`
 - PostgreSQL access through SQLAlchemy and Alembic
 - SuperTokens authentication and session handling
-- in-memory caching for file-backed operations
-- a non-production debug benchmark endpoint
+- in-memory caching for holiday API responses
 
-There is no `/v1` prefix. All backend routers are mounted under `/api`, so the effective route groups are `/api/health`, `/api/hday/*`, `/api/team/*`, `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`, and `/api/debug/*`.
+Legacy shared-`.hday`-file and team endpoints (`/api/hday/*`, `/api/team/*`) have been removed —
+that's handled entirely client-side now, via a local helper each user runs themselves
+(`hday-helper/README.md`), not by this backend.
+
+There is no `/v1` prefix. All backend routers are mounted under `/api`, so the effective route groups are `/api/health`, `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, and `/api/me`.
 SuperTokens auth uses:
 
 - internal SuperTokens base path: `/auth/*`
@@ -31,24 +31,18 @@ At startup, [main.py](app/main.py):
 
 - initializes SuperTokens
 - logs runtime configuration
-- ensures the share directory exists when possible
-- checks share-directory accessibility
 - initializes the database when `DATABASE_ENABLED=true`
-- starts cache warming in the background when caching is enabled
-- registers routers for file, team, database, and debug APIs
+- registers routers for database and auth APIs
 
 The app always exposes:
 
 - `GET /`
 - `GET /api/health`
-- `.hday` file endpoints
-- team endpoints
 - SuperTokens auth endpoints under the configured API base path
 
 The app conditionally exposes:
 
 - database-backed routes under `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, and `/api/me` when `DATABASE_ENABLED=true`
-- `/api/debug/benchmark` when `ENVIRONMENT != production`
 
 ## Route Groups
 
@@ -57,22 +51,8 @@ The app conditionally exposes:
 - `GET /` returns the API title and version
 - `GET /api/health` — lightweight summary with links to the liveness and readiness probes
 - `GET /api/health/liveness` — instant alive check with no external I/O; use for liveness probes
-- `GET /api/health/readiness` — verifies database connectivity (2-second statement timeout), SuperTokens reachability, and share-directory accessibility (only when legacy file-share is enabled); use for readiness probes
+- `GET /api/health/readiness` — verifies database connectivity (2-second statement timeout) and OIDC provider reachability; use for readiness probes
 - `GET /api/metrics` — HMAC-protected snapshot of in-memory request metrics (requires `METRICS_HMAC_SECRET`)
-
-### Shared `.hday` routes
-
-- `GET /api/hday/{username}`
-- `PUT /api/hday/{username}`
-
-These endpoints read and write `.hday` files in the share root and use ETags for optimistic concurrency on writes.
-
-### Team routes
-
-- `GET /api/team/{team_id}`
-- `GET /api/team/{team_id}/hday`
-
-Team metadata is read from `config/{team_id}.conf` and `config/{team_id}.people` under the share directory.
 
 ### Auth routes
 
@@ -151,37 +131,7 @@ Under `/api/sync`:
 
 - `GET /api/me`
 
-### Debug routes
-
-In non-production only:
-
-- `GET /api/debug/benchmark`
-
 ## Storage Model
-
-### Shared-file side
-
-`SHARE_DIR` is expected to contain:
-
-```text
-<share>/
-├── config/
-│   ├── team1.conf
-│   ├── team1.people
-│   ├── team2.conf
-│   └── team2.people
-├── alice.hday
-├── bob.hday
-└── charlie.hday
-```
-
-Conventions:
-
-- `config/{team_id}.conf` stores team metadata in `key=value` format
-- `config/{team_id}.people` stores `username,display name` rows
-- `{username}.hday` files live at the share root
-
-### Database side
 
 The database layer is PostgreSQL-only and expects an async SQLAlchemy URL using the `asyncpg` driver.
 
@@ -215,7 +165,6 @@ Important variables:
 - `ENVIRONMENT`
 - `HOST`
 - `PORT`
-- `SHARE_DIR`
 - `CORS_ORIGINS`
 - `CACHE_ENABLED`
 - `CACHE_TTL`
@@ -233,7 +182,6 @@ Behavior to note:
 - wildcard CORS is blocked in production
 - `DATABASE_URL` must use `postgresql+asyncpg://...`
 - `SUPERTOKENS_API_KEY` is required in production
-- cache warming runs asynchronously on startup when enabled
 
 ## Development
 
@@ -277,8 +225,6 @@ Current Docker characteristics:
 - Python 3.12 slim base image
 - multi-stage build
 - dependency installation via `uv`
-- runtime data directory rooted at `/var/data/worktime`
-- default `SHARE_DIR=/var/data/worktime/hday_files`
 - healthcheck against `GET /api/health`
 - non-root runtime user
 
@@ -290,11 +236,7 @@ The backend test suite lives under `tests/` and currently covers:
 - CORS
 - health
 - audit logging
-- `.hday` models, parser, and service layer
-- file-backed API endpoints
-- team endpoints and services
-- cache and cache warming
-- benchmark/debug behavior
+- holiday caching
 - database initialization
 - database-backed user, time-tracking, work-location, Gantt, and sync APIs
 - authentication behavior
@@ -315,7 +257,5 @@ The most important files are:
 - [settings.py](app/config/settings.py)
 - [supertokens_config.py](app/config/supertokens_config.py)
 - [health.py](app/routers/health.py)
-- [hday.py](app/routers/hday.py)
-- [team.py](app/routers/team.py)
 - the `app/routers/db_*.py` modules
 - the `tests/` directory

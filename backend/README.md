@@ -1,14 +1,15 @@
 # Worktime Backend
 
-FastAPI backend for shared `.hday` access and database-backed Worktime features.
+FastAPI backend for database-backed Worktime features.
 
 ## Responsibilities
 
-- Read and write user `.hday` files
-- Read team configuration from the shared file structure
-- Expose team and user time-off APIs
 - Provide database-backed APIs for users, time tracking, work locations, sync, and personal Gantt tasks
 - Run PostgreSQL schema migrations with Alembic
+
+Legacy shared-`.hday`-file access (`/api/hday/*`, `/api/team/*`) has been removed from this
+backend — that's now handled entirely by a local helper each user runs themselves; see
+`hday-helper/README.md`.
 
 ## Layout
 
@@ -51,42 +52,20 @@ Important variables:
 
 - `ENVIRONMENT` — `development` or `production`
 - `HOST` / `PORT` — bind address and port
-- `SHARE_DIR` — directory containing `.hday` files and the `config/` subdirectory
-- `CACHE_ENABLED` / `CACHE_TTL` — file-cache behavior
+- `CACHE_ENABLED` / `CACHE_TTL` — holiday-cache behavior
 - `DATABASE_ENABLED` / `DATABASE_URL` — PostgreSQL database behavior
 - `JWT_SECRET_KEY` / `JWT_ALGORITHM` / `JWT_ACCESS_TOKEN_EXPIRE_SECONDS` — auth settings for DB endpoints
 
 See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details.
 
-## Share Structure
-
-The shared directory is expected to look like this:
-
-```text
-<share>/
-├── config/
-│   ├── team1.conf
-│   ├── team1.people
-│   ├── team2.conf
-│   └── team2.people
-├── alice.hday
-├── bob.hday
-└── charlie.hday
-```
-
-- `config/{team_id}.conf` contains team metadata in `key=value` format
-- `config/{team_id}.people` contains members in `username,display name` format
-- `{username}.hday` files live in the share root
-
 ## API Groups
 
-- File/share endpoints: `/api/hday/*`, `/api/team/*`, `/api/health`
+- `/api/health`
 - Auth endpoints:
   - internal SuperTokens base path: `/auth/*`
   - public shared-host path in this repo: `/auth/*`
 - Registration endpoint (admin-only pre-provisioning): `POST /api/users/register`
 - Database endpoints: `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`
-- Debug endpoint in non-production only: `/api/debug/benchmark`
 
 Use `/docs` or `/redoc` for the full OpenAPI view while the server is running.
 
