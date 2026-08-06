@@ -29,12 +29,9 @@ services:
       AUTO_MIGRATE: "true"
     ports:
       - "8000:8000"
-    volumes:
-      - hday_files:/var/data/worktime/hday_files
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
-  hday_files:

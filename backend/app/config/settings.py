@@ -28,13 +28,6 @@ class Settings(BaseSettings):
         extra="allow"
     )
     
-    # Legacy file-share configuration — set to False when .hday file share is unavailable.
-    # Disables share directory checks, cache warming, and the hday/team endpoints.
-    LEGACY_FILESHARE_ENABLED: bool = False
-
-    # File storage configuration
-    SHARE_DIR: str = "./data/hday_files"
-    
     # CORS configuration
     CORS_ORIGINS: str = "http://localhost:5173"
 
@@ -276,25 +269,6 @@ class Settings(BaseSettings):
             host = f"[{host}]"
         return f"postgresql+asyncpg://{user}:{password}@{host}:{self.DB_PORT}/{self.DB_NAME}"
 
-    def get_share_dir_path(self) -> Path:
-        """Get SHARE_DIR as a Path object."""
-        return Path(self.SHARE_DIR).resolve()
-    
-    def ensure_share_dir_exists(self) -> None:
-        """Create SHARE_DIR if it doesn't exist (development convenience)."""
-        share_path = self.get_share_dir_path()
-        try:
-            if not share_path.exists():
-                logger.info(f"Creating SHARE_DIR: {share_path}")
-                share_path.mkdir(parents=True, exist_ok=True)
-            else:
-                logger.info(f"SHARE_DIR exists: {share_path}")
-        except (PermissionError, OSError) as e:
-            logger.warning(
-                f"Could not create or check SHARE_DIR at {share_path}: {e}. "
-                "This is expected in production when using mounted shares with restricted permissions."
-            )
-    
     def log_configuration(self) -> None:
         """Log configuration state at startup (mask sensitive values)."""
         logger.info("=" * 60)
@@ -303,10 +277,7 @@ class Settings(BaseSettings):
         logger.info(f"Environment:     {self.ENVIRONMENT}")
         logger.info(f"Host:            {self.HOST}")
         logger.info(f"Port:            {self.PORT}")
-        logger.info(f"Legacy fileshare: {'enabled' if self.LEGACY_FILESHARE_ENABLED else 'disabled'}")
-        if self.LEGACY_FILESHARE_ENABLED:
-            logger.info(f"Share Directory: {self.get_share_dir_path()}")
-        
+
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()
         if not cors_origins:
