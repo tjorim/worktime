@@ -16,6 +16,7 @@ import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
+import { resolveHdayHelperTarget } from "@/utils/hdayHelper";
 
 interface TeamMember {
   username: string;
@@ -40,18 +41,19 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-async function getTeamFetchErrorMessage(response: Response): Promise<string> {
+async function getTeamFetchErrorMessage(response: Response, usesHelper: boolean): Promise<string> {
   const contentType = response.headers.get("content-type");
+  let detail: string | null = null;
 
   if (contentType?.includes("application/json")) {
     try {
       const body: unknown = await response.json();
 
       if (body && typeof body === "object" && "detail" in body) {
-        const { detail } = body as { detail: unknown };
+        const { detail: rawDetail } = body as { detail: unknown };
 
-        if (typeof detail === "string" && detail.trim()) {
-          return detail;
+        if (typeof rawDetail === "string" && rawDetail.trim()) {
+          detail = rawDetail;
         }
       }
     } catch {
@@ -59,7 +61,14 @@ async function getTeamFetchErrorMessage(response: Response): Promise<string> {
     }
   }
 
-  return m.team_unknown_error();
+  // A 404 against the app's own origin (no helper configured) almost always means
+  // the legacy file-share routes aren't mounted here — point the user at the fix
+  // instead of leaving them with an opaque "Not Found".
+  if (response.status === 404 && !usesHelper) {
+    return m.team_fetch_404_no_helper_hint({ error: detail ?? m.team_unknown_error() });
+  }
+
+  return detail ?? m.team_unknown_error();
 }
 
 /**
@@ -95,6 +104,7 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
 export function TeamScheduleView() {
   const { options } = useDeveloperOptions();
   const connectionStatus = options.connectionStatus;
+  const { baseUrl, usesHelper } = resolveHdayHelperTarget(options.hdayHelperUrl);
 
   const [teamId, setTeamId] = useState(() => {
     // Load saved team ID from localStorage
@@ -159,17 +169,21 @@ export function TeamScheduleView() {
     setHasAttemptedFetch(true);
 
     try {
-      // Fetch team .hday data (includes team info)
-      const response = await fetch(`/api/team/${encodeURIComponent(teamId)}/hday?format=parsed`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
+      // Fetch team .hday data (includes team info) — routed to the configured local
+      // helper when set, since production doesn't mount these routes on the app origin.
+      const response = await fetch(
+        `${baseUrl}/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          signal: abortController.signal,
         },
-        signal: abortController.signal,
-      });
+      );
 
       if (!response.ok) {
-        const errorMessage = await getTeamFetchErrorMessage(response);
+        const errorMessage = await getTeamFetchErrorMessage(response, usesHelper);
         throw new Error(m.team_fetch_failed({ error: errorMessage }));
       }
 
@@ -194,7 +208,7 @@ export function TeamScheduleView() {
         setIsLoading(false);
       }
     }
-  }, [teamId]);
+  }, [teamId, baseUrl, usesHelper]);
 
   // Auto-load team data if team ID is available and connected (only once per team ID)
   useEffect(() => {
@@ -305,6 +319,12 @@ export function TeamScheduleView() {
           </Form>
         </Card.Body>
       </Card>
+
+      {!usesHelper && (
+        <Alert variant="info" className="mb-3">
+          {m.team_no_helper_configured()}
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
