@@ -210,6 +210,24 @@ async function fetchWithSnapshotFallback<T>(
   }
 }
 
+interface SnapshotBackedCollection<T> {
+  readonly toArray: T[];
+}
+
+async function syncQueryFn<T>(
+  name: string,
+  collection: SnapshotBackedCollection<T>,
+  select: (data: SyncPullResponse) => T[],
+): Promise<T[]> {
+  await whenHydrated();
+  const current = () => collection.toArray;
+  if (!_currentUserId) {
+    const items = current();
+    return items.length > 0 ? items : (getLoadedSnapshot<T>(name) ?? items);
+  }
+  return fetchWithSnapshotFallback(name, select, current);
+}
+
 /**
  * Every collection backed by the sync API, in no particular order.
  *
@@ -312,21 +330,41 @@ function utcIsoToLocalTime(utcIso: string): string {
  * when the operation set is empty, and start the collection if needed when
  * there are real writes to apply.
  */
-export function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void } }>(
+interface StartableCollection {
+  startSyncImmediate(): void;
+}
+
+interface DirectWriteCollection extends StartableCollection {
+  utils: { writeBatch: (callback: () => void) => void };
+}
+
+export function runWriteBatch<T extends DirectWriteCollection>(
   collection: T,
   hasWork: boolean,
   callback: () => void,
 ): void {
   if (!hasWork) return;
   // Ensure the collection is started so that writeBatch can access its sync context.
-  (collection as unknown as { startSyncImmediate: () => void }).startSyncImmediate();
+  collection.startSyncImmediate();
   collection.utils.writeBatch(callback);
+}
+
+/** Run ordinary optimistic mutations through their collection handlers. */
+export function runMutationBatch<T extends StartableCollection>(
+  collection: T,
+  hasWork: boolean,
+  callback: () => void,
+): void {
+  if (!hasWork) return;
+  collection.startSyncImmediate();
+  callback();
 }
 
 export function replaceCollectionContents<
   TItem,
   TKey extends string,
   TCollection extends {
+    startSyncImmediate: () => void;
     toArray: TItem[];
     has: (key: TKey) => boolean;
     delete: (key: TKey) => void;
@@ -586,21 +624,10 @@ export const labelsCollection = createCollection(
     queryClient,
     getKey: (label) => label.id,
     staleTime: Infinity,
-    queryFn: async (): Promise<Label[]> => {
-      await whenHydrated();
-      if (!_currentUserId) {
-        const items = labelsCollection.toArray as Label[];
-        // Cold start: the collection is empty but a previous session's
-        // rows are on disk. Returning them here is what puts them back
-        // in front of the user.
-        return items.length > 0 ? items : (getLoadedSnapshot<Label>("labels") ?? items);
-      }
-      return fetchWithSnapshotFallback(
-        "labels",
-        (data) => data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
-        () => labelsCollection.toArray as Label[],
-      );
-    },
+    queryFn: (): Promise<Label[]> =>
+      syncQueryFn("labels", labelsCollection, (data) =>
+        data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
+      ),
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
@@ -667,21 +694,10 @@ export const tasksCollection = createCollection(
     queryClient,
     getKey: (task) => task.id,
     staleTime: Infinity,
-    queryFn: async (): Promise<StoredTimeTrackingTask[]> => {
-      await whenHydrated();
-      if (!_currentUserId) {
-        const items = tasksCollection.toArray as StoredTimeTrackingTask[];
-        // Cold start: the collection is empty but a previous session's
-        // rows are on disk. Returning them here is what puts them back
-        // in front of the user.
-        return items.length > 0 ? items : (getLoadedSnapshot<StoredTimeTrackingTask>("tasks") ?? items);
-      }
-      return fetchWithSnapshotFallback(
-        "tasks",
-        (data) => data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
-        () => tasksCollection.toArray as StoredTimeTrackingTask[],
-      );
-    },
+    queryFn: (): Promise<StoredTimeTrackingTask[]> =>
+      syncQueryFn("tasks", tasksCollection, (data) =>
+        data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
+      ),
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
@@ -756,21 +772,10 @@ export const templatesCollection = createCollection(
     queryClient,
     getKey: (template) => template.id,
     staleTime: Infinity,
-    queryFn: async (): Promise<TimeTrackingTemplate[]> => {
-      await whenHydrated();
-      if (!_currentUserId) {
-        const items = templatesCollection.toArray as TimeTrackingTemplate[];
-        // Cold start: the collection is empty but a previous session's
-        // rows are on disk. Returning them here is what puts them back
-        // in front of the user.
-        return items.length > 0 ? items : (getLoadedSnapshot<TimeTrackingTemplate>("templates") ?? items);
-      }
-      return fetchWithSnapshotFallback(
-        "templates",
-        (data) => data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
-        () => templatesCollection.toArray as TimeTrackingTemplate[],
-      );
-    },
+    queryFn: (): Promise<TimeTrackingTemplate[]> =>
+      syncQueryFn("templates", templatesCollection, (data) =>
+        data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
+      ),
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
@@ -841,21 +846,10 @@ export const timeOffCollection = createCollection(
     queryClient,
     getKey: (entry) => entry.id,
     staleTime: Infinity,
-    queryFn: async (): Promise<TimeOffEntry[]> => {
-      await whenHydrated();
-      if (!_currentUserId) {
-        const items = timeOffCollection.toArray as TimeOffEntry[];
-        // Cold start: the collection is empty but a previous session's
-        // rows are on disk. Returning them here is what puts them back
-        // in front of the user.
-        return items.length > 0 ? items : (getLoadedSnapshot<TimeOffEntry>("time-off-entries") ?? items);
-      }
-      return fetchWithSnapshotFallback(
-        "time-off-entries",
-        (data) => _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
-        () => timeOffCollection.toArray as TimeOffEntry[],
-      );
-    },
+    queryFn: (): Promise<TimeOffEntry[]> =>
+      syncQueryFn("time-off-entries", timeOffCollection, (data) =>
+        _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+      ),
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
@@ -940,22 +934,10 @@ export const ganttTasksCollection = createCollection(
     queryClient,
     getKey: (task) => task.id,
     staleTime: Infinity,
-    queryFn: async (): Promise<GanttTask[]> => {
-      await whenHydrated();
-      if (!_currentUserId) {
-        const items = ganttTasksCollection.toArray as GanttTask[];
-        // Cold start: the collection is empty but a previous session's
-        // rows are on disk. Returning them here is what puts them back
-        // in front of the user.
-        return items.length > 0 ? items : (getLoadedSnapshot<GanttTask>("gantt-tasks") ?? items);
-      }
-      return fetchWithSnapshotFallback(
-        "gantt-tasks",
-        (data) =>
-          (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
-        () => ganttTasksCollection.toArray as GanttTask[],
-      );
-    },
+    queryFn: (): Promise<GanttTask[]> =>
+      syncQueryFn("gantt-tasks", ganttTasksCollection, (data) =>
+        (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
+      ),
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
@@ -1037,22 +1019,10 @@ export const workLocationsCollection = createCollection(
     queryClient,
     getKey: (entry) => entry.date,
     staleTime: Infinity,
-    queryFn: async (): Promise<WorkLocationEntry[]> => {
-      await whenHydrated();
-      if (!_currentUserId) {
-        const items = workLocationsCollection.toArray as WorkLocationEntry[];
-        // Cold start: the collection is empty but a previous session's
-        // rows are on disk. Returning them here is what puts them back
-        // in front of the user.
-        return items.length > 0 ? items : (getLoadedSnapshot<WorkLocationEntry>("work-locations") ?? items);
-      }
-      return fetchWithSnapshotFallback(
-        "work-locations",
-        (data) =>
-          data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
-        () => workLocationsCollection.toArray as WorkLocationEntry[],
-      );
-    },
+    queryFn: (): Promise<WorkLocationEntry[]> =>
+      syncQueryFn("work-locations", workLocationsCollection, (data) =>
+        data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
+      ),
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
@@ -1118,20 +1088,33 @@ export const workLocationsCollection = createCollection(
  * Names are stable storage keys — renaming one orphans that collection's
  * snapshot and the next reload looks like data loss for that domain.
  */
-export const SYNC_COLLECTIONS = {
+const syncCollections = {
   labels: labelsCollection,
   tasks: tasksCollection,
   templates: templatesCollection,
   "time-off-entries": timeOffCollection,
   "gantt-tasks": ganttTasksCollection,
   "work-locations": workLocationsCollection,
-} as unknown as Record<string, PersistableCollection<never>>;
+};
+
+export const SYNC_COLLECTIONS = syncCollections as unknown as Record<
+  string,
+  PersistableCollection<never>
+>;
+
+const SYNC_COLLECTION_KEYS = {
+  labels: (item: unknown) => (item as Label).id,
+  tasks: (item: unknown) => (item as StoredTimeTrackingTask).id,
+  templates: (item: unknown) => (item as TimeTrackingTemplate).id,
+  "time-off-entries": (item: unknown) => (item as TimeOffEntry).id,
+  "gantt-tasks": (item: unknown) => (item as GanttTask).id,
+  "work-locations": (item: unknown) => (item as WorkLocationEntry).date,
+} satisfies Record<keyof typeof syncCollections, (item: unknown) => string>;
 
 function getSyncCollectionItemKey(collectionName: string, item: unknown): string {
-  if (collectionName === "work-locations") {
-    return (item as WorkLocationEntry).date;
-  }
-  return (item as { id: string }).id;
+  const getKey = SYNC_COLLECTION_KEYS[collectionName as keyof typeof SYNC_COLLECTION_KEYS];
+  if (!getKey) throw new Error(`Missing snapshot key function for "${collectionName}"`);
+  return getKey(item);
 }
 
 /**

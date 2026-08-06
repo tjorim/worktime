@@ -16,7 +16,12 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { TimeOffImportResult } from "@/lib/timeOff/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { hasSyncCollectionAuth, runWriteBatch, timeOffCollection } from "@/db/collections";
+import {
+  hasSyncCollectionAuth,
+  runMutationBatch,
+  runWriteBatch,
+  timeOffCollection,
+} from "@/db/collections";
 import { logger } from "@/utils/logger";
 
 interface EventStoreContextType {
@@ -55,7 +60,7 @@ function cloneEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
 function writeLocalSnapshot(current: TimeOffEntry[], target: TimeOffEntry[]): void {
   const targetIds = new Set(target.map((entry) => entry.id));
   const toDelete = current.map((entry) => entry.id).filter((id) => !targetIds.has(id));
-  timeOffCollection.utils.writeBatch(() => {
+  runWriteBatch(timeOffCollection, toDelete.length > 0 || target.length > 0, () => {
     if (toDelete.length > 0) {
       timeOffCollection.utils.writeDelete(toDelete);
     }
@@ -124,7 +129,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     sortedEntriesRef.current = sortEntries(cloneEntries(newEntries));
     // Server-pushed data: write directly without pushing back to server.
     const existingKeys = timeOffCollection.toArray.map((e) => e.id);
-    timeOffCollection.utils.writeBatch(() => {
+    runWriteBatch(timeOffCollection, existingKeys.length > 0 || newEntries.length > 0, () => {
       if (existingKeys.length > 0) timeOffCollection.utils.writeDelete(existingKeys);
       if (newEntries.length > 0) timeOffCollection.utils.writeInsert(newEntries);
     });
@@ -208,7 +213,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         (id) => !result.entries.some((e) => e.id === id),
       );
       const hasWork = toDelete.length > 0 || result.entries.length > 0;
-      runWriteBatch(timeOffCollection, hasWork, () => {
+      runMutationBatch(timeOffCollection, hasWork, () => {
         for (const id of toDelete) {
           if (collectionIds.has(id)) timeOffCollection.delete(id);
         }
@@ -235,7 +240,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       writeLocalSnapshot(current, []);
       return;
     }
-    runWriteBatch(timeOffCollection, current.length > 0, () => {
+    runMutationBatch(timeOffCollection, current.length > 0, () => {
       for (const entry of current) {
         timeOffCollection.delete(entry.id);
       }

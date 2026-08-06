@@ -112,19 +112,59 @@ export default defineConfig({
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
         manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "vendor-react";
-            }
-            if (id.includes("react-bootstrap") || id.includes("bootstrap")) {
+          const normalizedId = id.replaceAll("\\", "/");
+          if (normalizedId.includes("/node_modules/")) {
+            if (
+              normalizedId.includes("/react-bootstrap/") ||
+              normalizedId.includes("/bootstrap/")
+            ) {
               return "vendor-ui";
             }
-            if (id.includes("dayjs")) {
+            if (/\/node_modules\/(react|react-dom|scheduler)\//.test(normalizedId)) {
+              return "vendor-react";
+            }
+            if (
+              normalizedId.includes("/node_modules/@tanstack/react-table/") ||
+              normalizedId.includes("/node_modules/@tanstack/table-core/")
+            ) {
+              return "vendor-table";
+            }
+            if (
+              normalizedId.includes("/node_modules/@tanstack/react-db/") ||
+              normalizedId.includes("/node_modules/@tanstack/db/") ||
+              normalizedId.includes("/node_modules/@tanstack/query-db-collection/")
+            ) {
+              return "vendor-db";
+            }
+            if (
+              normalizedId.includes("/node_modules/@tanstack/react-query/") ||
+              normalizedId.includes("/node_modules/@tanstack/query-core/")
+            ) {
+              return "vendor-query";
+            }
+            if (normalizedId.includes("/node_modules/@schedule-x/")) {
+              return "vendor-calendar";
+            }
+            if (
+              normalizedId.includes("/node_modules/temporal-polyfill/") ||
+              normalizedId.includes("/node_modules/temporal-spec/") ||
+              normalizedId.includes("/node_modules/temporal-utils/")
+            ) {
+              return "vendor-temporal";
+            }
+            if (
+              normalizedId.includes("/node_modules/react-select/") ||
+              normalizedId.includes("/node_modules/@emotion/")
+            ) {
+              return "vendor-select";
+            }
+            if (normalizedId.includes("/dayjs/")) {
               return "vendor-utils";
             }
-            if (id.includes("frappe-gantt")) {
+            if (normalizedId.includes("/frappe-gantt/")) {
               return "vendor-gantt";
             }
+            return "vendor";
           }
         },
       },

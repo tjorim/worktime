@@ -70,10 +70,10 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
         ...row,
         locationLabel:
           row.location === "home"
-            ? m.work_location_home()
+            ? m.work_location_home({}, { locale })
             : row.location === "office"
-              ? m.work_location_office()
-              : m.work_location_other(),
+              ? m.work_location_office({}, { locale })
+              : m.work_location_other({}, { locale }),
         percentage: totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0,
       })),
     [summaryRows, totalDays, locale],
@@ -83,7 +83,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     () => [
       {
         accessorKey: "locationLabel",
-        header: m.location_col_location(),
+        header: m.location_col_location({}, { locale }),
         cell: (context) => (
           <>
             <i
@@ -96,11 +96,11 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       },
       {
         accessorKey: "countryCode",
-        header: m.location_col_country(),
+        header: m.location_col_country({}, { locale }),
       },
       {
         accessorKey: "days",
-        header: m.location_col_days(),
+        header: m.location_col_days({}, { locale }),
         meta: { align: "end" } satisfies LocationSummaryColumnMeta,
         cell: (context) => <span className="text-end d-block">{context.getValue<number>()}</span>,
       },

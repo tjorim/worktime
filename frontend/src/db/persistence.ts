@@ -126,7 +126,7 @@ export function whenHydrated(): Promise<void> {
  */
 export function getLoadedSnapshot<T>(name: string): T[] | null {
   const items = loadedSnapshots.get(name);
-  return items && items.length > 0 ? (items as T[]) : null;
+  return items !== undefined ? (items as T[]) : null;
 }
 
 /**
@@ -158,7 +158,7 @@ export function hydrateSyncCollections(collectionNames: string[]): Promise<void>
     await Promise.all(
       collectionNames.map(async (name) => {
         const items = await readSnapshot(name);
-        if (items && items.length > 0) loadedSnapshots.set(name, items);
+        if (items !== null) loadedSnapshots.set(name, items);
       }),
     );
   })();

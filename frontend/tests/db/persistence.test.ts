@@ -67,6 +67,14 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
+describe("snapshot storage keys", () => {
+  it("keeps the centralized key values stable", () => {
+    expect(SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX).toBe("worktime_collection_snapshot_");
+    expect(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY).toBe("worktime_collection_snapshot_owner");
+    expect(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY).toBe("worktime_collection_snapshot_generation");
+  });
+});
+
 describe("hydrateSyncCollections", () => {
   it("loads a stored snapshot so the queryFn can return it", async () => {
     await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
@@ -74,6 +82,14 @@ describe("hydrateSyncCollections", () => {
     await hydrateSyncCollections(["tasks"]);
 
     expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
+  });
+
+  it("preserves an empty stored snapshot", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([]);
   });
 
   it("ignores a snapshot written by an incompatible version", async () => {
