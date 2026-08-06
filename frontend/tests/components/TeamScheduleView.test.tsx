@@ -1,14 +1,28 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { server } from "@/mocks/server";
 import { DEVELOPER_OPTIONS_STORAGE_KEY, LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { TestProviders } from "../utils/testProviders";
 
 const HELPER_URL = "http://localhost:8080";
+const OTHER_HELPER_URL = "http://localhost:9090";
+
+// Test-only harness for driving updateHdayHelperUrl() from outside DevOptionsPanel,
+// sharing the same DeveloperOptionsContext instance as the rendered TeamScheduleView.
+function HelperUrlSwitcher({ url }: { url: string }) {
+  const { updateHdayHelperUrl } = useDeveloperOptions();
+  return (
+    <button type="button" onClick={() => updateHdayHelperUrl(url)}>
+      switch helper
+    </button>
+  );
+}
 
 function seedConnectedOptions(hdayHelperUrl: string | null) {
   window.localStorage.setItem(
@@ -26,10 +40,10 @@ function seedConnectedOptions(hdayHelperUrl: string | null) {
   );
 }
 
-function teamHdayPayload(teamId: string) {
+function teamHdayPayload(teamId: string, name = "Engineering") {
   return {
     team_id: teamId,
-    name: "Engineering",
+    name,
     sections: [
       {
         title: null,
@@ -90,5 +104,33 @@ describe("TeamScheduleView", () => {
 
     expect(await screen.findByText("Engineering")).toBeInTheDocument();
     expect(screen.queryByText(m.team_helper_required_heading())).not.toBeInTheDocument();
+  });
+
+  it("clears stale data and refetches when the configured helper changes", async () => {
+    seedConnectedOptions(HELPER_URL);
+    window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
+    server.use(
+      http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
+        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper A")),
+      ),
+      http.get(`${OTHER_HELPER_URL}/team/:teamId/hday`, ({ params }) =>
+        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper B")),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <HelperUrlSwitcher url={OTHER_HELPER_URL} />
+        <TeamScheduleView />
+      </TestProviders>,
+    );
+
+    expect(await screen.findByText("Team from helper A")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "switch helper" }));
+
+    expect(await screen.findByText("Team from helper B")).toBeInTheDocument();
+    expect(screen.queryByText("Team from helper A")).not.toBeInTheDocument();
   });
 });

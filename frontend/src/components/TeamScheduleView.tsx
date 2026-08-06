@@ -131,6 +131,18 @@ export function TeamScheduleView() {
     }
   }, [connectionStatus]);
 
+  // Reset state when the target helper changes — otherwise data fetched from
+  // the previous helper stays on screen (or a stale in-flight request from it
+  // resolves) after the user points Developer Options at a different one.
+  useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setTeamData(null);
+    setError(null);
+    setHasAttemptedFetch(false);
+  }, [baseUrl]);
+
   // Cleanup: abort any pending requests on unmount
   useEffect(() => {
     return () => {
