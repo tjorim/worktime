@@ -239,7 +239,12 @@ function writeHdayFile(username: string, content: string, expectedEtag: string |
     const fileExists = existsSync(filePath);
 
     // Conflict detection (inside lock so ETag check and write are atomic)
-    if (expectedEtag !== null) {
+    if (expectedEtag === null) {
+      // No etag means "create new file" — must not already exist.
+      if (fileExists) {
+        throw new HdayConflictError();
+      }
+    } else {
       if (!fileExists) {
         // Client sent an etag but the file no longer exists — precondition failure.
         throw new HdayConflictError();
