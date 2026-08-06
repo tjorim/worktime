@@ -98,5 +98,5 @@ export function useCalendarRangeData(range: CalendarRange): CalendarEvent[] {
     }
 
     return events;
-  }, [myTeam, range.start, range.end, rawTimeOffEntries, scheduleType, tasks]);
+  }, [myTeam, range, rawTimeOffEntries, scheduleType, tasks]);
 }

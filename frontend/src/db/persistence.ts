@@ -1,5 +1,5 @@
 /**
- * Local persistence for the sync-backed TanStack DB collections.
+ * IndexedDB persistence for the sync-backed TanStack DB collections.
  *
  * Without this, every syncable domain (tasks, labels, templates, time-off,
  * gantt tasks, work locations) lives only in memory. That makes three ordinary
@@ -9,458 +9,325 @@
  *  - a signed-in user opening the installed PWA offline gets an empty app;
  *  - every cold start shows an empty app until a network round-trip completes.
  *
- * This module wires TanStack DB's first-class persistence
- * (`persistedCollectionOptions`, backed by WA-SQLite over OPFS in a dedicated
- * Web Worker) so persistence sits *inside* the sync pipe rather than hanging
- * off the side of it as a debounced mirror. The UI still reads the in-memory
- * collection; SQLite is read at hydration, never per render.
+ * ## Why snapshots rather than persisting the query cache
  *
- * ## Why a deferred adapter
+ * The obvious approach — persisting the TanStack Query cache — restores
+ * asynchronously while the collections start fetching, and the collection
+ * `queryFn` writes its result into the same cache entry. Whether the restored
+ * data or an empty first fetch wins is a race, and in local-only mode the
+ * `queryFn` returns the (not-yet-hydrated, empty) collection, so the query
+ * meant to load the user's data is what erases it.
  *
- * `openBrowserWASQLiteOPFSDatabase` is async, but the collections are created
- * at module scope and `persistedCollectionOptions` needs `persistence.adapter`
- * synchronously. So the exported persistence hands out an adapter whose every
- * method awaits the database open. Every `PersistenceAdapter` method already
- * returns a promise, so nothing observes the difference.
+ * Snapshotting each collection separately avoids the race: hydration is a
+ * promise the `queryFn` awaits, and the snapshot is returned *as* the query
+ * result, so the rows enter the collection through the library's normal sync
+ * path. (Seeding with `utils.writeInsert` instead does populate `toArray`, but
+ * `useLiveQuery` subscribers never render those rows — the query result is what
+ * the collection treats as its state.)
  *
- * The coordinator, by contrast, is constructed eagerly: it is BroadcastChannel
- * plus Web Locks and needs no database. `createBrowserWASQLitePersistence`
- * calls `coordinator.setAdapter()` once the database is open, and this tab
- * cannot claim leadership before then (leadership is requested from the
- * collection runtime, which is itself waiting on the same open), so there is no
- * window in which the coordinator serves a request without a real adapter.
+ * ## Lifecycle
  *
- * ## Multi-tab
- *
- * `BrowserCollectionCoordinator` does leader election over BroadcastChannel and
- * Web Locks so exactly one tab owns the SQLite writer, and followers route
- * their writes through it.
- *
- * That closes the two-tab gap when signed *in*. Signed out it does not: with no
- * server to pull from, each tab's `queryFn` returns its own memory and the query
- * collection applies that as the collection's complete state, truncating rows
- * another tab persisted in the same instant. See the "Known gap" section in
- * `docs/sync-data-safety.md` and issue #1045.
- *
- * ## Degrading
- *
- * Persistence is an enhancement, never a requirement. When OPFS or Web Workers
- * are unavailable (older iOS Safari, private browsing, the jsdom/happy-dom test
- * environment) the open fails and every collection falls back to
- * `UNAVAILABLE_ADAPTER` — a no-op that reports an empty store. The app then
- * behaves exactly as it did before any persistence existed, rather than
- * spraying rejected-promise warnings from the sync pipe.
+ * - `hydrateSyncCollections()` runs once at startup, reads every snapshot into
+ *   memory, and resolves `whenHydrated`.
+ * - Each collection is then subscribed, and any change (local mutation, server
+ *   pull, SSE direct write) schedules a debounced snapshot write.
+ * - `purgeSnapshotsOnOwnerChange` drops snapshots that belong to a different
+ *   account.
  */
 
+import { del, get, getMany, set, setMany, update } from "idb-keyval";
 import {
-  BrowserCollectionCoordinator,
-  createBrowserWASQLitePersistence,
-  openBrowserWASQLiteOPFSDatabase,
-  type PersistedCollectionPersistence,
-} from "@tanstack/browser-db-sqlite-persistence";
-import {
-  PERSISTED_COLLECTION_OWNER_KEY,
-  PERSISTED_COLLECTION_PURGE_PENDING_KEY,
+  SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
+  SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX,
+  SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
 } from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
 
 /**
- * Bumped when a collection's stored row shape changes.
- *
- * A mismatch resets the persisted store rather than migrating it. That is safe
- * here because every collection is sync-present: the server re-supplies the
- * rows on the next pull.
+ * Bumped when a stored snapshot's shape changes, so incompatible snapshots are
+ * discarded rather than hydrated into collections that cannot read them.
  */
-export const COLLECTION_SCHEMA_VERSION = 1;
+const SNAPSHOT_VERSION = 1;
 
-/** OPFS file backing the persisted collections. */
-const DATABASE_NAME = "worktime-collections.sqlite";
-
-/** Namespace for the coordinator's BroadcastChannel and Web Lock names. */
-const COORDINATOR_DB_NAME = "worktime-collections";
-
-/** Recorded owner value for local-only (signed-out) use. */
 const ANONYMOUS_OWNER = "anonymous";
 
-/**
- * The adapter half of TanStack's persistence contract.
- *
- * Derived from the persistence type rather than imported from
- * `@tanstack/db-sqlite-persistence-core`, which is a transitive dependency the
- * browser package does not re-export this type from.
- */
-type PersistenceAdapter = PersistedCollectionPersistence["adapter"];
+/** Namespace used by snapshots created before owner generations were added. */
+const LEGACY_GENERATION = "legacy";
 
-type ResolveOptions = Parameters<
-  NonNullable<PersistedCollectionPersistence["resolvePersistenceForCollection"]>
->[0];
+/** How long to coalesce rapid changes before writing a snapshot. */
+const WRITE_DEBOUNCE_MS = 500;
 
-/** The stream position of a store that has never been written to. */
-const EMPTY_STREAM_POSITION = { latestTerm: 0, latestSeq: 0, latestRowVersion: 0 };
+const SNAPSHOT_CHANNEL_NAME = "worktime_collection_snapshots";
 
-/**
- * Stand-in used when the database cannot be opened.
- *
- * Reports an empty store and accepts (discards) every write, so collections
- * hydrate to nothing and run purely from memory instead of failing.
- */
-const UNAVAILABLE_ADAPTER: PersistenceAdapter = {
-  loadSubset: () => Promise.resolve([]),
-  applyCommittedTx: () => Promise.resolve(),
-  loadCollectionMetadata: () => Promise.resolve([]),
-  scanRows: () => Promise.resolve([]),
-  ensureIndex: () => Promise.resolve(),
-  markIndexRemoved: () => Promise.resolve(),
-  getStreamPosition: () => Promise.resolve({ ...EMPTY_STREAM_POSITION }),
-};
-
-// ---------------------------------------------------------------------------
-// Coordinator
-// ---------------------------------------------------------------------------
-
-/**
- * Whether this runtime can run leader election.
- *
- * Both halves are required, and the Web Locks half is not optional politeness:
- * `BrowserCollectionCoordinator` re-arms `acquireLeadership` as soon as its
- * lock request settles, so where `navigator.locks` is missing the request fails
- * immediately and the retry recurses until the stack overflows. Test
- * environments (happy-dom) and non-secure contexts are both in that category.
- */
-function supportsLeaderElection(): boolean {
-  return (
-    typeof BroadcastChannel === "function" &&
-    typeof navigator !== "undefined" &&
-    typeof navigator.locks?.request === "function"
-  );
+interface StoredSnapshot {
+  version: number;
+  items: unknown[];
 }
 
-/**
- * Constructed eagerly so leader election is live from module load.
- *
- * `null` where election cannot run; the persistence layer then falls back to
- * `SingleProcessCoordinator`, which is the correct behavior for a lone tab.
- */
-const coordinator: BrowserCollectionCoordinator | null = supportsLeaderElection()
-  ? new BrowserCollectionCoordinator({ dbName: COORDINATOR_DB_NAME })
-  : null;
-
-/** Release the coordinator's BroadcastChannel and Web Lock handles. */
-export function disposePersistenceCoordinator(): void {
-  coordinator?.dispose();
+/** Minimal surface this module needs from a collection. */
+export interface PersistableCollection<T> {
+  readonly toArray: T[];
+  subscribeChanges(callback: () => void): { unsubscribe: () => void };
 }
 
-// ---------------------------------------------------------------------------
-// Database open
-// ---------------------------------------------------------------------------
+export type SnapshotItemKey = (collectionName: string, item: unknown) => string;
 
-function supportsOpfsPersistence(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.storage?.getDirectory === "function" &&
-    typeof Worker === "function"
-  );
+let activeGeneration = LEGACY_GENERATION;
+
+function snapshotKey(name: string, generation = activeGeneration): string {
+  const generationPrefix = generation === LEGACY_GENERATION ? "" : `${generation}_`;
+  return `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generationPrefix}${name}`;
 }
 
-/** The open database handle, kept so a purge can close it before deleting. */
-let openedDatabase: { close?: () => Promise<void> | void } | null = null;
-
-let openPromise: Promise<PersistedCollectionPersistence | null> | null = null;
-
-/**
- * Ask the browser to exempt our storage from eviction under pressure.
- *
- * OPFS is best-effort by default: the browser may clear it whenever it wants
- * space back, which for this app means an offline launch showing an empty
- * screen — the exact failure persistence exists to prevent. Granting is at the
- * browser's discretion (Chrome decides from engagement signals, Firefox may
- * prompt), so this is a request, not a guarantee, and never blocks the open.
- */
-function requestPersistentStorage(): void {
-  if (typeof navigator.storage?.persist !== "function") return;
-  void navigator.storage
-    .persisted()
-    .then((already) => (already ? true : navigator.storage.persist()))
-    .catch((err: unknown) => {
-      logger.error("Failed to request persistent storage:", err);
-    });
+function createSnapshotGeneration(): string {
+  return typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/**
- * Open the OPFS database once, resolving to `null` when persistence is not
- * available in this runtime — or when a store that must be discarded still
- * cannot be deleted.
- *
- * Never rejects: a failure here must degrade the app, not break it.
- */
-function openPersistence(): Promise<PersistedCollectionPersistence | null> {
-  openPromise ??= (async () => {
-    if (!supportsOpfsPersistence()) return null;
-    // A purge that could not delete the file leaves this set — most often
-    // because another tab still held the store open. Retry now that this load
-    // owns nothing, and if it still cannot be removed, run from memory rather
-    // than hydrate rows belonging to a different account.
-    if (isPurgePending()) {
-      if (!(await removeDatabaseFile())) {
-        logger.error("Refusing to open the local store: it is still pending deletion.");
-        return null;
-      }
-      setPurgePending(false);
-    }
-    requestPersistentStorage();
-    try {
-      const database = await openBrowserWASQLiteOPFSDatabase({
-        databaseName: DATABASE_NAME,
-      });
-      openedDatabase = database;
-      return createBrowserWASQLitePersistence({
-        database,
-        ...(coordinator ? { coordinator } : {}),
-      });
-    } catch (err) {
-      // Private browsing, a storage-disabled profile, or a browser without
-      // OPFS sync access handles. The app keeps working from memory, but a
-      // silent failure means the next reload looks like data loss, so it is
-      // always logged.
-      logger.error("Local collection persistence is unavailable:", err);
+async function readSnapshot(name: string): Promise<unknown[] | null> {
+  try {
+    const stored = await get<StoredSnapshot>(snapshotKey(name));
+    if (!stored || stored.version !== SNAPSHOT_VERSION || !Array.isArray(stored.items)) {
       return null;
     }
+    return stored.items;
+  } catch (err) {
+    logger.error(`Failed to read the "${name}" snapshot:`, err);
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hydration
+// ---------------------------------------------------------------------------
+
+let hydrationPromise: Promise<void> | null = null;
+const loadedSnapshots = new Map<string, unknown[]>();
+
+/**
+ * Resolves once the snapshots have been read from IndexedDB (or immediately if
+ * hydration was never started, so tests and non-browser contexts do not hang).
+ *
+ * Every collection `queryFn` awaits this before deciding what to return, which
+ * is what makes the ordering deterministic instead of a race.
+ */
+export function whenHydrated(): Promise<void> {
+  return hydrationPromise ?? Promise.resolve();
+}
+
+/**
+ * The snapshot loaded for a collection, if any.
+ *
+ * Returned by `queryFn` so the persisted rows enter the collection through the
+ * library's normal sync path. Seeding via `utils.writeInsert` instead does put
+ * rows in `toArray`, but `useLiveQuery` subscribers never render them — the
+ * query result is what the collection treats as its state.
+ */
+export function getLoadedSnapshot<T>(name: string): T[] | null {
+  const items = loadedSnapshots.get(name);
+  return items !== undefined ? (items as T[]) : null;
+}
+
+/**
+ * Forget the snapshots held in memory.
+ *
+ * The IndexedDB keys and this map are two copies of the same data, so purging
+ * one without the other leaves the previous account's records reachable: a
+ * failed pull for the *new* account falls back to `getLoadedSnapshot`, which
+ * would still be serving the old one's rows.
+ */
+export function clearLoadedSnapshots(): void {
+  loadedSnapshots.clear();
+}
+
+/**
+ * Read every collection's snapshot into memory.
+ *
+ * Safe to call more than once — subsequent calls return the original promise.
+ */
+export function hydrateSyncCollections(collectionNames: string[]): Promise<void> {
+  hydrationPromise ??= (async () => {
+    try {
+      activeGeneration =
+        (await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY)) ?? LEGACY_GENERATION;
+    } catch (err) {
+      logger.error("Failed to read the snapshot generation:", err);
+      activeGeneration = LEGACY_GENERATION;
+    }
+    await Promise.all(
+      collectionNames.map(async (name) => {
+        const items = await readSnapshot(name);
+        if (items !== null) loadedSnapshots.set(name, items);
+      }),
+    );
   })();
-  return openPromise;
+  return hydrationPromise;
 }
-
-/**
- * Resolves once the database open has settled, successfully or not.
- *
- * Collection `queryFn`s await this before deciding what to return, so a query
- * result cannot commit against a persistence layer that has not come up yet.
- */
-export async function whenPersistenceReady(): Promise<void> {
-  await openPersistence();
-}
-
-/** Resolve the adapter for one collection, or the no-op if unavailable. */
-async function adapterFor(options: ResolveOptions): Promise<PersistenceAdapter> {
-  const persistence = await openPersistence();
-  if (!persistence) return UNAVAILABLE_ADAPTER;
-  const resolved = persistence.resolvePersistenceForCollection?.(options) ?? persistence;
-  return resolved.adapter;
-}
-
-/**
- * Wrap an eventual adapter in one usable synchronously.
- *
- * Optional methods are implemented unconditionally — the real SQLite adapter
- * provides all of them, and the persistence runtime feature-detects by property
- * presence, so omitting them here would silently disable metadata loading and
- * stream positions.
- */
-function deferAdapter(resolve: () => Promise<PersistenceAdapter>): PersistenceAdapter {
-  return {
-    loadSubset: async (collectionId, options, ctx) =>
-      (await resolve()).loadSubset(collectionId, options, ctx),
-    applyCommittedTx: async (collectionId, tx) => {
-      await (await resolve()).applyCommittedTx(collectionId, tx);
-    },
-    loadCollectionMetadata: async (collectionId) => {
-      const adapter = await resolve();
-      return (await adapter.loadCollectionMetadata?.(collectionId)) ?? [];
-    },
-    scanRows: async (collectionId, options) => {
-      const adapter = await resolve();
-      return (await adapter.scanRows?.(collectionId, options)) ?? [];
-    },
-    ensureIndex: async (collectionId, signature, spec) => {
-      await (await resolve()).ensureIndex(collectionId, signature, spec);
-    },
-    markIndexRemoved: async (collectionId, signature) => {
-      await (await resolve()).markIndexRemoved?.(collectionId, signature);
-    },
-    getStreamPosition: async (collectionId) => {
-      const adapter = await resolve();
-      return (await adapter.getStreamPosition?.(collectionId)) ?? { ...EMPTY_STREAM_POSITION };
-    },
-  };
-}
-
-function persistenceFor(options: ResolveOptions): PersistedCollectionPersistence {
-  return {
-    adapter: deferAdapter(() => adapterFor(options)),
-    ...(coordinator ? { coordinator } : {}),
-  };
-}
-
-/**
- * The persistence handed to every `persistedCollectionOptions` call.
- *
- * `resolvePersistenceForCollection` is invoked synchronously by
- * `persistedCollectionOptions` with the collection's id, mode and schema
- * version; forwarding those through keeps the underlying adapter cache keyed
- * the same way it would be without the deferral.
- */
-export const syncCollectionPersistence: PersistedCollectionPersistence = {
-  ...persistenceFor({
-    collectionId: COORDINATOR_DB_NAME,
-    mode: "sync-present",
-    schemaVersion: COLLECTION_SCHEMA_VERSION,
-  }),
-  resolvePersistenceForCollection: (options) => persistenceFor(options),
-  resolvePersistenceForMode: (mode) =>
-    persistenceFor({
-      collectionId: COORDINATOR_DB_NAME,
-      mode,
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    }),
-};
 
 // ---------------------------------------------------------------------------
-// Startup race guard
+// Change subscriptions
 // ---------------------------------------------------------------------------
 
-/** The one transition this guard is allowed to swallow. */
-function isCleanedUpBeforeReady(err: unknown): boolean {
-  return (
-    err instanceof Error &&
-    err.name === "CollectionStateError" &&
-    err.message.startsWith(`Invalid collection status transition from "cleaned-up" to "ready"`)
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
+const subscriptions: Array<{ unsubscribe: () => void }> = [];
+const baselines = new Map<string, Map<string, string>>();
+const pendingWrites = new Map<string, Promise<void>>();
+let snapshotChannel: BroadcastChannel | null = null;
+
+function fingerprints(
+  name: string,
+  items: unknown[],
+  getItemKey: SnapshotItemKey,
+): Map<string, string> {
+  return new Map(
+    items.map((item) => [getItemKey(name, item), JSON.stringify(item) ?? "undefined"]),
   );
 }
 
-interface SyncParamsLike {
-  markReady: () => void;
+async function mergeSnapshotChanges(
+  name: string,
+  items: unknown[],
+  getItemKey: SnapshotItemKey,
+): Promise<void> {
+  const generation = activeGeneration;
+  const previous = baselines.get(name) ?? new Map<string, string>();
+  const current = new Map(items.map((item) => [getItemKey(name, item), item]));
+  const currentFingerprints = fingerprints(name, items, getItemKey);
+  const deletions = new Set([...previous.keys()].filter((key) => !current.has(key)));
+  const upserts = new Map(
+    [...current].filter(
+      ([key, item]) => previous.get(key) !== (JSON.stringify(item) ?? "undefined"),
+    ),
+  );
+
+  let mergedItems = items;
+  await update<StoredSnapshot>(snapshotKey(name, generation), (stored) => {
+    const persisted =
+      stored?.version === SNAPSHOT_VERSION && Array.isArray(stored.items) ? stored.items : [];
+    const merged = new Map(persisted.map((item) => [getItemKey(name, item), item]));
+    for (const key of deletions) merged.delete(key);
+    for (const [key, item] of upserts) merged.set(key, item);
+    mergedItems = [...merged.values()];
+    return { version: SNAPSHOT_VERSION, items: mergedItems };
+  });
+
+  baselines.set(name, currentFingerprints);
+  loadedSnapshots.set(name, mergedItems);
+  snapshotChannel?.postMessage({ type: "snapshot_changed", name, generation });
 }
 
-interface SyncConfigLike {
-  sync: (params: SyncParamsLike) => unknown;
+function openSnapshotChannel(): void {
+  if (snapshotChannel || typeof BroadcastChannel === "undefined") return;
+  snapshotChannel = new BroadcastChannel(SNAPSHOT_CHANNEL_NAME);
+  snapshotChannel.onmessage = (event: MessageEvent<unknown>) => {
+    const message = event.data;
+    if (
+      !message ||
+      typeof message !== "object" ||
+      !("type" in message) ||
+      message.type !== "snapshot_changed" ||
+      !("name" in message) ||
+      typeof message.name !== "string" ||
+      !("generation" in message) ||
+      message.generation !== activeGeneration
+    ) {
+      return;
+    }
+    const name = message.name;
+    void readSnapshot(name).then((items) => {
+      if (items) loadedSnapshots.set(name, items);
+      else loadedSnapshots.delete(name);
+    });
+  };
+}
+
+function scheduleSnapshot(
+  name: string,
+  read: () => unknown[],
+  getItemKey: SnapshotItemKey,
+): void {
+  const pending = timers.get(name);
+  if (pending) clearTimeout(pending);
+  timers.set(
+    name,
+    setTimeout(() => {
+      timers.delete(name);
+      const queued = (pendingWrites.get(name) ?? Promise.resolve())
+        .then(() => mergeSnapshotChanges(name, read(), getItemKey))
+        .catch((err: unknown) => {
+          // Storage unavailable or over quota. Persistence is an enhancement —
+          // the app keeps working from memory — but a silent failure here means
+          // the next reload looks like data loss, so it is always logged.
+          logger.error(`Failed to write the "${name}" snapshot:`, err);
+        })
+        .finally(() => {
+          if (pendingWrites.get(name) === queued) pendingWrites.delete(name);
+        });
+      pendingWrites.set(name, queued);
+    }, WRITE_DEBOUNCE_MS),
+  );
 }
 
 /**
- * Make a persisted collection safe to tear down while it is still starting up.
+ * Persist every future change to the given collections.
  *
- * `persistedCollectionOptions` defers the collection's `markReady` behind its
- * asynchronous persisted startup, but does not re-check whether the collection
- * was cleaned up while that was in flight — it holds a `cleanedUp` flag and
- * consults it everywhere *except* there. A collection torn down mid-startup (a
- * component unmounting, a test file finishing) therefore throws
- * `InvalidCollectionStatusTransitionError` out of a floating promise, which
- * surfaces as an unhandled rejection and fails the whole test run even though
- * every assertion passed.
- *
- * The library never exposes that promise, so the callback it eventually invokes
- * is the only place this can be caught. Only the cleaned-up transition is
- * swallowed; anything else still throws.
+ * Subscribes rather than hooking the mutation handlers so that server pulls and
+ * SSE direct writes are captured too — those never go through onInsert/onUpdate
+ * /onDelete, and they are most of what a synced device writes.
  */
-export function guardStartupMarkReady<TOptions extends { sync: unknown }>(
-  options: TOptions,
-): TOptions {
-  const inner = options.sync as SyncConfigLike;
-  return {
-    ...options,
-    sync: {
-      ...inner,
-      sync: (params: SyncParamsLike) =>
-        inner.sync({
-          ...params,
-          markReady: () => {
-            try {
-              params.markReady();
-            } catch (err) {
-              if (!isCleanedUpBeforeReady(err)) throw err;
-            }
-          },
+export function startPersistingSyncCollections(
+  collections: Record<string, PersistableCollection<never>>,
+  getItemKey: SnapshotItemKey,
+): void {
+  if (subscriptions.length > 0) return;
+  openSnapshotChannel();
+  for (const [name, collection] of Object.entries(collections)) {
+    baselines.set(
+      name,
+      fingerprints(name, loadedSnapshots.get(name) ?? [], getItemKey),
+    );
+    try {
+      subscriptions.push(
+        collection.subscribeChanges(() => {
+          scheduleSnapshot(name, () => collection.toArray, getItemKey);
         }),
-    },
-  };
+      );
+    } catch (err) {
+      logger.error(`Failed to subscribe to the "${name}" collection:`, err);
+    }
+  }
+}
+
+/** Stop persisting, cancel timers, and drain writes already in progress. */
+export async function stopPersistingSyncCollections(): Promise<void> {
+  for (const subscription of subscriptions.splice(0)) {
+    subscription.unsubscribe();
+  }
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
+  await Promise.allSettled([...pendingWrites.values()]);
+  baselines.clear();
+  pendingWrites.clear();
+  snapshotChannel?.close();
+  snapshotChannel = null;
+}
+
+/** Reset hydration state. Intended for tests. */
+export function resetHydrationForTests(): void {
+  hydrationPromise = null;
+  loadedSnapshots.clear();
+  activeGeneration = LEGACY_GENERATION;
 }
 
 // ---------------------------------------------------------------------------
 // Ownership
 // ---------------------------------------------------------------------------
 
-function readOwner(): string | null {
-  try {
-    return localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeOwner(owner: string): void {
-  try {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, owner);
-  } catch (err) {
-    logger.error("Failed to record the persisted collection owner:", err);
-  }
-}
-
-function isPurgePending(): boolean {
-  try {
-    return localStorage.getItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY) !== null;
-  } catch {
-    return false;
-  }
-}
-
-function setPurgePending(pending: boolean): void {
-  try {
-    if (pending) {
-      localStorage.setItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY, "1");
-    } else {
-      localStorage.removeItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY);
-    }
-  } catch (err) {
-    logger.error("Failed to record the pending purge:", err);
-  }
-}
-
 /**
- * Remove the OPFS file, reporting whether it is gone afterwards.
+ * Discard snapshots when they stop belonging to the current user.
  *
- * Kept separate from closing the database because the open path calls this
- * while nothing is open — and resetting `openPromise` from inside the open
- * would null out the very promise being assigned.
- */
-async function removeDatabaseFile(): Promise<boolean> {
-  if (!supportsOpfsPersistence()) return true;
-  try {
-    const root = await navigator.storage.getDirectory();
-    await root.removeEntry(DATABASE_NAME);
-    return true;
-  } catch (err) {
-    // A file that was never written is already in the desired state.
-    if ((err as { name?: string }).name === "NotFoundError") return true;
-    // Anything else leaves the previous account's rows on disk, which is the
-    // case this whole mechanism exists to prevent. Most likely another tab of
-    // this origin still holds a sync access handle on the file.
-    logger.error("Failed to delete the persisted collection database:", err);
-    return false;
-  }
-}
-
-/**
- * Close the database and delete its OPFS file, reporting whether it is gone.
- *
- * The file cannot be removed while the worker holds sync access handles on it,
- * so the close (which terminates the worker) has to come first.
- */
-async function deletePersistedDatabase(): Promise<boolean> {
-  try {
-    await openedDatabase?.close?.();
-  } catch (err) {
-    logger.error("Failed to close the persisted collection database:", err);
-  }
-  openedDatabase = null;
-  // Any adapter call after this point would hit a closed worker, so force the
-  // next open to start over. Callers reload the page rather than continue.
-  openPromise = null;
-
-  return removeDatabaseFile();
-}
-
-/**
- * Discard persisted collections when they stop belonging to the current user.
- *
- * The store is one per-device store, so a device shared by two people would
+ * Snapshots are one per-device store, so a device shared by two people would
  * otherwise show the previous user's records to the next one — and hand them to
  * the first-sync flow as "local data" to upload into the new account.
  *
@@ -475,45 +342,58 @@ async function deletePersistedDatabase(): Promise<boolean> {
  * | user A → user B | yes |
  * | user A → anonymous (sign-out) | yes — do not leave A's records on a signed-out device |
  *
- * Returns whether a purge was required. A purge closes the database, so the
- * caller must reload rather than keep using collections bound to it — that is
- * true whether or not the deletion itself succeeded.
- *
- * ## When the file cannot be deleted
- *
- * `removeEntry` fails if another tab of this origin still holds a sync access
- * handle on the store. Recording the new owner anyway would be the worst
- * possible outcome: the surviving database is reopened on the next load and
- * hydrated under the new owner. Worse, a failed *sign-out* purge would leave
- * the store labelled `anonymous`, and anonymous → user B is the one exempt
- * transition — so the previous user's rows would be handed to first sync as B's
- * local data and uploaded into B's account.
- *
- * So a failed deletion leaves the owner untouched (the transition is retried on
- * the next auth change) and sets a pending-purge flag. `openPersistence` retries
- * the deletion before opening and refuses to open at all while the flag is still
- * set, so the surviving rows are never read even if they cannot yet be removed.
+ * A purge clears the in-memory snapshots as well as the stored ones. They are
+ * two copies of the same records and the pull fallback reads the in-memory one.
  */
-export async function purgePersistedDataOnOwnerChange(userId: string | null): Promise<boolean> {
+export async function purgeSnapshotsOnOwnerChange(
+  userId: string | null,
+  collectionNames: string[],
+): Promise<boolean> {
   const owner = userId ?? ANONYMOUS_OWNER;
-  const previous = readOwner();
-  if (previous === owner) return false;
+  try {
+    const [previous, storedGeneration] = await getMany<string>([
+      SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
+      SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
+    ]);
+    const persistedGeneration = storedGeneration ?? LEGACY_GENERATION;
+    if (previous === owner) {
+      if (persistedGeneration === activeGeneration) return false;
 
-  const purge = previous !== null && previous !== ANONYMOUS_OWNER;
-  if (purge) {
-    // Set before attempting, so a crash or a closed tab mid-delete still leaves
-    // the store marked as one that must not be hydrated.
-    setPurgePending(true);
-    if (!(await deletePersistedDatabase())) return true;
-    setPurgePending(false);
+      // Another tab already completed this owner transition. Stop using this
+      // tab's stale namespace and force the same reload used by the initiating
+      // tab so its retained live collection rows are discarded too.
+      await stopPersistingSyncCollections();
+      clearLoadedSnapshots();
+      activeGeneration = persistedGeneration;
+      return true;
+    }
+
+    const purge = previous !== undefined && previous !== ANONYMOUS_OWNER;
+    if (purge) {
+      // Stop this tab before changing namespaces. Writes already running finish
+      // against the old generation and are deleted below; other tabs retain
+      // that generation and therefore cannot write into the new owner's keys.
+      await stopPersistingSyncCollections();
+      // Both copies, or neither: the in-memory map is what the pull fallback
+      // reads, so leaving it populated would let the previous account's rows
+      // render in this one's session the first time a pull fails.
+      clearLoadedSnapshots();
+      const previousGeneration = activeGeneration;
+      const nextGeneration = createSnapshotGeneration();
+      await Promise.all(
+        collectionNames.map((name) => del(snapshotKey(name, previousGeneration))),
+      );
+      await setMany([
+        [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, owner],
+        [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, nextGeneration],
+      ]);
+      activeGeneration = nextGeneration;
+      return true;
+    }
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, owner);
+    return purge;
+  } catch (err) {
+    logger.error("Failed to check the snapshot owner:", err);
+    return false;
   }
-  writeOwner(owner);
-  return purge;
-}
-
-/** Reset module state. Intended for tests. */
-export function resetPersistenceForTests(): void {
-  openPromise = null;
-  openedDatabase = null;
-  setPurgePending(false);
 }

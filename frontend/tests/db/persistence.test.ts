@@ -1,279 +1,389 @@
+import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clear, get, set, setMany } from "idb-keyval";
 import {
-  COLLECTION_SCHEMA_VERSION,
-  guardStartupMarkReady,
-  purgePersistedDataOnOwnerChange,
-  resetPersistenceForTests,
-  syncCollectionPersistence,
-  whenPersistenceReady,
-} from "@/db/persistence";
-import {
-  PERSISTED_COLLECTION_OWNER_KEY,
-  PERSISTED_COLLECTION_PURGE_PENDING_KEY,
+  SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
+  SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX,
+  SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
 } from "@/constants/storageKeys";
+import {
+  getLoadedSnapshot,
+  hydrateSyncCollections,
+  purgeSnapshotsOnOwnerChange,
+  resetHydrationForTests,
+  startPersistingSyncCollections,
+  stopPersistingSyncCollections,
+  whenHydrated,
+  type PersistableCollection,
+} from "@/db/persistence";
 
-/**
- * The methods `validatePersistenceAdapter` requires before it will accept an
- * adapter, plus the optional ones the persistence runtime feature-detects by
- * property presence. Missing an optional one does not throw — it silently
- * disables metadata loading and stream positions — so they are asserted here.
- */
-const ADAPTER_METHODS = [
-  "loadSubset",
-  "applyCommittedTx",
-  "ensureIndex",
-  "loadCollectionMetadata",
-  "scanRows",
-  "markIndexRemoved",
-  "getStreamPosition",
-] as const;
+const snapshotKey = (name: string, generation = "legacy") =>
+  `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generation === "legacy" ? "" : `${generation}_`}${name}`;
+const getItemKey = (_name: string, item: unknown) => (item as { id: string }).id;
 
-/** OPFS is not available under happy-dom, which is the degraded path. */
-function stubOpfs(removeEntry: (name: string) => Promise<void>): void {
-  vi.stubGlobal("navigator", {
-    ...navigator,
-    storage: { getDirectory: () => Promise.resolve({ removeEntry }) },
-  });
-  vi.stubGlobal("Worker", class {});
+class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+
+  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+  postMessage = vi.fn();
+  close = vi.fn();
+
+  constructor(readonly name: string) {
+    FakeBroadcastChannel.instances.push(this);
+  }
 }
 
-beforeEach(() => {
-  localStorage.clear();
-  resetPersistenceForTests();
+/** Stand-in for a TanStack DB collection with a controllable change stream. */
+function fakeCollection<T>(items: T[] = []) {
+  let current = items;
+  const listeners = new Set<() => void>();
+  return {
+    get toArray() {
+      return current;
+    },
+    subscribeChanges(cb: () => void) {
+      listeners.add(cb);
+      return { unsubscribe: () => listeners.delete(cb) };
+    },
+    /** Test helper: change the contents and notify subscribers. */
+    setItems(next: T[]) {
+      current = next;
+      for (const cb of listeners) cb();
+    },
+  };
+}
+
+beforeEach(async () => {
+  await stopPersistingSyncCollections();
+  await clear();
+  resetHydrationForTests();
+  vi.useRealTimers();
+  FakeBroadcastChannel.instances = [];
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await stopPersistingSyncCollections();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
-describe("syncCollectionPersistence", () => {
-  it("exposes every adapter method the persistence runtime looks for", () => {
-    const adapter = syncCollectionPersistence.adapter as unknown as Record<string, unknown>;
-    for (const method of ADAPTER_METHODS) {
-      expect(typeof adapter[method], method).toBe("function");
-    }
-  });
-
-  it("resolves a per-collection persistence with the same adapter surface", () => {
-    const resolved = syncCollectionPersistence.resolvePersistenceForCollection?.({
-      collectionId: "worktime/tasks",
-      mode: "sync-present",
-      schemaVersion: COLLECTION_SCHEMA_VERSION,
-    });
-
-    expect(resolved).toBeDefined();
-    const adapter = resolved?.adapter as unknown as Record<string, unknown>;
-    for (const method of ADAPTER_METHODS) {
-      expect(typeof adapter[method], method).toBe("function");
-    }
+describe("snapshot storage keys", () => {
+  it("keeps the centralized key values stable", () => {
+    expect(SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX).toBe("worktime_collection_snapshot_");
+    expect(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY).toBe("worktime_collection_snapshot_owner");
+    expect(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY).toBe("worktime_collection_snapshot_generation");
   });
 });
 
-describe("degrading when the local store cannot be opened", () => {
-  // Private browsing, a storage-disabled profile, or a browser without OPFS
-  // sync access handles. Persistence is an enhancement, so the app has to keep
-  // working from memory rather than have its sync pipe start rejecting.
-  it("reports ready rather than hanging or throwing", async () => {
-    await expect(whenPersistenceReady()).resolves.toBeUndefined();
+describe("hydrateSyncCollections", () => {
+  it("loads a stored snapshot so the queryFn can return it", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
   });
 
-  it("hydrates to an empty store instead of failing", async () => {
-    await expect(
-      syncCollectionPersistence.adapter.loadSubset("worktime/tasks", {}),
-    ).resolves.toEqual([]);
+  it("preserves an empty stored snapshot", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([]);
   });
 
-  it("accepts and discards writes instead of rejecting them", async () => {
-    await expect(
-      syncCollectionPersistence.adapter.applyCommittedTx("worktime/tasks", {
-        txId: "tx-1",
-        term: 1,
-        seq: 1,
-        rowVersion: 1,
-        mutations: [{ type: "insert", key: "t1", value: { id: "t1" } }],
-      }),
-    ).resolves.toBeUndefined();
+  it("ignores a snapshot written by an incompatible version", async () => {
+    // Hydrating rows the current code cannot read would be worse than showing
+    // nothing and refetching.
+    await set(snapshotKey("tasks"), { version: 999, items: [{ id: "t1" }] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toBeNull();
   });
 
-  it("reports the stream position of a store that was never written", async () => {
-    await expect(
-      syncCollectionPersistence.adapter.getStreamPosition?.("worktime/tasks"),
-    ).resolves.toEqual({ latestTerm: 0, latestSeq: 0, latestRowVersion: 0 });
+  it("reports no snapshot for a collection that has never been stored", async () => {
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+  });
+
+  it("resolves whenHydrated only after the snapshots are read", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    const hydration = hydrateSyncCollections(["tasks"]);
+    // The queryFn awaits this exact promise before deciding what to return —
+    // that ordering is what stops a cold start from committing an empty
+    // collection over a full local history.
+    await whenHydrated();
+    await hydration;
+
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
   });
 });
 
-describe("guardStartupMarkReady", () => {
-  /** Build the options shape the guard wraps, capturing what the inner sync sees. */
-  function wrap(markReady: () => void) {
-    let captured: (() => void) | undefined;
-    const guarded = guardStartupMarkReady({
-      id: "worktime/tasks",
-      sync: {
-        rowUpdateMode: "partial",
-        sync: (params: { markReady: () => void }) => {
-          captured = params.markReady;
-        },
-      },
-    });
-    (guarded.sync as { sync: (p: { markReady: () => void }) => unknown }).sync({ markReady });
-    return () => captured?.();
-  }
-
-  function transitionError(from: string): Error {
-    const err = new Error(
-      `Invalid collection status transition from "${from}" to "ready" for collection "worktime/tasks"`,
+describe("startPersistingSyncCollections", () => {
+  it("writes a snapshot after a change settles", async () => {
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
     );
-    err.name = "CollectionStateError";
-    return err;
-  }
 
-  it("passes a normal markReady straight through", () => {
-    const markReady = vi.fn();
-    wrap(markReady)();
-    expect(markReady).toHaveBeenCalledOnce();
+    tasks.setItems([{ id: "t1" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    // idb-keyval resolves on its own microtask queue.
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({ version: 1, items: [{ id: "t1" }] });
   });
 
-  it("preserves the rest of the sync config", () => {
-    const guarded = guardStartupMarkReady({ sync: { rowUpdateMode: "partial", sync: () => {} } });
-    expect((guarded.sync as { rowUpdateMode: string }).rowUpdateMode).toBe("partial");
-  });
+  it("coalesces a burst of changes into one write", async () => {
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
 
-  it("swallows a markReady on a collection cleaned up mid-startup", () => {
-    // The persisted wrapper defers markReady behind its async startup without
-    // re-checking whether the collection was torn down. Unguarded this escapes
-    // as an unhandled rejection and fails the whole run even though every
-    // assertion passed.
-    const run = wrap(() => {
-      throw transitionError("cleaned-up");
+    tasks.setItems([{ id: "t1" }]);
+    tasks.setItems([{ id: "t1" }, { id: "t2" }]);
+    tasks.setItems([{ id: "t1" }, { id: "t2" }, { id: "t3" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Only the settled state is stored, not each intermediate step.
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "t1" }, { id: "t2" }, { id: "t3" }],
     });
-    expect(run).not.toThrow();
   });
 
-  it("rethrows any other invalid transition", () => {
-    const run = wrap(() => {
-      throw transitionError("error");
+  it("merges a local addition with a snapshot written by another tab", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "original" }] });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection([{ id: "original" }]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "original" }, { id: "other-tab" }],
     });
-    expect(run).toThrow(/from "error" to "ready"/);
+    vi.useFakeTimers();
+    tasks.setItems([{ id: "original" }, { id: "this-tab" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "original" }, { id: "other-tab" }, { id: "this-tab" }],
+    });
   });
 
-  it("rethrows unrelated errors", () => {
-    const run = wrap(() => {
-      throw new TypeError("something else broke");
+  it("applies local deletions without resurrecting rows added by another tab", async () => {
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "keep" }, { id: "delete" }],
     });
-    expect(run).toThrow(TypeError);
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection([{ id: "keep" }, { id: "delete" }]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "keep" }, { id: "delete" }, { id: "other-tab" }],
+    });
+    vi.useFakeTimers();
+    tasks.setItems([{ id: "keep" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "keep" }, { id: "other-tab" }],
+    });
+  });
+
+  it("notifies other tabs after writing and refreshes its persisted fallback", async () => {
+    vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+    const channel = FakeBroadcastChannel.instances[0];
+
+    tasks.setItems([{ id: "local" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(channel.postMessage).toHaveBeenCalledWith({
+      type: "snapshot_changed",
+      name: "tasks",
+      generation: "legacy",
+    });
+
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "remote" }] });
+    channel.onmessage?.({
+      data: { type: "snapshot_changed", name: "tasks", generation: "legacy" },
+    } as MessageEvent<unknown>);
+    await vi.waitFor(() => expect(getLoadedSnapshot("tasks")).toEqual([{ id: "remote" }]));
   });
 });
 
-describe("purgePersistedDataOnOwnerChange", () => {
+describe("purgeSnapshotsOnOwnerChange", () => {
   it("records the owner on first run without purging", async () => {
-    expect(await purgePersistedDataOnOwnerChange("user-1")).toBe(false);
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-1");
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("user-1");
   });
 
-  it("keeps the store when the same user signs in again", async () => {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    const removeEntry = vi.fn(() => Promise.resolve());
-    stubOpfs(removeEntry);
+  it("keeps the snapshots when the same user signs in again", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
 
-    expect(await purgePersistedDataOnOwnerChange("user-1")).toBe(false);
-    expect(removeEntry).not.toHaveBeenCalled();
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+    expect(await get(snapshotKey("tasks"))).toBeDefined();
   });
 
   it("keeps anonymous data when that user signs in", async () => {
     // Data entered before signing in belongs to the person signing in, and
     // uploading it is exactly what first sync is for. Purging here would throw
     // away whatever someone entered while trying the app out.
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "anonymous");
-    const removeEntry = vi.fn(() => Promise.resolve());
-    stubOpfs(removeEntry);
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "anonymous");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
 
-    expect(await purgePersistedDataOnOwnerChange("user-1")).toBe(false);
-    expect(removeEntry).not.toHaveBeenCalled();
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-1");
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+    expect(await get(snapshotKey("tasks"))).toBeDefined();
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("user-1");
   });
 
-  it("deletes the store when a different user signs in on the same device", async () => {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    const removeEntry = vi.fn(() => Promise.resolve());
-    stubOpfs(removeEntry);
+  it("clears the in-memory snapshots too when purging", async () => {
+    // The stored keys and the in-memory map are two copies of the same
+    // records, and the pull fallback reads the in-memory one. Purging only
+    // IndexedDB would let user A's rows render in user B's session the first
+    // time a pull fails for B.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "a-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "a-task" }]);
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-a");
 
-    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
-    expect(removeEntry).toHaveBeenCalledWith("worktime-collections.sqlite");
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-2");
+    expect(await purgeSnapshotsOnOwnerChange("user-b", ["tasks"])).toBe(true);
+
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(getLoadedSnapshot("tasks")).toBeNull();
   });
 
-  it("deletes the store on sign-out so a signed-out device keeps no one's records", async () => {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    const removeEntry = vi.fn(() => Promise.resolve());
-    stubOpfs(removeEntry);
+  it("keeps the in-memory snapshots when there is nothing to purge", async () => {
+    // anonymous -> signed in: the data belongs to the person signing in, so it
+    // must survive for first sync to upload it.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "own-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "anonymous");
 
-    expect(await purgePersistedDataOnOwnerChange(null)).toBe(true);
-    expect(removeEntry).toHaveBeenCalledWith("worktime-collections.sqlite");
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("anonymous");
+    expect(await purgeSnapshotsOnOwnerChange("user-a", ["tasks"])).toBe(false);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "own-task" }]);
   });
 
-  it("still reports the purge when the store file was never written", async () => {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    stubOpfs(() => Promise.reject(Object.assign(new Error("missing"), { name: "NotFoundError" })));
+  it("purges when a different user signs in on the same device", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
 
-    // Nothing on disk is already the desired end state — the caller still has
-    // to reload, because user-1's rows are in memory either way.
-    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-2");
-    expect(localStorage.getItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY)).toBeNull();
+    expect(await purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).toBe(true);
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("user-2");
   });
-});
 
-describe("purge when the store cannot be deleted", () => {
-  // `removeEntry` fails while another tab of this origin still holds a sync
-  // access handle on the file. Treating that as success would reopen the
-  // previous account's rows under the new owner on the next load.
-  const locked = () =>
-    stubOpfs(() =>
-      Promise.reject(Object.assign(new Error("locked"), { name: "NoModificationAllowedError" })),
+  it("purges on sign-out so a signed-out device keeps no one's records", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    expect(await purgeSnapshotsOnOwnerChange(null, ["tasks"])).toBe(true);
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("anonymous");
+  });
+
+  it("cancels this tab's queued old-owner writes before changing owner", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
     );
+    tasks.setItems([{ id: "user-1-task" }]);
 
-  it("does not hand the store to the new owner", async () => {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    locked();
+    await expect(purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).resolves.toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
-    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
-    // Still user-1, so the transition is retried on the next auth change
-    // instead of being silently marked done.
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).toBe("user-1");
+    const generation = await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY);
+    expect(generation).toBeTypeOf("string");
+    expect(generation).not.toBe("legacy");
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(await get(snapshotKey("tasks", generation))).toBeUndefined();
   });
 
-  it("marks the store as pending deletion", async () => {
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    locked();
+  it("ignores a snapshot recreated by an old tab after an owner change", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "user-1-task" }] });
+    await hydrateSyncCollections(["tasks"]);
 
-    await purgePersistedDataOnOwnerChange("user-2");
+    await expect(purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).resolves.toBe(true);
+    const generation = await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY);
+    expect(generation).toBeTypeOf("string");
 
-    expect(localStorage.getItem(PERSISTED_COLLECTION_PURGE_PENDING_KEY)).not.toBeNull();
+    // A tab that has not observed the transition can only recreate its old
+    // namespace. A reload hydrates the new owner's generation instead.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "stale-user-1-task" }] });
+    resetHydrationForTests();
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "stale-user-1-task" }],
+    });
+    expect(await get(snapshotKey("tasks", generation))).toBeUndefined();
   });
 
-  it("does not let a failed sign-out purge become an anonymous store", async () => {
-    // The worst case, and the reason the owner is left untouched: sign-out
-    // recording "anonymous" would make the *next* sign-in an anonymous → user
-    // transition, which is the one exempt case — so user-1's rows would be
-    // handed to first sync as the new user's local data and uploaded into
-    // their account.
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    locked();
+  it("detects an owner transition already completed by another tab", async () => {
+    await setMany([
+      [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1"],
+      [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, "generation-1"],
+    ]);
+    await set(snapshotKey("tasks", "generation-1"), {
+      version: 1,
+      items: [{ id: "user-1-task" }],
+    });
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "user-1-task" }]);
 
-    expect(await purgePersistedDataOnOwnerChange(null)).toBe(true);
-    expect(localStorage.getItem(PERSISTED_COLLECTION_OWNER_KEY)).not.toBe("anonymous");
+    // Simulate another tab atomically assigning user-2 a fresh namespace.
+    await setMany([
+      [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-2"],
+      [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, "generation-2"],
+    ]);
 
-    // A later sign-in as somebody else must still be seen as user-1 → user-2.
-    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
+    await expect(purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).resolves.toBe(true);
+    expect(getLoadedSnapshot("tasks")).toBeNull();
   });
 
-  it("still reports the purge so the caller reloads", async () => {
-    // The rows are in memory regardless of what happened on disk.
-    localStorage.setItem(PERSISTED_COLLECTION_OWNER_KEY, "user-1");
-    locked();
+  it("reports no purge when storage is unavailable", async () => {
+    vi.spyOn(indexedDB, "open").mockImplementation(() => {
+      throw new Error("IndexedDB disabled");
+    });
 
-    expect(await purgePersistedDataOnOwnerChange("user-2")).toBe(true);
+    // Private browsing or disabled storage: persistence is an enhancement, so
+    // the app must keep working from memory rather than throwing.
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
   });
 });

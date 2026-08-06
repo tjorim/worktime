@@ -104,7 +104,10 @@ export function useTimeTrackingStorage() {
     [rawTemplateData],
   );
 
-  const labels = useMemo(() => sanitizeLabels((rawLabelData ?? []) as Label[]), [rawLabelData]);
+  const labels = useMemo(
+    () => sanitizeLabels((rawLabelData ?? []) as Label[]),
+    [rawLabelData],
+  );
 
   const addTask = useCallback(
     async (payload: StoredTimeTrackingTask): Promise<boolean> => {
@@ -248,7 +251,9 @@ export function useTimeTrackingStorage() {
   const updateLabels = useCallback((nextLabels: Label[]) => {
     const sanitized = sanitizeLabels(nextLabels);
     const nextIds = new Set(sanitized.map((l) => l.id));
-    const toDelete = (labelsCollection.toArray as Label[]).filter((l) => !nextIds.has(l.id));
+    const toDelete = (labelsCollection.toArray as Label[]).filter(
+      (l) => !nextIds.has(l.id),
+    );
     const hasWork = sanitized.length > 0 || toDelete.length > 0;
     runMutationBatch(labelsCollection, hasWork, () => {
       // Upsert all labels in the new list
