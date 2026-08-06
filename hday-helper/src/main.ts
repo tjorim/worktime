@@ -673,7 +673,16 @@ async function loggedHandleRequest(req: Request): Promise<Response> {
   } catch (err) {
     const ms = (performance.now() - start).toFixed(1);
     console.error(`${req.method} ${pathname} -> unhandled error (${ms}ms):`, err);
-    throw err;
+    // Every known error path in handleRequest already returns a CORS-headered
+    // response — this only catches genuine bugs. Respond ourselves (with CORS
+    // headers) rather than letting it fall through to Bun's default handling,
+    // which would omit them and surface to the browser as an opaque "CORS
+    // error" that hides the real problem.
+    return jsonResponse(
+      { detail: "Internal server error" },
+      500,
+      getCorsHeaders(req.headers.get("Origin")),
+    );
   }
 }
 
