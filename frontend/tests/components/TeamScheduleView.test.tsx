@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -59,51 +58,19 @@ describe("TeamScheduleView", () => {
     expect(screen.getByText(m.team_backend_required_heading())).toBeInTheDocument();
   });
 
-  it("routes team requests to the same-origin API and explains that no helper is configured", async () => {
+  it("requires a configured helper and never falls back to the app's own origin", async () => {
     seedConnectedOptions(null);
-    server.use(
-      http.get("*/api/team/:teamId/hday", ({ params }) =>
-        HttpResponse.json(teamHdayPayload(params.teamId as string)),
-      ),
-    );
+    // No handler for */api/team/*hday is registered — MSW's onUnhandledRequest: "error"
+    // means the test fails loudly if the view ever attempts that request.
 
-    const user = userEvent.setup();
     render(
       <TestProviders>
         <TeamScheduleView />
       </TestProviders>,
     );
 
-    expect(await screen.findByText(m.team_no_helper_configured())).toBeInTheDocument();
-
-    await user.type(screen.getByLabelText(m.team_id_label()), "eng");
-    await user.click(screen.getByRole("button", { name: m.team_load_btn() }));
-
-    expect(await screen.findByText("Engineering")).toBeInTheDocument();
-  });
-
-  it("gives a helper-configuration hint when the same-origin team endpoint 404s", async () => {
-    seedConnectedOptions(null);
-    server.use(
-      http.get("*/api/team/:teamId/hday", () =>
-        HttpResponse.json({ detail: "Not Found" }, { status: 404 }),
-      ),
-    );
-
-    const user = userEvent.setup();
-    render(
-      <TestProviders>
-        <TeamScheduleView />
-      </TestProviders>,
-    );
-
-    await screen.findByText(m.team_no_helper_configured());
-    await user.type(screen.getByLabelText(m.team_id_label()), "eng");
-    await user.click(screen.getByRole("button", { name: m.team_load_btn() }));
-
-    expect(
-      await screen.findByText(m.team_fetch_failed({ error: m.team_fetch_404_no_helper_hint({ error: "Not Found" }) })),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(m.team_helper_required_heading())).toBeInTheDocument();
+    expect(screen.queryByLabelText(m.team_id_label())).not.toBeInTheDocument();
   });
 
   it("routes team requests to the configured local helper instead of the app origin", async () => {
@@ -122,6 +89,6 @@ describe("TeamScheduleView", () => {
     );
 
     expect(await screen.findByText("Engineering")).toBeInTheDocument();
-    expect(screen.queryByText(m.team_no_helper_configured())).not.toBeInTheDocument();
+    expect(screen.queryByText(m.team_helper_required_heading())).not.toBeInTheDocument();
   });
 });

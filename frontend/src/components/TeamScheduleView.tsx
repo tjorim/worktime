@@ -41,19 +41,18 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-async function getTeamFetchErrorMessage(response: Response, usesHelper: boolean): Promise<string> {
+async function getTeamFetchErrorMessage(response: Response): Promise<string> {
   const contentType = response.headers.get("content-type");
-  let detail: string | null = null;
 
   if (contentType?.includes("application/json")) {
     try {
       const body: unknown = await response.json();
 
       if (body && typeof body === "object" && "detail" in body) {
-        const { detail: rawDetail } = body as { detail: unknown };
+        const { detail } = body as { detail: unknown };
 
-        if (typeof rawDetail === "string" && rawDetail.trim()) {
-          detail = rawDetail;
+        if (typeof detail === "string" && detail.trim()) {
+          return detail;
         }
       }
     } catch {
@@ -61,14 +60,7 @@ async function getTeamFetchErrorMessage(response: Response, usesHelper: boolean)
     }
   }
 
-  // A 404 against the app's own origin (no helper configured) almost always means
-  // the legacy file-share routes aren't mounted here — point the user at the fix
-  // instead of leaving them with an opaque "Not Found".
-  if (response.status === 404 && !usesHelper) {
-    return m.team_fetch_404_no_helper_hint({ error: detail ?? m.team_unknown_error() });
-  }
-
-  return detail ?? m.team_unknown_error();
+  return m.team_unknown_error();
 }
 
 /**
@@ -91,7 +83,8 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
 
 /**
  * Team Schedule Viewer - displays team members and their .hday schedules in a calendar grid.
- * Only visible when developer options are enabled and backend is connected.
+ * Only usable when developer options are enabled, the backend is connected, and a
+ * local .hday helper URL is configured — this server never mounts these routes itself.
  *
  * Shows a calendar-style grid with:
  * - Dates as columns (horizontal timeline)
@@ -183,7 +176,7 @@ export function TeamScheduleView() {
       );
 
       if (!response.ok) {
-        const errorMessage = await getTeamFetchErrorMessage(response, usesHelper);
+        const errorMessage = await getTeamFetchErrorMessage(response);
         throw new Error(m.team_fetch_failed({ error: errorMessage }));
       }
 
@@ -208,20 +201,22 @@ export function TeamScheduleView() {
         setIsLoading(false);
       }
     }
-  }, [teamId, baseUrl, usesHelper]);
+  }, [teamId, baseUrl]);
 
-  // Auto-load team data if team ID is available and connected (only once per team ID)
+  // Auto-load team data if team ID is available and connected (only once per team ID).
+  // Requires a configured helper — the app origin never exposes these routes in production.
   useEffect(() => {
     if (
       teamId &&
       connectionStatus === "connected" &&
+      usesHelper &&
       !teamData &&
       !isLoading &&
       !hasAttemptedFetch
     ) {
       fetchTeamData();
     }
-  }, [teamId, connectionStatus, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
+  }, [teamId, connectionStatus, usesHelper, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -276,6 +271,18 @@ export function TeamScheduleView() {
     );
   }
 
+  // This server never exposes team schedules directly (see backend LEGACY_FILESHARE_ENABLED) —
+  // a local .hday helper is the only way to load them, so require one before fetching anything.
+  if (!usesHelper) {
+    return (
+      <Alert variant="info" className="mt-3">
+        <Alert.Heading>{m.team_helper_required_heading()}</Alert.Heading>
+        <p>{m.team_helper_required_body()}</p>
+        <p className="mb-0 small">{m.team_helper_required_help()}</p>
+      </Alert>
+    );
+  }
+
   return (
     <div className="team-schedule-view py-3">
       <Card className="mb-3">
@@ -319,12 +326,6 @@ export function TeamScheduleView() {
           </Form>
         </Card.Body>
       </Card>
-
-      {!usesHelper && (
-        <Alert variant="info" className="mb-3">
-          {m.team_no_helper_configured()}
-        </Alert>
-      )}
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
