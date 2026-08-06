@@ -16,6 +16,7 @@ import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
+import { resolveHdayHelperTarget } from "@/utils/hdayHelper";
 
 interface TeamMember {
   username: string;
@@ -82,7 +83,8 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
 
 /**
  * Team Schedule Viewer - displays team members and their .hday schedules in a calendar grid.
- * Only visible when developer options are enabled and backend is connected.
+ * Only usable when developer options are enabled, the backend is connected, and a
+ * local .hday helper URL is configured — this server never mounts these routes itself.
  *
  * Shows a calendar-style grid with:
  * - Dates as columns (horizontal timeline)
@@ -95,6 +97,7 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
 export function TeamScheduleView() {
   const { options } = useDeveloperOptions();
   const connectionStatus = options.connectionStatus;
+  const { baseUrl, usesHelper } = resolveHdayHelperTarget(options.hdayHelperUrl);
 
   const [teamId, setTeamId] = useState(() => {
     // Load saved team ID from localStorage
@@ -128,6 +131,18 @@ export function TeamScheduleView() {
     }
   }, [connectionStatus]);
 
+  // Reset state when the target helper changes — otherwise data fetched from
+  // the previous helper stays on screen (or a stale in-flight request from it
+  // resolves) after the user points Developer Options at a different one.
+  useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setTeamData(null);
+    setError(null);
+    setHasAttemptedFetch(false);
+  }, [baseUrl]);
+
   // Cleanup: abort any pending requests on unmount
   useEffect(() => {
     return () => {
@@ -159,14 +174,18 @@ export function TeamScheduleView() {
     setHasAttemptedFetch(true);
 
     try {
-      // Fetch team .hday data (includes team info)
-      const response = await fetch(`/api/team/${encodeURIComponent(teamId)}/hday?format=parsed`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
+      // Fetch team .hday data (includes team info) — routed to the configured local
+      // helper when set, since production doesn't mount these routes on the app origin.
+      const response = await fetch(
+        `${baseUrl}/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          signal: abortController.signal,
         },
-        signal: abortController.signal,
-      });
+      );
 
       if (!response.ok) {
         const errorMessage = await getTeamFetchErrorMessage(response);
@@ -194,20 +213,22 @@ export function TeamScheduleView() {
         setIsLoading(false);
       }
     }
-  }, [teamId]);
+  }, [teamId, baseUrl]);
 
-  // Auto-load team data if team ID is available and connected (only once per team ID)
+  // Auto-load team data if team ID is available and connected (only once per team ID).
+  // Requires a configured helper — the app origin never exposes these routes in production.
   useEffect(() => {
     if (
       teamId &&
       connectionStatus === "connected" &&
+      usesHelper &&
       !teamData &&
       !isLoading &&
       !hasAttemptedFetch
     ) {
       fetchTeamData();
     }
-  }, [teamId, connectionStatus, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
+  }, [teamId, connectionStatus, usesHelper, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -258,6 +279,18 @@ export function TeamScheduleView() {
         <Alert.Heading>{m.team_backend_required_heading()}</Alert.Heading>
         <p>{m.team_backend_required_body()}</p>
         <p className="mb-0 small">{m.team_backend_required_help()}</p>
+      </Alert>
+    );
+  }
+
+  // This server never exposes team schedules directly (see backend LEGACY_FILESHARE_ENABLED) —
+  // a local .hday helper is the only way to load them, so require one before fetching anything.
+  if (!usesHelper) {
+    return (
+      <Alert variant="info" className="mt-3">
+        <Alert.Heading>{m.team_helper_required_heading()}</Alert.Heading>
+        <p>{m.team_helper_required_body()}</p>
+        <p className="mb-0 small">{m.team_helper_required_help()}</p>
       </Alert>
     );
   }

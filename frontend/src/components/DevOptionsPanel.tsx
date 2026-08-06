@@ -8,6 +8,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 
 interface DevOptionsPanelProps {
@@ -43,6 +44,8 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
+  const hdayHelperMixedContentRisk =
+    hdayHelperUrlDraft.trim() !== "" && isHdayHelperMixedContentBlocked(hdayHelperUrlDraft.trim());
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -289,6 +292,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             </div>
             <Form.Text className="text-muted">{m.dev_hday_helper_url_help()}</Form.Text>
           </Form.Group>
+
+          {hdayHelperMixedContentRisk && (
+            <Alert variant="warning" className="mb-2 py-2 small">
+              {m.dev_hday_helper_mixed_content_warning()}
+            </Alert>
+          )}
 
           {helperTestResult && (
             <Alert
