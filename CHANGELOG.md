@@ -16,6 +16,12 @@ below predate that switch.
 - Notification system
 - Cross-schedule transfer view
 
+## [2026.8.2] - 2026-08-01
+
+### Fixed
+
+- Android release builds now authenticate with the dedicated Worktime Android OIDC client (#1039)
+
 ## [2026.8.1] - 2026-08-01
 
 ### Changed
@@ -680,7 +686,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.1...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.2...HEAD
+[2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2
 [2026.8.1]: https://github.com/tjorim/worktime/compare/v2026.7.2...v2026.8.1
 [2026.7.2]: https://github.com/tjorim/worktime/compare/v2026.7.1...v2026.7.2
 [2026.7.1]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.1

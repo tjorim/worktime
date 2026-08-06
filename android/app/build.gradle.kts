@@ -73,14 +73,14 @@ val debugOidcClientId =
         "ANDROID_DEBUG_OIDC_CLIENT_ID",
         "ANDROID_DEBUG_OIDC_CLIENT_ID",
         required = false,
-        default = "worktime"
+        default = "worktime-android"
     )
 val releaseOidcClientId =
     resolveConfigValue(
         "ANDROID_OIDC_CLIENT_ID",
         "ANDROID_OIDC_CLIENT_ID",
         required = false,
-        default = "worktime"
+        default = "worktime-android"
     )
 val oidcScope =
     resolveConfigValue(

@@ -54,6 +54,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           ANDROID_API_BASE_URL: ${{ secrets.ANDROID_API_BASE_URL }}
+          ANDROID_OIDC_CLIENT_ID: worktime-android
           ANDROID_OIDC_ISSUER_URL: ${{ secrets.ANDROID_OIDC_ISSUER_URL }}
           ANDROID_CERTIFICATE_PIN_HOST: ${{ secrets.ANDROID_CERTIFICATE_PIN_HOST }}
           ANDROID_CERTIFICATE_PINS: ${{ secrets.ANDROID_CERTIFICATE_PINS }}
@@ -76,6 +77,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           ANDROID_API_BASE_URL: ${{ secrets.ANDROID_API_BASE_URL }}
+          ANDROID_OIDC_CLIENT_ID: worktime-android
           ANDROID_OIDC_ISSUER_URL: ${{ secrets.ANDROID_OIDC_ISSUER_URL }}
           ANDROID_CERTIFICATE_PIN_HOST: ${{ secrets.ANDROID_CERTIFICATE_PIN_HOST }}
           ANDROID_CERTIFICATE_PINS: ${{ secrets.ANDROID_CERTIFICATE_PINS }}

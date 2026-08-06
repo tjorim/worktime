@@ -13,6 +13,15 @@
 # :app:assembleRelease -- not just that one task).
 # ANDROID_API_BASE_URL=https://worktime.tjor.im/
 
+# Release and debug default to the dedicated worktime-android OIDC client.
+# Override either setting when building for an environment with a different
+# client registration.
+# ANDROID_OIDC_CLIENT_ID=worktime-android
+
+# Debug keeps a separate setting because its .debug application ID uses the
+# matching im.tjor.worktime.debug:/oauth2redirect registration.
+# ANDROID_DEBUG_OIDC_CLIENT_ID=worktime-android
+
 # Certificate pin host and pins (required when building a release artifact;
 # debug never pins, regardless of these values).
 # ANDROID_CERTIFICATE_PIN_HOST=worktime.tjor.im
