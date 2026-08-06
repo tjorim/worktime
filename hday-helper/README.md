@@ -6,10 +6,12 @@ required on the target machine.
 
 ## What it does
 
-- Exposes the same `/hday/:username` and `/team/:teamId` API shapes as the Python backend
+- Exposes `/hday/:username` and `/team/:teamId` HTTP endpoints for `.hday` file and team-config access
 - Reads `.hday` files from the share root; reads team config (`.conf`, `.people`) from `{SHARE_DIR}/config/`
 - Reads from / writes to a configurable directory (local path or UNC/mapped-drive path)
 - No database, no OIDC, no authentication — pure file I/O over HTTP
+- Logs each request (method, path, status, timing) to the console — the only diagnostic
+  output when running as a standalone EXE
 
 ## Quick start
 
@@ -55,10 +57,10 @@ SHARE_DIR=Z:\worktime
 
 ### `GET /health`
 
-Returns the server status and whether the share directory is accessible.
+Returns the server status, the helper's own version, and whether the share directory is accessible.
 
 ```json
-{ "status": "ok", "share": "accessible", "share_dir": "Z:\\worktime" }
+{ "status": "ok", "version": "2026.8.1", "share": "accessible", "share_dir": "Z:\\worktime" }
 ```
 
 HTTP 200 when accessible, 503 when the share directory cannot be reached.

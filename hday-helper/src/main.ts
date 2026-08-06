@@ -15,9 +15,9 @@
  * | HOST           | 127.0.0.1             | Bind address                        |
  * | CORS_ORIGINS   | http://localhost:5173 | Comma-separated allowed origins     |
  *
- * ## API (mirrors backend/app/routers/hday.py + team.py)
+ * ## API
  *
- * GET  /health              — health + share-directory status
+ * GET  /health              — health, own version, and share-directory status
  * GET  /hday/:username      — read a user's .hday file (always includes parsed events)
  * PUT  /hday/:username      — create or update a user's .hday file
  * GET  /team/:teamId        — read team config + member list
@@ -44,11 +44,16 @@ import { basename, join, resolve, sep } from "path";
 import { parseHday } from "../../frontend/src/lib/hday/parser";
 import { toLine } from "../../frontend/src/lib/hday/serializer";
 import type { HdayEvent } from "../../frontend/src/lib/hday/types";
+// `with { type: "text" }` embeds the file's contents as a string constant at bundle
+// time (verified to survive `bun build --compile` too), so the compiled EXE reports
+// the version of the source tree it was built from, not whatever's on the host disk.
+import VERSION_FILE from "../../VERSION" with { type: "text" };
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
+const HELPER_VERSION = VERSION_FILE.trim();
 const SHARE_DIR = resolve(process.env.SHARE_DIR ?? "./hday_files");
 const PORT = parseInt(process.env.PORT || "8080", 10) || 8080;
 const HOST = process.env.HOST || "127.0.0.1";
@@ -429,7 +434,12 @@ async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "GET" && pathname === "/health") {
     const shareOk = isShareAccessible();
     return jsonResponse(
-      { status: "ok", share: shareOk ? "accessible" : "inaccessible", share_dir: SHARE_DIR },
+      {
+        status: "ok",
+        version: HELPER_VERSION,
+        share: shareOk ? "accessible" : "inaccessible",
+        share_dir: SHARE_DIR,
+      },
       shareOk ? 200 : 503,
       corsHeaders,
     );
@@ -648,6 +658,26 @@ async function handleRequest(req: Request): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
+// Request logging — the only diagnostic output available to someone running
+// this as a standalone EXE with no other way to see what it's doing.
+// ---------------------------------------------------------------------------
+
+async function loggedHandleRequest(req: Request): Promise<Response> {
+  const start = performance.now();
+  const { pathname } = new URL(req.url);
+  try {
+    const response = await handleRequest(req);
+    const ms = (performance.now() - start).toFixed(1);
+    console.log(`${req.method} ${pathname} -> ${response.status} (${ms}ms)`);
+    return response;
+  } catch (err) {
+    const ms = (performance.now() - start).toFixed(1);
+    console.error(`${req.method} ${pathname} -> unhandled error (${ms}ms):`, err);
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bootstrap
 // ---------------------------------------------------------------------------
 
@@ -661,15 +691,29 @@ if (!existsSync(SHARE_DIR)) {
   }
 }
 
-Bun.serve({
-  hostname: HOST,
-  port: PORT,
-  fetch: handleRequest,
-});
+try {
+  Bun.serve({
+    hostname: HOST,
+    port: PORT,
+    fetch: loggedHandleRequest,
+  });
+} catch (err) {
+  if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
+    console.error(
+      `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
+        `Either stop whatever else is using it, or set PORT to a different value ` +
+        `(e.g. PORT=8081) in your .env file next to the executable.\n`,
+    );
+  } else {
+    console.error("\nCould not start the .hday helper:", err, "\n");
+  }
+  process.exit(1);
+}
 
 console.log("============================================================");
 console.log("Worktime .hday Helper");
 console.log("============================================================");
+console.log(`Version:   ${HELPER_VERSION}`);
 console.log(`Host:      ${HOST}`);
 console.log(`Port:      ${PORT}`);
 console.log(`Share dir: ${SHARE_DIR}`);
