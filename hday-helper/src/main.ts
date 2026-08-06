@@ -436,7 +436,12 @@ async function readBodyTextWithLimit(req: Request, maxBytes: number): Promise<st
   if (!req.body) return "";
 
   const reader = req.body.getReader();
-  const chunks: Uint8Array[] = [];
+  // Decode incrementally (stream: true carries partial multi-byte UTF-8
+  // sequences across chunk boundaries) instead of collecting raw chunks and
+  // concatenating them into a second full-size buffer before decoding —
+  // avoids holding two complete copies of a near-limit body in memory at once.
+  const decoder = new TextDecoder("utf-8");
+  const parts: string[] = [];
   let total = 0;
 
   while (true) {
@@ -447,16 +452,11 @@ async function readBodyTextWithLimit(req: Request, maxBytes: number): Promise<st
       await reader.cancel();
       throw new PayloadTooLargeError();
     }
-    chunks.push(value);
+    parts.push(decoder.decode(value, { stream: true }));
   }
+  parts.push(decoder.decode());
 
-  const combined = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    combined.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder("utf-8").decode(combined);
+  return parts.join("");
 }
 
 // ---------------------------------------------------------------------------
