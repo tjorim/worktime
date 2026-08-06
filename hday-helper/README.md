@@ -60,7 +60,7 @@ SHARE_DIR=Z:\worktime
 Returns the server status, the helper's own version, and whether the share directory is accessible.
 
 ```json
-{ "status": "ok", "version": "2026.8.1", "share": "accessible", "share_dir": "Z:\\worktime" }
+{ "status": "ok", "version": "2026.8.2", "share": "accessible", "share_dir": "Z:\\worktime" }
 ```
 
 HTTP 200 when accessible, 503 when the share directory cannot be reached.
