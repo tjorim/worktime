@@ -35,6 +35,9 @@ jobs:
         with:
           bun-version: "1"
 
+      - name: Run helper tests
+        run: bun test hday-helper/tests
+
       - name: Build helper executable
         run: bun build hday-helper/src/main.ts --compile --outfile /tmp/worktime-hday-helper
 

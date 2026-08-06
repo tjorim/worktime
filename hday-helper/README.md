@@ -158,4 +158,16 @@ bun build hday-helper/src/main.ts --compile --outfile worktime-hday-helper
 bun build hday-helper/src/main.ts --compile --target=bun-windows-x64 --outfile worktime-hday-helper.exe
 ```
 
+## Testing
+
+```bash
+# From the repo root:
+bun test hday-helper/tests
+```
+
+Tests spawn the real `src/main.ts` script as a child process against a throwaway
+`SHARE_DIR` and exercise it over real HTTP — black-box, no test-only exports needed.
+Covers routing, path-traversal defense, write-conflict/ETag semantics, the request
+size cap, team aggregation, and CORS.
+
 [ci]: https://github.com/tjorim/worktime/actions/workflows/build-hday-helper.yml
