@@ -39,10 +39,12 @@ logger = logging.getLogger(__name__)
 
 _worktime_mcp_base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "")
 if _worktime_mcp_base_url:
+    from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
     from .mcp_server import create_mcp_server as _create_mcp_server
     _mcp = _create_mcp_server()
     _mcp_app = _mcp.http_app(path="/")
 else:
+    from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
     _mcp = None
     _mcp_app = None
 
@@ -191,6 +193,7 @@ app.include_router(holidays_router, prefix="/api")
 if settings.DATABASE_ENABLED:
     from .routers.access_tokens import router as access_tokens_router
     from .routers.account_router import router as account_router
+    from .routers.audit import router as audit_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_preferences import router as db_preferences_router
     from .routers.db_sync import router as db_sync_router
@@ -198,12 +201,15 @@ if settings.DATABASE_ENABLED:
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
+    from .routers.integration_clients import router as integration_clients_router
     from .routers.pebble import router as pebble_router
     from .routers.read_models import router as read_models_router
     from .routers.registration import router as registration_router
 
     app.include_router(account_router, prefix="/api")
     app.include_router(access_tokens_router, prefix="/api")
+    app.include_router(integration_clients_router, prefix="/api")
+    app.include_router(audit_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(db_users_router, prefix="/api")
     app.include_router(db_time_tracking_router, prefix="/api")
@@ -221,6 +227,33 @@ else:
 if _mcp_app is not None:
     app.mount("/mcp", _mcp_app)
     logger.info("✓ MCP server mounted at /mcp")
+
+
+@app.get("/api/mcp/capabilities", tags=["Info"])
+async def mcp_capabilities() -> dict[str, object]:
+    """Authoritative MCP capability manifest (issue #1054).
+
+    Sourced directly from ``app.mcp_server.MCP_TOOL_CAPABILITIES`` — the same
+    dict ``create_mcp_server()`` iterates to register tools — so this
+    response cannot drift from what's actually registered on the running
+    server. ``tools`` is empty when the MCP server isn't mounted
+    (``WORKTIME_MCP_BASE_URL`` unset).
+    """
+    enabled = _mcp_app is not None
+    return {
+        "enabled": enabled,
+        "mount_path": "/mcp",
+        "tools": [
+            {
+                "name": name,
+                "side_effect": capability.effect.value,
+                "required_tier": capability.required_tier,
+            }
+            for name, capability in _MCP_TOOL_CAPABILITIES.items()
+        ]
+        if enabled
+        else [],
+    }
 
 
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])

@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.db import AuditActor
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
 from app.database.engine import get_session
@@ -296,6 +297,22 @@ def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal)
         return
     if principal.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
+def audit_actor_for(principal: AuthenticatedPrincipal) -> AuditActor:
+    """Build the transactional-audit actor identity for an authenticated REST caller.
+
+    ``label`` intentionally stays at the id-only ``user:<id>`` form rather
+    than resolving a username, so building an actor never costs an extra DB
+    query on every mutation's hot path — the audit trail can still be joined
+    to ``users`` by ``actor_user_id`` when a human-readable name is needed.
+    """
+    return AuditActor(
+        user_id=principal.user_id,
+        label=f"user:{principal.user_id}",
+        auth_source=principal.auth_type.value,
+        subject=principal.subject,
+    )
 
 
 def require_oidc_principal(

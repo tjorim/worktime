@@ -23,6 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy import false as sa_false
 from sqlalchemy import text as sql_text
+from sqlalchemy import true as sa_true
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -368,4 +369,91 @@ class CachedHoliday(Base):
             name="uq_cached_holiday",
             postgresql_nulls_not_distinct=True,
         ),
+    )
+
+
+class IntegrationClient(Base):
+    """Managed, database-backed credential for automation/integration callers (e.g. MCP).
+
+    Replaces the long-lived static-token map previously parsed once from
+    ``WORKTIME_MCP_INTEGRATION_KEYS`` at process startup. Each row is a
+    revocable, rotatable, rate-limited credential bound to one Worktime user.
+    Only the HMAC hash of the raw key is stored (see
+    ``app.services.integration_client_service.hash_integration_key``); the raw
+    value is returned once at creation/rotation time and cannot be recovered.
+
+    ``scopes`` follows the same shape as ``AccessToken.scopes``. The
+    well-known ``worktime:mcp`` scope grants ordinary personal-write MCP
+    access matching the caller's bound user; ``worktime:admin`` must be
+    granted explicitly (never implied) for team-wide/admin-tier access — this
+    preserves Worktime's existing ``is_admin`` semantics as a deliberate
+    grant rather than a default.
+    """
+
+    __tablename__ = "integration_clients"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    key_preview: Mapped[str] = mapped_column(String(8), nullable=False)
+    scopes: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=lambda: ["worktime:mcp"],
+        server_default='["worktime:mcp"]',
+    )
+    rate_limit_per_minute: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=120, server_default="120"
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=sa_true())
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
+    last_used_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_integration_clients_user_id_created_at", "user_id", "created_at"),
+    )
+
+
+class AuditEntry(Base):
+    """Transactional, durable record of a mutation performed via REST or MCP.
+
+    Written by ``app.audit.db.write_audit_entry`` into the *same* database
+    transaction as the mutation it describes (staged via ``session.add`` and
+    committed by the caller), so a mutation can never commit without leaving
+    an audit trail, and a failed mutation never leaves an orphaned entry.
+    This is the authoritative audit record; the rotated file logger in
+    ``app.audit.logger`` (from #984) remains as secondary, best-effort
+    operational telemetry only.
+    """
+
+    __tablename__ = "audit_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    actor_user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_label: Mapped[str] = mapped_column(String, nullable=False)
+    subject: Mapped[str | None] = mapped_column(String, nullable=True)
+    auth_source: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    resource_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    resource_id: Mapped[str] = mapped_column(String, nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    details: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now, index=True
+    )
+
+    __table_args__ = (
+        # Stable-pagination read order: (created_at DESC, id DESC). Ties on
+        # created_at (same-millisecond entries) still resolve deterministically
+        # via the autoincrement id, so keyset pagination never skips or repeats
+        # a row across pages.
+        Index("ix_audit_entries_created_at_id", "created_at", "id"),
     )

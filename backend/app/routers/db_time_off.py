@@ -9,7 +9,12 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import get_authenticated_user_id
+from app.routers.auth import (
+    AuthenticatedPrincipal,
+    audit_actor_for,
+    get_authenticated_principal,
+    get_authenticated_user_id,
+)
 from app.schemas import (
     TimeOffEntryCreate,
     TimeOffEntryListResponse,
@@ -34,10 +39,12 @@ router = APIRouter(prefix="/time-off", tags=["Time Off"])
 @router.post("", response_model=TimeOffEntryRead, status_code=status.HTTP_201_CREATED)
 async def create_or_update_time_off_endpoint(
     payload: TimeOffEntryCreate,
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    entry, created = await create_or_update_time_off_entry(session, authenticated_user_id, payload)
+    entry, created = await create_or_update_time_off_entry(
+        session, principal.user_id, payload, actor=audit_actor_for(principal)
+    )
     response = TimeOffEntryRead.model_validate(entry, from_attributes=True)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -99,13 +106,15 @@ async def get_time_off_entry_endpoint(
 async def update_time_off_entry_endpoint(
     entry_id: str,
     payload: TimeOffEntryUpdate,
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     timings: dict[str, float] = {}
     try:
         with time_operation("query", timings):
-            entry = await update_time_off_entry(session, authenticated_user_id, entry_id, payload)
+            entry = await update_time_off_entry(
+                session, principal.user_id, entry_id, payload, actor=audit_actor_for(principal)
+            )
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except ValidationError as error:
@@ -121,11 +130,11 @@ async def update_time_off_entry_endpoint(
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_time_off_entry_endpoint(
     entry_id: str,
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     try:
-        await delete_time_off_entry(session, authenticated_user_id, entry_id)
+        await delete_time_off_entry(session, principal.user_id, entry_id, actor=audit_actor_for(principal))
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

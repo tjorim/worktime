@@ -271,6 +271,79 @@ class AccessTokenListResponse(ListResponse[AccessTokenRead]):
     pass
 
 
+IntegrationClientScope = Literal["worktime:mcp", "worktime:admin"]
+
+
+class IntegrationClientCreate(BaseModel):
+    """Payload for provisioning a new managed integration client (issue #1054).
+
+    ``worktime:admin`` is a deliberate, explicit grant — never implied by
+    ``worktime:mcp`` — matching Worktime's existing ``is_admin`` semantics.
+    Only an admin caller may request it; see
+    app.routers.integration_clients.create_integration_client_endpoint.
+    """
+
+    name: str = Field(min_length=1, max_length=120)
+    scopes: list[IntegrationClientScope] = ["worktime:mcp"]
+    rate_limit_per_minute: int = Field(default=120, ge=1, le=6000)
+
+    @field_validator("scopes")
+    @classmethod
+    def deduplicate_scopes(cls, value: list[IntegrationClientScope]) -> list[IntegrationClientScope]:
+        if not value:
+            raise ValueError("at least one scope is required")
+        return list(dict.fromkeys(value))
+
+
+class IntegrationClientCreated(BaseModel):
+    """Response returned once, at creation/rotation time, including the raw key value."""
+
+    id: int
+    name: str
+    key: str
+    scopes: list[IntegrationClientScope]
+    rate_limit_per_minute: int
+    created_at: dt_datetime
+
+
+class IntegrationClientRead(BaseModel):
+    """A previously issued integration client, without its raw key."""
+
+    id: int
+    name: str
+    key_preview: str
+    scopes: list[IntegrationClientScope]
+    rate_limit_per_minute: int
+    is_active: bool
+    created_at: dt_datetime
+    last_used_at: dt_datetime | None
+    revoked_at: dt_datetime | None
+
+
+class IntegrationClientListResponse(ListResponse[IntegrationClientRead]):
+    pass
+
+
+class AuditEntryRead(BaseModel):
+    """A single transactional audit-trail entry (issue #1054)."""
+
+    id: int
+    actor_user_id: int | None
+    actor_label: str
+    subject: str | None
+    auth_source: str
+    action: str
+    resource_type: str
+    resource_id: str
+    request_id: str | None
+    details: dict[str, Any]
+    created_at: dt_datetime
+
+
+class AuditEntryListResponse(ListResponse[AuditEntryRead]):
+    pass
+
+
 class TaskListResponse(ListResponse[TaskRead]):
     pass
 

@@ -7,7 +7,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import get_authenticated_user_id, resolve_scoped_user_id
+from app.routers.auth import (
+    AuthenticatedPrincipal,
+    audit_actor_for,
+    get_authenticated_principal,
+    get_authenticated_user_id,
+    resolve_scoped_user_id,
+)
 from app.schemas import (
     GanttTaskCreate,
     GanttTaskListResponse,
@@ -44,12 +50,12 @@ def _handle_error(error: Exception) -> None:
 async def create_gantt_task_endpoint(
     payload: GanttTaskCreate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> GanttTaskRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        task = await create_gantt_task(session, user_id, payload)
+        task = await create_gantt_task(session, user_id, payload, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
         raise
@@ -104,12 +110,12 @@ async def update_gantt_task_endpoint(
     task_id: str,
     payload: GanttTaskUpdate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> GanttTaskRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        task = await update_gantt_task(session, user_id, task_id, payload)
+        task = await update_gantt_task(session, user_id, task_id, payload, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
         raise
@@ -121,12 +127,12 @@ async def update_gantt_task_endpoint(
 async def delete_gantt_task_endpoint(
     task_id: str,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        await delete_gantt_task(session, user_id, task_id)
+        await delete_gantt_task(session, user_id, task_id, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
 

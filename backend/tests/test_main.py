@@ -67,7 +67,20 @@ def test_redoc_docs(client):
 def test_404_handling(client):
     """Test that 404 errors are handled properly."""
     response = client.get("/nonexistent")
-    
+
     assert response.status_code == 404
     data = response.json()
     assert "detail" in data
+
+
+def test_mcp_capabilities_reports_disabled_with_empty_tools_when_unmounted(client):
+    """WORKTIME_MCP_BASE_URL is unset for the test app, so the MCP server isn't
+    mounted — the capability manifest must say so and list no tools, rather
+    than advertising tools that aren't actually reachable."""
+    response = client.get("/api/mcp/capabilities")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["enabled"] is False
+    assert data["mount_path"] == "/mcp"
+    assert data["tools"] == []

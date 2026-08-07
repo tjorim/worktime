@@ -73,6 +73,18 @@ class Settings(BaseSettings):
     # Generate a suitable value with: python -c "import secrets; print(secrets.token_hex(32))"
     METRICS_HMAC_SECRET: str = ""
 
+    # HMAC secret used to hash managed integration-client keys (app.services
+    # .integration_client_service) before they're stored in the database. The
+    # raw key is server-generated with high entropy (secrets.token_urlsafe),
+    # not a user password, so HMAC-SHA256 with a server-side secret is
+    # correct here: it adds defense-in-depth against a stolen database dump
+    # (without the secret, a leaked key_hash can't be replayed even though
+    # brute-forcing the raw key is already infeasible at this entropy).
+    # Falls back to a fixed local-dev-only value when unset; production must
+    # set a real secret — see validate_production_integration_key_hash_secret.
+    # Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+    INTEGRATION_KEY_HASH_SECRET: str = ""
+
     # Sentry error tracking.
     # Leave SENTRY_DSN empty (the default) to disable Sentry entirely.
     # When set, sentry-sdk[fastapi] must be installed: uv add sentry-sdk[fastapi]
@@ -176,6 +188,29 @@ class Settings(BaseSettings):
         if self.DEV_AUTH_BYPASS_TOKEN and self.ENVIRONMENT != "development":
             raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside ENVIRONMENT=development.")
         return self
+
+    @model_validator(mode="after")
+    def validate_production_integration_key_hash_secret(self) -> "Settings":
+        """Refuse to start in production without a real integration-key hash secret.
+
+        The unset default is safe only for local dev (single-operator,
+        low-value threat model); production must set an explicit secret so a
+        database dump alone can't be used to forge/replay integration-client
+        keys, matching the pattern already established for TRUSTED_HOSTS and
+        DEV_AUTH_BYPASS_TOKEN above.
+        """
+        if self.ENVIRONMENT == "production" and not self.INTEGRATION_KEY_HASH_SECRET.strip():
+            raise ValueError("INTEGRATION_KEY_HASH_SECRET must be set to a real secret in production.")
+        return self
+
+    def resolved_integration_key_hash_secret(self) -> str:
+        """Resolve the HMAC secret for hashing integration-client keys.
+
+        Falls back to a fixed local-dev-only value when unset. Production
+        cannot reach this fallback: validate_production_integration_key_hash_secret
+        refuses to start without an explicit value first.
+        """
+        return self.INTEGRATION_KEY_HASH_SECRET or "worktime-dev-integration-key-hash-secret"
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
