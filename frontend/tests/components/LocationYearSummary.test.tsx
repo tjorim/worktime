@@ -95,6 +95,25 @@ describe("LocationYearSummary", () => {
     expect(screen.getByRole("button", { name: /Copy/i })).toBeInTheDocument();
   });
 
+  it("sorts rows by day count descending by default and aligns numeric headers", () => {
+    const map: WorkLocationMap = new Map([
+      ["2026-01-05", HOME_NL],
+      ["2026-01-06", OFFICE_BE],
+      ["2026-01-07", OFFICE_BE],
+      ["2026-01-08", OFFICE_BE],
+      ["2026-01-09", { location: "other", countryCode: cc("US") }],
+      ["2026-01-10", { location: "other", countryCode: cc("US") }],
+    ]);
+    renderSummary(2026, map);
+
+    const bodyRows = screen.getAllByRole("row").slice(1);
+    expect(bodyRows[0]).toHaveTextContent("Office");
+    expect(bodyRows[1]).toHaveTextContent("Other");
+    expect(bodyRows[2]).toHaveTextContent("Home");
+    expect(screen.getByRole("columnheader", { name: /^Days/ })).toHaveClass("text-end");
+    expect(screen.getByRole("columnheader", { name: "%" })).toHaveClass("text-end");
+  });
+
   it("sorts rows by country when the country header is clicked", async () => {
     const user = userEvent.setup();
     const map: WorkLocationMap = new Map([
@@ -124,6 +143,20 @@ describe("LocationYearSummary", () => {
 
     expect(screen.getByText("BE")).toBeInTheDocument();
     expect(screen.queryByText("NL")).not.toBeInTheDocument();
+  });
+
+  it("filters rows by a case-insensitive location label", async () => {
+    const user = userEvent.setup();
+    const map: WorkLocationMap = new Map([
+      ["2026-01-05", HOME_NL],
+      ["2026-01-06", OFFICE_BE],
+    ]);
+    renderSummary(2026, map);
+
+    await user.type(screen.getByLabelText(/Country \/ Location/i), "oFFiCe");
+
+    expect(screen.getByText("Office")).toBeInTheDocument();
+    expect(screen.queryByText("Home")).not.toBeInTheDocument();
   });
 
   it("toggles table columns using visibility switches", async () => {
@@ -166,6 +199,25 @@ describe("LocationYearSummary", () => {
       );
       expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining("Home"));
       expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining("NL"));
+    });
+
+    it("copies only filtered rows in the active sort order", async () => {
+      const map: WorkLocationMap = new Map([
+        ["2026-01-05", { location: "home", countryCode: cc("US") }],
+        ["2026-01-06", { location: "office", countryCode: cc("BE") }],
+        ["2026-01-07", { location: "other", countryCode: cc("NL") }],
+      ]);
+      renderSummary(2026, map);
+
+      await userEvent.click(screen.getByRole("button", { name: /^Country$/i }));
+      await userEvent.type(screen.getByLabelText(/Country \/ Location/i), "h");
+      await userEvent.click(screen.getByRole("button", { name: /Copy/i }));
+
+      const writeTextMock = vi.mocked(navigator.clipboard.writeText);
+      const copiedText = writeTextMock.mock.calls[0]?.[0] ?? "";
+      expect(copiedText.indexOf("Other")).toBeLessThan(copiedText.indexOf("Home"));
+      expect(copiedText).not.toContain("Office");
+      expect(copiedText).not.toContain("BE");
     });
 
     it("uses correct Dutch singular/plural day labels in clipboard text", async () => {
