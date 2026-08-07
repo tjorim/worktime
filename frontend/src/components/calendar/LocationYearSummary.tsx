@@ -3,14 +3,22 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import {
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  createColumnHelper,
+  createFilteredRowModel,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  type ColumnDef,
+  globalFilteringFeature,
+  metaHelper,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_text,
+  tableFeatures,
+  type ColumnVisibilityState,
   type SortingState,
-  type VisibilityState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 import { useToast } from "@/contexts/ToastContext";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
@@ -35,6 +43,25 @@ type LocationSummaryRow = {
 type LocationSummaryColumnMeta = {
   align?: "end";
 };
+
+const locationSummaryTableFeatures = tableFeatures({
+  columnVisibilityFeature,
+  columnFilteringFeature,
+  columnMeta: metaHelper<LocationSummaryColumnMeta>(),
+  globalFilteringFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    text: sortFn_text,
+  },
+});
+const locationSummaryColumnHelper = createColumnHelper<
+  typeof locationSummaryTableFeatures,
+  LocationSummaryRow
+>();
 
 /**
  * Renders an annual work location summary grouped by (location, country, label).
@@ -62,7 +89,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   const totalDays = useMemo(() => summaryRows.reduce((sum, r) => sum + r.days, 0), [summaryRows]);
   const [sorting, setSorting] = useState<SortingState>([{ id: "days", desc: true }]);
   const [countryFilter, setCountryFilter] = useState("");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({});
 
   const rows = useMemo<LocationSummaryRow[]>(
     () =>
@@ -79,44 +106,42 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     [summaryRows, totalDays, locale],
   );
 
-  const columns = useMemo<ColumnDef<LocationSummaryRow>[]>(
-    () => [
-      {
-        accessorKey: "locationLabel",
-        header: m.location_col_location({}, { locale }),
-        cell: (context) => (
-          <>
-            <i
-              className={`bi ${WORK_LOCATION_ICON_CLASS[context.row.original.location]} me-1`}
-              aria-hidden="true"
-            ></i>
-            {context.getValue<string>()}
-          </>
-        ),
-      },
-      {
-        accessorKey: "countryCode",
-        header: m.location_col_country({}, { locale }),
-      },
-      {
-        accessorKey: "days",
-        header: m.location_col_days({}, { locale }),
-        meta: { align: "end" } satisfies LocationSummaryColumnMeta,
-        cell: (context) => <span className="text-end d-block">{context.getValue<number>()}</span>,
-      },
-      {
-        accessorKey: "percentage",
-        header: "%",
-        meta: { align: "end" } satisfies LocationSummaryColumnMeta,
-        cell: (context) => (
-          <span className="text-end text-muted d-block">{context.getValue<number>()}%</span>
-        ),
-      },
-    ],
+  const columns = useMemo(
+    () =>
+      locationSummaryColumnHelper.columns([
+        locationSummaryColumnHelper.accessor("locationLabel", {
+          header: m.location_col_location({}, { locale }),
+          cell: (context) => (
+            <>
+              <i
+                className={`bi ${WORK_LOCATION_ICON_CLASS[context.row.original.location]} me-1`}
+                aria-hidden="true"
+              ></i>
+              {context.getValue()}
+            </>
+          ),
+        }),
+        locationSummaryColumnHelper.accessor("countryCode", {
+          header: m.location_col_country({}, { locale }),
+        }),
+        locationSummaryColumnHelper.accessor("days", {
+          header: m.location_col_days({}, { locale }),
+          meta: { align: "end" } satisfies LocationSummaryColumnMeta,
+          cell: (context) => <span className="text-end d-block">{context.getValue()}</span>,
+        }),
+        locationSummaryColumnHelper.accessor("percentage", {
+          header: "%",
+          meta: { align: "end" } satisfies LocationSummaryColumnMeta,
+          cell: (context) => (
+            <span className="text-end text-muted d-block">{context.getValue()}%</span>
+          ),
+        }),
+      ]),
     [locale],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: locationSummaryTableFeatures,
     data: rows,
     columns,
     state: {
@@ -137,9 +162,6 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
         row.original.locationLabel.toLowerCase().includes(normalizedFilter)
       );
     },
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
 
   const handleCopy = () => {
@@ -232,7 +254,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 const sorted = header.column.getIsSorted();
-                const meta = header.column.columnDef.meta as LocationSummaryColumnMeta | undefined;
+                const meta = header.column.columnDef.meta;
                 const ariaSort = sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none";
                 return (
                   <th
