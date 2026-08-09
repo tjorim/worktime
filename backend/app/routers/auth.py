@@ -217,11 +217,15 @@ async def get_bearer_principal(
 def get_authenticated_principal(
     principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
 ) -> AuthenticatedPrincipal:
-    """Allow interactive users and delegated personal-access-token callers."""
-    if principal.auth_type not in (AuthType.KEYCLOAK_USER, AuthType.DELEGATED):
+    """Require an interactive user for the general REST API.
+
+    Delegated personal-access tokens stay confined to endpoints that opt into
+    ``require_scoped_principal`` (currently the dedicated Pebble surface).
+    """
+    if principal.auth_type != AuthType.KEYCLOAK_USER:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint requires a user session or personal access token",
+            detail="This endpoint requires an interactive Keycloak user session",
         )
     return principal
 

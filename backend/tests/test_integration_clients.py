@@ -121,14 +121,16 @@ async def test_rate_limit_enforced_per_client_in_database(db_session: AsyncSessi
     user = await db_service.create_user(db_session, UserCreate(username="rate-owner", display_name="Rate Owner"))
     first, _ = await create_integration_client(db_session, user.id, name="first", rate_limit_per_minute=2)
     second, _ = await create_integration_client(db_session, user.id, name="second", rate_limit_per_minute=1)
+    first_id = first.id
+    second_id = second.id
 
-    await enforce_integration_client_rate_limit(db_session, first.id)
-    await enforce_integration_client_rate_limit(db_session, first.id)
+    await enforce_integration_client_rate_limit(db_session, first_id)
+    await enforce_integration_client_rate_limit(db_session, first_id)
 
     with pytest.raises(RateLimitExceededError):
-        await enforce_integration_client_rate_limit(db_session, first.id)
+        await enforce_integration_client_rate_limit(db_session, first_id)
 
-    await enforce_integration_client_rate_limit(db_session, second.id)
+    await enforce_integration_client_rate_limit(db_session, second_id)
 
 
 async def test_create_integration_client_endpoint_returns_key_and_hides_it_on_list(

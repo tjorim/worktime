@@ -20,6 +20,7 @@ from app.database.models import AccessToken
 from app.routers.auth import (
     PEBBLE_READ_SCOPE,
     PEBBLE_WRITE_SCOPE,
+    AuthenticatedPrincipal,
     AuthType,
     get_authenticated_principal,
     get_bearer_principal,
@@ -40,10 +41,12 @@ def _fake_request() -> Request:
     return Request(scope={"type": "http", "headers": []})
 
 
-def test_regular_api_accepts_delegated_pat_but_oidc_boundary_rejects_it() -> None:
-    principal = SimpleNamespace(auth_type=AuthType.DELEGATED)
+def test_regular_api_and_oidc_boundary_reject_delegated_pat() -> None:
+    principal = AuthenticatedPrincipal(user_id=1, auth_type=AuthType.DELEGATED)
 
-    assert get_authenticated_principal(principal) is principal
+    with pytest.raises(HTTPException) as regular_error:
+        get_authenticated_principal(principal)
+    assert regular_error.value.status_code == 403
     with pytest.raises(HTTPException) as exc_info:
         require_oidc_principal(principal)
     assert exc_info.value.status_code == 403
