@@ -1,6 +1,6 @@
 # Local Worktime MCP Server
 
-Worktime ships a FastMCP v3 server in `backend/app/mcp_server.py` — split into
+Worktime ships a FastMCP v4 server in `backend/app/mcp_server.py` — split into
 a thin assembler (auth, tool registration) plus focused domain modules under
 `backend/app/mcp/` (identity, schedule, time_tracking, work_location,
 time_off, gantt) — exposing both read tools and personal write tools scoped
@@ -46,26 +46,6 @@ as `INTEGRATION_KEY_HASH_SECRET_PREVIOUS`. Credentials verified with the old
 secret are rehashed with the current secret on successful use. Remove the
 previous value after every active client has authenticated or after the
 operator-defined overlap window; only one previous secret is accepted.
-
-### Legacy static integration keys (deprecated, still supported)
-
-`WORKTIME_MCP_INTEGRATION_KEYS` — a comma-separated `token=user_id` or
-`token=user_id:admin` env var parsed once at process startup — still works
-alongside managed integration clients, for a migration/overlap period. It has
-**no rotation or revocation** short of removing the entry and restarting the
-process, so treat any configured value as a credential that needs manual
-lifecycle management. New integrations should provision a managed
-integration client instead; existing `WORKTIME_MCP_INTEGRATION_KEYS`
-deployments should migrate off it before its removal (tracked in a future
-issue). Support ends with the first Worktime release on or after **2026-11-01**;
-that release will refuse `WORKTIME_MCP_INTEGRATION_KEYS` and operators must
-provision managed clients before upgrading.
-
-Example (legacy, deprecated):
-
-```bash
-export WORKTIME_MCP_INTEGRATION_KEYS="local-agent-token=1:admin"
-```
 
 ## Run over stdio
 

@@ -1,7 +1,6 @@
 """REST API endpoints for managed integration clients (issue #1054).
 
-Replaces the long-lived static-token map (``WORKTIME_MCP_INTEGRATION_KEYS``)
-with revocable, rotatable, rate-limited, database-backed credentials —
+Provides revocable, rotatable, rate-limited, database-backed credentials,
 mirroring the personal-access-token pattern in ``app.routers.access_tokens``
 but for automation/integration callers (currently: the MCP server).
 

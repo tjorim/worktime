@@ -347,9 +347,8 @@ class CachedHoliday(Base):
 class IntegrationClient(Base):
     """Managed, database-backed credential for automation/integration callers (e.g. MCP).
 
-    Replaces the long-lived static-token map previously parsed once from
-    ``WORKTIME_MCP_INTEGRATION_KEYS`` at process startup. Each row is a
-    revocable, rotatable, rate-limited credential bound to one Worktime user.
+    Each row is a revocable, rotatable, rate-limited credential bound to one
+    Worktime user.
     Only the HMAC hash of the raw key is stored (see
     ``app.services.integration_client_service.hash_integration_key``); the raw
     value is returned once at creation/rotation time and cannot be recovered.

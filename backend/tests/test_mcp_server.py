@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastmcp.server.auth import AccessToken, MultiAuth
@@ -15,9 +15,11 @@ from app.mcp_server import (
     MCP_TOOL_CAPABILITIES,
     DbIntegrationClientVerifier,
     McpAuthError,
+    ToolEffect,
     WorktimeMcpBackend,
     _build_auth_provider,
     create_mcp_server,
+    tool_annotations,
 )
 from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
 from app.services import db_service, integration_client_service
@@ -32,7 +34,7 @@ def _token_for_user(user_id: int, *, is_admin: bool = False) -> AccessToken:
         claims={
             "worktime_user_id": user_id,
             "worktime_is_admin": is_admin,
-            "sub": f"integration-key:{user_id}",
+            "sub": f"test-user:{user_id}",
             "realm_access": {"roles": roles},
         },
     )
@@ -51,8 +53,7 @@ def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monk
         auth = _build_auth_provider()
 
     # Always wrapped in MultiAuth: the DB-backed managed-integration-client
-    # verifier (issue #1054) runs unconditionally alongside Keycloak, even
-    # with no legacy WORKTIME_MCP_INTEGRATION_KEYS configured.
+    # verifier runs unconditionally alongside Keycloak.
     assert isinstance(auth, MultiAuth)
     assert auth.server is provider.return_value
     assert len(auth.verifiers) == 1
@@ -63,22 +64,6 @@ def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monk
         required_scopes=[],
         audience="worktime",
     )
-
-
-def test_build_auth_provider_adds_legacy_verifier_when_configured(monkeypatch) -> None:
-    """WORKTIME_MCP_INTEGRATION_KEYS still works, stacked on top of the DB verifier."""
-    from app.mcp_server import IntegrationKeyVerifier
-
-    monkeypatch.setenv("WORKTIME_MCP_BASE_URL", "https://api.example/mcp")
-    monkeypatch.setenv("WORKTIME_MCP_INTEGRATION_KEYS", "legacy-token=1:admin")
-
-    with patch("app.mcp_server.KeycloakAuthProvider"):
-        auth = _build_auth_provider()
-
-    assert isinstance(auth, MultiAuth)
-    assert len(auth.verifiers) == 2
-    assert isinstance(auth.verifiers[0], DbIntegrationClientVerifier)
-    assert isinstance(auth.verifiers[1], IntegrationKeyVerifier)
 
 
 async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) -> None:
@@ -131,6 +116,28 @@ async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: A
         # test pins down so a future admin-scoped tool has to update it
         # deliberately rather than silently mis-tagging itself.
         assert capability.required_tier == "owner", name
+
+
+async def test_registered_tools_advertise_explicit_safety_annotations() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+    tools = await server.list_tools(run_middleware=False)
+
+    for tool in tools:
+        annotations = tool.annotations
+        capability = MCP_TOOL_CAPABILITIES[tool.name]
+        assert annotations is not None
+        assert annotations.read_only_hint is (capability.effect is ToolEffect.READ)
+        assert annotations.open_world_hint is False
+        if capability.effect is ToolEffect.READ:
+            assert annotations.destructive_hint is False
+            assert annotations.idempotent_hint is True
+
+
+def test_write_annotations_distinguish_creation_from_destructive_changes() -> None:
+    assert tool_annotations("create_gantt_task").destructive_hint is False
+    assert tool_annotations("update_gantt_task").destructive_hint is True
+    assert tool_annotations("delete_gantt_task").destructive_hint is True
+    assert tool_annotations("future_tool_without_policy").destructive_hint is True
 
 
 async def test_whoami_and_time_tracking_summary_happy_path(

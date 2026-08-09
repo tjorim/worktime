@@ -26,6 +26,7 @@ from fastmcp.server.auth import AccessToken, MultiAuth
 from fastmcp.server.auth.auth import TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
+from mcp.types import ToolAnnotations
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -55,76 +56,6 @@ __all__ = [
     "WorktimeMcpBackend",
     "create_mcp_server",
 ]
-
-
-class IntegrationKeyVerifier(TokenVerifier):
-    """Accept legacy static integration keys mapped to local users.
-
-    Deprecated (issue #1054): superseded by ``DbIntegrationClientVerifier``,
-    which looks up revocable, rotatable, rate-limited credentials in the
-    database instead of a fixed in-memory map parsed once at startup. This
-    verifier keeps running, alongside the new one, only while
-    ``WORKTIME_MCP_INTEGRATION_KEYS`` is set, for a documented migration
-    overlap period — see docs/integrations/LOCAL_MCP_SERVER.md for the
-    end-of-support plan. New integrations should provision a managed
-    integration client instead of a static key.
-    """
-
-    def __init__(self, key_mapping: dict[str, tuple[int, bool]]) -> None:
-        self._key_mapping = key_mapping
-
-    async def verify_token(self, token: str) -> AccessToken | None:
-        mapping = self._key_mapping.get(token)
-        if mapping is None:
-            return None
-
-        user_id, is_admin = mapping
-        return AccessToken(
-            token=token,
-            client_id=f"integration-user-{user_id}",
-            scopes=["worktime:mcp"],
-            claims={
-                "worktime_user_id": user_id,
-                "worktime_is_admin": is_admin,
-                "sub": f"integration-key:{user_id}",
-                "auth_type": "integration_key",
-            },
-        )
-
-
-def _parse_integration_key_mapping(value: str) -> dict[str, tuple[int, bool]]:
-    """Parse WORKTIME_MCP_INTEGRATION_KEYS into a token->(user_id,is_admin) map.
-
-    Format:
-      token=user_id
-      token=user_id:admin
-      token=user_id:user
-    Multiple entries are comma-separated.
-
-    Deprecated (issue #1054): this static, long-lived credential store has no
-    rotation or revocation short of removing the entry and restarting the
-    process. Prefer a managed integration client (``/api/integration-clients``,
-    ``app.services.integration_client_service``), which is DB-backed,
-    per-client rate-limited, and can be revoked or rotated without a
-    restart. WORKTIME_MCP_INTEGRATION_KEYS keeps working for now — see
-    docs/integrations/LOCAL_MCP_SERVER.md for the migration/overlap plan —
-    but new integrations should not adopt it.
-    """
-    mapping: dict[str, tuple[int, bool]] = {}
-    for item in (part.strip() for part in value.split(",") if part.strip()):
-        token, sep, raw_target = item.partition("=")
-        if not sep:
-            continue
-
-        user_part, role_sep, role = raw_target.partition(":")
-        try:
-            user_id = int(user_part)
-        except ValueError:
-            continue
-
-        is_admin = role_sep == ":" and role.strip().lower() == "admin"
-        mapping[token.strip()] = (user_id, is_admin)
-    return mapping
 
 
 class DbIntegrationClientVerifier(TokenVerifier):
@@ -176,13 +107,7 @@ class DbIntegrationClientVerifier(TokenVerifier):
 def _build_auth_provider(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> KeycloakAuthProvider | MultiAuth:
-    """Build FastMCP auth provider: Keycloak + managed integration clients (+ legacy static keys).
-
-    The DB-backed ``DbIntegrationClientVerifier`` runs unconditionally
-    alongside Keycloak. The legacy ``IntegrationKeyVerifier`` is added on top,
-    for the documented migration/overlap period, only when
-    ``WORKTIME_MCP_INTEGRATION_KEYS`` is set — see docs/integrations/LOCAL_MCP_SERVER.md.
-    """
+    """Build the FastMCP auth provider from Keycloak and managed clients."""
     base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "http://localhost:8000/mcp")
     realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL)
     audience = settings.OIDC_AUDIENCE or None
@@ -194,20 +119,8 @@ def _build_auth_provider(
         audience=audience,
     )
 
-    verifiers: list[TokenVerifier] = [DbIntegrationClientVerifier(session_factory or get_session_factory())]
-
-    integration_keys = _parse_integration_key_mapping(os.environ.get("WORKTIME_MCP_INTEGRATION_KEYS", ""))
-    if integration_keys:
-        import logging
-
-        logging.getLogger(__name__).warning(
-            "WORKTIME_MCP_INTEGRATION_KEYS is deprecated and will be removed in the next "
-            "release — migrate to managed integration clients (POST /api/integration-clients) "
-            "before the overlap period ends. See docs/integrations/LOCAL_MCP_SERVER.md."
-        )
-        verifiers.append(IntegrationKeyVerifier(integration_keys))
-
-    return MultiAuth(server=keycloak, verifiers=verifiers)
+    verifier = DbIntegrationClientVerifier(session_factory or get_session_factory())
+    return MultiAuth(server=keycloak, verifiers=[verifier])
 
 
 class WorktimeMcpBackend:
@@ -605,6 +518,24 @@ MCP_TOOL_CAPABILITIES: dict[str, ToolCapability] = {
 }
 
 
+def tool_annotations(tool_name: str) -> ToolAnnotations:
+    """Return explicit MCP safety metadata for ChatGPT and other clients."""
+    capability = MCP_TOOL_CAPABILITIES.get(tool_name)
+    if capability is not None and capability.effect is ToolEffect.READ:
+        return ToolAnnotations(
+            read_only_hint=True,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=False,
+        )
+
+    return ToolAnnotations(
+        read_only_hint=False,
+        destructive_hint=not tool_name.startswith("create_"),
+        open_world_hint=False,
+    )
+
+
 def create_mcp_server(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> FastMCP:
@@ -618,7 +549,7 @@ def create_mcp_server(
     )
 
     for tool_name in MCP_TOOL_CAPABILITIES:
-        server.tool(name=tool_name)(getattr(backend, tool_name))
+        server.tool(name=tool_name, annotations=tool_annotations(tool_name))(getattr(backend, tool_name))
 
     return server
 

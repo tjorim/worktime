@@ -1,10 +1,7 @@
 """Add managed, database-backed integration clients.
 
-Replaces the long-lived static-token map parsed from
-WORKTIME_MCP_INTEGRATION_KEYS with revocable, rotatable, rate-limited,
-per-user credentials. WORKTIME_MCP_INTEGRATION_KEYS keeps working alongside
-this table for a documented overlap/migration period — see
-docs/integrations/LOCAL_MCP_SERVER.md.
+Adds revocable, rotatable, rate-limited per-user credentials for automation
+and integration callers.
 
 Revision ID: 004
 Revises: 003
