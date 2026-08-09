@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, overload
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -713,6 +713,22 @@ async def get_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> G
     if task is None or task.user_id != user_id or task.deleted_at is not None:
         raise NotFoundError("gantt task not found")
     return task
+
+
+@overload
+async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]: ...
+
+
+@overload
+async def list_gantt_tasks(
+    session: AsyncSession, *, user_id: int, active_on: date | None, limit: int
+) -> tuple[list[GanttTask], int]: ...
+
+
+@overload
+async def list_gantt_tasks(
+    session: AsyncSession, *, user_id: int, active_on: date | None = None, limit: int | None = None
+) -> list[GanttTask] | tuple[list[GanttTask], int]: ...
 
 
 async def list_gantt_tasks(

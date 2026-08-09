@@ -281,7 +281,7 @@ class IntegrationClientCreate(BaseModel):
     """
 
     name: str = Field(min_length=1, max_length=120)
-    scopes: list[IntegrationClientScope] = Field(default_factory=lambda: ["worktime:mcp"])
+    scopes: list[IntegrationClientScope] = Field(default_factory=lambda: ["worktime:mcp"])  # ty: ignore[invalid-assignment]
     rate_limit_per_minute: int = Field(default=120, ge=1, le=6000)
 
     @field_validator("scopes")

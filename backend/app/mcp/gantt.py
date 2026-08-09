@@ -50,7 +50,7 @@ async def get_gantt_tasks(
         # Bounded, paginated retrieval with DB-side active_on filtering and count
         tasks, total_tasks = await list_gantt_tasks(
             db, user_id=context.user_id, active_on=active_on, limit=MAX_GANTT_TASKS_RETURNED
-        )
+        )  # type: ignore[assignment]
         payload_tasks = [
             GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json") for task in tasks
         ]
