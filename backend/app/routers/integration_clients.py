@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
+from app.routers.auth import AuthenticatedPrincipal, audit_actor_for, require_oidc_principal
 from app.schemas import (
     IntegrationClientCreate,
     IntegrationClientCreated,
@@ -72,6 +72,7 @@ async def create_integration_client_endpoint(
         name=payload.name,
         scopes=list(payload.scopes),
         rate_limit_per_minute=payload.rate_limit_per_minute,
+        actor=audit_actor_for(principal),
     )
     return IntegrationClientCreated(
         id=client.id,
@@ -104,7 +105,9 @@ async def rotate_integration_client_endpoint(
 ) -> IntegrationClientCreated:
     response.headers["Cache-Control"] = "no-store"
     try:
-        client, raw_key = await rotate_integration_client(session, principal.user_id, client_id)
+        client, raw_key = await rotate_integration_client(
+            session, principal.user_id, client_id, actor=audit_actor_for(principal)
+        )
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
@@ -125,7 +128,7 @@ async def revoke_integration_client_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     try:
-        await revoke_integration_client(session, principal.user_id, client_id)
+        await revoke_integration_client(session, principal.user_id, client_id, actor=audit_actor_for(principal))
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

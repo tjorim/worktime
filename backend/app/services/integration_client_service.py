@@ -20,6 +20,7 @@ from hashlib import sha256
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.db import AuditActor, write_audit_entry
 from app.config import settings
 from app.database.models import IntegrationClient, User
 from app.services.db_service import NotFoundError
@@ -67,6 +68,7 @@ async def create_integration_client(
     name: str,
     scopes: list[str] | None = None,
     rate_limit_per_minute: int = DEFAULT_RATE_LIMIT_PER_MINUTE,
+    actor: AuditActor | None = None,
 ) -> tuple[IntegrationClient, str]:
     """Create an integration client and return it alongside the raw key (shown only once).
 
@@ -74,14 +76,14 @@ async def create_integration_client(
     ``worktime:admin`` requires the acting principal to already be an admin
     (see ``app.routers.integration_clients``), so a credential can never mint
     another credential with broader privileges than its own caller.
+    When *actor* is supplied the creation is recorded in the transactional
+    audit trail (same DB transaction as the credential row).
     """
     user = await session.get(User, user_id)
     if user is None:
         raise NotFoundError("user not found")
     if rate_limit_per_minute < 1 or rate_limit_per_minute > MAX_RATE_LIMIT_PER_MINUTE:
-        raise ValueError(
-            f"rate_limit_per_minute must be between 1 and {MAX_RATE_LIMIT_PER_MINUTE}"
-        )
+        raise ValueError(f"rate_limit_per_minute must be between 1 and {MAX_RATE_LIMIT_PER_MINUTE}")
 
     validated_scopes = _validate_scopes(list(scopes) if scopes is not None else list(DEFAULT_SCOPES))
     raw_key = KEY_PREFIX + secrets.token_urlsafe(32)
@@ -94,14 +96,24 @@ async def create_integration_client(
         rate_limit_per_minute=rate_limit_per_minute,
     )
     session.add(client)
+    await session.flush()
+    effective_actor = actor or AuditActor(
+        user_id=user_id, label=f"user:{user_id}", auth_source="keycloak_user", subject=str(user_id)
+    )
+    await write_audit_entry(
+        session,
+        actor=effective_actor,
+        action="integration_client_created",
+        resource_type="integration_client",
+        resource_id=str(client.id),
+        details={"name": name, "scopes": validated_scopes, "rate_limit_per_minute": rate_limit_per_minute},
+    )
     await session.commit()
     await session.refresh(client)
     return client, raw_key
 
 
-async def list_integration_clients_for_user(
-    session: AsyncSession, user_id: int
-) -> list[IntegrationClient]:
+async def list_integration_clients_for_user(session: AsyncSession, user_id: int) -> list[IntegrationClient]:
     result = await session.execute(
         select(IntegrationClient)
         .where(IntegrationClient.user_id == user_id)
@@ -110,28 +122,39 @@ async def list_integration_clients_for_user(
     return list(result.scalars().all())
 
 
-async def get_integration_client_for_user(
-    session: AsyncSession, user_id: int, client_id: int
-) -> IntegrationClient:
+async def get_integration_client_for_user(session: AsyncSession, user_id: int, client_id: int) -> IntegrationClient:
     client = await session.get(IntegrationClient, client_id)
     if client is None or client.user_id != user_id:
         raise NotFoundError("integration client not found")
     return client
 
 
-async def revoke_integration_client(session: AsyncSession, user_id: int, client_id: int) -> IntegrationClient:
+async def revoke_integration_client(
+    session: AsyncSession, user_id: int, client_id: int, *, actor: AuditActor | None = None
+) -> IntegrationClient:
     """Disable a client (revocable, not deleted, so audit history stays intact)."""
     client = await get_integration_client_for_user(session, user_id, client_id)
     client.is_active = False
     client.revoked_at = datetime.now(UTC)
     session.add(client)
+    effective_actor = actor or AuditActor(
+        user_id=user_id, label=f"user:{user_id}", auth_source="keycloak_user", subject=str(user_id)
+    )
+    await write_audit_entry(
+        session,
+        actor=effective_actor,
+        action="integration_client_revoked",
+        resource_type="integration_client",
+        resource_id=str(client.id),
+        details={"name": client.name},
+    )
     await session.commit()
     await session.refresh(client)
     return client
 
 
 async def rotate_integration_client(
-    session: AsyncSession, user_id: int, client_id: int
+    session: AsyncSession, user_id: int, client_id: int, *, actor: AuditActor | None = None
 ) -> tuple[IntegrationClient, str]:
     """Replace a client's key in place, immediately invalidating the old one."""
     client = await get_integration_client_for_user(session, user_id, client_id)
@@ -141,14 +164,23 @@ async def rotate_integration_client(
     client.is_active = True
     client.revoked_at = None
     session.add(client)
+    effective_actor = actor or AuditActor(
+        user_id=user_id, label=f"user:{user_id}", auth_source="keycloak_user", subject=str(user_id)
+    )
+    await write_audit_entry(
+        session,
+        actor=effective_actor,
+        action="integration_client_rotated",
+        resource_type="integration_client",
+        resource_id=str(client.id),
+        details={"name": client.name},
+    )
     await session.commit()
     await session.refresh(client)
     return client, raw_key
 
 
-async def get_active_integration_client_by_key(
-    session: AsyncSession, raw_key: str
-) -> IntegrationClient | None:
+async def get_active_integration_client_by_key(session: AsyncSession, raw_key: str) -> IntegrationClient | None:
     """Look up an active client by raw key. Returns None for unknown/inactive/revoked keys."""
     result = await session.execute(
         select(IntegrationClient).where(IntegrationClient.key_hash == hash_integration_key(raw_key))
@@ -204,8 +236,7 @@ def enforce_integration_client_rate_limit(client_id: int, rate_limit_per_minute:
 
     if len(window) >= rate_limit_per_minute:
         raise RateLimitExceededError(
-            f"integration client {client_id!r} exceeded its rate limit of "
-            f"{rate_limit_per_minute} requests/minute"
+            f"integration client {client_id!r} exceeded its rate limit of {rate_limit_per_minute} requests/minute"
         )
     window.append(now)
 
