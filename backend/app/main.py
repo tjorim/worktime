@@ -31,20 +31,19 @@ from .utils.sse_manager import sync_event_manager
 from .version import APP_VERSION
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 _worktime_mcp_base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "")
 if _worktime_mcp_base_url:
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
     from .mcp_server import create_mcp_server as _create_mcp_server
+
     _mcp = _create_mcp_server()
     _mcp_app = _mcp.http_app(path="/")
 else:
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
+
     _mcp = None
     _mcp_app = None
 
@@ -62,8 +61,7 @@ if settings.SENTRY_DSN:
         logger.info("✓ Sentry error tracking initialized")
     except ImportError:
         logger.warning(
-            "⚠️  SENTRY_DSN is configured but sentry-sdk is not installed. "
-            "Install it with: uv add sentry-sdk[fastapi]"
+            "⚠️  SENTRY_DSN is configured but sentry-sdk is not installed. Install it with: uv add sentry-sdk[fastapi]"
         )
 
 
@@ -74,7 +72,7 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("Worktime Backend API - Starting up")
     logger.info("=" * 60)
-    
+
     # Log configuration
     settings.log_configuration()
 
@@ -124,7 +122,7 @@ app = FastAPI(
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
     version=APP_VERSION,
-    lifespan=_lifespan
+    lifespan=_lifespan,
 )
 
 # Configure CORS middleware with production safety
@@ -146,6 +144,7 @@ _cors_kwargs: dict[str, Any] = {
     "expose_headers": ["X-Request-ID", "X-Total-Ms"],
 }
 if _mcp_app is not None:
+
     class _MCPAwareCORSMiddleware:
         def __init__(self, app, **kwargs) -> None:
             self._app = app
@@ -259,7 +258,7 @@ async def mcp_capabilities() -> dict[str, object]:
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])
 async def root():
     """Root endpoint with basic API information.
-    
+
     Returns:
         Plain text message with API title and version.
     """
@@ -268,11 +267,11 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.ENVIRONMENT == "development",
-        log_level="info"
+        log_level="info",
     )

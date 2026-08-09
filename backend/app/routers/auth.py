@@ -193,6 +193,7 @@ async def get_bearer_principal(
     if settings.SENTRY_DSN:
         try:
             import sentry_sdk
+
             sentry_sdk.set_user({"id": str(local_user.id)})
         except ImportError:
             pass
@@ -248,9 +249,7 @@ def require_scoped_principal(
     ) -> AuthenticatedPrincipal:
         if principal.auth_type == AuthType.KEYCLOAK_USER:
             return principal
-        if principal.auth_type == AuthType.DELEGATED and has_required_scopes(
-            principal.scopes, required
-        ):
+        if principal.auth_type == AuthType.DELEGATED and has_required_scopes(principal.scopes, required):
             return principal
         missing = ", ".join(sorted(required))
         raise HTTPException(

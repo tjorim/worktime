@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from datetime import time as dt_time
-from typing import cast, Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 import pycountry
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -281,7 +281,9 @@ class IntegrationClientCreate(BaseModel):
     """
 
     name: str = Field(min_length=1, max_length=120)
-    scopes: list[IntegrationClientScope] = Field(default_factory=lambda: cast(list[IntegrationClientScope], ["worktime:mcp"]))
+    scopes: list[IntegrationClientScope] = Field(
+        default_factory=lambda: cast(list[IntegrationClientScope], ["worktime:mcp"])
+    )
     rate_limit_per_minute: int = Field(default=120, ge=1, le=6000)
 
     @field_validator("scopes")

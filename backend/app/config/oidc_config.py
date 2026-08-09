@@ -151,6 +151,7 @@ def start_periodic_jwks_refresh() -> asyncio.Task[None]:
 # Token validation
 # ---------------------------------------------------------------------------
 
+
 class OIDCTokenError(Exception):
     """Raised when a JWT cannot be validated."""
 
@@ -158,6 +159,7 @@ class OIDCTokenError(Exception):
 def _find_signing_key(jwks_dict: dict[str, Any], kid: str | None) -> Any | None:
     """Return the JWKS key matching kid, or any key when kid is absent."""
     from jwt import PyJWKSet
+
     jwks_set = PyJWKSet.from_dict(jwks_dict)
     return next(
         (k for k in jwks_set.keys if kid is None or k.key_id == kid),
@@ -218,6 +220,7 @@ async def decode_token(token: str) -> dict[str, Any]:
 # Local user provisioning
 # ---------------------------------------------------------------------------
 
+
 def _derive_username_and_display_name(claims: dict[str, Any], subject: str) -> tuple[str, str]:
     """Derive a local username and display name from OIDC token claims."""
     # Prefer preferred_username → email local part → sub prefix (explicit fallbacks)
@@ -228,11 +231,7 @@ def _derive_username_and_display_name(claims: dict[str, Any], subject: str) -> t
     if not username:
         username = f"user-{subject[:8]}"
 
-    display_name = (
-        (claims.get("name") or "").strip()
-        or (claims.get("display_name") or "").strip()
-        or username
-    )
+    display_name = (claims.get("name") or "").strip() or (claims.get("display_name") or "").strip() or username
 
     return username, display_name
 
@@ -257,10 +256,12 @@ async def _find_available_username(db_session, base_username: str, subject: str)
         attempt += 1
         # Progressively use more of the subject string as a disambiguation suffix.
         # Once the full subject is exhausted, append a numeric counter too.
-        suffix = subject[:min(8 + attempt, len(subject))]
+        suffix = subject[: min(8 + attempt, len(subject))]
         candidate = f"{base_username}-{suffix}" if len(suffix) < len(subject) else f"{base_username}-{suffix}-{attempt}"
 
-    raise RuntimeError(f"Could not find available username for {base_username!r} after {_MAX_USERNAME_ATTEMPTS} attempts")
+    raise RuntimeError(
+        f"Could not find available username for {base_username!r} after {_MAX_USERNAME_ATTEMPTS} attempts"
+    )
 
 
 async def get_or_create_local_user(subject: str, claims: dict[str, Any], db_session: Any):

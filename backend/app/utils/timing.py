@@ -11,14 +11,14 @@ from contextlib import contextmanager
 @contextmanager
 def time_operation(operation_name: str, timings: dict[str, float]):
     """Context manager for timing an operation.
-    
+
     Measures the elapsed time of a code block and stores the result
     in milliseconds in the provided timings dictionary.
-    
+
     Args:
         operation_name: Name/key to use for storing the timing result
         timings: Dictionary to store the timing result in
-        
+
     Example:
         timings = {}
         with time_operation("database_query", timings):

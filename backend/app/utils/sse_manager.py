@@ -269,6 +269,4 @@ async def notify_sync_changed(user_id: int) -> None:
     try:
         await sync_event_manager.broadcast_sync_changed(user_id)
     except Exception:
-        logger.warning(
-            "SSE: broadcast_sync_changed failed for user %d (non-fatal)", user_id, exc_info=True
-        )
+        logger.warning("SSE: broadcast_sync_changed failed for user %d (non-fatal)", user_id, exc_info=True)

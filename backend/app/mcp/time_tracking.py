@@ -61,9 +61,7 @@ async def get_time_tracking_summary(
 
     running = await get_running_task(db, context.user_id)
     running_payload = (
-        TaskRead.model_validate(running, from_attributes=True).model_dump(mode="json")
-        if running is not None
-        else None
+        TaskRead.model_validate(running, from_attributes=True).model_dump(mode="json") if running is not None else None
     )
 
     return {
@@ -81,12 +79,7 @@ async def get_time_tracking_summary(
 async def list_labels(context: WorktimeMcpContext, db: AsyncSession) -> dict[str, Any]:
     """List the authenticated user's active time-tracking labels."""
     labels = await list_labels_for_user(db, context.user_id)
-    return {
-        "labels": [
-            {"id": label.id, "name": label.name, "color": label.color}
-            for label in labels
-        ]
-    }
+    return {"labels": [{"id": label.id, "name": label.name, "color": label.color} for label in labels]}
 
 
 async def delete_label_tool(context: WorktimeMcpContext, db: AsyncSession, label_id: str) -> dict[str, Any]:

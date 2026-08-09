@@ -59,9 +59,7 @@ def _get_audit_logger(log_dir: Path, log_file: Path) -> logging.Logger | None:
             return None
 
         try:
-            handler = RotatingFileHandler(
-                log_file, maxBytes=_MAX_BYTES, backupCount=_BACKUP_COUNT, encoding="utf-8"
-            )
+            handler = RotatingFileHandler(log_file, maxBytes=_MAX_BYTES, backupCount=_BACKUP_COUNT, encoding="utf-8")
         except (PermissionError, OSError) as e:
             logger.error(f"Failed to open audit log file: {e}")
             return None
