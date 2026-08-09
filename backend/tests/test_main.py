@@ -27,7 +27,7 @@ def test_health_check(client):
 def test_root_endpoint(client):
     """Test the root endpoint."""
     response = client.get("/")
-    
+
     assert response.status_code == 200
     assert "Worktime Backend API" in response.text
     assert f"v{app.version}" in response.text
@@ -37,10 +37,10 @@ def test_root_endpoint(client):
 def test_openapi_docs(client):
     """Test that OpenAPI docs are accessible."""
     response = client.get("/openapi.json")
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["openapi"] == "3.1.0"
     assert data["info"]["title"] == "Worktime Backend API"
     assert data["info"]["version"] == app.version
@@ -51,7 +51,7 @@ def test_openapi_docs(client):
 def test_swagger_ui_docs(client):
     """Test that Swagger UI docs are accessible."""
     response = client.get("/docs")
-    
+
     assert response.status_code == 200
     assert "swagger" in response.text.lower()
 
@@ -59,7 +59,7 @@ def test_swagger_ui_docs(client):
 def test_redoc_docs(client):
     """Test that ReDoc docs are accessible."""
     response = client.get("/redoc")
-    
+
     assert response.status_code == 200
     assert "redoc" in response.text.lower()
 
@@ -83,4 +83,7 @@ def test_mcp_capabilities_reports_disabled_with_empty_tools_when_unmounted(clien
     data = response.json()
     assert data["enabled"] is False
     assert data["mount_path"] == "/mcp"
+    assert data["version"] is None
     assert data["tools"] == []
+    assert data["resources"] == []
+    assert data["prompts"] == []

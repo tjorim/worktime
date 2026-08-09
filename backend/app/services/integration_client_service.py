@@ -1,11 +1,9 @@
 """Service layer for managed, database-backed integration clients (issue #1054).
 
-Replaces the long-lived static-token map previously parsed once from
-``WORKTIME_MCP_INTEGRATION_KEYS`` at process startup. Each ``IntegrationClient``
-row is a revocable, rotatable, rate-limited credential bound to one Worktime
-user, mirroring the ``AccessToken`` pattern already used for personal access
-tokens (``app.services.access_token_service``) but scoped for
-automation/integration callers such as the MCP server.
+Each ``IntegrationClient`` row is a revocable, rotatable, rate-limited
+credential bound to one Worktime user, mirroring the ``AccessToken`` pattern
+already used for personal access tokens (``app.services.access_token_service``)
+but scoped for automation/integration callers such as the MCP server.
 """
 
 from __future__ import annotations
