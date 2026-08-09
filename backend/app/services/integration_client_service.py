@@ -238,9 +238,10 @@ async def enforce_integration_client_rate_limit(session: AsyncSession, client_id
         client.rate_limit_window_started_at = now
         client.rate_limit_window_count = 1
     elif client.rate_limit_window_count >= client.rate_limit_per_minute:
+        rate_limit = client.rate_limit_per_minute
         await session.rollback()
         raise RateLimitExceededError(
-            f"integration client {client_id!r} exceeded its rate limit of {client.rate_limit_per_minute} requests/minute"
+            f"integration client {client_id!r} exceeded its rate limit of {rate_limit} requests/minute"
         )
     else:
         client.rate_limit_window_count += 1
