@@ -7,18 +7,20 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from fastmcp.server.auth import AccessToken
+from fastmcp.server.auth import AccessToken, MultiAuth
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.mcp_server import (
+    MCP_TOOL_CAPABILITIES,
+    DbIntegrationClientVerifier,
     McpAuthError,
     WorktimeMcpBackend,
     _build_auth_provider,
     create_mcp_server,
 )
 from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
-from app.services import db_service
+from app.services import db_service, integration_client_service
 
 
 def _token_for_user(user_id: int, *, is_admin: bool = False) -> AccessToken:
@@ -48,13 +50,35 @@ def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monk
     with patch("app.mcp_server.KeycloakAuthProvider") as provider:
         auth = _build_auth_provider()
 
-    assert auth is provider.return_value
+    # Always wrapped in MultiAuth: the DB-backed managed-integration-client
+    # verifier (issue #1054) runs unconditionally alongside Keycloak, even
+    # with no legacy WORKTIME_MCP_INTEGRATION_KEYS configured.
+    assert isinstance(auth, MultiAuth)
+    assert auth.server is provider.return_value
+    assert len(auth.verifiers) == 1
+    assert isinstance(auth.verifiers[0], DbIntegrationClientVerifier)
     provider.assert_called_once_with(
         realm_url="https://auth.example/realms/worktime",
         base_url="https://api.example/mcp",
         required_scopes=[],
         audience="worktime",
     )
+
+
+def test_build_auth_provider_adds_legacy_verifier_when_configured(monkeypatch) -> None:
+    """WORKTIME_MCP_INTEGRATION_KEYS still works, stacked on top of the DB verifier."""
+    from app.mcp_server import IntegrationKeyVerifier
+
+    monkeypatch.setenv("WORKTIME_MCP_BASE_URL", "https://api.example/mcp")
+    monkeypatch.setenv("WORKTIME_MCP_INTEGRATION_KEYS", "legacy-token=1:admin")
+
+    with patch("app.mcp_server.KeycloakAuthProvider"):
+        auth = _build_auth_provider()
+
+    assert isinstance(auth, MultiAuth)
+    assert len(auth.verifiers) == 2
+    assert isinstance(auth.verifiers[0], DbIntegrationClientVerifier)
+    assert isinstance(auth.verifiers[1], IntegrationKeyVerifier)
 
 
 async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) -> None:
@@ -89,6 +113,24 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "update_gantt_task",
         "delete_gantt_task",
     }
+
+
+async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: AsyncEngine) -> None:
+    """MCP_TOOL_CAPABILITIES is the single source of truth create_mcp_server()
+    registers tools from — this asserts that guarantee holds, and also
+    that every capability entry has a sane effect/tier."""
+    server = create_mcp_server(session_factory=_make_factory(test_db))
+    tools = await server.list_tools(run_middleware=False)
+    tool_names = {tool.name for tool in tools}
+
+    assert tool_names == set(MCP_TOOL_CAPABILITIES)
+    for name, capability in MCP_TOOL_CAPABILITIES.items():
+        assert capability.required_tier in ("owner", "admin"), name
+        # No tool today accepts a target user id, so none should claim
+        # admin_write or an "admin" tier — this is a current-state fact this
+        # test pins down so a future admin-scoped tool has to update it
+        # deliberately rather than silently mis-tagging itself.
+        assert capability.required_tier == "owner", name
 
 
 async def test_whoami_and_time_tracking_summary_happy_path(
@@ -349,7 +391,7 @@ async def test_start_and_stop_time_entry(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     start_payload = await backend.start_time_entry(
-text="Working on feature",
+        text="Working on feature",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
     assert start_payload["text"] == "Working on feature"
@@ -357,7 +399,7 @@ text="Working on feature",
     assert start_payload["user_id"] == user.id
 
     stop_payload = await backend.stop_time_entry(
-stop_time=datetime(2026, 5, 1, 10, 30, tzinfo=UTC),
+        stop_time=datetime(2026, 5, 1, 10, 30, tzinfo=UTC),
     )
     assert stop_payload["id"] == start_payload["id"]
     assert stop_payload["stop_time"] is not None
@@ -383,13 +425,13 @@ async def test_start_time_entry_blocks_second_running_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.start_time_entry(
-text="First task",
+        text="First task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
 
     with pytest.raises(ValueError, match="only one running task"):
         await backend.start_time_entry(
-        text="Second task",
+            text="Second task",
             start_time=datetime(2026, 5, 1, 9, 30, tzinfo=UTC),
         )
 
@@ -437,7 +479,7 @@ async def test_create_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.create_time_tracking_task(
-text="Completed task",
+        text="Completed task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
         stop_time=datetime(2026, 5, 1, 11, 0, tzinfo=UTC),
         includes_break=True,
@@ -478,7 +520,7 @@ async def test_update_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     updated = await backend.update_time_tracking_task(
-task_id=task.id,
+        task_id=task.id,
         text="Updated text",
     )
     assert updated["text"] == "Updated text"
@@ -516,7 +558,7 @@ async def test_update_time_tracking_task_unauthorized(
 
     with pytest.raises(ValueError):
         await backend.update_time_tracking_task(
-        task_id=task.id,
+            task_id=task.id,
             text="Hacked",
         )
 
@@ -543,7 +585,7 @@ async def test_create_update_delete_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_tracking_task(
-text="Task to delete",
+        text="Task to delete",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
         stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
     )
@@ -551,13 +593,13 @@ text="Task to delete",
     task_id = created["id"]
 
     updated = await backend.update_time_tracking_task(
-task_id=task_id,
+        task_id=task_id,
         text="Updated before delete",
     )
     assert updated["text"] == "Updated before delete"
 
     deleted = await backend.delete_time_tracking_task(
-task_id=task_id,
+        task_id=task_id,
     )
     assert deleted["deleted"] is True
     assert deleted["task_id"] == task_id
@@ -579,9 +621,7 @@ async def test_delete_time_tracking_task_unauthorized(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        owner = await db_service.create_user(
-            session, UserCreate(username="task-owner", display_name="Task Owner")
-        )
+        owner = await db_service.create_user(session, UserCreate(username="task-owner", display_name="Task Owner"))
         attacker = await db_service.create_user(
             session, UserCreate(username="task-attacker", display_name="Task Attacker")
         )
@@ -621,7 +661,7 @@ async def test_set_work_location(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.set_work_location(
-value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
         country_code="BE",
         label="HQ",
     )
@@ -631,7 +671,7 @@ value_date=date(2026, 5, 1),
 
     # Idempotent: calling again overwrites
     payload2 = await backend.set_work_location(
-value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
         country_code="NL",
     )
     assert payload2["country_code"] == "NL"
@@ -657,12 +697,12 @@ async def test_delete_work_location(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.set_work_location(
-value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
         country_code="BE",
     )
 
     deleted = await backend.delete_work_location(
-value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
     )
     assert deleted["deleted"] is True
     assert deleted["date"] == "2026-05-01"
@@ -670,7 +710,7 @@ value_date=date(2026, 5, 1),
 
     with pytest.raises(ValueError):
         await backend.delete_work_location(
-        value_date=date(2026, 5, 1),
+            value_date=date(2026, 5, 1),
         )
 
 
@@ -695,7 +735,7 @@ async def test_set_work_location_invalid_country(
 
     with pytest.raises(ValidationError):
         await backend.set_work_location(
-        value_date=date(2026, 5, 1),
+            value_date=date(2026, 5, 1),
             country_code="ZZ",
         )
 
@@ -720,7 +760,7 @@ async def test_create_update_delete_time_off_event(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_off_event(
-entry_kind="date",
+        entry_kind="date",
         entry_type="vacation",
         date=date(2026, 8, 1),
         note="Summer holiday",
@@ -730,13 +770,13 @@ entry_kind="date",
     entry_id = created["entry_id"]
 
     updated = await backend.update_time_off_event(
-entry_id=entry_id,
+        entry_id=entry_id,
         note="Summer holiday (updated)",
     )
     assert updated["note"] == "Summer holiday (updated)"
 
     deleted = await backend.delete_time_off_event(
-entry_id=entry_id,
+        entry_id=entry_id,
     )
     assert deleted["deleted"] is True
     assert deleted["entry_id"] == entry_id
@@ -757,20 +797,18 @@ async def test_create_time_off_event_idempotent_with_entry_id(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        user = await db_service.create_user(
-            session, UserCreate(username="idempotent-user", display_name="Idempotent")
-        )
+        user = await db_service.create_user(session, UserCreate(username="idempotent-user", display_name="Idempotent"))
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     first = await backend.create_time_off_event(
-entry_kind="date",
+        entry_kind="date",
         entry_type="vacation",
         date=date(2026, 9, 1),
         entry_id="fixed-entry-id",
     )
     second = await backend.create_time_off_event(
-entry_kind="date",
+        entry_kind="date",
         entry_type="ill",
         date=date(2026, 9, 1),
         entry_id="fixed-entry-id",
@@ -794,12 +832,8 @@ async def test_delete_time_off_event_unauthorized(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        owner = await db_service.create_user(
-            session, UserCreate(username="to-owner", display_name="TO Owner")
-        )
-        attacker = await db_service.create_user(
-            session, UserCreate(username="to-attacker", display_name="TO Attacker")
-        )
+        owner = await db_service.create_user(session, UserCreate(username="to-owner", display_name="TO Owner"))
+        attacker = await db_service.create_user(session, UserCreate(username="to-attacker", display_name="TO Attacker"))
         entry, _ = await db_service.create_or_update_time_off_entry(
             session,
             owner.id,
@@ -827,14 +861,12 @@ async def test_create_update_delete_gantt_task(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        user = await db_service.create_user(
-            session, UserCreate(username="gantt-user", display_name="Gantt User")
-        )
+        user = await db_service.create_user(session, UserCreate(username="gantt-user", display_name="Gantt User"))
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_gantt_task(
-name="Sprint 1",
+        name="Sprint 1",
         start_date=date(2026, 6, 1),
         end_date=date(2026, 6, 14),
         progress=0,
@@ -844,7 +876,7 @@ name="Sprint 1",
     task_id = created["id"]
 
     updated = await backend.update_gantt_task(
-task_id=task_id,
+        task_id=task_id,
         progress=50,
         notes="Halfway done",
     )
@@ -852,7 +884,7 @@ task_id=task_id,
     assert updated["notes"] == "Halfway done"
 
     deleted = await backend.delete_gantt_task(
-task_id=task_id,
+        task_id=task_id,
     )
     assert deleted["deleted"] is True
     assert deleted["task_id"] == task_id
@@ -873,15 +905,13 @@ async def test_create_gantt_task_invalid_date_range(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        user = await db_service.create_user(
-            session, UserCreate(username="gantt-invalid", display_name="Gantt Invalid")
-        )
+        user = await db_service.create_user(session, UserCreate(username="gantt-invalid", display_name="Gantt Invalid"))
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ValidationError):
         await backend.create_gantt_task(
-        name="Bad range",
+            name="Bad range",
             start_date=date(2026, 6, 14),
             end_date=date(2026, 6, 1),
         )
@@ -902,9 +932,7 @@ async def test_delete_gantt_task_unauthorized(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        owner = await db_service.create_user(
-            session, UserCreate(username="gantt-owner", display_name="Gantt Owner")
-        )
+        owner = await db_service.create_user(session, UserCreate(username="gantt-owner", display_name="Gantt Owner"))
         attacker = await db_service.create_user(
             session, UserCreate(username="gantt-attacker", display_name="Gantt Attacker")
         )
@@ -938,14 +966,12 @@ async def test_write_tools_produce_audit_log_entries(
     backend = WorktimeMcpBackend(session_factory)
 
     async with session_factory() as session:
-        user = await db_service.create_user(
-            session, UserCreate(username="audit-user", display_name="Audit User")
-        )
+        user = await db_service.create_user(session, UserCreate(username="audit-user", display_name="Audit User"))
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.set_work_location(
-value_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 1),
         country_code="DE",
     )
     # append() dispatches the file write to a background thread when called
@@ -959,3 +985,134 @@ value_date=date(2026, 5, 1),
     entry = lines[-1]
     assert entry["action"] == "set_work_location"
     assert f"user:{user.id}" in entry["target"]
+
+
+async def test_write_tools_produce_transactional_db_audit_entries(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Write tools stage a durable AuditEntry row in the same transaction as
+    the mutation (issue #1054) — the authoritative record, distinct from the
+    best-effort file logger covered above."""
+    from sqlalchemy import select
+
+    from app.database.models import AuditEntry
+
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="db-audit-user", display_name="DB Audit User"))
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    payload = await backend.set_work_location(value_date=date(2026, 5, 1), country_code="DE")
+
+    async with session_factory() as session:
+        result = await session.execute(select(AuditEntry).where(AuditEntry.resource_type == "work_location"))
+        entries = list(result.scalars().all())
+
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry.action == "create_or_update_work_location"
+    assert entry.resource_id == "2026-05-01"
+    assert entry.actor_user_id == user.id
+    assert entry.auth_source == "oidc"
+    assert payload["country_code"] == "DE"
+
+
+async def test_whoami_includes_integration_client_identity_when_present(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """whoami surfaces the managed integration client's id/name/scopes — never
+    raw key material, which the server never has after creation anyway."""
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="ic-whoami-user", display_name="IC Whoami"))
+
+    token = AccessToken(
+        token="wtic_sometoken",
+        client_id="integration-client-7",
+        scopes=["worktime:mcp"],
+        claims={
+            "worktime_user_id": user.id,
+            "worktime_is_admin": False,
+            "sub": "integration-client:7",
+            "auth_type": "integration_client",
+            "worktime_integration_client_id": 7,
+            "worktime_integration_client_name": "home-assistant",
+            "worktime_integration_client_scopes": ["worktime:mcp"],
+            "worktime_integration_client_rate_limit_per_minute": 1000,
+        },
+    )
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: token)
+
+    payload = await backend.whoami()
+
+    assert payload["auth_type"] == "integration_client"
+    assert payload["integration_client"] == {
+        "id": 7,
+        "name": "home-assistant",
+        "scopes": ["worktime:mcp"],
+    }
+
+
+async def test_whoami_omits_integration_client_for_regular_users(
+    test_db: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="plain-whoami-user", display_name="Plain"))
+
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+
+    payload = await backend.whoami()
+
+    assert payload["integration_client"] is None
+
+
+async def test_db_integration_client_verifier_accepts_active_client(
+    test_db: AsyncEngine,
+) -> None:
+    session_factory = _make_factory(test_db)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="verifier-user", display_name="Verifier"))
+        client, raw_key = await integration_client_service.create_integration_client(
+            session, user.id, name="test-client"
+        )
+
+    verifier = DbIntegrationClientVerifier(session_factory)
+    access_token = await verifier.verify_token(raw_key)
+
+    assert access_token is not None
+    assert access_token.claims["worktime_user_id"] == user.id
+    assert access_token.claims["worktime_integration_client_id"] == client.id
+    assert access_token.claims["auth_type"] == "integration_client"
+    assert access_token.claims["worktime_is_admin"] is False
+
+
+async def test_db_integration_client_verifier_rejects_unknown_and_revoked(
+    test_db: AsyncEngine,
+) -> None:
+    session_factory = _make_factory(test_db)
+    verifier = DbIntegrationClientVerifier(session_factory)
+
+    assert await verifier.verify_token("wtic_unknown-key-value") is None
+    # Not our prefix at all — must not be confused with an OIDC bearer token.
+    assert await verifier.verify_token("some-other-bearer-token") is None
+
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="revoked-verifier-user", display_name="Revoked")
+        )
+        client, raw_key = await integration_client_service.create_integration_client(session, user.id, name="to-revoke")
+        await integration_client_service.revoke_integration_client(session, user.id, client.id)
+
+    assert await verifier.verify_token(raw_key) is None

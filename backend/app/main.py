@@ -31,18 +31,19 @@ from .utils.sse_manager import sync_event_manager
 from .version import APP_VERSION
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 _worktime_mcp_base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "")
 if _worktime_mcp_base_url:
+    from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
     from .mcp_server import create_mcp_server as _create_mcp_server
+
     _mcp = _create_mcp_server()
     _mcp_app = _mcp.http_app(path="/")
 else:
+    from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
+
     _mcp = None
     _mcp_app = None
 
@@ -60,8 +61,7 @@ if settings.SENTRY_DSN:
         logger.info("✓ Sentry error tracking initialized")
     except ImportError:
         logger.warning(
-            "⚠️  SENTRY_DSN is configured but sentry-sdk is not installed. "
-            "Install it with: uv add sentry-sdk[fastapi]"
+            "⚠️  SENTRY_DSN is configured but sentry-sdk is not installed. Install it with: uv add sentry-sdk[fastapi]"
         )
 
 
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("Worktime Backend API - Starting up")
     logger.info("=" * 60)
-    
+
     # Log configuration
     settings.log_configuration()
 
@@ -122,7 +122,7 @@ app = FastAPI(
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
     version=APP_VERSION,
-    lifespan=_lifespan
+    lifespan=_lifespan,
 )
 
 # Configure CORS middleware with production safety
@@ -144,6 +144,7 @@ _cors_kwargs: dict[str, Any] = {
     "expose_headers": ["X-Request-ID", "X-Total-Ms"],
 }
 if _mcp_app is not None:
+
     class _MCPAwareCORSMiddleware:
         def __init__(self, app, **kwargs) -> None:
             self._app = app
@@ -191,6 +192,7 @@ app.include_router(holidays_router, prefix="/api")
 if settings.DATABASE_ENABLED:
     from .routers.access_tokens import router as access_tokens_router
     from .routers.account_router import router as account_router
+    from .routers.audit import router as audit_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_preferences import router as db_preferences_router
     from .routers.db_sync import router as db_sync_router
@@ -198,12 +200,15 @@ if settings.DATABASE_ENABLED:
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
+    from .routers.integration_clients import router as integration_clients_router
     from .routers.pebble import router as pebble_router
     from .routers.read_models import router as read_models_router
     from .routers.registration import router as registration_router
 
     app.include_router(account_router, prefix="/api")
     app.include_router(access_tokens_router, prefix="/api")
+    app.include_router(integration_clients_router, prefix="/api")
+    app.include_router(audit_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(db_users_router, prefix="/api")
     app.include_router(db_time_tracking_router, prefix="/api")
@@ -223,10 +228,37 @@ if _mcp_app is not None:
     logger.info("✓ MCP server mounted at /mcp")
 
 
+@app.get("/api/mcp/capabilities", tags=["Info"])
+async def mcp_capabilities() -> dict[str, object]:
+    """Authoritative MCP capability manifest (issue #1054).
+
+    Sourced directly from ``app.mcp_server.MCP_TOOL_CAPABILITIES`` — the same
+    dict ``create_mcp_server()`` iterates to register tools — so this
+    response cannot drift from what's actually registered on the running
+    server. ``tools`` is empty when the MCP server isn't mounted
+    (``WORKTIME_MCP_BASE_URL`` unset).
+    """
+    enabled = _mcp_app is not None
+    return {
+        "enabled": enabled,
+        "mount_path": "/mcp",
+        "tools": [
+            {
+                "name": name,
+                "side_effect": capability.effect.value,
+                "required_tier": capability.required_tier,
+            }
+            for name, capability in _MCP_TOOL_CAPABILITIES.items()
+        ]
+        if enabled
+        else [],
+    }
+
+
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])
 async def root():
     """Root endpoint with basic API information.
-    
+
     Returns:
         Plain text message with API title and version.
     """
@@ -235,11 +267,11 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.ENVIRONMENT == "development",
-        log_level="info"
+        log_level="info",
     )

@@ -172,9 +172,7 @@ async def _get_or_fetch_holidays(
         return db_entry.data
 
     # --- Upstream fetch ---
-    logger.debug(
-        "Cache miss for %s holidays: %s — fetching from upstream", holiday_type, cache_key
-    )
+    logger.debug("Cache miss for %s holidays: %s — fetching from upstream", holiday_type, cache_key)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
@@ -192,9 +190,7 @@ async def _get_or_fetch_holidays(
             )
             # Return stale DB data if available rather than nothing
             if db_entry is not None:
-                logger.info(
-                    "Serving stale DB entry for %s holidays: %s", holiday_type, cache_key
-                )
+                logger.info("Serving stale DB entry for %s holidays: %s", holiday_type, cache_key)
                 return db_entry.data
             return None
 
@@ -203,9 +199,7 @@ async def _get_or_fetch_holidays(
             data = response_filter(data)
 
     except Exception:
-        logger.exception(
-            "Failed to fetch %s holidays from upstream (%s)", holiday_type, cache_key
-        )
+        logger.exception("Failed to fetch %s holidays from upstream (%s)", holiday_type, cache_key)
         # Serve stale DB data on network error
         if db_entry is not None:
             logger.info(

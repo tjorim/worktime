@@ -49,9 +49,7 @@ async def rotate_pebble_access_token(
     """Replace the auto-paired Pebble token and return its raw value once."""
     # Serialize rotations for one user. Without this lock, overlapping
     # transactions can both delete before either inserts its replacement.
-    await session.execute(
-        select(User.id).where(User.id == user_id).with_for_update()
-    )
+    await session.execute(select(User.id).where(User.id == user_id).with_for_update())
     await session.execute(
         delete(AccessToken).where(
             AccessToken.user_id == user_id,
@@ -70,9 +68,7 @@ async def rotate_pebble_access_token(
 
 async def list_access_tokens_for_user(session: AsyncSession, user_id: int) -> list[AccessToken]:
     result = await session.execute(
-        select(AccessToken)
-        .where(AccessToken.user_id == user_id)
-        .order_by(AccessToken.created_at.desc())
+        select(AccessToken).where(AccessToken.user_id == user_id).order_by(AccessToken.created_at.desc())
     )
     return list(result.scalars().all())
 
@@ -87,9 +83,7 @@ async def revoke_access_token(session: AsyncSession, user_id: int, token_id: str
 
 async def authenticate_access_token(session: AsyncSession, raw_token: str) -> AccessToken | None:
     """Look up a token by its hash and record last-used time. Returns None if unknown/revoked."""
-    result = await session.execute(
-        select(AccessToken).where(AccessToken.token_hash == _hash_token(raw_token))
-    )
+    result = await session.execute(select(AccessToken).where(AccessToken.token_hash == _hash_token(raw_token)))
     token = result.scalar_one_or_none()
     if token is None:
         return None

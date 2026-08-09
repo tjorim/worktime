@@ -413,17 +413,13 @@ def _build_time_off_summary(
                 starts_on, ends_on = entry.start_date, entry.end_date
             else:
                 starts_on, ends_on = today, today
-            active_items.append(
-                _to_time_off_item(entry, starts_on=starts_on, ends_on=ends_on, is_active=True)
-            )
+            active_items.append(_to_time_off_item(entry, starts_on=starts_on, ends_on=ends_on, is_active=True))
             continue
 
         window = _resolve_time_off_window(entry, today)
         if window is None:
             continue
-        upcoming_items.append(
-            _to_time_off_item(entry, starts_on=window[0], ends_on=window[1], is_active=False)
-        )
+        upcoming_items.append(_to_time_off_item(entry, starts_on=window[0], ends_on=window[1], is_active=False))
 
     active_items.sort(key=lambda item: (item.starts_on, item.ends_on, item.entry_id))
     upcoming_items.sort(key=lambda item: (item.starts_on, item.ends_on, item.entry_id))

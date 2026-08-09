@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.db import AuditActor
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
 from app.database.engine import get_session
@@ -192,6 +193,7 @@ async def get_bearer_principal(
     if settings.SENTRY_DSN:
         try:
             import sentry_sdk
+
             sentry_sdk.set_user({"id": str(local_user.id)})
         except ImportError:
             pass
@@ -215,7 +217,11 @@ async def get_bearer_principal(
 def get_authenticated_principal(
     principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
 ) -> AuthenticatedPrincipal:
-    """Require a Keycloak user session for the regular application API."""
+    """Require an interactive user for the general REST API.
+
+    Delegated personal-access tokens stay confined to endpoints that opt into
+    ``require_scoped_principal`` (currently the dedicated Pebble surface).
+    """
     if principal.auth_type != AuthType.KEYCLOAK_USER:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -244,9 +250,7 @@ def require_scoped_principal(
     ) -> AuthenticatedPrincipal:
         if principal.auth_type == AuthType.KEYCLOAK_USER:
             return principal
-        if principal.auth_type == AuthType.DELEGATED and has_required_scopes(
-            principal.scopes, required
-        ):
+        if principal.auth_type == AuthType.DELEGATED and has_required_scopes(principal.scopes, required):
             return principal
         missing = ", ".join(sorted(required))
         raise HTTPException(
@@ -298,8 +302,24 @@ def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
+def audit_actor_for(principal: AuthenticatedPrincipal) -> AuditActor:
+    """Build the transactional-audit actor identity for an authenticated REST caller.
+
+    ``label`` intentionally stays at the id-only ``user:<id>`` form rather
+    than resolving a username, so building an actor never costs an extra DB
+    query on every mutation's hot path — the audit trail can still be joined
+    to ``users`` by ``actor_user_id`` when a human-readable name is needed.
+    """
+    return AuditActor(
+        user_id=principal.user_id,
+        label=f"user:{principal.user_id}",
+        auth_source=principal.auth_type.value,
+        subject=principal.subject,
+    )
+
+
 def require_oidc_principal(
-    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
 ) -> AuthenticatedPrincipal:
     """Require an interactive OIDC session, rejecting personal access tokens.
 

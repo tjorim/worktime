@@ -48,6 +48,7 @@ def test_custom_settings():
         os.environ["DATABASE_ECHO"] = "true"
         os.environ["OIDC_ISSUER_URL"] = "https://auth.example.com/application/o/worktime"
         os.environ["TRUSTED_HOSTS"] = "worktime.tjor.im"
+        os.environ["INTEGRATION_KEY_HASH_SECRET"] = "test-secret"
 
         # Create new settings instance
         settings = Settings()
@@ -105,6 +106,7 @@ def test_cors_origins_wildcard_production():
         ENVIRONMENT="production",
         CORS_ORIGINS="*",
         TRUSTED_HOSTS="worktime.tjor.im",
+        INTEGRATION_KEY_HASH_SECRET="test-secret",
     )
     origins = settings.get_cors_origins_list()
 
@@ -118,7 +120,9 @@ def test_environment_validation():
     settings_dev = Settings(ENVIRONMENT="development")
     assert settings_dev.ENVIRONMENT == "development"
 
-    settings_prod = Settings(ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
+    settings_prod = Settings(
+        ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im", INTEGRATION_KEY_HASH_SECRET="test-secret"
+    )
     assert settings_prod.ENVIRONMENT == "production"
     
     # Invalid environment should raise error
@@ -287,7 +291,12 @@ def test_trusted_hosts_always_allows_localhost_for_healthcheck():
     """get_trusted_hosts_list() always allows "localhost" so Docker's own
     HEALTHCHECK (curling http://localhost:PORT/health from inside the
     container) keeps working regardless of the configured production allowlist."""
-    settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
+    settings = Settings(
+        _env_file=None,
+        ENVIRONMENT="production",
+        TRUSTED_HOSTS="worktime.tjor.im",
+        INTEGRATION_KEY_HASH_SECRET="test-secret",
+    )
     assert "localhost" in settings.get_trusted_hosts_list()
 
 
@@ -315,7 +324,12 @@ def test_trusted_hosts_separator_only_in_production_raises():
 
 def test_trusted_hosts_explicit_in_production_succeeds():
     """An explicit TRUSTED_HOSTS value starts normally in production."""
-    settings = Settings(_env_file=None, ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im")
+    settings = Settings(
+        _env_file=None,
+        ENVIRONMENT="production",
+        TRUSTED_HOSTS="worktime.tjor.im",
+        INTEGRATION_KEY_HASH_SECRET="test-secret",
+    )
     assert settings.get_trusted_hosts_list() == ["worktime.tjor.im", "localhost"]
 
 

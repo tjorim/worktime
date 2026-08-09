@@ -21,13 +21,8 @@ class Settings(BaseSettings):
     In production, override via environment variables.
     """
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="allow"
-    )
-    
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow")
+
     # CORS configuration
     CORS_ORIGINS: str = "http://localhost:5173"
 
@@ -38,11 +33,11 @@ class Settings(BaseSettings):
 
     # Environment mode
     ENVIRONMENT: str = "development"
-    
+
     # Server configuration
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    
+
     # Cache configuration
     CACHE_TTL: int = 10
     CACHE_ENABLED: bool = True
@@ -72,6 +67,19 @@ class Settings(BaseSettings):
     # When empty the metrics endpoint returns 404 so it stays invisible to scanners.
     # Generate a suitable value with: python -c "import secrets; print(secrets.token_hex(32))"
     METRICS_HMAC_SECRET: str = ""
+
+    # HMAC secret used to hash managed integration-client keys (app.services
+    # .integration_client_service) before they're stored in the database. The
+    # raw key is server-generated with high entropy (secrets.token_urlsafe),
+    # not a user password, so HMAC-SHA256 with a server-side secret is
+    # correct here: it adds defense-in-depth against a stolen database dump
+    # (without the secret, a leaked key_hash can't be replayed even though
+    # brute-forcing the raw key is already infeasible at this entropy).
+    # Falls back to a fixed local-dev-only value when unset; production must
+    # set a real secret — see validate_production_integration_key_hash_secret.
+    # Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+    INTEGRATION_KEY_HASH_SECRET: str = ""
+    INTEGRATION_KEY_HASH_SECRET_PREVIOUS: str = ""
 
     # Sentry error tracking.
     # Leave SENTRY_DSN empty (the default) to disable Sentry entirely.
@@ -127,18 +135,16 @@ class Settings(BaseSettings):
         if not v or not v.strip():
             raise ValueError("CORS_ORIGINS cannot be empty")
         return v
-    
+
     @field_validator("ENVIRONMENT")
     @classmethod
     def validate_environment(cls, v: str) -> str:
         """Validate environment mode."""
         v = v.lower()
         if v not in ("development", "production"):
-            raise ValueError(
-                f"ENVIRONMENT must be 'development' or 'production', got: {v}"
-            )
+            raise ValueError(f"ENVIRONMENT must be 'development' or 'production', got: {v}")
         return v
-    
+
     @field_validator("CACHE_TTL")
     @classmethod
     def validate_cache_ttl(cls, v: int) -> int:
@@ -177,15 +183,43 @@ class Settings(BaseSettings):
             raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside ENVIRONMENT=development.")
         return self
 
+    @model_validator(mode="after")
+    def validate_production_integration_key_hash_secret(self) -> "Settings":
+        """Refuse to start in production without a real integration-key hash secret.
+
+        The unset default is safe only for local dev (single-operator,
+        low-value threat model); production must set an explicit secret so a
+        database dump alone can't be used to forge/replay integration-client
+        keys, matching the pattern already established for TRUSTED_HOSTS and
+        DEV_AUTH_BYPASS_TOKEN above.
+        """
+        if self.ENVIRONMENT == "production" and not self.INTEGRATION_KEY_HASH_SECRET.strip():
+            raise ValueError("INTEGRATION_KEY_HASH_SECRET must be set to a real secret in production.")
+        return self
+
+    def resolved_integration_key_hash_secret(self) -> str:
+        """Resolve the HMAC secret for hashing integration-client keys.
+
+        Falls back to a fixed local-dev-only value when unset. Production
+        cannot reach this fallback: validate_production_integration_key_hash_secret
+        refuses to start without an explicit value first.
+
+        Deployment note: changing the effective secret (via env or fallback)
+        invalidates all previously stored ``integration_clients.key_hash`` values;
+        existing clients will fail to authenticate until rotated. Rotate all
+        integration clients when rotating this secret.
+        """
+        return self.INTEGRATION_KEY_HASH_SECRET.strip() or "worktime-dev-integration-key-hash-secret"
+
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
-        
+
         Returns:
             List of allowed origins. Returns empty list if wildcard is attempted
             in production (forcing explicit origin configuration for security).
         """
         cors_env = self.CORS_ORIGINS.strip()
-        
+
         # Handle wildcard
         if cors_env == "*":
             # Only allow wildcard in non-production
@@ -197,11 +231,11 @@ class Settings(BaseSettings):
                 return []
             logger.info("CORS: Allowing all origins (*) in development mode")
             return ["*"]
-        
+
         # Parse comma-separated origins
         origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
         return origins
-    
+
     def _parse_trusted_hosts(self) -> list[str]:
         """Parse the raw TRUSTED_HOSTS value into real hostnames.
 
@@ -244,9 +278,7 @@ class Settings(BaseSettings):
             try:
                 return Path(self.DB_PASSWORD_FILE).read_text(encoding="utf-8").strip()
             except OSError as e:
-                raise ValueError(
-                    f"Could not read DB_PASSWORD_FILE at {self.DB_PASSWORD_FILE}: {e}"
-                ) from e
+                raise ValueError(f"Could not read DB_PASSWORD_FILE at {self.DB_PASSWORD_FILE}: {e}") from e
         return self.DB_PASSWORD
 
     def resolved_database_url(self) -> str:
@@ -281,9 +313,7 @@ class Settings(BaseSettings):
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()
         if not cors_origins:
-            logger.error(
-                "⚠️  No CORS origins configured - all cross-origin requests will be blocked!"
-            )
+            logger.error("⚠️  No CORS origins configured - all cross-origin requests will be blocked!")
         else:
             logger.info(f"CORS Origins:    {', '.join(cors_origins)}")
 
@@ -310,7 +340,9 @@ class Settings(BaseSettings):
         if self.DATABASE_ENABLED and not self.DATABASE_URL:
             logger.info(f"  DB Host:       {self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME} (user: {self.DB_USER})")
         logger.info(f"OIDC Issuer:     {self.OIDC_ISSUER_URL}")
-        sentry_status = f"enabled (traces_sample_rate={self.SENTRY_TRACES_SAMPLE_RATE})" if self.SENTRY_DSN else "disabled"
+        sentry_status = (
+            f"enabled (traces_sample_rate={self.SENTRY_TRACES_SAMPLE_RATE})" if self.SENTRY_DSN else "disabled"
+        )
         logger.info(f"Sentry:          {sentry_status}")
         logger.info("=" * 60)
 

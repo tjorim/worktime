@@ -1,101 +1,74 @@
-"""FastMCP server exposing Worktime tools (read and personal write)."""
+"""FastMCP server exposing Worktime tools (read and personal write).
+
+This module is the thin assembler: imports, the ``WorktimeMcpContext``
+principal (re-exported from ``app.mcp.context``), auth-provider building
+(Keycloak + managed integration clients), and tool registration
+(``create_mcp_server``). Actual tool logic lives in the domain modules under
+``app.mcp`` (identity, schedule, time_tracking, work_location, time_off,
+gantt) as plain async functions this module's ``WorktimeMcpBackend`` methods
+delegate to — mirroring champagnefestival's ``app/mcp/`` package shape.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import functools
+import logging
 import os
-from collections import Counter
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
-from typing import Any, Concatenate
+from datetime import date, datetime
+from enum import StrEnum
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, MultiAuth
 from fastmcp.server.auth.auth import TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.audit import logger as audit
 from app.config import settings
 from app.database.engine import get_session_factory
-from app.routers.auth import AuthenticatedPrincipal
-from app.schemas import (
-    EntryFlag,
-    EntryKind,
-    EntryType,
-    GanttTaskCreate,
-    GanttTaskRead,
-    GanttTaskUpdate,
-    TaskCreate,
-    TaskRead,
-    TaskUpdate,
-    TimeOffEntryCreate,
-    TimeOffEntryRead,
-    TimeOffEntryUpdate,
-    WorkLocationCreate,
-    WorkLocationRead,
+from app.mcp import gantt, identity, schedule, time_off, time_tracking, work_location
+from app.mcp.context import (
+    McpAuthError,
+    McpPermissionError,
+    McpRateLimitError,
+    WorktimeMcpContext,
 )
-from app.services.db_service import (
-    ConflictError,
-    NotFoundError,
-    ValidationError,
-    create_gantt_task,
-    create_or_update_time_off_entry,
-    create_or_update_work_location,
-    create_task,
-    delete_gantt_task,
-    delete_label,
-    delete_task,
-    delete_time_off_entry,
-    delete_work_location,
-    get_gantt_task,
-    get_running_task,
-    get_task,
-    get_time_off_entry,
-    get_user,
-    list_gantt_tasks,
-    list_labels_for_user,
-    list_tasks,
-    list_time_off_entries,
-    list_work_locations,
-    update_gantt_task,
-    update_task,
-    update_time_off_entry,
+from app.mcp.context import (
+    map_domain_errors as _map_domain_errors,
 )
-from app.services.read_models_service import (
-    build_dashboard_read_model,
-    compute_next_shifts_for_team,
-    get_schedule_type_for_user,
-)
-from app.services.sync_service import get_sync_status
+from app.schemas import EntryFlag, EntryKind, EntryType
+from app.services import integration_client_service
+from app.services.db_service import get_user
 
+logger = logging.getLogger(__name__)
 
-class McpAuthError(RuntimeError):
-    """Raised when MCP authentication context is missing or invalid."""
-
-
-class McpPermissionError(RuntimeError):
-    """Raised when MCP caller is authenticated but not authorized."""
-
-
-@dataclass(frozen=True)
-class WorktimeMcpContext:
-    user_id: int
-    username: str
-    display_name: str
-    is_admin: bool
-    subject: str | None
-    claims: dict[str, Any]
-    scopes: list[str]
-    auth_type: str
+__all__ = [
+    "McpAuthError",
+    "McpPermissionError",
+    "McpRateLimitError",
+    "WorktimeMcpContext",
+    "WorktimeMcpBackend",
+    "create_mcp_server",
+]
 
 
 class IntegrationKeyVerifier(TokenVerifier):
-    """Accept static integration keys mapped to local users."""
+    """Accept legacy static integration keys mapped to local users.
+
+    Deprecated (issue #1054): superseded by ``DbIntegrationClientVerifier``,
+    which looks up revocable, rotatable, rate-limited credentials in the
+    database instead of a fixed in-memory map parsed once at startup. This
+    verifier keeps running, alongside the new one, only while
+    ``WORKTIME_MCP_INTEGRATION_KEYS`` is set, for a documented migration
+    overlap period — see docs/integrations/LOCAL_MCP_SERVER.md for the
+    end-of-support plan. New integrations should provision a managed
+    integration client instead of a static key.
+    """
 
     def __init__(self, key_mapping: dict[str, tuple[int, bool]]) -> None:
         self._key_mapping = key_mapping
@@ -128,15 +101,14 @@ def _parse_integration_key_mapping(value: str) -> dict[str, tuple[int, bool]]:
       token=user_id:user
     Multiple entries are comma-separated.
 
-    These are long-lived static bearer tokens with no built-in expiry — an
-    intentional trade-off for self-hosted, operator-controlled integrations
-    (they bypass the OIDC login flow entirely). To rotate a key: add a new
-    token=user_id entry alongside the old one, update the calling
-    integration to use it, then remove the old entry and restart the
-    process (the mapping is parsed once at startup, in _build_auth_provider).
-    There is no revocation mechanism short of removing the entry and
-    restarting, so treat these tokens like any other long-lived credential —
-    store them in a secret manager, not in version control.
+    Deprecated (issue #1054): this static, long-lived credential store has no
+    rotation or revocation short of removing the entry and restarting the
+    process. Prefer a managed integration client (``/api/integration-clients``,
+    ``app.services.integration_client_service``), which is DB-backed,
+    per-client rate-limited, and can be revoked or rotated without a
+    restart. WORKTIME_MCP_INTEGRATION_KEYS keeps working for now — see
+    docs/integrations/LOCAL_MCP_SERVER.md for the migration/overlap plan —
+    but new integrations should not adopt it.
     """
     mapping: dict[str, tuple[int, bool]] = {}
     for item in (part.strip() for part in value.split(",") if part.strip()):
@@ -155,8 +127,62 @@ def _parse_integration_key_mapping(value: str) -> dict[str, tuple[int, bool]]:
     return mapping
 
 
-def _build_auth_provider() -> KeycloakAuthProvider | MultiAuth:
-    """Build FastMCP auth provider with Keycloak plus optional integration keys."""
+class DbIntegrationClientVerifier(TokenVerifier):
+    """Verify managed, database-backed integration-client keys (issue #1054).
+
+    Looks the presented key's HMAC hash up in ``integration_clients`` instead
+    of a static in-memory map, so credentials can be created, rotated, and
+    revoked at runtime without a process restart. Inactive/revoked/unknown
+    keys verify as ``None`` (auth failure), matching ``TokenVerifier``'s
+    contract. Records best-effort ``last_used_at`` telemetry on success.
+    """
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        if not token.startswith(integration_client_service.KEY_PREFIX):
+            return None
+
+        async with self._session_factory() as session:
+            client = await integration_client_service.get_active_integration_client_by_key(session, token)
+            if client is None:
+                return None
+            try:
+                await integration_client_service.enforce_integration_client_rate_limit(session, client.id)
+                await integration_client_service.record_integration_client_usage(session, client)
+            except integration_client_service.RateLimitExceededError:
+                return None
+            except SQLAlchemyError:
+                logger.warning("Failed to record integration client usage or rate limit", exc_info=True)
+
+        return AccessToken(
+            token=token,
+            client_id=f"integration-client-{client.id}",
+            scopes=list(client.scopes),
+            claims={
+                "worktime_user_id": client.user_id,
+                "worktime_is_admin": integration_client_service.ADMIN_SCOPE in client.scopes,
+                "sub": f"integration-client:{client.id}",
+                "auth_type": "integration_client",
+                "worktime_integration_client_id": client.id,
+                "worktime_integration_client_name": client.name,
+                "worktime_integration_client_scopes": list(client.scopes),
+                "worktime_integration_client_rate_limit_per_minute": client.rate_limit_per_minute,
+            },
+        )
+
+
+def _build_auth_provider(
+    session_factory: async_sessionmaker[AsyncSession] | None = None,
+) -> KeycloakAuthProvider | MultiAuth:
+    """Build FastMCP auth provider: Keycloak + managed integration clients (+ legacy static keys).
+
+    The DB-backed ``DbIntegrationClientVerifier`` runs unconditionally
+    alongside Keycloak. The legacy ``IntegrationKeyVerifier`` is added on top,
+    for the documented migration/overlap period, only when
+    ``WORKTIME_MCP_INTEGRATION_KEYS`` is set — see docs/integrations/LOCAL_MCP_SERVER.md.
+    """
     base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "http://localhost:8000/mcp")
     realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL)
     audience = settings.OIDC_AUDIENCE or None
@@ -168,55 +194,20 @@ def _build_auth_provider() -> KeycloakAuthProvider | MultiAuth:
         audience=audience,
     )
 
+    verifiers: list[TokenVerifier] = [DbIntegrationClientVerifier(session_factory or get_session_factory())]
+
     integration_keys = _parse_integration_key_mapping(os.environ.get("WORKTIME_MCP_INTEGRATION_KEYS", ""))
-    if not integration_keys:
-        return keycloak
+    if integration_keys:
+        import logging
 
-    return MultiAuth(server=keycloak, verifiers=[IntegrationKeyVerifier(integration_keys)])
+        logging.getLogger(__name__).warning(
+            "WORKTIME_MCP_INTEGRATION_KEYS is deprecated and will be removed in the next "
+            "release — migrate to managed integration clients (POST /api/integration-clients) "
+            "before the overlap period ends. See docs/integrations/LOCAL_MCP_SERVER.md."
+        )
+        verifiers.append(IntegrationKeyVerifier(integration_keys))
 
-
-def _to_iso_date(value: date) -> str:
-    return value.isoformat()
-
-
-def _to_iso_datetime(value: datetime) -> str:
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=UTC)
-    return value.astimezone(UTC).isoformat()
-
-
-# Default lookback window for get_time_tracking_summary when the caller omits
-# both start_at and end_at — bounds the response to a reasonable size instead
-# of returning the user's entire tracked-task history into the model's
-# context on every unfiltered call.
-_DEFAULT_SUMMARY_WINDOW = timedelta(days=30)
-
-# Hard cap on items returned by get_gantt_tasks. Personal Gantt boards are
-# typically small (a handful of projects), so this is a defense-in-depth
-# bound rather than an expected everyday limit.
-_MAX_GANTT_TASKS_RETURNED = 200
-
-
-def _map_domain_errors[**P, R](
-    func: Callable[Concatenate[WorktimeMcpBackend, P], Awaitable[R]],
-) -> Callable[Concatenate[WorktimeMcpBackend, P], Awaitable[R]]:
-    """Translate db_service domain exceptions into ValueError for MCP callers.
-
-    Without this, only delete_label mapped ConflictError to ValueError —
-    every other write tool let ConflictError / NotFoundError / ValidationError
-    (e.g. "only one running task is allowed per user") propagate raw, so the
-    calling model saw an opaque failure instead of the actionable message the
-    exception already carries. Apply to every write tool method.
-    """
-
-    @functools.wraps(func)
-    async def wrapper(self: WorktimeMcpBackend, *args: P.args, **kwargs: P.kwargs) -> R:
-        try:
-            return await func(self, *args, **kwargs)
-        except (ConflictError, NotFoundError, ValidationError) as exc:
-            raise ValueError(str(exc)) from exc
-
-    return wrapper
+    return MultiAuth(server=keycloak, verifiers=verifiers)
 
 
 class WorktimeMcpBackend:
@@ -235,10 +226,7 @@ class WorktimeMcpBackend:
         subject = claims.get("sub")
         auth_type = str(claims.get("auth_type") or "oidc")
         preferred_username = claims.get("preferred_username")
-        is_service_account = (
-            isinstance(preferred_username, str)
-            and preferred_username.startswith("service-account-")
-        )
+        is_service_account = isinstance(preferred_username, str) and preferred_username.startswith("service-account-")
 
         if raw_user_id is not None:
             try:
@@ -262,9 +250,7 @@ class WorktimeMcpBackend:
         user = await get_user(db, user_id)
         realm_access = claims.get("realm_access")
         roles = realm_access.get("roles", []) if isinstance(realm_access, dict) else []
-        is_admin = bool(claims.get("worktime_is_admin")) or (
-            isinstance(roles, list) and "admin" in roles
-        )
+        is_admin = bool(claims.get("worktime_is_admin")) or (isinstance(roles, list) and "admin" in roles)
 
         return WorktimeMcpContext(
             user_id=user.id,
@@ -286,323 +272,58 @@ class WorktimeMcpBackend:
         finally:
             await db.close()
 
+    # ------------------------------------------------------------------
+    # Identity
+    # ------------------------------------------------------------------
+
     async def whoami(self) -> dict[str, Any]:
         async with self._tool_context() as (context, _db):
-            return {
-                "user_id": context.user_id,
-                "username": context.username,
-                "display_name": context.display_name,
-                "is_admin": context.is_admin,
-                "subject": context.subject,
-                "auth_type": context.auth_type,
-                "scopes": context.scopes,
-            }
+            return await identity.whoami(context)
+
+    # ------------------------------------------------------------------
+    # Schedule (read-only)
+    # ------------------------------------------------------------------
 
     async def get_current_status(self) -> dict[str, Any]:
-        today = datetime.now(UTC).date()
-        now_utc = datetime.now(UTC)
         async with self._tool_context() as (context, db):
-            running_task = await get_running_task(db, context.user_id)
-            running_task_payload = (
-                TaskRead.model_validate(running_task, from_attributes=True).model_dump(mode="json")
-                if running_task is not None
-                else None
-            )
-            running_seconds = None
-            if running_task is not None:
-                start = running_task.start_time
-                if start.tzinfo is None:
-                    start = start.replace(tzinfo=UTC)
-                running_seconds = max(0, int((now_utc - start.astimezone(UTC)).total_seconds()))
-
-            work_location = None
-            today_locations = await list_work_locations(db, user_id=context.user_id, start_date=today, end_date=today)
-            if today_locations:
-                work_location = WorkLocationRead.model_validate(
-                    today_locations[-1], from_attributes=True
-                ).model_dump(mode="json")
-
-            time_off_entries = await list_time_off_entries(
-                db, user_id=context.user_id, start_date=today, end_date=today
-            )
-            active_time_off = [
-                TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
-                for entry in time_off_entries
-            ]
-
-            return {
-                "date": _to_iso_date(today),
-                "user": {
-                    "user_id": context.user_id,
-                    "username": context.username,
-                    "display_name": context.display_name,
-                },
-                "running_task": running_task_payload,
-                "running_task_seconds": running_seconds,
-                "work_location": work_location,
-                "active_time_off": active_time_off,
-            }
+            return await schedule.get_current_status(context, db)
 
     async def get_next_shift(self) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
-            dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
-            as_of = dashboard.next_shifts.as_of
-            items = dashboard.next_shifts.items
-            if not items:
-                return {"as_of": _to_iso_datetime(as_of), "next_shift": None}
-            item = items[0]
-            return {
-                "as_of": _to_iso_datetime(as_of),
-                "next_shift": {
-                    "team_number": item.team_number,
-                    "date": _to_iso_date(item.date),
-                    "shift_code": item.shift_code,
-                    "shift": item.shift.model_dump(mode="json"),
-                },
-            }
+            return await schedule.get_next_shift(context, db)
 
     async def get_team_status(self) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            principal = AuthenticatedPrincipal(user_id=context.user_id, is_admin=context.is_admin)
-            dashboard = await build_dashboard_read_model(session=db, principal=principal, next_shift_limit=1)
-            return {
-                "as_of": _to_iso_datetime(dashboard.team_status.as_of),
-                "schedule_type": dashboard.work_context.schedule_type,
-                "items": [
-                    {
-                        "team_number": item.team_number,
-                        "date": _to_iso_date(item.date),
-                        "shift_day": _to_iso_date(item.shift_day),
-                        "shift_code": item.shift_code,
-                        "shift": item.shift.model_dump(mode="json"),
-                        "is_currently_working": item.is_currently_working,
-                    }
-                    for item in dashboard.team_status.items
-                ],
-            }
+            return await schedule.get_team_status(context, db)
 
-    async def get_next_shifts_for_team(
-        self,
-        team_number: int,
-        limit: int = 5,
-    ) -> dict[str, Any]:
-        if limit < 1:
-            raise ValueError("limit must be at least 1")
-        limit = min(limit, 50)
+    async def get_next_shifts_for_team(self, team_number: int, limit: int = 5) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            # Only the schedule type is needed here, so use the lightweight
-            # lookup instead of build_dashboard_read_model(), which would also
-            # fetch the user row, list time-off entries, and compute a
-            # team_status entry for every team in the schedule.
-            as_of = datetime.now(UTC)
-            schedule_type = await get_schedule_type_for_user(db, context.user_id)
-            if schedule_type is None:
-                return {
-                    "as_of": _to_iso_datetime(as_of),
-                    "schedule_type": None,
-                    "team_number": team_number,
-                    "items": [],
-                }
-            items = compute_next_shifts_for_team(
-                schedule_type,
-                team_number,
-                as_of=as_of,
-                limit=limit,
-            )
-            return {
-                "as_of": _to_iso_datetime(as_of),
-                "schedule_type": schedule_type,
-                "team_number": team_number,
-                "items": [
-                    {
-                        "team_number": item.team_number,
-                        "date": _to_iso_date(item.date),
-                        "shift_code": item.shift_code,
-                        "shift": item.shift.model_dump(mode="json"),
-                    }
-                    for item in items
-                ],
-            }
+            return await schedule.get_next_shifts_for_team(context, db, team_number, limit)
 
-    async def get_time_off_summary(
-        self,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> dict[str, Any]:
-        start = start_date or datetime.now(UTC).date()
-        end = end_date or start
+    async def get_sync_status(self) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            entries = await list_time_off_entries(
-                db, user_id=context.user_id, start_date=start, end_date=end
-            )
-            payload_entries = [
-                TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
-                for entry in entries
-            ]
+            return await schedule.get_sync_status(context, db)
 
-            by_type = Counter(entry["entry_type"] for entry in payload_entries)
-            by_kind = Counter(entry["entry_kind"] for entry in payload_entries)
-
-            return {
-                "user_id": context.user_id,
-                "start_date": _to_iso_date(start),
-                "end_date": _to_iso_date(end),
-                "total_entries": len(payload_entries),
-                "counts_by_type": dict(by_type),
-                "counts_by_kind": dict(by_kind),
-                "entries": payload_entries,
-            }
-
-    async def get_work_location_summary(
-        self,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> dict[str, Any]:
-        start = start_date or datetime.now(UTC).date()
-        end = end_date or start
-        async with self._tool_context() as (context, db):
-            locations = await list_work_locations(db, user_id=context.user_id, start_date=start, end_date=end)
-            payload_locations = [
-                WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
-                for location in locations
-            ]
-            by_country = Counter(location["country_code"] for location in payload_locations)
-
-            return {
-                "user_id": context.user_id,
-                "start_date": _to_iso_date(start),
-                "end_date": _to_iso_date(end),
-                "total_days": len(payload_locations),
-                "counts_by_country": dict(by_country),
-                "locations": payload_locations,
-            }
+    # ------------------------------------------------------------------
+    # Time tracking
+    # ------------------------------------------------------------------
 
     async def get_time_tracking_summary(
         self,
         start_at: datetime | None = None,
         end_at: datetime | None = None,
     ) -> dict[str, Any]:
-        """Summarize time-tracking tasks for the authenticated user.
-
-        When both start_at and end_at are omitted, defaults to the trailing
-        30 days rather than the user's entire history, so a plain call stays
-        bounded. Pass explicit dates for a wider or narrower range.
-        """
-        now_utc = datetime.now(UTC)
-        default_range_applied = start_at is None and end_at is None
-        effective_end = end_at or now_utc
-        effective_start = start_at or (effective_end - _DEFAULT_SUMMARY_WINDOW)
         async with self._tool_context() as (context, db):
-            tasks = await list_tasks(
-                db,
-                user_id=context.user_id,
-                start_date=effective_start,
-                end_date=effective_end,
-            )
-            payload_tasks = [TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json") for task in tasks]
-            total_seconds = 0
-            for task in tasks:
-                start = task.start_time
-                if start.tzinfo is None:
-                    start = start.replace(tzinfo=UTC)
-                stop = task.stop_time or now_utc
-                if stop.tzinfo is None:
-                    stop = stop.replace(tzinfo=UTC)
-                total_seconds += max(0, int((stop.astimezone(UTC) - start.astimezone(UTC)).total_seconds()))
-
-            running = await get_running_task(db, context.user_id)
-            running_payload = (
-                TaskRead.model_validate(running, from_attributes=True).model_dump(mode="json")
-                if running is not None
-                else None
-            )
-
-            return {
-                "user_id": context.user_id,
-                "start_at": _to_iso_datetime(effective_start),
-                "end_at": _to_iso_datetime(effective_end),
-                "default_range_applied": default_range_applied,
-                "task_count": len(payload_tasks),
-                "tracked_seconds": total_seconds,
-                "running_task": running_payload,
-                "tasks": payload_tasks,
-            }
+            return await time_tracking.get_time_tracking_summary(context, db, start_at, end_at)
 
     async def list_labels(self) -> dict[str, Any]:
-        """List the authenticated user's active time-tracking labels."""
         async with self._tool_context() as (context, db):
-            labels = await list_labels_for_user(db, context.user_id)
-            return {
-                "labels": [
-                    {
-                        "id": label.id,
-                        "name": label.name,
-                        "color": label.color,
-                    }
-                    for label in labels
-                ]
-            }
+            return await time_tracking.list_labels(context, db)
 
     @_map_domain_errors
     async def delete_label(self, label_id: str) -> dict[str, Any]:
-        """Delete a time-tracking label owned by the authenticated user.
-
-        Raises an error if the label is currently referenced by any tasks or
-        templates.  Returns a confirmation payload on success.
-        """
         async with self._tool_context() as (context, db):
-            await delete_label(db, context.user_id, label_id)
-            audit.append(
-                target=f"user:{context.user_id}:label:{label_id}",
-                action="delete_label",
-                details="via MCP",
-            )
-            return {"deleted": True, "label_id": label_id, "user_id": context.user_id}
-
-    async def get_gantt_tasks(
-        self,
-        active_on: date | None = None,
-        task_id: str | None = None,
-    ) -> dict[str, Any]:
-        async with self._tool_context() as (context, db):
-            if task_id:
-                task = await get_gantt_task(db, context.user_id, task_id)
-                payload_tasks = [GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")]
-            else:
-                tasks = await list_gantt_tasks(db, user_id=context.user_id)
-                payload_tasks = [
-                    GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
-                    for task in tasks
-                ]
-
-            if active_on is not None:
-                payload_tasks = [
-                    task
-                    for task in payload_tasks
-                    if task["start_date"] <= _to_iso_date(active_on) <= task["end_date"]
-                ]
-
-            total_tasks = len(payload_tasks)
-            truncated = total_tasks > _MAX_GANTT_TASKS_RETURNED
-            payload_tasks = payload_tasks[:_MAX_GANTT_TASKS_RETURNED]
-
-            return {
-                "user_id": context.user_id,
-                "active_on": _to_iso_date(active_on) if active_on is not None else None,
-                "total_tasks": total_tasks,
-                "truncated": truncated,
-                "tasks": payload_tasks,
-            }
-
-    async def get_sync_status(self) -> dict[str, Any]:
-        async with self._tool_context() as (context, db):
-            payload = await get_sync_status(db, context.user_id)
-            return payload.model_dump(mode="json")
-
-    # ------------------------------------------------------------------
-    # Personal write tools
-    # ------------------------------------------------------------------
+            return await time_tracking.delete_label_tool(context, db, label_id)
 
     @_map_domain_errors
     async def start_time_entry(
@@ -611,53 +332,13 @@ class WorktimeMcpBackend:
         start_time: datetime | None = None,
         label_id: str | None = None,
     ) -> dict[str, Any]:
-        """Start a new running time entry for the authenticated user.
-
-        Side effects: creates a new TimeTrackingTask row with no stop_time.
-        Only one running task per user is allowed; the call will fail if one
-        already exists.  Returns the created task resource.
-        """
         async with self._tool_context() as (context, db):
-            effective_start = start_time or datetime.now(UTC)
-            payload = TaskCreate(
-                text=text,
-                label_id=label_id,
-                start_time=effective_start,
-                stop_time=None,
-                includes_break=False,
-            )
-            task = await create_task(db, context.user_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:task:{task.id}",
-                action="start_time_entry",
-                details=f"text={text!r} via MCP",
-            )
-            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+            return await time_tracking.start_time_entry(context, db, text, start_time, label_id)
 
     @_map_domain_errors
-    async def stop_time_entry(
-        self,
-        stop_time: datetime | None = None,
-    ) -> dict[str, Any]:
-        """Stop the currently running time entry for the authenticated user.
-
-        Side effects: sets stop_time on the active (open) task.
-        Returns the updated task resource, or raises NotFoundError when no
-        running task exists.
-        """
+    async def stop_time_entry(self, stop_time: datetime | None = None) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            running = await get_running_task(db, context.user_id)
-            if running is None:
-                raise NotFoundError("no running task found")
-            effective_stop = stop_time or datetime.now(UTC)
-            payload = TaskUpdate(stop_time=effective_stop)
-            task = await update_task(db, context.user_id, running.id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:task:{task.id}",
-                action="stop_time_entry",
-                details=f"stop_time={_to_iso_datetime(effective_stop)!r} via MCP",
-            )
-            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+            return await time_tracking.stop_time_entry(context, db, stop_time)
 
     @_map_domain_errors
     async def create_time_tracking_task(
@@ -668,27 +349,10 @@ class WorktimeMcpBackend:
         includes_break: bool = False,
         label_id: str | None = None,
     ) -> dict[str, Any]:
-        """Create a time-tracking task for the authenticated user.
-
-        Side effects: inserts a new TimeTrackingTask row.  When stop_time is
-        omitted the task is left open (running); only one open task is allowed
-        per user.  Returns the created task resource.
-        """
         async with self._tool_context() as (context, db):
-            payload = TaskCreate(
-                text=text,
-                label_id=label_id,
-                start_time=start_time,
-                stop_time=stop_time,
-                includes_break=includes_break,
+            return await time_tracking.create_time_tracking_task(
+                context, db, text, start_time, stop_time, includes_break, label_id
             )
-            task = await create_task(db, context.user_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:task:{task.id}",
-                action="create_time_tracking_task",
-                details=f"text={text!r} via MCP",
-            )
-            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
     @_map_domain_errors
     async def update_time_tracking_task(
@@ -702,66 +366,36 @@ class WorktimeMcpBackend:
         clear_stop_time: bool = False,
         clear_label_id: bool = False,
     ) -> dict[str, Any]:
-        """Update a time-tracking task owned by the authenticated user.
-
-        Omit any parameter to leave it unchanged. Set clear_stop_time=True to
-        reopen the task (make it running again) instead of passing a
-        stop_time; set clear_label_id=True to unlink its label. Both take
-        precedence over the corresponding value parameter when true.
-
-        Side effects: updates the specified TimeTrackingTask row.  Authorization
-        is enforced — the task must belong to the caller.  Reopening a task
-        (clear_stop_time=True) fails if another task is already running.
-        Returns the updated task resource.
-        """
         async with self._tool_context() as (context, db):
-            # Verify ownership before updating
-            await get_task(db, context.user_id, task_id)
-            update_data: dict[str, Any] = {}
-            if text is not None:
-                update_data["text"] = text
-            if clear_label_id:
-                update_data["label_id"] = None
-            elif label_id is not None:
-                update_data["label_id"] = label_id
-            if start_time is not None:
-                update_data["start_time"] = start_time
-            if clear_stop_time:
-                update_data["stop_time"] = None
-            elif stop_time is not None:
-                update_data["stop_time"] = stop_time
-            if includes_break is not None:
-                update_data["includes_break"] = includes_break
-
-            payload = TaskUpdate(**update_data)
-            task = await update_task(db, context.user_id, task_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:task:{task_id}",
-                action="update_time_tracking_task",
-                details="via MCP",
+            return await time_tracking.update_time_tracking_task(
+                context,
+                db,
+                task_id,
+                text,
+                start_time,
+                stop_time,
+                includes_break,
+                label_id,
+                clear_stop_time,
+                clear_label_id,
             )
-            return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
     @_map_domain_errors
-    async def delete_time_tracking_task(
-        self,
-        task_id: str,
-    ) -> dict[str, Any]:
-        """Delete a time-tracking task owned by the authenticated user.
-
-        Side effects: soft-deletes the TimeTrackingTask row (sets deleted_at
-        so the deletion propagates through the sync layer to other devices;
-        the row is not removed).  The task must belong to the caller.
-        Returns a confirmation payload.
-        """
+    async def delete_time_tracking_task(self, task_id: str) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            await delete_task(db, context.user_id, task_id)
-            audit.append(
-                target=f"user:{context.user_id}:task:{task_id}",
-                action="delete_time_tracking_task",
-                details="via MCP",
-            )
-            return {"deleted": True, "task_id": task_id, "user_id": context.user_id}
+            return await time_tracking.delete_time_tracking_task(context, db, task_id)
+
+    # ------------------------------------------------------------------
+    # Work location
+    # ------------------------------------------------------------------
+
+    async def get_work_location_summary(
+        self,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await work_location.get_work_location_summary(context, db, start_date, end_date)
 
     @_map_domain_errors
     async def set_work_location(
@@ -770,41 +404,25 @@ class WorktimeMcpBackend:
         country_code: str,
         label: str | None = None,
     ) -> dict[str, Any]:
-        """Set (create or replace) the work location for a given date.
-
-        Side effects: upserts a WorkLocation row for (user_id, date).  Returns
-        the created or updated work-location resource.
-        """
         async with self._tool_context() as (context, db):
-            payload = WorkLocationCreate(date=value_date, country_code=country_code, label=label)
-            location = await create_or_update_work_location(db, context.user_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:work_location:{value_date.isoformat()}",
-                action="set_work_location",
-                details=f"country_code={country_code!r} via MCP",
-            )
-            return WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
+            return await work_location.set_work_location(context, db, value_date, country_code, label)
 
     @_map_domain_errors
-    async def delete_work_location(
-        self,
-        value_date: date,
-    ) -> dict[str, Any]:
-        """Delete the work location entry for a given date.
-
-        Side effects: soft-deletes the WorkLocation row for (user_id, date)
-        (sets deleted_at so the deletion propagates through the sync layer to
-        other devices; the row is not removed).  Returns a confirmation
-        payload.
-        """
+    async def delete_work_location(self, value_date: date) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            await delete_work_location(db, context.user_id, value_date)
-            audit.append(
-                target=f"user:{context.user_id}:work_location:{value_date.isoformat()}",
-                action="delete_work_location",
-                details="via MCP",
-            )
-            return {"deleted": True, "date": value_date.isoformat(), "user_id": context.user_id}
+            return await work_location.delete_work_location_tool(context, db, value_date)
+
+    # ------------------------------------------------------------------
+    # Time off
+    # ------------------------------------------------------------------
+
+    async def get_time_off_summary(
+        self,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await time_off.get_time_off_summary(context, db, start_date, end_date)
 
     @_map_domain_errors
     async def create_time_off_event(
@@ -819,15 +437,10 @@ class WorktimeMcpBackend:
         note: str | None = None,
         entry_id: str | None = None,
     ) -> dict[str, Any]:
-        """Create (or upsert) a personal time-off event.
-
-        Side effects: inserts or updates a TimeOffEntry row.  If entry_id is
-        provided the call is idempotent — re-sending the same payload restores
-        a previously deleted entry.  Returns the created or updated entry.
-        """
         async with self._tool_context() as (context, db):
-            payload = TimeOffEntryCreate(
-                entry_id=entry_id,
+            return await time_off.create_time_off_event(
+                context,
+                db,
                 entry_kind=entry_kind,
                 entry_type=entry_type,
                 entry_flag=entry_flag,
@@ -836,15 +449,8 @@ class WorktimeMcpBackend:
                 end_date=end_date,
                 weekday=weekday,
                 note=note,
+                entry_id=entry_id,
             )
-            entry, created = await create_or_update_time_off_entry(db, context.user_id, payload)
-            action = "create_time_off_event" if created else "upsert_time_off_event"
-            audit.append(
-                target=f"user:{context.user_id}:time_off:{entry.entry_id}",
-                action=action,
-                details=f"entry_type={entry_type!r} entry_kind={entry_kind!r} via MCP",
-            )
-            return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
 
     @_map_domain_errors
     async def update_time_off_event(
@@ -859,62 +465,37 @@ class WorktimeMcpBackend:
         weekday: int | None = None,
         note: str | None = None,
     ) -> dict[str, Any]:
-        """Update an existing personal time-off event.
-
-        Side effects: updates the specified TimeOffEntry row.  The entry must
-        belong to the authenticated user.  Returns the updated entry.
-        """
         async with self._tool_context() as (context, db):
-            # Verify ownership before updating
-            await get_time_off_entry(db, context.user_id, entry_id)
-            update_data: dict[str, Any] = {}
-            if entry_kind is not None:
-                update_data["entry_kind"] = entry_kind
-            if entry_type is not None:
-                update_data["entry_type"] = entry_type
-            if entry_flag is not None:
-                update_data["entry_flag"] = entry_flag
-            if date is not None:
-                update_data["date"] = date
-            if start_date is not None:
-                update_data["start_date"] = start_date
-            if end_date is not None:
-                update_data["end_date"] = end_date
-            if weekday is not None:
-                update_data["weekday"] = weekday
-            if note is not None:
-                update_data["note"] = None if note == "" else note
-
-            payload = TimeOffEntryUpdate(**update_data)
-            entry = await update_time_off_entry(db, context.user_id, entry_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:time_off:{entry_id}",
-                action="update_time_off_event",
-                details="via MCP",
+            return await time_off.update_time_off_event(
+                context,
+                db,
+                entry_id=entry_id,
+                entry_kind=entry_kind,
+                entry_type=entry_type,
+                entry_flag=entry_flag,
+                date=date,
+                start_date=start_date,
+                end_date=end_date,
+                weekday=weekday,
+                note=note,
             )
-            return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
 
     @_map_domain_errors
-    async def delete_time_off_event(
-        self,
-        entry_id: str,
-    ) -> dict[str, Any]:
-        """Soft-delete a personal time-off event.
-
-        Side effects: sets deleted_at on the TimeOffEntry row so the deletion
-        propagates through the sync layer.  The entry must belong to the
-        authenticated user.  Returns a confirmation payload.
-        """
+    async def delete_time_off_event(self, entry_id: str) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            # Verify ownership before deleting
-            await get_time_off_entry(db, context.user_id, entry_id)
-            await delete_time_off_entry(db, context.user_id, entry_id)
-            audit.append(
-                target=f"user:{context.user_id}:time_off:{entry_id}",
-                action="delete_time_off_event",
-                details="via MCP",
-            )
-            return {"deleted": True, "entry_id": entry_id, "user_id": context.user_id}
+            return await time_off.delete_time_off_event(context, db, entry_id)
+
+    # ------------------------------------------------------------------
+    # Gantt
+    # ------------------------------------------------------------------
+
+    async def get_gantt_tasks(
+        self,
+        active_on: date | None = None,
+        task_id: str | None = None,
+    ) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await gantt.get_gantt_tasks(context, db, active_on, task_id)
 
     @_map_domain_errors
     async def create_gantt_task(
@@ -927,27 +508,10 @@ class WorktimeMcpBackend:
         notes: str | None = None,
         label_id: str | None = None,
     ) -> dict[str, Any]:
-        """Create a personal Gantt task.
-
-        Side effects: inserts a new GanttTask row.  Returns the created task.
-        """
         async with self._tool_context() as (context, db):
-            payload = GanttTaskCreate(
-                name=name,
-                start_date=start_date,
-                end_date=end_date,
-                progress=progress,
-                dependencies=dependencies,
-                notes=notes,
-                label_id=label_id,
+            return await gantt.create_gantt_task(
+                context, db, name, start_date, end_date, progress, dependencies, notes, label_id
             )
-            task = await create_gantt_task(db, context.user_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:gantt:{task.id}",
-                action="create_gantt_task",
-                details=f"name={name!r} via MCP",
-            )
-            return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
     @_map_domain_errors
     async def update_gantt_task(
@@ -962,105 +526,100 @@ class WorktimeMcpBackend:
         label_id: str | None = None,
         clear_label_id: bool = False,
     ) -> dict[str, Any]:
-        """Update a personal Gantt task.
-
-        Omit any parameter to leave it unchanged. Set clear_label_id=True to
-        unlink its label; this takes precedence over label_id when true.
-
-        Side effects: updates the specified GanttTask row.  The task must
-        belong to the authenticated user.  Returns the updated task.
-        """
         async with self._tool_context() as (context, db):
-            # Verify ownership before updating
-            await get_gantt_task(db, context.user_id, task_id)
-            update_data: dict[str, Any] = {}
-            if name is not None:
-                update_data["name"] = name
-            if clear_label_id:
-                update_data["label_id"] = None
-            elif label_id is not None:
-                update_data["label_id"] = label_id
-            if start_date is not None:
-                update_data["start_date"] = start_date
-            if end_date is not None:
-                update_data["end_date"] = end_date
-            if progress is not None:
-                update_data["progress"] = progress
-            if dependencies is not None:
-                update_data["dependencies"] = None if dependencies == "" else dependencies
-            if notes is not None:
-                update_data["notes"] = None if notes == "" else notes
-
-            payload = GanttTaskUpdate(**update_data)
-            task = await update_gantt_task(db, context.user_id, task_id, payload)
-            audit.append(
-                target=f"user:{context.user_id}:gantt:{task_id}",
-                action="update_gantt_task",
-                details="via MCP",
+            return await gantt.update_gantt_task(
+                context,
+                db,
+                task_id=task_id,
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                progress=progress,
+                dependencies=dependencies,
+                notes=notes,
+                label_id=label_id,
+                clear_label_id=clear_label_id,
             )
-            return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
     @_map_domain_errors
-    async def delete_gantt_task(
-        self,
-        task_id: str,
-    ) -> dict[str, Any]:
-        """Delete a personal Gantt task.
-
-        Side effects: soft-deletes the GanttTask row (sets deleted_at so the
-        deletion propagates through the sync layer to other devices; the row
-        is not removed) and unlinks any time-tracking tasks that referenced
-        it.  The task must belong to the authenticated user.  Returns a
-        confirmation payload.
-        """
+    async def delete_gantt_task(self, task_id: str) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
-            # Verify ownership before deleting
-            await get_gantt_task(db, context.user_id, task_id)
-            await delete_gantt_task(db, context.user_id, task_id)
-            audit.append(
-                target=f"user:{context.user_id}:gantt:{task_id}",
-                action="delete_gantt_task",
-                details="via MCP",
-            )
-            return {"deleted": True, "task_id": task_id, "user_id": context.user_id}
+            return await gantt.delete_gantt_task(context, db, task_id)
+
+
+# ---------------------------------------------------------------------------
+# Capability manifest (issue #1054)
+# ---------------------------------------------------------------------------
+
+
+class ToolEffect(StrEnum):
+    """Side-effect classification for capability discovery."""
+
+    READ = "read"
+    PERSONAL_WRITE = "personal_write"
+    ADMIN_WRITE = "admin_write"
+
+
+@dataclass(frozen=True)
+class ToolCapability:
+    effect: ToolEffect
+    required_tier: str  # "owner" (caller's own data) or "admin"
+
+
+# Single source of truth for both tool registration (create_mcp_server, below)
+# and capability discovery (GET /api/mcp/capabilities, app.main). Because
+# create_mcp_server() registers exactly the tools named here — no more, no
+# less — the capability manifest structurally cannot drift from what's
+# actually registered.
+#
+# Every current tool operates on the caller's own data (context.user_id);
+# none accept a target user_id, so there is no admin_write tool today. That's
+# a deliberate current-state fact, not a design ceiling — a future team-wide
+# write tool would be tagged ADMIN_WRITE / "admin" here.
+MCP_TOOL_CAPABILITIES: dict[str, ToolCapability] = {
+    "whoami": ToolCapability(ToolEffect.READ, "owner"),
+    "get_current_status": ToolCapability(ToolEffect.READ, "owner"),
+    "get_next_shift": ToolCapability(ToolEffect.READ, "owner"),
+    "get_team_status": ToolCapability(ToolEffect.READ, "owner"),
+    "get_next_shifts_for_team": ToolCapability(ToolEffect.READ, "owner"),
+    "get_time_off_summary": ToolCapability(ToolEffect.READ, "owner"),
+    "get_work_location_summary": ToolCapability(ToolEffect.READ, "owner"),
+    "get_time_tracking_summary": ToolCapability(ToolEffect.READ, "owner"),
+    "list_labels": ToolCapability(ToolEffect.READ, "owner"),
+    "delete_label": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "get_gantt_tasks": ToolCapability(ToolEffect.READ, "owner"),
+    "get_sync_status": ToolCapability(ToolEffect.READ, "owner"),
+    "start_time_entry": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "stop_time_entry": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "create_time_tracking_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "update_time_tracking_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "delete_time_tracking_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "set_work_location": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "delete_work_location": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "create_time_off_event": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "update_time_off_event": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "delete_time_off_event": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "create_gantt_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "update_gantt_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "delete_gantt_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+}
 
 
 def create_mcp_server(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> FastMCP:
     """Create and configure the Worktime FastMCP server."""
-    backend = WorktimeMcpBackend(session_factory or get_session_factory())
+    factory = session_factory or get_session_factory()
+    backend = WorktimeMcpBackend(factory)
     server = FastMCP(
         "worktime",
         instructions="Worktime assistant tools — read and personal write access",
-        auth=_build_auth_provider(),
+        auth=_build_auth_provider(factory),
     )
 
-    server.tool(name="whoami")(backend.whoami)
-    server.tool(name="get_current_status")(backend.get_current_status)
-    server.tool(name="get_next_shift")(backend.get_next_shift)
-    server.tool(name="get_team_status")(backend.get_team_status)
-    server.tool(name="get_next_shifts_for_team")(backend.get_next_shifts_for_team)
-    server.tool(name="get_time_off_summary")(backend.get_time_off_summary)
-    server.tool(name="get_work_location_summary")(backend.get_work_location_summary)
-    server.tool(name="get_time_tracking_summary")(backend.get_time_tracking_summary)
-    server.tool(name="list_labels")(backend.list_labels)
-    server.tool(name="delete_label")(backend.delete_label)
-    server.tool(name="get_gantt_tasks")(backend.get_gantt_tasks)
-    server.tool(name="get_sync_status")(backend.get_sync_status)
-    server.tool(name="start_time_entry")(backend.start_time_entry)
-    server.tool(name="stop_time_entry")(backend.stop_time_entry)
-    server.tool(name="create_time_tracking_task")(backend.create_time_tracking_task)
-    server.tool(name="update_time_tracking_task")(backend.update_time_tracking_task)
-    server.tool(name="delete_time_tracking_task")(backend.delete_time_tracking_task)
-    server.tool(name="set_work_location")(backend.set_work_location)
-    server.tool(name="delete_work_location")(backend.delete_work_location)
-    server.tool(name="create_time_off_event")(backend.create_time_off_event)
-    server.tool(name="update_time_off_event")(backend.update_time_off_event)
-    server.tool(name="delete_time_off_event")(backend.delete_time_off_event)
-    server.tool(name="create_gantt_task")(backend.create_gantt_task)
-    server.tool(name="update_gantt_task")(backend.update_gantt_task)
-    server.tool(name="delete_gantt_task")(backend.delete_gantt_task)
+    for tool_name in MCP_TOOL_CAPABILITIES:
+        server.tool(name=tool_name)(getattr(backend, tool_name))
+
     return server
 
 

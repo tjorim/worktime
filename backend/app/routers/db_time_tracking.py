@@ -9,7 +9,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import get_authenticated_user_id, resolve_scoped_user_id
+from app.routers.auth import (
+    AuthenticatedPrincipal,
+    audit_actor_for,
+    get_authenticated_principal,
+    get_authenticated_user_id,
+    resolve_scoped_user_id,
+)
 from app.schemas import (
     LabelCreate,
     LabelListResponse,
@@ -65,12 +71,12 @@ def _handle_error(error: Exception) -> None:
 async def create_label_endpoint(
     payload: LabelCreate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        label = await create_label(session, user_id, payload)
+        label = await create_label(session, user_id, payload, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
         raise
@@ -125,12 +131,12 @@ async def update_label_endpoint(
     label_id: str,
     payload: LabelUpdate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        label = await update_label(session, user_id, label_id, payload)
+        label = await update_label(session, user_id, label_id, payload, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
         raise
@@ -142,12 +148,12 @@ async def update_label_endpoint(
 async def delete_label_endpoint(
     label_id: str,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        await delete_label(session, user_id, label_id)
+        await delete_label(session, user_id, label_id, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
 
@@ -158,13 +164,13 @@ async def delete_label_endpoint(
 async def create_task_endpoint(
     payload: TaskCreate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
 
     try:
-        task = await create_task(session, user_id, payload)
+        task = await create_task(session, user_id, payload, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
         raise
@@ -253,12 +259,12 @@ async def update_task_endpoint(
     task_id: str,
     payload: TaskUpdate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        task = await update_task(session, user_id, task_id, payload)
+        task = await update_task(session, user_id, task_id, payload, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
         raise
@@ -270,12 +276,12 @@ async def update_task_endpoint(
 async def delete_task_endpoint(
     task_id: str,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        await delete_task(session, user_id, task_id)
+        await delete_task(session, user_id, task_id, actor=audit_actor_for(principal))
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
 

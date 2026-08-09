@@ -141,14 +141,10 @@ class BulkDeleteGuardError(Exception):
         )
 
 
-async def _count_active(
-    session: AsyncSession, model: type[SyncEntityModel], user_id: int
-) -> int:
+async def _count_active(session: AsyncSession, model: type[SyncEntityModel], user_id: int) -> int:
     return (
         await session.scalar(
-            select(sql_func.count())
-            .select_from(model)
-            .where(model.user_id == user_id, model.deleted_at.is_(None))
+            select(sql_func.count()).select_from(model).where(model.user_id == user_id, model.deleted_at.is_(None))
         )
     ) or 0
 
@@ -172,9 +168,7 @@ async def _count_active_in(
     ) or 0
 
 
-async def _assert_not_bulk_delete(
-    session: AsyncSession, user_id: int, changes: SyncPushRequest
-) -> None:
+async def _assert_not_bulk_delete(session: AsyncSession, user_id: int, changes: SyncPushRequest) -> None:
     """Raise BulkDeleteGuardError when *changes* would wipe most of the account.
 
     Only deletes that would actually tombstone a currently-active row are
@@ -230,21 +224,18 @@ def _get_provided_fields(item: BaseModel) -> set[str]:
     return provided
 
 
-async def _validate_task_label_reference(
-    session: AsyncSession, user_id: int, label_id: str | None
-) -> None:
+async def _validate_task_label_reference(session: AsyncSession, user_id: int, label_id: str | None) -> None:
     if label_id is None:
         return
 
     label = await session.get(Label, label_id)
     if label is None or label.user_id != user_id or label.deleted_at is not None:
         from app.services.db_service import ValidationError
+
         raise ValidationError("label not found")
 
 
-async def _label_name_taken(
-    session: AsyncSession, user_id: int, name: str, *, exclude_id: str | None
-) -> bool:
+async def _label_name_taken(session: AsyncSession, user_id: int, name: str, *, exclude_id: str | None) -> bool:
     """Whether another *active* label already owns (user_id, name).
 
     Mirrors the ``uq_active_label_user_name`` partial unique index so callers
@@ -264,9 +255,7 @@ async def _label_name_taken(
     return result.scalar_one_or_none() is not None
 
 
-async def _push_label(
-    session: AsyncSession, user_id: int, item: LabelSyncItem
-) -> SyncRecordResult:
+async def _push_label(session: AsyncSession, user_id: int, item: LabelSyncItem) -> SyncRecordResult:
     now = _now()
     label: Label | None = await session.get(Label, item.id)
 
@@ -314,6 +303,7 @@ async def _push_label(
     if label is None:
         if item.name is None or item.color is None:
             from app.services.db_service import ValidationError
+
             raise ValidationError("name and color are required for label create")
         if await _label_name_taken(session, user_id, item.name, exclude_id=None):
             return SyncRecordResult(
@@ -377,9 +367,7 @@ async def _push_label(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-async def _push_task(
-    session: AsyncSession, user_id: int, item: TaskSyncItem
-) -> SyncRecordResult:
+async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) -> SyncRecordResult:
     now = _now()
     task: TimeTrackingTask | None = await session.get(TimeTrackingTask, item.id)
 
@@ -402,9 +390,11 @@ async def _push_task(
     if task is None:
         if item.text is None or item.start_time is None:
             from app.services.db_service import ValidationError
+
             raise ValidationError("text and start_time are required for task create")
         if item.stop_time is not None and as_utc(item.stop_time) < as_utc(item.start_time):
             from app.services.db_service import ValidationError
+
             raise ValidationError("stop_time cannot be earlier than start_time")
         await _validate_task_label_reference(session, user_id, item.label_id)
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
@@ -441,13 +431,12 @@ async def _push_task(
         )
     provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
     candidate_start_time = (
-        item.start_time
-        if "start_time" in provided_fields and item.start_time is not None
-        else task.start_time
+        item.start_time if "start_time" in provided_fields and item.start_time is not None else task.start_time
     )
     candidate_stop_time = item.stop_time if "stop_time" in provided_fields else task.stop_time
     if candidate_stop_time is not None and as_utc(candidate_stop_time) < as_utc(candidate_start_time):
         from app.services.db_service import ValidationError
+
         raise ValidationError("stop_time cannot be earlier than start_time")
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
@@ -471,9 +460,7 @@ async def _push_task(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-async def _push_template(
-    session: AsyncSession, user_id: int, item: TemplateSyncItem
-) -> SyncRecordResult:
+async def _push_template(session: AsyncSession, user_id: int, item: TemplateSyncItem) -> SyncRecordResult:
     now = _now()
     template: TimeTrackingTemplate | None = await session.get(TimeTrackingTemplate, item.id)
 
@@ -496,6 +483,7 @@ async def _push_template(
     if template is None:
         if item.text is None or item.start_time is None or item.stop_time is None:
             from app.services.db_service import ValidationError
+
             raise ValidationError("text, start_time and stop_time are required for template create")
         await _validate_task_label_reference(session, user_id, item.label_id)
         template = TimeTrackingTemplate(
@@ -543,9 +531,7 @@ async def _push_template(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-async def _push_work_location(
-    session: AsyncSession, user_id: int, item: WorkLocationSyncItem
-) -> SyncRecordResult:
+async def _push_work_location(session: AsyncSession, user_id: int, item: WorkLocationSyncItem) -> SyncRecordResult:
     """Work locations use (user_id, date) as their natural key."""
     now = _now()
     date_key = item.date.isoformat()
@@ -585,6 +571,7 @@ async def _push_work_location(
     if location is None:
         if item.country_code is None:
             from app.services.db_service import ValidationError
+
             raise ValidationError("country_code is required for work_location create")
         location = WorkLocation(
             user_id=user_id,
@@ -616,9 +603,7 @@ async def _push_work_location(
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
 
-async def _push_time_off_entry(
-    session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem
-) -> SyncRecordResult:
+async def _push_time_off_entry(session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem) -> SyncRecordResult:
     """Time-off entries use (user_id, entry_id) as their natural key."""
     now = _now()
     provided_fields = _get_provided_fields(item) - {"id", "action", "client_updated_at"}
@@ -658,6 +643,7 @@ async def _push_time_off_entry(
         # Create items always provide a full shape; update items can upsert when they do.
         if item.entry_kind is None:
             from app.services.db_service import ValidationError
+
             raise ValidationError("entry_kind is required to create a time-off entry")
         entry = TimeOffEntry(
             entry_id=item.id,
@@ -708,9 +694,7 @@ async def _push_time_off_entry(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-async def _push_gantt_task(
-    session: AsyncSession, user_id: int, item: GanttTaskSyncItem
-) -> SyncRecordResult:
+async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskSyncItem) -> SyncRecordResult:
     now = _now()
     task: GanttTask | None = await session.get(GanttTask, item.id)
 
@@ -746,6 +730,7 @@ async def _push_gantt_task(
     if task is None:
         if item.name is None or item.start_date is None or item.end_date is None:
             from app.services.db_service import ValidationError
+
             raise ValidationError("name, start_date and end_date are required for gantt task create")
         await _validate_task_label_reference(session, user_id, item.label_id)
         task = GanttTask(
@@ -802,9 +787,7 @@ async def _push_gantt_task(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-type SyncEntityModel = (
-    Label | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
-)
+type SyncEntityModel = Label | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
 
 
 async def _get_synced_entities[SyncEntityModelT: SyncEntityModel](
@@ -830,9 +813,7 @@ async def _get_synced_entities[SyncEntityModelT: SyncEntityModel](
 # ---------------------------------------------------------------------------
 
 
-async def push_changes(
-    session: AsyncSession, user_id: int, changes: SyncPushRequest
-) -> SyncPushResponse:
+async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushRequest) -> SyncPushResponse:
     """Apply a batched set of client changes within a single transaction."""
     results: dict[str, list[SyncRecordResult]] = {
         "labels": [],
@@ -874,9 +855,7 @@ async def push_changes(
     return SyncPushResponse(results=results)
 
 
-async def pull_changes(
-    session: AsyncSession, user_id: int, since: datetime
-) -> SyncPullResponse:
+async def pull_changes(session: AsyncSession, user_id: int, since: datetime) -> SyncPullResponse:
     """Return all records (including soft-deleted) modified after *since*."""
     since_utc = as_utc(since)
 

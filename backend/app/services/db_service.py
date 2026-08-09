@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, overload
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.db import AuditActor, write_audit_entry
 from app.database.models import (
     Base,
     GanttTask,
@@ -59,19 +60,44 @@ class ValidationError(Exception):
 MAX_USER_LIST_LIMIT = 1000
 
 
+async def _audit(
+    session: AsyncSession,
+    actor: AuditActor | None,
+    *,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    """Stage a transactional audit entry when *actor* is provided.
+
+    ``actor`` defaults to ``None`` everywhere in this module so existing
+    callers (including the large body of unit tests that call these
+    functions directly) keep working unchanged. Production write paths —
+    REST routers and MCP tools — always pass an actor; see
+    app.audit.db.write_audit_entry for the transactional contract (staged
+    here, committed by the caller as part of the same transaction).
+    """
+    if actor is None:
+        return
+    await write_audit_entry(
+        session,
+        actor=actor,
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        details=details,
+    )
+
+
 def _get_non_nullable_model_fields(model: type[Base]) -> set[str]:
-    return {
-        column.name
-        for column in model.__table__.columns
-        if not column.nullable and not column.primary_key
-    }
+    return {column.name for column in model.__table__.columns if not column.nullable and not column.primary_key}
 
 
 # User operations
 
-async def create_user(
-    session: AsyncSession, payload: UserCreate, *, oidc_subject: str | None = None
-) -> User:
+
+async def create_user(session: AsyncSession, payload: UserCreate, *, oidc_subject: str | None = None) -> User:
     existing = await get_user_by_username(session, payload.username)
     if existing is not None:
         raise ConflictError("username already exists")
@@ -115,9 +141,7 @@ async def get_user_export_data(
     async def _list_rows(model: type[Base], *order_by: Any) -> list[Any]:
         typed_model: Any = model
         result = await session.execute(
-            select(model)
-            .where(typed_model.user_id == user_id, typed_model.deleted_at.is_(None))
-            .order_by(*order_by)
+            select(model).where(typed_model.user_id == user_id, typed_model.deleted_at.is_(None)).order_by(*order_by)
         )
         return list(result.scalars().all())
 
@@ -165,9 +189,7 @@ async def list_users(
 
     total_result = await session.execute(select(sql_func.count()).select_from(User))
     total = int(total_result.scalar_one())
-    users_result = await session.execute(
-        select(User).order_by(User.id).offset(offset).limit(limit)
-    )
+    users_result = await session.execute(select(User).order_by(User.id).offset(offset).limit(limit))
     users = list(users_result.scalars().all())
     return users, total
 
@@ -216,6 +238,7 @@ async def delete_user_uncommitted(session: AsyncSession, user_id: int) -> None:
 
 # Label operations
 
+
 async def _ensure_user_exists(session: AsyncSession, user_id: int) -> User:
     return await get_user(session, user_id)
 
@@ -227,7 +250,9 @@ async def _ensure_label_for_user(session: AsyncSession, user_id: int, label_id: 
     return label
 
 
-async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate) -> Label:
+async def create_label(
+    session: AsyncSession, user_id: int, payload: LabelCreate, *, actor: AuditActor | None = None
+) -> Label:
     await _ensure_user_exists(session, user_id)
     result = await session.execute(
         select(Label).where(
@@ -241,6 +266,8 @@ async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate
 
     label = Label(user_id=user_id, **payload.model_dump())
     session.add(label)
+    await session.flush()
+    await _audit(session, actor, action="create_label", resource_type="label", resource_id=label.id)
     await session.commit()
     await session.refresh(label)
     await notify_sync_changed(user_id)
@@ -265,7 +292,12 @@ async def list_labels_for_user(session: AsyncSession, user_id: int) -> list[Labe
 
 
 async def update_label(
-    session: AsyncSession, user_id: int, label_id: str, payload: LabelUpdate
+    session: AsyncSession,
+    user_id: int,
+    label_id: str,
+    payload: LabelUpdate,
+    *,
+    actor: AuditActor | None = None,
 ) -> Label:
     label = await _ensure_label_for_user(session, user_id, label_id)
 
@@ -288,13 +320,14 @@ async def update_label(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     label.client_updated_at = datetime.now(UTC)
     session.add(label)
+    await _audit(session, actor, action="update_label", resource_type="label", resource_id=label_id)
     await session.commit()
     await session.refresh(label)
     await notify_sync_changed(user_id)
     return label
 
 
-async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> None:
+async def delete_label(session: AsyncSession, user_id: int, label_id: str, *, actor: AuditActor | None = None) -> None:
     label = await _ensure_label_for_user(session, user_id, label_id)
 
     task_count = await session.scalar(
@@ -319,23 +352,21 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> No
     label.deleted_at = now
     label.client_updated_at = now
     session.add(label)
+    await _audit(session, actor, action="delete_label", resource_type="label", resource_id=label_id)
     await session.commit()
     await notify_sync_changed(user_id)
 
 
 # Task operations
 
-async def _validate_task_label_reference(
-    session: AsyncSession, user_id: int, label_id: str | None
-) -> None:
+
+async def _validate_task_label_reference(session: AsyncSession, user_id: int, label_id: str | None) -> None:
     if label_id is None:
         return
     await _ensure_label_for_user(session, user_id, label_id)
 
 
-async def _validate_task_gantt_reference(
-    session: AsyncSession, user_id: int, gantt_task_id: str | None
-) -> None:
+async def _validate_task_gantt_reference(session: AsyncSession, user_id: int, gantt_task_id: str | None) -> None:
     if gantt_task_id is None:
         return
     gantt_task = await session.get(GanttTask, gantt_task_id)
@@ -343,7 +374,9 @@ async def _validate_task_gantt_reference(
         raise NotFoundError("gantt task not found")
 
 
-async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) -> TimeTrackingTask:
+async def create_task(
+    session: AsyncSession, user_id: int, payload: TaskCreate, *, actor: AuditActor | None = None
+) -> TimeTrackingTask:
     await _ensure_user_exists(session, user_id)
     await _validate_task_label_reference(session, user_id, payload.label_id)
     await _validate_task_gantt_reference(session, user_id, payload.gantt_task_id)
@@ -355,6 +388,8 @@ async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) 
 
     task = TimeTrackingTask(user_id=user_id, **payload.model_dump())
     session.add(task)
+    await session.flush()
+    await _audit(session, actor, action="create_task", resource_type="time_tracking_task", resource_id=task.id)
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
@@ -407,7 +442,12 @@ async def get_running_task(session: AsyncSession, user_id: int) -> TimeTrackingT
 
 
 async def update_task(
-    session: AsyncSession, user_id: int, task_id: str, payload: TaskUpdate
+    session: AsyncSession,
+    user_id: int,
+    task_id: str,
+    payload: TaskUpdate,
+    *,
+    actor: AuditActor | None = None,
 ) -> TimeTrackingTask:
     task = await get_task(session, user_id, task_id)
 
@@ -436,27 +476,28 @@ async def update_task(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     task.client_updated_at = datetime.now(UTC)
     session.add(task)
+    await _audit(session, actor, action="update_task", resource_type="time_tracking_task", resource_id=task_id)
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
     return task
 
 
-async def delete_task(session: AsyncSession, user_id: int, task_id: str) -> None:
+async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None) -> None:
     task = await get_task(session, user_id, task_id)
     now = datetime.now(UTC)
     task.deleted_at = now
     task.client_updated_at = now
     session.add(task)
+    await _audit(session, actor, action="delete_task", resource_type="time_tracking_task", resource_id=task_id)
     await session.commit()
     await notify_sync_changed(user_id)
 
 
 # Template operations
 
-async def create_template(
-    session: AsyncSession, user_id: int, payload: TemplateCreate
-) -> TimeTrackingTemplate:
+
+async def create_template(session: AsyncSession, user_id: int, payload: TemplateCreate) -> TimeTrackingTemplate:
     await _ensure_user_exists(session, user_id)
     await _validate_task_label_reference(session, user_id, payload.label_id)
 
@@ -468,9 +509,7 @@ async def create_template(
     return template
 
 
-async def get_template(
-    session: AsyncSession, user_id: int, template_id: str
-) -> TimeTrackingTemplate:
+async def get_template(session: AsyncSession, user_id: int, template_id: str) -> TimeTrackingTemplate:
     """Get a template scoped to a specific user to prevent cross-user access."""
     template = await session.get(TimeTrackingTemplate, template_id)
     if template is None or template.user_id != user_id or template.deleted_at is not None:
@@ -478,9 +517,7 @@ async def get_template(
     return template
 
 
-async def list_templates_for_user(
-    session: AsyncSession, user_id: int
-) -> list[TimeTrackingTemplate]:
+async def list_templates_for_user(session: AsyncSession, user_id: int) -> list[TimeTrackingTemplate]:
     result = await session.execute(
         select(TimeTrackingTemplate)
         .where(
@@ -527,7 +564,7 @@ async def delete_template(session: AsyncSession, user_id: int, template_id: str)
 
 
 async def create_or_update_work_location(
-    session: AsyncSession, user_id: int, payload: WorkLocationCreate
+    session: AsyncSession, user_id: int, payload: WorkLocationCreate, *, actor: AuditActor | None = None
 ) -> WorkLocation:
     await _ensure_user_exists(session, user_id)
 
@@ -552,15 +589,20 @@ async def create_or_update_work_location(
         location.client_updated_at = datetime.now(UTC)
 
     session.add(location)
+    await _audit(
+        session,
+        actor,
+        action="create_or_update_work_location",
+        resource_type="work_location",
+        resource_id=payload.date.isoformat(),
+    )
     await session.commit()
     await session.refresh(location)
     await notify_sync_changed(user_id)
     return location
 
 
-async def get_work_location(
-    session: AsyncSession, user_id: int, value_date: date
-) -> WorkLocation:
+async def get_work_location(session: AsyncSession, user_id: int, value_date: date) -> WorkLocation:
     result = await session.execute(
         select(WorkLocation).where(
             WorkLocation.user_id == user_id,
@@ -595,7 +637,12 @@ async def list_work_locations(
 
 
 async def update_work_location(
-    session: AsyncSession, user_id: int, value_date: date, payload: WorkLocationUpdate
+    session: AsyncSession,
+    user_id: int,
+    value_date: date,
+    payload: WorkLocationUpdate,
+    *,
+    actor: AuditActor | None = None,
 ) -> WorkLocation:
     location = await get_work_location(session, user_id, value_date)
     data = payload.model_dump(exclude_unset=True)
@@ -608,18 +655,34 @@ async def update_work_location(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     location.client_updated_at = datetime.now(UTC)
     session.add(location)
+    await _audit(
+        session,
+        actor,
+        action="update_work_location",
+        resource_type="work_location",
+        resource_id=value_date.isoformat(),
+    )
     await session.commit()
     await session.refresh(location)
     await notify_sync_changed(user_id)
     return location
 
 
-async def delete_work_location(session: AsyncSession, user_id: int, value_date: date) -> None:
+async def delete_work_location(
+    session: AsyncSession, user_id: int, value_date: date, *, actor: AuditActor | None = None
+) -> None:
     location = await get_work_location(session, user_id, value_date)
     now = datetime.now(UTC)
     location.deleted_at = now
     location.client_updated_at = now
     session.add(location)
+    await _audit(
+        session,
+        actor,
+        action="delete_work_location",
+        resource_type="work_location",
+        resource_id=value_date.isoformat(),
+    )
     await session.commit()
     await notify_sync_changed(user_id)
 
@@ -628,7 +691,7 @@ async def delete_work_location(session: AsyncSession, user_id: int, value_date: 
 
 
 async def create_gantt_task(
-    session: AsyncSession, user_id: int, payload: GanttTaskCreate
+    session: AsyncSession, user_id: int, payload: GanttTaskCreate, *, actor: AuditActor | None = None
 ) -> GanttTask:
     await _ensure_user_exists(session, user_id)
     await _validate_task_label_reference(session, user_id, payload.label_id)
@@ -637,6 +700,8 @@ async def create_gantt_task(
 
     task = GanttTask(user_id=user_id, **payload.model_dump())
     session.add(task)
+    await session.flush()
+    await _audit(session, actor, action="create_gantt_task", resource_type="gantt_task", resource_id=task.id)
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
@@ -650,17 +715,57 @@ async def get_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> G
     return task
 
 
-async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]:
-    result = await session.execute(
-        select(GanttTask)
-        .where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None))
-        .order_by(GanttTask.start_date)
-    )
-    return list(result.scalars().all())
+@overload
+async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]: ...
+
+
+@overload
+async def list_gantt_tasks(
+    session: AsyncSession, *, user_id: int, active_on: date | None, limit: int
+) -> tuple[list[GanttTask], int]: ...
+
+
+@overload
+async def list_gantt_tasks(
+    session: AsyncSession, *, user_id: int, active_on: date | None = None, limit: int | None = None
+) -> list[GanttTask] | tuple[list[GanttTask], int]: ...
+
+
+async def list_gantt_tasks(
+    session: AsyncSession, *, user_id: int, active_on: date | None = None, limit: int | None = None
+) -> tuple[list[GanttTask], int] | list[GanttTask]:
+    # Deterministic ordering and bounded retrieval; active_on filtering in DB
+    base_where = [GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None)]
+    if active_on is not None:
+        base_where.extend([GanttTask.start_date <= active_on, GanttTask.end_date >= active_on])
+    # Count query for truncated flag
+    if active_on is not None or limit is not None:
+        from sqlalchemy import func
+
+        count_stmt = select(func.count()).select_from(GanttTask).where(*base_where)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+        stmt = select(GanttTask).where(*base_where).order_by(GanttTask.start_date, GanttTask.id)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        result = await session.execute(stmt)
+        tasks = list(result.scalars().all())
+        # If caller expects new tuple signature (active_on/limit supplied), return tuple
+        if active_on is not None or limit is not None:
+            return tasks, total
+        return tasks
+    result = await session.execute(select(GanttTask).where(*base_where).order_by(GanttTask.start_date, GanttTask.id))
+    tasks = list(result.scalars().all())
+    return tasks
 
 
 async def update_gantt_task(
-    session: AsyncSession, user_id: int, task_id: str, payload: GanttTaskUpdate
+    session: AsyncSession,
+    user_id: int,
+    task_id: str,
+    payload: GanttTaskUpdate,
+    *,
+    actor: AuditActor | None = None,
 ) -> GanttTask:
     task = await get_gantt_task(session, user_id, task_id)
 
@@ -678,13 +783,16 @@ async def update_gantt_task(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     task.client_updated_at = datetime.now(UTC)
     session.add(task)
+    await _audit(session, actor, action="update_gantt_task", resource_type="gantt_task", resource_id=task_id)
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
     return task
 
 
-async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> None:
+async def delete_gantt_task(
+    session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None
+) -> None:
     task = await get_gantt_task(session, user_id, task_id)
     now = datetime.now(UTC)
     task.deleted_at = now
@@ -695,6 +803,7 @@ async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -
         .where(TimeTrackingTask.gantt_task_id == task.id)
         .values(gantt_task_id=None, client_updated_at=now, updated_at=now)
     )
+    await _audit(session, actor, action="delete_gantt_task", resource_type="gantt_task", resource_id=task_id)
     await session.commit()
     await notify_sync_changed(user_id)
 
@@ -824,7 +933,11 @@ async def list_time_off_entries(
 
 
 async def create_or_update_time_off_entry(
-    session: AsyncSession, user_id: int, payload: TimeOffEntryCreate
+    session: AsyncSession,
+    user_id: int,
+    payload: TimeOffEntryCreate,
+    *,
+    actor: AuditActor | None = None,
 ) -> tuple[TimeOffEntry, bool]:
     """Upsert a time-off entry for (user_id, entry_id).
 
@@ -884,6 +997,8 @@ async def create_or_update_time_off_entry(
         created = False
 
     session.add(entry)
+    audit_action = "create_time_off_entry" if created else "update_time_off_entry"
+    await _audit(session, actor, action=audit_action, resource_type="time_off_entry", resource_id=entry_id)
     try:
         await session.commit()
     except IntegrityError:
@@ -914,15 +1029,27 @@ async def create_or_update_time_off_entry(
         entry.updated_at = now
         entry.client_updated_at = now
         session.add(entry)
-        await session.commit()
         created = False
+        # The rollback above discarded the audit entry staged before the
+        # failed commit — re-stage it against the now-clean session before
+        # retrying, using the corrected action (a concurrent insert winning
+        # means this attempt is always an update, never a create).
+        await _audit(
+            session, actor, action="update_time_off_entry", resource_type="time_off_entry", resource_id=entry_id
+        )
+        await session.commit()
     await session.refresh(entry)
     await notify_sync_changed(user_id)
     return entry, created
 
 
 async def update_time_off_entry(
-    session: AsyncSession, user_id: int, entry_id: str, payload: TimeOffEntryUpdate
+    session: AsyncSession,
+    user_id: int,
+    entry_id: str,
+    payload: TimeOffEntryUpdate,
+    *,
+    actor: AuditActor | None = None,
 ) -> TimeOffEntry:
     entry = await get_time_off_entry(session, user_id, entry_id)
     data = payload.model_dump(exclude_unset=True)
@@ -952,13 +1079,16 @@ async def update_time_off_entry(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     entry.client_updated_at = now
     session.add(entry)
+    await _audit(session, actor, action="update_time_off_entry", resource_type="time_off_entry", resource_id=entry_id)
     await session.commit()
     await session.refresh(entry)
     await notify_sync_changed(user_id)
     return entry
 
 
-async def delete_time_off_entry(session: AsyncSession, user_id: int, entry_id: str) -> None:
+async def delete_time_off_entry(
+    session: AsyncSession, user_id: int, entry_id: str, *, actor: AuditActor | None = None
+) -> None:
     """Soft-delete a time-off entry so deletions sync to other devices."""
     entry = await get_time_off_entry(session, user_id, entry_id)
     now = datetime.now(UTC)
@@ -966,5 +1096,6 @@ async def delete_time_off_entry(session: AsyncSession, user_id: int, entry_id: s
     entry.updated_at = now
     entry.client_updated_at = now
     session.add(entry)
+    await _audit(session, actor, action="delete_time_off_entry", resource_type="time_off_entry", resource_id=entry_id)
     await session.commit()
     await notify_sync_changed(user_id)

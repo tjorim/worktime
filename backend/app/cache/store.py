@@ -112,7 +112,7 @@ _cache: FileCache | None = None
 
 def get_cache() -> FileCache:
     """Get the global FileCache singleton instance.
-    
+
     Returns:
         The FileCache singleton instance
     """

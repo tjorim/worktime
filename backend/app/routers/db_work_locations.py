@@ -9,7 +9,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import get_authenticated_user_id, resolve_scoped_user_id
+from app.routers.auth import (
+    AuthenticatedPrincipal,
+    audit_actor_for,
+    get_authenticated_principal,
+    get_authenticated_user_id,
+    resolve_scoped_user_id,
+)
 from app.schemas import (
     WorkLocationCreate,
     WorkLocationListResponse,
@@ -33,13 +39,13 @@ router = APIRouter(prefix="/work-locations", tags=["Work Locations"])
 async def create_or_update_work_location_endpoint(
     payload: WorkLocationCreate,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> WorkLocationRead:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
 
     try:
-        location = await create_or_update_work_location(session, user_id, payload)
+        location = await create_or_update_work_location(session, user_id, payload, actor=audit_actor_for(principal))
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except ValidationError as error:
@@ -107,12 +113,12 @@ async def get_work_location_endpoint(
 async def delete_work_location_endpoint(
     value_date: date,
     user_id: int | None = Query(default=None, ge=1),
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
-    user_id = resolve_scoped_user_id(user_id, authenticated_user_id)
+    user_id = resolve_scoped_user_id(user_id, principal.user_id)
     try:
-        await delete_work_location(session, user_id, value_date)
+        await delete_work_location(session, user_id, value_date, actor=audit_actor_for(principal))
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
