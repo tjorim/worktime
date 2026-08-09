@@ -184,12 +184,17 @@ def _build_auth_provider(
         audience=audience,
     )
 
-    verifiers: list[TokenVerifier] = [
-        DbIntegrationClientVerifier(session_factory or get_session_factory())
-    ]
+    verifiers: list[TokenVerifier] = [DbIntegrationClientVerifier(session_factory or get_session_factory())]
 
     integration_keys = _parse_integration_key_mapping(os.environ.get("WORKTIME_MCP_INTEGRATION_KEYS", ""))
     if integration_keys:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "WORKTIME_MCP_INTEGRATION_KEYS is deprecated and will be removed in the next "
+            "release — migrate to managed integration clients (POST /api/integration-clients) "
+            "before the overlap period ends. See docs/integrations/LOCAL_MCP_SERVER.md."
+        )
         verifiers.append(IntegrationKeyVerifier(integration_keys))
 
     return MultiAuth(server=keycloak, verifiers=verifiers)
@@ -211,10 +216,7 @@ class WorktimeMcpBackend:
         subject = claims.get("sub")
         auth_type = str(claims.get("auth_type") or "oidc")
         preferred_username = claims.get("preferred_username")
-        is_service_account = (
-            isinstance(preferred_username, str)
-            and preferred_username.startswith("service-account-")
-        )
+        is_service_account = isinstance(preferred_username, str) and preferred_username.startswith("service-account-")
 
         if raw_user_id is not None:
             try:
@@ -247,9 +249,7 @@ class WorktimeMcpBackend:
         user = await get_user(db, user_id)
         realm_access = claims.get("realm_access")
         roles = realm_access.get("roles", []) if isinstance(realm_access, dict) else []
-        is_admin = bool(claims.get("worktime_is_admin")) or (
-            isinstance(roles, list) and "admin" in roles
-        )
+        is_admin = bool(claims.get("worktime_is_admin")) or (isinstance(roles, list) and "admin" in roles)
 
         return WorktimeMcpContext(
             user_id=user.id,

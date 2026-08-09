@@ -50,9 +50,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, index=True, unique=True)
-    oidc_subject: Mapped[str | None] = mapped_column(
-        String, unique=True, index=True, nullable=True
-    )
+    oidc_subject: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
     display_name: Mapped[str] = mapped_column(String)
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[dt_datetime] = mapped_column(
@@ -78,9 +76,7 @@ class Label(ClientTimestampMixin, Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     __table_args__ = (
         Index(
@@ -101,9 +97,7 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
-    label_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("labels.id"), nullable=True, index=True
-    )
+    label_id: Mapped[str | None] = mapped_column(String, ForeignKey("labels.id"), nullable=True, index=True)
     gantt_task_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("gantt_tasks.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -119,9 +113,7 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     __table_args__ = (
         Index("ix_time_tracking_tasks_user_id_updated_at", "user_id", "updated_at"),
@@ -136,9 +128,7 @@ class TimeTrackingTemplate(ClientTimestampMixin, Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
-    label_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("labels.id"), nullable=True, index=True
-    )
+    label_id: Mapped[str | None] = mapped_column(String, ForeignKey("labels.id"), nullable=True, index=True)
     text: Mapped[str] = mapped_column(String)
     start_time: Mapped[dt_time] = mapped_column(Time)
     stop_time: Mapped[dt_time] = mapped_column(Time)
@@ -148,13 +138,9 @@ class TimeTrackingTemplate(ClientTimestampMixin, Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
-    __table_args__ = (
-        Index("ix_time_tracking_templates_user_id_updated_at", "user_id", "updated_at"),
-    )
+    __table_args__ = (Index("ix_time_tracking_templates_user_id_updated_at", "user_id", "updated_at"),)
 
 
 class WorkLocation(ClientTimestampMixin, Base):
@@ -173,9 +159,7 @@ class WorkLocation(ClientTimestampMixin, Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     __table_args__ = (
         Index(
@@ -195,12 +179,8 @@ class GanttTask(ClientTimestampMixin, Base):
     __tablename__ = "gantt_tasks"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
-    label_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("labels.id"), nullable=True, index=True
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    label_id: Mapped[str | None] = mapped_column(String, ForeignKey("labels.id"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String)
     start_date: Mapped[dt_date] = mapped_column(Date)
     end_date: Mapped[dt_date] = mapped_column(Date)
@@ -213,9 +193,7 @@ class GanttTask(ClientTimestampMixin, Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     __table_args__ = (Index("ix_gantt_tasks_user_id_updated_at", "user_id", "updated_at"),)
 
@@ -230,9 +208,7 @@ class UserPreferences(ClientTimestampMixin, Base):
 
     __tablename__ = "user_preferences"
 
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
@@ -270,9 +246,7 @@ class TimeOffEntry(ClientTimestampMixin, Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     __table_args__ = (
         Index(
@@ -312,9 +286,7 @@ class AccessToken(Base):
     __tablename__ = "access_tokens"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String)
     token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
     token_preview: Mapped[str] = mapped_column(String)
@@ -405,9 +377,7 @@ class IntegrationClient(Base):
         default=lambda: ["worktime:mcp"],
         server_default='["worktime:mcp"]',
     )
-    rate_limit_per_minute: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=120, server_default="120"
-    )
+    rate_limit_per_minute: Mapped[int] = mapped_column(Integer, nullable=False, default=120, server_default="120")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=sa_true())
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
@@ -415,9 +385,7 @@ class IntegrationClient(Base):
     last_used_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (
-        Index("ix_integration_clients_user_id_created_at", "user_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_integration_clients_user_id_created_at", "user_id", "created_at"),)
 
 
 class AuditEntry(Base):
@@ -447,7 +415,7 @@ class AuditEntry(Base):
     request_id: Mapped[str | None] = mapped_column(String, nullable=True)
     details: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[dt_datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), default=_utc_now, index=True
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
 
     __table_args__ = (
