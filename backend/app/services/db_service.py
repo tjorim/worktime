@@ -91,18 +91,13 @@ async def _audit(
 
 
 def _get_non_nullable_model_fields(model: type[Base]) -> set[str]:
-    return {
-        column.name
-        for column in model.__table__.columns
-        if not column.nullable and not column.primary_key
-    }
+    return {column.name for column in model.__table__.columns if not column.nullable and not column.primary_key}
 
 
 # User operations
 
-async def create_user(
-    session: AsyncSession, payload: UserCreate, *, oidc_subject: str | None = None
-) -> User:
+
+async def create_user(session: AsyncSession, payload: UserCreate, *, oidc_subject: str | None = None) -> User:
     existing = await get_user_by_username(session, payload.username)
     if existing is not None:
         raise ConflictError("username already exists")
@@ -146,9 +141,7 @@ async def get_user_export_data(
     async def _list_rows(model: type[Base], *order_by: Any) -> list[Any]:
         typed_model: Any = model
         result = await session.execute(
-            select(model)
-            .where(typed_model.user_id == user_id, typed_model.deleted_at.is_(None))
-            .order_by(*order_by)
+            select(model).where(typed_model.user_id == user_id, typed_model.deleted_at.is_(None)).order_by(*order_by)
         )
         return list(result.scalars().all())
 
@@ -196,9 +189,7 @@ async def list_users(
 
     total_result = await session.execute(select(sql_func.count()).select_from(User))
     total = int(total_result.scalar_one())
-    users_result = await session.execute(
-        select(User).order_by(User.id).offset(offset).limit(limit)
-    )
+    users_result = await session.execute(select(User).order_by(User.id).offset(offset).limit(limit))
     users = list(users_result.scalars().all())
     return users, total
 
@@ -246,6 +237,7 @@ async def delete_user_uncommitted(session: AsyncSession, user_id: int) -> None:
 
 
 # Label operations
+
 
 async def _ensure_user_exists(session: AsyncSession, user_id: int) -> User:
     return await get_user(session, user_id)
@@ -335,9 +327,7 @@ async def update_label(
     return label
 
 
-async def delete_label(
-    session: AsyncSession, user_id: int, label_id: str, *, actor: AuditActor | None = None
-) -> None:
+async def delete_label(session: AsyncSession, user_id: int, label_id: str, *, actor: AuditActor | None = None) -> None:
     label = await _ensure_label_for_user(session, user_id, label_id)
 
     task_count = await session.scalar(
@@ -369,17 +359,14 @@ async def delete_label(
 
 # Task operations
 
-async def _validate_task_label_reference(
-    session: AsyncSession, user_id: int, label_id: str | None
-) -> None:
+
+async def _validate_task_label_reference(session: AsyncSession, user_id: int, label_id: str | None) -> None:
     if label_id is None:
         return
     await _ensure_label_for_user(session, user_id, label_id)
 
 
-async def _validate_task_gantt_reference(
-    session: AsyncSession, user_id: int, gantt_task_id: str | None
-) -> None:
+async def _validate_task_gantt_reference(session: AsyncSession, user_id: int, gantt_task_id: str | None) -> None:
     if gantt_task_id is None:
         return
     gantt_task = await session.get(GanttTask, gantt_task_id)
@@ -496,9 +483,7 @@ async def update_task(
     return task
 
 
-async def delete_task(
-    session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None
-) -> None:
+async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None) -> None:
     task = await get_task(session, user_id, task_id)
     now = datetime.now(UTC)
     task.deleted_at = now
@@ -511,9 +496,8 @@ async def delete_task(
 
 # Template operations
 
-async def create_template(
-    session: AsyncSession, user_id: int, payload: TemplateCreate
-) -> TimeTrackingTemplate:
+
+async def create_template(session: AsyncSession, user_id: int, payload: TemplateCreate) -> TimeTrackingTemplate:
     await _ensure_user_exists(session, user_id)
     await _validate_task_label_reference(session, user_id, payload.label_id)
 
@@ -525,9 +509,7 @@ async def create_template(
     return template
 
 
-async def get_template(
-    session: AsyncSession, user_id: int, template_id: str
-) -> TimeTrackingTemplate:
+async def get_template(session: AsyncSession, user_id: int, template_id: str) -> TimeTrackingTemplate:
     """Get a template scoped to a specific user to prevent cross-user access."""
     template = await session.get(TimeTrackingTemplate, template_id)
     if template is None or template.user_id != user_id or template.deleted_at is not None:
@@ -535,9 +517,7 @@ async def get_template(
     return template
 
 
-async def list_templates_for_user(
-    session: AsyncSession, user_id: int
-) -> list[TimeTrackingTemplate]:
+async def list_templates_for_user(session: AsyncSession, user_id: int) -> list[TimeTrackingTemplate]:
     result = await session.execute(
         select(TimeTrackingTemplate)
         .where(
@@ -622,9 +602,7 @@ async def create_or_update_work_location(
     return location
 
 
-async def get_work_location(
-    session: AsyncSession, user_id: int, value_date: date
-) -> WorkLocation:
+async def get_work_location(session: AsyncSession, user_id: int, value_date: date) -> WorkLocation:
     result = await session.execute(
         select(WorkLocation).where(
             WorkLocation.user_id == user_id,
@@ -737,13 +715,32 @@ async def get_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> G
     return task
 
 
-async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]:
-    result = await session.execute(
-        select(GanttTask)
-        .where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None))
-        .order_by(GanttTask.start_date)
-    )
-    return list(result.scalars().all())
+async def list_gantt_tasks(
+    session: AsyncSession, *, user_id: int, active_on: date | None = None, limit: int | None = None
+) -> tuple[list[GanttTask], int] | list[GanttTask]:
+    # Deterministic ordering and bounded retrieval; active_on filtering in DB
+    base_where = [GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None)]
+    if active_on is not None:
+        base_where.extend([GanttTask.start_date <= active_on, GanttTask.end_date >= active_on])
+    # Count query for truncated flag
+    if active_on is not None or limit is not None:
+        from sqlalchemy import func
+
+        count_stmt = select(func.count()).select_from(GanttTask).where(*base_where)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+        stmt = select(GanttTask).where(*base_where).order_by(GanttTask.start_date, GanttTask.id)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        result = await session.execute(stmt)
+        tasks = list(result.scalars().all())
+        # If caller expects new tuple signature (active_on/limit supplied), return tuple
+        if active_on is not None or limit is not None:
+            return tasks, total
+        return tasks
+    result = await session.execute(select(GanttTask).where(*base_where).order_by(GanttTask.start_date, GanttTask.id))
+    tasks = list(result.scalars().all())
+    return tasks
 
 
 async def update_gantt_task(
@@ -1066,9 +1063,7 @@ async def update_time_off_entry(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     entry.client_updated_at = now
     session.add(entry)
-    await _audit(
-        session, actor, action="update_time_off_entry", resource_type="time_off_entry", resource_id=entry_id
-    )
+    await _audit(session, actor, action="update_time_off_entry", resource_type="time_off_entry", resource_id=entry_id)
     await session.commit()
     await session.refresh(entry)
     await notify_sync_changed(user_id)
@@ -1085,8 +1080,6 @@ async def delete_time_off_entry(
     entry.updated_at = now
     entry.client_updated_at = now
     session.add(entry)
-    await _audit(
-        session, actor, action="delete_time_off_entry", resource_type="time_off_entry", resource_id=entry_id
-    )
+    await _audit(session, actor, action="delete_time_off_entry", resource_type="time_off_entry", resource_id=entry_id)
     await session.commit()
     await notify_sync_changed(user_id)

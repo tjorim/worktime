@@ -12,6 +12,7 @@ delegate to — mirroring champagnefestival's ``app/mcp/`` package shape.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -25,6 +26,7 @@ from fastmcp.server.auth import AccessToken, MultiAuth
 from fastmcp.server.auth.auth import TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import settings
@@ -42,6 +44,8 @@ from app.mcp.context import (
 from app.schemas import EntryFlag, EntryKind, EntryType
 from app.services import integration_client_service
 from app.services.db_service import get_user
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "McpAuthError",
@@ -144,7 +148,10 @@ class DbIntegrationClientVerifier(TokenVerifier):
             client = await integration_client_service.get_active_integration_client_by_key(session, token)
             if client is None:
                 return None
-            await integration_client_service.record_integration_client_usage(session, client)
+            try:
+                await integration_client_service.record_integration_client_usage(session, client)
+            except SQLAlchemyError:
+                logger.warning("Failed to record integration client usage", exc_info=True)
 
         return AccessToken(
             token=token,
@@ -240,11 +247,12 @@ class WorktimeMcpBackend:
         if auth_type == "integration_client":
             client_id = claims.get("worktime_integration_client_id")
             rate_limit = claims.get("worktime_integration_client_rate_limit_per_minute")
-            if isinstance(client_id, int) and isinstance(rate_limit, int):
-                try:
-                    integration_client_service.enforce_integration_client_rate_limit(client_id, rate_limit)
-                except integration_client_service.RateLimitExceededError as exc:
-                    raise McpRateLimitError(str(exc)) from exc
+            if not isinstance(client_id, int) or not isinstance(rate_limit, int):
+                raise McpAuthError("Invalid integration client rate-limit claims")
+            try:
+                integration_client_service.enforce_integration_client_rate_limit(client_id, rate_limit)
+            except integration_client_service.RateLimitExceededError as exc:
+                raise McpRateLimitError(str(exc)) from exc
 
         user = await get_user(db, user_id)
         realm_access = claims.get("realm_access")
@@ -440,15 +448,15 @@ class WorktimeMcpBackend:
             return await time_off.create_time_off_event(
                 context,
                 db,
-                entry_kind,
-                entry_type,
-                entry_flag,
-                date,
-                start_date,
-                end_date,
-                weekday,
-                note,
-                entry_id,
+                entry_kind=entry_kind,
+                entry_type=entry_type,
+                entry_flag=entry_flag,
+                date=date,
+                start_date=start_date,
+                end_date=end_date,
+                weekday=weekday,
+                note=note,
+                entry_id=entry_id,
             )
 
     @_map_domain_errors
@@ -468,15 +476,15 @@ class WorktimeMcpBackend:
             return await time_off.update_time_off_event(
                 context,
                 db,
-                entry_id,
-                entry_kind,
-                entry_type,
-                entry_flag,
-                date,
-                start_date,
-                end_date,
-                weekday,
-                note,
+                entry_id=entry_id,
+                entry_kind=entry_kind,
+                entry_type=entry_type,
+                entry_flag=entry_flag,
+                date=date,
+                start_date=start_date,
+                end_date=end_date,
+                weekday=weekday,
+                note=note,
             )
 
     @_map_domain_errors
@@ -529,15 +537,15 @@ class WorktimeMcpBackend:
             return await gantt.update_gantt_task(
                 context,
                 db,
-                task_id,
-                name,
-                start_date,
-                end_date,
-                progress,
-                dependencies,
-                notes,
-                label_id,
-                clear_label_id,
+                task_id=task_id,
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                progress=progress,
+                dependencies=dependencies,
+                notes=notes,
+                label_id=label_id,
+                clear_label_id=clear_label_id,
             )
 
     @_map_domain_errors
@@ -608,11 +616,12 @@ def create_mcp_server(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> FastMCP:
     """Create and configure the Worktime FastMCP server."""
-    backend = WorktimeMcpBackend(session_factory or get_session_factory())
+    factory = session_factory or get_session_factory()
+    backend = WorktimeMcpBackend(factory)
     server = FastMCP(
         "worktime",
         instructions="Worktime assistant tools — read and personal write access",
-        auth=_build_auth_provider(),
+        auth=_build_auth_provider(factory),
     )
 
     for tool_name in MCP_TOOL_CAPABILITIES:

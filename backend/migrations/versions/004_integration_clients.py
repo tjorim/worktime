@@ -33,7 +33,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("name", sa.String(length=120), nullable=False),
-        sa.Column("key_hash", sa.String(length=128), nullable=False, unique=True),
+        sa.Column("key_hash", sa.String(length=128), nullable=False),
         sa.Column("key_preview", sa.String(length=8), nullable=False),
         sa.Column(
             "scopes",

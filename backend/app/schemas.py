@@ -15,7 +15,6 @@ from app.utils.datetime import ensure_utc
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 
 
-
 class ListResponse[T](BaseModel):
     """Generic paged list response."""
 
@@ -224,9 +223,7 @@ class WorkLocationUpdate(BaseModel):
     country_code: str | None = None
     label: str | None = None
 
-    _validate_country_code = field_validator("country_code")(
-        WorkLocationCreate.validate_country_code
-    )
+    _validate_country_code = field_validator("country_code")(WorkLocationCreate.validate_country_code)
 
 
 AccessTokenScope = Literal["pebble:read", "pebble:write"]
@@ -284,7 +281,7 @@ class IntegrationClientCreate(BaseModel):
     """
 
     name: str = Field(min_length=1, max_length=120)
-    scopes: list[IntegrationClientScope] = ["worktime:mcp"]
+    scopes: list[IntegrationClientScope] = Field(default_factory=lambda: ["worktime:mcp"])
     rate_limit_per_minute: int = Field(default=120, ge=1, le=6000)
 
     @field_validator("scopes")
@@ -404,11 +401,7 @@ class GanttTaskUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_date_range(self) -> GanttTaskUpdate:
-        if (
-            self.start_date is not None
-            and self.end_date is not None
-            and self.end_date < self.start_date
-        ):
+        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
             raise ValueError("end_date cannot be earlier than start_date")
         return self
 
@@ -891,15 +884,9 @@ class SyncPushRequest(BaseModel):
     labels: list[LabelSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     tasks: list[TaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
     templates: list[TemplateSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
-    work_locations: list[WorkLocationSyncItem] = Field(
-        default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS
-    )
-    time_off_entries: list[TimeOffEntrySyncItem] = Field(
-        default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS
-    )
-    gantt_tasks: list[GanttTaskSyncItem] = Field(
-        default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS
-    )
+    work_locations: list[WorkLocationSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
+    time_off_entries: list[TimeOffEntrySyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
+    gantt_tasks: list[GanttTaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
 
 
 class SyncPushResponse(BaseModel):

@@ -39,9 +39,9 @@ class AuditActor:
     or credential behind it — no current call site needs that). ``label`` is
     a human-readable identity (username, or ``integration:<client name>`` for
     managed integration-client calls) safe to display without a join.
-    ``auth_source`` matches ``WorktimeMcpContext.auth_type`` / REST
-    ``AuthType`` values (e.g. ``keycloak_user``, ``keycloak_service``,
-    ``integration_client``, ``delegated``).
+    ``auth_source`` is the persisted authentication source (e.g. ``oidc``,
+    ``keycloak_user``, ``keycloak_service``, ``integration_client``,
+    ``delegated`` — see ``AuthType``/``WorktimeMcpContext.auth_type``).
     """
 
     user_id: int | None
@@ -97,11 +97,12 @@ async def list_audit_entries(
       forced to ``requesting_user_id`` regardless of what was requested.
     - An admin caller may read any user's trail (``target_user_id`` given) or
       the full team-wide trail (``target_user_id`` omitted).
-    - ``limit`` is clamped between 1 and ``MAX_AUDIT_LIMIT``.
+    - ``limit`` must be between 1 and ``MAX_AUDIT_LIMIT`` (inclusive);
+      out-of-range values raise ``ValueError``.
     - Results are ordered ``(created_at DESC, id DESC)`` — a strictly
       decreasing key — and ``before_id`` (an exclusive keyset cursor on
-      ``id``) gives stable pagination that can't skip or repeat rows even
-      when many entries share a ``created_at`` timestamp.
+      ``(created_at, id)``) gives stable pagination that can't skip or repeat
+      rows even when many entries share a ``created_at`` timestamp.
     """
     if limit < 1 or limit > MAX_AUDIT_LIMIT:
         raise ValueError(f"limit must be between 1 and {MAX_AUDIT_LIMIT}, got: {limit}")
@@ -117,7 +118,13 @@ async def list_audit_entries(
     if effective_target is not None:
         statement = statement.where(AuditEntry.actor_user_id == effective_target)
     if before_id is not None:
-        statement = statement.where(AuditEntry.id < before_id)
+        # Use full (created_at, id) keyset cursor for stable pagination
+        cursor = await db.get(AuditEntry, before_id)
+        if cursor is not None:
+            statement = statement.where(
+                (AuditEntry.created_at < cursor.created_at)
+                | ((AuditEntry.created_at == cursor.created_at) & (AuditEntry.id < cursor.id))
+            )
 
     statement = statement.order_by(AuditEntry.created_at.desc(), AuditEntry.id.desc()).limit(limit)
     result = await db.execute(statement)

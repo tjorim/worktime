@@ -40,18 +40,21 @@ async def get_gantt_tasks(
     if task_id:
         task = await get_gantt_task(db, context.user_id, task_id)
         payload_tasks = [GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")]
+        total_tasks = 1
+        if active_on is not None:
+            payload_tasks = [
+                task for task in payload_tasks if task["start_date"] <= to_iso_date(active_on) <= task["end_date"]
+            ]
+            total_tasks = len(payload_tasks)
     else:
-        tasks = await list_gantt_tasks(db, user_id=context.user_id)
+        # Bounded, paginated retrieval with DB-side active_on filtering and count
+        tasks, total_tasks = await list_gantt_tasks(
+            db, user_id=context.user_id, active_on=active_on, limit=MAX_GANTT_TASKS_RETURNED
+        )
         payload_tasks = [
             GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json") for task in tasks
         ]
 
-    if active_on is not None:
-        payload_tasks = [
-            task for task in payload_tasks if task["start_date"] <= to_iso_date(active_on) <= task["end_date"]
-        ]
-
-    total_tasks = len(payload_tasks)
     truncated = total_tasks > MAX_GANTT_TASKS_RETURNED
     payload_tasks = payload_tasks[:MAX_GANTT_TASKS_RETURNED]
 
@@ -92,7 +95,7 @@ async def create_gantt_task(
     audit.append(
         target=f"user:{context.user_id}:gantt:{task.id}",
         action="create_gantt_task",
-        details=f"name={name!r} via MCP",
+        details="via MCP",
     )
     return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 

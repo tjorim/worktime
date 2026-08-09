@@ -56,7 +56,7 @@ async def set_work_location(
     audit.append(
         target=f"user:{context.user_id}:work_location:{value_date.isoformat()}",
         action="set_work_location",
-        details=f"country_code={country_code!r} via MCP",
+        details="via MCP",
     )
     return WorkLocationRead.model_validate(location, from_attributes=True).model_dump(mode="json")
 

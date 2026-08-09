@@ -129,7 +129,7 @@ async def start_time_entry(
     audit.append(
         target=f"user:{context.user_id}:task:{task.id}",
         action="start_time_entry",
-        details=f"text={text!r} via MCP",
+        details="via MCP",
     )
     return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
@@ -185,7 +185,7 @@ async def create_time_tracking_task(
     audit.append(
         target=f"user:{context.user_id}:task:{task.id}",
         action="create_time_tracking_task",
-        details=f"text={text!r} via MCP",
+        details="via MCP",
     )
     return TaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 

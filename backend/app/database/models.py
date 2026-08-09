@@ -369,7 +369,7 @@ class IntegrationClient(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    key_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    key_hash: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     key_preview: Mapped[str] = mapped_column(String(8), nullable=False)
     scopes: Mapped[list[str]] = mapped_column(
         JSON,
@@ -408,9 +408,9 @@ class AuditEntry(Base):
     )
     actor_label: Mapped[str] = mapped_column(String, nullable=False)
     subject: Mapped[str | None] = mapped_column(String, nullable=True)
-    auth_source: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    action: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    resource_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    auth_source: Mapped[str] = mapped_column(String, nullable=False)
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    resource_type: Mapped[str] = mapped_column(String, nullable=False)
     resource_id: Mapped[str] = mapped_column(String, nullable=False)
     request_id: Mapped[str | None] = mapped_column(String, nullable=True)
     details: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)

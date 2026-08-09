@@ -84,7 +84,7 @@ async def create_time_off_event(
     audit.append(
         target=f"user:{context.user_id}:time_off:{entry.entry_id}",
         action=action,
-        details=f"entry_type={entry_type!r} entry_kind={entry_kind!r} via MCP",
+        details="via MCP",
     )
     return TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json")
 

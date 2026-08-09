@@ -216,11 +216,14 @@ async def get_bearer_principal(
 def get_authenticated_principal(
     principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
 ) -> AuthenticatedPrincipal:
-    """Require a Keycloak user session for the regular application API."""
-    if principal.auth_type != AuthType.KEYCLOAK_USER:
+    """Require an authenticated principal (OIDC or PAT)."""
+    if principal.auth_type not in (AuthType.KEYCLOAK_USER, AuthType.DELEGATED):
+        # PATs (DELEGATED) and OIDC sessions (KEYCLOAK_USER) are both accepted here;
+        # account-deletion and token-management endpoints use require_oidc_principal
+        # to remain OIDC-only.
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint requires an interactive Keycloak user session",
+            detail="This endpoint requires an authenticated principal",
         )
     return principal
 

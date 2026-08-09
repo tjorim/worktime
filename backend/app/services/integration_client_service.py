@@ -158,6 +158,8 @@ async def rotate_integration_client(
 ) -> tuple[IntegrationClient, str]:
     """Replace a client's key in place, immediately invalidating the old one."""
     client = await get_integration_client_for_user(session, user_id, client_id)
+    if not client.is_active or client.revoked_at is not None:
+        raise ValueError("Cannot rotate a revoked or inactive integration client")
     raw_key = KEY_PREFIX + secrets.token_urlsafe(32)
     client.key_hash = hash_integration_key(raw_key)
     client.key_preview = raw_key[-_KEY_PREVIEW_LENGTH:]

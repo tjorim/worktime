@@ -47,16 +47,10 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_audit_entries_actor_user_id", "audit_entries", ["actor_user_id"])
-    op.create_index("ix_audit_entries_auth_source", "audit_entries", ["auth_source"])
-    op.create_index("ix_audit_entries_action", "audit_entries", ["action"])
-    op.create_index("ix_audit_entries_resource_type", "audit_entries", ["resource_type"])
     op.create_index("ix_audit_entries_created_at_id", "audit_entries", ["created_at", "id"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_audit_entries_created_at_id", table_name="audit_entries")
-    op.drop_index("ix_audit_entries_resource_type", table_name="audit_entries")
-    op.drop_index("ix_audit_entries_action", table_name="audit_entries")
-    op.drop_index("ix_audit_entries_auth_source", table_name="audit_entries")
     op.drop_index("ix_audit_entries_actor_user_id", table_name="audit_entries")
     op.drop_table("audit_entries")

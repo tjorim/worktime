@@ -202,6 +202,11 @@ class Settings(BaseSettings):
         Falls back to a fixed local-dev-only value when unset. Production
         cannot reach this fallback: validate_production_integration_key_hash_secret
         refuses to start without an explicit value first.
+
+        Deployment note: changing the effective secret (via env or fallback)
+        invalidates all previously stored ``integration_clients.key_hash`` values;
+        existing clients will fail to authenticate until rotated. Rotate all
+        integration clients when rotating this secret.
         """
         return self.INTEGRATION_KEY_HASH_SECRET.strip() or "worktime-dev-integration-key-hash-secret"
 
