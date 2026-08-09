@@ -11,7 +11,6 @@ delegate to — mirroring champagnefestival's ``app/mcp/`` package shape.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 from collections.abc import AsyncGenerator
@@ -22,8 +21,7 @@ from enum import StrEnum
 from typing import Any
 
 from fastmcp import FastMCP
-from fastmcp.server.auth import AccessToken, MultiAuth
-from fastmcp.server.auth.auth import TokenVerifier
+from fastmcp.server.auth import AccessToken, MultiAuth, TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
 from mcp.types import ToolAnnotations
@@ -45,6 +43,7 @@ from app.mcp.context import (
 from app.schemas import EntryFlag, EntryKind, EntryType
 from app.services import integration_client_service
 from app.services.db_service import get_user
+from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +78,8 @@ class DbIntegrationClientVerifier(TokenVerifier):
             client = await integration_client_service.get_active_integration_client_by_key(session, token)
             if client is None:
                 return None
+            if integration_client_service.MCP_SCOPE not in client.scopes:
+                return None
             try:
                 await integration_client_service.enforce_integration_client_rate_limit(session, client.id)
                 await integration_client_service.record_integration_client_usage(session, client)
@@ -95,6 +96,8 @@ class DbIntegrationClientVerifier(TokenVerifier):
                 "worktime_user_id": client.user_id,
                 "worktime_is_admin": integration_client_service.ADMIN_SCOPE in client.scopes,
                 "sub": f"integration-client:{client.id}",
+                "auth_source": "integration",
+                "integration_client_id": client.id,
                 "auth_type": "integration_client",
                 "worktime_integration_client_id": client.id,
                 "worktime_integration_client_name": client.name,
@@ -544,6 +547,7 @@ def create_mcp_server(
     backend = WorktimeMcpBackend(factory)
     server = FastMCP(
         "worktime",
+        version=APP_VERSION,
         instructions="Worktime assistant tools — read and personal write access",
         auth=_build_auth_provider(factory),
     )
@@ -554,14 +558,12 @@ def create_mcp_server(
     return server
 
 
-async def _run_stdio() -> None:
-    server = create_mcp_server()
-    await server.run_stdio_async()
-
-
 def main() -> None:
-    """Run the Worktime MCP server over stdio."""
-    asyncio.run(_run_stdio())
+    """Reject stdio startup because Worktime tools require bearer auth."""
+    raise SystemExit(
+        "Worktime MCP requires authenticated HTTP transport; run the FastAPI "
+        "application with WORKTIME_MCP_BASE_URL configured and connect to /mcp."
+    )
 
 
 if __name__ == "__main__":

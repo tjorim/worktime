@@ -1099,10 +1099,34 @@ async def test_db_integration_client_verifier_accepts_active_client(
     access_token = await verifier.verify_token(raw_key)
 
     assert access_token is not None
+    assert access_token.scopes == [integration_client_service.MCP_SCOPE]
     assert access_token.claims["worktime_user_id"] == user.id
+    assert access_token.claims["auth_source"] == "integration"
+    assert access_token.claims["integration_client_id"] == client.id
     assert access_token.claims["worktime_integration_client_id"] == client.id
     assert access_token.claims["auth_type"] == "integration_client"
     assert access_token.claims["worktime_is_admin"] is False
+
+
+async def test_db_integration_client_verifier_requires_mcp_scope(
+    test_db: AsyncEngine,
+) -> None:
+    session_factory = _make_factory(test_db)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="admin-only-client", display_name="Admin only")
+        )
+        _, raw_key = await integration_client_service.create_integration_client(
+            session,
+            user.id,
+            name="admin-without-mcp",
+            scopes=[integration_client_service.ADMIN_SCOPE],
+        )
+
+    verifier = DbIntegrationClientVerifier(session_factory)
+
+    assert await verifier.verify_token(raw_key) is None
 
 
 async def test_db_integration_client_verifier_rejects_unknown_and_revoked(

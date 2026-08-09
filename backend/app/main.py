@@ -40,7 +40,7 @@ if _worktime_mcp_base_url:
     from .mcp_server import create_mcp_server as _create_mcp_server
 
     _mcp = _create_mcp_server()
-    _mcp_app = _mcp.http_app(path="/")
+    _mcp_app = _mcp.http_app(path="/", stateless_http=True)
 else:
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
 
@@ -242,16 +242,19 @@ async def mcp_capabilities() -> dict[str, object]:
     return {
         "enabled": enabled,
         "mount_path": "/mcp",
+        "version": _mcp.version if _mcp is not None else None,
         "tools": [
             {
                 "name": name,
-                "side_effect": capability.effect.value,
+                "effect": capability.effect.value,
                 "required_tier": capability.required_tier,
             }
-            for name, capability in _MCP_TOOL_CAPABILITIES.items()
+            for name, capability in sorted(_MCP_TOOL_CAPABILITIES.items())
         ]
         if enabled
         else [],
+        "resources": [],
+        "prompts": [],
     }
 
 

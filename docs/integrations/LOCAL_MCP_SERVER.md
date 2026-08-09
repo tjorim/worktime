@@ -47,44 +47,12 @@ secret are rehashed with the current secret on successful use. Remove the
 previous value after every active client has authenticated or after the
 operator-defined overlap window; only one previous secret is accepted.
 
-## Run over stdio
+## Connect over authenticated HTTP
 
-```bash
-cd backend
-uv run python -m app.mcp_server
-```
-
-## Example client config
-
-### Claude Desktop
-
-```json
-{
-  "mcpServers": {
-    "worktime": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "app.mcp_server"],
-      "cwd": "/absolute/path/to/worktime/backend"
-    }
-  }
-}
-```
-
-### Codex CLI (example)
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "worktime": {
-        "command": "uv",
-        "args": ["run", "python", "-m", "app.mcp_server"],
-        "cwd": "/absolute/path/to/worktime/backend"
-      }
-    }
-  }
-}
-```
+Worktime tools require an authenticated principal, so stdio is not a supported
+transport. Configure `WORKTIME_MCP_BASE_URL`, run the FastAPI backend, and
+connect to its `/mcp` endpoint using OAuth or a managed integration-client key
+that carries the `worktime:mcp` scope.
 
 ## Capability discovery
 
