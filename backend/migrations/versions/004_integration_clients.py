@@ -61,13 +61,11 @@ def upgrade() -> None:
         ),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rate_limit_window_started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rate_limit_window_count", sa.Integer(), nullable=False, server_default="0"),
     )
-    op.create_index(
-        "ix_integration_clients_user_id", "integration_clients", ["user_id"]
-    )
-    op.create_index(
-        "ix_integration_clients_key_hash", "integration_clients", ["key_hash"], unique=True
-    )
+    op.create_index("ix_integration_clients_user_id", "integration_clients", ["user_id"])
+    op.create_index("ix_integration_clients_key_hash", "integration_clients", ["key_hash"], unique=True)
     op.create_index(
         "ix_integration_clients_user_id_created_at",
         "integration_clients",

@@ -19,17 +19,9 @@ from app.services.integration_client_service import (
     get_active_integration_client_by_key,
     hash_integration_key,
     list_integration_clients_for_user,
-    reset_rate_limit_state,
     revoke_integration_client,
     rotate_integration_client,
 )
-
-
-@pytest.fixture(autouse=True)
-def _reset_rate_limits():
-    reset_rate_limit_state()
-    yield
-    reset_rate_limit_state()
 
 
 async def test_create_integration_client_returns_raw_key_once(db_session: AsyncSession) -> None:
@@ -40,6 +32,26 @@ async def test_create_integration_client_returns_raw_key_once(db_session: AsyncS
     assert raw_key.startswith("wtic_")
     assert client.key_preview == raw_key[-4:]
     assert client.key_hash == hash_integration_key(raw_key)
+
+
+async def test_previous_hash_secret_is_upgraded_on_use(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.config import settings
+    from app.services import integration_client_service as service
+
+    user = await db_service.create_user(db_session, UserCreate(username="secret-owner", display_name="Secret Owner"))
+    raw_key = "wtic_previous_secret_key"
+    monkeypatch.setattr(settings, "INTEGRATION_KEY_HASH_SECRET", "current-secret")
+    monkeypatch.setattr(settings, "INTEGRATION_KEY_HASH_SECRET_PREVIOUS", "previous-secret")
+    client, _ = await create_integration_client(db_session, user.id, name="old-secret")
+    client.key_hash = service._hash_integration_key_with_secret(raw_key, "previous-secret")
+    await db_session.commit()
+
+    authenticated = await get_active_integration_client_by_key(db_session, raw_key)
+
+    assert authenticated is not None
+    assert authenticated.key_hash == hash_integration_key(raw_key)
     assert client.key_hash != raw_key
     assert client.scopes == ["worktime:mcp"]
     assert client.rate_limit_per_minute == 120
@@ -105,15 +117,18 @@ async def test_list_integration_clients_scoped_to_owner(db_session: AsyncSession
     assert [c.name for c in clients] == ["mine"]
 
 
-def test_rate_limit_enforced_then_recovers_with_fresh_window() -> None:
-    enforce_integration_client_rate_limit(client_id=1, rate_limit_per_minute=2)
-    enforce_integration_client_rate_limit(client_id=1, rate_limit_per_minute=2)
+async def test_rate_limit_enforced_per_client_in_database(db_session: AsyncSession) -> None:
+    user = await db_service.create_user(db_session, UserCreate(username="rate-owner", display_name="Rate Owner"))
+    first, _ = await create_integration_client(db_session, user.id, name="first", rate_limit_per_minute=2)
+    second, _ = await create_integration_client(db_session, user.id, name="second", rate_limit_per_minute=1)
+
+    await enforce_integration_client_rate_limit(db_session, first.id)
+    await enforce_integration_client_rate_limit(db_session, first.id)
 
     with pytest.raises(RateLimitExceededError):
-        enforce_integration_client_rate_limit(client_id=1, rate_limit_per_minute=2)
+        await enforce_integration_client_rate_limit(db_session, first.id)
 
-    # A different client id has its own independent window.
-    enforce_integration_client_rate_limit(client_id=2, rate_limit_per_minute=1)
+    await enforce_integration_client_rate_limit(db_session, second.id)
 
 
 async def test_create_integration_client_endpoint_returns_key_and_hides_it_on_list(

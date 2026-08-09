@@ -384,6 +384,8 @@ class IntegrationClient(Base):
     )
     last_used_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rate_limit_window_started_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rate_limit_window_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     __table_args__ = (Index("ix_integration_clients_user_id_created_at", "user_id", "created_at"),)
 

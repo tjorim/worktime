@@ -149,9 +149,12 @@ class DbIntegrationClientVerifier(TokenVerifier):
             if client is None:
                 return None
             try:
+                await integration_client_service.enforce_integration_client_rate_limit(session, client.id)
                 await integration_client_service.record_integration_client_usage(session, client)
+            except integration_client_service.RateLimitExceededError:
+                return None
             except SQLAlchemyError:
-                logger.warning("Failed to record integration client usage", exc_info=True)
+                logger.warning("Failed to record integration client usage or rate limit", exc_info=True)
 
         return AccessToken(
             token=token,
@@ -243,16 +246,6 @@ class WorktimeMcpBackend:
                 if is_service_account
                 else "Missing token subject"
             )
-
-        if auth_type == "integration_client":
-            client_id = claims.get("worktime_integration_client_id")
-            rate_limit = claims.get("worktime_integration_client_rate_limit_per_minute")
-            if not isinstance(client_id, int) or not isinstance(rate_limit, int):
-                raise McpAuthError("Invalid integration client rate-limit claims")
-            try:
-                integration_client_service.enforce_integration_client_rate_limit(client_id, rate_limit)
-            except integration_client_service.RateLimitExceededError as exc:
-                raise McpRateLimitError(str(exc)) from exc
 
         user = await get_user(db, user_id)
         realm_access = claims.get("realm_access")

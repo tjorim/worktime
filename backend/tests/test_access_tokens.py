@@ -21,8 +21,10 @@ from app.routers.auth import (
     PEBBLE_READ_SCOPE,
     PEBBLE_WRITE_SCOPE,
     AuthType,
+    get_authenticated_principal,
     get_bearer_principal,
     has_required_scopes,
+    require_oidc_principal,
 )
 from app.schemas import AccessTokenCreate, UserCreate
 from app.services.access_token_service import (
@@ -36,6 +38,15 @@ from app.services.db_service import NotFoundError, create_user
 
 def _fake_request() -> Request:
     return Request(scope={"type": "http", "headers": []})
+
+
+def test_regular_api_accepts_delegated_pat_but_oidc_boundary_rejects_it() -> None:
+    principal = SimpleNamespace(auth_type=AuthType.DELEGATED)
+
+    assert get_authenticated_principal(principal) is principal
+    with pytest.raises(HTTPException) as exc_info:
+        require_oidc_principal(principal)
+    assert exc_info.value.status_code == 403
 
 
 async def test_authentication_throttles_recent_activity_write() -> None:
@@ -144,10 +155,7 @@ async def test_concurrent_pebble_rotations_leave_one_active_token(
         )
         assert len(list(tokens.scalars())) == 1
 
-        authenticated = [
-            await authenticate_access_token(verification_session, raw_token)
-            for raw_token in raw_tokens
-        ]
+        authenticated = [await authenticate_access_token(verification_session, raw_token) for raw_token in raw_tokens]
         assert sum(token is not None for token in authenticated) == 1
 
 

@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import hmac
 import secrets
-import time
-from collections import deque
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
@@ -39,6 +37,10 @@ class RateLimitExceededError(Exception):
     """Raised when an integration client exceeds its configured per-minute rate limit."""
 
 
+def _hash_integration_key_with_secret(raw_key: str, secret: str) -> str:
+    return hmac.new(secret.encode("utf-8"), raw_key.encode("utf-8"), sha256).hexdigest()
+
+
 def hash_integration_key(raw_key: str) -> str:
     """Hash a raw integration-client key for storage/lookup.
 
@@ -48,7 +50,18 @@ def hash_integration_key(raw_key: str) -> str:
     changing the (already infeasible) brute-force cost of the raw key.
     """
     secret = settings.resolved_integration_key_hash_secret()
-    return hmac.new(secret.encode("utf-8"), raw_key.encode("utf-8"), sha256).hexdigest()
+    return _hash_integration_key_with_secret(raw_key, secret)
+
+
+def integration_key_hash_candidates(raw_key: str) -> list[str]:
+    """Return current then optional previous-secret hashes for bounded rotation."""
+    candidates = [hash_integration_key(raw_key)]
+    previous = settings.INTEGRATION_KEY_HASH_SECRET_PREVIOUS.strip()
+    if previous:
+        previous_hash = _hash_integration_key_with_secret(raw_key, previous)
+        if previous_hash not in candidates:
+            candidates.append(previous_hash)
+    return candidates
 
 
 def _validate_scopes(scopes: list[str]) -> list[str]:
@@ -184,12 +197,17 @@ async def rotate_integration_client(
 
 async def get_active_integration_client_by_key(session: AsyncSession, raw_key: str) -> IntegrationClient | None:
     """Look up an active client by raw key. Returns None for unknown/inactive/revoked keys."""
+    current_hash, *fallback_hashes = integration_key_hash_candidates(raw_key)
     result = await session.execute(
-        select(IntegrationClient).where(IntegrationClient.key_hash == hash_integration_key(raw_key))
+        select(IntegrationClient).where(IntegrationClient.key_hash.in_([current_hash, *fallback_hashes]))
     )
     client = result.scalar_one_or_none()
     if client is None or not client.is_active:
         return None
+    if client.key_hash != current_hash:
+        client.key_hash = current_hash
+        await session.commit()
+        await session.refresh(client)
     return client
 
 
@@ -207,42 +225,23 @@ async def record_integration_client_usage(session: AsyncSession, client: Integra
     await session.commit()
 
 
-# ---------------------------------------------------------------------------
-# Per-client rate limiting (in-process sliding window)
-# ---------------------------------------------------------------------------
-#
-# Deliberately in-process rather than DB- or Redis-backed: Worktime's MCP
-# server runs as a single process (see docs/integrations/LOCAL_MCP_SERVER.md),
-# so a per-process window is sufficient defense-in-depth against a
-# misbehaving/compromised integration credential without adding an
-# infrastructure dependency. A multi-process deployment would need a shared
-# store instead — noted as a follow-up, not a requirement for this issue.
-_WINDOW_SECONDS = 60.0
-_usage_windows: dict[int, deque[float]] = {}
-
-
-def enforce_integration_client_rate_limit(client_id: int, rate_limit_per_minute: int) -> None:
-    """Raise RateLimitExceededError once *client_id* exceeds its per-minute budget.
-
-    Takes the client id and configured limit directly (rather than an ORM
-    instance) so callers that only have the verified token's claims — as
-    ``WorktimeMcpBackend.resolve_context`` does, once per tool call — can
-    enforce the limit without an extra DB round-trip. Resets naturally as old
-    timestamps age out of the window — no background task required.
-    """
-    now = time.monotonic()
-    window = _usage_windows.setdefault(client_id, deque())
-    cutoff = now - _WINDOW_SECONDS
-    while window and window[0] < cutoff:
-        window.popleft()
-
-    if len(window) >= rate_limit_per_minute:
+async def enforce_integration_client_rate_limit(session: AsyncSession, client_id: int) -> None:
+    """Consume one database-backed fixed-window request across all workers."""
+    client = await session.scalar(select(IntegrationClient).where(IntegrationClient.id == client_id).with_for_update())
+    if client is None:
+        raise RateLimitExceededError("integration client no longer exists")
+    now = datetime.now(UTC)
+    started = client.rate_limit_window_started_at
+    if started is not None and started.tzinfo is None:
+        started = started.replace(tzinfo=UTC)
+    if started is None or now - started >= timedelta(minutes=1):
+        client.rate_limit_window_started_at = now
+        client.rate_limit_window_count = 1
+    elif client.rate_limit_window_count >= client.rate_limit_per_minute:
+        await session.rollback()
         raise RateLimitExceededError(
-            f"integration client {client_id!r} exceeded its rate limit of {rate_limit_per_minute} requests/minute"
+            f"integration client {client_id!r} exceeded its rate limit of {client.rate_limit_per_minute} requests/minute"
         )
-    window.append(now)
-
-
-def reset_rate_limit_state() -> None:
-    """Clear all in-process rate-limit windows. Test-only helper."""
-    _usage_windows.clear()
+    else:
+        client.rate_limit_window_count += 1
+    await session.commit()

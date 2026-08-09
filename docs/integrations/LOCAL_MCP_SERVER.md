@@ -39,6 +39,14 @@ credential via this endpoint. Every client is also rate-limited
 per-minute (`rate_limit_per_minute`); calls beyond the limit fail with a
 clear error instead of a silent 429 (MCP tool calls are JSON-RPC, not HTTP).
 
+### Rotate the managed-key hashing secret
+
+Set the new `INTEGRATION_KEY_HASH_SECRET` and temporarily retain the old value
+as `INTEGRATION_KEY_HASH_SECRET_PREVIOUS`. Credentials verified with the old
+secret are rehashed with the current secret on successful use. Remove the
+previous value after every active client has authenticated or after the
+operator-defined overlap window; only one previous secret is accepted.
+
 ### Legacy static integration keys (deprecated, still supported)
 
 `WORKTIME_MCP_INTEGRATION_KEYS` — a comma-separated `token=user_id` or
@@ -49,7 +57,9 @@ process, so treat any configured value as a credential that needs manual
 lifecycle management. New integrations should provision a managed
 integration client instead; existing `WORKTIME_MCP_INTEGRATION_KEYS`
 deployments should migrate off it before its removal (tracked in a future
-issue — this env var is not being silently dropped in the meantime).
+issue). Support ends with the first Worktime release on or after **2026-11-01**;
+that release will refuse `WORKTIME_MCP_INTEGRATION_KEYS` and operators must
+provision managed clients before upgrading.
 
 Example (legacy, deprecated):
 

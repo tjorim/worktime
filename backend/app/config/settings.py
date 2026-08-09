@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     # set a real secret — see validate_production_integration_key_hash_secret.
     # Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
     INTEGRATION_KEY_HASH_SECRET: str = ""
+    INTEGRATION_KEY_HASH_SECRET_PREVIOUS: str = ""
 
     # Sentry error tracking.
     # Leave SENTRY_DSN empty (the default) to disable Sentry entirely.

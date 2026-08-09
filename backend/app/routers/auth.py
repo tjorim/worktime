@@ -217,11 +217,11 @@ async def get_bearer_principal(
 def get_authenticated_principal(
     principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
 ) -> AuthenticatedPrincipal:
-    """Require a Keycloak user session for the regular application API."""
-    if principal.auth_type != AuthType.KEYCLOAK_USER:
+    """Allow interactive users and delegated personal-access-token callers."""
+    if principal.auth_type not in (AuthType.KEYCLOAK_USER, AuthType.DELEGATED):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint requires an interactive Keycloak user session",
+            detail="This endpoint requires a user session or personal access token",
         )
     return principal
 
@@ -315,7 +315,7 @@ def audit_actor_for(principal: AuthenticatedPrincipal) -> AuditActor:
 
 
 def require_oidc_principal(
-    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    principal: AuthenticatedPrincipal = Depends(get_bearer_principal),
 ) -> AuthenticatedPrincipal:
     """Require an interactive OIDC session, rejecting personal access tokens.
 
