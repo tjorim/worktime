@@ -75,7 +75,7 @@ async def create_integration_client_tool(
     rate_limit_per_minute: int = DEFAULT_RATE_LIMIT_PER_MINUTE,
 ) -> dict[str, Any]:
     _require_interactive(context)
-    effective_scopes = list(["worktime:mcp"] if scopes is None else scopes)
+    effective_scopes: list[str] = ["worktime:mcp"] if scopes is None else list(scopes)
     if ADMIN_SCOPE in effective_scopes and not context.is_admin:
         raise PermissionError("Admin privileges are required to grant worktime:admin")
     client, raw_key = await create_integration_client(
