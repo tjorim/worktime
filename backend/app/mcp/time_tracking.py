@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import logger as audit
 from app.mcp.context import WorktimeMcpContext, actor_from_context
 from app.mcp.formatting import to_iso_datetime
-from app.schemas import TaskCreate, TaskRead, TaskUpdate
+from app.schemas import LabelCreate, LabelRead, LabelUpdate, TaskCreate, TaskRead, TaskUpdate
 from app.services.db_service import (
     NotFoundError,
+    create_label,
     create_task,
     delete_label,
     delete_task,
@@ -20,6 +21,7 @@ from app.services.db_service import (
     get_task,
     list_labels_for_user,
     list_tasks,
+    update_label,
     update_task,
 )
 
@@ -80,6 +82,33 @@ async def list_labels(context: WorktimeMcpContext, db: AsyncSession) -> dict[str
     """List the authenticated user's active time-tracking labels."""
     labels = await list_labels_for_user(db, context.user_id)
     return {"labels": [{"id": label.id, "name": label.name, "color": label.color} for label in labels]}
+
+
+async def create_label_tool(context: WorktimeMcpContext, db: AsyncSession, name: str, color: str) -> dict[str, Any]:
+    label = await create_label(
+        db, context.user_id, LabelCreate(name=name, color=color), actor=actor_from_context(context)
+    )
+    return LabelRead.model_validate(label, from_attributes=True).model_dump(mode="json")
+
+
+async def update_label_tool(
+    context: WorktimeMcpContext,
+    db: AsyncSession,
+    label_id: str,
+    name: str | None = None,
+    color: str | None = None,
+) -> dict[str, Any]:
+    payload = LabelUpdate.model_validate(
+        {key: value for key, value in {"name": name, "color": color}.items() if value is not None}
+    )
+    label = await update_label(
+        db,
+        context.user_id,
+        label_id,
+        payload,
+        actor=actor_from_context(context),
+    )
+    return LabelRead.model_validate(label, from_attributes=True).model_dump(mode="json")
 
 
 async def delete_label_tool(context: WorktimeMcpContext, db: AsyncSession, label_id: str) -> dict[str, Any]:

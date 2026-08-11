@@ -7,7 +7,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastmcp.server.auth import AccessToken, MultiAuth
+from fastmcp.server.auth import AccessToken, AuthContext, MultiAuth, run_auth_checks
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -20,6 +20,7 @@ from app.mcp_server import (
     _build_auth_provider,
     create_mcp_server,
     tool_annotations,
+    tool_auth,
 )
 from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
 from app.services import db_service, integration_client_service
@@ -68,7 +69,7 @@ def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monk
 
 async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) -> None:
     server = create_mcp_server(session_factory=_make_factory(test_db))
-    tools = await server.list_tools(run_middleware=False)
+    tools = await server.local_provider.list_tools()
     tool_names = {tool.name for tool in tools}
 
     assert tool_names == {
@@ -81,9 +82,14 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "get_work_location_summary",
         "get_time_tracking_summary",
         "list_labels",
+        "create_label",
+        "update_label",
         "delete_label",
         "get_gantt_tasks",
         "get_sync_status",
+        "get_public_holidays",
+        "get_school_holidays",
+        "get_paydates",
         "start_time_entry",
         "stop_time_entry",
         "create_time_tracking_task",
@@ -97,7 +103,47 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
         "create_gantt_task",
         "update_gantt_task",
         "delete_gantt_task",
+        "list_audit_entries",
+        "get_preferences",
+        "list_integration_clients",
+        "create_integration_client",
+        "rotate_integration_client",
+        "revoke_integration_client",
     }
+
+
+async def test_search_transform_replaces_large_initial_catalog() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+
+    assert {tool.name for tool in await server.list_tools()} == {
+        "whoami",
+        "search_tools",
+        "call_tool",
+    }
+
+
+async def test_search_tools_finds_time_summary() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+    result = await server.call_tool("search_tools", {"query": "summarize tracked working time"})
+
+    assert result.structured_content is not None
+    names = [item["name"] for item in result.structured_content["result"]]
+    assert "get_time_tracking_summary" in names
+
+
+def test_search_serializer_preserves_schema_and_capabilities() -> None:
+    from app.mcp_server import _search_serializer
+
+    tool = MagicMock(name="tool")
+    tool.name = "get_time_tracking_summary"
+    tool.description = "Summarize tracked time"
+    tool.parameters = {"type": "object", "properties": {}}
+    result = _search_serializer([tool])[0]
+
+    assert result["name"] == tool.name
+    assert result["input_schema"] == tool.parameters
+    assert result["required_tier"] == "owner"
+    assert result["effect"] == "read"
 
 
 async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: AsyncEngine) -> None:
@@ -105,7 +151,7 @@ async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: A
     registers tools from — this asserts that guarantee holds, and also
     that every capability entry has a sane effect/tier."""
     server = create_mcp_server(session_factory=_make_factory(test_db))
-    tools = await server.list_tools(run_middleware=False)
+    tools = await server.local_provider.list_tools()
     tool_names = {tool.name for tool in tools}
 
     assert tool_names == set(MCP_TOOL_CAPABILITIES)
@@ -120,7 +166,7 @@ async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: A
 
 async def test_registered_tools_advertise_explicit_safety_annotations() -> None:
     server = create_mcp_server(session_factory=MagicMock())
-    tools = await server.list_tools(run_middleware=False)
+    tools = await server.local_provider.list_tools()
 
     for tool in tools:
         annotations = tool.annotations
@@ -138,6 +184,81 @@ def test_write_annotations_distinguish_creation_from_destructive_changes() -> No
     assert tool_annotations("update_gantt_task").destructive_hint is True
     assert tool_annotations("delete_gantt_task").destructive_hint is True
     assert tool_annotations("future_tool_without_policy").destructive_hint is True
+
+
+async def test_integration_client_management_requires_interactive_oidc() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+    tools = {tool.name: tool for tool in await server.local_provider.list_tools()}
+    auth = tool_auth("create_integration_client")
+    assert auth is not None
+
+    def context(
+        auth_type: str,
+        preferred_username: str = "owner",
+        azp: str = "worktime",
+    ) -> AuthContext:
+        return AuthContext(
+            token=AccessToken(
+                token="test",
+                client_id="client",
+                scopes=[],
+                claims={
+                    "auth_type": auth_type,
+                    "preferred_username": preferred_username,
+                    "azp": azp,
+                },
+            ),
+            component=tools["create_integration_client"],
+        )
+
+    assert await run_auth_checks(auth, context("oidc"))
+    assert not await run_auth_checks(auth, context("integration_client"))
+    assert not await run_auth_checks(
+        auth,
+        context("oidc", "service-account-automation", "worktime-mcp"),
+    )
+    assert not await run_auth_checks(
+        auth,
+        context("oidc", "service-account-automation", "worktime"),
+    )
+    assert not await run_auth_checks(auth, context("oidc", azp="worktime-mcp"))
+
+
+async def test_mcp_label_preferences_and_audit_reads(test_db: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> None:
+    factory = _make_factory(test_db)
+    async with factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="mcp-gaps", display_name="MCP Gaps"))
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    backend = WorktimeMcpBackend(factory)
+
+    label = await backend.create_label("Focus", "#112233")
+    updated = await backend.update_label(label["id"], name="Deep focus")
+    preferences = await backend.get_preferences()
+    audit = await backend.list_audit_entries()
+
+    assert updated["name"] == "Deep focus"
+    assert preferences is None
+    assert audit["total"] >= 2
+
+
+async def test_mcp_integration_client_lifecycle(test_db: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> None:
+    factory = _make_factory(test_db)
+    async with factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="mcp-integrations", display_name="MCP Integrations")
+        )
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    backend = WorktimeMcpBackend(factory)
+
+    created = await backend.create_integration_client("Automation")
+    with pytest.raises(ValueError, match="at least one scope is required"):
+        await backend.create_integration_client("No scopes", scopes=[])
+    rotated = await backend.rotate_integration_client(created["id"])
+    revoked = await backend.revoke_integration_client(created["id"])
+
+    assert created["key"].startswith("wtic_")
+    assert rotated["key"] != created["key"]
+    assert revoked == {"revoked": True, "client_id": created["id"]}
 
 
 async def test_whoami_and_time_tracking_summary_happy_path(

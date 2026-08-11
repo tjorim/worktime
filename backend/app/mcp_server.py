@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -21,16 +21,18 @@ from enum import StrEnum
 from typing import Any
 
 from fastmcp import FastMCP
-from fastmcp.server.auth import AccessToken, MultiAuth, TokenVerifier
+from fastmcp.server.auth import AccessToken, AuthCheck, AuthContext, MultiAuth, TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.server.transforms.search import BM25SearchTransform
+from fastmcp.tools.base import Tool
 from mcp.types import ToolAnnotations
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import settings
 from app.database.engine import get_session_factory
-from app.mcp import gantt, identity, schedule, time_off, time_tracking, work_location
+from app.mcp import account, gantt, holidays, identity, schedule, time_off, time_tracking, work_location
 from app.mcp.context import (
     McpAuthError,
     McpPermissionError,
@@ -40,12 +42,27 @@ from app.mcp.context import (
 from app.mcp.context import (
     map_domain_errors as _map_domain_errors,
 )
-from app.schemas import EntryFlag, EntryKind, EntryType
+from app.schemas import EntryFlag, EntryKind, EntryType, IntegrationClientScope
 from app.services import integration_client_service
 from app.services.db_service import get_user
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
+
+
+def _search_serializer(tools: Sequence[Tool]) -> list[dict[str, Any]]:
+    """Preserve callable schemas and Worktime capability metadata in search results."""
+    return [
+        {
+            "name": tool.name,
+            "description": tool.description or "",
+            "input_schema": tool.parameters,
+            "required_tier": MCP_TOOL_CAPABILITIES[tool.name].required_tier,
+            "effect": MCP_TOOL_CAPABILITIES[tool.name].effect.value,
+        }
+        for tool in tools
+    ]
+
 
 __all__ = [
     "McpAuthError",
@@ -220,6 +237,18 @@ class WorktimeMcpBackend:
         async with self._tool_context() as (context, db):
             return await schedule.get_sync_status(context, db)
 
+    async def get_public_holidays(self, year: int, country: str = "NL") -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await holidays.get_public_holidays(context, db, year, country)
+
+    async def get_school_holidays(self, year: int, country: str = "NL") -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await holidays.get_school_holidays(context, db, year, country)
+
+    async def get_paydates(self, year: int, country: str = "NL") -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await holidays.get_paydates(context, db, year, country)
+
     # ------------------------------------------------------------------
     # Time tracking
     # ------------------------------------------------------------------
@@ -235,6 +264,16 @@ class WorktimeMcpBackend:
     async def list_labels(self) -> dict[str, Any]:
         async with self._tool_context() as (context, db):
             return await time_tracking.list_labels(context, db)
+
+    @_map_domain_errors
+    async def create_label(self, name: str, color: str) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await time_tracking.create_label_tool(context, db, name, color)
+
+    @_map_domain_errors
+    async def update_label(self, label_id: str, name: str | None = None, color: str | None = None) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await time_tracking.update_label_tool(context, db, label_id, name, color)
 
     @_map_domain_errors
     async def delete_label(self, label_id: str) -> dict[str, Any]:
@@ -462,6 +501,42 @@ class WorktimeMcpBackend:
         async with self._tool_context() as (context, db):
             return await gantt.delete_gantt_task(context, db, task_id)
 
+    # ------------------------------------------------------------------
+    # Account data and managed integrations
+    # ------------------------------------------------------------------
+
+    async def list_audit_entries(self, limit: int = 100, before_id: int | None = None) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await account.list_audit_entries_tool(context, db, limit, before_id)
+
+    async def get_preferences(self) -> dict[str, Any] | None:
+        async with self._tool_context() as (context, db):
+            return await account.get_preferences(context, db)
+
+    async def list_integration_clients(self) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await account.list_integration_clients(context, db)
+
+    @_map_domain_errors
+    async def create_integration_client(
+        self,
+        name: str,
+        scopes: list[IntegrationClientScope] | None = None,
+        rate_limit_per_minute: int = 120,
+    ) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await account.create_integration_client_tool(context, db, name, scopes, rate_limit_per_minute)
+
+    @_map_domain_errors
+    async def rotate_integration_client(self, client_id: int) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await account.rotate_integration_client_tool(context, db, client_id)
+
+    @_map_domain_errors
+    async def revoke_integration_client(self, client_id: int) -> dict[str, Any]:
+        async with self._tool_context() as (context, db):
+            return await account.revoke_integration_client_tool(context, db, client_id)
+
 
 # ---------------------------------------------------------------------------
 # Capability manifest (issue #1054)
@@ -502,9 +577,14 @@ MCP_TOOL_CAPABILITIES: dict[str, ToolCapability] = {
     "get_work_location_summary": ToolCapability(ToolEffect.READ, "owner"),
     "get_time_tracking_summary": ToolCapability(ToolEffect.READ, "owner"),
     "list_labels": ToolCapability(ToolEffect.READ, "owner"),
+    "create_label": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "update_label": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
     "delete_label": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
     "get_gantt_tasks": ToolCapability(ToolEffect.READ, "owner"),
     "get_sync_status": ToolCapability(ToolEffect.READ, "owner"),
+    "get_public_holidays": ToolCapability(ToolEffect.READ, "owner"),
+    "get_school_holidays": ToolCapability(ToolEffect.READ, "owner"),
+    "get_paydates": ToolCapability(ToolEffect.READ, "owner"),
     "start_time_entry": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
     "stop_time_entry": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
     "create_time_tracking_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
@@ -518,7 +598,39 @@ MCP_TOOL_CAPABILITIES: dict[str, ToolCapability] = {
     "create_gantt_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
     "update_gantt_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
     "delete_gantt_task": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "list_audit_entries": ToolCapability(ToolEffect.READ, "owner"),
+    "get_preferences": ToolCapability(ToolEffect.READ, "owner"),
+    "list_integration_clients": ToolCapability(ToolEffect.READ, "owner"),
+    "create_integration_client": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "rotate_integration_client": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
+    "revoke_integration_client": ToolCapability(ToolEffect.PERSONAL_WRITE, "owner"),
 }
+
+_INTERACTIVE_ONLY_TOOLS = frozenset(
+    {
+        "list_integration_clients",
+        "create_integration_client",
+        "rotate_integration_client",
+        "revoke_integration_client",
+    }
+)
+
+
+def _require_interactive_auth(ctx: AuthContext) -> bool:
+    if ctx.token is None or ctx.token.claims.get("auth_type", "oidc") != "oidc":
+        return False
+    username = ctx.token.claims.get("preferred_username")
+    if isinstance(username, str) and username.startswith("service-account-"):
+        return False
+    interactive_client_ids = {
+        client_id.strip() for client_id in settings.MCP_INTERACTIVE_CLIENT_IDS.split(",") if client_id.strip()
+    }
+    return ctx.token.claims.get("azp") in interactive_client_ids
+
+
+def tool_auth(tool_name: str) -> AuthCheck | None:
+    """Hide credential-management tools from managed/service credentials."""
+    return _require_interactive_auth if tool_name in _INTERACTIVE_ONLY_TOOLS else None
 
 
 def tool_annotations(tool_name: str) -> ToolAnnotations:
@@ -550,10 +662,23 @@ def create_mcp_server(
         version=APP_VERSION,
         instructions="Worktime assistant tools — read and personal write access",
         auth=_build_auth_provider(factory),
+        transforms=[
+            BM25SearchTransform(
+                max_results=10,
+                always_visible=["whoami"],
+                search_tool_name="search_tools",
+                call_tool_name="call_tool",
+                search_result_serializer=_search_serializer,
+            )
+        ],
     )
 
     for tool_name in MCP_TOOL_CAPABILITIES:
-        server.tool(name=tool_name, annotations=tool_annotations(tool_name))(getattr(backend, tool_name))
+        server.tool(
+            name=tool_name,
+            annotations=tool_annotations(tool_name),
+            auth=tool_auth(tool_name),
+        )(getattr(backend, tool_name))
 
     return server
 
