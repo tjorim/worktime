@@ -251,12 +251,12 @@ async def test_mcp_integration_client_lifecycle(test_db: AsyncEngine, monkeypatc
     backend = WorktimeMcpBackend(factory)
 
     created = await backend.create_integration_client("Automation")
-    empty_scoped = await backend.create_integration_client("No scopes", scopes=[])
+    with pytest.raises(ValueError, match="at least one scope is required"):
+        await backend.create_integration_client("No scopes", scopes=[])
     rotated = await backend.rotate_integration_client(created["id"])
     revoked = await backend.revoke_integration_client(created["id"])
 
     assert created["key"].startswith("wtic_")
-    assert empty_scoped["scopes"] == []
     assert rotated["key"] != created["key"]
     assert revoked == {"revoked": True, "client_id": created["id"]}
 
