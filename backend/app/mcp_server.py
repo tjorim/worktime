@@ -619,6 +619,9 @@ _INTERACTIVE_ONLY_TOOLS = frozenset(
 def _require_interactive_auth(ctx: AuthContext) -> bool:
     if ctx.token is None or ctx.token.claims.get("auth_type", "oidc") != "oidc":
         return False
+    username = ctx.token.claims.get("preferred_username")
+    if isinstance(username, str) and username.startswith("service-account-"):
+        return False
     interactive_client_ids = {
         client_id.strip() for client_id in settings.MCP_INTERACTIVE_CLIENT_IDS.split(",") if client_id.strip()
     }

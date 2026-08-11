@@ -217,6 +217,10 @@ async def test_integration_client_management_requires_interactive_oidc() -> None
         auth,
         context("oidc", "service-account-automation", "worktime-mcp"),
     )
+    assert not await run_auth_checks(
+        auth,
+        context("oidc", "service-account-automation", "worktime"),
+    )
     assert not await run_auth_checks(auth, context("oidc", azp="worktime-mcp"))
 
 
@@ -247,10 +251,12 @@ async def test_mcp_integration_client_lifecycle(test_db: AsyncEngine, monkeypatc
     backend = WorktimeMcpBackend(factory)
 
     created = await backend.create_integration_client("Automation")
+    empty_scoped = await backend.create_integration_client("No scopes", scopes=[])
     rotated = await backend.rotate_integration_client(created["id"])
     revoked = await backend.revoke_integration_client(created["id"])
 
     assert created["key"].startswith("wtic_")
+    assert empty_scoped["scopes"] == []
     assert rotated["key"] != created["key"]
     assert revoked == {"revoked": True, "client_id": created["id"]}
 
