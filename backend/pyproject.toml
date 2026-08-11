@@ -62,4 +62,17 @@ known-first-party = ["app"]
 unresolved-attribute = "warn"
 
 [tool.uv]
-constraint-dependencies = ["fastmcp-slim==4.0.0b1"]
+# fastmcp is intentionally pinned to a prerelease (still pre-1.0 during its
+# v4 beta cycle) and requires an exact matching prerelease of fastmcp-slim,
+# a transitive dependency uv doesn't treat as "explicitly" prerelease the
+# same way. That inconsistency breaks specifically in the
+# `python_full_version >= '3.14'` resolution fork (this project's actual
+# Docker runtime — see backend/Dockerfile) whenever fastmcp itself moves to
+# a newer prerelease, which is exactly the update Dependabot needs to
+# propose. A `constraint-dependencies` pin on fastmcp-slim here is
+# redundant (fastmcp's own metadata already exact-pins it) and, worse, goes
+# stale the moment fastmcp bumps, since Dependabot only updates the
+# `dependencies` entry it's targeting — not this separate constraint —
+# breaking resolution outright instead of surfacing as an update PR.
+# Allowing prereleases project-wide removes the inconsistency instead.
+prerelease = "allow"
