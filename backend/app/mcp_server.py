@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -24,6 +24,8 @@ from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, MultiAuth, TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.server.transforms.search import BM25SearchTransform
+from fastmcp.tools.base import Tool
 from mcp.types import ToolAnnotations
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -46,6 +48,20 @@ from app.services.db_service import get_user
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
+
+
+def _search_serializer(tools: Sequence[Tool]) -> list[dict[str, Any]]:
+    """Preserve callable schemas and Worktime capability metadata in search results."""
+    return [
+        {
+            "name": tool.name,
+            "description": tool.description or "",
+            "input_schema": tool.parameters,
+            "required_tier": MCP_TOOL_CAPABILITIES[tool.name].required_tier,
+            "effect": MCP_TOOL_CAPABILITIES[tool.name].effect.value,
+        }
+        for tool in tools
+    ]
 
 __all__ = [
     "McpAuthError",
@@ -550,6 +566,15 @@ def create_mcp_server(
         version=APP_VERSION,
         instructions="Worktime assistant tools — read and personal write access",
         auth=_build_auth_provider(factory),
+        transforms=[
+            BM25SearchTransform(
+                max_results=10,
+                always_visible=["whoami"],
+                search_tool_name="search_tools",
+                call_tool_name="call_tool",
+                search_result_serializer=_search_serializer,
+            )
+        ],
     )
 
     for tool_name in MCP_TOOL_CAPABILITIES:

@@ -68,7 +68,7 @@ def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monk
 
 async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) -> None:
     server = create_mcp_server(session_factory=_make_factory(test_db))
-    tools = await server.list_tools(run_middleware=False)
+    tools = await server.local_provider.list_tools()
     tool_names = {tool.name for tool in tools}
 
     assert tool_names == {
@@ -100,12 +100,48 @@ async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) 
     }
 
 
+async def test_search_transform_replaces_large_initial_catalog() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+
+    assert {tool.name for tool in await server.list_tools()} == {
+        "whoami",
+        "search_tools",
+        "call_tool",
+    }
+
+
+async def test_search_tools_finds_time_summary() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+    result = await server.call_tool(
+        "search_tools", {"query": "summarize tracked working time"}
+    )
+
+    assert result.structured_content is not None
+    names = [item["name"] for item in result.structured_content["result"]]
+    assert "get_time_tracking_summary" in names
+
+
+def test_search_serializer_preserves_schema_and_capabilities() -> None:
+    from app.mcp_server import _search_serializer
+
+    tool = MagicMock(name="tool")
+    tool.name = "get_time_tracking_summary"
+    tool.description = "Summarize tracked time"
+    tool.parameters = {"type": "object", "properties": {}}
+    result = _search_serializer([tool])[0]
+
+    assert result["name"] == tool.name
+    assert result["input_schema"] == tool.parameters
+    assert result["required_tier"] == "owner"
+    assert result["effect"] == "read"
+
+
 async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: AsyncEngine) -> None:
     """MCP_TOOL_CAPABILITIES is the single source of truth create_mcp_server()
     registers tools from — this asserts that guarantee holds, and also
     that every capability entry has a sane effect/tier."""
     server = create_mcp_server(session_factory=_make_factory(test_db))
-    tools = await server.list_tools(run_middleware=False)
+    tools = await server.local_provider.list_tools()
     tool_names = {tool.name for tool in tools}
 
     assert tool_names == set(MCP_TOOL_CAPABILITIES)
@@ -120,7 +156,7 @@ async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: A
 
 async def test_registered_tools_advertise_explicit_safety_annotations() -> None:
     server = create_mcp_server(session_factory=MagicMock())
-    tools = await server.list_tools(run_middleware=False)
+    tools = await server.local_provider.list_tools()
 
     for tool in tools:
         annotations = tool.annotations
