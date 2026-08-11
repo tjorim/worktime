@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     OIDC_ISSUER_URL: str = "http://localhost:9000/application/o/worktime"
     # OIDC_AUDIENCE: Expected audience claim in the JWT (leave empty to skip audience check)
     OIDC_AUDIENCE: str = ""
+    # Comma-separated OIDC client IDs allowed to manage MCP credentials.
+    MCP_INTERACTIVE_CLIENT_IDS: str = "worktime,worktime-android"
     # OIDC_JWKS_URI: optional JWKS endpoint override; discovered from OIDC metadata when empty
     OIDC_JWKS_URI: str = ""
     # OIDC_ALGORITHMS: Comma-separated list of accepted signing algorithms

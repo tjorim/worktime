@@ -192,20 +192,32 @@ async def test_integration_client_management_requires_interactive_oidc() -> None
     auth = tool_auth("create_integration_client")
     assert auth is not None
 
-    def context(auth_type: str, preferred_username: str = "owner") -> AuthContext:
+    def context(
+        auth_type: str,
+        preferred_username: str = "owner",
+        azp: str = "worktime",
+    ) -> AuthContext:
         return AuthContext(
             token=AccessToken(
                 token="test",
                 client_id="client",
                 scopes=[],
-                claims={"auth_type": auth_type, "preferred_username": preferred_username},
+                claims={
+                    "auth_type": auth_type,
+                    "preferred_username": preferred_username,
+                    "azp": azp,
+                },
             ),
             component=tools["create_integration_client"],
         )
 
     assert await run_auth_checks(auth, context("oidc"))
     assert not await run_auth_checks(auth, context("integration_client"))
-    assert not await run_auth_checks(auth, context("oidc", "service-account-automation"))
+    assert not await run_auth_checks(
+        auth,
+        context("oidc", "service-account-automation", "worktime-mcp"),
+    )
+    assert not await run_auth_checks(auth, context("oidc", azp="worktime-mcp"))
 
 
 async def test_mcp_label_preferences_and_audit_reads(test_db: AsyncEngine, monkeypatch: pytest.MonkeyPatch) -> None:
