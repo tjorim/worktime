@@ -1,5 +1,6 @@
 """Tests for database engine, sessions, and initialization."""
 
+from collections.abc import Generator
 from unittest.mock import Mock
 
 import pytest
@@ -9,7 +10,7 @@ from app.database.init import init_db
 
 
 @pytest.fixture(autouse=True)
-def reset_database_engine_singleton() -> None:
+def reset_database_engine_singleton() -> Generator[None]:
     """Reset database engine singleton between tests for isolation."""
     existing_engine = database_engine._engine
     database_engine._engine = None

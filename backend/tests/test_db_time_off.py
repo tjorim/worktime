@@ -26,10 +26,13 @@ class TestTimeOffAuth:
         assert db_client.get("/api/time-off").status_code == 401
 
     def test_create_requires_auth(self, db_client: TestClient) -> None:
-        assert db_client.post(
-            "/api/time-off",
-            json={"date": "2026-06-01", "entry_type": "vacation"},
-        ).status_code == 401
+        assert (
+            db_client.post(
+                "/api/time-off",
+                json={"date": "2026-06-01", "entry_type": "vacation"},
+            ).status_code
+            == 401
+        )
 
     def test_delete_requires_auth(self, db_client: TestClient) -> None:
         assert db_client.delete("/api/time-off/entry-1").status_code == 401
@@ -55,16 +58,18 @@ class TestTimeOffAuth:
         entry = _create_entry(db_client, headers_a)
 
         assert db_client.get(f"/api/time-off/{entry['entry_id']}", headers=headers_b).status_code == 404
-        assert db_client.patch(
-            f"/api/time-off/{entry['entry_id']}",
-            json={"note": "forbidden"},
-            headers=headers_b,
-        ).status_code == 404
+        assert (
+            db_client.patch(
+                f"/api/time-off/{entry['entry_id']}",
+                json={"note": "forbidden"},
+                headers=headers_b,
+            ).status_code
+            == 404
+        )
         assert db_client.delete(f"/api/time-off/{entry['entry_id']}", headers=headers_b).status_code == 404
 
 
 class TestCreateTimeOff:
-
     def test_creates_date_entry(
         self,
         db_client: TestClient,
@@ -310,11 +315,14 @@ class TestGetPatchDeleteTimeOff:
         headers = auth_headers(user_id)
 
         assert db_client.get("/api/time-off/not-found", headers=headers).status_code == 404
-        assert db_client.patch(
-            "/api/time-off/not-found",
-            json={"note": "updated"},
-            headers=headers,
-        ).status_code == 404
+        assert (
+            db_client.patch(
+                "/api/time-off/not-found",
+                json={"note": "updated"},
+                headers=headers,
+            ).status_code
+            == 404
+        )
         assert db_client.delete("/api/time-off/not-found", headers=headers).status_code == 404
 
     def test_deleted_entry_can_be_recreated_with_same_entry_id(

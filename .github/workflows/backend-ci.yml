@@ -23,6 +23,9 @@ jobs:
   backend:
     name: Lint, Typecheck, Tests & Migrations
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://worktime:worktime@localhost:5432/worktime_test
+      TEST_DATABASE_URL: postgresql+asyncpg://worktime:worktime@localhost:5432/worktime_test
     defaults:
       run:
         working-directory: backend
@@ -55,19 +58,19 @@ jobs:
         run: uv sync --frozen
 
       - name: Lint (ruff check)
-        run: uv run ruff check app
+        run: uv run ruff check app tests
+
+      - name: Format (ruff format)
+        run: uv run ruff format --check app tests
 
       - name: Typecheck (ty)
-        run: uv run ty check app
+        run: uv run ty check app tests
 
       - name: Test
-        env:
-          DB_USER: worktime
-          DB_PASSWORD: worktime
-        run: TEST_DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@localhost/worktime_test" uv run pytest
+        run: uv run pytest
 
       - name: Migration upgrade check
-        env:
-          DB_USER: worktime
-          DB_PASSWORD: worktime
-        run: DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@localhost/worktime_test" uv run alembic upgrade head
+        run: uv run alembic upgrade head
+
+      - name: Verify migrations are in sync with models
+        run: uv run alembic check

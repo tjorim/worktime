@@ -45,16 +45,12 @@ class TestScheduleStructure:
     def test_5shift_pattern(self) -> None:
         from app.services.read_models_service import _SCHEDULES  # noqa: PLC2701
 
-        assert list(_SCHEDULES["5-shift"].schedule_pattern) == [
-            "M", "M", "L", "L", "N", "N", "O", "O", "O", "O"
-        ]
+        assert list(_SCHEDULES["5-shift"].schedule_pattern) == ["M", "M", "L", "L", "N", "N", "O", "O", "O", "O"]
 
     def test_9_5_pattern(self) -> None:
         from app.services.read_models_service import _SCHEDULES  # noqa: PLC2701
 
-        assert list(_SCHEDULES["9-5"].schedule_pattern) == [
-            "D", "D", "D", "D", "D", "O", "O"
-        ]
+        assert list(_SCHEDULES["9-5"].schedule_pattern) == ["D", "D", "D", "D", "D", "O", "O"]
 
     def test_night_shift_spans_midnight(self) -> None:
         from app.services.read_models_service import _SCHEDULES  # noqa: PLC2701

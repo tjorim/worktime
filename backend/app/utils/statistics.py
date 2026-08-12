@@ -6,9 +6,10 @@ statistics module.
 """
 
 import statistics
+from collections.abc import Sequence
 
 
-def calculate_avg(measurements: list[float]) -> float:
+def calculate_avg(measurements: Sequence[float]) -> float:
     """Calculate the mean (average) of a list of measurements.
 
     Args:
@@ -27,7 +28,7 @@ def calculate_avg(measurements: list[float]) -> float:
     return statistics.mean(measurements)
 
 
-def calculate_percentile(measurements: list[float], percentile: int) -> float:
+def calculate_percentile(measurements: Sequence[float], percentile: int) -> float:
     """Calculate the specified percentile of a list of measurements.
 
     Uses Python's quantiles function to calculate the percentile value.
@@ -60,7 +61,7 @@ def calculate_percentile(measurements: list[float], percentile: int) -> float:
     return statistics.quantiles(measurements, n=100, method="inclusive")[percentile - 1]
 
 
-def calculate_stats(measurements: list[float]) -> dict[str, float]:
+def calculate_stats(measurements: Sequence[float]) -> dict[str, float]:
     """Calculate both average and 95th percentile statistics.
 
     This is a convenience function that combines calculate_avg and

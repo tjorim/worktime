@@ -447,47 +447,74 @@ def test_cross_user_cannot_read_modify_or_delete_time_tracking_resources(
     assert template_response.status_code == 201
     template_id = template_response.json()["id"]
 
-    assert db_client.get(
-        f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.put(
-        f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
-        json={"name": "Intrusion", "color": "#654321"},
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.delete(
-        f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
+    assert (
+        db_client.get(
+            f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.put(
+            f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
+            json={"name": "Intrusion", "color": "#654321"},
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.delete(
+            f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
 
-    assert db_client.get(
-        f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.put(
-        f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
-        json={"text": "Intrusion"},
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.delete(
-        f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
+    assert (
+        db_client.get(
+            f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.put(
+            f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
+            json={"text": "Intrusion"},
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.delete(
+            f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
 
-    assert db_client.get(
-        f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.put(
-        f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
-        json={"text": "Intrusion"},
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.delete(
-        f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
+    assert (
+        db_client.get(
+            f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.put(
+            f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
+            json={"text": "Intrusion"},
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.delete(
+            f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
 
 
 def test_user_id_query_param_is_optional_and_derived_from_auth(
@@ -589,7 +616,5 @@ def test_list_labels_pagination(
     # Exceeding the server-side cap is rejected rather than silently clamped.
     from app.utils.pagination import MAX_PAGE_LIMIT
 
-    too_large = db_client.get(
-        f"/api/time-tracking/labels?limit={MAX_PAGE_LIMIT + 1}", headers=headers
-    )
+    too_large = db_client.get(f"/api/time-tracking/labels?limit={MAX_PAGE_LIMIT + 1}", headers=headers)
     assert too_large.status_code == 422

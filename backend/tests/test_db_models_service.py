@@ -414,17 +414,13 @@ async def test_delete_user_removes_all_user_scoped_rows(db_session: AsyncSession
     )
 
     for model in user_scoped_models:
-        count = await db_session.scalar(
-            select(func.count()).select_from(model).where(model.user_id == user.id)
-        )
+        count = await db_session.scalar(select(func.count()).select_from(model).where(model.user_id == user.id))
         assert count == 1
 
     await delete_user(db_session, user.id)
 
     for model in user_scoped_models:
-        count = await db_session.scalar(
-            select(func.count()).select_from(model).where(model.user_id == user.id)
-        )
+        count = await db_session.scalar(select(func.count()).select_from(model).where(model.user_id == user.id))
         assert count == 0
 
 

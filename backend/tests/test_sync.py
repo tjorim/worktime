@@ -6,7 +6,9 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -780,9 +782,7 @@ class TestSyncTimeOffEntries:
         assert results[0]["status"] == "ok"
         assert results[0]["id"] == entry_id
 
-    def test_push_create_time_off_entry_applies_schema_defaults(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_push_create_time_off_entry_applies_schema_defaults(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-create-defaults")
         headers = auth_headers(user_id)
@@ -808,16 +808,12 @@ class TestSyncTimeOffEntries:
 
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
-        created_entries = [
-            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
-        ]
+        created_entries = [item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id]
         assert len(created_entries) == 1
         assert created_entries[0]["entry_type"] == "vacation"
         assert created_entries[0]["entry_flag"] == "full_day"
 
-    def test_push_update_time_off_entry_allows_patch_without_kind(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_push_update_time_off_entry_allows_patch_without_kind(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-update-patch")
         headers = auth_headers(user_id)
@@ -861,9 +857,7 @@ class TestSyncTimeOffEntries:
 
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
-        updated_entries = [
-            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
-        ]
+        updated_entries = [item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id]
         assert len(updated_entries) == 1
         assert updated_entries[0]["entry_kind"] == "date"
         assert updated_entries[0]["date"] == "2026-07-03"
@@ -962,9 +956,7 @@ class TestSyncTimeOffEntries:
 
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
-        deleted_entries = [
-            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
-        ]
+        deleted_entries = [item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id]
         assert len(deleted_entries) == 1
         assert deleted_entries[0]["deleted_at"] is not None
 
@@ -1028,9 +1020,7 @@ class TestSyncTimeOffEntries:
 
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
-        deleted_entries = [
-            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
-        ]
+        deleted_entries = [item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id]
         assert len(deleted_entries) == 1
         assert deleted_entries[0]["deleted_at"] is not None
 
@@ -1070,9 +1060,7 @@ class TestSyncTimeOffEntries:
         assert pull_resp.json()["time_off_entries"][0]["start_date"] == "2026-09-01"
         assert pull_resp.json()["time_off_entries"][0]["end_date"] == "2026-09-03"
 
-    def test_status_includes_time_off_and_preferences_fields(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_status_includes_time_off_and_preferences_fields(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-status-new-fields")
         headers = auth_headers(user_id)
@@ -1197,9 +1185,7 @@ class TestSyncMultiDeviceFlow:
     # §3 — Incremental pull across devices (ongoing sync)
     # -------------------------------------------------------------------
 
-    def test_incremental_pull_with_since_across_devices(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_incremental_pull_with_since_across_devices(self, db_client: TestClient, auth_headers) -> None:
         """
         Device A pushes an initial label. Device B performs a full pull and
         stores the returned server_timestamp as its cursor. Device A later
@@ -1269,9 +1255,7 @@ class TestSyncMultiDeviceFlow:
     # §3 — User data isolation (cross-user invariant)
     # -------------------------------------------------------------------
 
-    def test_user_data_is_isolated_between_accounts(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_user_data_is_isolated_between_accounts(self, db_client: TestClient, auth_headers) -> None:
         """
         Records pushed by User A are never visible to User B's pull.
         This validates the per-user data isolation invariant.
@@ -1318,9 +1302,7 @@ class TestSyncMultiDeviceFlow:
     # §5 — Concurrent edit conflict between devices
     # -------------------------------------------------------------------
 
-    def test_concurrent_edit_conflict_between_devices(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_concurrent_edit_conflict_between_devices(self, db_client: TestClient, auth_headers) -> None:
         """
         Both Device A and Device B edit the same record while offline.
         When both push, the later timestamp wins; the earlier push is
@@ -1449,9 +1431,7 @@ class TestSyncMultiDeviceFlow:
     # §2 — First-sync status endpoint reflects all entity types
     # -------------------------------------------------------------------
 
-    def test_sync_status_reflects_all_entity_types(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_sync_status_reflects_all_entity_types(self, db_client: TestClient, auth_headers) -> None:
         """
         After pushing data for every synced entity type, the status
         endpoint must report a non-null timestamp for each entity.
@@ -1651,9 +1631,7 @@ class TestSyncEventManager:
         manager.subscribe(user_id=7, queue=queue)
 
         with patch.object(manager, "_enqueue_local", wraps=manager._enqueue_local) as spy:
-            manager._pg_listener_callback(
-                conn=MagicMock(), pid=12345, channel="worktime_sync_changed", payload="7"
-            )
+            manager._pg_listener_callback(conn=MagicMock(), pid=12345, channel="worktime_sync_changed", payload="7")
             spy.assert_called_once_with(7)
         assert not queue.empty()
 
@@ -1725,8 +1703,11 @@ class TestSyncEventsEndpoint:
         assert response.headers.get("x-accel-buffering") == "no"
 
         # Close the body iterator so the manager's finally block runs and
-        # unsubscribes the connection from the SyncEventManager.
-        await response.body_iterator.aclose()
+        # unsubscribes the connection from the SyncEventManager. body_iterator
+        # is typed as a plain AsyncIterable by Starlette, which doesn't
+        # guarantee aclose() at the type level even though it's always an
+        # async generator here at runtime.
+        await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
 
     def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
         """Push must succeed even if broadcast_sync_changed raises an exception."""
@@ -1796,9 +1777,7 @@ class TestSyncEventsEndpoint:
 class TestSyncCorrectnessFixes:
     """Regression tests for LWW/cursor correctness fixes."""
 
-    def test_sync_label_delete_ignores_soft_deleted_references(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_sync_label_delete_ignores_soft_deleted_references(self, db_client: TestClient, auth_headers) -> None:
         """A label whose only referencing tasks are soft-deleted must be deletable.
 
         Previously the sync push counted soft-deleted tasks as active references,
@@ -1859,9 +1838,7 @@ class TestSyncCorrectnessFixes:
         result = delete_label_resp.json()["results"]["labels"][0]
         assert result["status"] == "ok", result
 
-    def test_sync_label_delete_conflicts_on_active_reference(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_sync_label_delete_conflicts_on_active_reference(self, db_client: TestClient, auth_headers) -> None:
         """A label with an *active* referencing task must still refuse deletion."""
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "label-active-ref-user")
@@ -1979,9 +1956,7 @@ class TestSyncCorrectnessFixes:
         )
         assert bad_gantt_resp.status_code == 400
 
-    def test_push_task_create_rejects_stop_time_before_start_time(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_push_task_create_rejects_stop_time_before_start_time(self, db_client: TestClient, auth_headers) -> None:
         """Sync push must reject an inverted time range, matching the REST create_task check.
 
         The REST path (db_service.create_task) already rejects
@@ -2105,9 +2080,7 @@ class TestSyncCorrectnessFixes:
 
         # A legitimate edit stamped further ahead than the clamp ceiling must
         # still win — proving the bogus value did not get stored as-is.
-        legitimate_future_edit = (
-            datetime.now(UTC) + _MAX_CLOCK_SKEW + timedelta(minutes=1)
-        ).isoformat()
+        legitimate_future_edit = (datetime.now(UTC) + _MAX_CLOCK_SKEW + timedelta(minutes=1)).isoformat()
         edit_resp = db_client.post(
             "/api/sync/push",
             json={
@@ -2129,9 +2102,7 @@ class TestSyncCorrectnessFixes:
         pulled = next(t for t in pull_resp.json()["tasks"] if t["id"] == task_id)
         assert pulled["text"] == "Fixed-clock correction wins"
 
-    def test_pull_server_timestamp_includes_safety_overlap(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_pull_server_timestamp_includes_safety_overlap(self, db_client: TestClient, auth_headers) -> None:
         """The pull cursor must lag real time so concurrent pushes are not skipped.
 
         pull_changes subtracts _PULL_CURSOR_OVERLAP from the reported
@@ -2408,11 +2379,7 @@ class TestSyncCorrectnessFixes:
         )
         db_client.post(
             "/api/sync/push",
-            json={
-                "labels": [
-                    {"id": tombstoned_id, "action": "delete", "client_updated_at": _ts(-20)}
-                ]
-            },
+            json={"labels": [{"id": tombstoned_id, "action": "delete", "client_updated_at": _ts(-20)}]},
             headers=headers,
         )
 
@@ -2454,9 +2421,7 @@ class TestSyncCorrectnessFixes:
         assert result["status"] == "conflict"
         assert "already exists" in result["conflict_reason"]
 
-    def test_rest_update_wins_over_stale_sync_push(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_rest_update_wins_over_stale_sync_push(self, db_client: TestClient, auth_headers) -> None:
         """An edit made via the REST/MCP path must not be silently reverted.
 
         REST updates now bump client_updated_at, so a sync push carrying a
@@ -2519,9 +2484,7 @@ class TestSyncCorrectnessFixes:
         pulled = [t for t in pull_resp.json()["tasks"] if t["id"] == task_id]
         assert pulled[0]["text"] == "Edited via REST"
 
-    def test_push_creates_gantt_linked_task_in_single_batch(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_push_creates_gantt_linked_task_in_single_batch(self, db_client: TestClient, auth_headers) -> None:
         """A single batch may create a gantt task and a task linking to it.
 
         First-sync uploads send everything in one push; gantt tasks must be
@@ -2805,24 +2768,17 @@ class TestBulkDeleteGuard:
     @staticmethod
     def _delete_payload(label_ids: list[str], **extra) -> dict:  # noqa: ANN003
         return {
-            "labels": [
-                {"id": label_id, "action": "delete", "client_updated_at": _ts(5)}
-                for label_id in label_ids
-            ],
+            "labels": [{"id": label_id, "action": "delete", "client_updated_at": _ts(5)} for label_id in label_ids],
             **extra,
         }
 
-    def test_refuses_a_push_that_would_wipe_the_account(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_refuses_a_push_that_would_wipe_the_account(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "bulk-delete-guard-user")
         headers = auth_headers(user_id)
         label_ids = self._seed_labels(db_client, headers, 30)
 
-        resp = db_client.post(
-            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
-        )
+        resp = db_client.post("/api/sync/push", json=self._delete_payload(label_ids), headers=headers)
         assert resp.status_code == 409, resp.text
 
         # Nothing was applied: the guard runs before any record is touched.
@@ -2830,9 +2786,7 @@ class TestBulkDeleteGuard:
         assert pull.status_code == 200
         assert all(label["deleted_at"] is None for label in pull.json()["labels"])
 
-    def test_allows_the_same_push_when_the_client_opts_in(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_allows_the_same_push_when_the_client_opts_in(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "bulk-delete-optin-user")
         headers = auth_headers(user_id)
@@ -2849,37 +2803,27 @@ class TestBulkDeleteGuard:
         pull = db_client.get("/api/sync/pull", headers=headers)
         assert all(label["deleted_at"] is not None for label in pull.json()["labels"])
 
-    def test_allows_deleting_a_minority_of_records(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_allows_deleting_a_minority_of_records(self, db_client: TestClient, auth_headers) -> None:
         """Ordinary pruning stays well under the guard's threshold."""
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "bulk-delete-minority-user")
         headers = auth_headers(user_id)
         label_ids = self._seed_labels(db_client, headers, 60)
 
-        resp = db_client.post(
-            "/api/sync/push", json=self._delete_payload(label_ids[:30]), headers=headers
-        )
+        resp = db_client.post("/api/sync/push", json=self._delete_payload(label_ids[:30]), headers=headers)
         assert resp.status_code == 200, resp.text
 
-    def test_allows_deleting_everything_in_a_small_account(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_allows_deleting_everything_in_a_small_account(self, db_client: TestClient, auth_headers) -> None:
         """Below BULK_DELETE_MIN_RECORDS the blast radius is small enough not to gate."""
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "bulk-delete-small-user")
         headers = auth_headers(user_id)
         label_ids = self._seed_labels(db_client, headers, 5)
 
-        resp = db_client.post(
-            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
-        )
+        resp = db_client.post("/api/sync/push", json=self._delete_payload(label_ids), headers=headers)
         assert resp.status_code == 200, resp.text
 
-    def test_replayed_deletes_do_not_trip_the_guard(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_replayed_deletes_do_not_trip_the_guard(self, db_client: TestClient, auth_headers) -> None:
         """A re-flushed outbox is full of already-applied deletes.
 
         Counting those would let a client deadlock against its own earlier
@@ -2899,14 +2843,10 @@ class TestBulkDeleteGuard:
 
         # Same batch again, this time without the opt-in — every delete is now a
         # no-op against an already-tombstoned row, so nothing is at risk.
-        replay = db_client.post(
-            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
-        )
+        replay = db_client.post("/api/sync/push", json=self._delete_payload(label_ids), headers=headers)
         assert replay.status_code == 200, replay.text
 
-    def test_guard_ignores_another_user_s_records(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_guard_ignores_another_user_s_records(self, db_client: TestClient, auth_headers) -> None:
         """The active-record count is per user, not global."""
         admin_h = auth_headers(1, is_admin=True)
         other_id = _create_user(db_client, admin_h, "bulk-delete-bystander")
@@ -2918,14 +2858,10 @@ class TestBulkDeleteGuard:
 
         # 30 of this user's 30 records — a wipe, regardless of how much data
         # the unrelated account happens to hold.
-        resp = db_client.post(
-            "/api/sync/push", json=self._delete_payload(label_ids), headers=headers
-        )
+        resp = db_client.post("/api/sync/push", json=self._delete_payload(label_ids), headers=headers)
         assert resp.status_code == 409, resp.text
 
-    def test_declared_total_refuses_the_first_chunk_of_a_split_wipe(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_declared_total_refuses_the_first_chunk_of_a_split_wipe(self, db_client: TestClient, auth_headers) -> None:
         """A chunked destructive push must be refused before its first chunk lands.
 
         Each chunk is its own transaction, so a per-chunk view of 1500 deletes
@@ -2949,9 +2885,7 @@ class TestBulkDeleteGuard:
         pull = db_client.get("/api/sync/pull", headers=headers)
         assert all(label["deleted_at"] is None for label in pull.json()["labels"])
 
-    def test_declared_total_is_ignored_when_the_client_opted_in(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_declared_total_is_ignored_when_the_client_opted_in(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "bulk-delete-declared-optin")
         headers = auth_headers(user_id)
@@ -2959,16 +2893,12 @@ class TestBulkDeleteGuard:
 
         resp = db_client.post(
             "/api/sync/push",
-            json=self._delete_payload(
-                label_ids[:20], declared_delete_total=40, allow_bulk_delete=True
-            ),
+            json=self._delete_payload(label_ids[:20], declared_delete_total=40, allow_bulk_delete=True),
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
 
-    def test_a_modest_declared_total_still_passes(
-        self, db_client: TestClient, auth_headers
-    ) -> None:
+    def test_a_modest_declared_total_still_passes(self, db_client: TestClient, auth_headers) -> None:
         """Declaring a total only tightens the guard where it should."""
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "bulk-delete-declared-modest")

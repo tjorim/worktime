@@ -52,7 +52,10 @@ SAMPLE_SCHOOL_HOLIDAYS = [
         "startDate": "2026-02-14",
         "endDate": "2026-02-22",
         "type": "SchoolHolidays",
-        "name": [{"language": "EN", "text": "Carnival/Spring Half-Term"}, {"language": "NL", "text": "Voorjaarsvakantie"}],
+        "name": [
+            {"language": "EN", "text": "Carnival/Spring Half-Term"},
+            {"language": "NL", "text": "Voorjaarsvakantie"},
+        ],
         "regionalScope": "Regional",
         "temporalScope": "FullDay",
         "nationwide": False,
@@ -62,6 +65,7 @@ SAMPLE_SCHOOL_HOLIDAYS = [
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _mock_httpx_client(status_code: int = 200, json_data=None, raise_exc=None):
     """Return a fully-wired httpx.AsyncClient mock context manager."""
@@ -83,6 +87,7 @@ def _mock_httpx_client(status_code: int = 200, json_data=None, raise_exc=None):
 
 
 # ── public holidays ───────────────────────────────────────────────────────────
+
 
 class TestGetPublicHolidays:
     """Tests for GET /api/holidays/public."""
@@ -264,7 +269,9 @@ class TestGetPublicHolidays:
         assert response.status_code == 400
         assert response.json() == {"detail": "Unsupported country code: BE. Only NL is supported."}
 
-    @pytest.mark.parametrize("path", ["/api/holidays/public", "/api/holidays/school", "/api/holidays/longweekend", "/api/holidays/paydates"])
+    @pytest.mark.parametrize(
+        "path", ["/api/holidays/public", "/api/holidays/school", "/api/holidays/longweekend", "/api/holidays/paydates"]
+    )
     def test_year_out_of_range_returns_422(self, db_client: TestClient, path: str):
         """Holiday endpoints validate the year query parameter consistently."""
         response = db_client.get(f"{path}?country=NL&year=2200")
@@ -273,6 +280,7 @@ class TestGetPublicHolidays:
 
 
 # ── school holidays ───────────────────────────────────────────────────────────
+
 
 class TestGetSchoolHolidays:
     """Tests for GET /api/holidays/school."""
@@ -378,6 +386,7 @@ class TestGetSchoolHolidays:
 
 # ── staleness helpers ─────────────────────────────────────────────────────────
 
+
 class TestIsStale:
     """Unit tests for the _is_stale staleness check."""
 
@@ -426,6 +435,7 @@ class TestIsStale:
 
 # ── payday computation ────────────────────────────────────────────────────────
 
+
 class TestPaydayComputation:
     """Unit tests for payday calculation helpers."""
 
@@ -450,42 +460,49 @@ class TestPaydayComputation:
     def test_is_business_day_weekday_no_holiday(self):
         """A regular Monday is a business day."""
         from datetime import date
+
         # 2026-01-05 is a Monday
         assert _is_business_day(date(2026, 1, 5), set())
 
     def test_is_business_day_saturday(self):
         """Saturday is not a business day."""
         from datetime import date
+
         # 2026-01-03 is a Saturday
         assert not _is_business_day(date(2026, 1, 3), set())
 
     def test_is_business_day_sunday(self):
         """Sunday is not a business day."""
         from datetime import date
+
         # 2026-01-04 is a Sunday
         assert not _is_business_day(date(2026, 1, 4), set())
 
     def test_is_business_day_public_holiday(self):
         """A public holiday weekday is not a business day."""
         from datetime import date
+
         # 2026-01-01 is a Thursday (New Year's Day)
         assert not _is_business_day(date(2026, 1, 1), {"2026-01-01"})
 
     def test_payday_regular_month_on_weekday(self):
         """Feb 2026: 25th is a Wednesday — payday is the 25th."""
         from datetime import date
+
         payday = _payday_for_month(2026, 2, set())
         assert payday == date(2026, 2, 25)
 
     def test_payday_regular_month_shifts_back_over_weekend(self):
         """Jan 2026: 25th is a Sunday — payday moves back to Friday the 23rd."""
         from datetime import date
+
         payday = _payday_for_month(2026, 1, set())
         assert payday == date(2026, 1, 23)
 
     def test_payday_december_christmas_on_25th(self):
         """Dec 2026: 25th is a Friday and is a holiday — start from 23rd."""
         from datetime import date
+
         # 2026-12-25 is a Friday and is Christmas Day (public holiday)
         holiday_dates = {"2026-12-25"}
         payday = _payday_for_month(2026, 12, holiday_dates)
@@ -495,6 +512,7 @@ class TestPaydayComputation:
     def test_payday_december_no_holiday_on_25th(self):
         """Dec 2026: 25th is a Friday and NOT a holiday — treat as normal (walk back for weekend)."""
         from datetime import date
+
         # 2026-12-25 is a Friday (no holiday listed)
         payday = _payday_for_month(2026, 12, set())
         # 25th is a Friday, not a weekend or holiday — payday is the 25th
@@ -508,6 +526,7 @@ class TestPaydayComputation:
     def test_compute_paydates_format_is_iso(self):
         """All returned dates are valid ISO YYYY-MM-DD strings."""
         from datetime import date
+
         paydates = compute_paydates(2026, SAMPLE_PUBLIC_HOLIDAYS)
         for d in paydates:
             # date.fromisoformat raises ValueError for invalid formats
@@ -516,6 +535,7 @@ class TestPaydayComputation:
 
 
 # ── paydates endpoint ─────────────────────────────────────────────────────────
+
 
 class TestGetPaydates:
     """Tests for GET /api/holidays/paydates."""
@@ -534,6 +554,7 @@ class TestGetPaydates:
     def test_paydates_are_valid_iso_dates(self, db_client: TestClient):
         """All returned paydates parse as YYYY-MM-DD."""
         from datetime import date
+
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
             response = db_client.get("/api/holidays/paydates?country=NL&year=2026")
@@ -585,9 +606,7 @@ class TestGetLongWeekends:
         """Successful upstream call returns JSON array of long weekend periods."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
+            response = db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
 
         assert response.status_code == 200
         data = response.json()
@@ -610,9 +629,7 @@ class TestGetLongWeekends:
         """availableBridgeDays is forwarded to the upstream as a query param."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=3"
-            )
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=3")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         call_kwargs = mock_http_client.get.call_args.kwargs
@@ -625,9 +642,7 @@ class TestGetLongWeekends:
 
         mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
 
         assert cache.get_holiday("longweekend:NL:2026:1") is not None
 
@@ -635,12 +650,8 @@ class TestGetLongWeekends:
         """Second identical request uses the in-memory cache and skips the upstream."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
-            db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1
@@ -652,12 +663,8 @@ class TestGetLongWeekends:
         ctx2 = _mock_httpx_client(200, [])
 
         with patch("app.routers.holidays.httpx.AsyncClient", side_effect=[ctx1, ctx2]):
-            db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
-            db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=2"
-            )
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=2")
 
         assert cache.get_holiday("longweekend:NL:2026:1") is not None
         assert cache.get_holiday("longweekend:NL:2026:2") is not None
@@ -666,9 +673,7 @@ class TestGetLongWeekends:
         """503 is returned when the upstream responds with a non-2xx status."""
         mock_ctx = _mock_httpx_client(500)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
+            response = db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
 
         assert response.status_code == 503
 
@@ -676,9 +681,7 @@ class TestGetLongWeekends:
         """503 is returned when the upstream raises a network exception."""
         mock_ctx = _mock_httpx_client(raise_exc=Exception("network error"))
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get(
-                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
-            )
+            response = db_client.get("/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1")
 
         assert response.status_code == 503
 

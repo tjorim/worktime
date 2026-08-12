@@ -231,16 +231,22 @@ class TestPutPreferences:
         headers_a = auth_headers(user_a)
         headers_b = auth_headers(user_b)
 
-        assert db_client.put(
-            "/api/preferences",
-            json={"data": {"theme": "dark"}, "client_updated_at": _ts()},
-            headers=headers_a,
-        ).status_code == 200
-        assert db_client.put(
-            "/api/preferences",
-            json={"data": {"theme": "light"}, "client_updated_at": _ts(1)},
-            headers=headers_b,
-        ).status_code == 200
+        assert (
+            db_client.put(
+                "/api/preferences",
+                json={"data": {"theme": "dark"}, "client_updated_at": _ts()},
+                headers=headers_a,
+            ).status_code
+            == 200
+        )
+        assert (
+            db_client.put(
+                "/api/preferences",
+                json={"data": {"theme": "light"}, "client_updated_at": _ts(1)},
+                headers=headers_b,
+            ).status_code
+            == 200
+        )
 
         resp_a = db_client.get("/api/preferences", headers=headers_a)
         assert resp_a.status_code == 200

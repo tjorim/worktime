@@ -318,7 +318,9 @@ async def test_decode_token_expired(monkeypatch) -> None:
     monkeypatch.setattr(oidc_config, "_get_jwks", fake_get_jwks)
     monkeypatch.setattr(oidc_config.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
     monkeypatch.setattr(oidc_config, "_find_signing_key", lambda jwks, kid: SimpleNamespace(key=object()))
-    monkeypatch.setattr(oidc_config.jwt, "decode", lambda *a, **kw: (_ for _ in ()).throw(ExpiredSignatureError("expired")))
+    monkeypatch.setattr(
+        oidc_config.jwt, "decode", lambda *a, **kw: (_ for _ in ()).throw(ExpiredSignatureError("expired"))
+    )
 
     with pytest.raises(oidc_config.OIDCTokenError, match="expired"):
         await oidc_config.decode_token("some.token.here")
@@ -394,7 +396,7 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
         async def execute(self, _query):
             self.calls += 1
             if self.calls == 1:
-                return FakeResult(None)   # oidc_subject lookup → not found
+                return FakeResult(None)  # oidc_subject lookup → not found
             if self.calls == 2:
                 return FakeResult(object())  # username "alice" already taken
             return FakeResult(None)  # "alice-sub-abc1" is available
