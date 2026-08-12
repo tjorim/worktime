@@ -19,6 +19,7 @@ def client():
 @pytest.fixture
 def readiness_client(client):
     """Test client with DB dependency override and SuperTokens mock applied."""
+
     async def mock_db():
         yield AsyncMock()
 
@@ -99,5 +100,3 @@ async def test_jwks_reachable_coalesces_concurrent_cache_misses(monkeypatch):
 
     assert results == [True] * 5
     assert calls == 1
-
-

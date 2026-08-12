@@ -67,16 +67,16 @@ class Label(ClientTimestampMixin, Base):
     __tablename__ = "labels"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String)
     color: Mapped[str] = mapped_column(String)
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
     updated_at: Mapped[dt_datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now
     )
-    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index(
@@ -87,6 +87,14 @@ class Label(ClientTimestampMixin, Base):
             postgresql_where=sql_text("deleted_at IS NULL"),
         ),
         Index("ix_time_tracking_labels_user_id_updated_at", "user_id", "updated_at"),
+        # This table was renamed from time_tracking_labels in production, and a
+        # table RENAME does not carry over dependent index names — these three
+        # single-column indexes keep their pre-rename names to match what's
+        # actually live, same as the composite index above and the
+        # id/user_id constraint names in migrations/versions/001_initial.py.
+        Index("ix_time_tracking_labels_user_id", "user_id"),
+        Index("ix_time_tracking_labels_updated_at", "updated_at"),
+        Index("ix_time_tracking_labels_deleted_at", "deleted_at"),
     )
 
 
@@ -368,7 +376,7 @@ class IntegrationClient(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    key_hash: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    key_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
     key_preview: Mapped[str] = mapped_column(String(8), nullable=False)
     scopes: Mapped[list[str]] = mapped_column(
         JSON,

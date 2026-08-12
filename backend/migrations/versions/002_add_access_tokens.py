@@ -35,9 +35,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_access_tokens_token_hash", "access_tokens", ["token_hash"], unique=True)
     op.create_index("ix_access_tokens_user_id", "access_tokens", ["user_id"])
-    op.create_index(
-        "ix_access_tokens_user_id_created_at", "access_tokens", ["user_id", "created_at"]
-    )
+    op.create_index("ix_access_tokens_user_id_created_at", "access_tokens", ["user_id", "created_at"])
 
 
 def downgrade() -> None:

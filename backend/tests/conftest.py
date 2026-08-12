@@ -97,12 +97,8 @@ async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine, No
     """Per-test fixture: yields the shared engine and truncates all tables after each test."""
     yield _schema_engine
     async with _schema_engine.begin() as conn:
-        table_names = ", ".join(
-            f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables)
-        )
-        await conn.execute(
-            sql_text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE")
-        )
+        table_names = ", ".join(f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables))
+        await conn.execute(sql_text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
 
 
 @pytest_asyncio.fixture()

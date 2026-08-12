@@ -95,16 +95,25 @@ def test_cross_user_cannot_read_modify_or_delete_work_locations(
     )
     assert create_response.status_code == 201
 
-    assert db_client.get(
-        f"/api/work-locations/2026-02-05?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.post(
-        f"/api/work-locations?user_id={owner_id}",
-        json={"date": "2026-02-05", "country_code": "BE", "label": "Office"},
-        headers=other_headers,
-    ).status_code == 403
-    assert db_client.delete(
-        f"/api/work-locations/2026-02-05?user_id={owner_id}",
-        headers=other_headers,
-    ).status_code == 403
+    assert (
+        db_client.get(
+            f"/api/work-locations/2026-02-05?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.post(
+            f"/api/work-locations?user_id={owner_id}",
+            json={"date": "2026-02-05", "country_code": "BE", "label": "Office"},
+            headers=other_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        db_client.delete(
+            f"/api/work-locations/2026-02-05?user_id={owner_id}",
+            headers=other_headers,
+        ).status_code
+        == 403
+    )

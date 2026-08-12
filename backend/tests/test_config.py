@@ -8,10 +8,15 @@ import pytest
 from app.config.settings import Settings
 
 
-def test_default_settings():
+def test_default_settings(monkeypatch: pytest.MonkeyPatch):
     """Test that default settings are loaded correctly."""
+    # Settings(_env_file=None) skips the .env file but still reads real OS env
+    # vars — CI (and some local shells) sets DATABASE_URL/TEST_DATABASE_URL for
+    # other steps/tests, so clear it explicitly rather than assume a clean
+    # ambient environment.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     settings = Settings(_env_file=None)
-    
+
     assert settings.ENVIRONMENT == "development"
     assert settings.HOST == "0.0.0.0"
     assert settings.PORT == 8000
@@ -34,7 +39,7 @@ def test_custom_settings():
     """Test that custom environment variables override defaults."""
     # Save original environment
     original_env = os.environ.copy()
-    
+
     try:
         # Set custom environment variables
         os.environ["ENVIRONMENT"] = "production"
@@ -74,29 +79,23 @@ def test_cors_origins_parsing_single():
     """Test parsing single CORS origin."""
     settings = Settings(CORS_ORIGINS="http://localhost:3000")
     origins = settings.get_cors_origins_list()
-    
+
     assert origins == ["http://localhost:3000"]
 
 
 def test_cors_origins_parsing_multiple():
     """Test parsing multiple CORS origins."""
-    settings = Settings(
-        CORS_ORIGINS="http://localhost:5173,http://localhost:3000,https://example.com"
-    )
+    settings = Settings(CORS_ORIGINS="http://localhost:5173,http://localhost:3000,https://example.com")
     origins = settings.get_cors_origins_list()
-    
-    assert origins == [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://example.com"
-    ]
+
+    assert origins == ["http://localhost:5173", "http://localhost:3000", "https://example.com"]
 
 
 def test_cors_origins_wildcard_development():
     """Test wildcard CORS in development mode."""
     settings = Settings(ENVIRONMENT="development", CORS_ORIGINS="*")
     origins = settings.get_cors_origins_list()
-    
+
     assert origins == ["*"]
 
 
@@ -124,7 +123,7 @@ def test_environment_validation():
         ENVIRONMENT="production", TRUSTED_HOSTS="worktime.tjor.im", INTEGRATION_KEY_HASH_SECRET="test-secret"
     )
     assert settings_prod.ENVIRONMENT == "production"
-    
+
     # Invalid environment should raise error
     with pytest.raises(ValueError, match="must be 'development' or 'production'"):
         Settings(ENVIRONMENT="invalid")
@@ -135,11 +134,11 @@ def test_cache_ttl_validation():
     # Valid TTL
     settings = Settings(CACHE_TTL=30)
     assert settings.CACHE_TTL == 30
-    
+
     # Zero is valid
     settings_zero = Settings(CACHE_TTL=0)
     assert settings_zero.CACHE_TTL == 0
-    
+
     # Negative should raise error
     with pytest.raises(ValueError, match="must be non-negative"):
         Settings(CACHE_TTL=-1)
@@ -150,7 +149,7 @@ def test_cors_origins_validation():
     # Empty string should raise error
     with pytest.raises(ValueError, match="cannot be empty"):
         Settings(CORS_ORIGINS="")
-    
+
     # Whitespace only should raise error
     with pytest.raises(ValueError, match="cannot be empty"):
         Settings(CORS_ORIGINS="   ")
