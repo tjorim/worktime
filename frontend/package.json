@@ -83,7 +83,7 @@
     "@vitest/ui": "^4.1.10",
     "canvas": "^3.2.3",
     "fake-indexeddb": "6.2.5",
-    "happy-dom": "^20.11.1",
+    "happy-dom": "^20.11.2",
     "lightningcss": "^1.33.0",
     "msw": "^2.15.0",
     "oxfmt": "^0.62.0",
