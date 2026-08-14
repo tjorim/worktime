@@ -23,7 +23,7 @@ junit = "4.13.2"
 mockk = "1.14.11"
 json = "20260719"
 turbine = "1.2.1"
-detekt = "2.0.0-alpha.5"
+detekt = "2.0.0-alpha.6"
 ktlint-gradle = "14.2.0"
 
 [libraries]
