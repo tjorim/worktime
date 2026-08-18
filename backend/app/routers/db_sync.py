@@ -159,10 +159,16 @@ async def events_endpoint(
     one, so this long-lived stream doesn't pin a pooled connection for its
     entire lifetime (see ``get_principal_shortlived``). It's also exempt from
     the ordinary rate limiter: a stream is one long-lived connection, not one
-    unit of request work, and the client only ever opens one at a time.
+    unit of request work, and the client only ever opens one at a time in
+    normal use — ``sync_event_manager``'s own per-user connection cap is what
+    now bounds a single account from accumulating unbounded concurrent streams.
     """
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
-    sync_event_manager.subscribe(authenticated_user_id, queue)
+    if not sync_event_manager.subscribe(authenticated_user_id, queue):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many concurrent sync streams for this account",
+        )
 
     async def event_generator():
         try:

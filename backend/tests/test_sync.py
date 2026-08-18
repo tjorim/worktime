@@ -1615,6 +1615,27 @@ class TestSyncEventManager:
         assert not q1.empty()
         assert not q2.empty()
 
+    async def test_subscribe_rejects_past_the_per_user_cap(self) -> None:
+        """A single user can't accumulate unbounded concurrent SSE connections.
+
+        The endpoint is exempt from the ordinary per-IP rate limiter (a stream
+        is one long-lived connection, not one unit of request work), so this
+        cap is what actually bounds one account's concurrent streams.
+        """
+        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+
+        manager = SyncEventManager()
+        queues = [asyncio.Queue() for _ in range(_MAX_QUEUES_PER_USER)]
+        for q in queues:
+            assert manager.subscribe(user_id=1, queue=q) is True
+
+        overflow: asyncio.Queue[str] = asyncio.Queue()
+        assert manager.subscribe(user_id=1, queue=overflow) is False
+
+        # Freeing a slot lets a new connection back in.
+        manager.unsubscribe(user_id=1, queue=queues[0])
+        assert manager.subscribe(user_id=1, queue=overflow) is True
+
     async def test_coalescing_drops_duplicate_when_queue_full(self) -> None:
         """A full maxsize=1 queue silently drops the second hint (via public API)."""
         manager = SyncEventManager()
@@ -1716,6 +1737,31 @@ class TestSyncEventsEndpoint:
         # guarantee aclose() at the type level even though it's always an
         # async generator here at runtime.
         await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
+
+    async def test_events_endpoint_rejects_past_the_per_user_cap(self) -> None:
+        """A 429 is raised (not a StreamingResponse) once one user hits the
+        per-user connection cap — see test_subscribe_rejects_past_the_per_user_cap
+        for the SyncEventManager-level unit test this exercises end-to-end.
+        """
+        import pytest
+        from fastapi import HTTPException, Request
+
+        from app.routers.db_sync import events_endpoint
+        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+
+        mock_request = MagicMock(spec=Request)
+        user_id = 987654321  # unique to this test to avoid cross-test interference
+        responses = []
+        try:
+            for _ in range(_MAX_QUEUES_PER_USER):
+                responses.append(await events_endpoint(request=mock_request, authenticated_user_id=user_id))
+
+            with pytest.raises(HTTPException) as exc_info:
+                await events_endpoint(request=mock_request, authenticated_user_id=user_id)
+            assert exc_info.value.status_code == 429
+        finally:
+            for response in responses:
+                await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
 
     def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
         """Push must succeed even if broadcast_sync_changed raises an exception."""
