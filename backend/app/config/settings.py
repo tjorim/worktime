@@ -113,6 +113,15 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_DEFAULT: str = "200/minute"
 
+    # Cap on concurrent SSE connections one account can hold *per worker
+    # process* (SyncEventManager's queue registry lives in process memory, not
+    # shared across workers — see app/utils/sse_manager.py). The effective
+    # per-account bound across a deployment is this value times the worker
+    # count. /api/sync/events is exempt from RATE_LIMIT_DEFAULT (a long-lived
+    # stream is one connection, not one unit of request work), so this is the
+    # only admission control on that route.
+    SSE_MAX_QUEUES_PER_USER: int = 8
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:

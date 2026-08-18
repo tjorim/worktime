@@ -21,16 +21,22 @@ from urllib.parse import urlparse, urlunparse
 
 import asyncpg
 
+from app.config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 _NOTIFY_CHANNEL = "worktime_sync_changed"
 
 # The ordinary per-IP rate limiter doesn't apply to this route (a long-lived
 # stream is one connection, not one unit of request work — see events_endpoint),
-# so nothing else bounds how many concurrent streams one account can hold. Cap
-# it here instead: generous enough for several simultaneous tabs/devices, low
-# enough that one account can't accumulate unbounded live tasks and queues.
-_MAX_QUEUES_PER_USER = 8
+# so nothing else bounds how many concurrent streams one account can hold.
+# This cap is *per worker process*: the queue registry below lives in process
+# memory, so the effective per-account bound across a deployment is
+# _MAX_QUEUES_PER_USER * worker_count. Keep it generous enough for several
+# simultaneous tabs/devices, low enough that one account can't accumulate
+# unbounded live tasks and queues. Sourced from settings so operators can tune
+# it per deployment instead of editing this constant.
+_MAX_QUEUES_PER_USER = settings.SSE_MAX_QUEUES_PER_USER
 
 
 def _redact_credentials(db_url: object) -> str:
