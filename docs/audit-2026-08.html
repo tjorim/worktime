@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worktime v2026.8.2 Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Minimal reset (the hosted artifact gets this from its wrapper). */
+  *, *::before, *::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, figure, table, ul { margin: 0; }
+  img { max-width: 100%; height: auto; display: block; }
+</style>
+</head>
+<body>
+<style>
+  /* ---- Tokens: complete light palette on bare :root ---- */
+  :root {
+    --ground:      #f4f6f9;
+    --surface:     #ffffff;
+    --surface-2:   #eef1f6;
+    --line:        #dbe1ea;
+    --line-strong: #c3ccd9;
+    --ink:         #151a21;
+    --ink-2:       #3d4753;
+    --muted:       #626e7d;
+
+    --accent:      #1976d2;  /* app's "morning" blue */
+    --display:     #7b1fa2;  /* app's "night" purple */
+
+    --sev-high:    #bf360c;  /* app's "late" */
+    --sev-high-bg: #fdeee9;
+    --sev-med:     #b35c00;  /* app's "day", darkened for text contrast */
+    --sev-med-bg:  #fdf3e3;
+    --sev-low:     #5a6470;
+    --sev-low-bg:  #eef1f5;
+
+    --good:        #14663f;
+    --code-bg:     #eef1f6;
+
+    --shadow: 0 1px 2px rgb(21 26 33 / 6%), 0 8px 24px -14px rgb(21 26 33 / 22%);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #101418;
+      --surface:     #191f25;
+      --surface-2:   #212932;
+      --line:        #2b333d;
+      --line-strong: #3b4650;
+      --ink:         #e7ecf2;
+      --ink-2:       #c2cbd6;
+      --muted:       #8d99a8;
+
+      --accent:      #6ea8fe;
+      --display:     #cf9be0;
+
+      --sev-high:    #ff8a65;
+      --sev-high-bg: #2e1a13;
+      --sev-med:     #ffc061;
+      --sev-med-bg:  #2c2214;
+      --sev-low:     #93a0b0;
+      --sev-low-bg:  #222a33;
+
+      --good:        #6ee7b7;
+      --code-bg:     #212932;
+
+      --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 10px 28px -16px rgb(0 0 0 / 70%);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #101418;
+    --surface:     #191f25;
+    --surface-2:   #212932;
+    --line:        #2b333d;
+    --line-strong: #3b4650;
+    --ink:         #e7ecf2;
+    --ink-2:       #c2cbd6;
+    --muted:       #8d99a8;
+
+    --accent:      #6ea8fe;
+    --display:     #cf9be0;
+
+    --sev-high:    #ff8a65;
+    --sev-high-bg: #2e1a13;
+    --sev-med:     #ffc061;
+    --sev-med-bg:  #2c2214;
+    --sev-low:     #93a0b0;
+    --sev-low-bg:  #222a33;
+
+    --good:        #6ee7b7;
+    --code-bg:     #212932;
+
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 10px 28px -16px rgb(0 0 0 / 70%);
+  }
+
+  /* ---- Base ---- */
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2rem) 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  h1, h2, h3 {
+    font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    text-wrap: balance;
+    line-height: 1.15;
+    margin: 0;
+    letter-spacing: -0.015em;
+  }
+
+  p { margin: 0; max-width: 68ch; }
+
+  code, .mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.855em;
+  }
+
+  code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.1em 0.36em;
+    color: var(--ink-2);
+  }
+
+  a { color: var(--accent); }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  .eyebrow {
+    font-family: Archivo, sans-serif;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--display);
+  }
+
+  /* ---- Masthead ---- */
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-bottom: 2rem;
+    border-bottom: 3px solid var(--line-strong);
+  }
+
+  .masthead h1 { font-size: clamp(2.1rem, 5.5vw, 3.1rem); }
+
+  .lede { font-size: 1.1rem; color: var(--ink-2); }
+
+  .method {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+  .method span { display: flex; align-items: center; gap: 0.4rem; }
+  .method span::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--line-strong);
+  }
+
+  /* ---- Sections ---- */
+  section { display: flex; flex-direction: column; gap: 1.4rem; }
+
+  .sec-head { display: flex; flex-direction: column; gap: 0.5rem; }
+  .sec-head h2 { font-size: 1.55rem; }
+  .sec-head p { color: var(--muted); font-size: 0.95rem; }
+  .sec-count {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-radius: 4px;
+    padding: 0.15rem 0.45rem;
+    margin-left: 0.55rem;
+    vertical-align: 0.22em;
+    letter-spacing: 0;
+  }
+
+  /* ---- Scoreboard ---- */
+  .scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1rem;
+  }
+  .score {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    box-shadow: var(--shadow);
+  }
+  .score .n {
+    font-family: Archivo, sans-serif;
+    font-weight: 700;
+    font-size: 2.1rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .score .k {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .score.high .n { color: var(--sev-high); }
+  .score.med  .n { color: var(--sev-med); }
+  .score.low  .n { color: var(--sev-low); }
+
+  /* ---- Issue cards ---- */
+  .findings { display: flex; flex-direction: column; gap: 1rem; }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--stripe, var(--line-strong));
+    border-radius: 8px;
+    padding: 1.15rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    box-shadow: var(--shadow);
+  }
+  .finding.high { --stripe: var(--sev-high); }
+  .finding.med  { --stripe: var(--sev-med); }
+  .finding.low  { --stripe: var(--sev-low); }
+
+  .f-top {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .issue {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .issue:hover { text-decoration: underline; }
+
+  .area {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.2rem 0.42rem;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .finding h3 { font-size: 1.04rem; flex: 1 1 15rem; }
+
+  .sev {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .finding.high .sev { background: var(--sev-high-bg); color: var(--sev-high); }
+  .finding.med  .sev { background: var(--sev-med-bg);  color: var(--sev-med); }
+  .finding.low  .sev { background: var(--sev-low-bg);  color: var(--sev-low); }
+
+  .finding p { font-size: 0.94rem; color: var(--ink-2); }
+
+  .finding ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    font-size: 0.92rem;
+    color: var(--ink-2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .fix { display: flex; gap: 0.6rem; font-size: 0.9rem; padding-top: 0.1rem; }
+  .fix::before {
+    content: "FIX";
+    font-family: Archivo, sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    color: var(--good);
+    padding-top: 0.34em;
+    flex-shrink: 0;
+  }
+  .fix span { color: var(--ink-2); }
+
+  .refs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .refs b {
+    font-weight: 400;
+    background: var(--surface-2);
+    padding: 0.14rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  /* ---- Colour-drift demo ---- */
+  .demo {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.1rem;
+  }
+  .demo-col { display: flex; flex-direction: column; gap: 0.55rem; }
+  .demo-col .cap {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .chip {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    padding: 0.28rem 0.7rem;
+    border-radius: 5px;
+    min-width: 2.4rem;
+    text-align: center;
+  }
+  .c-green { background: #198754; }
+  .c-gray  { background: #616161; }
+  .c-morn  { background: #1976d2; }
+  .c-late  { background: #bf360c; }
+  .c-night { background: #7b1fa2; }
+
+  /* ---- Evidence figures ---- */
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.1rem;
+  }
+  figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.85rem;
+    box-shadow: var(--shadow);
+  }
+  figure img {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    max-height: 26rem;
+    object-fit: cover;
+    object-position: top;
+    width: 100%;
+  }
+  figcaption { font-size: 0.83rem; color: var(--muted); }
+  figcaption b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---- Tables ---- */
+  .tablewrap { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 34rem;
+    font-size: 0.91rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  thead th {
+    font-family: Archivo, sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--line-strong);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td .mono { color: var(--muted); font-size: 0.78rem; }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.05rem 1.2rem;
+    font-size: 0.92rem;
+    color: var(--ink-2);
+    box-shadow: var(--shadow);
+  }
+  .note strong { color: var(--ink); }
+  .note.alarm { border-left: 4px solid var(--sev-high); }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Worktime · v2026.8.2 · full audit</div>
+    <h1>What's broken, and in what order</h1>
+    <p class="lede">Thirty-six open findings across sync, backend, interface and documentation —
+      from three separate reviews run against <span class="mono">main</span> at
+      <span class="mono">6c48e73</span>. Each is traced to the code that produces it and filed as a
+      GitHub issue. The app is well built; the failures cluster in the places where two subsystems
+      meet and neither owns the seam.</p>
+    <div class="method">
+      <span>Full-codebase read</span>
+      <span>App driven in Chromium, desktop and phone, both themes</span>
+      <span>Docs checked against code</span>
+    </div>
+    <p style="font-size:0.92rem;color:var(--muted);margin-top:0.4rem">
+      Tracking issue for the interface review:
+      <a href="https://github.com/tjorim/worktime/issues/1135">#1135</a>. Every card below links to
+      its own issue.
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>At a glance</h2>
+      <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
+    </div>
+    <div class="scores">
+      <div class="score high"><span class="n">8</span><span class="k">High</span></div>
+      <div class="score med"><span class="n">15</span><span class="k">Medium</span></div>
+      <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">36</span><span class="k">Open issues</span></div>
+    </div>
+    <div class="note alarm">
+      <strong>Start with #1098.</strong> It silently drops user writes: a change queued while a
+      sync flush is in flight gets deleted by that flush's commit, with no error, no trace and no
+      retry. Everything else on this page is recoverable or cosmetic by comparison. Then #1100,
+      which locks a user out of the views they'd need to fix their own account, and #1099, which
+      takes the API down at roughly fifteen open tabs.
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Data integrity<span class="sec-count">4</span></h2>
+      <p>Writes that vanish, accounts that wedge, and a pool that runs out. These outrank
+        everything below.</p>
+    </div>
+    <div class="findings">
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1098">#1098</a>
+          <span class="area">sync</span>
+          <h3>Outbox flush clears the whole key, dropping changes queued mid-push</h3>
+          <span class="sev">High</span>
+        </div>
+        <p><code>dequeueAndMergeSyncOutbox</code> returns a <code>commit</code> that calls
+          <code>clearSyncOutbox</code> — a <code>removeItem</code> on the entire key — rather than
+          removing the entries it dequeued. A write whose immediate push fails during an in-flight
+          flush is appended to that same key, then deleted when the flush commits. The optimistic
+          write still shows in the UI and sync reports healthy, so nothing surfaces the loss and
+          nothing retries it.</p>
+        <div class="fix"><span>Record the snapshot length and drop exactly that many entries from
+          the front — safe because appends only ever go to the end. Same treatment on the quarantine
+          path.</span></div>
+        <div class="refs"><b>frontend/src/utils/syncClient.ts:1246</b> <b>syncClient.ts:1112</b> <b>hooks/useOngoingSync.ts:280</b> <b>useOngoingSync.ts:336</b></div>
+      </div>
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1100">#1100</a>
+          <span class="area">backend</span>
+          <span class="area">data-model</span>
+          <h3>Two running tasks crash every endpoint that resolves the running task</h3>
+          <span class="sev">High</span>
+        </div>
+        <p><code>get_running_task</code> ends in <code>scalar_one_or_none()</code>, which raises on
+          more than one row — and nothing stops a second row existing, because
+          <code>_push_task</code> skips the single-running-task rule that
+          <code>create_task</code> enforces. Two devices each starting a task offline is enough. The
+          result is a 500 from every caller <em>including reads</em>, and the user can't recover:
+          the views that would let them stop a task are the ones erroring.</p>
+        <div class="fix"><span>Three parts, all needed — make the read defensive
+          (<code>order_by(start_time.desc()).first()</code>) so existing broken accounts unwedge
+          immediately; close the write path in <code>_push_task</code> with a per-record conflict
+          rather than a raise; add the partial unique index with a data-repair migration that runs
+          before the constraint.</span></div>
+        <div class="refs"><b>backend/app/services/db_service.py:441</b> <b>sync_service.py:352</b> <b>routers/pebble.py:58</b> <b>mcp/time_tracking.py:64</b></div>
+      </div>
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1099">#1099</a>
+          <span class="area">backend</span>
+          <span class="area">perf</span>
+          <h3>SSE pins a pooled DB connection per stream, exhausting the pool at ~15 tabs</h3>
+          <span class="sev">High</span>
+        </div>
+        <p>The events endpoint depends on <code>get_session</code>, a yield-dependency FastAPI only
+          unwinds once the response finishes — which for a <code>StreamingResponse</code> means when
+          the client disconnects. Auth runs a <code>SELECT</code> and never commits, so the
+          connection sits idle-in-transaction for the life of the stream. Pool is 5 + 10 overflow,
+          and each signed-in tab holds exactly one stream, so ~15 tabs <em>across all users</em>
+          blocks every other request for the 30 s acquisition timeout.</p>
+        <div class="fix"><span>Give the SSE route its own short-lived auth dependency that resolves
+          the principal, closes its session, and returns a plain user id.</span></div>
+        <div class="refs"><b>backend/app/routers/db_sync.py:128</b> <b>routers/auth.py:139</b> <b>database/engine.py:63</b> <b>config/settings.py:54</b></div>
+      </div>
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1101">#1101</a>
+          <span class="area">frontend</span>
+          <span class="area">sync</span>
+          <h3>Backup restore silently reverts on a synced account</h3>
+          <span class="sev">High</span>
+        </div>
+        <p>Two defects that compound. <code>restoreAppBackup</code> writes through the optimistic
+          collection API, firing one un-awaited push per record, then calls
+          <code>window.location.reload()</code> synchronously — aborting those pushes before even
+          the outbox <code>catch</code> can run. And restored preferences keep their
+          <code>_updatedAt</code> from <em>export</em> time, so any backup older than the server copy
+          loses the last-write-wins comparison. The user watches the restore apply, the page reload,
+          and their old data come back.</p>
+        <div class="fix"><span>Stamp a fresh <code>_updatedAt</code> at restore time; apply sections
+          via the direct-write path so no push handlers fire, then push once through
+          <code>buildKeepLocalReplacePayload</code> and await it before reloading.</span></div>
+        <div class="refs"><b>frontend/src/utils/appBackup.ts:410</b> <b>appBackup.ts:499</b> <b>appBackup.ts:411</b> <b>utils/syncClient.ts:741</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Sync, API and platform correctness<span class="sec-count">6</span></h2>
+      <p>Contracts that disagree with themselves — one path validating what another doesn't.</p>
+    </div>
+    <div class="findings">
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1103">#1103</a>
+          <span class="area">backend</span>
+          <span class="area">frontend</span>
+          <h3>First-sync filter drops invalid labels but keeps the tasks referencing them</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>The defensive filter in <code>buildLocalSyncPushPayload</code> exists so "a single
+          corrupted label cannot cause the entire first-sync push to fail" — but it drops labels and
+          gantt tasks independently of the tasks pointing at them, leaving dangling references.
+          Server-side that raises <code>ValidationError</code>, which 400s the <em>whole batch</em>,
+          and since 400 is classified permanent it's quarantined rather than retried. One bad label
+          costs the user their entire history upload, permanently.</p>
+        <div class="fix"><span>Make the filter reference-aware: null out any
+          <code>label_id</code> / <code>gantt_task_id</code> not in the surviving id sets.</span></div>
+        <div class="refs"><b>frontend/src/utils/syncClient.ts:790</b> <b>backend/app/services/sync_service.py:227</b> <b>routers/db_sync.py:76</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1102">#1102</a>
+          <span class="area">backend</span>
+          <span class="area">observability</span>
+          <h3>Postgres LISTEN never reconnects, so live updates die after a restart</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>sse_manager</code> opens its listen and notify connections once at startup and
+          never re-establishes either — no termination listener, no supervised retry, no health
+          check. After a Postgres restart or failover a worker stops delivering
+          <code>sync_changed</code> permanently, with no log line, because nothing notices. The
+          existing fallback doesn't help: it's local-only, and when another worker's notify
+          connection is alive the NOTIFY "succeeds" so no fallback fires anywhere.</p>
+        <div class="fix"><span>Register <code>add_termination_listener</code> on both connections
+          with a backoff reconnect, mirroring <code>_periodic_jwks_refresh_loop</code>. Cheap
+          interim: always call <code>_enqueue_local</code> alongside <code>_pg_notify</code>.
+          Either way <strong>AGENTS.md is currently wrong about this</strong> and needs
+          correcting.</span></div>
+        <div class="refs"><b>backend/app/utils/sse_manager.py</b> <b>app/main.py:88</b> <b>AGENTS.md — Live Updates</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
+          <span class="area">backend</span>
+          <span class="area">auth</span>
+          <h3>Pebble clock-in/out commits without an audit entry</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>pebble.py</code> calls <code>create_task</code> / <code>update_task</code> without
+          an actor, and <code>_audit</code> returns early when the actor is <code>None</code> — so
+          the mutation commits with nothing staged. Every other mutating router passes one; this is
+          the sole exception, and it's the one path using a long-lived delegated
+          <code>wtpat_</code> credential, which is exactly where you'd want the trail. Both the
+          <code>AuditEntry</code> docstring and <code>_audit</code>'s own docstring claim this can't
+          happen.</p>
+        <div class="fix"><span>Pass <code>actor=audit_actor_for(principal)</code> at both call
+          sites. Separately: <code>push_changes</code> writes no audit entries at all — plausibly
+          deliberate for bulk sync, but it needs a decision and a comment either way.</span></div>
+        <div class="refs"><b>backend/app/routers/pebble.py:76</b> <b>pebble.py:99</b> <b>services/db_service.py:82</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a>
+          <span class="area">mcp</span>
+          <span class="area">auth</span>
+          <h3>MCP reports rate-limit exhaustion as 401 invalid credentials</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>verify_token</code> catches <code>RateLimitExceededError</code> and returns
+          <code>None</code>, which FastMCP turns into a 401. A throttled client is told its
+          credentials are wrong, so instead of backing off it re-authenticates or rotates its key —
+          and because the window rolls, it looks like an intermittent auth fault. The REST side gets
+          this right with a real 429.</p>
+        <div class="fix"><span>Either move enforcement out of token verification into a
+          post-auth dependency, or let the error propagate and map it to a 429 with
+          <code>Retry-After</code> computed from the stored window start.</span></div>
+        <div class="refs"><b>backend/app/mcp_server.py:100</b> <b>services/integration_client_service.py:221</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
+          <span class="area">backend</span>
+          <h3>Sync push accepts gantt tasks with end before start; REST rejects them</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>The ordering check lives on <code>GanttTaskCreate</code> and
+          <code>GanttTaskUpdate</code> but not on <code>GanttTaskSyncItem</code>, and
+          <code>_push_gantt_task</code> adds none of its own. The row renders as an inverted bar and
+          can't be corrected via REST without also fixing the dates. <code>_push_task</code>
+          re-validates its equivalent invariant on both branches, so the sync path is inconsistent
+          with itself here, not just with REST. No <code>CheckConstraint</code> backstop either,
+          unlike <code>TimeOffEntry</code>.</p>
+        <div class="refs"><b>backend/app/schemas.py:806</b> <b>services/sync_service.py:697</b> <b>database/models.py:180</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1109">#1109</a>
+          <span class="area">backend</span>
+          <h3>Three low-severity backend findings</h3>
+          <span class="sev">Low</span>
+        </div>
+        <ul>
+          <li>JWKS refresh task is cancelled but never awaited on shutdown, so its own cancellation
+            handling is effectively dead code.</li>
+          <li>Cold holiday cache has no single-flight guard, so every client re-fetching after a
+            deploy stampedes two free public APIs.</li>
+          <li><code>_build_holiday_date_set</code> trusts the upstream payload shape and 500s on a
+            malformed response — the one unguarded spot in otherwise careful code.</li>
+        </ul>
+        <div class="refs"><b>backend/app/main.py:112</b> <b>routers/holidays.py:113</b> <b>holidays.py:246</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Frontend correctness and i18n<span class="sec-count">5</span></h2>
+      <p>Controls that lie about what they do, and text that doesn't translate.</p>
+    </div>
+    <div class="findings">
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a>
+          <span class="area">frontend</span>
+          <span class="area">i18n</span>
+          <h3>Dutch is missing 22 keys, including the entire first-sync conflict dialog</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>nl.json</code> has 1171 keys to <code>en.json</code>'s 1193, and nothing in CI
+          catches the drift. The worst gap is the 11-key first-sync conflict dialog — a Dutch user
+          choosing between "keep local" and "use server" data reads that decision in English. Also
+          missing: the long-weekend feature, two calendar legend entries, two Gantt aria labels.</p>
+        <div class="fix"><span>Translate the 22, then add a
+          <code>check-message-parity.ts</code> script wired into <code>frontend-ci.yml</code> beside
+          the existing version-consistency check — same pattern, and it stops this
+          recurring.</span></div>
+        <div class="refs"><b>frontend/messages/nl.json</b> <b>.github/workflows/frontend-ci.yml:49</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1112">#1112</a>
+          <span class="area">frontend</span>
+          <span class="area">android</span>
+          <h3>Notifications are dead code, but three places promise them</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>The web setting is declared, validated, migrated, persisted and rendered as a switch —
+          and read by nothing; there is no <code>Notification.requestPermission</code> anywhere in
+          <code>frontend/src</code>. Android defines <code>showShiftReminder</code>,
+          <code>showStaleTimer</code> and <code>showSyncStatus</code>, creates the channels, and
+          requests <code>POST_NOTIFICATIONS</code> from the user — with no caller for any of the
+          three. The privacy page asserts the capability exists.</p>
+        <div class="fix"><span>Pick a direction rather than leaving three half-promises: build it
+          (folding into #271), or retreat honestly — drop the toggle with a migration, stop
+          requesting the Android permission until a caller exists, and soften the privacy copy to
+          describe the design rather than assert the feature.</span></div>
+        <div class="refs"><b>contexts/SettingsContext.tsx:42</b> <b>settings/SettingsGeneralSection.tsx:200</b> <b>core/notifications/WorktimeNotifications.kt</b> <b>app/WorktimeApp.kt:78</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a>
+          <span class="area">frontend</span>
+          <h3>Schedule selector is silently ignored on the Transfers tab</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>ScheduleTabView</code> renders the schedule dropdown unconditionally, but
+          <code>TransferView</code> never receives <code>viewingScheduleType</code> — it reads the
+          user's own schedule from settings. Today and Week both honor the selection, so the control
+          looks live while its value is discarded. The code already knows: the "select a schedule"
+          hint is explicitly excluded for transfer mode.</p>
+        <div class="fix"><span>Short term, hide the selector in transfer mode so the UI stops
+          promising something it doesn't deliver — two lines. Wiring it through properly is the
+          cross-schedule work in #1111.</span></div>
+        <div class="refs"><b>components/ScheduleTabView.tsx:130</b> <b>ScheduleTabView.tsx:191</b> <b>hooks/useTransferCalculations.ts:119</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1108">#1108</a>
+          <span class="area">frontend</span>
+          <h3>Three low-severity frontend findings</h3>
+          <span class="sev">Low</span>
+        </div>
+        <ul>
+          <li><code>parseHday</code> accepts impossible dates — <code>2025/13/45</code> parses as a
+            valid range event, contradicting the module's own docstring. <code>isValidDate</code>
+            already exists in the same directory.</li>
+          <li>Time-off validation errors are hardcoded English, rendered beside an already-localized
+            toast.</li>
+          <li><code>useLocalStorage</code> ignores cross-tab key removal — currently unreachable,
+            but the natural implementation of "sign out clears local state" would hit it.</li>
+        </ul>
+        <div class="refs"><b>lib/hday/parser.ts:206</b> <b>hooks/useEventForm.ts:63</b> <b>hooks/useLocalStorage.ts:85</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1114">#1114</a>
+          <span class="area">frontend</span>
+          <span class="area">a11y</span>
+          <h3><code>.live-indicator</code> animates forever with no reduced-motion guard</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>An infinite opacity-plus-scale pulse with no motion query. The sync spinner immediately
+          next to it does honor the preference, so the pattern already exists in the codebase — this
+          one was missed. Two lines, and deliberately separate from the broader accessibility work
+          in #270 so it can land now.</p>
+        <div class="refs"><b>frontend/src/styles/_shifts.scss:331</b> <b>_utilities.scss:199</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Interface<span class="sec-count">10</span></h2>
+      <p>Nineteen findings from driving the app, grouped into ten issues. Tracked in
+        <a href="https://github.com/tjorim/worktime/issues/1135">#1135</a>.</p>
+    </div>
+
+    <div class="shots">
+      <figure>
+        <img src="screenshots/ux-audit-home-desktop.png"
+             alt="Worktime calendar tab at 1440px. A tall Current Status card fills the upper half; below it the month grid shows uniformly green shift bars in cells that are mostly empty.">
+        <figcaption><b>Desktop, Calendar tab.</b> The status hero and tab bar fill the fold, and the
+          month grid's 140&nbsp;px cells hold one 24&nbsp;px badge — every bar the same green
+          regardless of shift.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/ux-audit-home-mobile.png"
+             alt="Worktime at 390px. The Current Status card occupies the entire viewport; the tab bar below shows six unlabeled icons, four of which are calendar glyphs.">
+        <figcaption><b>Mobile, Calendar tab.</b> The status card takes the whole 390×844 viewport.
+          The tab bar below is six unlabeled icons — four of them calendar variants.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/ux-audit-schedule-desktop.png"
+             alt="Worktime Schedule tab showing five team cards, each with a colored shift badge: gray for off, purple for night, red for evening, blue for morning.">
+        <figcaption><b>Desktop, Schedule tab.</b> The palette applied correctly — M&nbsp;blue,
+          E&nbsp;red, N&nbsp;purple, O&nbsp;gray. This is what the month calendar replaces with one
+          green.</figcaption>
+      </figure>
+    </div>
+
+    <div class="demo">
+      <div class="demo-col">
+        <span class="cap">Month calendar shows</span>
+        <div class="chips">
+          <span class="chip c-green">M</span>
+          <span class="chip c-green">E</span>
+          <span class="chip c-green">N</span>
+          <span class="chip c-gray">O</span>
+        </div>
+        <span class="cap" style="color:var(--sev-high)">One green for all three shifts</span>
+      </div>
+      <div class="demo-col">
+        <span class="cap">Every other view shows</span>
+        <div class="chips">
+          <span class="chip c-morn">M</span>
+          <span class="chip c-late">E</span>
+          <span class="chip c-night">N</span>
+          <span class="chip c-gray">O</span>
+        </div>
+        <span class="cap" style="color:var(--good)">The documented <span class="mono">--wt-shift-*</span> palette</span>
+      </div>
+    </div>
+
+    <div class="findings">
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1125">#1125</a>
+          <span class="area">frontend</span>
+          <h3>Month calendar and shift timeline ignore the shift color language</h3>
+          <span class="sev">High</span>
+        </div>
+        <p>Day cells render <code>text-bg-success</code> when working and
+          <code>text-bg-secondary</code> when off, collapsing morning, evening and night into one
+          green — on the default tab, contradicting every other view. Scanning the rotation pattern
+          is the reason to open a month view, and the single green makes it impossible. The timeline
+          has the milder version: it prints the handover codes as bare text under colored team
+          pills.</p>
+        <div class="fix"><span>Widen the <code>DayCell</code> prop to carry the full
+          <code>ShiftResult["shift"]</code> and render the existing <code>ShiftBadge</code>, which
+          already applies <code>shift.className</code> and brings its tooltip along.</span></div>
+        <div class="refs"><b>components/calendar/DayCell.tsx:461</b> <b>DayCell.tsx:32</b> <b>ShiftTimeline.tsx:183</b> <b>shared/ShiftBadge.tsx</b></div>
+      </div>
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1126">#1126</a>
+          <span class="area">frontend</span>
+          <h3>Current Status hero consumes the first screen on every tab</h3>
+          <span class="sev">High</span>
+        </div>
+        <p>Rendered above the tab bar by <code>HomePage</code>, so it shows identically on Gantt and
+          Time Tracking where shift status is irrelevant. ~570&nbsp;px on desktop; the entire
+          viewport on a 390×844 phone, so every visit to every tab starts with a scroll. It also
+          scrolls away, so the status you paid a full screen for isn't there when you're working.
+          Inside it, <em>Today</em> and <em>Up Next</em> print the same shift twice whenever the next
+          shift is today's.</p>
+        <div class="fix"><span>A <code>variant="compact"</code> single-line strip, sticky under the
+          navbar, expanding on tap; suppress <em>Up Next</em> when it resolves to the same shift as
+          <em>Today</em>.</span></div>
+        <div class="refs"><b>pages/HomePage.tsx</b> <b>components/CurrentStatus.tsx</b> <b>status/PersonalizedStatus.tsx:335</b></div>
+      </div>
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1127">#1127</a>
+          <span class="area">frontend</span>
+          <h3>Month calendar cells reserve 140px for ~50px of content</h3>
+          <span class="sev">High</span>
+        </div>
+        <p>A fixed floor regardless of content — 110&nbsp;px under 768&nbsp;px. A typical cell holds
+          a day number and one badge, so two-thirds is empty and six rows produce an 840&nbsp;px grid
+          that could be 400. A month never fits on one screen at any width.</p>
+        <div class="fix"><span>Drop the floor to ~4.5&nbsp;rem; grid rows already stretch to the
+          tallest cell, so a busy day still gets its room without imposing that height on the other
+          five rows.</span></div>
+        <div class="refs"><b>styles/_calendar.scss:58</b> <b>_calendar.scss:454</b></div>
+      </div>
+
+      <div class="finding high">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1128">#1128</a>
+          <span class="area">frontend</span>
+          <h3>Mobile tab bar is icon-only, and four of six icons are calendars</h3>
+          <span class="sev">High</span>
+        </div>
+        <p>Below 576&nbsp;px the labels are hidden, leaving six 16&nbsp;px glyphs — of which
+          <code>bi-calendar3</code>, <code>bi-calendar-range</code>, <code>bi-calendar-week</code>
+          and <code>bi-calendar-check</code> are indistinguishable at that size. Primary navigation
+          becomes trial and error. The <code>aria-label</code>s are correct, so screen-reader users
+          are better served here than sighted ones. Separately, "Calendar" and "Unified" name the
+          implementation rather than the content.</p>
+        <div class="fix"><span>Stacked icon + label (a two-line tab still clears the existing
+          44&nbsp;px target), or a labeled bottom bar — but that has to be reconciled with the FAB
+          proposed in #1120 before either is built.</span></div>
+        <div class="refs"><b>styles/_utilities.scss</b> <b>components/MainTabs.tsx</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a>
+          <span class="area">frontend</span>
+          <h3>Settings: duplicated headers, opaque labels, dead toggle</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <ul>
+          <li>Three stacked headings and two competing page descriptions fill the screen above the
+            first control; "Preferences" appears three times.</li>
+          <li>"Quick Actions" is backup/restore/reset; "Information" is About. Neither predicts its
+            contents, so finding "export my data" means opening sections at random.</li>
+          <li>The Notifications switch can't be turned on — see #1112 for the other half.</li>
+        </ul>
+        <div class="refs"><b>pages/SettingsPage.tsx:44</b> <b>settings/SettingsGeneralSection.tsx:61</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a>
+          <span class="area">frontend</span>
+          <h3>Disabled actions and empty states don't explain themselves</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>"Start Now" and "Add Task" disable with no stated reason and, on mobile, full-width pale
+          fills that read as enabled. The Label field's only guidance is the placeholder "Add labels
+          first" — a dead end. <code>GanttTaskModal</code> and <code>TemplateModal</code> both render
+          <code>tt_add_labels_first_help()</code> under the same field; the daily entry form, used
+          every day, doesn't. Separately, the empty Time Off tab ships Delete&nbsp;Selected,
+          Select&nbsp;All and Clear&nbsp;Selection above a table that doesn't exist.</p>
+        <div class="refs"><b>timeTracking/TaskEntryForm.tsx:114</b> <b>TaskEntryForm.tsx:171</b> <b>timeOff/TimeOffToolbar.tsx:97</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a>
+          <span class="area">frontend</span>
+          <h3>Onboarding gates the app behind 8 steps before showing value</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>"Step 1 of 8 / 12.5% Complete" is a commitment ask made before the user knows the app is
+          for them — and only two steps (schedule, team) produce a working app. The other six
+          configure features that are <code>false</code> in <code>defaultSettings</code>. The screen
+          also repeats its own title, states progress three ways, and styles "Maybe Later" as a solid
+          gray button competing with the primary.</p>
+        <div class="fix"><span><code>WIZARD_STEP_CONFIG</code> is already declarative with per-step
+          <code>isVisible</code> predicates — add a minimal mode admitting only welcome/schedule/team,
+          and re-target the existing per-feature step components to run when that feature is enabled.
+          Watch <code>hasCompletedOnboarding</code>, whose meaning shifts.</span></div>
+        <div class="refs"><b>components/WelcomeWizard.tsx</b> <b>wizardStepConfig.ts</b> <b>contexts/SettingsContext.tsx:488</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a>
+          <span class="area">frontend</span>
+          <h3>Dark mode flattens card hierarchy and keeps a full-saturation navbar</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>Body <code>#181a1b</code> to card <code>#23272b</code> is too small a step to read as
+          elevation, so the nesting that's obvious in light mode collapses into one dark field held
+          together by hairlines. And the navbar keeps <code>bg="primary"</code> in both themes — a
+          bright saturated band across a near-black page, for an app whose users read it at
+          3&nbsp;a.m.</p>
+        <div class="fix"><span>Widen the surface steps and add a subtle top highlight. Add a
+          separate navbar token rather than touching <code>--wt-primary-color</code>, which is
+          deliberately pinned for <code>.team-btn.selected</code> contrast.</span></div>
+        <div class="refs"><b>styles/main.scss</b> <b>styles/_variables.scss</b> <b>components/Header.tsx</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1133">#1133</a>
+          <span class="area">frontend</span>
+          <h3>Time tracking header collides on mobile; Quick Timer card is redundant</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>At 390&nbsp;px the title wraps to three lines while the date navigation crowds beside it,
+          making the header taller than its content. Above the form sits a card holding two sentences
+          that say the same thing and an Idle badge, in ~120&nbsp;px of empty space. Net effect: the
+          task-entry form starts around y=890 — starting a timer, the tab's main action, is four
+          layers of chrome down.</p>
+        <div class="refs"><b>timeTracking/DailyViewHeader.tsx:33</b> <b>shared/NavigationButtonGroup.tsx</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1134">#1134</a>
+          <span class="area">frontend</span>
+          <span class="area">sync</span>
+          <h3>No offline indicator — queued changes look identical to synced ones</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p><code>navigator.onLine</code> is read to skip a flush but nothing in the UI reflects it,
+          and the sync indicator is hidden entirely when unauthenticated. For a PWA aimed at shift
+          workers on site with poor signal, this is the user-visible half of
+          <a href="https://github.com/tjorim/worktime/issues/1098">#1098</a> — if queued writes can
+          vanish, an offline indicator stops being polish.</p>
+        <div class="fix"><span>Add an offline tone above the error case in the indicator's priority
+          list — offline is the <em>explanation</em> for a failed flush, so it should win over the
+          generic error.</span></div>
+        <div class="refs"><b>hooks/useOngoingSync.ts:467</b> <b>sync/SyncStatusIndicator.tsx</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Product gaps<span class="sec-count">6</span></h2>
+      <p>Capability that exists on one side of the wire and can't be reached from the other.</p>
+    </div>
+    <div class="findings">
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a>
+          <span class="area">backend</span>
+          <span class="area">frontend</span>
+          <h3>Time Off → Team can never render in the hosted app</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p>The Team tab is a first-class view that, on worktime.tjor.im, can only ever show an info
+          alert: it fetches <code>/api/team/:id/hday</code>, a route the backend doesn't serve, and
+          the flag its comments reference doesn't exist in settings. Reaching the feature requires
+          setting a helper URL in Developer Options. Meanwhile the data <em>does</em> exist —
+          <code>/api/read-models/team-status</code> is live and consumed by Android and Pebble. There
+          are two team-data paths and the web app is wired to the dead one.</p>
+        <div class="fix"><span>Check whether the read model carries a date range or only today,
+          settle what "team" means for authorization, then read through the API and keep the
+          <code>.hday</code> helper as the local/offline fallback. It can piggyback the existing
+          <code>sync_changed</code> signal for live updates.</span></div>
+        <div class="refs"><b>components/TeamScheduleView.tsx:180</b> <b>utils/hdayHelper.ts:18</b> <b>backend/app/routers/read_models.py:89</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a>
+          <span class="area">backend</span>
+          <span class="area">frontend</span>
+          <h3>iCal subscription feed for shifts and time off</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>No iCalendar code exists anywhere yet. The blocker recorded in <code>TODO.md</code> —
+          that the backend would need to replicate shift calculation — is gone: that replication
+          already exists and already serves Android and Pebble. A subscription URL beats a download
+          because calendar apps re-poll it.</p>
+        <div class="fix"><span>The interesting constraint is auth: calendar apps can't do OIDC or
+          send headers, so the credential lives in the URL. Mint a dedicated revocable feed token
+          with an <code>ical:read</code> scope — never accept a <code>wtpat_</code> in a query
+          string.</span></div>
+        <div class="refs"><b>backend/app/services/read_models_service.py</b> <b>services/access_token_service.py</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a>
+          <span class="area">frontend</span>
+          <h3>TransferView: cross-schedule overlap and time-off overlays</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>Transfers computes handover moments for two teams on <em>one</em> schedule, so a 9-5 user
+          can't see when their hours overlap a 5-shift team's. And a handover with someone on
+          vacation looks identical to a real one, because the overlay dots that Schedule View has
+          aren't here.</p>
+        <div class="fix"><span>Add pure <code>getShiftWindow</code> / <code>findOverlaps</code>
+          helpers to <code>shiftCalculations.ts</code> (unit-testable without React), extend the hook
+          with an <code>otherScheduleType</code>, and pass <code>viewingScheduleType</code> through —
+          which also fixes #1110. Watch the team-count mismatch when schedules differ.</span></div>
+        <div class="refs"><b>hooks/useTransferCalculations.ts:198</b> <b>utils/shiftCalculations.ts</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a>
+          <span class="area">frontend</span>
+          <span class="area">mcp</span>
+          <h3>Integration clients can only be created with hand-written HTTP</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>The full managed-credential API shipped in #1054, and every endpoint correctly requires
+          an interactive OIDC session — deliberately unreachable by a PAT or by an integration client
+          itself. With no UI, that leaves raw HTTP as the only documented path; the docs literally
+          say "create one via <code>POST /api/integration-clients</code>". Personal access tokens got
+          the UI treatment; integration clients didn't.</p>
+        <div class="fix"><span>Mirror the PAT section, including its show-secret-once flow — that
+          part is fiddly and worth copying rather than re-deriving. Hide the <code>admin</code> scope
+          for non-admins to match the server's self-escalation guard instead of letting the request
+          403.</span></div>
+        <div class="refs"><b>settings/account/SettingsApiTokensSection.tsx</b> <b>backend/app/routers/integration_clients.py</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a>
+          <span class="area">frontend</span>
+          <span class="area">observability</span>
+          <h3>Audit trail has no UI</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p><code>/api/audit</code> serves a per-user trail and an admin-only team trail, with tests.
+          Nothing in the frontend calls it. So the data is captured and queryable but invisible —
+          and "why did this entry change?", the obvious question in a multi-device sync story, is
+          currently unanswerable in-app.</p>
+        <div class="refs"><b>backend/app/routers/audit.py</b> <b>settings/admin/SettingsAdminUsersSection.tsx</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a>
+          <span class="area">frontend</span>
+          <h3>Mobile ergonomics: team carousel and floating action button</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>Two mobile navigation ideas with no code yet. Worth deciding whether the carousel replaces
+          the team selector on mobile or supplements it — two ways to do one thing on a small screen
+          is usually worse than one good one. <strong>Overlaps #1128:</strong> a fixed FAB and a
+          bottom tab bar can't both own the bottom of a 390&nbsp;px viewport, so settle that layout
+          once across both.</p>
+        <div class="refs"><b>components/MainTabs.tsx</b> <b>components/TeamScheduleView.tsx</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Documentation and technical debt<span class="sec-count">5</span></h2>
+      <p>Nothing user-visible breaks today; these are the things that make the next change wrong.</p>
+    </div>
+    <div class="findings">
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a>
+          <span class="area">backend</span>
+          <span class="area">cross-cutting</span>
+          <h3>Backend re-implements the shift logic AGENTS.md calls single-source-of-truth</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>read_models_service.py</code> hand-copies all four rosters — team counts, cycle
+          lengths, reference dates, shift patterns — and reimplements six frontend functions. The
+          implementations currently agree, so this is a latent hazard rather than a live bug. But
+          nothing ties them together, so a roster change applied to <code>rosters.ts</code> alone
+          silently desyncs Pebble, Android and every MCP schedule tool from the web UI with no
+          failing check. One divergence already exists: the 9-5 flex-start window has no equivalent
+          in <code>ReadModelShift</code>.</p>
+        <div class="fix"><span>A golden-file cross-check — export the roster config to a committed
+          fixture and assert the backend matches, the way
+          <code>check-version-consistency.ts</code> already guards <code>VERSION</code> drift — plus
+          a generated <code>(schedule, team, date) → code</code> table to catch algorithm
+          drift.</span></div>
+        <div class="refs"><b>backend/app/services/read_models_service.py:70</b> <b>frontend/src/utils/shiftCalculations.ts</b> <b>AGENTS.md — Source Of Truth</b></div>
+      </div>
+
+      <div class="finding med">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a>
+          <span class="area">docs</span>
+          <h3>Repo documentation is substantially out of sync with the codebase</h3>
+          <span class="sev">Medium</span>
+        </div>
+        <p><code>backend/README.md</code> is the worst: it documents <strong>SuperTokens</strong>
+          auth and <code>JWT_*</code> settings that don't exist, while omitting every
+          <code>OIDC_*</code>, <code>RATE_LIMIT_*</code> and secret-related variable and 8 of 18
+          routers. Anyone onboarding starts with a wrong model of how auth works. The root README
+          lists a GitHub Pages workflow that doesn't exist and predates most of the product;
+          <code>TODO.md</code> claims v4.7.0 and has six entries whose stated reality is now
+          false.</p>
+        <div class="fix"><span>One editing pass. Reduce <code>TODO.md</code> to a pointer at the
+          issue tracker rather than maintaining a second drifting copy of it, and move the historical
+          comparison docs under <code>docs/history/</code>.</span></div>
+        <div class="refs"><b>backend/README.md</b> <b>README.md</b> <b>TODO.md</b> <b>docs/project-comparison.md</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a>
+          <span class="area">frontend</span>
+          <span class="area">docs</span>
+          <h3>In-app changelog shows a stale roadmap and one wrong entry</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>User-visible, not just repo docs. <code>futurePlans</code> promises a
+          <strong>v4.8.0</strong> that can't exist under CalVer, and lists multi-language support and
+          data export as upcoming — both shipped. Separately, the 2026.7.1 entry states that
+          <code>VERSION</code> syncs to <code>backend/pyproject.toml</code>; it doesn't, and that
+          file is deliberately pinned at <code>0.0.0</code>.</p>
+        <div class="fix"><span>Drop the version-keyed grouping — it will always rot under CalVer —
+          and prune what shipped. <code>CHANGELOG.md</code> needs the same correction via
+          <code>generate-changelog</code>.</span></div>
+        <div class="refs"><b>frontend/src/data/changelog.ts:707</b> <b>changelog.ts:64</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a>
+          <span class="area">frontend</span>
+          <h3>Finish the feature-folder migration</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>Two parallel conventions: everything under <code>src/components/**</code> except the
+          calendar, colocated under <code>src/features/calendar/**</code>. Time tracking is the
+          better second candidate — it already has its own hooks folder plus four related hooks
+          scattered in <code>src/hooks/</code>.</p>
+        <div class="fix"><span>The real work is deciding per file what the slice owns versus what's
+          shared. Update AGENTS.md to make the layout the documented standard, and add an
+          architecture test forbidding cross-feature imports — that's what stops the convention
+          decaying at two slices.</span></div>
+        <div class="refs"><b>docs/optimization-plan.md</b> <b>frontend/tests/architecture/</b></div>
+      </div>
+
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a>
+          <span class="area">frontend</span>
+          <h3>Extract a shared TeamSelector component</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>A two-call-site refactor, not the four-file sweep <code>TODO.md</code> implies —
+          <code>ScheduleDetailModal</code> now takes <code>teamNumber</code> as a prop and has no
+          selector at all. Only worth doing if a third call site is coming, which the cross-schedule
+          work in #1111 would add.</p>
+        <div class="refs"><b>components/TransferView.tsx:380</b> <b>components/ScheduleTabView.tsx:135</b></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Suggested sequencing</h2>
+      <p>Revised across all six areas. The ordering changed once the sync findings were in — the
+        interface work is the most <em>visible</em> improvement, not the most urgent.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Batch</th><th>Contents</th><th>Why together</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1 · Stop losing data</strong><br><span class="mono">#1098 #1100 #1101</span></td>
+            <td>Outbox truncation, the two-running-tasks lockout, and backup restore.</td>
+            <td>All three destroy or strand user data, and all three are invisible when they happen.
+              #1100's defensive read should ship first on its own — it unwedges affected accounts
+              immediately.</td>
+          </tr>
+          <tr>
+            <td><strong>2 · Keep the service up</strong><br><span class="mono">#1099 #1102</span></td>
+            <td>SSE connection pinning and the dead LISTEN reconnect.</td>
+            <td>Both are SSE lifecycle, both are operational rather than user-reported, and #1102
+              carries an AGENTS.md correction either way.</td>
+          </tr>
+          <tr>
+            <td><strong>3 · Make the calendar readable</strong><br><span class="mono">#1125 #1127</span></td>
+            <td>Real shift colors and content-sized day cells.</td>
+            <td>Same two files, and together they change how a month scans. The first thing anyone
+              will notice.</td>
+          </tr>
+          <tr>
+            <td><strong>4 · Give back the first screen</strong><br><span class="mono">#1126 #1128 #1120</span></td>
+            <td>Condensed status strip, labeled mobile tabs, and the FAB/carousel decision.</td>
+            <td>The mobile experience is gated on all three, and #1128 and #1120 both want the bottom
+              of the viewport — decide once.</td>
+          </tr>
+          <tr>
+            <td><strong>5 · Close the contract gaps</strong><br><span class="mono">#1103 #1104 #1105 #1106</span></td>
+            <td>Reference-aware sync filter, Pebble audit actor, gantt date ordering, MCP 429.</td>
+            <td>Each is a small, well-understood diff against a path that already has a correct
+              sibling to copy.</td>
+          </tr>
+          <tr>
+            <td><strong>6 · Tell the truth</strong><br><span class="mono">#1112 #1113 #1123 #1124 #1129</span></td>
+            <td>Notifications decision, Dutch parity + CI check, docs pass, changelog, settings copy.</td>
+            <td>One editing-and-deciding pass. #1112 and #1129 overlap on the same dead toggle;
+              #1113's CI check is what stops the drift recurring.</td>
+          </tr>
+          <tr>
+            <td><strong>7 · The rest</strong><br><span class="mono">#1107 #1108 #1109 #1110 #1111 #1114 #1115 #1116 #1117 #1118 #1121 #1122 #1130–#1134</span></td>
+            <td>Latent hazards, product gaps, refactors, polish.</td>
+            <td>Independent and individually cheap. #1114 and #1110 are near-trivial and can fill
+              gaps between larger pieces; #1107's golden-file check is the highest-value item here
+              because it prevents a whole class of future bug.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Older backlog<span class="sec-count">5</span></h2>
+      <p>Open before today, unchanged by these reviews.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Issue</th><th>Title</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a class="issue" href="https://github.com/tjorim/worktime/issues/270">#270</a></td>
+            <td>Advanced accessibility: high contrast, font scaling, reduced motion</td>
+            <td>Has an open PR at #447. #1114 is the two-line subset that can land without it.</td>
+          </tr>
+          <tr>
+            <td><a class="issue" href="https://github.com/tjorim/worktime/issues/271">#271</a></td>
+            <td>Notification system with shift reminders and push notifications</td>
+            <td>The build-it half; #1112 is the it's-currently-a-lie half.</td>
+          </tr>
+          <tr>
+            <td><a class="issue" href="https://github.com/tjorim/worktime/issues/273">#273</a></td>
+            <td>Smart PWA installation prompts based on user engagement</td>
+            <td>PWA is fully back per #1123; only <code>beforeinstallprompt</code> is missing.</td>
+          </tr>
+          <tr>
+            <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
+            <td>Enhance ScheduleDetailModal with export and improved schedule display</td>
+            <td>The serializer built for #1118 can back this too.</td>
+          </tr>
+          <tr>
+            <td><a class="issue" href="https://github.com/tjorim/worktime/issues/793">#793</a></td>
+            <td>Verify @schedule-x/drag-and-drop v3 compatibility with calendar v4</td>
+            <td>Chore, unrelated to the above.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>What's already good</h2>
+    </div>
+    <div class="note">
+      Recorded so it isn't disturbed. A skip link and <code>aria-keyshortcuts</code> in the header;
+      shift-badge contrast ratios documented inline with the reasoning behind each dark-mode
+      override; toasts that pause their autohide on hover and focus so an Undo stays reachable; a
+      shared <code>EmptyState</code> used consistently; assertive vs. polite announcement chosen per
+      toast severity; lazy-loaded tab content with a labeled loading state. On the backend: partial
+      unique indexes and check constraints used correctly in most places — which is precisely why
+      their absence in #1100 and #1105 stands out; stale-cache fallbacks on holiday fetches; a
+      supervised-background-task pattern in the JWKS refresh loop that #1102 can copy.
+      <br><br>
+      The pattern across all thirty-six: almost every finding is a place where a correct
+      implementation already exists somewhere else in the codebase and one call site didn't get it.
+    </div>
+  </section>
+
+  <footer>
+    Reviewed against <span class="mono">main</span> at <span class="mono">6c48e73</span>, Worktime
+    v2026.8.2. Thirty-six open issues from three reviews on 2026-08-18. Line references point at the
+    code that produces each behavior. Not covered: authenticated sync states and conflict dialogs
+    were not exercised in a live browser — they need a running backend.
+  </footer>
+
+</div>
+
+</body>
+</html>
