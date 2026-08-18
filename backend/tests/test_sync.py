@@ -1859,6 +1859,9 @@ class TestSyncEventsConnectionPool:
             pool_timeout=2,
         )
         small_factory = async_sessionmaker(small_engine, expire_on_commit=False)
+        # app.database.engine exposes no setter/override for the module-level
+        # engine and session factory, so swapping them in for this test means
+        # patching the private globals directly.
         monkeypatch.setattr(db_engine, "_engine", small_engine)
         monkeypatch.setattr(db_engine, "_session_factory", small_factory)
 
@@ -2293,7 +2296,13 @@ class TestSyncCorrectnessFixes:
         for a second one — its preflight check passes (A isn't committed
         yet), so its INSERT blocks on Postgres's uncommitted conflicting
         index entry until A commits, then fails uniqueness.
+
+        Spies on `_add_task_or_running_conflict` so the test fails loudly if
+        timing ever let the preflight check (rather than the savepoint this
+        test targets) resolve the conflict instead.
         """
+        from app.services import sync_service
+
         factory = async_sessionmaker(test_db, expire_on_commit=False)
         async with factory() as setup_session:
             user = await create_user(setup_session, UserCreate(username="race-user", display_name="Race"))
@@ -2336,14 +2345,18 @@ class TestSyncCorrectnessFixes:
             await session_b.commit()
             return result
 
-        try:
-            _, result_b = await asyncio.gather(racer_a(), racer_b())
-        finally:
-            await session_a.close()
-            await session_b.close()
+        with patch.object(
+            sync_service, "_add_task_or_running_conflict", wraps=sync_service._add_task_or_running_conflict
+        ) as spy:
+            try:
+                _, result_b = await asyncio.gather(racer_a(), racer_b())
+            finally:
+                await session_a.close()
+                await session_b.close()
 
         assert result_b.status == "conflict"
         assert result_b.conflict_reason == "only one running task is allowed per user"
+        spy.assert_called_once()
 
     async def test_concurrent_running_task_reopen_returns_conflict_not_500(self, test_db: AsyncEngine) -> None:
         """Two concurrent pushes racing on a *reopen* (not a create) must not abort the batch.
