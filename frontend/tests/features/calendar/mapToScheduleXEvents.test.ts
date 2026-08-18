@@ -29,7 +29,7 @@ describe("mapToScheduleXEvents", () => {
     expect(event).toMatchObject({
       id: "shift:2:2026-05-31",
       title: "Morning",
-      calendarId: "shift",
+      calendarId: "shift-M",
       shiftCode: "M",
       team: 2,
       _options: { disableDND: true, disableResize: true },
@@ -98,9 +98,20 @@ describe("mapToScheduleXEvents", () => {
     expect(
       buildCalendarConfig([{ id: "label-1", name: "Development", color: "#abcdef" }]),
     ).toMatchObject({
-      shift: { lightColors: { main: "#0d6efd" } },
       "time-off": { lightColors: { main: "#198754" } },
       "label-1": { lightColors: { main: "#abcdef" } },
+    });
+  });
+
+  it("gives each shift code its own color, matching the shift badge palette", () => {
+    const config = buildCalendarConfig([]);
+
+    expect(config).toMatchObject({
+      "shift-M": { lightColors: { main: "#1976d2" }, darkColors: { main: "#1565c0" } },
+      "shift-L": { lightColors: { main: "#bf360c" }, darkColors: { main: "#8d3200" } },
+      "shift-N": { lightColors: { main: "#7b1fa2" }, darkColors: { main: "#4527a0" } },
+      "shift-D": { lightColors: { main: "#f57c00" }, darkColors: { main: "#b85500" } },
+      "shift-O": { lightColors: { main: "#616161" }, darkColors: { main: "#616161" } },
     });
   });
 });
