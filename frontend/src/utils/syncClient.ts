@@ -1222,6 +1222,14 @@ export function getSyncOutboxSize(userId: string): number {
  * queued mutation carries the full record and the server upserts by natural
  * key, and it keeps long-offline flushes bounded by the number of *distinct*
  * records rather than the number of mutations.
+ *
+ * `allow_bulk_delete` is OR-combined across entries: if any queued payload
+ * opted in (e.g. a "keep local" replace queued after its immediate push
+ * failed — see `buildKeepLocalReplacePayload`), the merged batch carries the
+ * opt-in too, and `declared_delete_total` is recomputed from the merged
+ * result. Dropping either on a retry would let the server's bulk-delete guard
+ * reject deletes the user already confirmed, silently leaving those records
+ * (and anything they depended on being gone) back on the server.
  */
 export function dequeueAndMergeSyncOutbox(
   userId: string,
@@ -1237,6 +1245,7 @@ export function dequeueAndMergeSyncOutbox(
     time_off_entries: [],
     gantt_tasks: [],
   };
+  let allowBulkDelete = false;
   for (const payload of outbox) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) continue;
     merged.labels.push(...(Array.isArray(payload.labels) ? payload.labels : []));
@@ -1249,16 +1258,22 @@ export function dequeueAndMergeSyncOutbox(
       ...(Array.isArray(payload.time_off_entries) ? payload.time_off_entries : []),
     );
     merged.gantt_tasks.push(...(Array.isArray(payload.gantt_tasks) ? payload.gantt_tasks : []));
+    if (payload.allow_bulk_delete) allowBulkDelete = true;
+  }
+  const mergedResult: SyncPushPayload = {
+    labels: dedupeByKey(merged.labels, (l) => l.id),
+    tasks: dedupeByKey(merged.tasks, (t) => t.id),
+    templates: dedupeByKey(merged.templates, (t) => t.id),
+    work_locations: dedupeByKey(merged.work_locations, (w) => w.date),
+    time_off_entries: dedupeByKey(merged.time_off_entries, (e) => e.id),
+    gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
+  };
+  if (allowBulkDelete) {
+    mergedResult.allow_bulk_delete = true;
+    mergedResult.declared_delete_total = countPayloadDeletes(mergedResult);
   }
   return {
-    merged: {
-      labels: dedupeByKey(merged.labels, (l) => l.id),
-      tasks: dedupeByKey(merged.tasks, (t) => t.id),
-      templates: dedupeByKey(merged.templates, (t) => t.id),
-      work_locations: dedupeByKey(merged.work_locations, (w) => w.date),
-      time_off_entries: dedupeByKey(merged.time_off_entries, (e) => e.id),
-      gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
-    },
+    merged: mergedResult,
     commit: () => {
       // Remove exactly the dequeued entries, matched by content rather than
       // position, so a concurrent commit (a second tab, or anything else
