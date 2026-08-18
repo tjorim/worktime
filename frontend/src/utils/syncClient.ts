@@ -245,7 +245,7 @@ export interface SyncStatusResponse {
 // Fetch wrappers
 // ---------------------------------------------------------------------------
 
-type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Call GET /db/sync/status.
@@ -1278,15 +1278,22 @@ export function dequeueAndMergeSyncOutbox(
       // Remove exactly the dequeued entries, matched by content rather than
       // position, so a concurrent commit (a second tab, or anything else
       // that raced this snapshot) never removes an entry it didn't dequeue.
-      const toRemove = outbox.map((entry) => JSON.stringify(entry));
+      // Tracked as a multiset (key -> remaining count) rather than an
+      // indexOf/splice scan per entry, so this stays O(n) instead of O(n*m).
+      const toRemoveCounts = new Map<string, number>();
+      for (const entry of outbox) {
+        const key = JSON.stringify(entry);
+        toRemoveCounts.set(key, (toRemoveCounts.get(key) ?? 0) + 1);
+      }
       const current = readSyncOutbox(userId);
       const remaining: SyncPushPayload[] = [];
       for (const entry of current) {
-        const idx = toRemove.indexOf(JSON.stringify(entry));
-        if (idx === -1) {
-          remaining.push(entry);
+        const key = JSON.stringify(entry);
+        const count = toRemoveCounts.get(key);
+        if (count) {
+          toRemoveCounts.set(key, count - 1);
         } else {
-          toRemove.splice(idx, 1);
+          remaining.push(entry);
         }
       }
       try {

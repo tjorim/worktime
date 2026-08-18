@@ -31,6 +31,7 @@ import {
   isEmptyPushPayload,
   pullSyncData,
   pushSyncPayload,
+  type FetchFn,
 } from "@/utils/syncClient";
 import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
@@ -39,9 +40,6 @@ import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isValidScheduleType } from "./scheduleUtils";
-
-/** Minimal fetch shape accepted by the sync push/pull helpers. */
-type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 export type AppBackupPayload = {
   exportedAt: string;
