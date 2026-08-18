@@ -1289,7 +1289,13 @@ export function dequeueAndMergeSyncOutbox(
           toRemove.splice(idx, 1);
         }
       }
-      writeSyncOutbox(userId, remaining);
+      try {
+        writeSyncOutbox(userId, remaining);
+      } catch (err) {
+        // The push already succeeded. Report the failed prune rather than
+        // reporting the whole flush as failed.
+        logger.error("Failed to prune committed entries from the sync outbox:", err);
+      }
     },
   };
 }
