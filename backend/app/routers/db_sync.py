@@ -165,9 +165,13 @@ async def events_endpoint(
     """
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
     if not sync_event_manager.subscribe(authenticated_user_id, queue):
+        # 30s gives the server enough time to notice a stale/disconnected
+        # stream (via is_disconnected() polling, at most _SSE_KEEPALIVE_TIMEOUT
+        # apart) and free a slot, without the client retrying immediately.
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many concurrent sync streams for this account",
+            headers={"Retry-After": "30"},
         )
 
     async def event_generator():
