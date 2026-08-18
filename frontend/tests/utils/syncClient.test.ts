@@ -1610,6 +1610,40 @@ describe("syncClient", () => {
       expect(remaining!.merged.tasks.map((t) => t.id)).toEqual(["task-B"]);
     });
 
+    it("a stale commit from an overlapping flush does not drop a newer entry (cross-tab race)", () => {
+      // Two tabs share one outbox key with no cross-tab coordination
+      // (isFlushingRef is in-memory, per tab). Both dequeue the same
+      // snapshot; tab A commits (removing it), a new entry is appended,
+      // then tab B's commit fires. A position-based commit (slice by
+      // count) would misinterpret its stale count against the new array
+      // and delete the newly queued entry. Matching by content instead
+      // means B's commit finds none of its own entries still present and
+      // removes nothing.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-old" }],
+      } as never);
+
+      const tabA = dequeueAndMergeSyncOutbox("user-1");
+      const tabB = dequeueAndMergeSyncOutbox("user-1");
+      expect(tabA).not.toBeNull();
+      expect(tabB).not.toBeNull();
+
+      tabA!.commit();
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-new" }],
+      } as never);
+
+      tabB!.commit();
+
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      const remaining = dequeueAndMergeSyncOutbox("user-1");
+      expect(remaining!.merged.tasks.map((t) => t.id)).toEqual(["task-new"]);
+    });
+
     it("skips corrupted/non-object outbox entries without throwing", () => {
       appendToSyncOutbox("user-1", emptyPayload());
       // Corrupt the outbox by injecting a bad entry directly.

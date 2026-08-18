@@ -1205,11 +1205,17 @@ export function getSyncOutboxSize(userId: string): number {
  * entries.  If the push fails the outbox is left intact and will be retried
  * on the next flush cycle.
  *
- * `commit` only removes the entries present in this snapshot (by count, from
- * the front of the array) rather than clearing the whole key. The outbox is
+ * `commit` only removes the entries present in this snapshot (matched by
+ * content, not position) rather than clearing the whole key. The outbox is
  * append-only, so any entry written by a concurrent `appendToSyncOutbox`
  * while this batch's push is in flight lands after the snapshot and survives
- * the commit instead of being silently dropped.
+ * the commit instead of being silently dropped. Matching by content (rather
+ * than dropping a fixed count from the front) also keeps a second, overlapping
+ * flush safe — e.g. two browser tabs for the same user, which aren't
+ * serialized against each other since `isFlushingRef` is in-memory per tab:
+ * if tab A's commit has already removed the snapshot it dequeued, tab B's
+ * later commit finds none of *its* snapshot entries still present and removes
+ * nothing, rather than deleting whatever now occupies that position.
  *
  * Entries are coalesced by natural key (id, or date for work locations),
  * keeping only the newest entry per record.  This is safe because every
@@ -1222,7 +1228,6 @@ export function dequeueAndMergeSyncOutbox(
 ): { merged: SyncPushPayload; commit: () => void } | null {
   const outbox = readSyncOutbox(userId);
   if (outbox.length === 0) return null;
-  const consumed = outbox.length;
 
   const merged: SyncPushPayload = {
     labels: [],
@@ -1255,8 +1260,21 @@ export function dequeueAndMergeSyncOutbox(
       gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
     },
     commit: () => {
+      // Remove exactly the dequeued entries, matched by content rather than
+      // position, so a concurrent commit (a second tab, or anything else
+      // that raced this snapshot) never removes an entry it didn't dequeue.
+      const toRemove = outbox.map((entry) => JSON.stringify(entry));
       const current = readSyncOutbox(userId);
-      writeSyncOutbox(userId, current.slice(consumed));
+      const remaining: SyncPushPayload[] = [];
+      for (const entry of current) {
+        const idx = toRemove.indexOf(JSON.stringify(entry));
+        if (idx === -1) {
+          remaining.push(entry);
+        } else {
+          toRemove.splice(idx, 1);
+        }
+      }
+      writeSyncOutbox(userId, remaining);
     },
   };
 }
