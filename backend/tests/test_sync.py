@@ -1796,6 +1796,7 @@ class TestSyncEventsConnectionPool:
         """
         from sqlalchemy import text as sql_text
         from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+        from sqlalchemy.pool import QueuePool
 
         import app.database.engine as db_engine
         from app.routers.auth import get_principal_shortlived
@@ -1827,7 +1828,7 @@ class TestSyncEventsConnectionPool:
 
             # Every session opened above must have released its connection —
             # none should still be checked out now that all calls returned.
-            assert small_engine.pool.checkedout() == 0
+            assert cast("QueuePool", small_engine.pool).checkedout() == 0
 
             # An ordinary request must still get a connection immediately.
             async with small_factory() as session:
