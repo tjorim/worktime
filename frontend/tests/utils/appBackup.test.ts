@@ -410,6 +410,23 @@ describe("appBackup", () => {
         expect(window.location.reload).toHaveBeenCalledOnce();
       });
 
+      it("preloads every sync collection before building the push payload", async () => {
+        // A collection this restore's payload never touches (e.g. tasks, when
+        // only labels are being restored) must still be read in full before
+        // buildLocalSyncPushPayload() runs — an unloaded collection reads as
+        // empty, which would make the keep-local replace delete every
+        // server-side record in that domain.
+        const preloadSpy = vi.spyOn(collectionsModule, "preloadSyncCollections");
+        const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        mockFetch
+          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse })
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+
+        await restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch);
+
+        expect(preloadSpy).toHaveBeenCalled();
+      });
+
       it("does not throw, does not hit the network, and still reloads when the restored state is empty", async () => {
         // No collection sections in the payload: buildLocalSyncPushPayload()
         // produces an empty push, so there is nothing to reconcile with the
@@ -420,10 +437,25 @@ describe("appBackup", () => {
         expect(window.location.reload).toHaveBeenCalledOnce();
       });
 
-      it("throws, does not reload, and queues the payload in the outbox when the push fails", async () => {
+      it("throws, does not reload, and queues the full replace payload (including allow_bulk_delete) in the outbox when the push fails", async () => {
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        // The server has an extra label the local restore doesn't — the
+        // queued replace payload must carry its delete plus the bulk-delete
+        // opt-in, not just the create-only local payload.
+        const pullResponseWithExtraLabel = {
+          ...emptyPullResponse,
+          labels: [
+            {
+              id: "server-only",
+              name: "Old",
+              color: "#000000",
+              deleted_at: null,
+              updated_at: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        };
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull succeeds
+          .mockResolvedValueOnce({ ok: true, json: async () => pullResponseWithExtraLabel }) // pull succeeds
           .mockResolvedValueOnce({ ok: false, status: 500 }); // push fails
 
         await expect(
@@ -433,12 +465,16 @@ describe("appBackup", () => {
         expect(window.location.reload).not.toHaveBeenCalled();
         const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey("user-1"))!);
         expect(outbox).toHaveLength(1);
-        expect(outbox[0].labels).toEqual([
-          expect.objectContaining({ id: "l1", action: "create" }),
-        ]);
+        expect(outbox[0].allow_bulk_delete).toBe(true);
+        expect(outbox[0].labels).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: "l1", action: "create" }),
+            expect.objectContaining({ id: "server-only", action: "delete" }),
+          ]),
+        );
       });
 
-      it("throws and does not reload when the pre-push pull fails", async () => {
+      it("throws, does not reload, and queues nothing when the pre-push pull fails", async () => {
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];
         mockFetch.mockResolvedValueOnce({ ok: false, status: 500 }); // pull fails
 
@@ -447,6 +483,10 @@ describe("appBackup", () => {
         ).rejects.toThrow();
 
         expect(window.location.reload).not.toHaveBeenCalled();
+        // No server snapshot to diff against, so there is nothing correct to
+        // queue — queuing the create-only local payload would silently drop
+        // the deletes a real replace would have needed.
+        expect(localStorage.getItem(getSyncOutboxKey("user-1"))).toBeNull();
       });
     });
   });

@@ -16,6 +16,7 @@ import {
   getSyncCollectionUserId,
   hasSyncCollectionAuth,
   labelsCollection,
+  preloadSyncCollections,
   replaceCollectionContents,
   tasksCollection,
   templatesCollection,
@@ -30,7 +31,6 @@ import {
   isEmptyPushPayload,
   pullSyncData,
   pushSyncPayload,
-  type SyncPushPayload,
 } from "@/utils/syncClient";
 import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
@@ -407,11 +407,16 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
  * overwritten by the next sync pull — callers on a synced account must pass
  * one.
  *
- * Throws if the server-side push fails; the restored local state stays in
- * place (already durably written) and the payload needed to reconcile it is
- * queued in the sync outbox for the next successful sync cycle. Callers
- * should surface an error and must not treat a throw as fatal to the local
- * restore. Does not throw for a backup that restores no collection data
+ * Throws if the server round-trip fails; the restored local state stays in
+ * place either way (already durably written). If the pre-push server pull
+ * fails, nothing is queued — there is no server snapshot to diff against, so
+ * there is no way to compute which server-only records the replace should
+ * delete, and queuing a create-only payload would silently drop those
+ * deletes. If the push itself fails after a successful pull, the full replace
+ * payload (including its deletes and its `allow_bulk_delete` opt-in) is
+ * queued in the sync outbox for the next successful sync cycle. Either way,
+ * callers should surface an error and must not treat a throw as fatal to the
+ * local restore. Does not throw for a backup that restores no collection data
  * (nothing to push).
  */
 export async function restoreAppBackup(
@@ -481,28 +486,33 @@ export async function restoreAppBackup(
   }
 
   if (hasSyncCollectionAuth() && fetchFn) {
+    // Collections outside the sections this backup touches must still be read
+    // in full to build the replace payload below — an unmounted collection
+    // reads as empty, which buildKeepLocalReplacePayload would otherwise
+    // read as "delete everything the server has for this domain".
+    await preloadSyncCollections();
     const localPayload = buildLocalSyncPushPayload();
     // A backup that restores no collection data has nothing to reconcile —
     // buildKeepLocalReplacePayload would otherwise throw EmptyLocalReplaceError
     // for what is really a no-op, and there is no reason to round-trip to the
     // server for it.
     if (!isEmptyPushPayload(localPayload)) {
-      const userId = getSyncCollectionUserId();
-      let pushPayload: SyncPushPayload = localPayload;
-      try {
-        const serverData = await pullSyncData(fetchFn);
-        if (!serverData) {
-          throw new Error("restoreAppBackup: failed to pull server data before push");
-        }
-        pushPayload = buildKeepLocalReplacePayload(localPayload, serverData);
-        const result = await pushSyncPayload(fetchFn, pushPayload);
-        if (!result) {
-          throw new Error("restoreAppBackup: push failed");
-        }
-      } catch (err) {
-        logger.error("restoreAppBackup: failed to push restored data to server:", err);
+      const serverData = await pullSyncData(fetchFn);
+      if (!serverData) {
+        // No server snapshot to diff against, so there is no way to compute
+        // which server-only records this replace should delete. Queuing the
+        // create-only localPayload instead would silently drop those
+        // deletes, so surface the failure and leave nothing queued — the
+        // already-written local state is untouched either way.
+        throw new Error("restoreAppBackup: failed to pull server data before push");
+      }
+      const pushPayload = buildKeepLocalReplacePayload(localPayload, serverData);
+      const result = await pushSyncPayload(fetchFn, pushPayload);
+      if (!result) {
+        logger.error("restoreAppBackup: failed to push restored data to server");
+        const userId = getSyncCollectionUserId();
         if (userId) appendToSyncOutbox(userId, pushPayload);
-        throw err;
+        throw new Error("restoreAppBackup: push failed");
       }
     }
   }

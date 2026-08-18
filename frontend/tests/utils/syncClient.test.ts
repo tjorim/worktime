@@ -1584,6 +1584,42 @@ describe("syncClient", () => {
       );
     });
 
+    it("propagates allow_bulk_delete when any queued entry opted in, and recomputes declared_delete_total", () => {
+      // A regular optimistic mutation queued alongside a failed "keep local"
+      // replace (see buildKeepLocalReplacePayload) — the merged batch must
+      // still carry allow_bulk_delete or the server's bulk-delete guard
+      // rejects the replace's deletes on retry.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A", action: "create" }],
+      } as never);
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        allow_bulk_delete: true,
+        labels: [
+          { id: "lbl-1", action: "create" },
+          { id: "lbl-2", action: "delete" },
+        ],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      expect(result!.merged.allow_bulk_delete).toBe(true);
+      expect(result!.merged.declared_delete_total).toBe(1);
+    });
+
+    it("does not set allow_bulk_delete when no queued entry opted in", () => {
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A", action: "delete" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      expect(result!.merged.allow_bulk_delete).toBeUndefined();
+      expect(result!.merged.declared_delete_total).toBeUndefined();
+    });
+
     it("skips corrupted/non-object outbox entries without throwing", () => {
       appendToSyncOutbox("user-1", emptyPayload());
       // Corrupt the outbox by injecting a bad entry directly.
