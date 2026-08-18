@@ -33,6 +33,7 @@ from typing import Any
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
 from sqlalchemy import literal, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -274,6 +275,36 @@ async def _user_has_other_running_task(session: AsyncSession, user_id: int, *, e
     return result.scalar_one_or_none() is not None
 
 
+async def _add_task_or_running_conflict(
+    session: AsyncSession, task: TimeTrackingTask, item: TaskSyncItem
+) -> SyncRecordResult | None:
+    """Stage *task* and flush it inside a savepoint, catching a running-task race.
+
+    `_user_has_other_running_task` closes the ordinary case (offline devices
+    reconnecting and pushing one after another), but two genuinely concurrent
+    pushes for the same user can both pass that preflight check before either
+    commits — the `uq_active_running_task_user` index is the backstop for
+    that case. `push_changes` commits the whole batch in one transaction, so
+    without a savepoint here the resulting `IntegrityError` would propagate
+    out of the flush (autoflush runs before every later query in the batch,
+    not just at the final commit) and abort every other record in the batch
+    instead of surfacing as this one record's conflict.
+    """
+    try:
+        async with session.begin_nested():
+            session.add(task)
+            await session.flush()
+    except IntegrityError as exc:
+        if "uq_active_running_task_user" not in str(exc.orig):
+            raise
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            conflict_reason="only one running task is allowed per user",
+        )
+    return None
+
+
 async def _push_label(session: AsyncSession, user_id: int, item: LabelSyncItem) -> SyncRecordResult:
     now = _now()
     label: Label | None = await session.get(Label, item.id)
@@ -434,7 +465,12 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
             includes_break=item.includes_break or False,
             client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
-        session.add(task)
+        if task.stop_time is None:
+            conflict = await _add_task_or_running_conflict(session, task, item)
+            if conflict is not None:
+                return conflict
+        else:
+            session.add(task)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task.user_id != user_id:
@@ -488,7 +524,12 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         task.deleted_at = None
     task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
     task.updated_at = now
-    session.add(task)
+    if task.stop_time is None:
+        conflict = await _add_task_or_running_conflict(session, task, item)
+        if conflict is not None:
+            return conflict
+    else:
+        session.add(task)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
