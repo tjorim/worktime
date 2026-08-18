@@ -9,6 +9,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
+import { logger } from "@/utils/logger";
 import { BackupDialog } from "@/components/BackupDialog";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { CONFIG } from "@/utils/config";
@@ -314,7 +315,8 @@ export function SettingsContent({
       // Reloads the page on success, so this only returns for a failed sync
       // push — the local restore itself already landed.
       await restoreAppBackup(parsed, isAuthenticated ? fetchFn : undefined);
-    } catch {
+    } catch (err) {
+      logger.error("Backup restore's sync push failed:", err);
       toast.showError(m.restore_sync_failed());
       setIsRestoringBackup(false);
     } finally {

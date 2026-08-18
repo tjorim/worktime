@@ -48,7 +48,12 @@ export function SettingsDataSection({
               <i className="bi bi-chevron-right text-muted"></i>
             </div>
           </ListGroup.Item>
-          <ListGroup.Item action onClick={onRestoreBackup} disabled={isRestoringBackup}>
+          <ListGroup.Item
+            action
+            onClick={onRestoreBackup}
+            disabled={isRestoringBackup}
+            aria-busy={isRestoringBackup}
+          >
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <div className="fw-medium">
