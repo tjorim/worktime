@@ -1778,9 +1778,7 @@ class TestSyncEventsConnectionPool:
     for the stream's lifetime, exhausting the pool under concurrent tabs.
     """
 
-    async def test_shortlived_auth_does_not_exhaust_connection_pool(
-        self, test_db: AsyncEngine, monkeypatch
-    ) -> None:
+    async def test_shortlived_auth_does_not_exhaust_connection_pool(self, test_db: AsyncEngine, monkeypatch) -> None:
         """N > pool_size + max_overflow concurrent auth resolutions, followed by
         an ordinary query, must not exhaust the pool.
 
