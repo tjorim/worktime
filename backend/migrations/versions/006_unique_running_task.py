@@ -10,7 +10,11 @@ index is created so it's safe even on a table that currently violates the
 constraint: for each user with more than one running task, all but the
 most-recently-started one are closed by setting ``stop_time = start_time``
 (a zero-duration close, since we have no way to know when the user actually
-intended to stop it).
+intended to stop it). ``updated_at``/``client_updated_at`` are bumped to the
+migration time too, so the close is visible to an incremental pull (which
+filters on ``updated_at``) and outranks a still-queued stale client push
+that might otherwise try to reopen the task via LWW (which compares
+``client_updated_at``).
 
 Revision ID: 006
 Revises: 005
@@ -34,7 +38,9 @@ def upgrade() -> None:
     op.execute(
         """
         UPDATE time_tracking_tasks
-        SET stop_time = start_time
+        SET stop_time = start_time,
+            updated_at = now(),
+            client_updated_at = now()
         WHERE id IN (
             SELECT id FROM (
                 SELECT id,
