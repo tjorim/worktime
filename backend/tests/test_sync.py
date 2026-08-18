@@ -12,6 +12,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
@@ -1614,6 +1615,27 @@ class TestSyncEventManager:
         assert not q1.empty()
         assert not q2.empty()
 
+    async def test_subscribe_rejects_past_the_per_user_cap(self) -> None:
+        """A single user can't accumulate unbounded concurrent SSE connections.
+
+        The endpoint is exempt from the ordinary per-IP rate limiter (a stream
+        is one long-lived connection, not one unit of request work), so this
+        cap is what actually bounds one account's concurrent streams.
+        """
+        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+
+        manager = SyncEventManager()
+        queues = [asyncio.Queue() for _ in range(_MAX_QUEUES_PER_USER)]
+        for q in queues:
+            assert manager.subscribe(user_id=1, queue=q) is True
+
+        overflow: asyncio.Queue[str] = asyncio.Queue()
+        assert manager.subscribe(user_id=1, queue=overflow) is False
+
+        # Freeing a slot lets a new connection back in.
+        manager.unsubscribe(user_id=1, queue=queues[0])
+        assert manager.subscribe(user_id=1, queue=overflow) is True
+
     async def test_coalescing_drops_duplicate_when_queue_full(self) -> None:
         """A full maxsize=1 queue silently drops the second hint (via public API)."""
         manager = SyncEventManager()
@@ -1716,6 +1738,31 @@ class TestSyncEventsEndpoint:
         # async generator here at runtime.
         await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
 
+    async def test_events_endpoint_rejects_past_the_per_user_cap(self) -> None:
+        """A 429 is raised (not a StreamingResponse) once one user hits the
+        per-user connection cap — see test_subscribe_rejects_past_the_per_user_cap
+        for the SyncEventManager-level unit test this exercises end-to-end.
+        """
+        import pytest
+        from fastapi import HTTPException, Request
+
+        from app.routers.db_sync import events_endpoint
+        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+
+        mock_request = MagicMock(spec=Request)
+        user_id = 987654321  # unique to this test to avoid cross-test interference
+        responses = []
+        try:
+            for _ in range(_MAX_QUEUES_PER_USER):
+                responses.append(await events_endpoint(request=mock_request, authenticated_user_id=user_id))
+
+            with pytest.raises(HTTPException) as exc_info:
+                await events_endpoint(request=mock_request, authenticated_user_id=user_id)
+            assert exc_info.value.status_code == 429
+        finally:
+            for response in responses:
+                await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
+
     def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
         """Push must succeed even if broadcast_sync_changed raises an exception."""
         admin_h = auth_headers(1, is_admin=True)
@@ -1774,6 +1821,70 @@ class TestSyncEventsEndpoint:
             )
             assert resp.status_code == 200
             mock_bc.assert_called_once_with(user_id)
+
+
+class TestSyncEventsConnectionPool:
+    """Regression test for #1099: SSE auth must not pin a pooled DB connection
+    for the stream's lifetime, exhausting the pool under concurrent tabs.
+    """
+
+    async def test_shortlived_auth_does_not_exhaust_connection_pool(self, test_db: AsyncEngine, monkeypatch) -> None:
+        """N > pool_size + max_overflow concurrent auth resolutions, followed by
+        an ordinary query, must not exhaust the pool.
+
+        ``get_principal_shortlived`` (used by the SSE route in place of the
+        request-scoped ``get_session``) is exactly where the fix lives: it
+        opens its own session, runs the auth lookup, and closes it — all
+        before the route ever returns its ``StreamingResponse``. Exercising
+        it directly against a deliberately tiny pool reproduces the bug
+        scenario without needing a real long-lived HTTP connection: before
+        the fix, each call would have pinned a connection for the *stream's*
+        lifetime (via the request-scoped ``get_session``) rather than
+        releasing it once auth resolves, so ``num_calls`` concurrent
+        resolutions would exhaust the 2-connection pool below and the final
+        ordinary query would time out waiting for one.
+        """
+        from sqlalchemy import text as sql_text
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+        from sqlalchemy.pool import QueuePool
+
+        import app.database.engine as db_engine
+        from app.routers.auth import get_principal_shortlived
+
+        pool_size, max_overflow = 1, 1  # total capacity: 2 pooled connections
+        small_engine = create_async_engine(
+            test_db.url.render_as_string(hide_password=False),
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=2,
+        )
+        small_factory = async_sessionmaker(small_engine, expire_on_commit=False)
+        monkeypatch.setattr(db_engine, "_engine", small_engine)
+        monkeypatch.setattr(db_engine, "_session_factory", small_factory)
+
+        fake_claims = {"sub": "pool-test-subject", "realm_access": {"roles": []}}
+        monkeypatch.setattr("app.routers.auth.decode_token", AsyncMock(return_value=fake_claims))
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="faketoken")
+
+        num_calls = pool_size + max_overflow + 3
+
+        try:
+            principals = await asyncio.wait_for(
+                asyncio.gather(*(get_principal_shortlived(MagicMock(), credentials) for _ in range(num_calls))),
+                timeout=10,
+            )
+            assert len(principals) == num_calls
+            assert all(p.user_id == principals[0].user_id for p in principals)
+
+            # Every session opened above must have released its connection —
+            # none should still be checked out now that all calls returned.
+            assert cast("QueuePool", small_engine.pool).checkedout() == 0
+
+            # An ordinary request must still get a connection immediately.
+            async with small_factory() as session:
+                await asyncio.wait_for(session.execute(sql_text("SELECT 1")), timeout=2)
+        finally:
+            await small_engine.dispose()
 
 
 # ---------------------------------------------------------------------------

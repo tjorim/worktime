@@ -13,19 +13,35 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import {
   ganttTasksCollection,
+  getSyncCollectionUserId,
+  hasSyncCollectionAuth,
   labelsCollection,
+  preloadSyncCollections,
+  replaceCollectionContents,
   tasksCollection,
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
 } from "@/db/collections";
 import { normalizeTimeOffEntries } from "@/lib/timeOff/storage";
+import {
+  appendToSyncOutbox,
+  buildKeepLocalReplacePayload,
+  buildLocalSyncPushPayload,
+  isEmptyPushPayload,
+  pullSyncData,
+  pushSyncPayload,
+} from "@/utils/syncClient";
+import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import type { Label } from "@/components/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isValidScheduleType } from "./scheduleUtils";
+
+/** Minimal fetch shape accepted by the sync push/pull helpers. */
+type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 export type AppBackupPayload = {
   exportedAt: string;
@@ -367,60 +383,67 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
   return incomingEntries;
 }
 
-function replaceCollectionContents<T extends object, TKey extends string>(
-  collection: {
-    toArray: T[];
-    has: (key: TKey) => boolean;
-    insert: (item: T) => void;
-    update: (key: TKey, cb: (draft: T) => void) => void;
-    delete: (key: TKey) => void;
-  },
-  items: T[],
-  getKey: (item: T) => TKey,
-): void {
-  const nextKeys = new Set(items.map(getKey));
-
-  for (const item of items) {
-    const key = getKey(item);
-    if (collection.has(key)) {
-      collection.update(key, (draft) => {
-        Object.assign(draft, item);
-      });
-    } else {
-      collection.insert(item);
-    }
-  }
-
-  for (const existing of collection.toArray) {
-    const key = getKey(existing);
-    if (!nextKeys.has(key) && collection.has(key)) {
-      collection.delete(key);
-    }
-  }
-}
-
 /**
  * Write each section from the backup payload to the current storage model,
- * replacing the current contents of any included section, then reload the page
- * so all React contexts pick up the restored values.
+ * push the restored state to the server as one "keep local" replace (on a
+ * synced account), and only then reload the page so all React contexts pick
+ * up the restored values.
  *
  * Only sections present in the payload are restored; absent sections are left
  * untouched.
+ *
+ * Collection writes use the direct-write batch API (same path as an
+ * incoming sync pull) rather than the optimistic insert/update/delete API, so
+ * no push handlers fire — the server side is instead driven explicitly below
+ * via a single push, which the caller can await before reloading. Reloading
+ * immediately after N per-record optimistic pushes (the previous behavior)
+ * let the navigation abort those in-flight requests, so the server never
+ * learned about the restore and the next pull silently brought the old data
+ * back.
+ *
+ * `fetchFn` is required to sync the restore to the server; omit it (or when
+ * the account isn't signed in) to restore local-only. On a signed-in account
+ * with no `fetchFn`, the restored local state is not pushed and will be
+ * overwritten by the next sync pull — callers on a synced account must pass
+ * one.
+ *
+ * Throws if the server round-trip fails; the restored local state stays in
+ * place either way (already durably written). If the pre-push server pull
+ * fails, nothing is queued — there is no server snapshot to diff against, so
+ * there is no way to compute which server-only records the replace should
+ * delete, and queuing a create-only payload would silently drop those
+ * deletes. If the push itself fails after a successful pull, the full replace
+ * payload (including its deletes and its `allow_bulk_delete` opt-in) is
+ * queued in the sync outbox for the next successful sync cycle. Either way,
+ * callers should surface an error and must not treat a throw as fatal to the
+ * local restore. Does not throw for a backup that restores no collection data
+ * (nothing to push).
  */
-export function restoreAppBackup(payload: AppBackupPayload): void {
-  if (payload.userState !== undefined) {
-    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(payload.userState));
+export async function restoreAppBackup(
+  payload: AppBackupPayload,
+  fetchFn?: FetchFn,
+): Promise<void> {
+  if (
+    payload.userState !== undefined &&
+    typeof payload.userState === "object" &&
+    payload.userState !== null
+  ) {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({
+        ...(payload.userState as Record<string, unknown>),
+        // The restore is the newest intent for this device — without this,
+        // reconcilePreferences compares export-time timestamps against the
+        // server's, and any backup older than the account's current server
+        // copy loses the last-write-wins check and gets silently overwritten.
+        _updatedAt: new Date().toISOString(),
+      }),
+    );
   }
 
   if (Array.isArray(payload.timeOff)) {
     replaceCollectionContents(
-      timeOffCollection as unknown as {
-        toArray: TimeOffEntry[];
-        has: (id: string) => boolean;
-        insert: (item: TimeOffEntry) => void;
-        update: (id: string, cb: (draft: TimeOffEntry) => void) => void;
-        delete: (id: string) => void;
-      },
+      timeOffCollection,
       normalizeTimeOffEntries(payload.timeOff),
       (entry) => entry.id,
     );
@@ -428,13 +451,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (payload.workLocations && typeof payload.workLocations === "object") {
     replaceCollectionContents(
-      workLocationsCollection as unknown as {
-        toArray: WorkLocationEntry[];
-        has: (id: string) => boolean;
-        insert: (item: WorkLocationEntry) => void;
-        update: (id: string, cb: (draft: WorkLocationEntry) => void) => void;
-        delete: (id: string) => void;
-      },
+      workLocationsCollection,
       parseWorkLocationEntries(payload.workLocations),
       (entry) => entry.date,
     );
@@ -442,13 +459,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (Array.isArray(payload.tasks)) {
     replaceCollectionContents(
-      tasksCollection as unknown as {
-        toArray: StoredTimeTrackingTask[];
-        has: (id: string) => boolean;
-        insert: (item: StoredTimeTrackingTask) => void;
-        update: (id: string, cb: (draft: StoredTimeTrackingTask) => void) => void;
-        delete: (id: string) => void;
-      },
+      tasksCollection,
       payload.tasks as StoredTimeTrackingTask[],
       (task) => task.id,
     );
@@ -456,44 +467,54 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (Array.isArray(payload.templates)) {
     replaceCollectionContents(
-      templatesCollection as unknown as {
-        toArray: TimeTrackingTemplate[];
-        has: (id: string) => boolean;
-        insert: (item: TimeTrackingTemplate) => void;
-        update: (id: string, cb: (draft: TimeTrackingTemplate) => void) => void;
-        delete: (id: string) => void;
-      },
+      templatesCollection,
       payload.templates as TimeTrackingTemplate[],
       (template) => template.id,
     );
   }
 
   if (Array.isArray(payload.labels)) {
-    replaceCollectionContents(
-      labelsCollection as unknown as {
-        toArray: Label[];
-        has: (id: string) => boolean;
-        insert: (item: Label) => void;
-        update: (id: string, cb: (draft: Label) => void) => void;
-        delete: (id: string) => void;
-      },
-      payload.labels as Label[],
-      (label) => label.id,
-    );
+    replaceCollectionContents(labelsCollection, payload.labels as Label[], (label) => label.id);
   }
 
   if (Array.isArray(payload.ganttTasks)) {
     replaceCollectionContents(
-      ganttTasksCollection as unknown as {
-        toArray: GanttTask[];
-        has: (id: string) => boolean;
-        insert: (item: GanttTask) => void;
-        update: (id: string, cb: (draft: GanttTask) => void) => void;
-        delete: (id: string) => void;
-      },
+      ganttTasksCollection,
       payload.ganttTasks as GanttTask[],
       (task) => task.id,
     );
+  }
+
+  if (hasSyncCollectionAuth() && fetchFn) {
+    // Collections outside the sections this backup touches must still be read
+    // in full to build the replace payload below — an unmounted collection
+    // reads as empty, which buildKeepLocalReplacePayload would otherwise
+    // read as "delete everything the server has for this domain".
+    await preloadSyncCollections();
+    const localPayload = buildLocalSyncPushPayload();
+    // A backup that restores no collection data has nothing to reconcile —
+    // buildKeepLocalReplacePayload would otherwise throw EmptyLocalReplaceError
+    // for what is really a no-op, and there is no reason to round-trip to the
+    // server for it.
+    if (!isEmptyPushPayload(localPayload)) {
+      const serverData = await pullSyncData(fetchFn);
+      if (!serverData) {
+        // No server snapshot to diff against, so there is no way to compute
+        // which server-only records this replace should delete. Queuing the
+        // create-only localPayload instead would silently drop those
+        // deletes, so surface the failure and leave nothing queued — the
+        // already-written local state is untouched either way.
+        throw new Error("restoreAppBackup: failed to pull server data before push");
+      }
+      const pushPayload = buildKeepLocalReplacePayload(localPayload, serverData);
+      const result = await pushSyncPayload(fetchFn, pushPayload);
+      if (!result) {
+        logger.error("restoreAppBackup: failed to push restored data to server");
+        const userId = getSyncCollectionUserId();
+        if (userId) appendToSyncOutbox(userId, pushPayload);
+        throw new Error("restoreAppBackup: push failed");
+      }
+    }
   }
 
   window.location.reload();
