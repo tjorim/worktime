@@ -2345,6 +2345,88 @@ class TestSyncCorrectnessFixes:
         assert result_b.status == "conflict"
         assert result_b.conflict_reason == "only one running task is allowed per user"
 
+    async def test_concurrent_running_task_reopen_returns_conflict_not_500(self, test_db: AsyncEngine) -> None:
+        """Two concurrent pushes racing on a *reopen* (not a create) must not abort the batch.
+
+        Same race as the test above, but for the update path: reopening a
+        completed task (clearing stop_time) mutates an already-persistent,
+        already-dirty `task` object before `_add_task_or_running_conflict` is
+        called. `session.begin_nested()` unconditionally flushes any dirty
+        session state *before* it establishes the SAVEPOINT, so if those
+        mutations were applied directly (rather than deferred via the `apply`
+        callback), the constraint violation would be raised by that
+        pre-SAVEPOINT flush — outside the savepoint's protection, leaving the
+        session's transaction aborted rather than yielding a clean per-record
+        conflict. Asserting `session_b.commit()` succeeds afterward is the
+        actual regression check: before the fix, the aborted transaction
+        would make it raise.
+        """
+        factory = async_sessionmaker(test_db, expire_on_commit=False)
+        async with factory() as setup_session:
+            user = await create_user(setup_session, UserCreate(username="reopen-race-user", display_name="Race"))
+            completed_task = TimeTrackingTask(
+                id=str(uuid4()),
+                user_id=user.id,
+                text="Completed earlier",
+                start_time=datetime(2026, 2, 1, 7, 0, tzinfo=UTC),
+                stop_time=datetime(2026, 2, 1, 8, 0, tzinfo=UTC),
+                client_updated_at=datetime.now(UTC),
+            )
+            setup_session.add(completed_task)
+            await setup_session.commit()
+            user_id = user.id
+            completed_task_id = completed_task.id
+
+        session_a = factory()
+        session_b = factory()
+        a_inserted = asyncio.Event()
+
+        async def racer_a() -> None:
+            session_a.add(
+                TimeTrackingTask(
+                    id=str(uuid4()),
+                    user_id=user_id,
+                    text="Racer A",
+                    start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
+                    stop_time=None,
+                    client_updated_at=datetime.now(UTC),
+                )
+            )
+            await session_a.flush()
+            a_inserted.set()
+            # Hold the uncommitted row long enough for racer_b's preflight
+            # check and blocking UPDATE to both be underway.
+            await asyncio.sleep(0.3)
+            await session_a.commit()
+
+        async def racer_b():
+            await a_inserted.wait()
+            item = TaskSyncItem(
+                id=completed_task_id,
+                action="update",
+                client_updated_at=datetime.now(UTC),
+                stop_time=None,
+            )
+            result = await _push_task(session_b, user_id, item)
+            await session_b.commit()
+            return result
+
+        try:
+            _, result_b = await asyncio.gather(racer_a(), racer_b())
+        finally:
+            await session_a.close()
+            await session_b.close()
+
+        assert result_b.status == "conflict"
+        assert result_b.conflict_reason == "only one running task is allowed per user"
+
+        # The reopen was rejected: the task must still be completed, not
+        # dangling half-mutated from the aborted-transaction failure mode.
+        async with factory() as verify_session:
+            reloaded = await verify_session.get(TimeTrackingTask, completed_task_id)
+            assert reloaded is not None
+            assert reloaded.stop_time is not None
+
     def test_push_client_updated_at_is_clamped_to_prevent_permanent_lww_lock(
         self, db_client: TestClient, auth_headers
     ) -> None:

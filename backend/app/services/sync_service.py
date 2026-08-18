@@ -27,11 +27,13 @@ removing the row, so pull queries can propagate the deletion to other clients.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import literal, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -276,7 +278,10 @@ async def _user_has_other_running_task(session: AsyncSession, user_id: int, *, e
 
 
 async def _add_task_or_running_conflict(
-    session: AsyncSession, task: TimeTrackingTask, item: TaskSyncItem
+    session: AsyncSession,
+    task: TimeTrackingTask,
+    item: TaskSyncItem,
+    apply: Callable[[], None] | None = None,
 ) -> SyncRecordResult | None:
     """Stage *task* and flush it inside a savepoint, catching a running-task race.
 
@@ -289,14 +294,34 @@ async def _add_task_or_running_conflict(
     out of the flush (autoflush runs before every later query in the batch,
     not just at the final commit) and abort every other record in the batch
     instead of surfacing as this one record's conflict.
+
+    `session.begin_nested()` itself unconditionally flushes any already-dirty
+    session state *before* it establishes the SAVEPOINT. For an update, that
+    means mutating *task*'s fields before calling this function would let
+    that pre-SAVEPOINT flush be the one that raises `IntegrityError` — outside
+    the savepoint's protection, leaving the outer transaction aborted instead
+    of just this record conflicted. Pass those mutations as *apply* instead,
+    so they're staged only once the SAVEPOINT already exists (the create path
+    doesn't need this: `task` isn't added to the session until inside the
+    block below, so it can't be part of that pre-existing dirty state).
     """
     try:
         async with session.begin_nested():
+            if apply is not None:
+                apply()
             session.add(task)
             await session.flush()
     except IntegrityError as exc:
         if "uq_active_running_task_user" not in str(exc.orig):
             raise
+        # The SAVEPOINT rollback reverts task's row in the DB but not its
+        # in-memory attributes; expire it so a later session.get() elsewhere
+        # in this batch reloads the real, unconflicted state rather than the
+        # rejected mutation. Only meaningful for the update path — a create's
+        # task never became persistent (the failed flush means its INSERT
+        # never landed), and expiring a non-persistent instance raises.
+        if sa_inspect(task).persistent:
+            session.expire(task)
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -506,29 +531,38 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
             server_updated_at=task.updated_at,
             conflict_reason="only one running task is allowed per user",
         )
-    if "text" in provided_fields and item.text is not None:
-        task.text = item.text
     if "label_id" in provided_fields:
         await _validate_task_label_reference(session, user_id, item.label_id)
-        task.label_id = item.label_id
     if "gantt_task_id" in provided_fields:
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
-        task.gantt_task_id = item.gantt_task_id
-    if "start_time" in provided_fields and item.start_time is not None:
-        task.start_time = item.start_time
-    if "stop_time" in provided_fields:
-        task.stop_time = item.stop_time
-    if "includes_break" in provided_fields and item.includes_break is not None:
-        task.includes_break = item.includes_break
-    if task.deleted_at is not None:
-        task.deleted_at = None
-    task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
-    task.updated_at = now
-    if task.stop_time is None:
-        conflict = await _add_task_or_running_conflict(session, task, item)
+
+    def apply_task_update() -> None:
+        # Deferred until inside _add_task_or_running_conflict's savepoint (see
+        # its docstring) when candidate_stop_time is None — mutating task
+        # before that call would defeat the savepoint's protection.
+        if "text" in provided_fields and item.text is not None:
+            task.text = item.text
+        if "label_id" in provided_fields:
+            task.label_id = item.label_id
+        if "gantt_task_id" in provided_fields:
+            task.gantt_task_id = item.gantt_task_id
+        if "start_time" in provided_fields and item.start_time is not None:
+            task.start_time = item.start_time
+        if "stop_time" in provided_fields:
+            task.stop_time = item.stop_time
+        if "includes_break" in provided_fields and item.includes_break is not None:
+            task.includes_break = item.includes_break
+        if task.deleted_at is not None:
+            task.deleted_at = None
+        task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
+        task.updated_at = now
+
+    if candidate_stop_time is None:
+        conflict = await _add_task_or_running_conflict(session, task, item, apply=apply_task_update)
         if conflict is not None:
             return conflict
     else:
+        apply_task_update()
         session.add(task)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
