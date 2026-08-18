@@ -12,7 +12,9 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.utils.sse_manager import SyncEventManager, _redact_credentials
 
@@ -1769,6 +1771,71 @@ class TestSyncEventsEndpoint:
             )
             assert resp.status_code == 200
             mock_bc.assert_called_once_with(user_id)
+
+
+class TestSyncEventsConnectionPool:
+    """Regression test for #1099: SSE auth must not pin a pooled DB connection
+    for the stream's lifetime, exhausting the pool under concurrent tabs.
+    """
+
+    async def test_shortlived_auth_does_not_exhaust_connection_pool(
+        self, test_db: AsyncEngine, monkeypatch
+    ) -> None:
+        """N > pool_size + max_overflow concurrent auth resolutions, followed by
+        an ordinary query, must not exhaust the pool.
+
+        ``get_principal_shortlived`` (used by the SSE route in place of the
+        request-scoped ``get_session``) is exactly where the fix lives: it
+        opens its own session, runs the auth lookup, and closes it — all
+        before the route ever returns its ``StreamingResponse``. Exercising
+        it directly against a deliberately tiny pool reproduces the bug
+        scenario without needing a real long-lived HTTP connection: before
+        the fix, each call would have pinned a connection for the *stream's*
+        lifetime (via the request-scoped ``get_session``) rather than
+        releasing it once auth resolves, so ``num_calls`` concurrent
+        resolutions would exhaust the 2-connection pool below and the final
+        ordinary query would time out waiting for one.
+        """
+        from sqlalchemy import text as sql_text
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+        import app.database.engine as db_engine
+        from app.routers.auth import get_principal_shortlived
+
+        pool_size, max_overflow = 1, 1  # total capacity: 2 pooled connections
+        small_engine = create_async_engine(
+            test_db.url.render_as_string(hide_password=False),
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=2,
+        )
+        small_factory = async_sessionmaker(small_engine, expire_on_commit=False)
+        monkeypatch.setattr(db_engine, "_engine", small_engine)
+        monkeypatch.setattr(db_engine, "_session_factory", small_factory)
+
+        fake_claims = {"sub": "pool-test-subject", "realm_access": {"roles": []}}
+        monkeypatch.setattr("app.routers.auth.decode_token", AsyncMock(return_value=fake_claims))
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="faketoken")
+
+        num_calls = pool_size + max_overflow + 3
+
+        try:
+            principals = await asyncio.wait_for(
+                asyncio.gather(*(get_principal_shortlived(MagicMock(), credentials) for _ in range(num_calls))),
+                timeout=10,
+            )
+            assert len(principals) == num_calls
+            assert all(p.user_id == principals[0].user_id for p in principals)
+
+            # Every session opened above must have released its connection —
+            # none should still be checked out now that all calls returned.
+            assert small_engine.pool.checkedout() == 0
+
+            # An ordinary request must still get a connection immediately.
+            async with small_factory() as session:
+                await asyncio.wait_for(session.execute(sql_text("SELECT 1")), timeout=2)
+        finally:
+            await small_engine.dispose()
 
 
 # ---------------------------------------------------------------------------
