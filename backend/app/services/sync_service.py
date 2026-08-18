@@ -255,6 +255,25 @@ async def _label_name_taken(session: AsyncSession, user_id: int, name: str, *, e
     return result.scalar_one_or_none() is not None
 
 
+async def _user_has_other_running_task(session: AsyncSession, user_id: int, *, exclude_id: str | None) -> bool:
+    """Whether the user already has a running (``stop_time IS NULL``) task.
+
+    Mirrors the "only one running task is allowed per user" rule enforced by
+    ``db_service.create_task``/``update_task`` so the sync push path can
+    return a per-record conflict instead of leaving a second running task in
+    place (see issue #1100).
+    """
+    conditions = [
+        TimeTrackingTask.user_id == user_id,
+        TimeTrackingTask.stop_time.is_(None),
+        TimeTrackingTask.deleted_at.is_(None),
+    ]
+    if exclude_id is not None:
+        conditions.append(TimeTrackingTask.id != exclude_id)
+    result = await session.execute(select(TimeTrackingTask.id).where(*conditions).limit(1))
+    return result.scalar_one_or_none() is not None
+
+
 async def _push_label(session: AsyncSession, user_id: int, item: LabelSyncItem) -> SyncRecordResult:
     now = _now()
     label: Label | None = await session.get(Label, item.id)
@@ -396,6 +415,12 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
             from app.services.db_service import ValidationError
 
             raise ValidationError("stop_time cannot be earlier than start_time")
+        if item.stop_time is None and await _user_has_other_running_task(session, user_id, exclude_id=None):
+            return SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                conflict_reason="only one running task is allowed per user",
+            )
         await _validate_task_label_reference(session, user_id, item.label_id)
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
         task = TimeTrackingTask(
@@ -438,6 +463,13 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         from app.services.db_service import ValidationError
 
         raise ValidationError("stop_time cannot be earlier than start_time")
+    if candidate_stop_time is None and await _user_has_other_running_task(session, user_id, exclude_id=task.id):
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            server_updated_at=task.updated_at,
+            conflict_reason="only one running task is allowed per user",
+        )
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:

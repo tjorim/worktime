@@ -1397,6 +1397,8 @@ class TestSyncMultiDeviceFlow:
         headers = auth_headers(user_id)
 
         # Simulate multiple queued changes from the outbox (merged into one request).
+        # Each task has a distinct stop_time (rather than all-running) since only
+        # one running task is allowed per user — see test_push_second_running_task_conflicts.
         task_ids = [str(uuid4()) for _ in range(3)]
         outbox_payload = {
             "tasks": [
@@ -1407,7 +1409,7 @@ class TestSyncMultiDeviceFlow:
                     "text": f"Queued task {i}",
                     "label_id": None,
                     "start_time": "2026-02-01T09:00:00+00:00",
-                    "stop_time": None,
+                    "stop_time": "2026-02-01T10:00:00+00:00",
                     "includes_break": False,
                 }
                 for i, task_id in enumerate(task_ids)
@@ -2034,6 +2036,129 @@ class TestSyncCorrectnessFixes:
             headers=headers,
         )
         assert resp.status_code == 400
+
+    def test_push_second_running_task_conflicts(self, db_client: TestClient, auth_headers) -> None:
+        """Sync push must reject a second running task, matching db_service.create_task.
+
+        Reproduces #1100: two devices each start a task offline, then both
+        push. Without this check both creates would land as `stop_time IS
+        NULL` rows, and every endpoint resolving the running task via
+        `get_running_task` would later crash on `MultipleResultsFound`.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "two-running-tasks-user")
+        headers = auth_headers(user_id)
+
+        first_id = str(uuid4())
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": first_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "text": "Device A running task",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["tasks"][0]["status"] == "ok"
+
+        second_id = str(uuid4())
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": second_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Device B running task",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:05:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["tasks"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "only one running task is allowed per user"
+
+        # The first task remains the sole running task.
+        pull_resp = db_client.get("/api/sync/pull", headers=headers)
+        running = [t for t in pull_resp.json()["tasks"] if t["stop_time"] is None]
+        assert [t["id"] for t in running] == [first_id]
+
+    def test_push_update_clearing_stop_time_conflicts_with_existing_running_task(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Reopening a completed task (clearing stop_time) must not create a second running task."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "reopen-task-user")
+        headers = auth_headers(user_id)
+
+        running_id = str(uuid4())
+        completed_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": running_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "text": "Already running",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    },
+                    {
+                        "id": completed_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "text": "Completed earlier",
+                        "label_id": None,
+                        "start_time": "2026-02-01T07:00:00+00:00",
+                        "stop_time": "2026-02-01T08:00:00+00:00",
+                        "includes_break": False,
+                    },
+                ]
+            },
+            headers=headers,
+        )
+
+        # Clearing stop_time on the completed task would reopen it, creating
+        # a second running task alongside `running_id`.
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": completed_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "stop_time": None,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["tasks"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "only one running task is allowed per user"
 
     def test_push_client_updated_at_is_clamped_to_prevent_permanent_lww_lock(
         self, db_client: TestClient, auth_headers
