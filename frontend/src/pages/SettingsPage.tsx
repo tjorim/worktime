@@ -179,6 +179,7 @@ export function SettingsContent({
   const [showChangelog, setShowChangelog] = useState(false);
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
@@ -294,16 +295,28 @@ export function SettingsContent({
   const handleRestoreFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    let parsed: unknown;
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text);
-      if (!validateAppBackupPayload(parsed)) {
-        toast.showError(m.restore_failed());
-        return;
-      }
-      restoreAppBackup(parsed);
+      parsed = JSON.parse(text);
     } catch {
       toast.showError(m.restore_failed());
+      event.target.value = "";
+      return;
+    }
+    if (!validateAppBackupPayload(parsed)) {
+      toast.showError(m.restore_failed());
+      event.target.value = "";
+      return;
+    }
+    setIsRestoringBackup(true);
+    try {
+      // Reloads the page on success, so this only returns for a failed sync
+      // push — the local restore itself already landed.
+      await restoreAppBackup(parsed, isAuthenticated ? fetchFn : undefined);
+    } catch {
+      toast.showError(m.restore_sync_failed());
+      setIsRestoringBackup(false);
     } finally {
       event.target.value = "";
     }
@@ -440,6 +453,7 @@ export function SettingsContent({
         onShareApp={handleShareApp}
         onShowBackupDialog={() => setShowBackupDialog(true)}
         onRestoreBackup={() => restoreFileInputRef.current?.click()}
+        isRestoringBackup={isRestoringBackup}
         onResetSettings={handleClearData}
       />
     ),

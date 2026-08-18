@@ -5,6 +5,7 @@ interface SettingsDataSectionProps {
   onShareApp: () => void;
   onShowBackupDialog: () => void;
   onRestoreBackup: () => void;
+  isRestoringBackup: boolean;
   onResetSettings: () => void;
 }
 
@@ -12,6 +13,7 @@ export function SettingsDataSection({
   onShareApp,
   onShowBackupDialog,
   onRestoreBackup,
+  isRestoringBackup,
   onResetSettings,
 }: SettingsDataSectionProps) {
   return (
@@ -46,12 +48,12 @@ export function SettingsDataSection({
               <i className="bi bi-chevron-right text-muted"></i>
             </div>
           </ListGroup.Item>
-          <ListGroup.Item action onClick={onRestoreBackup}>
+          <ListGroup.Item action onClick={onRestoreBackup} disabled={isRestoringBackup}>
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <div className="fw-medium">
                   <i className="bi bi-upload me-2"></i>
-                  {m.restore_backup_label()}
+                  {isRestoringBackup ? m.restore_backup_busy() : m.restore_backup_label()}
                 </div>
                 <small className="text-muted">{m.restore_backup_description()}</small>
               </div>

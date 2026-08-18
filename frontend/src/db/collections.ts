@@ -129,6 +129,11 @@ export function hasSyncCollectionAuth(): boolean {
   return _currentUserId !== null;
 }
 
+/** The current signed-in sync user's id, or null when not signed in. */
+export function getSyncCollectionUserId(): string | null {
+  return _currentUserId;
+}
+
 // ---------------------------------------------------------------------------
 // Internal fetch helper
 // ---------------------------------------------------------------------------
