@@ -3,19 +3,24 @@ import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
 import * as m from "@/paraglide/messages.js";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import type { Shift } from "@/utils/shiftCalculations";
 
 type CalendarLegendProps = {
   showEventTypes?: boolean;
+  /** Shift types used by the active roster, shown color-coded to match the calendar */
+  shifts?: Shift[];
 };
 
 /**
  * CalendarLegend displays a popover legend explaining event colors and indicators.
  *
  * Shows:
+ * - Shift type colors with labels (when a schedule is active)
  * - Event type color dots with labels
  * - Day indicator emojis with explanations
  */
-export function CalendarLegend({ showEventTypes = true }: CalendarLegendProps) {
+export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegendProps) {
   const eventTypeLegend = [
     { colorClass: "event-holiday-full", label: m.calendar_legend_holiday() },
     { colorClass: "event-business-full", label: m.calendar_legend_business() },
@@ -38,6 +43,16 @@ export function CalendarLegend({ showEventTypes = true }: CalendarLegendProps) {
     <Popover id="calendar-legend-popover">
       <Popover.Header as="h3">{m.team_legend_heading()}</Popover.Header>
       <Popover.Body>
+        {shifts && shifts.length > 0 && (
+          <div className="mb-2">
+            <strong className="small">{m.calendar_legend_shift_types_heading()}</strong>
+            <div className="d-flex flex-wrap gap-2 mt-1">
+              {shifts.map((shift) => (
+                <ShiftBadge key={shift.code} shift={shift} showEmoji showName size="sm" />
+              ))}
+            </div>
+          </div>
+        )}
         {showEventTypes && (
           <div className="mb-2">
             <strong className="small">{m.calendar_legend_event_types_heading()}</strong>

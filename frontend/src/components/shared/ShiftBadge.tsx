@@ -36,6 +36,8 @@ interface ShiftBadgeProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   showTooltip?: boolean;
+  /** Native title attribute, useful as a lightweight hover hint when showTooltip is false */
+  title?: string;
 }
 
 /**
@@ -63,6 +65,7 @@ export function ShiftBadge({
   size = "md",
   className = "",
   showTooltip = showCode && !showName && !showEmoji,
+  title,
 }: ShiftBadgeProps) {
   const tooltipId = useId();
   const formattedTime = useFormattedShiftTime(shift);
@@ -81,6 +84,7 @@ export function ShiftBadge({
         className,
       )}
       pill={pill}
+      title={title}
     >
       {content}
     </Badge>
