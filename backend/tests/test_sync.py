@@ -13,7 +13,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+from app.database.models import TimeTrackingTask
+from app.schemas import TaskSyncItem, UserCreate
+from app.services.db_service import create_user
+from app.services.sync_service import _push_task
 from app.utils.sse_manager import SyncEventManager, _redact_credentials
 
 # ---------------------------------------------------------------------------
@@ -2159,6 +2164,75 @@ class TestSyncCorrectnessFixes:
         result = resp.json()["results"]["tasks"][0]
         assert result["status"] == "conflict"
         assert result["conflict_reason"] == "only one running task is allowed per user"
+
+    async def test_concurrent_running_task_pushes_return_conflict_not_500(self, test_db: AsyncEngine) -> None:
+        """Two genuinely concurrent pushes racing to start a running task must not 500 the batch.
+
+        `_user_has_other_running_task`'s preflight check closes the ordinary
+        sequential-push race (see the two tests above), but two literally
+        concurrent requests for the same user can both pass it before either
+        commits — `uq_active_running_task_user` is the backstop for that
+        case. Without `_add_task_or_running_conflict`'s savepoint, the
+        resulting IntegrityError would propagate out of `_push_task` and
+        abort the whole batch (push_changes commits once at the end) instead
+        of surfacing as this one record's conflict.
+
+        Simulated with two real sessions: session A inserts (but doesn't yet
+        commit) a running task directly, session B then runs `_push_task`
+        for a second one — its preflight check passes (A isn't committed
+        yet), so its INSERT blocks on Postgres's uncommitted conflicting
+        index entry until A commits, then fails uniqueness.
+        """
+        factory = async_sessionmaker(test_db, expire_on_commit=False)
+        async with factory() as setup_session:
+            user = await create_user(setup_session, UserCreate(username="race-user", display_name="Race"))
+            await setup_session.commit()
+            user_id = user.id
+
+        session_a = factory()
+        session_b = factory()
+        a_inserted = asyncio.Event()
+
+        async def racer_a() -> None:
+            session_a.add(
+                TimeTrackingTask(
+                    id=str(uuid4()),
+                    user_id=user_id,
+                    text="Racer A",
+                    start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
+                    stop_time=None,
+                    client_updated_at=datetime.now(UTC),
+                )
+            )
+            await session_a.flush()
+            a_inserted.set()
+            # Hold the uncommitted row long enough for racer_b's preflight
+            # check and blocking INSERT to both be underway.
+            await asyncio.sleep(0.3)
+            await session_a.commit()
+
+        async def racer_b():
+            await a_inserted.wait()
+            item = TaskSyncItem(
+                id=str(uuid4()),
+                action="create",
+                client_updated_at=datetime.now(UTC),
+                text="Racer B",
+                start_time=datetime(2026, 2, 1, 9, 5, tzinfo=UTC),
+                stop_time=None,
+            )
+            result = await _push_task(session_b, user_id, item)
+            await session_b.commit()
+            return result
+
+        try:
+            _, result_b = await asyncio.gather(racer_a(), racer_b())
+        finally:
+            await session_a.close()
+            await session_b.close()
+
+        assert result_b.status == "conflict"
+        assert result_b.conflict_reason == "only one running task is allowed per user"
 
     def test_push_client_updated_at_is_clamped_to_prevent_permanent_lww_lock(
         self, db_client: TestClient, auth_headers
