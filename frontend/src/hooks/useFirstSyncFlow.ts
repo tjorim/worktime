@@ -40,6 +40,7 @@ import {
   reconcilePreferences,
   storeSyncCursor,
   syncStatusHasEntityData,
+  type FetchFn,
   type SyncPullResponse,
   type SyncPushPayload,
   type SyncStatusResponse,
@@ -157,7 +158,6 @@ async function readLocalSyncPayload(): Promise<SyncPushPayload | null> {
   }
 }
 
-type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 type MountedCheck = () => boolean;
 
 /**

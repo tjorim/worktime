@@ -12,8 +12,14 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+from app.database.models import TimeTrackingTask
+from app.schemas import TaskSyncItem, UserCreate
+from app.services.db_service import create_user
+from app.services.sync_service import _push_task
 from app.utils.sse_manager import SyncEventManager, _redact_credentials
 
 # ---------------------------------------------------------------------------
@@ -1397,6 +1403,8 @@ class TestSyncMultiDeviceFlow:
         headers = auth_headers(user_id)
 
         # Simulate multiple queued changes from the outbox (merged into one request).
+        # Each task has a distinct stop_time (rather than all-running) since only
+        # one running task is allowed per user — see test_push_second_running_task_conflicts.
         task_ids = [str(uuid4()) for _ in range(3)]
         outbox_payload = {
             "tasks": [
@@ -1407,7 +1415,7 @@ class TestSyncMultiDeviceFlow:
                     "text": f"Queued task {i}",
                     "label_id": None,
                     "start_time": "2026-02-01T09:00:00+00:00",
-                    "stop_time": None,
+                    "stop_time": "2026-02-01T10:00:00+00:00",
                     "includes_break": False,
                 }
                 for i, task_id in enumerate(task_ids)
@@ -1607,6 +1615,27 @@ class TestSyncEventManager:
         assert not q1.empty()
         assert not q2.empty()
 
+    async def test_subscribe_rejects_past_the_per_user_cap(self) -> None:
+        """A single user can't accumulate unbounded concurrent SSE connections.
+
+        The endpoint is exempt from the ordinary per-IP rate limiter (a stream
+        is one long-lived connection, not one unit of request work), so this
+        cap is what actually bounds one account's concurrent streams.
+        """
+        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+
+        manager = SyncEventManager()
+        queues = [asyncio.Queue() for _ in range(_MAX_QUEUES_PER_USER)]
+        for q in queues:
+            assert manager.subscribe(user_id=1, queue=q) is True
+
+        overflow: asyncio.Queue[str] = asyncio.Queue()
+        assert manager.subscribe(user_id=1, queue=overflow) is False
+
+        # Freeing a slot lets a new connection back in.
+        manager.unsubscribe(user_id=1, queue=queues[0])
+        assert manager.subscribe(user_id=1, queue=overflow) is True
+
     async def test_coalescing_drops_duplicate_when_queue_full(self) -> None:
         """A full maxsize=1 queue silently drops the second hint (via public API)."""
         manager = SyncEventManager()
@@ -1709,6 +1738,31 @@ class TestSyncEventsEndpoint:
         # async generator here at runtime.
         await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
 
+    async def test_events_endpoint_rejects_past_the_per_user_cap(self) -> None:
+        """A 429 is raised (not a StreamingResponse) once one user hits the
+        per-user connection cap — see test_subscribe_rejects_past_the_per_user_cap
+        for the SyncEventManager-level unit test this exercises end-to-end.
+        """
+        import pytest
+        from fastapi import HTTPException, Request
+
+        from app.routers.db_sync import events_endpoint
+        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+
+        mock_request = MagicMock(spec=Request)
+        user_id = 987654321  # unique to this test to avoid cross-test interference
+        responses = []
+        try:
+            for _ in range(_MAX_QUEUES_PER_USER):
+                responses.append(await events_endpoint(request=mock_request, authenticated_user_id=user_id))
+
+            with pytest.raises(HTTPException) as exc_info:
+                await events_endpoint(request=mock_request, authenticated_user_id=user_id)
+            assert exc_info.value.status_code == 429
+        finally:
+            for response in responses:
+                await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
+
     def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
         """Push must succeed even if broadcast_sync_changed raises an exception."""
         admin_h = auth_headers(1, is_admin=True)
@@ -1767,6 +1821,73 @@ class TestSyncEventsEndpoint:
             )
             assert resp.status_code == 200
             mock_bc.assert_called_once_with(user_id)
+
+
+class TestSyncEventsConnectionPool:
+    """Regression test for #1099: SSE auth must not pin a pooled DB connection
+    for the stream's lifetime, exhausting the pool under concurrent tabs.
+    """
+
+    async def test_shortlived_auth_does_not_exhaust_connection_pool(self, test_db: AsyncEngine, monkeypatch) -> None:
+        """N > pool_size + max_overflow concurrent auth resolutions, followed by
+        an ordinary query, must not exhaust the pool.
+
+        ``get_principal_shortlived`` (used by the SSE route in place of the
+        request-scoped ``get_session``) is exactly where the fix lives: it
+        opens its own session, runs the auth lookup, and closes it — all
+        before the route ever returns its ``StreamingResponse``. Exercising
+        it directly against a deliberately tiny pool reproduces the bug
+        scenario without needing a real long-lived HTTP connection: before
+        the fix, each call would have pinned a connection for the *stream's*
+        lifetime (via the request-scoped ``get_session``) rather than
+        releasing it once auth resolves, so ``num_calls`` concurrent
+        resolutions would exhaust the 2-connection pool below and the final
+        ordinary query would time out waiting for one.
+        """
+        from sqlalchemy import text as sql_text
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+        from sqlalchemy.pool import QueuePool
+
+        import app.database.engine as db_engine
+        from app.routers.auth import get_principal_shortlived
+
+        pool_size, max_overflow = 1, 1  # total capacity: 2 pooled connections
+        small_engine = create_async_engine(
+            test_db.url.render_as_string(hide_password=False),
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=2,
+        )
+        small_factory = async_sessionmaker(small_engine, expire_on_commit=False)
+        # app.database.engine exposes no setter/override for the module-level
+        # engine and session factory, so swapping them in for this test means
+        # patching the private globals directly.
+        monkeypatch.setattr(db_engine, "_engine", small_engine)
+        monkeypatch.setattr(db_engine, "_session_factory", small_factory)
+
+        fake_claims = {"sub": "pool-test-subject", "realm_access": {"roles": []}}
+        monkeypatch.setattr("app.routers.auth.decode_token", AsyncMock(return_value=fake_claims))
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="faketoken")
+
+        num_calls = pool_size + max_overflow + 3
+
+        try:
+            principals = await asyncio.wait_for(
+                asyncio.gather(*(get_principal_shortlived(MagicMock(), credentials) for _ in range(num_calls))),
+                timeout=10,
+            )
+            assert len(principals) == num_calls
+            assert all(p.user_id == principals[0].user_id for p in principals)
+
+            # Every session opened above must have released its connection —
+            # none should still be checked out now that all calls returned.
+            assert cast("QueuePool", small_engine.pool).checkedout() == 0
+
+            # An ordinary request must still get a connection immediately.
+            async with small_factory() as session:
+                await asyncio.wait_for(session.execute(sql_text("SELECT 1")), timeout=2)
+        finally:
+            await small_engine.dispose()
 
 
 # ---------------------------------------------------------------------------
@@ -2034,6 +2155,290 @@ class TestSyncCorrectnessFixes:
             headers=headers,
         )
         assert resp.status_code == 400
+
+    def test_push_second_running_task_conflicts(self, db_client: TestClient, auth_headers) -> None:
+        """Sync push must reject a second running task, matching db_service.create_task.
+
+        Reproduces #1100: two devices each start a task offline, then both
+        push. Without this check both creates would land as `stop_time IS
+        NULL` rows, and every endpoint resolving the running task via
+        `get_running_task` would later crash on `MultipleResultsFound`.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "two-running-tasks-user")
+        headers = auth_headers(user_id)
+
+        first_id = str(uuid4())
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": first_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "text": "Device A running task",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["tasks"][0]["status"] == "ok"
+
+        second_id = str(uuid4())
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": second_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Device B running task",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:05:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["tasks"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "only one running task is allowed per user"
+
+        # The first task remains the sole running task.
+        pull_resp = db_client.get("/api/sync/pull", headers=headers)
+        running = [t for t in pull_resp.json()["tasks"] if t["stop_time"] is None]
+        assert [t["id"] for t in running] == [first_id]
+
+    def test_push_update_clearing_stop_time_conflicts_with_existing_running_task(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Reopening a completed task (clearing stop_time) must not create a second running task."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "reopen-task-user")
+        headers = auth_headers(user_id)
+
+        running_id = str(uuid4())
+        completed_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": running_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "text": "Already running",
+                        "label_id": None,
+                        "start_time": "2026-02-01T09:00:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    },
+                    {
+                        "id": completed_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "text": "Completed earlier",
+                        "label_id": None,
+                        "start_time": "2026-02-01T07:00:00+00:00",
+                        "stop_time": "2026-02-01T08:00:00+00:00",
+                        "includes_break": False,
+                    },
+                ]
+            },
+            headers=headers,
+        )
+
+        # Clearing stop_time on the completed task would reopen it, creating
+        # a second running task alongside `running_id`.
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": completed_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "stop_time": None,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["tasks"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "only one running task is allowed per user"
+
+    async def test_concurrent_running_task_pushes_return_conflict_not_500(self, test_db: AsyncEngine) -> None:
+        """Two genuinely concurrent pushes racing to start a running task must not 500 the batch.
+
+        `_user_has_other_running_task`'s preflight check closes the ordinary
+        sequential-push race (see the two tests above), but two literally
+        concurrent requests for the same user can both pass it before either
+        commits — `uq_active_running_task_user` is the backstop for that
+        case. Without `_add_task_or_running_conflict`'s savepoint, the
+        resulting IntegrityError would propagate out of `_push_task` and
+        abort the whole batch (push_changes commits once at the end) instead
+        of surfacing as this one record's conflict.
+
+        Simulated with two real sessions: session A inserts (but doesn't yet
+        commit) a running task directly, session B then runs `_push_task`
+        for a second one — its preflight check passes (A isn't committed
+        yet), so its INSERT blocks on Postgres's uncommitted conflicting
+        index entry until A commits, then fails uniqueness.
+
+        Spies on `_add_task_or_running_conflict` so the test fails loudly if
+        timing ever let the preflight check (rather than the savepoint this
+        test targets) resolve the conflict instead.
+        """
+        from app.services import sync_service
+
+        factory = async_sessionmaker(test_db, expire_on_commit=False)
+        async with factory() as setup_session:
+            user = await create_user(setup_session, UserCreate(username="race-user", display_name="Race"))
+            await setup_session.commit()
+            user_id = user.id
+
+        session_a = factory()
+        session_b = factory()
+        a_inserted = asyncio.Event()
+
+        async def racer_a() -> None:
+            session_a.add(
+                TimeTrackingTask(
+                    id=str(uuid4()),
+                    user_id=user_id,
+                    text="Racer A",
+                    start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
+                    stop_time=None,
+                    client_updated_at=datetime.now(UTC),
+                )
+            )
+            await session_a.flush()
+            a_inserted.set()
+            # Hold the uncommitted row long enough for racer_b's preflight
+            # check and blocking INSERT to both be underway.
+            await asyncio.sleep(0.3)
+            await session_a.commit()
+
+        async def racer_b():
+            await a_inserted.wait()
+            item = TaskSyncItem(
+                id=str(uuid4()),
+                action="create",
+                client_updated_at=datetime.now(UTC),
+                text="Racer B",
+                start_time=datetime(2026, 2, 1, 9, 5, tzinfo=UTC),
+                stop_time=None,
+            )
+            result = await _push_task(session_b, user_id, item)
+            await session_b.commit()
+            return result
+
+        with patch.object(
+            sync_service, "_add_task_or_running_conflict", wraps=sync_service._add_task_or_running_conflict
+        ) as spy:
+            try:
+                _, result_b = await asyncio.gather(racer_a(), racer_b())
+            finally:
+                await session_a.close()
+                await session_b.close()
+
+        assert result_b.status == "conflict"
+        assert result_b.conflict_reason == "only one running task is allowed per user"
+        spy.assert_called_once()
+
+    async def test_concurrent_running_task_reopen_returns_conflict_not_500(self, test_db: AsyncEngine) -> None:
+        """Two concurrent pushes racing on a *reopen* (not a create) must not abort the batch.
+
+        Same race as the test above, but for the update path: reopening a
+        completed task (clearing stop_time) mutates an already-persistent,
+        already-dirty `task` object before `_add_task_or_running_conflict` is
+        called. `session.begin_nested()` unconditionally flushes any dirty
+        session state *before* it establishes the SAVEPOINT, so if those
+        mutations were applied directly (rather than deferred via the `apply`
+        callback), the constraint violation would be raised by that
+        pre-SAVEPOINT flush — outside the savepoint's protection, leaving the
+        session's transaction aborted rather than yielding a clean per-record
+        conflict. Asserting `session_b.commit()` succeeds afterward is the
+        actual regression check: before the fix, the aborted transaction
+        would make it raise.
+        """
+        factory = async_sessionmaker(test_db, expire_on_commit=False)
+        async with factory() as setup_session:
+            user = await create_user(setup_session, UserCreate(username="reopen-race-user", display_name="Race"))
+            completed_task = TimeTrackingTask(
+                id=str(uuid4()),
+                user_id=user.id,
+                text="Completed earlier",
+                start_time=datetime(2026, 2, 1, 7, 0, tzinfo=UTC),
+                stop_time=datetime(2026, 2, 1, 8, 0, tzinfo=UTC),
+                client_updated_at=datetime.now(UTC),
+            )
+            setup_session.add(completed_task)
+            await setup_session.commit()
+            user_id = user.id
+            completed_task_id = completed_task.id
+
+        session_a = factory()
+        session_b = factory()
+        a_inserted = asyncio.Event()
+
+        async def racer_a() -> None:
+            session_a.add(
+                TimeTrackingTask(
+                    id=str(uuid4()),
+                    user_id=user_id,
+                    text="Racer A",
+                    start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
+                    stop_time=None,
+                    client_updated_at=datetime.now(UTC),
+                )
+            )
+            await session_a.flush()
+            a_inserted.set()
+            # Hold the uncommitted row long enough for racer_b's preflight
+            # check and blocking UPDATE to both be underway.
+            await asyncio.sleep(0.3)
+            await session_a.commit()
+
+        async def racer_b():
+            await a_inserted.wait()
+            item = TaskSyncItem(
+                id=completed_task_id,
+                action="update",
+                client_updated_at=datetime.now(UTC),
+                stop_time=None,
+            )
+            result = await _push_task(session_b, user_id, item)
+            await session_b.commit()
+            return result
+
+        try:
+            _, result_b = await asyncio.gather(racer_a(), racer_b())
+        finally:
+            await session_a.close()
+            await session_b.close()
+
+        assert result_b.status == "conflict"
+        assert result_b.conflict_reason == "only one running task is allowed per user"
+
+        # The reopen was rejected: the task must still be completed, not
+        # dangling half-mutated from the aborted-transaction failure mode.
+        async with factory() as verify_session:
+            reloaded = await verify_session.get(TimeTrackingTask, completed_task_id)
+            assert reloaded is not None
+            assert reloaded.stop_time is not None
 
     def test_push_client_updated_at_is_clamped_to_prevent_permanent_lww_lock(
         self, db_client: TestClient, auth_headers

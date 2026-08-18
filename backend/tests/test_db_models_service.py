@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from datetime import UTC, date, datetime, time
 
 import pytest
+import pytest_asyncio
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text as sql_text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.database.models import (
     GanttTask,
@@ -153,6 +156,74 @@ async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSessio
                 includes_break=False,
             ),
         )
+
+
+@pytest_asyncio.fixture()
+async def without_running_task_index(test_db: AsyncEngine) -> AsyncGenerator[None, None]:
+    """Drop uq_active_running_task_user for one test and always restore it.
+
+    Uses test_db's own connection for both drop and restore, rather than the
+    test's db_session: `_schema_engine` creates the schema once per test
+    session, so a restore that depends on the test's own session ending in a
+    healthy, non-aborted state could leave the index missing for every later
+    test in the session if that test's own logic ever left its transaction
+    aborted first.
+    """
+    async with test_db.begin() as conn:
+        await conn.execute(sql_text("DROP INDEX uq_active_running_task_user"))
+    try:
+        yield
+    finally:
+        async with test_db.begin() as conn:
+            # Recreating the index requires the table to satisfy it again first.
+            await conn.execute(sql_text("DELETE FROM time_tracking_tasks"))
+            await conn.execute(
+                sql_text(
+                    "CREATE UNIQUE INDEX uq_active_running_task_user ON time_tracking_tasks (user_id) "
+                    "WHERE stop_time IS NULL AND deleted_at IS NULL"
+                )
+            )
+
+
+async def test_get_running_task_degrades_to_most_recent_on_pre_existing_duplicates(
+    db_session: AsyncSession,
+    without_running_task_index: None,
+) -> None:
+    """`get_running_task` must not crash on an account that already has two running tasks.
+
+    `create_task`/`update_task` block a second running task, but the sync push
+    path historically didn't (see #1100), so some accounts may already have
+    more than one `stop_time IS NULL` row. `get_running_task` used to call
+    `scalar_one_or_none()`, which raises `MultipleResultsFound` in that case,
+    turning every read that resolves the running task into a 500. It must
+    instead return the most recently started one.
+
+    The partial unique index added alongside this fix (uq_active_running_task_user)
+    prevents a *new* account from reaching this state, so the
+    without_running_task_index fixture drops it for the duration of this test
+    to reproduce the pre-migration-repair state that existing production data
+    may still be in when this code first ships.
+    """
+    user = await create_user(db_session, UserCreate(username="dup-running", display_name="Dup Running"))
+
+    older = TimeTrackingTask(
+        user_id=user.id,
+        text="Older running task",
+        start_time=datetime(2026, 2, 26, 9, 0, tzinfo=UTC),
+        stop_time=None,
+    )
+    newer = TimeTrackingTask(
+        user_id=user.id,
+        text="Newer running task",
+        start_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
+        stop_time=None,
+    )
+    db_session.add_all([older, newer])
+    await db_session.commit()
+
+    running = await get_running_task(db_session, user.id)
+    assert running is not None
+    assert running.id == newer.id
 
 
 async def test_create_task_rejects_negative_duration(db_session: AsyncSession) -> None:
