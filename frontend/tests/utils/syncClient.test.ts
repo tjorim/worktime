@@ -1584,6 +1584,32 @@ describe("syncClient", () => {
       );
     });
 
+    it("commit() only removes the dequeued entries, preserving concurrent appends", () => {
+      // Simulates the race from #1098: a flush snapshots the outbox and starts
+      // its network push, and a write lands in the outbox (e.g. because its own
+      // immediate push failed) before that flush's commit() runs.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+
+      // A concurrent write appends while the dequeued batch's push is in flight.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-B" }],
+      } as never);
+
+      result!.commit();
+
+      // Only the dequeued entry (task-A) is removed; task-B survives.
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      const remaining = dequeueAndMergeSyncOutbox("user-1");
+      expect(remaining!.merged.tasks.map((t) => t.id)).toEqual(["task-B"]);
+    });
+
     it("skips corrupted/non-object outbox entries without throwing", () => {
       appendToSyncOutbox("user-1", emptyPayload());
       // Corrupt the outbox by injecting a bad entry directly.

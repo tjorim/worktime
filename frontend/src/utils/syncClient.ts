@@ -1081,6 +1081,10 @@ function readSyncOutbox(userId: string): SyncPushPayload[] {
   }
 }
 
+function writeSyncOutbox(userId: string, outbox: SyncPushPayload[]): void {
+  localStorage.setItem(getSyncOutboxKey(userId), JSON.stringify(outbox));
+}
+
 /**
  * Append a single change payload to the outbox queue stored in localStorage.
  * Called when an immediate push fails (e.g. offline).
@@ -1094,7 +1098,7 @@ export function appendToSyncOutbox(userId: string, change: SyncPushPayload): boo
   try {
     const outbox = readSyncOutbox(userId);
     outbox.push(change);
-    localStorage.setItem(getSyncOutboxKey(userId), JSON.stringify(outbox));
+    writeSyncOutbox(userId, outbox);
     return true;
   } catch (err) {
     // Storage rejected the write (quota exceeded, private browsing). Report it
@@ -1197,9 +1201,15 @@ export function getSyncOutboxSize(userId: string): number {
  * send via pushSyncPayload().  Returns null when the outbox is empty.
  *
  * The outbox is **not** cleared by this call.  After a successful push the
- * caller must invoke the returned `commit` function to clear the outbox.  If
- * the push fails the outbox is left intact and will be retried on the next
- * flush cycle.
+ * caller must invoke the returned `commit` function to remove the dequeued
+ * entries.  If the push fails the outbox is left intact and will be retried
+ * on the next flush cycle.
+ *
+ * `commit` only removes the entries present in this snapshot (by count, from
+ * the front of the array) rather than clearing the whole key. The outbox is
+ * append-only, so any entry written by a concurrent `appendToSyncOutbox`
+ * while this batch's push is in flight lands after the snapshot and survives
+ * the commit instead of being silently dropped.
  *
  * Entries are coalesced by natural key (id, or date for work locations),
  * keeping only the newest entry per record.  This is safe because every
@@ -1212,6 +1222,7 @@ export function dequeueAndMergeSyncOutbox(
 ): { merged: SyncPushPayload; commit: () => void } | null {
   const outbox = readSyncOutbox(userId);
   if (outbox.length === 0) return null;
+  const consumed = outbox.length;
 
   const merged: SyncPushPayload = {
     labels: [],
@@ -1243,6 +1254,9 @@ export function dequeueAndMergeSyncOutbox(
       time_off_entries: dedupeByKey(merged.time_off_entries, (e) => e.id),
       gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
     },
-    commit: () => clearSyncOutbox(userId),
+    commit: () => {
+      const current = readSyncOutbox(userId);
+      writeSyncOutbox(userId, current.slice(consumed));
+    },
   };
 }
