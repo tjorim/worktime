@@ -129,6 +129,7 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
             "user_id",
             unique=True,
             postgresql_where=sql_text("stop_time IS NULL AND deleted_at IS NULL"),
+            sqlite_where=sql_text("stop_time IS NULL AND deleted_at IS NULL"),
         ),
         Index("ix_time_tracking_tasks_user_id_updated_at", "user_id", "updated_at"),
         Index("ix_time_tracking_tasks_user_id_start_time", "user_id", "start_time"),

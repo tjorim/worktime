@@ -39,8 +39,8 @@ def upgrade() -> None:
         """
         UPDATE time_tracking_tasks
         SET stop_time = start_time,
-            updated_at = now(),
-            client_updated_at = now()
+            updated_at = CURRENT_TIMESTAMP,
+            client_updated_at = CURRENT_TIMESTAMP
         WHERE id IN (
             SELECT id FROM (
                 SELECT id,
@@ -60,6 +60,7 @@ def upgrade() -> None:
         ["user_id"],
         unique=True,
         postgresql_where=sa.text("stop_time IS NULL AND deleted_at IS NULL"),
+        sqlite_where=sa.text("stop_time IS NULL AND deleted_at IS NULL"),
     )
 
 
