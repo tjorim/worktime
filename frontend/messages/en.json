@@ -119,7 +119,7 @@
   "developer_mode_disabled": "Developer mode disabled",
   "developer_mode_enabled": "Developer mode enabled - check Information section",
   "restore_failed": "Import failed. Please select a valid backup file.",
-  "restore_sync_failed": "Local data restored, but syncing it to your account failed. It will be retried automatically.",
+  "restore_sync_failed": "Local data restored, but syncing it to your account failed. It may be retried automatically, or you can try restoring again.",
   "share_success": "Share dialog opened or link copied!",
   "share_failed": "Could not share. Try copying the link manually.",
   "language_label": "Language",

@@ -112,7 +112,7 @@
   "developer_mode_disabled": "Ontwikkelaarsmodus uitgeschakeld",
   "developer_mode_enabled": "Ontwikkelaarsmodus ingeschakeld - bekijk de sectie Informatie",
   "restore_failed": "Importeren mislukt. Selecteer een geldig back-upbestand.",
-  "restore_sync_failed": "Lokale gegevens zijn gehersteld, maar synchroniseren met uw account is mislukt. Dit wordt automatisch opnieuw geprobeerd.",
+  "restore_sync_failed": "Lokale gegevens zijn gehersteld, maar synchroniseren met uw account is mislukt. Dit kan automatisch opnieuw worden geprobeerd, of u kunt het herstel opnieuw proberen.",
   "share_success": "Deelvenster geopend of link gekopieerd!",
   "share_failed": "Kan niet delen. Probeer de link handmatig te kopiëren.",
   "language_label": "Taal",
