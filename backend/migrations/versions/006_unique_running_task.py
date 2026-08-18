@@ -54,15 +54,37 @@ def upgrade() -> None:
         )
         """
     )
-    op.create_index(
-        "uq_active_running_task_user",
-        "time_tracking_tasks",
-        ["user_id"],
-        unique=True,
-        postgresql_where=sa.text("stop_time IS NULL AND deleted_at IS NULL"),
-        sqlite_where=sa.text("stop_time IS NULL AND deleted_at IS NULL"),
-    )
+    # A plain CREATE UNIQUE INDEX holds a SHARE lock on the table for the
+    # entire index build, blocking every write to time_tracking_tasks until
+    # it completes — on a large production table that's a real outage risk.
+    # CONCURRENTLY avoids that (at the cost of not running inside this
+    # migration's transaction, so it commits the repair above first). If
+    # interrupted it can leave an INVALID index behind; rerunning this
+    # migration after `DROP INDEX CONCURRENTLY IF EXISTS
+    # uq_active_running_task_user` recovers. SQLite has no CONCURRENTLY and
+    # only ever meets this table freshly created (via
+    # Base.metadata.create_all() for local dev/tests), so it keeps the plain
+    # path.
+    if op.get_bind().dialect.name == "postgresql":
+        with op.get_context().autocommit_block():
+            op.execute(
+                "CREATE UNIQUE INDEX CONCURRENTLY uq_active_running_task_user "
+                "ON time_tracking_tasks (user_id) "
+                "WHERE stop_time IS NULL AND deleted_at IS NULL"
+            )
+    else:
+        op.create_index(
+            "uq_active_running_task_user",
+            "time_tracking_tasks",
+            ["user_id"],
+            unique=True,
+            sqlite_where=sa.text("stop_time IS NULL AND deleted_at IS NULL"),
+        )
 
 
 def downgrade() -> None:
-    op.drop_index("uq_active_running_task_user", table_name="time_tracking_tasks")
+    if op.get_bind().dialect.name == "postgresql":
+        with op.get_context().autocommit_block():
+            op.execute("DROP INDEX CONCURRENTLY IF EXISTS uq_active_running_task_user")
+    else:
+        op.drop_index("uq_active_running_task_user", table_name="time_tracking_tasks")
