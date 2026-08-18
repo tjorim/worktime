@@ -6,7 +6,7 @@ import {
   restoreAppBackup,
   validateAppBackupPayload,
 } from "@/utils/appBackup";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { getSyncOutboxKey, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import {
   ganttTasksCollection,
@@ -16,6 +16,7 @@ import {
   timeOffCollection,
   workLocationsCollection,
 } from "@/db/collections";
+import * as collectionsModule from "@/db/collections";
 
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
 
@@ -287,14 +288,22 @@ describe("appBackup", () => {
       vi.spyOn(window.location, "reload").mockImplementation(() => {});
     });
 
-    it("writes userState to localStorage and reloads", () => {
+    it("writes userState to localStorage and reloads", async () => {
       const state = { version: 2, myTeam: 1 };
-      restoreAppBackup({ exportedAt: "", version: 1, userState: state });
-      expect(JSON.parse(localStorage.getItem(USER_STATE_KEY)!)).toEqual(state);
+      await restoreAppBackup({ exportedAt: "", version: 1, userState: state });
+      expect(JSON.parse(localStorage.getItem(USER_STATE_KEY)!)).toMatchObject(state);
       expect(window.location.reload).toHaveBeenCalledOnce();
     });
 
-    it("writes timeOff canonical entries to storage", () => {
+    it("stamps a fresh _updatedAt on the restored userState, discarding the export-time one", async () => {
+      const exportTimeState = { version: 2, myTeam: 1, _updatedAt: "2020-01-01T00:00:00.000Z" };
+      await restoreAppBackup({ exportedAt: "", version: 1, userState: exportTimeState });
+      const restored = JSON.parse(localStorage.getItem(USER_STATE_KEY)!);
+      expect(restored._updatedAt).not.toBe(exportTimeState._updatedAt);
+      expect(new Date(restored._updatedAt).toISOString()).toBe(restored._updatedAt);
+    });
+
+    it("writes timeOff canonical entries to storage", async () => {
       const entry: TimeOffEntry = {
         id: "e1",
         entryKind: "date",
@@ -303,7 +312,7 @@ describe("appBackup", () => {
         entryFlag: "full_day",
         note: "Vacation",
       };
-      restoreAppBackup({ exportedAt: "", version: 1, timeOff: [entry] });
+      await restoreAppBackup({ exportedAt: "", version: 1, timeOff: [entry] });
       expect(timeOffCollection.toArray).toHaveLength(1);
       expect(timeOffCollection.toArray[0]).toMatchObject({
         entryKind: "date",
@@ -312,25 +321,25 @@ describe("appBackup", () => {
       });
     });
 
-    it("writes work locations for each year", () => {
+    it("writes work locations for each year", async () => {
       const locs = { "2026": { "2026-02-24": { countryCode: "NL" } } };
-      restoreAppBackup({ exportedAt: "", version: 1, workLocations: locs });
+      await restoreAppBackup({ exportedAt: "", version: 1, workLocations: locs });
       expect(plainCollectionItems(workLocationsCollection.toArray)).toEqual([
         { date: "2026-02-24", countryCode: "NL" },
       ]);
     });
 
-    it("writes time tracking tasks, templates and labels", () => {
+    it("writes time tracking tasks, templates and labels", async () => {
       const tasks = [{ id: "t1", text: "T", label: "l1", startTime: "2026-02-24T09:00" }];
       const templates = [{ id: "tp1", text: "T", label: "l1", start: "09:00", stop: "17:00" }];
       const labels = [{ id: "l1", name: "Work", color: "#198754" }];
-      restoreAppBackup({ exportedAt: "", version: 1, tasks, templates, labels });
+      await restoreAppBackup({ exportedAt: "", version: 1, tasks, templates, labels });
       expect(plainCollectionItems(tasksCollection.toArray)).toEqual(tasks);
       expect(plainCollectionItems(templatesCollection.toArray)).toEqual(templates);
       expect(plainCollectionItems(labelsCollection.toArray)).toEqual(labels);
     });
 
-    it("replaces existing tasks when tasks are present in the backup payload", () => {
+    it("replaces existing tasks when tasks are present in the backup payload", async () => {
       const existingTasks = [
         { id: "t-2025", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
         { id: "t-2026", text: "B", label: "l1", startTime: "2026-02-24T09:00" },
@@ -341,21 +350,104 @@ describe("appBackup", () => {
 
       tasksCollection.insert(existingTasks[0]!);
       tasksCollection.insert(existingTasks[1]!);
-      restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
+      await restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
 
       expect(plainCollectionItems(tasksCollection.toArray)).toEqual(backupTasks);
     });
 
-    it("leaves unspecified sections untouched", () => {
+    it("leaves unspecified sections untouched", async () => {
       localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 5 }));
-      restoreAppBackup({ exportedAt: "", version: 1, labels: [] });
+      await restoreAppBackup({ exportedAt: "", version: 1, labels: [] });
       // userState was not in payload, should still be in localStorage
       expect(JSON.parse(localStorage.getItem(USER_STATE_KEY)!)).toEqual({ myTeam: 5 });
     });
 
-    it("always calls window.location.reload", () => {
-      restoreAppBackup({ exportedAt: "", version: 1, labels: [] });
+    it("always calls window.location.reload when not signed in to a synced account", async () => {
+      await restoreAppBackup({ exportedAt: "", version: 1, labels: [] });
       expect(window.location.reload).toHaveBeenCalledOnce();
+    });
+
+    describe("on a synced account", () => {
+      const mockFetch = vi.fn();
+
+      beforeEach(() => {
+        mockFetch.mockReset();
+        vi.spyOn(collectionsModule, "hasSyncCollectionAuth").mockReturnValue(true);
+        vi.spyOn(collectionsModule, "getSyncCollectionUserId").mockReturnValue("user-1");
+      });
+
+      afterEach(() => {
+        localStorage.removeItem(getSyncOutboxKey("user-1"));
+      });
+
+      const emptyPullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+        server_timestamp: "2026-01-02T00:00:00.000Z",
+      };
+
+      it("pulls, pushes a single keep-local replace payload, then reloads", async () => {
+        const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        mockFetch
+          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // GET /api/sync/pull
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) }); // POST /api/sync/push
+
+        await restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch);
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(mockFetch.mock.calls[0]![0]).toBe("/api/sync/pull");
+        const [pushUrl, pushInit] = mockFetch.mock.calls[1]!;
+        expect(pushUrl).toBe("/api/sync/push");
+        const pushBody = JSON.parse((pushInit as RequestInit).body as string);
+        expect(pushBody.allow_bulk_delete).toBe(true);
+        expect(pushBody.labels).toEqual([
+          expect.objectContaining({ id: "l1", action: "create", name: "Work", color: "#198754" }),
+        ]);
+        expect(window.location.reload).toHaveBeenCalledOnce();
+      });
+
+      it("does not throw, does not hit the network, and still reloads when the restored state is empty", async () => {
+        // No collection sections in the payload: buildLocalSyncPushPayload()
+        // produces an empty push, so there is nothing to reconcile with the
+        // server and no reason to round-trip for it.
+        await restoreAppBackup({ exportedAt: "", version: 1, userState: {} }, mockFetch);
+
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(window.location.reload).toHaveBeenCalledOnce();
+      });
+
+      it("throws, does not reload, and queues the payload in the outbox when the push fails", async () => {
+        const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        mockFetch
+          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull succeeds
+          .mockResolvedValueOnce({ ok: false, status: 500 }); // push fails
+
+        await expect(
+          restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch),
+        ).rejects.toThrow();
+
+        expect(window.location.reload).not.toHaveBeenCalled();
+        const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey("user-1"))!);
+        expect(outbox).toHaveLength(1);
+        expect(outbox[0].labels).toEqual([
+          expect.objectContaining({ id: "l1", action: "create" }),
+        ]);
+      });
+
+      it("throws and does not reload when the pre-push pull fails", async () => {
+        const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        mockFetch.mockResolvedValueOnce({ ok: false, status: 500 }); // pull fails
+
+        await expect(
+          restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch),
+        ).rejects.toThrow();
+
+        expect(window.location.reload).not.toHaveBeenCalled();
+      });
     });
   });
 
