@@ -684,7 +684,8 @@
         <div class="verified"><span><code>buildLocalSyncPushPayload</code> now computes the
           surviving label and gantt-task id sets before building tasks/templates, and nulls out any
           <code>label_id</code> / <code>gantt_task_id</code> not in those sets (including a gantt
-          task's own dangling <code>label_id</code>) instead of leaving the reference intact.</span></div>
+          task's own dangling <code>label_id</code>) instead of leaving the reference intact. Fixed
+          in PR #1147.</span></div>
       </div>
 
       <div class="finding med resolved">
