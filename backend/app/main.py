@@ -37,10 +37,9 @@ logger = logging.getLogger(__name__)
 _worktime_mcp_base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "")
 if _worktime_mcp_base_url:
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
-    from .mcp_server import create_mcp_server as _create_mcp_server
+    from .mcp_server import create_mcp_http_app as _create_mcp_http_app
 
-    _mcp = _create_mcp_server()
-    _mcp_app = _mcp.http_app(path="/", stateless_http=True)
+    _mcp, _mcp_app = _create_mcp_http_app(path="/", stateless_http=True)
 else:
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
 

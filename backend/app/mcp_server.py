@@ -24,11 +24,15 @@ from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, AuthCheck, AuthContext, MultiAuth, TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.server.transforms.search import BM25SearchTransform
 from fastmcp.tools.base import Tool
 from mcp.types import ToolAnnotations
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from starlette.middleware import Middleware as ASGIMiddleware
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import settings
 from app.database.engine import get_session_factory
@@ -70,7 +74,9 @@ __all__ = [
     "McpRateLimitError",
     "WorktimeMcpContext",
     "WorktimeMcpBackend",
+    "IntegrationClientRateLimitMiddleware",
     "create_mcp_server",
+    "create_mcp_http_app",
 ]
 
 
@@ -82,6 +88,12 @@ class DbIntegrationClientVerifier(TokenVerifier):
     revoked at runtime without a process restart. Inactive/revoked/unknown
     keys verify as ``None`` (auth failure), matching ``TokenVerifier``'s
     contract. Records best-effort ``last_used_at`` telemetry on success.
+
+    Rate limiting is deliberately *not* enforced here (issue #1106): FastMCP's
+    ``MultiAuth`` treats any exception a verifier raises from ``verify_token``
+    as a non-match and tries the next source, so a client over its limit would
+    have surfaced as "401 invalid credentials" instead of 429 either way.
+    ``IntegrationClientRateLimitMiddleware`` enforces it after auth resolves.
     """
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -98,12 +110,9 @@ class DbIntegrationClientVerifier(TokenVerifier):
             if integration_client_service.MCP_SCOPE not in client.scopes:
                 return None
             try:
-                await integration_client_service.enforce_integration_client_rate_limit(session, client.id)
                 await integration_client_service.record_integration_client_usage(session, client)
-            except integration_client_service.RateLimitExceededError:
-                return None
             except SQLAlchemyError:
-                logger.warning("Failed to record integration client usage or rate limit", exc_info=True)
+                logger.warning("Failed to record integration client usage", exc_info=True)
 
         return AccessToken(
             token=token,
@@ -141,6 +150,52 @@ def _build_auth_provider(
 
     verifier = DbIntegrationClientVerifier(session_factory or get_session_factory())
     return MultiAuth(server=keycloak, verifiers=[verifier])
+
+
+class IntegrationClientRateLimitMiddleware:
+    """Reject over-limit managed-integration-client requests with 429 (issue #1106).
+
+    FastMCP wires this ASGI middleware in right after its own auth middleware
+    (``AuthenticationMiddleware`` + ``AuthContextMiddleware``) and before
+    ``RequireAuthMiddleware``'s 401 gate — see ``create_mcp_http_app`` below —
+    so ``get_access_token()`` already reflects a successfully verified token
+    by the time this runs, and a 429 here short-circuits before the request
+    ever reaches ``RequireAuthMiddleware`` or the MCP session handling.
+    Requests with no integration-client claim (OIDC users, unauthenticated
+    requests) pass straight through — rate limiting only applies to managed
+    integration clients, matching ``enforce_integration_client_rate_limit``.
+    """
+
+    def __init__(self, app: ASGIApp, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._app = app
+        self._session_factory = session_factory
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+
+        access_token = get_access_token()
+        client_id = (access_token.claims or {}).get("integration_client_id") if access_token else None
+        if client_id is None:
+            await self._app(scope, receive, send)
+            return
+
+        async with self._session_factory() as session:
+            try:
+                await integration_client_service.enforce_integration_client_rate_limit(session, client_id)
+            except integration_client_service.RateLimitExceededError as exc:
+                response = JSONResponse(
+                    {"error": "rate_limited", "error_description": str(exc)},
+                    status_code=429,
+                    headers={"Retry-After": str(exc.retry_after_seconds)},
+                )
+                await response(scope, receive, send)
+                return
+            except SQLAlchemyError:
+                logger.warning("Failed to enforce integration client rate limit", exc_info=True)
+
+        await self._app(scope, receive, send)
 
 
 class WorktimeMcpBackend:
@@ -681,6 +736,28 @@ def create_mcp_server(
         )(getattr(backend, tool_name))
 
     return server
+
+
+def create_mcp_http_app(
+    session_factory: async_sessionmaker[AsyncSession] | None = None,
+    **http_app_kwargs: Any,
+) -> tuple[FastMCP, StarletteWithLifespan]:
+    """Create the Worktime FastMCP server and its mountable Starlette HTTP app.
+
+    Wires ``IntegrationClientRateLimitMiddleware`` in after FastMCP's own auth
+    middleware, so it sees the resolved token but still runs ahead of
+    ``RequireAuthMiddleware`` (issue #1106). Prefer this over calling
+    ``create_mcp_server(...).http_app(...)`` directly so callers don't have to
+    re-derive the middleware wiring.
+    """
+    factory = session_factory or get_session_factory()
+    server = create_mcp_server(factory)
+    middleware = [
+        ASGIMiddleware(IntegrationClientRateLimitMiddleware, session_factory=factory),
+        *http_app_kwargs.pop("middleware", []),
+    ]
+    app = server.http_app(middleware=middleware, **http_app_kwargs)
+    return server, app
 
 
 def main() -> None:

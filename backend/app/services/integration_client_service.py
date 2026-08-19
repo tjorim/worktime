@@ -32,7 +32,15 @@ _LAST_USED_UPDATE_INTERVAL = timedelta(minutes=15)
 
 
 class RateLimitExceededError(Exception):
-    """Raised when an integration client exceeds its configured per-minute rate limit."""
+    """Raised when an integration client exceeds its configured per-minute rate limit.
+
+    ``retry_after_seconds`` is how long until the fixed window rolls over, so
+    callers producing an HTTP 429 (issue #1106) can set a ``Retry-After`` header.
+    """
+
+    def __init__(self, message: str, *, retry_after_seconds: int) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
 
 
 def _hash_integration_key_with_secret(raw_key: str, secret: str) -> str:
@@ -227,7 +235,7 @@ async def enforce_integration_client_rate_limit(session: AsyncSession, client_id
     """Consume one database-backed fixed-window request across all workers."""
     client = await session.scalar(select(IntegrationClient).where(IntegrationClient.id == client_id).with_for_update())
     if client is None:
-        raise RateLimitExceededError("integration client no longer exists")
+        raise RateLimitExceededError("integration client no longer exists", retry_after_seconds=60)
     now = datetime.now(UTC)
     started = client.rate_limit_window_started_at
     if started is not None and started.tzinfo is None:
@@ -237,9 +245,12 @@ async def enforce_integration_client_rate_limit(session: AsyncSession, client_id
         client.rate_limit_window_count = 1
     elif client.rate_limit_window_count >= client.rate_limit_per_minute:
         rate_limit = client.rate_limit_per_minute
+        window_started = started if started is not None else now
+        retry_after_seconds = max(1, int((window_started + timedelta(minutes=1) - now).total_seconds()))
         await session.rollback()
         raise RateLimitExceededError(
-            f"integration client {client_id!r} exceeded its rate limit of {rate_limit} requests/minute"
+            f"integration client {client_id!r} exceeded its rate limit of {rate_limit} requests/minute",
+            retry_after_seconds=retry_after_seconds,
         )
     else:
         client.rate_limit_window_count += 1
