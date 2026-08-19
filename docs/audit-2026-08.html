@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-  /* Minimal reset (the hosted artifact gets this from its wrapper). */
   *, *::before, *::after { box-sizing: border-box; }
   body, h1, h2, h3, p, figure, table, ul { margin: 0; }
   img { max-width: 100%; height: auto; display: block; }
@@ -255,6 +254,63 @@
   .finding.high { --stripe: var(--sev-high); }
   .finding.med  { --stripe: var(--sev-med); }
   .finding.low  { --stripe: var(--sev-low); }
+  /* Qualified with .high so specificity beats .finding.high's own rules
+     regardless of source order — all resolved cards are also .high today. */
+  .finding.high.resolved { --stripe: var(--good); }
+  .finding.high.resolved .sev {
+    background: color-mix(in srgb, var(--good) 16%, transparent);
+    color: var(--good);
+  }
+  .verified {
+    display: flex;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    padding-top: 0.1rem;
+  }
+  .verified::before {
+    content: "FIXED";
+    font-family: Archivo, sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    color: var(--good);
+    padding-top: 0.34em;
+    flex-shrink: 0;
+  }
+  .verified span { color: var(--ink-2); }
+  .verified code { font-size: 0.85em; }
+
+  /* ---- Sequencing lists ---- */
+  .seq-block { display: flex; flex-direction: column; gap: 0.6rem; }
+  .seq-block h3 {
+    font-size: 1.15rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .seq-block h3 .sec-count { margin-left: 0; }
+  .seq-block > p { color: var(--muted); font-size: 0.92rem; }
+  table.seq col.n { width: 2.5rem; }
+  td.seq-n {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 600;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  td.seq-issues { white-space: nowrap; }
+  .stale {
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-radius: 4px;
+    padding: 0.12rem 0.4rem;
+    vertical-align: 0.1em;
+  }
 
   .f-top {
     display: flex;
@@ -456,11 +512,11 @@
   <header class="masthead">
     <div class="eyebrow">Worktime · v2026.8.2 · full audit</div>
     <h1>What's broken, and in what order</h1>
-    <p class="lede">Thirty-six open findings across sync, backend, interface and documentation —
-      from three separate reviews run against <span class="mono">main</span> at
-      <span class="mono">6c48e73</span>. Each is traced to the code that produces it and filed as a
-      GitHub issue. The app is well built; the failures cluster in the places where two subsystems
-      meet and neither owns the seam.</p>
+    <p class="lede">Thirty-seven findings across sync, backend, interface and documentation, from
+      three reviews run against <span class="mono">main</span> — each traced to the code that
+      produces it and filed as a GitHub issue. The eight high-severity ones are now fixed and
+      verified; twenty-nine remain, with a suggested order below. The app is well built; the
+      failures cluster in the places where two subsystems meet and neither owns the seam.</p>
     <div class="method">
       <span>Full-codebase read</span>
       <span>App driven in Chromium, desktop and phone, both themes</span>
@@ -479,34 +535,35 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score high"><span class="n">8</span><span class="k">High</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">8</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">15</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">36</span><span class="k">Open issues</span></div>
+      <div class="score low"><span class="n">14</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">29</span><span class="k">Open</span></div>
     </div>
-    <div class="note alarm">
-      <strong>Start with #1098.</strong> It silently drops user writes: a change queued while a
-      sync flush is in flight gets deleted by that flush's commit, with no error, no trace and no
-      retry. Everything else on this page is recoverable or cosmetic by comparison. Then #1100,
-      which locks a user out of the views they'd need to fix their own account, and #1099, which
-      takes the API down at roughly fifteen open tabs.
+    <div class="note">
+      <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
+      <code>main</code> — see the <span class="mono">FIXED</span> marker on each card below for what
+      changed and where. One new low finding, <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
+      turned up while verifying #1126. A suggested order for what's left — 15 medium, 14 low — is at
+      the bottom of the page, along with three in-flight PRs from other tools worth checking before
+      you duplicate their work.
     </div>
   </section>
 
   <section>
     <div class="sec-head">
-      <h2>Data integrity<span class="sec-count">4</span></h2>
-      <p>Writes that vanish, accounts that wedge, and a pool that runs out. These outrank
-        everything below.</p>
+      <h2>Data integrity<span class="sec-count">4 · all fixed</span></h2>
+      <p>Writes that vanished, accounts that wedged, a pool that ran out — all four fixed and
+        verified on <code>main</code>. Kept here as the record of what shipped.</p>
     </div>
     <div class="findings">
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1098">#1098</a>
           <span class="area">sync</span>
           <h3>Outbox flush clears the whole key, dropping changes queued mid-push</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>dequeueAndMergeSyncOutbox</code> returns a <code>commit</code> that calls
           <code>clearSyncOutbox</code> — a <code>removeItem</code> on the entire key — rather than
@@ -518,15 +575,18 @@
           the front — safe because appends only ever go to the end. Same treatment on the quarantine
           path.</span></div>
         <div class="refs"><b>frontend/src/utils/syncClient.ts:1246</b> <b>syncClient.ts:1112</b> <b>hooks/useOngoingSync.ts:280</b> <b>useOngoingSync.ts:336</b></div>
+        <div class="verified"><span><code>commit()</code> now removes exactly the dequeued entries
+          via a content-keyed multiset — <code>clearSyncOutbox</code> has zero call sites left in
+          <code>src/</code>. Merged via #1137.</span></div>
       </div>
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1100">#1100</a>
           <span class="area">backend</span>
           <span class="area">data-model</span>
           <h3>Two running tasks crash every endpoint that resolves the running task</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>get_running_task</code> ends in <code>scalar_one_or_none()</code>, which raises on
           more than one row — and nothing stops a second row existing, because
@@ -540,15 +600,19 @@
           rather than a raise; add the partial unique index with a data-repair migration that runs
           before the constraint.</span></div>
         <div class="refs"><b>backend/app/services/db_service.py:441</b> <b>sync_service.py:352</b> <b>routers/pebble.py:58</b> <b>mcp/time_tracking.py:64</b></div>
+        <div class="verified"><span>All three parts landed, plus a savepoint in
+          <code>_add_task_or_running_conflict</code> beyond what was asked — a genuinely concurrent
+          push now conflicts one record instead of aborting the batch. Migration
+          <code>006_unique_running_task.py</code> repairs before indexing. Merged via #1138.</span></div>
       </div>
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1099">#1099</a>
           <span class="area">backend</span>
           <span class="area">perf</span>
           <h3>SSE pins a pooled DB connection per stream, exhausting the pool at ~15 tabs</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>The events endpoint depends on <code>get_session</code>, a yield-dependency FastAPI only
           unwinds once the response finishes — which for a <code>StreamingResponse</code> means when
@@ -559,15 +623,19 @@
         <div class="fix"><span>Give the SSE route its own short-lived auth dependency that resolves
           the principal, closes its session, and returns a plain user id.</span></div>
         <div class="refs"><b>backend/app/routers/db_sync.py:128</b> <b>routers/auth.py:139</b> <b>database/engine.py:63</b> <b>config/settings.py:54</b></div>
+        <div class="verified"><span><code>get_principal_shortlived</code> opens and closes its own
+          session before the stream body runs; the route is <code>@limiter.exempt</code>. Auth
+          semantics unchanged — <code>get_authenticated_principal</code> already rejected PATs, so
+          the new dependency doesn't narrow anything. Merged via #1139.</span></div>
       </div>
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1101">#1101</a>
           <span class="area">frontend</span>
           <span class="area">sync</span>
           <h3>Backup restore silently reverts on a synced account</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Two defects that compound. <code>restoreAppBackup</code> writes through the optimistic
           collection API, firing one un-awaited push per record, then calls
@@ -580,6 +648,10 @@
           via the direct-write path so no push handlers fire, then push once through
           <code>buildKeepLocalReplacePayload</code> and await it before reloading.</span></div>
         <div class="refs"><b>frontend/src/utils/appBackup.ts:410</b> <b>appBackup.ts:499</b> <b>appBackup.ts:411</b> <b>utils/syncClient.ts:741</b></div>
+        <div class="verified"><span>Fresh <code>_updatedAt</code> stamped at restore;
+          <code>restoreAppBackup</code> is now async, pulls once, pushes one
+          <code>buildKeepLocalReplacePayload</code>, and <code>window.location.reload()</code> is
+          unreachable unless that push succeeds. Merged via #1140.</span></div>
       </div>
 
     </div>
@@ -815,37 +887,42 @@
 
   <section>
     <div class="sec-head">
-      <h2>Interface<span class="sec-count">10</span></h2>
-      <p>Nineteen findings from driving the app, grouped into ten issues. Tracked in
-        <a href="https://github.com/tjorim/worktime/issues/1135">#1135</a>.</p>
+      <h2>Interface<span class="sec-count">11 · 4 fixed</span></h2>
+      <p>Twenty findings from driving the app (nineteen from the original pass, plus
+        <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a> found while verifying
+        #1126), grouped into eleven issues. Tracked in
+        <a href="https://github.com/tjorim/worktime/issues/1135">#1135</a>. The four high-severity
+        ones are fixed; the screenshots below are the <strong>before</strong> state they were found
+        in.</p>
     </div>
 
     <div class="shots">
       <figure>
         <img src="screenshots/ux-audit-home-desktop.png"
              alt="Worktime calendar tab at 1440px. A tall Current Status card fills the upper half; below it the month grid shows uniformly green shift bars in cells that are mostly empty.">
-        <figcaption><b>Desktop, Calendar tab.</b> The status hero and tab bar fill the fold, and the
-          month grid's 140&nbsp;px cells hold one 24&nbsp;px badge — every bar the same green
-          regardless of shift.</figcaption>
+        <figcaption><b>Before · Desktop, Calendar tab.</b> The status hero and tab bar filled the
+          fold, and the month grid's 140&nbsp;px cells held one 24&nbsp;px badge — every bar the
+          same green regardless of shift. Fixed by #1125–#1127.</figcaption>
       </figure>
       <figure>
         <img src="screenshots/ux-audit-home-mobile.png"
              alt="Worktime at 390px. The Current Status card occupies the entire viewport; the tab bar below shows six unlabeled icons, four of which are calendar glyphs.">
-        <figcaption><b>Mobile, Calendar tab.</b> The status card takes the whole 390×844 viewport.
-          The tab bar below is six unlabeled icons — four of them calendar variants.</figcaption>
+        <figcaption><b>Before · Mobile, Calendar tab.</b> The status card took the whole
+          390×844 viewport. The tab bar below was six unlabeled icons — four of them calendar
+          variants. Fixed by #1126 and #1128.</figcaption>
       </figure>
       <figure>
         <img src="screenshots/ux-audit-schedule-desktop.png"
              alt="Worktime Schedule tab showing five team cards, each with a colored shift badge: gray for off, purple for night, red for evening, blue for morning.">
-        <figcaption><b>Desktop, Schedule tab.</b> The palette applied correctly — M&nbsp;blue,
-          E&nbsp;red, N&nbsp;purple, O&nbsp;gray. This is what the month calendar replaces with one
-          green.</figcaption>
+        <figcaption><b>Desktop, Schedule tab</b> (unchanged — shown for comparison). The palette
+          applied correctly here — M&nbsp;blue, E&nbsp;red, N&nbsp;purple, O&nbsp;gray. The month
+          calendar now uses it too, per #1125.</figcaption>
       </figure>
     </div>
 
     <div class="demo">
       <div class="demo-col">
-        <span class="cap">Month calendar shows</span>
+        <span class="cap">Before · month calendar showed</span>
         <div class="chips">
           <span class="chip c-green">M</span>
           <span class="chip c-green">E</span>
@@ -855,25 +932,25 @@
         <span class="cap" style="color:var(--sev-high)">One green for all three shifts</span>
       </div>
       <div class="demo-col">
-        <span class="cap">Every other view shows</span>
+        <span class="cap">After · month calendar now matches</span>
         <div class="chips">
           <span class="chip c-morn">M</span>
           <span class="chip c-late">E</span>
           <span class="chip c-night">N</span>
           <span class="chip c-gray">O</span>
         </div>
-        <span class="cap" style="color:var(--good)">The documented <span class="mono">--wt-shift-*</span> palette</span>
+        <span class="cap" style="color:var(--good)">The documented <span class="mono">--wt-shift-*</span> palette — same as every other view</span>
       </div>
     </div>
 
     <div class="findings">
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1125">#1125</a>
           <span class="area">frontend</span>
           <h3>Month calendar and shift timeline ignore the shift color language</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Day cells render <code>text-bg-success</code> when working and
           <code>text-bg-secondary</code> when off, collapsing morning, evening and night into one
@@ -885,14 +962,18 @@
           <code>ShiftResult["shift"]</code> and render the existing <code>ShiftBadge</code>, which
           already applies <code>shift.className</code> and brings its tooltip along.</span></div>
         <div class="refs"><b>components/calendar/DayCell.tsx:461</b> <b>DayCell.tsx:32</b> <b>ShiftTimeline.tsx:183</b> <b>shared/ShiftBadge.tsx</b></div>
+        <div class="verified"><span><code>DayCell</code>'s prop widened to the full
+          <code>ShiftResult["shift"]</code>; both <code>DayCell</code> and <code>ShiftTimeline</code>
+          render <code>ShiftBadge</code> now — confirmed visually, M blue / E red / N purple / O gray
+          in both the grid and the timeline. Merged via #1141.</span></div>
       </div>
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1126">#1126</a>
           <span class="area">frontend</span>
           <h3>Current Status hero consumes the first screen on every tab</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Rendered above the tab bar by <code>HomePage</code>, so it shows identically on Gantt and
           Time Tracking where shift status is irrelevant. ~570&nbsp;px on desktop; the entire
@@ -904,14 +985,42 @@
           navbar, expanding on tap; suppress <em>Up Next</em> when it resolves to the same shift as
           <em>Today</em>.</span></div>
         <div class="refs"><b>pages/HomePage.tsx</b> <b>components/CurrentStatus.tsx</b> <b>status/PersonalizedStatus.tsx:335</b></div>
+        <div class="verified"><span><code>CurrentStatus</code> takes a
+          <code>variant="full" | "compact"</code> prop driven per-tab from <code>HomePage</code> via
+          a <code>FULL_STATUS_TABS</code> set; on mobile Time Tracking the hero is now a ~110&nbsp;px
+          one-line strip with an expand chevron instead of the full card. The
+          <code>nextShiftDuplicatesToday</code> guard correctly declines to fire when the two panels
+          describe genuinely different shift instances — see #1145 for the labeling gap that leaves
+          in that case. Merged via #1142.</span></div>
       </div>
 
-      <div class="finding high">
+      <div class="finding low">
+        <div class="f-top">
+          <a class="issue" href="https://github.com/tjorim/worktime/issues/1145">#1145</a>
+          <span class="area">frontend</span>
+          <h3>Today and Up Next can show identical text for two different shift instances a day apart</h3>
+          <span class="sev">Low</span>
+        </div>
+        <p>Found verifying #1126 — not a regression from it. When a team works two-plus consecutive
+          night shifts, <em>Today</em> and <em>Up Next</em> can both read "Night, 23:00–07:00": one
+          card for the shift currently ending, the other for an unrelated shift starting that night.
+          <code>currentShift.date</code> is the shift-day (rolled back a day while the clock is still
+          inside the night shift's window); <code>nextShift</code> searches from
+          <code>shiftDay + 1</code>, which can coincide with real calendar "today" and print the
+          literal word "Today" for a shift that hasn't started. Both labels are locally correct;
+          together they collide.</p>
+        <div class="fix"><span>Prefer "Tonight" for a same-day shift that hasn't started yet,
+          reserving "Today" for one already in progress — or give the <em>Today</em> card its own
+          relative-time cue when its date isn't the real calendar day.</span></div>
+        <div class="refs"><b>status/PersonalizedStatus.tsx:168</b> <b>PersonalizedStatus.tsx:395</b> <b>hooks/useLiveShiftStatus.ts:26</b> <b>utils/shiftCalculations.ts:417</b></div>
+      </div>
+
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1127">#1127</a>
           <span class="area">frontend</span>
           <h3>Month calendar cells reserve 140px for ~50px of content</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>A fixed floor regardless of content — 110&nbsp;px under 768&nbsp;px. A typical cell holds
           a day number and one badge, so two-thirds is empty and six rows produce an 840&nbsp;px grid
@@ -920,25 +1029,33 @@
           tallest cell, so a busy day still gets its room without imposing that height on the other
           five rows.</span></div>
         <div class="refs"><b>styles/_calendar.scss:58</b> <b>_calendar.scss:454</b></div>
+        <div class="verified"><span><code>min-height</code> dropped 140px→<code>4.5rem</code>,
+          110px→<code>3.5rem</code>. The whole month now fits on one desktop screen — confirmed
+          visually. Merged via #1143.</span></div>
       </div>
 
-      <div class="finding high">
+      <div class="finding high resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1128">#1128</a>
           <span class="area">frontend</span>
           <h3>Mobile tab bar is icon-only, and four of six icons are calendars</h3>
-          <span class="sev">High</span>
+          <span class="sev">Resolved</span>
         </div>
-        <p>Below 576&nbsp;px the labels are hidden, leaving six 16&nbsp;px glyphs — of which
+        <p>Below 576&nbsp;px the labels were hidden, leaving six 16&nbsp;px glyphs — of which
           <code>bi-calendar3</code>, <code>bi-calendar-range</code>, <code>bi-calendar-week</code>
-          and <code>bi-calendar-check</code> are indistinguishable at that size. Primary navigation
-          becomes trial and error. The <code>aria-label</code>s are correct, so screen-reader users
-          are better served here than sighted ones. Separately, "Calendar" and "Unified" name the
-          implementation rather than the content.</p>
+          and <code>bi-calendar-check</code> were indistinguishable at that size. Primary navigation
+          became trial and error. The <code>aria-label</code>s were correct, so screen-reader users
+          were better served than sighted ones. Separately, "Calendar" and "Unified" name the
+          implementation rather than the content — that naming question is still open.</p>
         <div class="fix"><span>Stacked icon + label (a two-line tab still clears the existing
-          44&nbsp;px target), or a labeled bottom bar — but that has to be reconciled with the FAB
-          proposed in #1120 before either is built.</span></div>
+          44&nbsp;px target), or a labeled bottom bar.</span></div>
         <div class="refs"><b>styles/_utilities.scss</b> <b>components/MainTabs.tsx</b></div>
+        <div class="verified"><span>Labels restored via stacked <code>flex-direction: column</code>
+          at 0.65rem. Three of the four calendar glyphs replaced —
+          <code>bi-layers</code>, <code>bi-list-ul</code>, <code>bi-airplane</code> — confirmed
+          visually on a 390&nbsp;px viewport. The FAB proposal in #1120 predates this fix; its
+          "reconcile with #1128" caveat is now stale since #1128 shipped stacked labels, not a
+          bottom-bar redesign — see the sequencing note below. Merged via #1144.</span></div>
       </div>
 
       <div class="finding med">
@@ -1273,68 +1390,232 @@
   <section>
     <div class="sec-head">
       <h2>Suggested sequencing</h2>
-      <p>Revised across all six areas. The ordering changed once the sync findings were in — the
-        interface work is the most <em>visible</em> improvement, not the most urgent.</p>
+      <p>The high-severity batch is done, so this replaces the old six-area table with two straight
+        lists — medium, then low. Each row is sized to land as one PR; a shared row is meant to ship
+        together.</p>
     </div>
-    <div class="tablewrap">
-      <table>
-        <thead>
-          <tr><th>Batch</th><th>Contents</th><th>Why together</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>1 · Stop losing data</strong><br><span class="mono">#1098 #1100 #1101</span></td>
-            <td>Outbox truncation, the two-running-tasks lockout, and backup restore.</td>
-            <td>All three destroy or strand user data, and all three are invisible when they happen.
-              #1100's defensive read should ship first on its own — it unwedges affected accounts
-              immediately.</td>
-          </tr>
-          <tr>
-            <td><strong>2 · Keep the service up</strong><br><span class="mono">#1099 #1102</span></td>
-            <td>SSE connection pinning and the dead LISTEN reconnect.</td>
-            <td>Both are SSE lifecycle, both are operational rather than user-reported, and #1102
-              carries an AGENTS.md correction either way.</td>
-          </tr>
-          <tr>
-            <td><strong>3 · Make the calendar readable</strong><br><span class="mono">#1125 #1127</span></td>
-            <td>Real shift colors and content-sized day cells.</td>
-            <td>Same two files, and together they change how a month scans. The first thing anyone
-              will notice.</td>
-          </tr>
-          <tr>
-            <td><strong>4 · Give back the first screen</strong><br><span class="mono">#1126 #1128 #1120</span></td>
-            <td>Condensed status strip, labeled mobile tabs, and the FAB/carousel decision.</td>
-            <td>The mobile experience is gated on all three, and #1128 and #1120 both want the bottom
-              of the viewport — decide once.</td>
-          </tr>
-          <tr>
-            <td><strong>5 · Close the contract gaps</strong><br><span class="mono">#1103 #1104 #1105 #1106</span></td>
-            <td>Reference-aware sync filter, Pebble audit actor, gantt date ordering, MCP 429.</td>
-            <td>Each is a small, well-understood diff against a path that already has a correct
-              sibling to copy.</td>
-          </tr>
-          <tr>
-            <td><strong>6 · Tell the truth</strong><br><span class="mono">#1112 #1113 #1123 #1124 #1129</span></td>
-            <td>Notifications decision, Dutch parity + CI check, docs pass, changelog, settings copy.</td>
-            <td>One editing-and-deciding pass. #1112 and #1129 overlap on the same dead toggle;
-              #1113's CI check is what stops the drift recurring.</td>
-          </tr>
-          <tr>
-            <td><strong>7 · The rest</strong><br><span class="mono">#1107 #1108 #1109 #1110 #1111 #1114 #1115 #1116 #1117 #1118 #1121 #1122 #1130–#1134</span></td>
-            <td>Latent hazards, product gaps, refactors, polish.</td>
-            <td>Independent and individually cheap. #1114 and #1110 are near-trivial and can fill
-              gaps between larger pieces; #1107's golden-file check is the highest-value item here
-              because it prevents a whole class of future bug.</td>
-          </tr>
-        </tbody>
-      </table>
+
+    <div class="note">
+      <strong>Check these three before you start.</strong> Independent tool-driven branches already
+      have open PRs against issues this backlog touches. None are on <code>main</code> yet, so treat
+      them as drafts to review/finish, not as done — but starting fresh work on the same ground would
+      duplicate effort.
+      <div class="tablewrap" style="margin-top:0.75rem">
+        <table>
+          <thead><tr><th>PR</th><th>Closes</th><th>Overlaps</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a></td>
+              <td>#271, #273</td>
+              <td>Shift reminder notifications + smart PWA install prompts. This is the "build it"
+                option for medium&nbsp;#2 (#1112) below — review it before deciding to retreat
+                instead.</td>
+            </tr>
+            <tr>
+              <td><a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a></td>
+              <td>#270</td>
+              <td>High contrast, reduced motion, focus indicators. Land before or alongside low&nbsp;#1
+                (#1114) so the two reduced-motion fixes don't conflict.</td>
+            </tr>
+            <tr>
+              <td><a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a></td>
+              <td>#274</td>
+              <td>ScheduleDetailModal team info <strong>and iCal export</strong> — check what it ships
+                before starting low&nbsp;#10 (#1118); it may already cover the feed.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="seq-block">
+      <h3>Medium <span class="sec-count">15</span></h3>
+      <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
+        (#1131, #1115) come last, once everything upstream of them has landed.</p>
+      <div class="tablewrap">
+        <table class="seq">
+          <colgroup><col class="n"><col><col></colgroup>
+          <thead><tr><th>#</th><th>Issue(s)</th><th>Why this slot</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="seq-n">1</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1102">#1102</a>
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1103">#1103</a>
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
+              <td>Finish the sync/API contract sweep. Same files the high-severity fixes just
+                touched (<code>sync_service.py</code>, <code>db_sync.py</code>, <code>mcp_server.py</code>) —
+                context is warm and each issue already names the sibling function to mirror.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">2</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1112">#1112</a>
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
+              <td>Same dead Notifications toggle from two angles (already cross-linked). Check PR
+                #311 first — pick "build it" or "retreat honestly" once, both issues resolve
+                together.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">3</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a></td>
+              <td>Dutch parity plus the CI parity check — the check is what stops this specific class
+                of drift recurring, so it's worth doing before more translated surface ships.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">4</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a></td>
+              <td>Docs pass (backend README, root README, TODO.md). Fold
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a> (low)
+                into the same PR — it's a two-paragraph fix in a file this already touches.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">5</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
+              <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
+                decision needed.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">6</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
+              <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
+                the low list; sequence that right after if you want the whole feature rather than the
+                patch.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">7</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
+              <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
+                values but no architecture decision.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">8</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
+              <td>Golden-file cross-check between <code>rosters.ts</code> and
+                <code>read_models_service.py</code>. Higher effort, but the one item here that
+                prevents a future bug class rather than fixing a present one — worth landing before
+                #1115 below builds more on <code>read_models_service.py</code>.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">9</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
+              <td>Onboarding flow. Needs a product decision (which features get deferred setup)
+                before code — sequence it after the notifications/settings direction from #2–#4 is
+                settled, since that decision feeds it directly.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">10</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
+              <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
+                open question ("does the read model carry a date range") is easier to answer once
+                #1107 has forced a closer look at the same file.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="seq-block" style="margin-top:2rem">
+      <h3>Low <span class="sec-count">14</span></h3>
+      <p>Cheapest and most isolated first; the two items that gain from a predecessor (#1111→#1121)
+        are placed back to back; the largest and least-constrained items — new capability, pure
+        refactor — go last.</p>
+      <div class="tablewrap">
+        <table class="seq">
+          <colgroup><col class="n"><col><col></colgroup>
+          <thead><tr><th>#</th><th>Issue(s)</th><th>Why this slot</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="seq-n">1</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1114">#1114</a></td>
+              <td>Two-line reduced-motion guard — the cheapest fix on the whole backlog. Check PR
+                #447 first so the two motion fixes don't collide.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">2</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1108">#1108</a>
+                <a class="issue" href="https://github.com/tjorim/worktime/issues/1109">#1109</a></td>
+              <td>Two grab-bags of independent low-severity findings, already grouped by issue. No
+                reason not to clear both in one pass.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">3</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1134">#1134</a></td>
+              <td>Offline indicator. Was partly motivated by #1098 (queued writes vanishing); now
+                that's fixed, this is UX polish rather than a correctness signal, but the queued
+                state is still invisible.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">4</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1145">#1145</a></td>
+              <td>Today/Up Next label collision. Small, isolated to <code>PersonalizedStatus.tsx</code>,
+                no dependencies.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">5</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1133">#1133</a></td>
+              <td>Mobile header layout and the Quick Timer card. Independent CSS-and-copy change.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">6</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a></td>
+              <td>TransferView cross-schedule overlap and time-off overlays — the real fix behind
+                medium&nbsp;#6's stopgap. Do it once that's landed; reuses the same
+                <code>viewingScheduleType</code> plumbing.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">7</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
+              <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
+                once a third call site exists — #1111 just added one, so this is its natural
+                follow-up.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">8</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
+              <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
+                decision.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">9</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
+              <td>Integration-client management UI. Mirrors the existing PAT section's patterns
+                closely enough to copy rather than design.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">10</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
+              <td>iCal subscription feed. <span class="stale">check PR #448</span> before starting —
+                it may already ship the export half of this.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">11</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
+              <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
+                designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
+                stacked icon+labels, not a bottom-bar redesign, so there's no fixed bottom element left
+                to collide with. Worth a design pass against the shipped tab bar rather than the
+                hypothetical one the issue was written against.</td>
+            </tr>
+            <tr>
+              <td class="seq-n">12</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
+              <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
+                frontend change above already having landed, rather than fighting them for merge
+                conflicts.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
   <section>
     <div class="sec-head">
       <h2>Older backlog<span class="sec-count">5</span></h2>
-      <p>Open before today, unchanged by these reviews.</p>
+      <p>Open before this review. All four non-chore items now have open PRs from other tools —
+        see the callout above the sequencing tables for what each covers and where it overlaps.</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -1345,27 +1626,33 @@
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/270">#270</a></td>
             <td>Advanced accessibility: high contrast, font scaling, reduced motion</td>
-            <td>Has an open PR at #447. #1114 is the two-line subset that can land without it.</td>
+            <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a>.
+              Low&nbsp;#1 (#1114) is the two-line subset that can land independently of it.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/271">#271</a></td>
             <td>Notification system with shift reminders and push notifications</td>
-            <td>The build-it half; #1112 is the it's-currently-a-lie half.</td>
+            <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a> —
+              the same PR closes #273 below. This is the "build it" option for medium&nbsp;#2
+              (#1112); review #311 before choosing "retreat" instead.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/273">#273</a></td>
             <td>Smart PWA installation prompts based on user engagement</td>
-            <td>PWA is fully back per #1123; only <code>beforeinstallprompt</code> is missing.</td>
+            <td>Same PR <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
+              as #271, above.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
             <td>Enhance ScheduleDetailModal with export and improved schedule display</td>
-            <td>The serializer built for #1118 can back this too.</td>
+            <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a>,
+              which already includes iCal export — check it before starting low&nbsp;#10 (#1118);
+              it may cover the export half already.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/793">#793</a></td>
             <td>Verify @schedule-x/drag-and-drop v3 compatibility with calendar v4</td>
-            <td>Chore, unrelated to the above.</td>
+            <td>Chore, unrelated to the above. No PR yet.</td>
           </tr>
         </tbody>
       </table>
@@ -1392,10 +1679,13 @@
   </section>
 
   <footer>
-    Reviewed against <span class="mono">main</span> at <span class="mono">6c48e73</span>, Worktime
-    v2026.8.2. Thirty-six open issues from three reviews on 2026-08-18. Line references point at the
-    code that produces each behavior. Not covered: authenticated sync states and conflict dialogs
-    were not exercised in a live browser — they need a running backend.
+    Original review against <span class="mono">main</span> at <span class="mono">6c48e73</span>,
+    Worktime v2026.8.2 — thirty-six findings from three reviews on 2026-08-18. Updated
+    2026-08-19 after the eight high-severity fixes landed on <span class="mono">main</span> at
+    <span class="mono">612a815</span> (verified in code, in 1637 passing tests, and by driving the
+    app); one new low finding, #1145, surfaced during that verification. Line references point at
+    the code that produces each behavior. Not covered: authenticated sync states and conflict
+    dialogs were not exercised in a live browser — they need a running backend.
   </footer>
 
 </div>
