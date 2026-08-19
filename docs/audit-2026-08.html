@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">12</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">12</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">13</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">11</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">25</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">24</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -766,12 +766,12 @@
         <div class="refs"><b>backend/app/mcp_server.py:100</b> <b>services/integration_client_service.py:221</b></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
           <span class="area">backend</span>
           <h3>Sync push accepts gantt tasks with end before start; REST rejects them</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>The ordering check lives on <code>GanttTaskCreate</code> and
           <code>GanttTaskUpdate</code> but not on <code>GanttTaskSyncItem</code>, and
@@ -781,6 +781,12 @@
           with itself here, not just with REST. No <code>CheckConstraint</code> backstop either,
           unlike <code>TimeOffEntry</code>.</p>
         <div class="refs"><b>backend/app/schemas.py:806</b> <b>services/sync_service.py:697</b> <b>database/models.py:180</b></div>
+        <div class="verified"><span>PR #1149 updated <code>GanttTaskSyncItem</code> to reject an inverted create
+          the same way REST does; <code>_push_gantt_task</code> re-checks the merged candidate dates
+          on update, mirroring <code>_push_task</code>; and a
+          <code>ck_gantt_tasks_date_range</code> <code>CheckConstraint</code> (migration 007, with a
+          data-repair step that swaps any existing inverted rows) backstops both paths, matching
+          <code>TimeOffEntry</code>.</span></div>
       </div>
 
       <div class="finding low">
@@ -1467,12 +1473,11 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
               <td>Finish the sync/API contract sweep. Same files the high-severity fixes just
                 touched (<code>sync_service.py</code>, <code>db_sync.py</code>, <code>mcp_server.py</code>) —
                 context is warm and each issue already names the sibling function to mirror.
-                (#1102, #1103, and #1104 in this group have since been resolved.)</td>
+                (#1102, #1103, #1104, and #1105 in this group have since been resolved.)</td>
             </tr>
             <tr>
               <td class="seq-n">2</td>

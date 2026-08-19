@@ -839,6 +839,10 @@ async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskS
             from app.services.db_service import ValidationError
 
             raise ValidationError("name, start_date and end_date are required for gantt task create")
+        if item.end_date < item.start_date:
+            from app.services.db_service import ValidationError
+
+            raise ValidationError("end_date cannot be earlier than start_date")
         await _validate_task_label_reference(session, user_id, item.label_id)
         task = GanttTask(
             id=item.id,
@@ -871,6 +875,14 @@ async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskS
             conflict_reason="server version is newer",
         )
     provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
+    candidate_start_date = (
+        item.start_date if "start_date" in provided_fields and item.start_date is not None else task.start_date
+    )
+    candidate_end_date = item.end_date if "end_date" in provided_fields and item.end_date is not None else task.end_date
+    if candidate_end_date < candidate_start_date:
+        from app.services.db_service import ValidationError
+
+        raise ValidationError("end_date cannot be earlier than start_date")
     if "name" in provided_fields and item.name is not None:
         task.name = item.name
     if "label_id" in provided_fields:

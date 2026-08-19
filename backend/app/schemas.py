@@ -809,6 +809,11 @@ class GanttTaskSyncItem(BaseModel):
             missing = [f for f in ("name", "start_date", "end_date") if getattr(self, f) is None]
             if missing:
                 raise ValueError(f"Fields required for action 'create': {', '.join(missing)}")
+        # Only catches the create case, since start_date/end_date may each be
+        # provided independently on a partial update — _push_gantt_task
+        # re-checks the merged candidate dates for that case.
+        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("end_date cannot be earlier than start_date")
         return self
 
 

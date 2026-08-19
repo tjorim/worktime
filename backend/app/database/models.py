@@ -210,7 +210,10 @@ class GanttTask(ClientTimestampMixin, Base):
     )
     deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
-    __table_args__ = (Index("ix_gantt_tasks_user_id_updated_at", "user_id", "updated_at"),)
+    __table_args__ = (
+        Index("ix_gantt_tasks_user_id_updated_at", "user_id", "updated_at"),
+        CheckConstraint("start_date <= end_date", name="ck_gantt_tasks_date_range"),
+    )
 
 
 class UserPreferences(ClientTimestampMixin, Base):
