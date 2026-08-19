@@ -20,6 +20,7 @@ export const changelogData: ChangelogVersion[] = [
     added: [],
     changed: [
       "The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)",
+      "Month calendar cells now size to their content instead of reserving a fixed 140px (110px on mobile), so a full month fits on screen without scrolling (#1127)",
     ],
     fixed: [],
   },
