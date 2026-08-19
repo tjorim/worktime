@@ -254,10 +254,10 @@
   .finding.high { --stripe: var(--sev-high); }
   .finding.med  { --stripe: var(--sev-med); }
   .finding.low  { --stripe: var(--sev-low); }
-  /* Qualified with .high so specificity beats .finding.high's own rules
-     regardless of source order — all resolved cards are also .high today. */
-  .finding.high.resolved { --stripe: var(--good); }
-  .finding.high.resolved .sev {
+  /* Qualified with the severity class so specificity beats .finding.high/.low's own
+     rules regardless of source order. */
+  .finding.high.resolved, .finding.low.resolved { --stripe: var(--good); }
+  .finding.high.resolved .sev, .finding.low.resolved .sev {
     background: color-mix(in srgb, var(--good) 16%, transparent);
     color: var(--good);
   }
@@ -535,18 +535,18 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">8</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">9</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">15</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">14</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">29</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">28</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
-      <code>main</code> — see the <span class="mono">FIXED</span> marker on each card below for what
-      changed and where. One new low finding, <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
-      turned up while verifying #1126. A suggested order for what's left — 15 medium, 14 low — is at
-      the bottom of the page, along with three in-flight PRs from other tools worth checking before
-      you duplicate their work.
+      <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
+      discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
+      marker on each of the 9 resolved cards below for what changed and where. A suggested order for
+      what's left — 15 medium, 13 low — is at the bottom of the page, along with three in-flight PRs
+      from other tools worth checking before you duplicate their work.
     </div>
   </section>
 
@@ -887,13 +887,13 @@
 
   <section>
     <div class="sec-head">
-      <h2>Interface<span class="sec-count">11 · 4 fixed</span></h2>
+      <h2>Interface<span class="sec-count">11 · 5 fixed</span></h2>
       <p>Twenty findings from driving the app (nineteen from the original pass, plus
         <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a> found while verifying
         #1126), grouped into eleven issues. Tracked in
         <a href="https://github.com/tjorim/worktime/issues/1135">#1135</a>. The four high-severity
-        ones are fixed; the screenshots below are the <strong>before</strong> state they were found
-        in.</p>
+        ones plus #1145 are fixed; the screenshots below are the <strong>before</strong> state the
+        high-severity ones were found in.</p>
     </div>
 
     <div class="shots">
@@ -994,12 +994,12 @@
           in that case. Merged via #1142.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1145">#1145</a>
           <span class="area">frontend</span>
           <h3>Today and Up Next can show identical text for two different shift instances a day apart</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Found verifying #1126 — not a regression from it. When a team works two-plus consecutive
           night shifts, <em>Today</em> and <em>Up Next</em> can both read "Night, 23:00–07:00": one
@@ -1013,6 +1013,13 @@
           reserving "Today" for one already in progress — or give the <em>Today</em> card its own
           relative-time cue when its date isn't the real calendar day.</span></div>
         <div class="refs"><b>status/PersonalizedStatus.tsx:168</b> <b>PersonalizedStatus.tsx:395</b> <b>hooks/useLiveShiftStatus.ts:26</b> <b>utils/shiftCalculations.ts:417</b></div>
+        <div class="verified"><span>Shipped as "Later today" rather than "Tonight" — the collision
+          isn't night-shift-specific (the upcoming shift resolving to real "today" could be any
+          type), so a generic phrase was more accurate than a night-only one. New
+          <code>nextShiftIsLaterToday</code> derived value, computed the same way as the existing
+          <code>nextShiftDuplicatesToday</code> guard; new <code>personalized_status_later_today</code>
+          message pair (en/nl). Covered by two new tests reproducing the exact collision and its
+          negative case.</span></div>
       </div>
 
       <div class="finding high resolved">
@@ -1517,7 +1524,7 @@
     </div>
 
     <div class="seq-block" style="margin-top:2rem">
-      <h3>Low <span class="sec-count">14</span></h3>
+      <h3>Low <span class="sec-count">13</span></h3>
       <p>Cheapest and most isolated first; the two items that gain from a predecessor (#1111→#1121)
         are placed back to back; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
@@ -1548,49 +1555,43 @@
             </tr>
             <tr>
               <td class="seq-n">4</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1145">#1145</a></td>
-              <td>Today/Up Next label collision. Small, isolated to <code>PersonalizedStatus.tsx</code>,
-                no dependencies.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1133">#1133</a></td>
               <td>Mobile header layout and the Quick Timer card. Independent CSS-and-copy change.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a></td>
               <td>TransferView cross-schedule overlap and time-off overlays — the real fix behind
                 medium&nbsp;#6's stopgap. Do it once that's landed; reuses the same
                 <code>viewingScheduleType</code> plumbing.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
               <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
                 once a third call site exists — #1111 just added one, so this is its natural
                 follow-up.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
               <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
                 decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">9</td>
+              <td class="seq-n">8</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
               <td>Integration-client management UI. Mirrors the existing PAT section's patterns
                 closely enough to copy rather than design.</td>
             </tr>
             <tr>
-              <td class="seq-n">10</td>
+              <td class="seq-n">9</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
               <td>iCal subscription feed. <span class="stale">check PR #448</span> before starting —
                 it may already ship the export half of this.</td>
             </tr>
             <tr>
-              <td class="seq-n">11</td>
+              <td class="seq-n">10</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
               <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
                 designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
@@ -1599,7 +1600,7 @@
                 hypothetical one the issue was written against.</td>
             </tr>
             <tr>
-              <td class="seq-n">12</td>
+              <td class="seq-n">11</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge
@@ -1683,9 +1684,10 @@
     Worktime v2026.8.2 — thirty-six findings from three reviews on 2026-08-18. Updated
     2026-08-19 after the eight high-severity fixes landed on <span class="mono">main</span> at
     <span class="mono">612a815</span> (verified in code, in 1637 passing tests, and by driving the
-    app); one new low finding, #1145, surfaced during that verification. Line references point at
-    the code that produces each behavior. Not covered: authenticated sync states and conflict
-    dialogs were not exercised in a live browser — they need a running backend.
+    app); one new low finding, #1145, surfaced during that verification and was fixed the same day
+    (1639 tests passing). Line references point at the code that produces each behavior. Not
+    covered: authenticated sync states and conflict dialogs were not exercised in a live browser —
+    they need a running backend.
   </footer>
 
 </div>
