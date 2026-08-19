@@ -33,6 +33,7 @@ import {
 } from "@/constants/storageKeys";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 import {
+  ganttTasksCollection,
   labelsCollection,
   tasksCollection,
   templatesCollection,
@@ -699,6 +700,7 @@ describe("syncClient", () => {
     });
 
     it("converts tasks to sync items with UTC start_time", () => {
+      labelsCollection.insert({ id: "label-1", name: "Work", color: "#FF0000" });
       tasksCollection.insert({
         id: "task-1",
         text: "Hello",
@@ -735,6 +737,7 @@ describe("syncClient", () => {
     });
 
     it("converts templates with HH:mm:ss time format", () => {
+      labelsCollection.insert({ id: "label-1", name: "Work", color: "#FF0000" });
       templatesCollection.insert({
         id: "tmpl-1",
         text: "Standup",
@@ -817,6 +820,95 @@ describe("syncClient", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
       expect(payload.tasks[0].id).toBe("task-live");
+    });
+
+    it("nulls out a task's label_id when the referenced label was dropped by the label filter", () => {
+      // No matching label in labelsCollection — e.g. it was dropped for having a non-string color.
+      labelsCollection.insert({ id: "lbl-dropped", name: "Bad", color: null as never });
+      tasksCollection.insert({
+        id: "task-1",
+        text: "Hello",
+        label: "lbl-dropped",
+        startTime: "2026-01-01T09:00",
+      });
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.labels).toHaveLength(0);
+      expect(payload.tasks).toHaveLength(1);
+      expect(payload.tasks[0].label_id).toBeNull();
+    });
+
+    it("nulls out a template's label_id when the referenced label was dropped by the label filter", () => {
+      labelsCollection.insert({ id: "lbl-dropped", name: "Bad", color: null as never });
+      templatesCollection.insert({
+        id: "tmpl-1",
+        text: "Standup",
+        label: "lbl-dropped",
+        start: "09:00",
+        stop: "09:15",
+      });
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.templates).toHaveLength(1);
+      expect(payload.templates[0].label_id).toBeNull();
+    });
+
+    it("nulls out a task's gantt_task_id when the referenced gantt task was dropped by the gantt filter", () => {
+      // Empty `name` fails isValidRawGanttTask, so this row is dropped.
+      ganttTasksCollection.insert({
+        id: "gantt-dropped",
+        name: "",
+        start: "2026-01-01",
+        end: "2026-01-02",
+      });
+      tasksCollection.insert({
+        id: "task-1",
+        text: "Hello",
+        label: "",
+        ganttTaskId: "gantt-dropped",
+        startTime: "2026-01-01T09:00",
+      });
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.gantt_tasks).toHaveLength(0);
+      expect(payload.tasks).toHaveLength(1);
+      expect(payload.tasks[0].gantt_task_id).toBeNull();
+    });
+
+    it("nulls out a gantt task's own label_id when the referenced label was dropped by the label filter", () => {
+      labelsCollection.insert({ id: "lbl-dropped", name: "Bad", color: null as never });
+      ganttTasksCollection.insert({
+        id: "gantt-1",
+        name: "Plan release",
+        label: "lbl-dropped",
+        start: "2026-01-01",
+        end: "2026-01-02",
+      });
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.gantt_tasks).toHaveLength(1);
+      expect(payload.gantt_tasks[0].label_id).toBeNull();
+    });
+
+    it("keeps label_id/gantt_task_id references that survive both filters", () => {
+      labelsCollection.insert({ id: "label-1", name: "Work", color: "#FF0000" });
+      ganttTasksCollection.insert({
+        id: "gantt-1",
+        name: "Plan release",
+        start: "2026-01-01",
+        end: "2026-01-02",
+      });
+      tasksCollection.insert({
+        id: "task-1",
+        text: "Hello",
+        label: "label-1",
+        ganttTaskId: "gantt-1",
+        startTime: "2026-01-01T09:00",
+      });
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.tasks[0].label_id).toBe("label-1");
+      expect(payload.tasks[0].gantt_task_id).toBe("gantt-1");
     });
 
     it("converts work locations from the flat collection", () => {
