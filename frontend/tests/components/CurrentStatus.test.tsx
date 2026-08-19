@@ -418,44 +418,40 @@ describe("CurrentStatus Component", () => {
   });
 
   describe("Later-today labeling for a night-shift-extension collision (#1145)", () => {
-    // The file-wide `dayjs()` mock returns one shared singleton, so every `.isSame()` call
-    // in the render normally shares one canned answer — fine for the duplicate-suppression
-    // tests above, which only need one true/false verdict, but this bug is exactly two
-    // `.isSame` comparisons disagreeing in the same render (next-vs-today is same-day,
-    // current-vs-today is not). To get that, `currentShift.date` and `nextShift.date` below
-    // are built from the *real* `RealDayjs` package (untouched by the module mock) with only
-    // `isSame` shadowed to compare by reference against `liveToday` — the exact object
-    // `dayjs()` already returns by default, unmodified, so `today` inside the component
-    // still resolves to it without touching the shared mock at all. Every other method
-    // (`.format`, `.hour`, `.add`, …) stays the real implementation, since
-    // `useTodayActualStart`/`setTimeFromFractionalHour`/etc. call real chained dayjs
-    // methods on these dates during render regardless of which UI branch is showing.
-    const dateStandInWithIdentityIsSame = (isToday: boolean) => {
-      const real = RealDayjs("2026-08-19T03:00:00") as unknown as Record<string, unknown>;
-      real.isSame = (other: unknown) => isToday && other === liveToday;
-      return real as unknown as ReturnType<typeof dayjs>;
-    };
+    // The file-wide `dayjs()` mock normally returns one shared stub whose `isSame` is a
+    // dumb `() => false` — fine for the duplicate-suppression tests above, which only need
+    // one true/false verdict, but this bug is exactly two `.isSame` comparisons disagreeing
+    // in the same render (next-vs-today is same calendar day, current-vs-today is not), and
+    // a canned answer can't produce that. For these two tests only, route the mock through
+    // the real Day.js package instead: zero-arg calls (`dayjs()`, what `useLiveTime` reads
+    // for "now") resolve to a fixed real instant, and calls with arguments still parse
+    // through unchanged. Every date built below is then a genuine dayjs instance, so
+    // `.isSame(..., "day")` exercises real calendar-day comparison — the actual logic the
+    // bug was in — rather than a hand-coded stand-in for it.
+    let originalDayjsImpl: unknown;
     let liveToday: ReturnType<typeof dayjs>;
 
     beforeEach(() => {
-      liveToday = dayjs(); // the same object useLiveTime() will read — left untouched
+      originalDayjsImpl = vi.mocked(dayjs).getMockImplementation();
+      liveToday = RealDayjs("2026-08-19T06:00:00") as unknown as ReturnType<typeof dayjs>;
+      vi.mocked(dayjs).mockImplementation(((...args: Parameters<typeof RealDayjs>) =>
+        args.length === 0 ? liveToday : RealDayjs(...args)) as typeof dayjs);
     });
 
     afterEach(() => {
-      // liveToday IS the file-wide shared mock singleton, so its `isSame` is the same
-      // vi.fn() every other test reads — restore its default so nothing here leaks out.
-      vi.mocked(liveToday.isSame).mockReturnValue(false);
+      vi.mocked(dayjs).mockImplementation(originalDayjsImpl as typeof dayjs);
     });
 
     it('labels Up Next "Later today" instead of "Today" while Today is still showing an in-progress night shift', () => {
-      const shiftDay = dateStandInWithIdentityIsSame(false); // currentShift.date — not today
-      const nextDate = dateStandInWithIdentityIsSame(true); // nextShift.date — is today
-
+      // The shift day the still-running night shift belongs to: a real calendar day
+      // before `liveToday`, exactly like the production bug (06:00 is still inside the
+      // prior night shift's 23:00–07:00 window, so getCurrentShiftDay backs it up).
+      const shiftDay = RealDayjs("2026-08-18T06:00:00") as unknown as ReturnType<typeof dayjs>;
       // Keeps isInNightShiftExtension truthy (isWorking + isCurrentlyWorking are already
       // mocked true in beforeEach), so currentShift.date becomes this shiftDay.
       vi.mocked(shiftCalculations.getCurrentShiftDay).mockReturnValue(shiftDay);
       vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
-        date: nextDate,
+        date: RealDayjs("2026-08-19T06:00:00") as unknown as ReturnType<typeof dayjs>, // the same real day as liveToday
         shift: {
           code: "L",
           displayCode: "E",
@@ -479,18 +475,12 @@ describe("CurrentStatus Component", () => {
     });
 
     it('still labels Up Next "Today" when Today\'s card already reflects the real calendar day', () => {
-      const nextDate = dateStandInWithIdentityIsSame(true); // nextShift.date — is today
-
       // currentShift.date falls back to `today` itself whenever isInNightShiftExtension is
       // false — simulate that by making the shift-day lookup not currently working, so
-      // currentShift.date is `today` (liveToday) too and the two cards genuinely agree.
+      // currentShift.date resolves to the same real `liveToday` instant as nextShift.date.
       vi.mocked(shiftCalculations.isCurrentlyWorking).mockReturnValue(false);
-      // currentShift.date and the `today` it's compared against are now the same object
-      // (liveToday), so this specific comparison should read "same day" — the shared mock's
-      // default (`() => false`) would otherwise report them as different.
-      vi.mocked(liveToday.isSame).mockReturnValue(true);
       vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
-        date: nextDate,
+        date: RealDayjs("2026-08-19T06:00:00") as unknown as ReturnType<typeof dayjs>,
         shift: {
           code: "L",
           displayCode: "E",
