@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">10</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">14</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">11</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">13</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">27</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">26</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -664,13 +664,13 @@
     </div>
     <div class="findings">
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1103">#1103</a>
           <span class="area">backend</span>
           <span class="area">frontend</span>
           <h3>First-sync filter drops invalid labels but keeps the tasks referencing them</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>The defensive filter in <code>buildLocalSyncPushPayload</code> exists so "a single
           corrupted label cannot cause the entire first-sync push to fail" — but it drops labels and
@@ -681,6 +681,11 @@
         <div class="fix"><span>Make the filter reference-aware: null out any
           <code>label_id</code> / <code>gantt_task_id</code> not in the surviving id sets.</span></div>
         <div class="refs"><b>frontend/src/utils/syncClient.ts:790</b> <b>backend/app/services/sync_service.py:227</b> <b>routers/db_sync.py:76</b></div>
+        <div class="verified"><span><code>buildLocalSyncPushPayload</code> now computes the
+          surviving label and gantt-task id sets before building tasks/templates, and nulls out any
+          <code>label_id</code> / <code>gantt_task_id</code> not in those sets (including a gantt
+          task's own dangling <code>label_id</code>) instead of leaving the reference intact. Fixed
+          in PR #1147.</span></div>
       </div>
 
       <div class="finding med resolved">
@@ -1455,14 +1460,13 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1103">#1103</a>
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
               <td>Finish the sync/API contract sweep. Same files the high-severity fixes just
                 touched (<code>sync_service.py</code>, <code>db_sync.py</code>, <code>mcp_server.py</code>) —
                 context is warm and each issue already names the sibling function to mirror.
-                (#1102 in this group has since been resolved.)</td>
+                (#1102 and #1103 in this group have since been resolved.)</td>
             </tr>
             <tr>
               <td class="seq-n">2</td>

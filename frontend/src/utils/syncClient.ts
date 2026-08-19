@@ -809,6 +809,24 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       name: l.name,
       color: l.color,
     }));
+  const keptLabelIds = new Set(labels.map((l) => l.id));
+
+  // Gantt tasks — computed before tasks/templates so their id set is available
+  // to null out dangling `gantt_task_id` references below.
+  const rawGanttTasks = ganttTasksCollection.toArray as RawGanttTask[];
+  const ganttTasks: GanttTaskSyncItem[] = rawGanttTasks.filter(isValidRawGanttTask).map((t) => ({
+    id: t.id,
+    action: "create" as const,
+    client_updated_at: now,
+    name: t.name,
+    label_id: t.label && keptLabelIds.has(t.label) ? t.label : null,
+    start_date: t.start,
+    end_date: t.end,
+    progress: t.progress ?? 0,
+    dependencies: t.dependencies ?? null,
+    notes: t.notes ?? null,
+  }));
+  const keptGanttIds = new Set(ganttTasks.map((g) => g.id));
 
   // Tasks
   const rawTasks = tasksCollection.toArray as StoredTimeTrackingTask[];
@@ -827,8 +845,12 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       id: t.id,
       action: "create" as const,
       client_updated_at: now,
-      label_id: t.label || null,
-      gantt_task_id: t.ganttTaskId || null,
+      // Null out references to labels/gantt tasks that were themselves
+      // dropped by the filters above, so a dangling reference cannot 400 the
+      // whole batch server-side (see backend `_validate_task_label_reference`
+      // / `_validate_task_gantt_reference`).
+      label_id: t.label && keptLabelIds.has(t.label) ? t.label : null,
+      gantt_task_id: t.ganttTaskId && keptGanttIds.has(t.ganttTaskId) ? t.ganttTaskId : null,
       text: t.text,
       start_time: localTimeToUtcIso(t.startTime)!,
       stop_time: t.stopTime ? localTimeToUtcIso(t.stopTime) : null,
@@ -862,7 +884,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       id: t.id,
       action: "create",
       client_updated_at: now,
-      label_id: t.label || null,
+      label_id: t.label && keptLabelIds.has(t.label) ? t.label : null,
       text: t.text,
       // Local format is "HH:mm"; server expects "HH:mm:ss"
       start_time: `${t.start}:00`,
@@ -902,20 +924,6 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
   );
 
   const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
-
-  const rawGanttTasks = ganttTasksCollection.toArray as RawGanttTask[];
-  const ganttTasks: GanttTaskSyncItem[] = rawGanttTasks.filter(isValidRawGanttTask).map((t) => ({
-    id: t.id,
-    action: "create" as const,
-    client_updated_at: now,
-    name: t.name,
-    label_id: t.label ?? null,
-    start_date: t.start,
-    end_date: t.end,
-    progress: t.progress ?? 0,
-    dependencies: t.dependencies ?? null,
-    notes: t.notes ?? null,
-  }));
 
   return {
     labels,
