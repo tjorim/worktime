@@ -55,7 +55,7 @@
   border-radius: 0.75rem;
   border: 1px solid var(--wt-month-calendar-border);
   background: var(--wt-month-calendar-day-bg);
-  min-height: 140px;
+  min-height: 4.5rem;
   padding: 0.25rem;
   transition:
     border-color 0.2s ease,
@@ -441,7 +441,7 @@
   }
 
   .month-calendar-day {
-    min-height: 110px;
+    min-height: 3.5rem;
   }
 
   .month-calendar-events {
