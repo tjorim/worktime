@@ -289,8 +289,14 @@ class SyncEventManager:
     async def _connect_listen(self) -> None:
         """(Re)establish the LISTEN connection and register its callbacks."""
         conn = await asyncpg.connect(self._db_url)
-        await conn.add_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)
-        conn.add_termination_listener(functools.partial(self._on_pg_conn_terminated, "listen"))
+        try:
+            await conn.add_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)
+            conn.add_termination_listener(functools.partial(self._on_pg_conn_terminated, "listen"))
+        except BaseException:
+            # conn opened but registration failed — close it rather than leaking it,
+            # since it was never assigned to _listen_conn.
+            await conn.close()
+            raise
         self._listen_conn = conn
 
     async def _connect_notify(self) -> None:
