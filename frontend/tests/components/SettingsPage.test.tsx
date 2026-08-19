@@ -931,6 +931,71 @@ describe("SettingsPage General Section", () => {
     expect(requestPermission).not.toHaveBeenCalled();
     await waitFor(() => expect(toggle).not.toBeChecked());
   });
+
+  it("shows lead-time and quiet-hours controls only once notifications are on", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission: vi.fn() });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+
+    expect(screen.queryByText(m.notification_lead_time_label())).not.toBeInTheDocument();
+    expect(screen.queryByText(m.notification_quiet_hours_label())).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
+
+    expect(await screen.findByText(m.notification_lead_time_label())).toBeInTheDocument();
+    expect(screen.getByText(m.notification_quiet_hours_label())).toBeInTheDocument();
+  });
+
+  it("changes the reminder lead time and persists it", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission: vi.fn() });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
+    await screen.findByText(m.notification_lead_time_label());
+
+    const oneHourButton = screen.getByRole("button", { name: m.notification_lead_time_1h() });
+    await user.click(oneHourButton);
+
+    expect(oneHourButton).toHaveAttribute("aria-pressed", "true");
+    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    expect(JSON.parse(stored ?? "{}").settings.notificationLeadTimeMinutes).toBe(60);
+  });
+
+  it("enables quiet hours with default bounds and lets them be adjusted", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission: vi.fn() });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
+    await screen.findByText(m.notification_quiet_hours_label());
+
+    const quietHoursToggle = screen.getByRole("checkbox", { name: m.notification_quiet_hours_label() });
+    expect(quietHoursToggle).not.toBeChecked();
+
+    await user.click(quietHoursToggle);
+
+    const startSelect = await screen.findByLabelText<HTMLSelectElement>(
+      m.notification_quiet_hours_start_aria(),
+    );
+    const endSelect = screen.getByLabelText<HTMLSelectElement>(m.notification_quiet_hours_end_aria());
+    expect(startSelect.value).toBe("22");
+    expect(endSelect.value).toBe("6");
+
+    await user.selectOptions(startSelect, "23");
+
+    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    const settings = JSON.parse(stored ?? "{}").settings;
+    expect(settings.notificationQuietHoursStart).toBe(23);
+    expect(settings.notificationQuietHoursEnd).toBe(6);
+
+    await user.click(quietHoursToggle);
+    expect(screen.queryByLabelText(m.notification_quiet_hours_start_aria())).not.toBeInTheDocument();
+    const clearedSettings = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}").settings;
+    expect(clearedSettings.notificationQuietHoursStart).toBe(null);
+    expect(clearedSettings.notificationQuietHoursEnd).toBe(null);
+  });
 });
 
 describe("SettingsPage Time Tracking Section", () => {

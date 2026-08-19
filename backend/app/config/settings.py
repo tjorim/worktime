@@ -122,6 +122,17 @@ class Settings(BaseSettings):
     # only admission control on that route.
     SSE_MAX_QUEUES_PER_USER: int = 8
 
+    # Web Push (shift-reminder notifications that fire even when the app is closed).
+    # Both keys empty (the default) disables the feature entirely: the subscribe
+    # endpoint and the periodic reminder loop both no-op. Generate a pair with:
+    # uv run python -c "from py_vapid import Vapid02; v = Vapid02(); v.generate_keys(); print(v.public_key, v.private_key)"
+    # or via the pywebpush-provided `vapid` CLI.
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    # Contact address the push service can reach if it needs to flag abuse.
+    # Must be an https:// URL or mailto: address per the Web Push protocol.
+    VAPID_SUBJECT: str = "mailto:admin@example.com"
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
@@ -221,6 +232,15 @@ class Settings(BaseSettings):
         integration clients when rotating this secret.
         """
         return self.INTEGRATION_KEY_HASH_SECRET.strip() or "worktime-dev-integration-key-hash-secret"
+
+    @property
+    def push_notifications_enabled(self) -> bool:
+        """True once both VAPID keys are configured.
+
+        Gates both the push router and the periodic reminder loop — the
+        feature is entirely optional and no-ops everywhere when unset.
+        """
+        return bool(self.VAPID_PUBLIC_KEY.strip() and self.VAPID_PRIVATE_KEY.strip())
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.

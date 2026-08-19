@@ -322,6 +322,43 @@ class AccessToken(Base):
     __table_args__ = (Index("ix_access_tokens_user_id_created_at", "user_id", "created_at"),)
 
 
+class PushSubscription(Base):
+    """A browser's Web Push subscription, used to send shift-reminder notifications
+    that fire even when the app is closed (see app.services.shift_reminder_scheduler).
+
+    One row per browser/device — a user with multiple devices has multiple rows.
+    lead_time_minutes and quiet_hours are per-subscription rather than a single
+    per-user preference so each device can be tuned independently; they're set
+    at subscribe time and updated via a re-subscribe (upsert by endpoint).
+    """
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(String, unique=True, index=True)
+    p256dh_key: Mapped[str] = mapped_column(String)
+    auth_key: Mapped[str] = mapped_column(String)
+    # IANA timezone name (e.g. "Europe/Brussels"), captured client-side at
+    # subscribe time — roster shift times are local wall-clock times, so the
+    # reminder scheduler needs this to compute the right UTC instant to fire at.
+    timezone: Mapped[str] = mapped_column(String, default="UTC", server_default="UTC")
+    lead_time_minutes: Mapped[int] = mapped_column(Integer, default=15, server_default="15")
+    # 0-23 local hour, both null (the default) disables quiet hours. When
+    # quiet_hours_start > quiet_hours_end the window wraps past midnight.
+    quiet_hours_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    quiet_hours_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Dedup key for the shift a reminder was last sent for (f"{date}-{shift_code}"),
+    # so the periodic loop doesn't re-send while the same shift is still upcoming.
+    last_reminder_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now
+    )
+
+
 class CachedHoliday(Base):
     """Persisted holiday data from upstream holiday APIs.
 

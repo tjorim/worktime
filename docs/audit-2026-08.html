@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">15</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">16</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">9</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">23</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">22</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -873,7 +873,9 @@
           fires a foreground browser reminder ~15 minutes before the user's next shift, computed
           the same way <code>PersonalizedStatusContent</code> derives "Up Next". Privacy copy
           updated to disclose the web notification too. Scoped deliberately smaller than #271 (no
-          service worker, no push-when-closed, no per-shift lead time) — #271 stays open for that.</span></div>
+          service worker, no push-when-closed, no per-shift lead time) at the time — #271 has
+          since been resolved on top of this, adding the service worker and push-when-closed
+          half (see its row in the older backlog below).</span></div>
       </div>
 
       <div class="finding med">
@@ -1450,23 +1452,16 @@
     </div>
 
     <div class="note">
-      <strong>Check these three before you start.</strong> Independent tool-driven branches already
-      have open PRs against issues this backlog touches. None are on <code>main</code> yet, so treat
+      <strong>Check these two before you start.</strong> Independent tool-driven branches already
+      have open PRs against issues this backlog touches. Neither is on <code>main</code> yet, so treat
       them as drafts to review/finish, not as done — but starting fresh work on the same ground would
-      duplicate effort.
+      duplicate effort. The stale <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
+      draft that used to cover #271/#273 is no longer the candidate for either: both were resolved
+      independently (#271 above, #273 with its own dedicated PR) rather than by reviving it.
       <div class="tablewrap" style="margin-top:0.75rem">
         <table>
           <thead><tr><th>PR</th><th>Closes</th><th>Overlaps</th></tr></thead>
           <tbody>
-            <tr>
-              <td><a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a></td>
-              <td>#271, #273</td>
-              <td>Shift reminder notifications + smart PWA install prompts. #1112 was resolved
-                separately with a smaller, purpose-built web reminder (see its card above) rather
-                than by reviving this stale draft; #311 is still the candidate for the fuller
-                #271/#273 scope (push-when-closed, PWA install prompts, per-shift lead time) if
-                someone picks it up.</td>
-            </tr>
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a></td>
               <td>#270</td>
@@ -1652,8 +1647,9 @@
   <section>
     <div class="sec-head">
       <h2>Older backlog<span class="sec-count">5</span></h2>
-      <p>Open before this review. All four non-chore items now have open PRs from other tools —
-        see the callout above the sequencing tables for what each covers and where it overlaps.</p>
+      <p>Open before this review. #271 is now resolved directly (see its row below); the other
+        three non-chore items still have open PRs from other tools — see the callout above the
+        sequencing tables for what each covers and where it overlaps.</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -1669,18 +1665,20 @@
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/271">#271</a></td>
-            <td>Notification system with shift reminders and push notifications</td>
-            <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a> —
-              the same PR closes #273 below. #1112 (the dead-code half of this) is now resolved with
-              a smaller, purpose-built web reminder rather than by reviving #311; this issue's fuller
-              scope (push-when-closed, per-shift lead time) is still open and #311 is still the
-              candidate PR for it.</td>
+            <td>Notification system with shift reminders and push notifications — <strong>Resolved</strong></td>
+            <td>Built rather than revived from the stale #311 draft. Adds full Web Push
+              infrastructure (VAPID keys, <code>PushSubscription</code> storage, a periodic
+              backend scheduler, a <code>push-sw.js</code> service-worker script) on top of the
+              #1112 foreground reminder, so shift reminders now fire even when the app is closed,
+              with a configurable per-shift lead time and quiet hours shared between both
+              delivery paths.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/273">#273</a></td>
             <td>Smart PWA installation prompts based on user engagement</td>
-            <td>Same PR <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
-              as #271, above.</td>
+            <td>The stale <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
+              draft used to cover this alongside #271; #271 was resolved separately above and no
+              longer needs it.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>

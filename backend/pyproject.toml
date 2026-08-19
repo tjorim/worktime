@@ -27,6 +27,7 @@ dependencies = [
   "uvicorn[standard]==0.52.1",
   "slowapi==0.1.10",
   "aiosqlite>=0.22.1",
+  "pywebpush>=2.4.0",
 ]
 
 [dependency-groups]

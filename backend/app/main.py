@@ -100,6 +100,15 @@ async def lifespan(app: FastAPI):
         jwks_refresh_task = start_periodic_jwks_refresh()
         logger.info("✓ Periodic OIDC JWKS refresh started in background")
 
+    # Shift-reminder Web Push: opt-in via VAPID keys, so most deployments
+    # (and every test run) never start this loop at all.
+    shift_reminder_task = None
+    if settings.DATABASE_ENABLED and settings.push_notifications_enabled:
+        from .services.shift_reminder_scheduler import start_periodic_shift_reminders
+
+        shift_reminder_task = start_periodic_shift_reminders()
+        logger.info("✓ Periodic shift-reminder push notifications started in background")
+
     logger.info("=" * 60)
     logger.info("Startup complete - Server ready to accept connections")
     logger.info("=" * 60)
@@ -110,6 +119,8 @@ async def lifespan(app: FastAPI):
     logger.info("Worktime Backend API shutting down...")
     if jwks_refresh_task is not None:
         jwks_refresh_task.cancel()
+    if shift_reminder_task is not None:
+        shift_reminder_task.cancel()
     if settings.DATABASE_ENABLED:
         await sync_event_manager.stop_pg_listener()
 
@@ -201,6 +212,7 @@ if settings.DATABASE_ENABLED:
     from .routers.db_work_locations import router as db_work_locations_router
     from .routers.integration_clients import router as integration_clients_router
     from .routers.pebble import router as pebble_router
+    from .routers.push import router as push_router
     from .routers.read_models import router as read_models_router
     from .routers.registration import router as registration_router
 
@@ -218,6 +230,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(read_models_router, prefix="/api")
     app.include_router(pebble_router, prefix="/api")
     app.include_router(db_time_off_router, prefix="/api")
+    app.include_router(push_router, prefix="/api")
     logger.info("✓ Database API endpoints enabled")
 else:
     logger.info("Database API endpoint registration skipped (DATABASE_ENABLED=false)")

@@ -61,7 +61,12 @@ export default defineConfig({
         // App-shell precache: build output plus static assets copied from public/.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         // MSW's mock worker is dev-only tooling; it has no place in the production precache.
-        globIgnores: ["mockServiceWorker.js"],
+        // push-sw.js is imported as code below, not precached content.
+        globIgnores: ["mockServiceWorker.js", "push-sw.js"],
+        // Adds the push/notificationclick handlers (public/push-sw.js) to the generated
+        // service worker via importScripts, rather than switching to injectManifest —
+        // keeps the existing precaching/update-toast behavior completely untouched.
+        importScripts: ["push-sw.js"],
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {

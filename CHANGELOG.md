@@ -16,6 +16,12 @@ below predate that switch.
 - Notification system
 - Cross-schedule transfer view
 
+## [2026.8.5] - 2026-08-19
+
+### Added
+
+- Shift reminders now work even when Worktime isn't open: turning on Notifications registers a push subscription, and the backend sends a reminder before your next shift via your browser's push service. Configurable lead time (15m/1h/2h) and quiet hours are shared with the existing in-app reminder (#271)
+
 ## [2026.8.4] - 2026-08-19
 
 ### Added
@@ -707,7 +713,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.4...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.5...HEAD
+[2026.8.5]: https://github.com/tjorim/worktime/compare/v2026.8.4...v2026.8.5
 [2026.8.4]: https://github.com/tjorim/worktime/compare/v2026.8.3...v2026.8.4
 [2026.8.3]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.8.3
 [2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2

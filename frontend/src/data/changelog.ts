@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "2026.8.4",
+    version: "2026.8.5",
     date: "2026-08-19",
     status: "current",
+    added: [
+      "Shift reminders now work even when Worktime isn't open: turning on Notifications registers a push subscription, and the backend sends a reminder before your next shift via your browser's push service. Configurable lead time (15m/1h/2h) and quiet hours are shared with the existing in-app reminder (#271)",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
+    version: "2026.8.4",
+    date: "2026-08-19",
+    status: "released",
     added: [
       "The web Notifications toggle in Settings now does something: turning it on asks your browser for permission and shows a reminder about 15 minutes before your next shift starts, while the app is open (#1112)",
     ],

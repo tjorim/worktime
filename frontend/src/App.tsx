@@ -18,6 +18,7 @@ import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
 import { useShiftNotifications } from "@/hooks/useShiftNotifications";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
@@ -93,7 +94,31 @@ function AppContent() {
     }
   }, [syncPhase, showInfo, showSuccess, showError]);
 
-  useShiftNotifications(settings.notifications === "on", myTeam, scheduleType);
+  const { getActiveSubscription } = usePushSubscription();
+  const [hasActivePushSubscription, setHasActivePushSubscription] = useState(false);
+  useEffect(() => {
+    if (settings.notifications !== "on") {
+      setHasActivePushSubscription(false);
+      return;
+    }
+    let cancelled = false;
+    void getActiveSubscription().then((subscription) => {
+      if (!cancelled) setHasActivePushSubscription(subscription != null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.notifications, getActiveSubscription]);
+
+  useShiftNotifications({
+    enabled: settings.notifications === "on",
+    myTeam,
+    scheduleType,
+    leadTimeMinutes: settings.notificationLeadTimeMinutes,
+    quietHoursStart: settings.notificationQuietHoursStart,
+    quietHoursEnd: settings.notificationQuietHoursEnd,
+    hasActivePushSubscription,
+  });
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.
