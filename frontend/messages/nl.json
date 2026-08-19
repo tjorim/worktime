@@ -824,6 +824,7 @@
   "personalized_status_no_next_title": "Geen volgende dienst",
   "personalized_status_no_next_desc": "Geen aankomende diensten gevonden voor uw team.",
   "personalized_status_tomorrow": "Morgen",
+  "personalized_status_later_today": "Later vandaag",
   "error_boundary_heading": "Applicatiefout",
   "error_boundary_message": "Onze excuses, er is iets onverwachts gebeurd. Klik op",
   "error_boundary_try_again": "Opnieuw proberen",

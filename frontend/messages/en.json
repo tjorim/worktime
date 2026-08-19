@@ -831,6 +831,7 @@
   "personalized_status_no_next_title": "No Next Shift",
   "personalized_status_no_next_desc": "No upcoming shifts found for your team.",
   "personalized_status_tomorrow": "Tomorrow",
+  "personalized_status_later_today": "Later today",
   "error_boundary_heading": "Application Error",
   "error_boundary_message": "We're sorry, but something unexpected happened. Click",
   "error_boundary_try_again": "Try Again",

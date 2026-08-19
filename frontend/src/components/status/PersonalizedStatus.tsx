@@ -171,6 +171,17 @@ export function PersonalizedStatusContent({
     nextShift.shift.code === currentShift.shift.code;
   const showUpNext = hasTeams && !nextShiftDuplicatesToday;
 
+  // currentShift.date is the "shift day" (useLiveShiftStatus backs it up while a night
+  // shift from the prior calendar day is still running), so it can differ from the real
+  // calendar day even though the "Today" card's title is the static string "Today". When
+  // that's the case and the next shift also resolves to the real calendar day, labeling
+  // it "Today" too reads as a duplicate of the shift already ending — say "Later today"
+  // instead so the two cards don't appear to describe the same shift twice (issue #1145).
+  const nextShiftIsLaterToday =
+    nextShift != null &&
+    nextShift.date.isSame(today, "day") &&
+    !currentShift.date.isSame(today, "day");
+
   if (compact) {
     const isWorking = currentShift.shift.isWorking;
     const hasStarted = effectiveStartTime != null && today.isAfter(effectiveStartTime);
@@ -391,15 +402,18 @@ export function PersonalizedStatusContent({
                 {nextShift ? (
                   <div>
                     <div className="fw-semibold">
-                      {nextShift.date.isSame(today, "day")
-                        ? m.today()
-                        : nextShift.date.isSame(today.add(1, "day"), "day")
-                          ? m.personalized_status_tomorrow()
-                          : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
-                            ? weekdayDateFormatter.format(
-                                (nextShift.date as { toDate: () => Date }).toDate(),
-                              )
-                            : nextShift.date.format("ddd, MMM D")}{" "}
+                      {nextShiftIsLaterToday
+                        ? m.personalized_status_later_today()
+                        : nextShift.date.isSame(today, "day")
+                          ? m.today()
+                          : nextShift.date.isSame(today.add(1, "day"), "day")
+                            ? m.personalized_status_tomorrow()
+                            : typeof (nextShift.date as { toDate?: () => Date }).toDate ===
+                                "function"
+                              ? weekdayDateFormatter.format(
+                                  (nextShift.date as { toDate: () => Date }).toDate(),
+                                )
+                              : nextShift.date.format("ddd, MMM D")}{" "}
                       - {nextShift.shift.name}
                     </div>
                     <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
