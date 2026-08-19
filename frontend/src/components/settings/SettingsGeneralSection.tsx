@@ -1,6 +1,7 @@
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -14,11 +15,13 @@ interface SettingsGeneralSectionProps {
   timeFormat: "12h" | "24h";
   theme: "light" | "dark" | "auto";
   locale: "en" | "nl";
+  notificationsEnabled: boolean;
   onScheduleChange: (schedule: ScheduleOption) => void;
   onTeamChange: (team: number) => void;
   onTimeFormatChange: (format: "12h" | "24h") => void;
   onThemeChange: (theme: "light" | "dark" | "auto") => void;
   onLocaleChange: (locale: "en" | "nl") => void;
+  onNotificationsChange: (enabled: boolean) => void;
 }
 
 export function SettingsGeneralSection({
@@ -27,11 +30,13 @@ export function SettingsGeneralSection({
   timeFormat,
   theme,
   locale,
+  notificationsEnabled,
   onScheduleChange,
   onTeamChange,
   onTimeFormatChange,
   onThemeChange,
   onLocaleChange,
+  onNotificationsChange,
 }: SettingsGeneralSectionProps) {
   return (
     <div className="border-bottom">
@@ -190,6 +195,21 @@ export function SettingsGeneralSection({
                   NL
                 </Button>
               </ButtonGroup>
+            </div>
+          </ListGroup.Item>
+          <ListGroup.Item>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <div className="fw-medium">{m.notifications_label()}</div>
+                <small className="text-muted">{m.notifications_description()}</small>
+              </div>
+              <Form.Check
+                type="switch"
+                id="toggle-notifications"
+                checked={notificationsEnabled}
+                onChange={(event) => onNotificationsChange(event.target.checked)}
+                aria-label={m.notifications_label()}
+              />
             </div>
           </ListGroup.Item>
         </ListGroup>

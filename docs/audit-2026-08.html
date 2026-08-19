@@ -866,12 +866,14 @@
         <div class="verified"><span>Re-checked against current <code>main</code> rather than PR
           #311 (still an unmerged, months-stale draft): Android already has real callers for all
           three <code>show*</code> methods, wired through <code>NotificationPreferencesStore</code>
-          and live Settings toggles, so the permission request and the privacy copy are both
-          accurate today. Only the web half was still dead — <code>notifications</code> removed
-          entirely from <code>UserSettings</code>/<code>SettingsContext</code> (no migration needed
-          beyond the existing normalize-on-read validation dropping the stale key) and the
-          disabled "Coming Soon" switch removed from <code>SettingsGeneralSection</code>, along with
-          its now-unused message keys.</span></div>
+          and live Settings toggles, so the permission request and the privacy page copy were
+          already accurate for Android. Picked "build it" for the web half: the Settings switch is
+          now live (no more disabled "Coming Soon" state), enabling it requests
+          <code>Notification</code> permission, and a new <code>useShiftNotifications</code> hook
+          fires a foreground browser reminder ~15 minutes before the user's next shift, computed
+          the same way <code>PersonalizedStatusContent</code> derives "Up Next". Privacy copy
+          updated to disclose the web notification too. Scoped deliberately smaller than #271 (no
+          service worker, no push-when-closed, no per-shift lead time) — #271 stays open for that.</span></div>
       </div>
 
       <div class="finding med">
@@ -1121,8 +1123,8 @@
             first control; "Preferences" appears three times.</li>
           <li>"Quick Actions" is backup/restore/reset; "Information" is About. Neither predicts its
             contents, so finding "export my data" means opening sections at random.</li>
-          <li>The Notifications switch was removed as dead code (#1112); this card's other two
-            bullets — duplicated headers and opaque labels — remain open.</li>
+          <li>The Notifications switch now works (#1112); this card's other two bullets —
+            duplicated headers and opaque labels — remain open.</li>
         </ul>
         <div class="refs"><b>pages/SettingsPage.tsx:44</b> <b>settings/SettingsGeneralSection.tsx:61</b></div>
       </div>
@@ -1459,9 +1461,11 @@
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a></td>
               <td>#271, #273</td>
-              <td>Shift reminder notifications + smart PWA install prompts. Was the "build it"
-                option for #1112 (now resolved by retreating instead — see its card above); still
-                the open PR for #271/#273 if someone wants to build the real feature later.</td>
+              <td>Shift reminder notifications + smart PWA install prompts. #1112 was resolved
+                separately with a smaller, purpose-built web reminder (see its card above) rather
+                than by reviving this stale draft; #311 is still the candidate for the fuller
+                #271/#273 scope (push-when-closed, PWA install prompts, per-shift lead time) if
+                someone picks it up.</td>
             </tr>
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a></td>
@@ -1492,9 +1496,9 @@
             <tr>
               <td class="seq-n">1</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
-              <td>The dead Notifications toggle it cross-linked to #1112 for is gone now (the
-                setting and the disabled switch were removed rather than built out — see #1112).
-                What's left here is Settings' duplicated headers and opaque section labels.</td>
+              <td>The dead Notifications toggle it cross-linked to #1112 for now works (see
+                #1112 — built rather than removed). What's left here is Settings' duplicated
+                headers and opaque section labels.</td>
             </tr>
             <tr>
               <td class="seq-n">2</td>
@@ -1667,8 +1671,10 @@
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/271">#271</a></td>
             <td>Notification system with shift reminders and push notifications</td>
             <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a> —
-              the same PR closes #273 below. #1112 (the dead-code half of this) is now resolved by
-              retreating instead; #311 remains the "build it" option for this issue itself.</td>
+              the same PR closes #273 below. #1112 (the dead-code half of this) is now resolved with
+              a smaller, purpose-built web reminder rather than by reviving #311; this issue's fuller
+              scope (push-when-closed, per-shift lead time) is still open and #311 is still the
+              candidate PR for it.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/273">#273</a></td>

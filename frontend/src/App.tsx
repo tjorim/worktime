@@ -17,6 +17,7 @@ import { ToastProvider, useToast } from "@/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
+import { useShiftNotifications } from "@/hooks/useShiftNotifications";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
@@ -91,6 +92,8 @@ function AppContent() {
         break;
     }
   }, [syncPhase, showInfo, showSuccess, showError]);
+
+  useShiftNotifications(settings.notifications === "on", myTeam, scheduleType);
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.

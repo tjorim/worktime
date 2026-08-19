@@ -197,6 +197,7 @@ export function SettingsContent({
     setScheduleType,
     updateTimeFormat,
     updateTheme,
+    updateNotifications,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -336,6 +337,28 @@ export function SettingsContent({
     setScheduleType(schedule);
   };
 
+  const handleNotificationsChange = async (enabled: boolean) => {
+    if (!enabled) {
+      updateNotifications("off");
+      return;
+    }
+    if (typeof Notification === "undefined") {
+      toast?.showWarning(m.notifications_unsupported());
+      return;
+    }
+    if (Notification.permission === "denied") {
+      toast?.showWarning(m.notifications_permission_denied());
+      return;
+    }
+    const permission =
+      Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    if (permission !== "granted") {
+      toast?.showWarning(m.notifications_permission_denied());
+      return;
+    }
+    updateNotifications("on");
+  };
+
   const handleShareApp = () => {
     shareApp(
       () => toast?.showSuccess(m.share_success()),
@@ -415,11 +438,13 @@ export function SettingsContent({
         timeFormat={settings.timeFormat}
         theme={settings.theme}
         locale={getLocale() === "nl" ? "nl" : "en"}
+        notificationsEnabled={settings.notifications === "on"}
         onScheduleChange={handleScheduleChange}
         onTeamChange={setMyTeam}
         onTimeFormatChange={updateTimeFormat}
         onThemeChange={updateTheme}
         onLocaleChange={setLocale}
+        onNotificationsChange={(enabled) => void handleNotificationsChange(enabled)}
       />
     ),
     features: () => (

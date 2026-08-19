@@ -17,14 +17,14 @@ export const changelogData: ChangelogVersion[] = [
     version: "2026.8.4",
     date: "2026-08-19",
     status: "current",
-    added: [],
+    added: [
+      "The web Notifications toggle in Settings now does something: turning it on asks your browser for permission and shows a reminder about 15 minutes before your next shift starts, while the app is open (#1112)",
+    ],
     changed: [
       "The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)",
       "Month calendar cells now size to their content instead of reserving a fixed 140px (110px on mobile), so a full month fits on screen without scrolling (#1127)",
     ],
-    fixed: [
-      "Removed the dead Notifications toggle from Settings — the setting was declared, validated, and persisted but nothing ever read it or could turn it on (#1112)",
-    ],
+    fixed: [],
   },
   {
     version: "2026.8.3",

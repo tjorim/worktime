@@ -62,6 +62,7 @@ afterEach(() => {
   useOngoingSyncContextSpy?.mockRestore();
   useOngoingSyncContextSpy = undefined;
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 
   localStorage.removeItem(USER_STATE_STORAGE_KEY);
 
@@ -879,6 +880,56 @@ describe("SettingsPage General Section", () => {
     });
     await user.click(teamOneButton);
     expect(teamOneButton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("enables notifications after requesting and receiving browser permission", async () => {
+    const user = userEvent.setup();
+    const requestPermission = vi.fn().mockResolvedValue("granted");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+
+    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+
+    expect(requestPermission).toHaveBeenCalled();
+    await waitFor(() => expect(toggle).toBeChecked());
+
+    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    expect(JSON.parse(stored ?? "{}").settings.notifications).toBe("on");
+  });
+
+  it("shows a warning and stays off when notification permission is denied", async () => {
+    const user = userEvent.setup();
+    const requestPermission = vi.fn().mockResolvedValue("denied");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+
+    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    await user.click(toggle);
+
+    expect(await screen.findByText(m.notifications_permission_denied())).toBeInTheDocument();
+    expect(toggle).not.toBeChecked();
+  });
+
+  it("does not re-request permission when already granted, and turns off without checking permission", async () => {
+    const user = userEvent.setup();
+    const requestPermission = vi.fn();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+
+    await user.click(toggle);
+    expect(requestPermission).not.toHaveBeenCalled();
+    await waitFor(() => expect(toggle).toBeChecked());
+
+    await user.click(toggle);
+    expect(requestPermission).not.toHaveBeenCalled();
+    await waitFor(() => expect(toggle).not.toBeChecked());
   });
 });
 

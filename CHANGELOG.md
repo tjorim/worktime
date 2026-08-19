@@ -18,14 +18,14 @@ below predate that switch.
 
 ## [2026.8.4] - 2026-08-19
 
+### Added
+
+- The web Notifications toggle in Settings now does something: turning it on asks your browser for permission and shows a reminder about 15 minutes before your next shift starts, while the app is open (#1112)
+
 ### Changed
 
 - The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)
 - Month calendar cells now size to their content instead of reserving a fixed 140px (110px on mobile), so a full month fits on screen without scrolling (#1127)
-
-### Fixed
-
-- Removed the dead Notifications toggle from Settings — the setting was declared, validated, and persisted but nothing ever read it or could turn it on (#1112)
 
 ## [2026.8.3] - 2026-08-18
 
