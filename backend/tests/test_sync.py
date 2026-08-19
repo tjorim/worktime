@@ -1692,6 +1692,137 @@ class TestSyncEventManager:
         assert "does not start with" in caplog.text
 
 
+class TestSyncEventManagerReconnect:
+    """Unit tests for issue #1102 — reconnecting dropped LISTEN/NOTIFY connections."""
+
+    async def test_termination_schedules_reconnect_for_listen(self) -> None:
+        """An unexpected termination of the listen connection clears it and
+        schedules a reconnect task, instead of leaving the manager permanently
+        without cross-process delivery.
+        """
+        manager = SyncEventManager()
+        manager._closing = False
+        manager._db_url = "postgresql://irrelevant/db"
+
+        with patch.object(manager, "_connect_listen", new_callable=AsyncMock) as mock_connect:
+            manager._on_pg_conn_terminated("listen", MagicMock())
+            task = manager._reconnect_tasks["listen"]
+            await asyncio.wait_for(task, timeout=1.0)
+
+        assert manager._listen_conn is None
+        mock_connect.assert_awaited_once()
+
+    async def test_termination_schedules_reconnect_for_notify(self) -> None:
+        manager = SyncEventManager()
+        manager._closing = False
+        manager._db_url = "postgresql://irrelevant/db"
+
+        with patch.object(manager, "_connect_notify", new_callable=AsyncMock) as mock_connect:
+            manager._on_pg_conn_terminated("notify", MagicMock())
+            task = manager._reconnect_tasks["notify"]
+            await asyncio.wait_for(task, timeout=1.0)
+
+        assert manager._notify_conn is None
+        mock_connect.assert_awaited_once()
+
+    async def test_intentional_close_does_not_schedule_reconnect(self) -> None:
+        """stop_pg_listener sets _closing first, so the termination listener
+        it triggers must not schedule a reconnect (that would fight the
+        deliberate shutdown).
+        """
+        manager = SyncEventManager()
+        manager._closing = True
+
+        with patch.object(manager, "_connect_listen", new_callable=AsyncMock) as mock_connect:
+            manager._on_pg_conn_terminated("listen", MagicMock())
+
+        assert manager._reconnect_tasks == {}
+        mock_connect.assert_not_awaited()
+
+    async def test_reconnect_does_not_duplicate_when_already_in_flight(self) -> None:
+        """A second termination signal while a reconnect is still running for
+        the same connection must not spawn a competing reconnect task.
+        """
+        manager = SyncEventManager()
+        manager._closing = False
+        manager._db_url = "postgresql://irrelevant/db"
+
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def _slow_connect() -> None:
+            started.set()
+            await release.wait()
+
+        with patch.object(manager, "_connect_listen", new_callable=AsyncMock, side_effect=_slow_connect):
+            manager._on_pg_conn_terminated("listen", MagicMock())
+            await asyncio.wait_for(started.wait(), timeout=1.0)
+            first_task = manager._reconnect_tasks["listen"]
+
+            manager._on_pg_conn_terminated("listen", MagicMock())
+            assert manager._reconnect_tasks["listen"] is first_task
+
+            release.set()
+            await asyncio.wait_for(first_task, timeout=1.0)
+
+    async def test_reconnect_with_backoff_retries_until_success(self) -> None:
+        """A reconnect attempt that fails is retried (not given up on) and
+        succeeds once the underlying connect call stops raising.
+        """
+        manager = SyncEventManager()
+        manager._closing = False
+
+        with (
+            patch.object(
+                manager, "_connect_listen", new_callable=AsyncMock, side_effect=[OSError("down"), None]
+            ) as mock_connect,
+            patch("app.utils.sse_manager.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            await manager._reconnect_with_backoff("listen")
+
+        assert mock_connect.await_count == 2
+
+    async def test_reconnect_with_backoff_stops_when_closing(self) -> None:
+        """The retry loop exits once stop_pg_listener sets _closing, instead of
+        retrying forever after a deliberate shutdown.
+        """
+        manager = SyncEventManager()
+        manager._closing = False
+
+        async def _fail_and_close(*args, **kwargs) -> None:
+            manager._closing = True
+            raise OSError("down")
+
+        with (
+            patch.object(manager, "_connect_listen", new_callable=AsyncMock, side_effect=_fail_and_close),
+            patch("app.utils.sse_manager.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            await manager._reconnect_with_backoff("listen")
+
+    async def test_stop_pg_listener_cancels_in_flight_reconnect(self) -> None:
+        """stop_pg_listener must cancel a still-running reconnect task rather
+        than leaving it retrying against a manager that has moved on.
+        """
+        manager = SyncEventManager()
+        manager._closing = False
+        manager._db_url = "postgresql://irrelevant/db"
+
+        release = asyncio.Event()
+
+        async def _hang(*args, **kwargs) -> None:
+            await release.wait()
+
+        with patch.object(manager, "_connect_listen", new_callable=AsyncMock, side_effect=_hang):
+            manager._on_pg_conn_terminated("listen", MagicMock())
+            task = manager._reconnect_tasks["listen"]
+            await asyncio.sleep(0)  # let the task start and await release
+
+            await manager.stop_pg_listener()
+
+            assert task.cancelled()
+        release.set()
+
+
 class TestRedactCredentials:
     """Unit tests for the _redact_credentials logging helper."""
 

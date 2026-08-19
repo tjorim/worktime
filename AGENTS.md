@@ -130,7 +130,7 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 - **Proxy buffering** — set `X-Accel-Buffering: no` (already sent by the endpoint) so Nginx/Caddy does not buffer the stream.
 - **Timeouts** — ensure the proxy does not close idle SSE connections before the 15 s keepalive fires. Caddy's default idle timeout is fine; Nginx needs `proxy_read_timeout` ≥ 60 s.
 - **CORS** — cross-origin dev setups rely on the existing `CORSMiddleware` config (`Authorization` is already in `allow_headers`); same-origin production deployments (frontend and API behind the same Caddy host) need no CORS handling at all for this endpoint.
-- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the asyncpg LISTEN connection is unavailable (e.g. during startup or a Postgres restart), the manager falls back to in-process delivery automatically; no operator action is required.
+- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the connections are unavailable at startup (e.g. `DATABASE_ENABLED=false`, tests), the manager falls back to in-process delivery within that worker automatically; no operator action is required. If a connection drops later (Postgres restart, failover, idle-connection reaper, network blip), an asyncpg termination listener schedules a background reconnect with exponential backoff and re-registers the channel listener — see `SyncEventManager._on_pg_conn_terminated` in `backend/app/utils/sse_manager.py`.
 
 ### Adding new live-update behaviour
 

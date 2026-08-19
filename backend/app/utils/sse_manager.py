@@ -7,12 +7,17 @@ regardless of which worker handled the originating push.
 
 If the Postgres connection is unavailable (DATABASE_ENABLED=False, tests, or a
 transient failure) the manager falls back to local in-process delivery so the
-SSE endpoint keeps working within a single process.
+SSE endpoint keeps working within a single process. If a connection drops
+after being established (Postgres restart, failover, idle-connection reaper,
+network blip), asyncpg's termination listener triggers a background reconnect
+with exponential backoff — see ``SyncEventManager._on_pg_conn_terminated``.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import functools
 import json
 import logging
 from collections import defaultdict
@@ -26,6 +31,13 @@ from app.config.settings import settings
 logger = logging.getLogger(__name__)
 
 _NOTIFY_CHANNEL = "worktime_sync_changed"
+
+# Backoff for re-establishing a Postgres LISTEN/NOTIFY connection after it
+# terminates unexpectedly (Postgres restart, failover, idle-connection reaper,
+# network blip). Mirrors the "supervised background task, log and swallow
+# failures" shape of _periodic_jwks_refresh_loop in app/config/oidc_config.py.
+_RECONNECT_INITIAL_DELAY_SECONDS = 1.0
+_RECONNECT_MAX_DELAY_SECONDS = 60.0
 
 # The ordinary per-IP rate limiter doesn't apply to this route (a long-lived
 # stream is one connection, not one unit of request work — see events_endpoint),
@@ -85,6 +97,16 @@ class SyncEventManager:
     pending hint the duplicate is silently dropped.  The hint is idempotent
     ("pull now"), so dropping duplicates is correct and prevents slow clients
     from accumulating a backlog of identical frames.
+
+    **Reconnection**
+
+    Both the LISTEN and NOTIFY connections register an asyncpg termination
+    listener (:meth:`_on_pg_conn_terminated`) so a dropped connection (Postgres
+    restart, failover, idle-connection reaper, network blip) is re-established
+    in the background with exponential backoff, instead of leaving the manager
+    permanently degraded until process restart. ``_closing`` distinguishes an
+    intentional :meth:`stop_pg_listener` close (which also fires the
+    termination listener) from an unexpected drop.
     """
 
     def __init__(self) -> None:
@@ -92,6 +114,12 @@ class SyncEventManager:
         self._queues: dict[int, set[asyncio.Queue[str]]] = defaultdict(set)
         self._listen_conn: asyncpg.Connection | None = None
         self._notify_conn: asyncpg.Connection | None = None
+        self._db_url: str | None = None
+        # True until start_pg_listener configures a URL, and again once
+        # stop_pg_listener begins closing — suppresses reconnect scheduling
+        # from the termination listener during an intentional shutdown.
+        self._closing = True
+        self._reconnect_tasks: dict[str, asyncio.Task[None]] = {}
 
     # ------------------------------------------------------------------
     # Local queue management
@@ -221,7 +249,10 @@ class SyncEventManager:
         ``+asyncpg`` dialect prefix is stripped before passing to asyncpg.
 
         Failures are logged and swallowed — the SSE endpoint continues to work
-        within a single worker process without cross-process broadcast.
+        within a single worker process without cross-process broadcast. Once
+        connected, either connection dropping later is handled by the
+        termination-listener-driven reconnect in :meth:`_on_pg_conn_terminated`,
+        not by this method.
         """
         if not isinstance(db_url, str) or not db_url:
             logger.warning(
@@ -236,14 +267,14 @@ class SyncEventManager:
                 _redact_credentials(db_url),
             )
             return
-        asyncpg_url = urlunparse(parsed._replace(scheme="postgresql"))
         # Note: further URL validation (host, port, credentials) is deferred to
         # asyncpg.connect(); any connection error is caught in the try/except below
         # and causes graceful degradation to single-process mode.
+        self._db_url = urlunparse(parsed._replace(scheme="postgresql"))
+        self._closing = False
         try:
-            self._listen_conn = await asyncpg.connect(asyncpg_url)
-            await self._listen_conn.add_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)
-            self._notify_conn = await asyncpg.connect(asyncpg_url)
+            await self._connect_listen()
+            await self._connect_notify()
             logger.info(
                 "✓ SSE: Postgres LISTEN/NOTIFY connections established on channel %r",
                 _NOTIFY_CHANNEL,
@@ -255,8 +286,86 @@ class SyncEventManager:
             )
             await self.stop_pg_listener()
 
+    async def _connect_listen(self) -> None:
+        """(Re)establish the LISTEN connection and register its callbacks."""
+        conn = await asyncpg.connect(self._db_url)
+        try:
+            await conn.add_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)
+            conn.add_termination_listener(functools.partial(self._on_pg_conn_terminated, "listen"))
+        except BaseException:
+            # conn opened but registration failed — close it rather than leaking it,
+            # since it was never assigned to _listen_conn.
+            await conn.close()
+            raise
+        self._listen_conn = conn
+
+    async def _connect_notify(self) -> None:
+        """(Re)establish the NOTIFY connection and register its callback."""
+        conn = await asyncpg.connect(self._db_url)
+        conn.add_termination_listener(functools.partial(self._on_pg_conn_terminated, "notify"))
+        self._notify_conn = conn
+
+    def _on_pg_conn_terminated(self, which: str, conn: asyncpg.Connection) -> None:
+        """asyncpg termination-listener callback for either connection.
+
+        Fires for *any* closure — an intentional :meth:`stop_pg_listener` close
+        as well as an unexpected drop (Postgres restart, failover, idle-connection
+        reaper, network blip) — so ``_closing`` guards against scheduling a
+        reconnect during a deliberate shutdown. Otherwise clears the dead
+        connection reference and schedules a supervised reconnect loop, unless
+        one is already in flight for *which*.
+        """
+        if self._closing:
+            return
+        if which == "listen":
+            self._listen_conn = None
+        else:
+            self._notify_conn = None
+        existing = self._reconnect_tasks.get(which)
+        if existing is not None and not existing.done():
+            return
+        logger.warning("SSE: Postgres %s connection terminated unexpectedly — scheduling reconnect", which)
+        self._reconnect_tasks[which] = asyncio.create_task(self._reconnect_with_backoff(which))
+
+    async def _reconnect_with_backoff(self, which: str) -> None:
+        """Retry (re)connecting *which* ("listen" or "notify") with exponential backoff.
+
+        Runs until it succeeds or :meth:`stop_pg_listener` sets ``_closing``.
+        Failures are logged and swallowed between attempts, mirroring
+        ``_periodic_jwks_refresh_loop``'s "supervised background task" shape.
+        """
+        delay = _RECONNECT_INITIAL_DELAY_SECONDS
+        while not self._closing:
+            try:
+                if which == "listen":
+                    await self._connect_listen()
+                else:
+                    await self._connect_notify()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.warning(
+                    "SSE: Postgres %s reconnect attempt failed — retrying in %.0fs",
+                    which,
+                    delay,
+                    exc_info=True,
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, _RECONNECT_MAX_DELAY_SECONDS)
+            else:
+                logger.info("✓ SSE: Postgres %s connection re-established", which)
+                return
+
     async def stop_pg_listener(self) -> None:
-        """Remove the LISTEN callback and close asyncpg connections."""
+        """Remove the LISTEN callback, close asyncpg connections, and stop reconnecting."""
+        self._closing = True
+        for task in self._reconnect_tasks.values():
+            task.cancel()
+        for task in list(self._reconnect_tasks.values()):
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        self._reconnect_tasks.clear()
+
         had_connections = self._listen_conn is not None or self._notify_conn is not None
         if self._listen_conn is not None:
             try:
