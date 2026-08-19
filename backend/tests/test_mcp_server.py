@@ -1278,9 +1278,7 @@ async def test_db_integration_client_verifier_still_verifies_when_rate_limited(t
     session_factory = _make_factory(test_db)
 
     async with session_factory() as session:
-        user = await db_service.create_user(
-            session, UserCreate(username="rl-verify-user", display_name="RL Verify")
-        )
+        user = await db_service.create_user(session, UserCreate(username="rl-verify-user", display_name="RL Verify"))
         client, raw_key = await integration_client_service.create_integration_client(
             session, user.id, name="rl-verify-client", rate_limit_per_minute=1
         )
