@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">13</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">11</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">14</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">10</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">24</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">23</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -747,13 +747,13 @@
           docstring in <code>backend/app/database/models.py</code>.</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a>
           <span class="area">mcp</span>
           <span class="area">auth</span>
           <h3>MCP reports rate-limit exhaustion as 401 invalid credentials</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>verify_token</code> catches <code>RateLimitExceededError</code> and returns
           <code>None</code>, which FastMCP turns into a 401. A throttled client is told its
@@ -764,6 +764,14 @@
           post-auth dependency, or let the error propagate and map it to a 429 with
           <code>Retry-After</code> computed from the stored window start.</span></div>
         <div class="refs"><b>backend/app/mcp_server.py:100</b> <b>services/integration_client_service.py:221</b></div>
+        <div class="verified"><span>Enforcement moved out of <code>DbIntegrationClientVerifier.verify_token</code>
+          — it now only looks up the client, checks scope, and records usage. A new
+          <code>IntegrationClientRateLimitMiddleware</code> runs after FastMCP's auth middleware
+          resolves <code>get_access_token()</code> but before <code>RequireAuthMiddleware</code>'s 401
+          gate, so an over-limit request gets a real 429 with a <code>Retry-After</code> header
+          computed from the stored window start, never folded into "invalid credentials". Wired up
+          via a new <code>create_mcp_http_app()</code> helper in <code>backend/app/mcp_server.py</code>,
+          used by <code>backend/app/main.py</code>.</span></div>
       </div>
 
       <div class="finding med resolved">
@@ -1473,14 +1481,6 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
-              <td>Finish the sync/API contract sweep. Same files the high-severity fixes just
-                touched (<code>sync_service.py</code>, <code>db_sync.py</code>, <code>mcp_server.py</code>) —
-                context is warm and each issue already names the sibling function to mirror.
-                (#1102, #1103, #1104, and #1105 in this group have since been resolved.)</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1112">#1112</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
               <td>Same dead Notifications toggle from two angles (already cross-linked). Check PR
@@ -1488,26 +1488,26 @@
                 together.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a></td>
               <td>Dutch parity plus the CI parity check — the check is what stops this specific class
                 of drift recurring, so it's worth doing before more translated surface ships.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a></td>
               <td>Docs pass (backend README, root README, TODO.md). Fold
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a> (low)
                 into the same PR — it's a two-paragraph fix in a file this already touches.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
               <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
                 decision needed.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
               <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
@@ -1515,13 +1515,13 @@
                 patch.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
               <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
                 values but no architecture decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1529,14 +1529,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">9</td>
+              <td class="seq-n">8</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — sequence it after the notifications/settings direction from #2–#4 is
                 settled, since that decision feeds it directly.</td>
             </tr>
             <tr>
-              <td class="seq-n">10</td>
+              <td class="seq-n">9</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once

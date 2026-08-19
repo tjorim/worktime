@@ -1268,3 +1268,141 @@ async def test_db_integration_client_verifier_rejects_unknown_and_revoked(
         await integration_client_service.revoke_integration_client(session, user.id, client.id)
 
     assert await verifier.verify_token(raw_key) is None
+
+
+async def test_db_integration_client_verifier_still_verifies_when_rate_limited(test_db: AsyncEngine) -> None:
+    """verify_token no longer enforces the per-minute rate limit itself (issue #1106):
+    doing so there could only ever surface as 401, since MultiAuth swallows any
+    exception a verifier raises and treats it as a non-match. Enforcement now
+    happens after auth resolves, in IntegrationClientRateLimitMiddleware."""
+    session_factory = _make_factory(test_db)
+
+    async with session_factory() as session:
+        user = await db_service.create_user(
+            session, UserCreate(username="rl-verify-user", display_name="RL Verify")
+        )
+        client, raw_key = await integration_client_service.create_integration_client(
+            session, user.id, name="rl-verify-client", rate_limit_per_minute=1
+        )
+        await integration_client_service.enforce_integration_client_rate_limit(session, client.id)
+
+    verifier = DbIntegrationClientVerifier(session_factory)
+    access_token = await verifier.verify_token(raw_key)
+
+    assert access_token is not None
+    assert access_token.claims["integration_client_id"] == client.id
+
+
+async def test_integration_client_rate_limit_middleware_returns_429_not_401(test_db: AsyncEngine) -> None:
+    """A request from an otherwise-valid integration-client key that has
+    exceeded its rate limit gets 429 with Retry-After, never 401 (issue #1106)."""
+    from app.mcp_server import IntegrationClientRateLimitMiddleware
+
+    session_factory = _make_factory(test_db)
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="rl-mw-user", display_name="RL MW"))
+        client, _raw_key = await integration_client_service.create_integration_client(
+            session, user.id, name="rl-mw-client", rate_limit_per_minute=1
+        )
+        # Consume the client's only request for this window.
+        await integration_client_service.enforce_integration_client_rate_limit(session, client.id)
+
+    downstream_called = False
+
+    async def downstream_app(scope: dict, receive: Any, send: Any) -> None:
+        nonlocal downstream_called
+        downstream_called = True
+
+    token = AccessToken(
+        token="wtic_whatever",
+        client_id=f"integration-client-{client.id}",
+        scopes=["worktime:mcp"],
+        claims={"integration_client_id": client.id},
+    )
+    monkeypatch_target = "app.mcp_server.get_access_token"
+    with patch(monkeypatch_target, lambda: token):
+        middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
+
+        sent_messages = []
+
+        async def send(message: dict) -> None:
+            sent_messages.append(message)
+
+        async def receive() -> dict:
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
+
+    assert downstream_called is False
+    start_message = next(m for m in sent_messages if m["type"] == "http.response.start")
+    assert start_message["status"] == 429
+    assert start_message["status"] != 401
+    headers = {name.decode().lower(): value.decode() for name, value in start_message["headers"]}
+    assert "retry-after" in headers
+    assert int(headers["retry-after"]) > 0
+
+
+async def test_integration_client_rate_limit_middleware_passes_through_under_limit(test_db: AsyncEngine) -> None:
+    """A request from an integration client still under its rate limit reaches
+    the downstream app untouched."""
+    from app.mcp_server import IntegrationClientRateLimitMiddleware
+
+    session_factory = _make_factory(test_db)
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="rl-mw-ok-user", display_name="RL MW OK"))
+        client, _raw_key = await integration_client_service.create_integration_client(
+            session, user.id, name="rl-mw-ok-client", rate_limit_per_minute=60
+        )
+
+    downstream_called = False
+
+    async def downstream_app(scope: dict, receive: Any, send: Any) -> None:
+        nonlocal downstream_called
+        downstream_called = True
+
+    token = AccessToken(
+        token="wtic_whatever",
+        client_id=f"integration-client-{client.id}",
+        scopes=["worktime:mcp"],
+        claims={"integration_client_id": client.id},
+    )
+    with patch("app.mcp_server.get_access_token", lambda: token):
+        middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
+
+        async def receive() -> dict:
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def send(_message: dict) -> None:
+            pass
+
+        await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
+
+    assert downstream_called is True
+
+
+async def test_integration_client_rate_limit_middleware_ignores_non_integration_requests(
+    test_db: AsyncEngine,
+) -> None:
+    """Regular OIDC users have no integration_client_id claim, so the
+    middleware never touches the rate-limit table for them."""
+    from app.mcp_server import IntegrationClientRateLimitMiddleware
+
+    session_factory = _make_factory(test_db)
+    downstream_called = False
+
+    async def downstream_app(scope: dict, receive: Any, send: Any) -> None:
+        nonlocal downstream_called
+        downstream_called = True
+
+    with patch("app.mcp_server.get_access_token", lambda: _token_for_user(1)):
+        middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
+
+        async def receive() -> dict:
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def send(_message: dict) -> None:
+            pass
+
+        await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
+
+    assert downstream_called is True

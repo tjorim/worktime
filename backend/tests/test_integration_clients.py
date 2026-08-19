@@ -127,8 +127,9 @@ async def test_rate_limit_enforced_per_client_in_database(db_session: AsyncSessi
     await enforce_integration_client_rate_limit(db_session, first_id)
     await enforce_integration_client_rate_limit(db_session, first_id)
 
-    with pytest.raises(RateLimitExceededError):
+    with pytest.raises(RateLimitExceededError) as exc_info:
         await enforce_integration_client_rate_limit(db_session, first_id)
+    assert 0 < exc_info.value.retry_after_seconds <= 60
 
     await enforce_integration_client_rate_limit(db_session, second_id)
 
