@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentStatus } from "@/components/CurrentStatus";
 import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
@@ -371,6 +372,86 @@ describe("CurrentStatus Component", () => {
 
       const todayCard = screen.getByText("Today").closest(".col-md-12");
       expect(todayCard).toBeInTheDocument();
+    });
+  });
+
+  describe("Duplicate Up Next suppression (multi-team)", () => {
+    afterEach(() => {
+      // Restore the default dayjs mock behavior for later tests in the file.
+      vi.mocked(dayjs().isSame).mockImplementation(() => false);
+    });
+
+    it("hides Up Next and lets Today take the full width when next shift is the same date and shift as Today", () => {
+      vi.mocked(dayjs().isSame).mockImplementation(() => true);
+      vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
+        date: dayjs("2024-01-15"),
+        shift: {
+          code: "M",
+          displayCode: "M",
+          emoji: "🌅",
+          name: "Morning",
+          start: 7,
+          end: 15,
+          isWorking: true,
+          className: "shift-morning",
+        },
+        code: "2404.1M",
+      });
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Today")).toBeInTheDocument();
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+
+      const todayCard = screen.getByText("Today").closest(".col-md-12");
+      expect(todayCard).toBeInTheDocument();
+    });
+
+    it("still shows Up Next when next shift differs from Today's shift", () => {
+      vi.mocked(dayjs().isSame).mockImplementation(() => false);
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+    });
+  });
+
+  describe("Compact variant", () => {
+    it("renders a single-line summary without the full header, timeline, or Up Next tile", () => {
+      renderWithProviders(
+        <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} variant="compact" />,
+      );
+
+      expect(screen.queryByText("Current Status")).not.toBeInTheDocument();
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
+      expect(screen.getByText("Team 1:")).toBeInTheDocument();
+      expect(screen.getByText(/Morning/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /expand status/i })).toBeInTheDocument();
+    });
+
+    it("expands to the full card when the expand toggle is clicked", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} variant="compact" />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /expand status/i }));
+
+      expect(screen.getByText("Current Status")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /collapse status/i })).toBeInTheDocument();
+    });
+
+    it("collapses back to the compact strip when the collapse toggle is clicked", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} variant="compact" />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /expand status/i }));
+      await user.click(screen.getByRole("button", { name: /collapse status/i }));
+
+      expect(screen.queryByText("Current Status")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /expand status/i })).toBeInTheDocument();
     });
   });
 

@@ -124,6 +124,13 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
     deleted_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     __table_args__ = (
+        Index(
+            "uq_active_running_task_user",
+            "user_id",
+            unique=True,
+            postgresql_where=sql_text("stop_time IS NULL AND deleted_at IS NULL"),
+            sqlite_where=sql_text("stop_time IS NULL AND deleted_at IS NULL"),
+        ),
         Index("ix_time_tracking_tasks_user_id_updated_at", "user_id", "updated_at"),
         Index("ix_time_tracking_tasks_user_id_start_time", "user_id", "start_time"),
     )

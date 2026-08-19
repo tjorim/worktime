@@ -6,7 +6,9 @@ import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocationInfo } from "@/types/workLocation";
+import type { ShiftResult } from "@/utils/shiftCalculations";
 import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import {
   getEventColorClass,
   getEventTypeLabel,
@@ -29,7 +31,7 @@ interface DayCellProps {
   paydayInfo?: PaydayInfo;
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
-  shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
+  shiftBadge?: ShiftResult["shift"]; // Optional shift info
   workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
   onViewEvent: (id: string) => void;
   onDayContextMenu?: (date: Dayjs, x: number, y: number, el: HTMLElement | null) => void;
@@ -207,7 +209,7 @@ export function DayCell({
     ariaLabelParts.push(m.daycell_today_label());
   }
   if (shiftBadge) {
-    ariaLabelParts.push(m.daycell_shift_label({ shift: shiftBadge.label }));
+    ariaLabelParts.push(m.daycell_shift_label({ shift: shiftBadge.name }));
   }
   if (workLocationLabel) {
     ariaLabelParts.push(workLocationLabel);
@@ -453,17 +455,15 @@ export function DayCell({
         )}
       </div>
       <div className="month-calendar-events">
-        {/* Shift badge - shows working schedule when provided */}
+        {/* Shift badge - shows working schedule when provided, color-coded by shift type */}
         {shiftBadge && (
-          <div
-            className={clsx(
-              "month-calendar-shift-badge",
-              shiftBadge.isWorking ? "text-bg-success" : "text-bg-secondary",
-            )}
-            title={shiftBadge.label}
-          >
-            {shiftBadge.code}
-          </div>
+          <ShiftBadge
+            shift={shiftBadge}
+            size="sm"
+            className="month-calendar-shift-badge"
+            showTooltip={false}
+            title={shiftBadge.name}
+          />
         )}
         {visibleEvents.map((dayEvent) => renderEventButton(dayEvent))}
         {hiddenCount > 0 && (

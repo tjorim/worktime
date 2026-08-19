@@ -19,8 +19,8 @@ import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { usePaydates } from "@/hooks/usePaydates";
 import { useLongWeekend } from "@/hooks/useLongWeekend";
-import { calculateShift } from "@/utils/shiftCalculations";
-import { SCHEDULE_OPTIONS } from "@/data/rosters";
+import { calculateShift, getShift } from "@/utils/shiftCalculations";
+import { SCHEDULE_OPTIONS, SHIFT_CODES } from "@/data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "@/utils/workingDayUtils";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import {
@@ -316,13 +316,26 @@ export function CalendarView({
         }
       }
 
+      // Keep the shift's own color/emoji so the calendar matches the shift
+      // color language elsewhere, but reflect whether the day is actually
+      // worked (time off/public holiday) in the name shown on hover.
       return {
-        code: shift.displayCode,
-        label: displayLabel,
+        ...shift,
+        name: displayLabel,
         isWorking: actuallyWorking,
       };
     };
   }, [myTeam, scheduleType, calendarEntries, publicHolidayMap]);
+
+  // Shift types used by the active roster, for the calendar legend
+  const shiftLegendEntries = useMemo(() => {
+    if (!scheduleType) return undefined;
+    const roster = SCHEDULE_OPTIONS.find((opt) => opt.value === scheduleType);
+    if (!roster) return undefined;
+    return SHIFT_CODES.filter((code) => roster.shiftConfig.shiftTimes[code]).map((code) =>
+      getShift(code, scheduleType),
+    );
+  }, [scheduleType]);
 
   // Cross-border tracking feature flag
   const crossBorderEnabled = settings.enableCrossBorderTracking;
@@ -414,7 +427,7 @@ export function CalendarView({
                   <span className="ms-1">{m.long_weekend_btn()}</span>
                 </Button>
               )}
-              <CalendarLegend showEventTypes={timeOffEnabled} />
+              <CalendarLegend showEventTypes={timeOffEnabled} shifts={shiftLegendEntries} />
             </div>
           )}
         </Card.Header>

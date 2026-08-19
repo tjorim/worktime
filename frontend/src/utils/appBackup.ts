@@ -13,13 +13,29 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import {
   ganttTasksCollection,
+  getSyncCollectionUserId,
+  hasSyncCollectionAuth,
   labelsCollection,
+  preloadSyncCollections,
+  replaceCollectionContents,
   tasksCollection,
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
 } from "@/db/collections";
 import { normalizeTimeOffEntries } from "@/lib/timeOff/storage";
+import {
+  appendToSyncOutbox,
+  buildKeepLocalReplacePayload,
+  buildLocalSyncPushPayload,
+  countPushConflicts,
+  isEmptyPushPayload,
+  pullSyncData,
+  pushSyncPayload,
+  type FetchFn,
+  type SyncPushPayload,
+} from "@/utils/syncClient";
+import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import type { Label } from "@/components/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
@@ -367,60 +383,77 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
   return incomingEntries;
 }
 
-function replaceCollectionContents<T extends object, TKey extends string>(
-  collection: {
-    toArray: T[];
-    has: (key: TKey) => boolean;
-    insert: (item: T) => void;
-    update: (key: TKey, cb: (draft: T) => void) => void;
-    delete: (key: TKey) => void;
-  },
-  items: T[],
-  getKey: (item: T) => TKey,
-): void {
-  const nextKeys = new Set(items.map(getKey));
-
-  for (const item of items) {
-    const key = getKey(item);
-    if (collection.has(key)) {
-      collection.update(key, (draft) => {
-        Object.assign(draft, item);
-      });
-    } else {
-      collection.insert(item);
-    }
-  }
-
-  for (const existing of collection.toArray) {
-    const key = getKey(existing);
-    if (!nextKeys.has(key) && collection.has(key)) {
-      collection.delete(key);
-    }
-  }
-}
-
 /**
  * Write each section from the backup payload to the current storage model,
- * replacing the current contents of any included section, then reload the page
- * so all React contexts pick up the restored values.
+ * push the restored state to the server as one "keep local" replace (on a
+ * synced account), and only then reload the page so all React contexts pick
+ * up the restored values.
  *
  * Only sections present in the payload are restored; absent sections are left
- * untouched.
+ * untouched both locally and on the server — the server replace is scoped to
+ * exactly the domains the backup included, never to whatever the rest of the
+ * account's collections happen to hold locally (which may legitimately be
+ * behind the server on a device that hasn't fully synced yet).
+ *
+ * Collection writes use the direct-write batch API (same path as an
+ * incoming sync pull) rather than the optimistic insert/update/delete API, so
+ * no push handlers fire — the server side is instead driven explicitly below
+ * via a single push, which the caller can await before reloading. Reloading
+ * immediately after N per-record optimistic pushes (the previous behavior)
+ * let the navigation abort those in-flight requests, so the server never
+ * learned about the restore and the next pull silently brought the old data
+ * back.
+ *
+ * `fetchFn` is required to sync the restore to the server; omit it (or when
+ * the account isn't signed in) to restore local-only. On a signed-in account
+ * with no `fetchFn`, the restored local state is not pushed and will be
+ * overwritten by the next sync pull — callers on a synced account must pass
+ * one.
+ *
+ * Throws if the server round-trip fails, or if the server accepts the push
+ * but reports a per-record conflict (a concurrent write on another device won
+ * last-write-wins for that record) — a silent partial success would let the
+ * next regular sync pull quietly revert just those records, leaving the
+ * restore looking like it worked when part of it didn't. The restored local
+ * state stays in place either way (already durably written). If the pre-push
+ * server pull fails, nothing is queued — there is no server snapshot to diff
+ * against, so there is no way to compute which server-only records the
+ * replace should delete, and queuing a create-only payload would silently
+ * drop those deletes. If the push itself fails outright after a successful
+ * pull, the full replace payload (including its deletes and its
+ * `allow_bulk_delete` opt-in) is queued in the sync outbox for the next
+ * successful sync cycle; a partial per-record conflict is not queued, since
+ * re-sending already-accepted records is redundant and the conflicted ones
+ * would just conflict again. Either way, callers should surface an error and
+ * must not treat a throw as fatal to the local restore. Does not throw for a
+ * backup that restores no collection data
+ * (nothing to push).
  */
-export function restoreAppBackup(payload: AppBackupPayload): void {
-  if (payload.userState !== undefined) {
-    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(payload.userState));
+export async function restoreAppBackup(
+  payload: AppBackupPayload,
+  fetchFn?: FetchFn,
+): Promise<void> {
+  if (
+    payload.userState !== undefined &&
+    typeof payload.userState === "object" &&
+    payload.userState !== null
+  ) {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({
+        ...(payload.userState as Record<string, unknown>),
+        // The restore is the newest intent for this device — without this,
+        // reconcilePreferences compares export-time timestamps against the
+        // server's, and any backup older than the account's current server
+        // copy loses the last-write-wins check and gets silently overwritten.
+        _updatedAt: new Date().toISOString(),
+      }),
+    );
   }
 
   if (Array.isArray(payload.timeOff)) {
     replaceCollectionContents(
-      timeOffCollection as unknown as {
-        toArray: TimeOffEntry[];
-        has: (id: string) => boolean;
-        insert: (item: TimeOffEntry) => void;
-        update: (id: string, cb: (draft: TimeOffEntry) => void) => void;
-        delete: (id: string) => void;
-      },
+      timeOffCollection,
       normalizeTimeOffEntries(payload.timeOff),
       (entry) => entry.id,
     );
@@ -428,13 +461,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (payload.workLocations && typeof payload.workLocations === "object") {
     replaceCollectionContents(
-      workLocationsCollection as unknown as {
-        toArray: WorkLocationEntry[];
-        has: (id: string) => boolean;
-        insert: (item: WorkLocationEntry) => void;
-        update: (id: string, cb: (draft: WorkLocationEntry) => void) => void;
-        delete: (id: string) => void;
-      },
+      workLocationsCollection,
       parseWorkLocationEntries(payload.workLocations),
       (entry) => entry.date,
     );
@@ -442,13 +469,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (Array.isArray(payload.tasks)) {
     replaceCollectionContents(
-      tasksCollection as unknown as {
-        toArray: StoredTimeTrackingTask[];
-        has: (id: string) => boolean;
-        insert: (item: StoredTimeTrackingTask) => void;
-        update: (id: string, cb: (draft: StoredTimeTrackingTask) => void) => void;
-        delete: (id: string) => void;
-      },
+      tasksCollection,
       payload.tasks as StoredTimeTrackingTask[],
       (task) => task.id,
     );
@@ -456,44 +477,101 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (Array.isArray(payload.templates)) {
     replaceCollectionContents(
-      templatesCollection as unknown as {
-        toArray: TimeTrackingTemplate[];
-        has: (id: string) => boolean;
-        insert: (item: TimeTrackingTemplate) => void;
-        update: (id: string, cb: (draft: TimeTrackingTemplate) => void) => void;
-        delete: (id: string) => void;
-      },
+      templatesCollection,
       payload.templates as TimeTrackingTemplate[],
       (template) => template.id,
     );
   }
 
   if (Array.isArray(payload.labels)) {
-    replaceCollectionContents(
-      labelsCollection as unknown as {
-        toArray: Label[];
-        has: (id: string) => boolean;
-        insert: (item: Label) => void;
-        update: (id: string, cb: (draft: Label) => void) => void;
-        delete: (id: string) => void;
-      },
-      payload.labels as Label[],
-      (label) => label.id,
-    );
+    replaceCollectionContents(labelsCollection, payload.labels as Label[], (label) => label.id);
   }
 
   if (Array.isArray(payload.ganttTasks)) {
     replaceCollectionContents(
-      ganttTasksCollection as unknown as {
-        toArray: GanttTask[];
-        has: (id: string) => boolean;
-        insert: (item: GanttTask) => void;
-        update: (id: string, cb: (draft: GanttTask) => void) => void;
-        delete: (id: string) => void;
-      },
+      ganttTasksCollection,
       payload.ganttTasks as GanttTask[],
       (task) => task.id,
     );
+  }
+
+  if (hasSyncCollectionAuth() && fetchFn) {
+    // Only the domains this backup actually included may be replaced
+    // server-side. The other collections are read below purely so
+    // buildKeepLocalReplacePayload doesn't see them as empty (see its own
+    // comment), then their creates/deletes are stripped back out before the
+    // push — the payload sent to the server touches exactly the domains the
+    // backup restored, nothing else, matching "absent sections are left
+    // untouched" for the server side too.
+    const includedDomains = {
+      labels: Array.isArray(payload.labels),
+      tasks: Array.isArray(payload.tasks),
+      templates: Array.isArray(payload.templates),
+      work_locations: payload.workLocations != null && typeof payload.workLocations === "object",
+      time_off_entries: Array.isArray(payload.timeOff),
+      gantt_tasks: Array.isArray(payload.ganttTasks),
+    } as const satisfies Record<
+      keyof Omit<SyncPushPayload, "allow_bulk_delete" | "declared_delete_total">,
+      boolean
+    >;
+
+    // Collections outside the sections this backup touches must still be read
+    // in full to build the replace payload below — an unmounted collection
+    // reads as empty, which buildKeepLocalReplacePayload would otherwise
+    // read as "delete everything the server has for this domain".
+    await preloadSyncCollections();
+    const localPayload = buildLocalSyncPushPayload();
+    // A backup that restores no collection data has nothing to reconcile —
+    // buildKeepLocalReplacePayload would otherwise throw EmptyLocalReplaceError
+    // for what is really a no-op, and there is no reason to round-trip to the
+    // server for it.
+    if (!isEmptyPushPayload(localPayload)) {
+      const serverData = await pullSyncData(fetchFn);
+      if (!serverData) {
+        // No server snapshot to diff against, so there is no way to compute
+        // which server-only records this replace should delete. Queuing the
+        // create-only localPayload instead would silently drop those
+        // deletes, so surface the failure and leave nothing queued — the
+        // already-written local state is untouched either way.
+        throw new Error("restoreAppBackup: failed to pull server data before push");
+      }
+      const fullReplacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+      // Drop every domain the backup didn't include — both the creates (which
+      // just mirror whatever this device's local copy currently holds) and,
+      // critically, the deletes buildKeepLocalReplacePayload computed for it.
+      // A domain the backup left untouched must not lose server records just
+      // because this device hasn't synced that domain yet.
+      const pushPayload: SyncPushPayload = {
+        allow_bulk_delete: fullReplacePayload.allow_bulk_delete,
+        labels: includedDomains.labels ? fullReplacePayload.labels : [],
+        tasks: includedDomains.tasks ? fullReplacePayload.tasks : [],
+        templates: includedDomains.templates ? fullReplacePayload.templates : [],
+        work_locations: includedDomains.work_locations ? fullReplacePayload.work_locations : [],
+        time_off_entries: includedDomains.time_off_entries
+          ? fullReplacePayload.time_off_entries
+          : [],
+        gantt_tasks: includedDomains.gantt_tasks ? fullReplacePayload.gantt_tasks : [],
+      };
+
+      if (!isEmptyPushPayload(pushPayload)) {
+        const result = await pushSyncPayload(fetchFn, pushPayload);
+        if (!result) {
+          logger.error("restoreAppBackup: failed to push restored data to server");
+          const userId = getSyncCollectionUserId();
+          if (userId) appendToSyncOutbox(userId, pushPayload);
+          throw new Error("restoreAppBackup: push failed");
+        }
+        const conflictCount = countPushConflicts(result);
+        if (conflictCount > 0) {
+          // Some records lost last-write-wins to a concurrent write on
+          // another device. Those records were NOT overwritten with the
+          // restored values server-side, so the next sync pull would quietly
+          // revert them — surface this instead of reloading over it.
+          logger.error(`restoreAppBackup: server rejected ${conflictCount} record(s) as conflicts`);
+          throw new Error("restoreAppBackup: push had conflicts");
+        }
+      }
+    }
   }
 
   window.location.reload();

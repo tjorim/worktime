@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
-from app.routers.auth import get_authenticated_user_id
+from app.middleware.rate_limit import limiter
+from app.routers.auth import get_authenticated_user_id, get_authenticated_user_id_shortlived
 from app.schemas import (
     SyncPullResponse,
     SyncPushRequest,
@@ -125,9 +126,10 @@ async def status_endpoint(
 
 
 @router.get("/events")
+@limiter.exempt
 async def events_endpoint(
     request: Request,
-    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    authenticated_user_id: int = Depends(get_authenticated_user_id_shortlived),
 ) -> StreamingResponse:
     """SSE stream delivering ``sync_changed`` events for the authenticated user.
 
@@ -151,9 +153,26 @@ async def events_endpoint(
     force an unconditional catch-up pull whenever its SSE connection
     re-establishes (not just when an event arrives) to cover that gap; see
     ``createFetchSseTransport`` in the frontend.
+
+    Authenticates via ``get_authenticated_user_id_shortlived``, which resolves
+    the principal on its own short-lived session rather than the request-scoped
+    one, so this long-lived stream doesn't pin a pooled connection for its
+    entire lifetime (see ``get_principal_shortlived``). It's also exempt from
+    the ordinary rate limiter: a stream is one long-lived connection, not one
+    unit of request work, and the client only ever opens one at a time in
+    normal use — ``sync_event_manager``'s own per-user connection cap is what
+    now bounds a single account from accumulating unbounded concurrent streams.
     """
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
-    sync_event_manager.subscribe(authenticated_user_id, queue)
+    if not sync_event_manager.subscribe(authenticated_user_id, queue):
+        # 30s gives the server enough time to notice a stale/disconnected
+        # stream (via is_disconnected() polling, at most _SSE_KEEPALIVE_TIMEOUT
+        # apart) and free a slot, without the client retrying immediately.
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many concurrent sync streams for this account",
+            headers={"Retry-After": "30"},
+        )
 
     async def event_generator():
         try:

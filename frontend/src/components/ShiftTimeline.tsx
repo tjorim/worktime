@@ -5,6 +5,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import type { ScheduleOption } from "@/data/rosters";
 import { getAllTeamsShifts } from "@/utils/shiftCalculations";
@@ -180,7 +181,9 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             <Badge bg="secondary" className="timeline-badge">
               T{prevShift.teamNumber}
             </Badge>
-            <div className="timeline-code">{prevShift.shift.displayCode}</div>
+            <div className="timeline-code">
+              <ShiftBadge shift={prevShift.shift} size="sm" />
+            </div>
           </div>
         )}
         {prevShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
@@ -208,7 +211,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             </Badge>
           </OverlayTrigger>
           <div className="timeline-code">
-            {currentWorkingTeam.shift.displayCode}
+            <ShiftBadge shift={currentWorkingTeam.shift} size="sm" showTooltip={false} />
             <OverlayTrigger
               placement="bottom"
               overlay={
@@ -229,7 +232,9 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             <Badge bg="secondary" className="timeline-badge">
               T{nextShift.teamNumber}
             </Badge>
-            <div className="timeline-code">{nextShift.shift.displayCode}</div>
+            <div className="timeline-code">
+              <ShiftBadge shift={nextShift.shift} size="sm" />
+            </div>
           </div>
         )}
       </div>

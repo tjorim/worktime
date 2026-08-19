@@ -3,6 +3,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainTabs } from "@/components/MainTabs";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 
+// The status card is only central to the Calendar and Schedule tabs — everywhere
+// else it collapses to a single-line strip so tab content is visible without
+// scrolling (see #1126).
+const FULL_STATUS_TABS = new Set(["calendar", "unified-calendar", "schedule"]);
+
 export function HomePage() {
   const {
     myTeam,
@@ -17,6 +22,8 @@ export function HomePage() {
     clearPendingTaskEdit,
   } = useAppShellContext();
 
+  const statusVariant = FULL_STATUS_TABS.has(activeTab) ? "full" : "compact";
+
   return (
     <main id="main-content">
       <ErrorBoundary>
@@ -24,6 +31,7 @@ export function HomePage() {
           myTeam={myTeam}
           onChangeTeam={onChangeTeam}
           onChangeSchedule={onChangeSchedule}
+          variant={statusVariant}
         />
       </ErrorBoundary>
       <ErrorBoundary>

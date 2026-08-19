@@ -16,6 +16,23 @@ below predate that switch.
 - Notification system
 - Cross-schedule transfer view
 
+## [2026.8.4] - 2026-08-19
+
+### Changed
+
+- The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)
+- Month calendar cells now size to their content instead of reserving a fixed 140px (110px on mobile), so a full month fits on screen without scrolling (#1127)
+
+## [2026.8.3] - 2026-08-18
+
+### Changed
+
+- The Current Status card now shows only a compact one-line summary outside the Calendar and Schedule tabs, expandable back to the full card, so tab content is visible without scrolling (#1126)
+
+### Fixed
+
+- "Up Next" no longer duplicates "Today" when they resolve to the same date and shift (#1126)
+
 ## [2026.8.2] - 2026-08-01
 
 ### Fixed
@@ -686,7 +703,9 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.2...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.4...HEAD
+[2026.8.4]: https://github.com/tjorim/worktime/compare/v2026.8.3...v2026.8.4
+[2026.8.3]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.8.3
 [2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2
 [2026.8.1]: https://github.com/tjorim/worktime/compare/v2026.7.2...v2026.8.1
 [2026.7.2]: https://github.com/tjorim/worktime/compare/v2026.7.1...v2026.7.2
