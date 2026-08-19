@@ -64,10 +64,13 @@ export function PwaInstallProvider({ children }: PwaInstallProviderProps) {
   const hasCountedVisitRef = useRef(false);
 
   // Some browsers let the user install without ever firing beforeinstallprompt/appinstalled
-  // (e.g. an existing installed session). Detect that directly so we never show install UI.
+  // (e.g. an existing installed session). Detect that directly so we never show install UI —
+  // and reconcile the other way too, since an uninstall never fires an event either, so a
+  // stale `installed: true` from a previous session would otherwise block reinstallation forever.
   useEffect(() => {
-    if (isRunningStandalone() && !state.installed) {
-      setState((prev) => ({ ...prev, installed: true }));
+    const standalone = isRunningStandalone();
+    if (standalone !== state.installed) {
+      setState((prev) => ({ ...prev, installed: standalone }));
     }
     // Only needs to run once per mount; state.installed is read, not depended on, to avoid
     // re-running every time this same effect sets it.
@@ -105,10 +108,21 @@ export function PwaInstallProvider({ children }: PwaInstallProviderProps) {
     const deferred = deferredPromptRef.current;
     if (!deferred) return "unavailable";
 
-    await deferred.prompt();
-    const { outcome } = await deferred.userChoice;
+    // The captured prompt is single-use either way - clear it up front so a rejection
+    // (e.g. the browser refusing a second prompt() call) can't leave a stale reference
+    // that just fails again on the next attempt.
     deferredPromptRef.current = null;
     setHasDeferredPrompt(false);
+
+    let outcome: "accepted" | "dismissed";
+    try {
+      await deferred.prompt();
+      ({ outcome } = await deferred.userChoice);
+    } catch (error) {
+      logger.error("PWA install prompt failed", error);
+      return "unavailable";
+    }
+
     if (outcome === "accepted") {
       setState((prev) => ({ ...prev, installed: true }));
       logger.info("PWA install accepted");

@@ -145,4 +145,34 @@ describe("PwaInstallContext", () => {
     expect(result.current.isInstalled).toBe(true);
     matchMediaSpy.mockRestore();
   });
+
+  it("resets a stale installed flag once the app is no longer running standalone", () => {
+    window.localStorage.setItem(
+      PWA_INSTALL_STATE_STORAGE_KEY,
+      JSON.stringify({ visitCount: 3, installed: true, lastPromptedAt: null }),
+    );
+
+    const { result } = renderHook(() => usePwaInstall(), { wrapper });
+
+    expect(result.current.isInstalled).toBe(false);
+  });
+
+  it("resolves 'unavailable' and clears the deferred prompt when it's rejected", async () => {
+    const { result } = renderHook(() => usePwaInstall(), { wrapper });
+    const promptSpy = vi.fn().mockRejectedValue(new Error("prompt already used"));
+
+    act(() => {
+      dispatchBeforeInstallPrompt({ prompt: promptSpy });
+    });
+    expect(result.current.canInstall).toBe(true);
+
+    let outcome: string | undefined;
+    await act(async () => {
+      outcome = await result.current.promptInstall();
+    });
+
+    expect(outcome).toBe("unavailable");
+    expect(result.current.isInstalled).toBe(false);
+    expect(result.current.canInstall).toBe(false);
+  });
 });
