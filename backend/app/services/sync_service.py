@@ -921,7 +921,16 @@ async def _get_synced_entities[SyncEntityModelT: SyncEntityModel](
 
 
 async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushRequest) -> SyncPushResponse:
-    """Apply a batched set of client changes within a single transaction."""
+    """Apply a batched set of client changes within a single transaction.
+
+    Deliberately writes no ``AuditEntry`` rows: a single offline-sync batch
+    can carry hundreds of per-field LWW merges across every entity type, and
+    attributing each one individually would blow up the audit trail without
+    adding a meaningful record — the batch's provenance (which user, which
+    request) is already captured by the surrounding access logging. This is
+    an explicit exclusion from the "no mutation without an audit trail"
+    contract described on ``AuditEntry``, not an oversight.
+    """
     results: dict[str, list[SyncRecordResult]] = {
         "labels": [],
         "tasks": [],

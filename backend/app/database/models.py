@@ -414,6 +414,10 @@ class AuditEntry(Base):
     This is the authoritative audit record; the rotated file logger in
     ``app.audit.logger`` (from #984) remains as secondary, best-effort
     operational telemetry only.
+
+    Exception: bulk changes applied via ``sync_service.push_changes`` (the
+    offline-sync batch upload) are deliberately excluded — see the comment
+    there for why.
     """
 
     __tablename__ = "audit_entries"

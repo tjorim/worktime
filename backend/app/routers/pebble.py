@@ -13,6 +13,7 @@ from app.database.models import TimeTrackingTask
 from app.read_models import CurrentStatusReadModel, NextShiftsReadModel
 from app.routers.auth import (
     AuthenticatedPrincipal,
+    audit_actor_for,
     require_pebble_read_principal,
     require_pebble_write_principal,
 )
@@ -77,6 +78,7 @@ async def pebble_clock_in(
             session,
             principal.user_id,
             TaskCreate(text="Working", start_time=datetime.now(UTC)),
+            actor=audit_actor_for(principal),
         )
     except ConflictError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
@@ -100,6 +102,7 @@ async def pebble_clock_out(
             principal.user_id,
             running_task.id,
             TaskUpdate(stop_time=datetime.now(UTC)),
+            actor=audit_actor_for(principal),
         )
     except (NotFoundError, ConflictError, ValidationError) as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
