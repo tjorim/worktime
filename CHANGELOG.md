@@ -20,7 +20,7 @@ below predate that switch.
 
 ### Changed
 
-- The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Everything (formerly Unified), Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)
+- The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)
 
 ## [2026.8.3] - 2026-08-18
 
