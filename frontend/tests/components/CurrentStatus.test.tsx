@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import RealDayjs from "dayjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentStatus } from "@/components/CurrentStatus";
 import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
@@ -413,6 +414,96 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("Up Next")).toBeInTheDocument();
+    });
+  });
+
+  describe("Later-today labeling for a night-shift-extension collision (#1145)", () => {
+    // The file-wide `dayjs()` mock normally returns one shared stub whose `isSame` is a
+    // dumb `() => false` — fine for the duplicate-suppression tests above, which only need
+    // one true/false verdict, but this bug is exactly two `.isSame` comparisons disagreeing
+    // in the same render (next-vs-today is same calendar day, current-vs-today is not), and
+    // a canned answer can't produce that. For these two tests only, route the mock through
+    // the real Day.js package instead: zero-arg calls (`dayjs()`, what `useLiveTime` reads
+    // for "now") resolve to a fixed real instant, and calls with arguments still parse
+    // through unchanged. Every date built below is then a genuine dayjs instance, so
+    // `.isSame(..., "day")` exercises real calendar-day comparison — the actual logic the
+    // bug was in — rather than a hand-coded stand-in for it.
+    let originalDayjsImpl: unknown;
+    let liveToday: ReturnType<typeof dayjs>;
+
+    beforeEach(() => {
+      originalDayjsImpl = vi.mocked(dayjs).getMockImplementation();
+      liveToday = RealDayjs("2026-08-19T06:00:00") as unknown as ReturnType<typeof dayjs>;
+      vi.mocked(dayjs).mockImplementation(((...args: Parameters<typeof RealDayjs>) =>
+        args.length === 0 ? liveToday : RealDayjs(...args)) as typeof dayjs);
+    });
+
+    afterEach(() => {
+      vi.mocked(dayjs).mockImplementation(originalDayjsImpl as typeof dayjs);
+    });
+
+    it('labels Up Next "Later today" instead of "Today" while Today is still showing an in-progress night shift', () => {
+      // The shift day the still-running night shift belongs to: a real calendar day
+      // before `liveToday`, exactly like the production bug (06:00 is still inside the
+      // prior night shift's 23:00–07:00 window, so getCurrentShiftDay backs it up).
+      const shiftDay = RealDayjs("2026-08-18T06:00:00") as unknown as ReturnType<typeof dayjs>;
+      // Keeps isInNightShiftExtension truthy (isWorking + isCurrentlyWorking are already
+      // mocked true in beforeEach), so currentShift.date becomes this shiftDay.
+      vi.mocked(shiftCalculations.getCurrentShiftDay).mockReturnValue(shiftDay);
+      vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
+        date: RealDayjs("2026-08-19T06:00:00") as unknown as ReturnType<typeof dayjs>, // the same real day as liveToday
+        shift: {
+          code: "L",
+          displayCode: "E",
+          emoji: "🌆",
+          name: "Evening",
+          start: 15,
+          end: 23,
+          isWorking: true,
+          className: "shift-evening",
+        },
+        code: "2404.2L",
+      });
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+      expect(screen.getByText(/Later today/)).toBeInTheDocument();
+      // "Today" still appears once, as the left card's static heading — just not as the
+      // Up Next date label too, which is the collision #1145 reports.
+      expect(screen.getAllByText("Today")).toHaveLength(1);
+    });
+
+    it('still labels Up Next "Today" when Today\'s card already reflects the real calendar day', () => {
+      // currentShift.date falls back to `today` itself whenever isInNightShiftExtension is
+      // false — simulate that by making the shift-day lookup not currently working, so
+      // currentShift.date resolves to the same real `liveToday` instant as nextShift.date.
+      vi.mocked(shiftCalculations.isCurrentlyWorking).mockReturnValue(false);
+      vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
+        date: RealDayjs("2026-08-19T06:00:00") as unknown as ReturnType<typeof dayjs>,
+        shift: {
+          code: "L",
+          displayCode: "E",
+          emoji: "🌆",
+          name: "Evening",
+          start: 15,
+          end: 23,
+          isWorking: true,
+          className: "shift-evening",
+        },
+        code: "2404.2L",
+      });
+
+      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
+      expect(screen.queryByText(/Later today/)).not.toBeInTheDocument();
+      // The Up Next label sits beside "- Evening" as sibling text nodes, so it never
+      // matches an exact "Today" query on its own — assert the combined text instead.
+      // Both cards legitimately say "Today" here (same real day, no collision): the left
+      // card's isolated static heading, plus this compound label on the right.
+      expect(screen.getAllByText("Today")).toHaveLength(1);
+      expect(screen.getByText(/^Today\s*-\s*Evening$/)).toBeInTheDocument();
     });
   });
 
