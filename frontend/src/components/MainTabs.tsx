@@ -208,7 +208,7 @@ export function MainTabs({
               eventKey="unified-calendar"
               title={
                 <>
-                  <i className="bi bi-calendar-range" aria-hidden="true"></i>
+                  <i className="bi bi-layers" aria-hidden="true"></i>
                   <span className="main-tab-label">{m.tab_unified_calendar()}</span>
                 </>
               }
@@ -229,7 +229,7 @@ export function MainTabs({
             eventKey="schedule"
             title={
               <>
-                <i className="bi bi-calendar-week" aria-hidden="true"></i>
+                <i className="bi bi-list-ul" aria-hidden="true"></i>
                 <span className="main-tab-label">{m.tab_schedule()}</span>
               </>
             }
@@ -251,7 +251,7 @@ export function MainTabs({
               eventKey="timeoff"
               title={
                 <>
-                  <i className="bi bi-calendar-check" aria-hidden="true"></i>
+                  <i className="bi bi-airplane" aria-hidden="true"></i>
                   <span className="main-tab-label">{m.tab_time_off()}</span>
                 </>
               }
