@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.db import AuditActor
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
-from app.database.engine import get_session
+from app.database.engine import get_session, get_session_factory
 from app.schemas import OidcDiscoveryConfig
 from app.services.access_token_service import TOKEN_PREFIX as _PAT_PREFIX
 from app.services.access_token_service import authenticate_access_token
@@ -269,6 +269,39 @@ def get_authenticated_user_id(
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
 ) -> int:
     """Backward-compatible dependency returning only the authenticated user ID."""
+    return principal.user_id
+
+
+async def get_principal_shortlived(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+) -> AuthenticatedPrincipal:
+    """Resolve the authenticated principal via a session scoped to this call only.
+
+    ``get_bearer_principal`` normally takes its session from ``Depends(get_session)``,
+    a yield-dependency FastAPI only tears down after the response finishes. For an
+    ordinary request that's immediate, but for a ``StreamingResponse`` (SSE) it means
+    "finishes" is "the client disconnects" — pinning a pooled connection idle for the
+    entire stream. Open and close our own session here, before the route (and its
+    stream body) ever runs, so the connection is released back to the pool as soon as
+    auth is resolved.
+    """
+    async with get_session_factory()() as session:
+        return await get_bearer_principal(request, credentials, session)
+
+
+def get_authenticated_user_id_shortlived(
+    principal: AuthenticatedPrincipal = Depends(get_principal_shortlived),
+) -> int:
+    """Short-lived-session counterpart to ``get_authenticated_user_id`` for streaming routes.
+
+    Requires an interactive Keycloak user session, same as ``get_authenticated_principal``.
+    """
+    if principal.auth_type != AuthType.KEYCLOAK_USER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint requires an interactive Keycloak user session",
+        )
     return principal.user_id
 
 

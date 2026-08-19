@@ -245,7 +245,7 @@ export interface SyncStatusResponse {
 // Fetch wrappers
 // ---------------------------------------------------------------------------
 
-type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Call GET /db/sync/status.
@@ -1081,6 +1081,10 @@ function readSyncOutbox(userId: string): SyncPushPayload[] {
   }
 }
 
+function writeSyncOutbox(userId: string, outbox: SyncPushPayload[]): void {
+  localStorage.setItem(getSyncOutboxKey(userId), JSON.stringify(outbox));
+}
+
 /**
  * Append a single change payload to the outbox queue stored in localStorage.
  * Called when an immediate push fails (e.g. offline).
@@ -1094,7 +1098,7 @@ export function appendToSyncOutbox(userId: string, change: SyncPushPayload): boo
   try {
     const outbox = readSyncOutbox(userId);
     outbox.push(change);
-    localStorage.setItem(getSyncOutboxKey(userId), JSON.stringify(outbox));
+    writeSyncOutbox(userId, outbox);
     return true;
   } catch (err) {
     // Storage rejected the write (quota exceeded, private browsing). Report it
@@ -1197,15 +1201,35 @@ export function getSyncOutboxSize(userId: string): number {
  * send via pushSyncPayload().  Returns null when the outbox is empty.
  *
  * The outbox is **not** cleared by this call.  After a successful push the
- * caller must invoke the returned `commit` function to clear the outbox.  If
- * the push fails the outbox is left intact and will be retried on the next
- * flush cycle.
+ * caller must invoke the returned `commit` function to remove the dequeued
+ * entries.  If the push fails the outbox is left intact and will be retried
+ * on the next flush cycle.
+ *
+ * `commit` only removes the entries present in this snapshot (matched by
+ * content, not position) rather than clearing the whole key. The outbox is
+ * append-only, so any entry written by a concurrent `appendToSyncOutbox`
+ * while this batch's push is in flight lands after the snapshot and survives
+ * the commit instead of being silently dropped. Matching by content (rather
+ * than dropping a fixed count from the front) also keeps a second, overlapping
+ * flush safe — e.g. two browser tabs for the same user, which aren't
+ * serialized against each other since `isFlushingRef` is in-memory per tab:
+ * if tab A's commit has already removed the snapshot it dequeued, tab B's
+ * later commit finds none of *its* snapshot entries still present and removes
+ * nothing, rather than deleting whatever now occupies that position.
  *
  * Entries are coalesced by natural key (id, or date for work locations),
  * keeping only the newest entry per record.  This is safe because every
  * queued mutation carries the full record and the server upserts by natural
  * key, and it keeps long-offline flushes bounded by the number of *distinct*
  * records rather than the number of mutations.
+ *
+ * `allow_bulk_delete` is OR-combined across entries: if any queued payload
+ * opted in (e.g. a "keep local" replace queued after its immediate push
+ * failed — see `buildKeepLocalReplacePayload`), the merged batch carries the
+ * opt-in too, and `declared_delete_total` is recomputed from the merged
+ * result. Dropping either on a retry would let the server's bulk-delete guard
+ * reject deletes the user already confirmed, silently leaving those records
+ * (and anything they depended on being gone) back on the server.
  */
 export function dequeueAndMergeSyncOutbox(
   userId: string,
@@ -1221,6 +1245,7 @@ export function dequeueAndMergeSyncOutbox(
     time_off_entries: [],
     gantt_tasks: [],
   };
+  let allowBulkDelete = false;
   for (const payload of outbox) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) continue;
     merged.labels.push(...(Array.isArray(payload.labels) ? payload.labels : []));
@@ -1233,16 +1258,51 @@ export function dequeueAndMergeSyncOutbox(
       ...(Array.isArray(payload.time_off_entries) ? payload.time_off_entries : []),
     );
     merged.gantt_tasks.push(...(Array.isArray(payload.gantt_tasks) ? payload.gantt_tasks : []));
+    if (payload.allow_bulk_delete) allowBulkDelete = true;
+  }
+  const mergedResult: SyncPushPayload = {
+    labels: dedupeByKey(merged.labels, (l) => l.id),
+    tasks: dedupeByKey(merged.tasks, (t) => t.id),
+    templates: dedupeByKey(merged.templates, (t) => t.id),
+    work_locations: dedupeByKey(merged.work_locations, (w) => w.date),
+    time_off_entries: dedupeByKey(merged.time_off_entries, (e) => e.id),
+    gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
+  };
+  if (allowBulkDelete) {
+    mergedResult.allow_bulk_delete = true;
+    mergedResult.declared_delete_total = countPayloadDeletes(mergedResult);
   }
   return {
-    merged: {
-      labels: dedupeByKey(merged.labels, (l) => l.id),
-      tasks: dedupeByKey(merged.tasks, (t) => t.id),
-      templates: dedupeByKey(merged.templates, (t) => t.id),
-      work_locations: dedupeByKey(merged.work_locations, (w) => w.date),
-      time_off_entries: dedupeByKey(merged.time_off_entries, (e) => e.id),
-      gantt_tasks: dedupeByKey(merged.gantt_tasks, (g) => g.id),
+    merged: mergedResult,
+    commit: () => {
+      // Remove exactly the dequeued entries, matched by content rather than
+      // position, so a concurrent commit (a second tab, or anything else
+      // that raced this snapshot) never removes an entry it didn't dequeue.
+      // Tracked as a multiset (key -> remaining count) rather than an
+      // indexOf/splice scan per entry, so this stays O(n) instead of O(n*m).
+      const toRemoveCounts = new Map<string, number>();
+      for (const entry of outbox) {
+        const key = JSON.stringify(entry);
+        toRemoveCounts.set(key, (toRemoveCounts.get(key) ?? 0) + 1);
+      }
+      const current = readSyncOutbox(userId);
+      const remaining: SyncPushPayload[] = [];
+      for (const entry of current) {
+        const key = JSON.stringify(entry);
+        const count = toRemoveCounts.get(key);
+        if (count) {
+          toRemoveCounts.set(key, count - 1);
+        } else {
+          remaining.push(entry);
+        }
+      }
+      try {
+        writeSyncOutbox(userId, remaining);
+      } catch (err) {
+        // The push already succeeded. Report the failed prune rather than
+        // reporting the whole flush as failed.
+        logger.error("Failed to prune committed entries from the sync outbox:", err);
+      }
     },
-    commit: () => clearSyncOutbox(userId),
   };
 }

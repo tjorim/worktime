@@ -21,9 +21,22 @@ from urllib.parse import urlparse, urlunparse
 
 import asyncpg
 
+from app.config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 _NOTIFY_CHANNEL = "worktime_sync_changed"
+
+# The ordinary per-IP rate limiter doesn't apply to this route (a long-lived
+# stream is one connection, not one unit of request work — see events_endpoint),
+# so nothing else bounds how many concurrent streams one account can hold.
+# This cap is *per worker process*: the queue registry below lives in process
+# memory, so the effective per-account bound across a deployment is
+# _MAX_QUEUES_PER_USER * worker_count. Keep it generous enough for several
+# simultaneous tabs/devices, low enough that one account can't accumulate
+# unbounded live tasks and queues. Sourced from settings so operators can tune
+# it per deployment instead of editing this constant.
+_MAX_QUEUES_PER_USER = settings.SSE_MAX_QUEUES_PER_USER
 
 
 def _redact_credentials(db_url: object) -> str:
@@ -84,10 +97,18 @@ class SyncEventManager:
     # Local queue management
     # ------------------------------------------------------------------
 
-    def subscribe(self, user_id: int, queue: asyncio.Queue[str]) -> None:
-        """Register *queue* as an active SSE connection for *user_id*."""
+    def subscribe(self, user_id: int, queue: asyncio.Queue[str]) -> bool:
+        """Register *queue* as an active SSE connection for *user_id*.
+
+        Returns ``False`` without registering if *user_id* already holds
+        ``_MAX_QUEUES_PER_USER`` connections — see the module-level constant.
+        """
+        if len(self._queues.get(user_id, ())) >= _MAX_QUEUES_PER_USER:
+            logger.warning("SSE: user %d rejected — already at the %d-connection cap", user_id, _MAX_QUEUES_PER_USER)
+            return False
         self._queues[user_id].add(queue)
         logger.debug("SSE: user %d subscribed (%d total)", user_id, len(self._queues[user_id]))
+        return True
 
     def unsubscribe(self, user_id: int, queue: asyncio.Queue[str]) -> None:
         """Remove *queue* from the registry when the SSE connection closes."""

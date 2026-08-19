@@ -1584,6 +1584,102 @@ describe("syncClient", () => {
       );
     });
 
+    it("commit() only removes the dequeued entries, preserving concurrent appends", () => {
+      // Simulates the race from #1098: a flush snapshots the outbox and starts
+      // its network push, and a write lands in the outbox (e.g. because its own
+      // immediate push failed) before that flush's commit() runs.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+
+      // A concurrent write appends while the dequeued batch's push is in flight.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-B" }],
+      } as never);
+
+      result!.commit();
+
+      // Only the dequeued entry (task-A) is removed; task-B survives.
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      const remaining = dequeueAndMergeSyncOutbox("user-1");
+      expect(remaining!.merged.tasks.map((t) => t.id)).toEqual(["task-B"]);
+    });
+
+    it("a stale commit from an overlapping flush does not drop a newer entry (cross-tab race)", () => {
+      // Two tabs share one outbox key with no cross-tab coordination
+      // (isFlushingRef is in-memory, per tab). Both dequeue the same
+      // snapshot; tab A commits (removing it), a new entry is appended,
+      // then tab B's commit fires. A position-based commit (slice by
+      // count) would misinterpret its stale count against the new array
+      // and delete the newly queued entry. Matching by content instead
+      // means B's commit finds none of its own entries still present and
+      // removes nothing.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-old" }],
+      } as never);
+
+      const tabA = dequeueAndMergeSyncOutbox("user-1");
+      const tabB = dequeueAndMergeSyncOutbox("user-1");
+      expect(tabA).not.toBeNull();
+      expect(tabB).not.toBeNull();
+
+      tabA!.commit();
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-new" }],
+      } as never);
+
+      tabB!.commit();
+
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      const remaining = dequeueAndMergeSyncOutbox("user-1");
+      expect(remaining!.merged.tasks.map((t) => t.id)).toEqual(["task-new"]);
+    });
+
+    it("propagates allow_bulk_delete when any queued entry opted in, and recomputes declared_delete_total", () => {
+      // A regular optimistic mutation queued alongside a failed "keep local"
+      // replace (see buildKeepLocalReplacePayload) — the merged batch must
+      // still carry allow_bulk_delete or the server's bulk-delete guard
+      // rejects the replace's deletes on retry.
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A", action: "create" }],
+      } as never);
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        allow_bulk_delete: true,
+        labels: [
+          { id: "lbl-1", action: "create" },
+          { id: "lbl-2", action: "delete" },
+        ],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      expect(result!.merged.allow_bulk_delete).toBe(true);
+      expect(result!.merged.declared_delete_total).toBe(1);
+    });
+
+    it("does not set allow_bulk_delete when no queued entry opted in", () => {
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A", action: "delete" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      expect(result!.merged.allow_bulk_delete).toBeUndefined();
+      expect(result!.merged.declared_delete_total).toBeUndefined();
+    });
+
     it("skips corrupted/non-object outbox entries without throwing", () => {
       appendToSyncOutbox("user-1", emptyPayload());
       // Corrupt the outbox by injecting a bad entry directly.

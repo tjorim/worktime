@@ -431,14 +431,24 @@ async def list_tasks(
 
 
 async def get_running_task(session: AsyncSession, user_id: int) -> TimeTrackingTask | None:
+    """Return the user's running task.
+
+    Only one running task per user is meant to exist, but the sync push path
+    historically didn't enforce that, so some accounts already have more than
+    one `stop_time IS NULL` row. Order by `start_time` and take the most
+    recent instead of `scalar_one_or_none()` so a pre-existing inconsistency
+    degrades to "shows the most recent one" rather than a hard 500.
+    """
     result = await session.execute(
-        select(TimeTrackingTask).where(
+        select(TimeTrackingTask)
+        .where(
             TimeTrackingTask.user_id == user_id,
             TimeTrackingTask.stop_time.is_(None),
             TimeTrackingTask.deleted_at.is_(None),
         )
+        .order_by(TimeTrackingTask.start_time.desc())
     )
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def update_task(
