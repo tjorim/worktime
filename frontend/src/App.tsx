@@ -6,6 +6,7 @@ import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PwaUpdateToast } from "@/components/PwaUpdateToast";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppShellProvider } from "@/contexts/AppShellContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -15,6 +16,7 @@ import { SettingsProvider, type TabKey, useSettings } from "@/contexts/SettingsC
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
 import { useShiftNotifications } from "@/hooks/useShiftNotifications";
@@ -292,6 +294,7 @@ function AppContent() {
   return (
     <OngoingSyncProvider isSyncEstablished={isSyncEstablished}>
       <PwaUpdateToast />
+      <PwaInstallPrompt />
       <ErrorBoundary>
         <AppShellProvider
           value={{
@@ -372,9 +375,11 @@ function App() {
           <EventStoreProvider>
             <DeveloperOptionsProvider>
               <ToastProvider>
-                <AuthProvider>
-                  <AppContent />
-                </AuthProvider>
+                <PwaInstallProvider>
+                  <AuthProvider>
+                    <AppContent />
+                  </AuthProvider>
+                </PwaInstallProvider>
               </ToastProvider>
             </DeveloperOptionsProvider>
           </EventStoreProvider>

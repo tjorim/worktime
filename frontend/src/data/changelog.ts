@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "2026.8.5",
+    version: "2026.8.6",
     date: "2026-08-19",
     status: "current",
+    added: [
+      "The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual \"Install App\" action in Settings > Quick Actions (#273)",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
+    version: "2026.8.5",
+    date: "2026-08-19",
+    status: "released",
     added: [
       "Shift reminders now work even when Worktime isn't open: turning on Notifications registers a push subscription, and the backend sends a reminder before your next shift via your browser's push service. Configurable lead time (15m/1h/2h) and quiet hours are shared with the existing in-app reminder (#271)",
     ],
