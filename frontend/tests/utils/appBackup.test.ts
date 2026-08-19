@@ -474,6 +474,66 @@ describe("appBackup", () => {
         );
       });
 
+      it("does not push deletes or creates for a domain the backup didn't include, even when local hasn't synced it yet", async () => {
+        // Only `labels` is in the backup payload. `tasksCollection` is left
+        // empty here to simulate a device that hasn't synced tasks yet, while
+        // the server reports an existing task — the old whole-account replace
+        // would have read the empty local tasks as "delete this on the
+        // server", even though the backup never touched the tasks domain.
+        const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        const pullResponseWithServerTask = {
+          ...emptyPullResponse,
+          tasks: [
+            {
+              id: "server-task",
+              text: "Existing",
+              start_time: "2026-01-01T08:00:00.000Z",
+              stop_time: null,
+              deleted_at: null,
+              updated_at: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        };
+        mockFetch
+          .mockResolvedValueOnce({ ok: true, json: async () => pullResponseWithServerTask })
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+
+        await restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch);
+
+        const [, pushInit] = mockFetch.mock.calls[1]!;
+        const pushBody = JSON.parse((pushInit as RequestInit).body as string);
+        expect(pushBody.labels).toEqual([expect.objectContaining({ id: "l1", action: "create" })]);
+        // The untouched tasks domain must carry neither the server's
+        // existing task nor any delete for it.
+        expect(pushBody.tasks).toEqual([]);
+        expect(window.location.reload).toHaveBeenCalledOnce();
+      });
+
+      it("throws and does not reload when the server reports a per-record conflict", async () => {
+        const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+        mockFetch
+          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+              results: {
+                labels: [
+                  { id: "l1", status: "conflict", server_updated_at: "2026-01-03T00:00:00.000Z" },
+                ],
+              },
+            }),
+          });
+
+        await expect(
+          restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch),
+        ).rejects.toThrow();
+
+        // A conflict means the record was NOT overwritten server-side, so
+        // reloading now would show restored data the server doesn't actually
+        // have — the local restore itself still stands either way.
+        expect(window.location.reload).not.toHaveBeenCalled();
+      });
+
       it("throws, does not reload, and queues nothing when the pre-push pull fails", async () => {
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];
         mockFetch.mockResolvedValueOnce({ ok: false, status: 500 }); // pull fails

@@ -3,12 +3,30 @@ import { Temporal } from "temporal-polyfill";
 import type { Label } from "@/components/timeTracking/constants";
 import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
 import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/timeOff/types";
+import { SHIFT_CODES, type ShiftCode } from "@/data/rosters";
 import type { Shift, ShiftResult } from "@/utils/shiftCalculations";
 
 export const CALENDAR_COLORS = {
-  shift: "#0d6efd",
   "time-off": "#198754",
 } as const;
+
+/**
+ * Mirrors the --wt-shift-* custom properties in styles/_variables.scss so the
+ * Unified Calendar's shift blocks match the shift color language used
+ * everywhere else (month calendar, shift timeline, schedule table). Schedule-X
+ * bakes light/dark colors into its own theme config rather than resolving CSS
+ * custom properties at render time, so these must be kept in sync by hand.
+ */
+const SHIFT_CALENDAR_COLORS: Record<
+  ShiftCode,
+  { light: string; lightText: string; dark: string; darkText: string }
+> = {
+  M: { light: "#1976d2", lightText: "#ffffff", dark: "#1565c0", darkText: "#e3f2fd" },
+  L: { light: "#bf360c", lightText: "#ffffff", dark: "#8d3200", darkText: "#ffe0b2" },
+  D: { light: "#f57c00", lightText: "#111111", dark: "#b85500", darkText: "#ffffff" },
+  N: { light: "#7b1fa2", lightText: "#ffffff", dark: "#4527a0", darkText: "#ede7f6" },
+  O: { light: "#616161", lightText: "#ffffff", dark: "#616161", darkText: "#ffffff" },
+};
 
 type MappableTimeOffEntry = TimeOffDateEntry | TimeOffRangeEntry;
 type DatedShift = Pick<ShiftResult, "date" | "shift">;
@@ -21,10 +39,26 @@ function createCalendarColors(color: string): CalendarType {
   };
 }
 
+/** Calendar id for a shift code's Schedule-X calendar, e.g. "shift-M". */
+export function shiftCalendarId(code: string): string {
+  return `shift-${code}`;
+}
+
+function createShiftCalendarColors(code: ShiftCode): CalendarType {
+  const colors = SHIFT_CALENDAR_COLORS[code];
+  return {
+    colorName: shiftCalendarId(code),
+    lightColors: { main: colors.light, container: colors.light, onContainer: colors.lightText },
+    darkColors: { main: colors.dark, container: colors.dark, onContainer: colors.darkText },
+  };
+}
+
 /** Build the Schedule-X calendar configuration for shifts, time-off, and task labels. */
 export function buildCalendarConfig(labels: Label[]): Record<string, CalendarType> {
   return {
-    shift: createCalendarColors(CALENDAR_COLORS.shift),
+    ...Object.fromEntries(
+      SHIFT_CODES.map((code) => [shiftCalendarId(code), createShiftCalendarColors(code)]),
+    ),
     "time-off": createCalendarColors(CALENDAR_COLORS["time-off"]),
     ...Object.fromEntries(labels.map((label) => [label.id, createCalendarColors(label.color)])),
   };
@@ -69,7 +103,7 @@ export function shiftToEvent(datedShift: DatedShift, team: number): CalendarEven
     title: shift.name,
     start,
     end,
-    calendarId: "shift",
+    calendarId: shiftCalendarId(shift.code),
     shiftCode: shift.code,
     team,
     _options: { disableDND: true, disableResize: true },

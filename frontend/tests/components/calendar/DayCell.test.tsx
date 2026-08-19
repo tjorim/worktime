@@ -4,6 +4,19 @@ import userEvent from "@testing-library/user-event";
 import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { dayjs } from "@/utils/dateTimeUtils";
+import type { Shift } from "@/utils/shiftCalculations";
+import { TestProviders } from "../../utils/testProviders";
+
+const OFF_SHIFT: Shift = {
+  code: "O",
+  displayCode: "O",
+  emoji: "🏠",
+  name: "Off",
+  start: null,
+  end: null,
+  isWorking: false,
+  className: "shift-off",
+};
 
 describe("DayCell", () => {
   const mockOnViewEvent = vi.fn();
@@ -366,9 +379,10 @@ describe("DayCell", () => {
         <DayCell
           {...defaultProps}
           isWeekend={true}
-          shiftBadge={{ code: "O", label: "Off", isWorking: false }}
+          shiftBadge={OFF_SHIFT}
           workLocation={{ location: "home", countryCode: "NL" }}
         />,
+        { wrapper: TestProviders },
       );
 
       const indicator = screen.getByTitle("Working from home");
@@ -396,9 +410,10 @@ describe("DayCell", () => {
           {...defaultProps}
           isWeekend={true}
           schoolHoliday={{ name: "Winter Break", localName: "Wintervakantie" }}
-          shiftBadge={{ code: "O", label: "Off", isWorking: false }}
+          shiftBadge={OFF_SHIFT}
           workLocation={{ location: "home", countryCode: "NL" }}
         />,
+        { wrapper: TestProviders },
       );
 
       expect(screen.getByText("🏫")).toBeInTheDocument();

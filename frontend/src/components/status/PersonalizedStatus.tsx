@@ -26,6 +26,8 @@ import * as m from "@/paraglide/messages.js";
 interface PersonalizedStatusContentProps {
   myTeam: number;
   scheduleType: ScheduleOption;
+  /** Render a single-line summary instead of the full Today/Up Next cards. */
+  compact?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ interface PersonalizedStatusContentProps {
 export function PersonalizedStatusContent({
   myTeam,
   scheduleType,
+  compact = false,
 }: PersonalizedStatusContentProps) {
   const teamTooltipId = useId();
   const locale = getLocale();
@@ -159,9 +162,59 @@ export function PersonalizedStatusContent({
 
   // Single-team schedules (e.g. 9-5) have nothing meaningful to show in "Up Next" —
   // it's the same shift every day. Drop that tile and let "Today" take the full width.
+  // Multi-team schedules can independently resolve "next shift" to the same date and
+  // shift already shown in "Today" (e.g. an off day whose only upcoming shift is later
+  // today) — drop the duplicate tile in that case too.
+  const nextShiftDuplicatesToday =
+    nextShift != null &&
+    nextShift.date.isSame(currentShift.date, "day") &&
+    nextShift.shift.code === currentShift.shift.code;
+  const showUpNext = hasTeams && !nextShiftDuplicatesToday;
+
+  if (compact) {
+    const isWorking = currentShift.shift.isWorking;
+    const hasStarted = effectiveStartTime != null && today.isAfter(effectiveStartTime);
+    return (
+      <div className="d-flex align-items-center gap-2 flex-wrap current-status-compact-line">
+        {hasTeams && (
+          <span className="fw-semibold compact-item">
+            {m.personalized_status_team({ team: String(myTeam) })}
+          </span>
+        )}
+        <span className="compact-item">
+          <ShiftBadge shift={currentShift.shift} showEmoji showName size="sm" showTooltip={false} />
+        </span>
+        {currentShift.shift.start != null && currentShift.shift.end != null && !isFlexShift && (
+          <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted compact-item" />
+        )}
+        {isFlexShift && flexStartTime && flexEndTime && (
+          <span className="small text-muted compact-item">
+            {formatTimeByPreference(flexStartTime, settings.timeFormat)}–
+            {formatTimeByPreference(flexEndTime, settings.timeFormat)}
+          </span>
+        )}
+        {isWorking && effectiveStartTime && !hasStarted && !shiftStartCountdown.isExpired && (
+          <span className="small text-muted compact-item">
+            {m.current_status_starts_in({ time: shiftStartCountdown.formatted })}
+          </span>
+        )}
+        {isWorking && effectiveStartTime && hasStarted && !shiftEndCountdown.isExpired && (
+          <span className="small text-warning compact-item">
+            {m.personalized_status_ends_in()} {shiftEndCountdown.formatted}
+          </span>
+        )}
+        {!isWorking && nextShiftStartTime && !countdown.isExpired && (
+          <span className="small text-muted compact-item">
+            {m.current_status_next_in({ time: countdown.formatted })}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <Row>
-      <Col md={hasTeams ? 6 : 12}>
+      <Col md={showUpNext ? 6 : 12}>
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
@@ -326,7 +379,7 @@ export function PersonalizedStatusContent({
           </Card.Body>
         </Card>
       </Col>
-      {hasTeams && (
+      {showUpNext && (
         <Col md={6}>
           <Card className="h-100">
             <Card.Body className="d-flex flex-column">

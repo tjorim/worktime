@@ -28,10 +28,12 @@ import {
   appendToSyncOutbox,
   buildKeepLocalReplacePayload,
   buildLocalSyncPushPayload,
+  countPushConflicts,
   isEmptyPushPayload,
   pullSyncData,
   pushSyncPayload,
   type FetchFn,
+  type SyncPushPayload,
 } from "@/utils/syncClient";
 import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
@@ -388,7 +390,10 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
  * up the restored values.
  *
  * Only sections present in the payload are restored; absent sections are left
- * untouched.
+ * untouched both locally and on the server — the server replace is scoped to
+ * exactly the domains the backup included, never to whatever the rest of the
+ * account's collections happen to hold locally (which may legitimately be
+ * behind the server on a device that hasn't fully synced yet).
  *
  * Collection writes use the direct-write batch API (same path as an
  * incoming sync pull) rather than the optimistic insert/update/delete API, so
@@ -405,16 +410,23 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
  * overwritten by the next sync pull — callers on a synced account must pass
  * one.
  *
- * Throws if the server round-trip fails; the restored local state stays in
- * place either way (already durably written). If the pre-push server pull
- * fails, nothing is queued — there is no server snapshot to diff against, so
- * there is no way to compute which server-only records the replace should
- * delete, and queuing a create-only payload would silently drop those
- * deletes. If the push itself fails after a successful pull, the full replace
- * payload (including its deletes and its `allow_bulk_delete` opt-in) is
- * queued in the sync outbox for the next successful sync cycle. Either way,
- * callers should surface an error and must not treat a throw as fatal to the
- * local restore. Does not throw for a backup that restores no collection data
+ * Throws if the server round-trip fails, or if the server accepts the push
+ * but reports a per-record conflict (a concurrent write on another device won
+ * last-write-wins for that record) — a silent partial success would let the
+ * next regular sync pull quietly revert just those records, leaving the
+ * restore looking like it worked when part of it didn't. The restored local
+ * state stays in place either way (already durably written). If the pre-push
+ * server pull fails, nothing is queued — there is no server snapshot to diff
+ * against, so there is no way to compute which server-only records the
+ * replace should delete, and queuing a create-only payload would silently
+ * drop those deletes. If the push itself fails outright after a successful
+ * pull, the full replace payload (including its deletes and its
+ * `allow_bulk_delete` opt-in) is queued in the sync outbox for the next
+ * successful sync cycle; a partial per-record conflict is not queued, since
+ * re-sending already-accepted records is redundant and the conflicted ones
+ * would just conflict again. Either way, callers should surface an error and
+ * must not treat a throw as fatal to the local restore. Does not throw for a
+ * backup that restores no collection data
  * (nothing to push).
  */
 export async function restoreAppBackup(
@@ -484,6 +496,25 @@ export async function restoreAppBackup(
   }
 
   if (hasSyncCollectionAuth() && fetchFn) {
+    // Only the domains this backup actually included may be replaced
+    // server-side. The other collections are read below purely so
+    // buildKeepLocalReplacePayload doesn't see them as empty (see its own
+    // comment), then their creates/deletes are stripped back out before the
+    // push — the payload sent to the server touches exactly the domains the
+    // backup restored, nothing else, matching "absent sections are left
+    // untouched" for the server side too.
+    const includedDomains = {
+      labels: Array.isArray(payload.labels),
+      tasks: Array.isArray(payload.tasks),
+      templates: Array.isArray(payload.templates),
+      work_locations: payload.workLocations != null && typeof payload.workLocations === "object",
+      time_off_entries: Array.isArray(payload.timeOff),
+      gantt_tasks: Array.isArray(payload.ganttTasks),
+    } as const satisfies Record<
+      keyof Omit<SyncPushPayload, "allow_bulk_delete" | "declared_delete_total">,
+      boolean
+    >;
+
     // Collections outside the sections this backup touches must still be read
     // in full to build the replace payload below — an unmounted collection
     // reads as empty, which buildKeepLocalReplacePayload would otherwise
@@ -504,13 +535,41 @@ export async function restoreAppBackup(
         // already-written local state is untouched either way.
         throw new Error("restoreAppBackup: failed to pull server data before push");
       }
-      const pushPayload = buildKeepLocalReplacePayload(localPayload, serverData);
-      const result = await pushSyncPayload(fetchFn, pushPayload);
-      if (!result) {
-        logger.error("restoreAppBackup: failed to push restored data to server");
-        const userId = getSyncCollectionUserId();
-        if (userId) appendToSyncOutbox(userId, pushPayload);
-        throw new Error("restoreAppBackup: push failed");
+      const fullReplacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+      // Drop every domain the backup didn't include — both the creates (which
+      // just mirror whatever this device's local copy currently holds) and,
+      // critically, the deletes buildKeepLocalReplacePayload computed for it.
+      // A domain the backup left untouched must not lose server records just
+      // because this device hasn't synced that domain yet.
+      const pushPayload: SyncPushPayload = {
+        allow_bulk_delete: fullReplacePayload.allow_bulk_delete,
+        labels: includedDomains.labels ? fullReplacePayload.labels : [],
+        tasks: includedDomains.tasks ? fullReplacePayload.tasks : [],
+        templates: includedDomains.templates ? fullReplacePayload.templates : [],
+        work_locations: includedDomains.work_locations ? fullReplacePayload.work_locations : [],
+        time_off_entries: includedDomains.time_off_entries
+          ? fullReplacePayload.time_off_entries
+          : [],
+        gantt_tasks: includedDomains.gantt_tasks ? fullReplacePayload.gantt_tasks : [],
+      };
+
+      if (!isEmptyPushPayload(pushPayload)) {
+        const result = await pushSyncPayload(fetchFn, pushPayload);
+        if (!result) {
+          logger.error("restoreAppBackup: failed to push restored data to server");
+          const userId = getSyncCollectionUserId();
+          if (userId) appendToSyncOutbox(userId, pushPayload);
+          throw new Error("restoreAppBackup: push failed");
+        }
+        const conflictCount = countPushConflicts(result);
+        if (conflictCount > 0) {
+          // Some records lost last-write-wins to a concurrent write on
+          // another device. Those records were NOT overwritten with the
+          // restored values server-side, so the next sync pull would quietly
+          // revert them — surface this instead of reloading over it.
+          logger.error(`restoreAppBackup: server rejected ${conflictCount} record(s) as conflicts`);
+          throw new Error("restoreAppBackup: push had conflicts");
+        }
       }
     }
   }

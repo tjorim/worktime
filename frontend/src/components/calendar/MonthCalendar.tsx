@@ -8,6 +8,7 @@ import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
+import type { ShiftResult } from "@/utils/shiftCalculations";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import * as m from "@/paraglide/messages.js";
@@ -31,9 +32,7 @@ interface MonthCalendarProps {
   showOfficeLocationAction?: boolean;
   showOtherLocationAction?: boolean;
   // Optional: Provide shift calculation function to show working schedule
-  getShiftForDate?: (
-    date: Dayjs,
-  ) => { code: string; label: string; isWorking: boolean } | undefined;
+  getShiftForDate?: (date: Dayjs) => ShiftResult["shift"] | undefined;
 }
 
 const DAY_FORMAT = "YYYY-MM-DD";

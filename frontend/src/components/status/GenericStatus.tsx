@@ -19,6 +19,8 @@ import * as m from "@/paraglide/messages.js";
 
 interface GenericStatusContentProps {
   scheduleType: ScheduleOption;
+  /** Render a single-line summary instead of the full status/next-activity cards. */
+  compact?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface GenericStatusContentProps {
  * This is a content component rendered by CurrentStatus - it does not include
  * the Card wrapper, header row, or timeline.
  */
-export function GenericStatusContent({ scheduleType }: GenericStatusContentProps) {
+export function GenericStatusContent({ scheduleType, compact = false }: GenericStatusContentProps) {
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
   const locale = getLocale();
@@ -129,6 +131,46 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
   }, [currentWorkingTeam, currentShiftStartTime]);
 
   const shiftEndCountdown = useCountdown(currentShiftEndTime);
+
+  if (compact) {
+    return (
+      <div className="d-flex align-items-center gap-2 flex-wrap current-status-compact-line">
+        {currentWorkingTeam ? (
+          <>
+            {hasTeams && (
+              <span className="fw-semibold compact-item">
+                {m.generic_status_team_label({ team: String(currentWorkingTeam.teamNumber) })}
+              </span>
+            )}
+            <span className="compact-item">
+              <ShiftBadge
+                shift={currentWorkingTeam.shift}
+                showEmoji
+                showName
+                size="sm"
+                showTooltip={false}
+              />
+            </span>
+            <ShiftTimeDisplay
+              shift={currentWorkingTeam.shift}
+              className="small text-muted compact-item"
+            />
+            {shiftEndCountdown && !shiftEndCountdown.isExpired && (
+              <span className="small text-warning compact-item">
+                {m.generic_status_ends_in()} {shiftEndCountdown.formatted}
+              </span>
+            )}
+          </>
+        ) : nextShiftAnyTeam && countdown && !countdown.isExpired ? (
+          <span className="small text-muted compact-item">
+            {m.current_status_next_in({ time: countdown.formatted })}
+          </span>
+        ) : (
+          <span className="small text-muted compact-item">{m.generic_status_no_teams_title()}</span>
+        )}
+      </div>
+    );
+  }
 
   const shiftProgress = useMemo(() => {
     if (!currentShiftStartTime || !currentShiftEndTime) return null;

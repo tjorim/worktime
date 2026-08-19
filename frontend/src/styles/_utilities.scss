@@ -173,11 +173,19 @@ body {
   }
 }
 
-/* Icon-only tabs below `sm` keep the bar to a single row on phone widths;
-   the accessible name is preserved via `aria-label` on the nav link. */
+/* Below `sm`, stack the label under the icon instead of hiding it — six
+   near-identical calendar-family glyphs aren't enough to navigate by on
+   their own, so keep a (smaller) accessible name visible for sighted users
+   too. Still fits the 44px touch target with room to spare. */
 @media (width <= 575.98px) {
+  .main-tabs .nav-link {
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
   .main-tab-label {
-    display: none;
+    font-size: 0.65rem;
+    line-height: 1;
   }
 }
 

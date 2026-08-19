@@ -55,7 +55,7 @@
   border-radius: 0.75rem;
   border: 1px solid var(--wt-month-calendar-border);
   background: var(--wt-month-calendar-day-bg);
-  min-height: 140px;
+  min-height: 4.5rem;
   padding: 0.25rem;
   transition:
     border-color 0.2s ease,
@@ -291,18 +291,8 @@
   overflow-y: auto;
 }
 
-/* Shift badge in calendar cells */
+/* Shift badge in calendar cells - sizing/color come from ShiftBadge's shift-badge-sm styling */
 .month-calendar-shift-badge {
-  display: inline-block;
-  padding: 0.125rem 0.4rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1;
-  color: inherit;
-  text-align: center;
-  white-space: nowrap;
-  vertical-align: baseline;
-  border-radius: 0.25rem;
   margin-bottom: 0.25rem;
 }
 
@@ -451,7 +441,7 @@
   }
 
   .month-calendar-day {
-    min-height: 110px;
+    min-height: 3.5rem;
   }
 
   .month-calendar-events {

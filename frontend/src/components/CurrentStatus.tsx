@@ -1,4 +1,5 @@
-import { useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -19,6 +20,8 @@ interface CurrentStatusProps {
   myTeam: number | null;
   onChangeTeam: () => void;
   onChangeSchedule?: () => void;
+  /** "compact" renders a single-line summary strip, expandable to the full card. Default "full". */
+  variant?: "full" | "compact";
 }
 
 /**
@@ -30,12 +33,26 @@ interface CurrentStatusProps {
  * For single-user schedules (9-5), automatically treats user as team 1.
  * For multi-team schedules, shows generic view if no team selected.
  */
-export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: CurrentStatusProps) {
+export function CurrentStatus({
+  myTeam,
+  onChangeTeam,
+  onChangeSchedule,
+  variant = "full",
+}: CurrentStatusProps) {
   const dateTooltipId = useId();
   const { settings, scheduleType } = useSettings();
   const liveTime = useLiveTime({ precision: "minute" });
   const today = liveTime;
   const locale = getLocale();
+
+  // A user-initiated expand always wins over the tab-driven default, but resets
+  // when the default itself changes (e.g. switching to a tab that wants "compact").
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    setExpanded(false);
+  }, [variant]);
+  const isCompact = variant === "compact" && !expanded;
+  const canCollapse = variant === "compact" && expanded;
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);
@@ -82,6 +99,37 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
     );
   }
 
+  if (isCompact) {
+    return (
+      <Col className="mb-4">
+        <Card className="current-status-compact">
+          <Card.Body className="d-flex align-items-center justify-content-between gap-2 py-2">
+            {effectiveTeam ? (
+              <PersonalizedStatusContent
+                myTeam={effectiveTeam}
+                scheduleType={scheduleType}
+                compact
+              />
+            ) : (
+              <GenericStatusContent scheduleType={scheduleType} compact />
+            )}
+            <Button
+              variant="link"
+              size="sm"
+              className="p-0 current-status-toggle flex-shrink-0"
+              onClick={() => setExpanded(true)}
+              aria-expanded={false}
+              aria-label={m.current_status_expand()}
+              title={m.current_status_expand()}
+            >
+              <i className="bi bi-chevron-down" aria-hidden="true"></i>
+            </Button>
+          </Card.Body>
+        </Card>
+      </Col>
+    );
+  }
+
   return (
     <Col className="mb-4">
       <Card>
@@ -119,11 +167,26 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
                 </OverlayTrigger>
               </div>
             </div>
-            <SetupActionButton
-              onChangeSchedule={onChangeSchedule}
-              onChangeTeam={onChangeTeam}
-              size="sm"
-            />
+            <div className="d-flex align-items-center gap-2">
+              {canCollapse && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="p-0 current-status-toggle"
+                  onClick={() => setExpanded(false)}
+                  aria-expanded={true}
+                  aria-label={m.current_status_collapse()}
+                  title={m.current_status_collapse()}
+                >
+                  <i className="bi bi-chevron-up" aria-hidden="true"></i>
+                </Button>
+              )}
+              <SetupActionButton
+                onChangeSchedule={onChangeSchedule}
+                onChangeTeam={onChangeTeam}
+                size="sm"
+              />
+            </div>
           </div>
 
           {/* Timeline Row */}
