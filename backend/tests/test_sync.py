@@ -2287,6 +2287,91 @@ class TestSyncCorrectnessFixes:
         )
         assert resp.status_code == 400
 
+    def test_push_gantt_task_create_rejects_end_date_before_start_date(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """Sync push must reject an inverted date range, matching the REST create_gantt_task check.
+
+        Reproduces #1105: the REST path (GanttTaskCreate.validate_date_range)
+        already rejects end_date < start_date; the sync push path had no
+        equivalent check, so a client could silently write an inverted gantt
+        task that the REST API would have refused. The create case is caught
+        by GanttTaskSyncItem's own model_validator (a request-shape problem,
+        like the pre-existing missing-fields check beside it), so it 422s
+        like the REST create endpoint rather than 400ing like a service-level
+        ValidationError.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "gantt-date-order-create-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "gantt_tasks": [
+                    {
+                        "id": str(uuid4()),
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "Inverted range",
+                        "label_id": None,
+                        "start_date": "2026-02-10",
+                        "end_date": "2026-02-01",
+                        "progress": 0,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 422
+
+    def test_push_gantt_task_update_rejects_end_date_before_effective_start_date(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """The same check must apply to a partial update, using the merged start/end dates."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "gantt-date-order-update-user")
+        headers = auth_headers(user_id)
+
+        task_id = str(uuid4())
+        db_client.post(
+            "/api/sync/push",
+            json={
+                "gantt_tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "Valid range",
+                        "label_id": None,
+                        "start_date": "2026-02-01",
+                        "end_date": "2026-02-10",
+                        "progress": 0,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # Only start_date is updated (to after the existing end_date) — the
+        # check must use the *effective* end_date (unchanged), not skip
+        # validation just because end_date wasn't part of this payload.
+        resp = db_client.post(
+            "/api/sync/push",
+            json={
+                "gantt_tasks": [
+                    {
+                        "id": task_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "start_date": "2026-02-15",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
     def test_push_second_running_task_conflicts(self, db_client: TestClient, auth_headers) -> None:
         """Sync push must reject a second running task, matching db_service.create_task.
 
