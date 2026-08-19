@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.8.4",
+    date: "2026-08-19",
+    status: "current",
+    added: [],
+    changed: [
+      "The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)",
+    ],
+    fixed: [],
+  },
+  {
     version: "2026.8.3",
     date: "2026-08-18",
-    status: "current",
+    status: "released",
     added: [],
     changed: [
       "The Current Status card now shows only a compact one-line summary outside the Calendar and Schedule tabs, expandable back to the full card, so tab content is visible without scrolling (#1126)",
