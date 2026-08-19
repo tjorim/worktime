@@ -344,6 +344,21 @@
 }
 
 /* ============================================================================
+   CURRENT STATUS - COMPACT STRIP
+   ========================================================================= */
+
+.current-status-compact-line .compact-item:not(:first-child)::before {
+  content: "·";
+  margin-right: 0.5rem;
+  color: var(--bs-secondary-color);
+}
+
+.current-status-toggle {
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+}
+
+/* ============================================================================
    EVENT INDICATORS & BADGES
    ============================================================================
    Colors match EVENT_COLORS in parser.ts for time-off events

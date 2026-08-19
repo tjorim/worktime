@@ -14,9 +14,21 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.8.3",
+    date: "2026-08-18",
+    status: "current",
+    added: [],
+    changed: [
+      "The Current Status card now shows only a compact one-line summary outside the Calendar and Schedule tabs, expandable back to the full card, so tab content is visible without scrolling (#1126)",
+    ],
+    fixed: [
+      "\"Up Next\" no longer duplicates \"Today\" when they resolve to the same date and shift (#1126)",
+    ],
+  },
+  {
     version: "2026.8.2",
     date: "2026-08-01",
-    status: "current",
+    status: "released",
     added: [],
     changed: [],
     fixed: [

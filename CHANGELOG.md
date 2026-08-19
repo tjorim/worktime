@@ -16,6 +16,16 @@ below predate that switch.
 - Notification system
 - Cross-schedule transfer view
 
+## [2026.8.3] - 2026-08-18
+
+### Changed
+
+- The Current Status card now shows only a compact one-line summary outside the Calendar and Schedule tabs, expandable back to the full card, so tab content is visible without scrolling (#1126)
+
+### Fixed
+
+- "Up Next" no longer duplicates "Today" when they resolve to the same date and shift (#1126)
+
 ## [2026.8.2] - 2026-08-01
 
 ### Fixed
@@ -686,7 +696,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.2...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.3...HEAD
+[2026.8.3]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.8.3
 [2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2
 [2026.8.1]: https://github.com/tjorim/worktime/compare/v2026.7.2...v2026.8.1
 [2026.7.2]: https://github.com/tjorim/worktime/compare/v2026.7.1...v2026.7.2
