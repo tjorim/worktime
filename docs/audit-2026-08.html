@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">11</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">13</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">12</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">12</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">26</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">25</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -719,13 +719,13 @@
           PR #1146.</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
           <span class="area">backend</span>
           <span class="area">auth</span>
           <h3>Pebble clock-in/out commits without an audit entry</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>pebble.py</code> calls <code>create_task</code> / <code>update_task</code> without
           an actor, and <code>_audit</code> returns early when the actor is <code>None</code> — so
@@ -738,6 +738,13 @@
           sites. Separately: <code>push_changes</code> writes no audit entries at all — plausibly
           deliberate for bulk sync, but it needs a decision and a comment either way.</span></div>
         <div class="refs"><b>backend/app/routers/pebble.py:76</b> <b>pebble.py:99</b> <b>services/db_service.py:82</b></div>
+        <div class="verified"><span>Both <code>pebble_clock_in</code> and <code>pebble_clock_out</code>
+          now pass <code>actor=audit_actor_for(principal)</code>, so PAT-authenticated writes land in
+          <code>audit_entries</code> with <code>auth_source="delegated"</code>.
+          <code>backend/app/routers/pebble.py</code>. The <code>push_changes</code> bulk-sync gap was
+          a deliberate decision, not an oversight: it's now documented with a comment on
+          <code>sync_service.push_changes</code> and a qualifying note on the <code>AuditEntry</code>
+          docstring in <code>backend/app/database/models.py</code>.</span></div>
       </div>
 
       <div class="finding med">
@@ -1450,7 +1457,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">14</span></h3>
+      <h3>Medium <span class="sec-count">13</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1460,13 +1467,12 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
               <td>Finish the sync/API contract sweep. Same files the high-severity fixes just
                 touched (<code>sync_service.py</code>, <code>db_sync.py</code>, <code>mcp_server.py</code>) —
                 context is warm and each issue already names the sibling function to mirror.
-                (#1102 and #1103 in this group have since been resolved.)</td>
+                (#1102, #1103, and #1104 in this group have since been resolved.)</td>
             </tr>
             <tr>
               <td class="seq-n">2</td>

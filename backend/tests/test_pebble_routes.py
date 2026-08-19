@@ -57,6 +57,31 @@ def test_pebble_scope_matrix_and_clock_actions(
     assert duplicate_clock_out.status_code == 409
 
 
+def test_pebble_clock_actions_write_delegated_audit_entries(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "pebble-audit-user")
+    write_headers = auth_headers(user_id, via_pat=True, pat_write=True)
+    owner_headers = auth_headers(user_id)
+
+    clocked_in = db_client.post("/api/pebble/actions/clock-in", headers=write_headers)
+    assert clocked_in.status_code == 201, clocked_in.text
+    task_id = clocked_in.json()["id"]
+
+    clocked_out = db_client.post("/api/pebble/actions/clock-out", headers=write_headers)
+    assert clocked_out.status_code == 200, clocked_out.text
+
+    trail = db_client.get("/api/audit", headers=owner_headers)
+    assert trail.status_code == 200, trail.text
+    entries = trail.json()["items"]
+    matching = [e for e in entries if e["resource_id"] == task_id]
+    assert {e["action"] for e in matching} == {"create_task", "update_task"}
+    assert all(e["auth_source"] == "delegated" for e in matching)
+
+
 def test_keycloak_user_keeps_access_to_pebble_surface(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
