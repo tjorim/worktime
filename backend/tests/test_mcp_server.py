@@ -10,6 +10,7 @@ import pytest
 from fastmcp.server.auth import AccessToken, AuthContext, MultiAuth, run_auth_checks
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from starlette.types import Receive, Scope, Send
 
 from app.mcp_server import (
     MCP_TOOL_CAPABILITIES,
@@ -1307,7 +1308,7 @@ async def test_integration_client_rate_limit_middleware_returns_429_not_401(test
 
     downstream_called = False
 
-    async def downstream_app(scope: dict, receive: Any, send: Any) -> None:
+    async def downstream_app(scope: Scope, receive: Receive, send: Send) -> None:
         nonlocal downstream_called
         downstream_called = True
 
@@ -1321,12 +1322,12 @@ async def test_integration_client_rate_limit_middleware_returns_429_not_401(test
     with patch(monkeypatch_target, lambda: token):
         middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
 
-        sent_messages = []
+        sent_messages: list[Scope] = []
 
-        async def send(message: dict) -> None:
+        async def send(message: Scope) -> None:
             sent_messages.append(message)
 
-        async def receive() -> dict:
+        async def receive() -> Scope:
             return {"type": "http.request", "body": b"", "more_body": False}
 
         await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
@@ -1354,7 +1355,7 @@ async def test_integration_client_rate_limit_middleware_passes_through_under_lim
 
     downstream_called = False
 
-    async def downstream_app(scope: dict, receive: Any, send: Any) -> None:
+    async def downstream_app(scope: Scope, receive: Receive, send: Send) -> None:
         nonlocal downstream_called
         downstream_called = True
 
@@ -1367,10 +1368,10 @@ async def test_integration_client_rate_limit_middleware_passes_through_under_lim
     with patch("app.mcp_server.get_access_token", lambda: token):
         middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
 
-        async def receive() -> dict:
+        async def receive() -> Scope:
             return {"type": "http.request", "body": b"", "more_body": False}
 
-        async def send(_message: dict) -> None:
+        async def send(_message: Scope) -> None:
             pass
 
         await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
@@ -1388,17 +1389,17 @@ async def test_integration_client_rate_limit_middleware_ignores_non_integration_
     session_factory = _make_factory(test_db)
     downstream_called = False
 
-    async def downstream_app(scope: dict, receive: Any, send: Any) -> None:
+    async def downstream_app(scope: Scope, receive: Receive, send: Send) -> None:
         nonlocal downstream_called
         downstream_called = True
 
     with patch("app.mcp_server.get_access_token", lambda: _token_for_user(1)):
         middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
 
-        async def receive() -> dict:
+        async def receive() -> Scope:
             return {"type": "http.request", "body": b"", "more_body": False}
 
-        async def send(_message: dict) -> None:
+        async def send(_message: Scope) -> None:
             pass
 
         await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
