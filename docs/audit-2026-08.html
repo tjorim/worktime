@@ -254,10 +254,10 @@
   .finding.high { --stripe: var(--sev-high); }
   .finding.med  { --stripe: var(--sev-med); }
   .finding.low  { --stripe: var(--sev-low); }
-  /* Qualified with the severity class so specificity beats .finding.high/.low's own
+  /* Qualified with the severity class so specificity beats .finding.high/.med/.low's own
      rules regardless of source order. */
-  .finding.high.resolved, .finding.low.resolved { --stripe: var(--good); }
-  .finding.high.resolved .sev, .finding.low.resolved .sev {
+  .finding.high.resolved, .finding.med.resolved, .finding.low.resolved { --stripe: var(--good); }
+  .finding.high.resolved .sev, .finding.med.resolved .sev, .finding.low.resolved .sev {
     background: color-mix(in srgb, var(--good) 16%, transparent);
     color: var(--good);
   }
@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">9</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">15</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">10</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">14</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">28</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">27</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -683,13 +683,13 @@
         <div class="refs"><b>frontend/src/utils/syncClient.ts:790</b> <b>backend/app/services/sync_service.py:227</b> <b>routers/db_sync.py:76</b></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1102">#1102</a>
           <span class="area">backend</span>
           <span class="area">observability</span>
           <h3>Postgres LISTEN never reconnects, so live updates die after a restart</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>sse_manager</code> opens its listen and notify connections once at startup and
           never re-establishes either — no termination listener, no supervised retry, no health
@@ -703,6 +703,14 @@
           Either way <strong>AGENTS.md is currently wrong about this</strong> and needs
           correcting.</span></div>
         <div class="refs"><b>backend/app/utils/sse_manager.py</b> <b>app/main.py:88</b> <b>AGENTS.md — Live Updates</b></div>
+        <div class="verified"><span>Both connections now register an asyncpg
+          <code>add_termination_listener</code> that schedules
+          <code>_reconnect_with_backoff</code> (exponential backoff, capped at 60s) on an
+          unexpected drop, re-opening the connection and re-registering the channel listener; a
+          <code>_closing</code> flag distinguishes a deliberate <code>stop_pg_listener</code> close
+          from a real outage so shutdown doesn't itself trigger a reconnect.
+          <code>backend/app/utils/sse_manager.py</code>; AGENTS.md's Live Updates section corrected
+          to describe the reconnect behavior instead of claiming only in-process fallback.</span></div>
       </div>
 
       <div class="finding med">
@@ -1436,7 +1444,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">15</span></h3>
+      <h3>Medium <span class="sec-count">14</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1446,14 +1454,14 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1102">#1102</a>
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1103">#1103</a>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1103">#1103</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1104">#1104</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1105">#1105</a>
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1106">#1106</a></td>
               <td>Finish the sync/API contract sweep. Same files the high-severity fixes just
                 touched (<code>sync_service.py</code>, <code>db_sync.py</code>, <code>mcp_server.py</code>) —
-                context is warm and each issue already names the sibling function to mirror.</td>
+                context is warm and each issue already names the sibling function to mirror.
+                (#1102 in this group has since been resolved.)</td>
             </tr>
             <tr>
               <td class="seq-n">2</td>
