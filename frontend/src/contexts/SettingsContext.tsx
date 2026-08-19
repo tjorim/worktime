@@ -11,7 +11,6 @@ import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
-export type NotificationSetting = "on" | "off";
 export type TabKey =
   | "calendar"
   | "unified-calendar"
@@ -39,7 +38,6 @@ export interface LastUsed {
 export interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
-  notifications: NotificationSetting;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
   enableGantt: boolean;
@@ -53,7 +51,6 @@ interface SettingsContextType {
   settings: UserSettings;
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
-  updateNotifications: (setting: NotificationSetting) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateGanttEnabled: (enabled: boolean) => void;
@@ -102,7 +99,6 @@ interface SettingsContextType {
 export const defaultSettings: UserSettings = {
   timeFormat: "24h",
   theme: "auto",
-  notifications: "off",
   enableTimeOff: false,
   enableTimeTracking: false,
   enableGantt: false,
@@ -245,10 +241,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   const settingsValidators = {
     timeFormat: enumWithDefault(new Set<TimeFormat>(["12h", "24h"]), defaultSettings.timeFormat),
     theme: enumWithDefault(new Set<Theme>(["light", "dark", "auto"]), defaultSettings.theme),
-    notifications: enumWithDefault(
-      new Set<NotificationSetting>(["on", "off"]),
-      defaultSettings.notifications,
-    ),
     enableTimeOff: booleanWithDefault(defaultSettings.enableTimeOff),
     enableTimeTracking: booleanWithDefault(defaultSettings.enableTimeTracking),
     enableGantt: booleanWithDefault(defaultSettings.enableGantt),
@@ -394,7 +386,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     return {
       updateTimeFormat: updateSetting("timeFormat"),
       updateTheme: updateSetting("theme"),
-      updateNotifications: updateSetting("notifications"),
       updateTimeOffEnabled: updateSetting("enableTimeOff"),
       updateTimeTrackingEnabled: updateSetting("enableTimeTracking"),
       updateGanttEnabled: updateSetting("enableGantt"),
@@ -436,7 +427,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const {
     updateTimeFormat,
     updateTheme,
-    updateNotifications,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -581,7 +571,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       settings: stableSettings,
       updateTimeFormat,
       updateTheme,
-      updateNotifications,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateGanttEnabled,
@@ -615,7 +604,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       userState.crossBorderAnnouncementSeen,
       updateTimeFormat,
       updateTheme,
-      updateNotifications,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateGanttEnabled,

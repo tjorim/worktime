@@ -535,8 +535,8 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">14</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">10</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">15</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">9</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
       <div class="score"><span class="n">23</span><span class="k">Open</span></div>
     </div>
@@ -844,13 +844,13 @@
         <div class="refs"><b>frontend/messages/nl.json</b> <b>.github/workflows/frontend-ci.yml:49</b></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1112">#1112</a>
           <span class="area">frontend</span>
           <span class="area">android</span>
           <h3>Notifications are dead code, but three places promise them</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>The web setting is declared, validated, migrated, persisted and rendered as a switch —
           and read by nothing; there is no <code>Notification.requestPermission</code> anywhere in
@@ -863,6 +863,15 @@
           requesting the Android permission until a caller exists, and soften the privacy copy to
           describe the design rather than assert the feature.</span></div>
         <div class="refs"><b>contexts/SettingsContext.tsx:42</b> <b>settings/SettingsGeneralSection.tsx:200</b> <b>core/notifications/WorktimeNotifications.kt</b> <b>app/WorktimeApp.kt:78</b></div>
+        <div class="verified"><span>Re-checked against current <code>main</code> rather than PR
+          #311 (still an unmerged, months-stale draft): Android already has real callers for all
+          three <code>show*</code> methods, wired through <code>NotificationPreferencesStore</code>
+          and live Settings toggles, so the permission request and the privacy copy are both
+          accurate today. Only the web half was still dead — <code>notifications</code> removed
+          entirely from <code>UserSettings</code>/<code>SettingsContext</code> (no migration needed
+          beyond the existing normalize-on-read validation dropping the stale key) and the
+          disabled "Coming Soon" switch removed from <code>SettingsGeneralSection</code>, along with
+          its now-unused message keys.</span></div>
       </div>
 
       <div class="finding med">
@@ -1112,7 +1121,8 @@
             first control; "Preferences" appears three times.</li>
           <li>"Quick Actions" is backup/restore/reset; "Information" is About. Neither predicts its
             contents, so finding "export my data" means opening sections at random.</li>
-          <li>The Notifications switch can't be turned on — see #1112 for the other half.</li>
+          <li>The Notifications switch was removed as dead code (#1112); this card's other two
+            bullets — duplicated headers and opaque labels — remain open.</li>
         </ul>
         <div class="refs"><b>pages/SettingsPage.tsx:44</b> <b>settings/SettingsGeneralSection.tsx:61</b></div>
       </div>
@@ -1449,9 +1459,9 @@
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a></td>
               <td>#271, #273</td>
-              <td>Shift reminder notifications + smart PWA install prompts. This is the "build it"
-                option for medium&nbsp;#2 (#1112) below — review it before deciding to retreat
-                instead.</td>
+              <td>Shift reminder notifications + smart PWA install prompts. Was the "build it"
+                option for #1112 (now resolved by retreating instead — see its card above); still
+                the open PR for #271/#273 if someone wants to build the real feature later.</td>
             </tr>
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a></td>
@@ -1481,11 +1491,10 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1112">#1112</a>
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
-              <td>Same dead Notifications toggle from two angles (already cross-linked). Check PR
-                #311 first — pick "build it" or "retreat honestly" once, both issues resolve
-                together.</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
+              <td>The dead Notifications toggle it cross-linked to #1112 for is gone now (the
+                setting and the disabled switch were removed rather than built out — see #1112).
+                What's left here is Settings' duplicated headers and opaque section labels.</td>
             </tr>
             <tr>
               <td class="seq-n">2</td>
@@ -1532,7 +1541,7 @@
               <td class="seq-n">8</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
-                before code — sequence it after the notifications/settings direction from #2–#4 is
+                before code — sequence it after the Settings cleanup in row&nbsp;1 (#1129) is
                 settled, since that decision feeds it directly.</td>
             </tr>
             <tr>
@@ -1658,8 +1667,8 @@
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/271">#271</a></td>
             <td>Notification system with shift reminders and push notifications</td>
             <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a> —
-              the same PR closes #273 below. This is the "build it" option for medium&nbsp;#2
-              (#1112); review #311 before choosing "retreat" instead.</td>
+              the same PR closes #273 below. #1112 (the dead-code half of this) is now resolved by
+              retreating instead; #311 remains the "build it" option for this issue itself.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/273">#273</a></td>

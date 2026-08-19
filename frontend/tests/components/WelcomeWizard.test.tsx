@@ -84,7 +84,6 @@ const defaultUserState = {
   settings: {
     timeFormat: "24h",
     theme: "auto",
-    notifications: "off",
     enableTimeOff: true,
     enableTimeTracking: true,
   },

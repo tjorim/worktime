@@ -20,7 +20,6 @@ describe("SettingsContext unified user state", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     expect(result.current.settings.timeFormat).toBe("24h");
     expect(result.current.settings.theme).toBe("auto");
-    expect(result.current.settings.notifications).toBe("off");
     expect(result.current.settings.homeCountry).toBe(null);
     expect(result.current.settings.officeCountry).toBe(null);
     expect(result.current.settings.enableCrossBorderTracking).toBe(false);
@@ -40,10 +39,6 @@ describe("SettingsContext unified user state", () => {
       result.current.updateTheme("dark");
     });
     expect(result.current.settings.theme).toBe("dark");
-    await act(async () => {
-      result.current.updateNotifications("on");
-    });
-    expect(result.current.settings.notifications).toBe("on");
     await act(async () => {
       result.current.setMyTeam(3);
     });
@@ -132,7 +127,6 @@ describe("SettingsContext unified user state", () => {
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        notifications: "off",
         enableTimeOff: false,
         enableTimeTracking: false,
         enableGantt: false,
@@ -251,7 +245,6 @@ describe("SettingsContext unified user state", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: false,
@@ -423,7 +416,6 @@ describe("SettingsContext unified user state", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: false,

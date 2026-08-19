@@ -38,7 +38,6 @@ function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        notifications: "off",
         vacationAllowance: {
           amount: 0,
           unit: "days",

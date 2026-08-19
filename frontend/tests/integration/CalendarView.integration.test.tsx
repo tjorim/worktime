@@ -102,7 +102,6 @@ const setupUserState = (
       settings: {
         timeFormat: "24h",
         theme: "system",
-        notifications: "off",
         vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff,
         enableTimeTracking: false,

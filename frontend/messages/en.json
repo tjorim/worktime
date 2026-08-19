@@ -124,8 +124,6 @@
   "share_failed": "Could not share. Try copying the link manually.",
   "language_label": "Language",
   "language_description": "Display language",
-  "notifications_label": "Notifications",
-  "notifications_description": "Browser notifications for app events",
   "timeoff_days_logged_in": "days logged in {year}",
   "loading": "Loading...",
   "error": "Error",

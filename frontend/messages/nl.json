@@ -117,8 +117,6 @@
   "share_failed": "Kan niet delen. Probeer de link handmatig te kopiëren.",
   "language_label": "Taal",
   "language_description": "Weergavetaal",
-  "notifications_label": "Meldingen",
-  "notifications_description": "Browsermeldingen voor app-gebeurtenissen",
   "timeoff_days_logged_in": "dagen geregistreerd in {year}",
   "loading": "Laden...",
   "error": "Fout",

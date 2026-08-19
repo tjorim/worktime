@@ -66,7 +66,6 @@ describe("TimeOffView Integration Tests", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: true,
             enableTimeTracking: true,

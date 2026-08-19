@@ -18,7 +18,6 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        notifications: "off",
         vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,
@@ -139,7 +138,6 @@ describe("ShiftTimeline", () => {
       settings: {
         timeFormat: "24h" as const,
         theme: "auto" as const,
-        notifications: "off" as const,
         vacationAllowance: { yearlyAmounts: {}, unit: "days" as const, hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,

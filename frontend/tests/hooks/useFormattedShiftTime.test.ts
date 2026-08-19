@@ -14,7 +14,6 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
   settings: {
     timeFormat,
     theme: "auto",
-    notifications: "off",
     enableTimeOff: false,
     enableTimeTracking: false,
     enableGantt: false,
@@ -24,7 +23,6 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
   },
   updateTimeFormat: vi.fn(),
   updateTheme: vi.fn(),
-  updateNotifications: vi.fn(),
   updateTimeOffEnabled: vi.fn(),
   updateTimeTrackingEnabled: vi.fn(),
   updateGanttEnabled: vi.fn(),

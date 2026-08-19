@@ -1,7 +1,6 @@
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -191,26 +190,6 @@ export function SettingsGeneralSection({
                   NL
                 </Button>
               </ButtonGroup>
-            </div>
-          </ListGroup.Item>
-          <ListGroup.Item className="text-muted">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <div className="fw-medium d-flex align-items-center gap-2">
-                  {m.notifications_label()}
-                  <Badge bg="secondary" pill className="fw-normal" style={{ fontSize: "0.65em" }}>
-                    {m.wizard_coming_soon_badge()}
-                  </Badge>
-                </div>
-                <small>{m.notifications_description()}</small>
-              </div>
-              <Form.Check
-                type="switch"
-                id="toggle-notifications"
-                checked={false}
-                disabled
-                aria-label={m.notifications_label()}
-              />
             </div>
           </ListGroup.Item>
         </ListGroup>
