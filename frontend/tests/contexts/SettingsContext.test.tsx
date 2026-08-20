@@ -21,6 +21,9 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.settings.timeFormat).toBe("24h");
     expect(result.current.settings.theme).toBe("auto");
     expect(result.current.settings.notifications).toBe("off");
+    expect(result.current.settings.notificationLeadTimeMinutes).toBe(15);
+    expect(result.current.settings.notificationQuietHoursStart).toBe(null);
+    expect(result.current.settings.notificationQuietHoursEnd).toBe(null);
     expect(result.current.settings.homeCountry).toBe(null);
     expect(result.current.settings.officeCountry).toBe(null);
     expect(result.current.settings.enableCrossBorderTracking).toBe(false);
@@ -44,6 +47,20 @@ describe("SettingsContext unified user state", () => {
       result.current.updateNotifications("on");
     });
     expect(result.current.settings.notifications).toBe("on");
+    await act(async () => {
+      result.current.updateNotificationLeadTime(60);
+    });
+    expect(result.current.settings.notificationLeadTimeMinutes).toBe(60);
+    await act(async () => {
+      result.current.updateNotificationQuietHours({ start: 22, end: 6 });
+    });
+    expect(result.current.settings.notificationQuietHoursStart).toBe(22);
+    expect(result.current.settings.notificationQuietHoursEnd).toBe(6);
+    await act(async () => {
+      result.current.updateNotificationQuietHours(null);
+    });
+    expect(result.current.settings.notificationQuietHoursStart).toBe(null);
+    expect(result.current.settings.notificationQuietHoursEnd).toBe(null);
     await act(async () => {
       result.current.setMyTeam(3);
     });
@@ -133,6 +150,9 @@ describe("SettingsContext unified user state", () => {
         timeFormat: "24h",
         theme: "auto",
         notifications: "off",
+        notificationLeadTimeMinutes: 15,
+        notificationQuietHoursStart: null,
+        notificationQuietHoursEnd: null,
         enableTimeOff: false,
         enableTimeTracking: false,
         enableGantt: false,

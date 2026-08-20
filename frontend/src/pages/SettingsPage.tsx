@@ -4,8 +4,9 @@ import { useVersionClickEasterEgg } from "@/pages/settings/hooks/useVersionClick
 import Button from "react-bootstrap/Button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings, type NotificationLeadTimeMinutes } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
+import { usePwaInstall } from "@/contexts/PwaInstallContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
@@ -29,6 +30,7 @@ import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSec
 import { SettingsTimeTrackingSection } from "@/components/settings/SettingsTimeTrackingSection";
 import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
@@ -183,6 +185,8 @@ export function SettingsContent({
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const { subscribeToPush, unsubscribeFromPush } = usePushSubscription();
+  const { canInstall, isInstalled, promptInstall } = usePwaInstall();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
@@ -198,6 +202,8 @@ export function SettingsContent({
     updateTimeFormat,
     updateTheme,
     updateNotifications,
+    updateNotificationLeadTime,
+    updateNotificationQuietHours,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -340,6 +346,7 @@ export function SettingsContent({
   const handleNotificationsChange = async (enabled: boolean) => {
     if (!enabled) {
       updateNotifications("off");
+      void unsubscribeFromPush();
       return;
     }
     if (typeof Notification === "undefined") {
@@ -357,6 +364,39 @@ export function SettingsContent({
       return;
     }
     updateNotifications("on");
+    // Best-effort: push works when the app is closed, but the foreground
+    // reminder (already enabled above) covers the open-tab case regardless
+    // of whether this succeeds (unsupported browser, push not configured
+    // server-side, not signed in, etc).
+    if (isAuthenticated) {
+      void subscribeToPush({
+        leadTimeMinutes: settings.notificationLeadTimeMinutes,
+        quietHoursStart: settings.notificationQuietHoursStart,
+        quietHoursEnd: settings.notificationQuietHoursEnd,
+      });
+    }
+  };
+
+  const handleNotificationLeadTimeChange = (minutes: NotificationLeadTimeMinutes) => {
+    updateNotificationLeadTime(minutes);
+    if (settings.notifications === "on" && isAuthenticated) {
+      void subscribeToPush({
+        leadTimeMinutes: minutes,
+        quietHoursStart: settings.notificationQuietHoursStart,
+        quietHoursEnd: settings.notificationQuietHoursEnd,
+      });
+    }
+  };
+
+  const handleNotificationQuietHoursChange = (range: { start: number; end: number } | null) => {
+    updateNotificationQuietHours(range);
+    if (settings.notifications === "on" && isAuthenticated) {
+      void subscribeToPush({
+        leadTimeMinutes: settings.notificationLeadTimeMinutes,
+        quietHoursStart: range?.start ?? null,
+        quietHoursEnd: range?.end ?? null,
+      });
+    }
   };
 
   const handleShareApp = () => {
@@ -364,6 +404,15 @@ export function SettingsContent({
       () => toast?.showSuccess(m.share_success()),
       () => toast?.showError(m.share_failed()),
     );
+  };
+
+  const handleInstallApp = async () => {
+    const outcome = await promptInstall();
+    if (outcome === "accepted") {
+      toast?.showSuccess(m.pwa_install_success());
+    } else if (outcome === "unavailable") {
+      toast?.showWarning(m.pwa_install_unavailable_toast());
+    }
   };
 
   const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
@@ -439,12 +488,17 @@ export function SettingsContent({
         theme={settings.theme}
         locale={getLocale() === "nl" ? "nl" : "en"}
         notificationsEnabled={settings.notifications === "on"}
+        notificationLeadTimeMinutes={settings.notificationLeadTimeMinutes}
+        notificationQuietHoursStart={settings.notificationQuietHoursStart}
+        notificationQuietHoursEnd={settings.notificationQuietHoursEnd}
         onScheduleChange={handleScheduleChange}
         onTeamChange={setMyTeam}
         onTimeFormatChange={updateTimeFormat}
         onThemeChange={updateTheme}
         onLocaleChange={setLocale}
         onNotificationsChange={(enabled) => void handleNotificationsChange(enabled)}
+        onNotificationLeadTimeChange={handleNotificationLeadTimeChange}
+        onNotificationQuietHoursChange={handleNotificationQuietHoursChange}
       />
     ),
     features: () => (
@@ -478,6 +532,9 @@ export function SettingsContent({
     data: () => (
       <SettingsDataSection
         onShareApp={handleShareApp}
+        canInstallApp={canInstall}
+        isAppInstalled={isInstalled}
+        onInstallApp={() => void handleInstallApp()}
         onShowBackupDialog={() => setShowBackupDialog(true)}
         onRestoreBackup={() => restoreFileInputRef.current?.click()}
         isRestoringBackup={isRestoringBackup}

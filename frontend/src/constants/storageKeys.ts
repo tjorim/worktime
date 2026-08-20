@@ -9,6 +9,7 @@ export const SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY =
 export const LAST_TEAM_ID_STORAGE_KEY = "worktime_last_team_id";
 export const DEVELOPER_OPTIONS_STORAGE_KEY = "worktime_developer_options";
 export const FLEX_START_OVERRIDE_STORAGE_KEY = "worktime_flex_start_override";
+export const PWA_INSTALL_STATE_STORAGE_KEY = "worktime_pwa_install_state";
 
 export function getSyncCursorKey(userId: string): string {
   return `${SYNC_CURSOR_KEY_PREFIX}${userId}`;

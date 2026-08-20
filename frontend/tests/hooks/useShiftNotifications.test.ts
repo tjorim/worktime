@@ -1,10 +1,24 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useShiftNotifications } from "@/hooks/useShiftNotifications";
+import { useShiftNotifications, type ShiftNotificationOptions } from "@/hooks/useShiftNotifications";
+import type { ScheduleOption } from "@/data/rosters";
 import * as m from "@/paraglide/messages.js";
 
 // 2025-07-17 is a Thursday; the "9-5" schedule works Mon-Fri, 09:00-17:00, single team.
 const THURSDAY_SHIFT_START = "2025-07-17T09:00:00";
+
+function buildOptions(overrides: Partial<ShiftNotificationOptions> = {}): ShiftNotificationOptions {
+  return {
+    enabled: true,
+    myTeam: 1,
+    scheduleType: "9-5" as ScheduleOption,
+    leadTimeMinutes: 15,
+    quietHoursStart: null,
+    quietHoursEnd: null,
+    hasActivePushSubscription: false,
+    ...overrides,
+  };
+}
 
 describe("useShiftNotifications", () => {
   const notificationCtor = vi.fn();
@@ -29,10 +43,10 @@ describe("useShiftNotifications", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fires a reminder when mounted inside the 15-minute window before a working shift", () => {
+  it("fires a reminder when mounted inside the reminder window before a working shift", () => {
     vi.setSystemTime(new Date("2025-07-17T08:50:00"));
 
-    renderHook(() => useShiftNotifications(true, 1, "9-5"));
+    renderHook(() => useShiftNotifications(buildOptions()));
 
     expect(notificationCtor).toHaveBeenCalledTimes(1);
     expect(notificationCtor).toHaveBeenCalledWith(
@@ -47,7 +61,7 @@ describe("useShiftNotifications", () => {
   it("waits until the reminder window before firing", () => {
     vi.setSystemTime(new Date("2025-07-17T08:00:00"));
 
-    renderHook(() => useShiftNotifications(true, 1, "9-5"));
+    renderHook(() => useShiftNotifications(buildOptions()));
     expect(notificationCtor).not.toHaveBeenCalled();
 
     // Still outside the window (44 minutes before start).
@@ -63,10 +77,23 @@ describe("useShiftNotifications", () => {
     expect(notificationCtor).toHaveBeenCalledTimes(1);
   });
 
+  it("respects a longer configured lead time", () => {
+    // 1 hour before the 09:00 shift start.
+    vi.setSystemTime(new Date("2025-07-17T07:59:00"));
+
+    renderHook(() => useShiftNotifications(buildOptions({ leadTimeMinutes: 60 })));
+    expect(notificationCtor).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(notificationCtor).toHaveBeenCalledTimes(1);
+  });
+
   it("does not fire twice for the same shift", () => {
     vi.setSystemTime(new Date("2025-07-17T08:50:00"));
 
-    renderHook(() => useShiftNotifications(true, 1, "9-5"));
+    renderHook(() => useShiftNotifications(buildOptions()));
     expect(notificationCtor).toHaveBeenCalledTimes(1);
 
     act(() => {
@@ -78,7 +105,26 @@ describe("useShiftNotifications", () => {
   it("does not fire when disabled", () => {
     vi.setSystemTime(new Date("2025-07-17T08:50:00"));
 
-    renderHook(() => useShiftNotifications(false, 1, "9-5"));
+    renderHook(() => useShiftNotifications(buildOptions({ enabled: false })));
+
+    expect(notificationCtor).not.toHaveBeenCalled();
+  });
+
+  it("does not fire when a push subscription is already handling reminders", () => {
+    vi.setSystemTime(new Date("2025-07-17T08:50:00"));
+
+    renderHook(() => useShiftNotifications(buildOptions({ hasActivePushSubscription: true })));
+
+    expect(notificationCtor).not.toHaveBeenCalled();
+  });
+
+  it("does not fire during quiet hours", () => {
+    // 08:50 falls inside a 06:00-09:00 quiet window.
+    vi.setSystemTime(new Date("2025-07-17T08:50:00"));
+
+    renderHook(() =>
+      useShiftNotifications(buildOptions({ quietHoursStart: 6, quietHoursEnd: 9 })),
+    );
 
     expect(notificationCtor).not.toHaveBeenCalled();
   });
@@ -87,7 +133,7 @@ describe("useShiftNotifications", () => {
     MockNotification.permission = "default";
     vi.setSystemTime(new Date("2025-07-17T08:50:00"));
 
-    renderHook(() => useShiftNotifications(true, 1, "9-5"));
+    renderHook(() => useShiftNotifications(buildOptions()));
 
     expect(notificationCtor).not.toHaveBeenCalled();
   });
@@ -97,7 +143,7 @@ describe("useShiftNotifications", () => {
     // working shift (Monday) is far outside the reminder window.
     vi.setSystemTime(new Date("2025-07-19T08:50:00"));
 
-    renderHook(() => useShiftNotifications(true, 1, "9-5"));
+    renderHook(() => useShiftNotifications(buildOptions()));
 
     expect(notificationCtor).not.toHaveBeenCalled();
   });
@@ -105,7 +151,7 @@ describe("useShiftNotifications", () => {
   it("does nothing without a valid team/schedule", () => {
     vi.setSystemTime(new Date(THURSDAY_SHIFT_START));
 
-    renderHook(() => useShiftNotifications(true, null, null));
+    renderHook(() => useShiftNotifications(buildOptions({ myTeam: null, scheduleType: null })));
 
     expect(notificationCtor).not.toHaveBeenCalled();
   });

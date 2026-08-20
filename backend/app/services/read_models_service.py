@@ -474,6 +474,45 @@ async def get_schedule_type_for_user(session: AsyncSession, user_id: int) -> Sch
     return _build_work_context(preferences_data).schedule_type
 
 
+async def get_work_context_for_user(session: AsyncSession, user_id: int) -> ReadModelWorkContext:
+    """Return the user's full work context (schedule type + effective team number).
+
+    Like get_schedule_type_for_user, but also resolves the effective team number
+    (defaulting to 1 for single-team schedules) — for callers such as the push
+    reminder scheduler that need to compute an actual next shift, not just know
+    which schedule is configured.
+    """
+    preferences = await get_user_preferences(session, user_id)
+    preferences_data = preferences.data if preferences is not None else {}
+    return _build_work_context(preferences_data)
+
+
+def compute_current_shift_day(as_of: dt_datetime, schedule_type: ScheduleType) -> dt_date:
+    """Return the calendar date a night shift still in progress at `as_of` belongs to.
+
+    Public wrapper for callers outside this module (e.g. the push reminder
+    scheduler) that need the same day-boundary handling `_build_work_context`'s
+    callers get internally: a night shift running past midnight still counts
+    as the previous day's shift until it ends.
+    """
+    return _get_current_shift_day(as_of, schedule_type)
+
+
+def compute_shift_for_team(
+    schedule_type: ScheduleType,
+    team_number: int,
+    target_date: dt_date,
+) -> ReadModelShift:
+    """Return the shift (working or off) for one team on one calendar date.
+
+    Public wrapper for callers that need a single date's shift directly rather
+    than searching forward for the next working one (compute_next_shifts_for_team
+    always searches strictly after its as_of date, so it can't answer "is the
+    team already working today, and if so when does that shift start").
+    """
+    return _to_shift_model(_resolve_shift(schedule_type, team_number, target_date))
+
+
 async def build_dashboard_read_model(
     session: AsyncSession,
     principal: AuthenticatedPrincipal,
