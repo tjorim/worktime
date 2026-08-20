@@ -124,7 +124,7 @@ const defaultHookReturn = {
   otherTeam: 2,
   setOtherTeam: vi.fn(),
   validatedMyTeam: 1, // Add validated team
-  otherScheduleType: "5-shift", // Same as the mocked scheduleType — same-schedule by default
+  otherScheduleType: "5-shift" as const, // Same as the mocked scheduleType — same-schedule by default
 };
 
 const defaultProps = {

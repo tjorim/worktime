@@ -662,6 +662,8 @@
   "transfer_comparing_schedule_note": "U vergelijkt uw rooster met {scheduleTitle}. Overdrachtspunten worden niet getoond tussen verschillende roosters — alleen overlappende uren.",
   "transfer_overlaps_section_title": "Overlappende uren",
   "transfer_overlaps_help": "Momenten waarop uw dienst en die van dit team allebei actief zijn.",
+  "transfer_overlap_duration_hm": "{hours}u {minutes}m",
+  "transfer_overlap_duration_h": "{hours}u",
   "transfer_no_overlaps_title": "Geen overlappende uren",
   "transfer_no_overlaps_desc": "Geen overlappende werkuren gevonden tussen uw rooster en dat van team {otherTeam} in het geselecteerde datumbereik.",
   "transfer_you_on_leave": "U bent afwezig ({label})",

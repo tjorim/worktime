@@ -669,6 +669,8 @@
   "transfer_comparing_schedule_note": "Comparing your schedule with {scheduleTitle}. Handover points aren't shown between different schedules — only overlapping hours.",
   "transfer_overlaps_section_title": "Overlapping Hours",
   "transfer_overlaps_help": "Times when your shift and this team's shift are both active.",
+  "transfer_overlap_duration_hm": "{hours}h {minutes}m",
+  "transfer_overlap_duration_h": "{hours}h",
   "transfer_no_overlaps_title": "No Overlapping Hours",
   "transfer_no_overlaps_desc": "No overlapping working hours found between your schedule and Team {otherTeam}'s in the selected date range.",
   "transfer_you_on_leave": "You're on leave ({label})",
