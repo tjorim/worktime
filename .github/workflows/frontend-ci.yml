@@ -48,6 +48,10 @@ jobs:
         working-directory: frontend
         run: pnpm run check-version-consistency
 
+      - name: Validate translation message parity
+        working-directory: frontend
+        run: pnpm run check-message-parity
+
       - name: Typecheck
         working-directory: frontend
         run: pnpm run typecheck
