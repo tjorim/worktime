@@ -6,6 +6,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useSettings, type NotificationLeadTimeMinutes } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
+import { usePwaInstall } from "@/contexts/PwaInstallContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
@@ -185,6 +186,7 @@ export function SettingsContent({
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const { subscribeToPush, unsubscribeFromPush } = usePushSubscription();
+  const { canInstall, isInstalled, promptInstall } = usePwaInstall();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
@@ -404,6 +406,15 @@ export function SettingsContent({
     );
   };
 
+  const handleInstallApp = async () => {
+    const outcome = await promptInstall();
+    if (outcome === "accepted") {
+      toast?.showSuccess(m.pwa_install_success());
+    } else if (outcome === "unavailable") {
+      toast?.showWarning(m.pwa_install_unavailable_toast());
+    }
+  };
+
   const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
     account: () => (
       <>
@@ -521,6 +532,9 @@ export function SettingsContent({
     data: () => (
       <SettingsDataSection
         onShareApp={handleShareApp}
+        canInstallApp={canInstall}
+        isAppInstalled={isInstalled}
+        onInstallApp={() => void handleInstallApp()}
         onShowBackupDialog={() => setShowBackupDialog(true)}
         onRestoreBackup={() => restoreFileInputRef.current?.click()}
         isRestoringBackup={isRestoringBackup}

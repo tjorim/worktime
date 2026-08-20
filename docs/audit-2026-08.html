@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">16</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">17</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">9</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">22</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">21</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1647,9 +1647,9 @@
   <section>
     <div class="sec-head">
       <h2>Older backlog<span class="sec-count">5</span></h2>
-      <p>Open before this review. #271 is now resolved directly (see its row below); the other
-        three non-chore items still have open PRs from other tools — see the callout above the
-        sequencing tables for what each covers and where it overlaps.</p>
+      <p>Open before this review. #271 and #273 are now resolved directly (see their rows below);
+        the other two non-chore items still have open PRs from other tools — see the callout above
+        the sequencing tables for what each covers and where it overlaps.</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -1674,11 +1674,13 @@
               delivery paths.</td>
           </tr>
           <tr>
-            <td><a class="issue" href="https://github.com/tjorim/worktime/issues/273">#273</a></td>
-            <td>Smart PWA installation prompts based on user engagement</td>
-            <td>The stale <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
-              draft used to cover this alongside #271; #271 was resolved separately above and no
-              longer needs it.</td>
+            <td>Smart PWA installation prompts based on user engagement — <strong>Resolved</strong></td>
+            <td>Resolved directly (not via the stale <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
+              draft): a <code>PwaInstallContext</code> captures <code>beforeinstallprompt</code>,
+              waits for a visit-count-plus-in-session-delay engagement threshold before
+              auto-prompting via a dismissible toast (7-day cooldown either way), tracks
+              install/dismiss outcomes, and exposes a manual "Install App" action in Settings &gt;
+              Quick Actions that works independently of the auto-prompt's engagement gate.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>

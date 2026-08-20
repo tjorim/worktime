@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
@@ -13,9 +13,10 @@ import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { server } from "@/mocks/server";
 import { labelsCollection } from "@/db/collections";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY, PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
@@ -65,6 +66,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 
   localStorage.removeItem(USER_STATE_STORAGE_KEY);
+  localStorage.removeItem(PWA_INSTALL_STATE_STORAGE_KEY);
 
   const labelsSnapshot = [...labelsCollection.toArray];
   labelsSnapshot.forEach((label) => {
@@ -78,7 +80,9 @@ function renderWithProviders(ui: React.ReactElement) {
       <EventStoreProvider>
         <DeveloperOptionsProvider>
           <ToastProvider>
-            <AuthProvider>{ui}</AuthProvider>
+            <PwaInstallProvider>
+              <AuthProvider>{ui}</AuthProvider>
+            </PwaInstallProvider>
           </ToastProvider>
         </DeveloperOptionsProvider>
       </EventStoreProvider>
@@ -862,6 +866,67 @@ describe("SettingsPage Data Section", () => {
     const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
     expect(stored).not.toBeNull();
     expect(JSON.parse(stored ?? "{}").scheduleType).toBeNull();
+  });
+
+  it("enables the Install App action once the browser offers a prompt, and installs on click", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="data" />);
+
+    const installButton = screen.getByRole("button", {
+      name: new RegExp(`^${m.pwa_install_app_label()}`),
+    });
+    // ListGroup.Item's `disabled` sets aria-disabled + blocks its onClick handler
+    // internally rather than the native `disabled` attribute, so toBeDisabled() (which
+    // checks the native attribute) doesn't apply here.
+    expect(installButton).toHaveAttribute("aria-disabled", "true");
+
+    const promptSpy = vi.fn().mockResolvedValue(undefined);
+    act(() => {
+      const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+      };
+      event.prompt = promptSpy;
+      event.userChoice = Promise.resolve({ outcome: "accepted" as const, platform: "web" });
+      window.dispatchEvent(event);
+    });
+
+    await waitFor(() => expect(installButton).not.toHaveAttribute("aria-disabled"));
+
+    await user.click(installButton);
+
+    expect(promptSpy).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("button", {
+        name: new RegExp(`^${m.pwa_install_installed_label()}`),
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(await screen.findByText(m.pwa_install_success())).toBeInTheDocument();
+  });
+
+  it("does not show a success toast when the install prompt is dismissed", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="data" />);
+
+    const installButton = screen.getByRole("button", {
+      name: new RegExp(`^${m.pwa_install_app_label()}`),
+    });
+
+    act(() => {
+      const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+      };
+      event.prompt = vi.fn().mockResolvedValue(undefined);
+      event.userChoice = Promise.resolve({ outcome: "dismissed" as const, platform: "web" });
+      window.dispatchEvent(event);
+    });
+
+    await waitFor(() => expect(installButton).not.toHaveAttribute("aria-disabled"));
+    await user.click(installButton);
+
+    await waitFor(() => expect(installButton).toHaveAttribute("aria-disabled", "true"));
+    expect(screen.queryByText(m.pwa_install_success())).not.toBeInTheDocument();
   });
 });
 
