@@ -1,5 +1,9 @@
 # Code Review & Optimization Plan
 
+> **Historical record, superseded 2026-08.** All 11 steps below shipped; the follow-up
+> (completing the feature-folder migration mentioned at the end of this doc) is tracked as
+> #1122. Kept as a record of that review, not as an open plan — see #1123.
+>
 > Reviewer pass over the Worktime frontend (`frontend/src`) and supporting
 > backend layout. The codebase is mature and well-maintained — strict
 > TypeScript, ~88 test files, i18n via Paraglide, near-zero `any`/`@ts-ignore`.

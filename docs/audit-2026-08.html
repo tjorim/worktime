@@ -514,9 +514,9 @@
     <h1>What's broken, and in what order</h1>
     <p class="lede">Thirty-seven findings across sync, backend, interface and documentation, from
       three reviews run against <span class="mono">main</span> — each traced to the code that
-      produces it and filed as a GitHub issue. The eight high-severity ones are now fixed and
-      verified; twenty-nine remain, with a suggested order below. The app is well built; the
-      failures cluster in the places where two subsystems meet and neither owns the seam.</p>
+      produces it and filed as a GitHub issue. Eighteen are now fixed and verified; nineteen
+      remain, with a suggested order below. The app is well built; the failures cluster in the
+      places where two subsystems meet and neither owns the seam.</p>
     <div class="method">
       <span>Full-codebase read</span>
       <span>App driven in Chromium, desktop and phone, both themes</span>
@@ -535,18 +535,18 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">17</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">9</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">21</span><span class="k">Open</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">7</span><span class="k">Medium</span></div>
+      <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">19</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
-      marker on each of the 9 resolved cards below for what changed and where. A suggested order for
-      what's left — 15 medium, 13 low — is at the bottom of the page, along with three in-flight PRs
-      from other tools worth checking before you duplicate their work.
+      marker on each resolved card below (scoreboard above) for what changed and where. A suggested
+      order for what's left — 7 medium, 12 low — is at the bottom of the page, along with three
+      in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
 
@@ -935,7 +935,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Interface<span class="sec-count">11 · 5 fixed</span></h2>
+      <h2>Interface<span class="sec-count">11 · 6 fixed</span></h2>
       <p>Twenty findings from driving the app (nineteen from the original pass, plus
         <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a> found while verifying
         #1126), grouped into eleven issues. Tracked in
@@ -1113,22 +1113,35 @@
           bottom-bar redesign — see the sequencing note below. Merged via #1144.</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a>
           <span class="area">frontend</span>
           <h3>Settings: duplicated headers, opaque labels, dead toggle</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <ul>
           <li>Three stacked headings and two competing page descriptions fill the screen above the
             first control; "Preferences" appears three times.</li>
           <li>"Quick Actions" is backup/restore/reset; "Information" is About. Neither predicts its
             contents, so finding "export my data" means opening sections at random.</li>
-          <li>The Notifications switch now works (#1112); this card's other two bullets —
-            duplicated headers and opaque labels — remain open.</li>
+          <li>The Notifications switch now works (#1112), resolved separately ahead of this
+            card's headers/labels fix below.</li>
         </ul>
         <div class="refs"><b>pages/SettingsPage.tsx:44</b> <b>settings/SettingsGeneralSection.tsx:61</b></div>
+        <div class="verified"><span>Dropped the content card's duplicate header/description
+          (<code>SettingsPage.tsx</code>) so the hero title is the only page-level heading, and
+          renamed the two opaque nav labels to <code>Data &amp; backup</code> and
+          <code>About</code> (<code>messages/en.json</code>, <code>messages/nl.json</code>). The
+          issue's "Schedule &amp; team" section-promotion suggestion — the highest-consequence
+          setting in the app, buried under "Preferences" — was folded in too: schedule/team
+          selection now has its own top-level nav section
+          (<code>SettingsScheduleSection.tsx</code>, new), leaving
+          <code>SettingsGeneralSection.tsx</code> with just display/notification prefs. One more
+          pass beyond the issue: renaming "Quick Actions" to "Data &amp; backup" exposed a
+          mismatch — Share App and Install App aren't data operations — so those two moved to
+          <code>SettingsAboutSection.tsx</code>, leaving <code>SettingsDataSection.tsx</code> as
+          backup/restore/reset only.</span></div>
       </div>
 
       <div class="finding med">
@@ -1369,12 +1382,12 @@
         <div class="refs"><b>backend/app/services/read_models_service.py:70</b> <b>frontend/src/utils/shiftCalculations.ts</b> <b>AGENTS.md — Source Of Truth</b></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a>
           <span class="area">docs</span>
           <h3>Repo documentation is substantially out of sync with the codebase</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>backend/README.md</code> is the worst: it documents <strong>SuperTokens</strong>
           auth and <code>JWT_*</code> settings that don't exist, while omitting every
@@ -1387,15 +1400,23 @@
           issue tracker rather than maintaining a second drifting copy of it, and move the historical
           comparison docs under <code>docs/history/</code>.</span></div>
         <div class="refs"><b>backend/README.md</b> <b>README.md</b> <b>TODO.md</b> <b>docs/project-comparison.md</b></div>
+        <div class="verified"><span><code>backend/README.md</code> and <code>backend/BACKEND_GUIDE.md</code>
+          now document OIDC/PAT auth, the real env vars, and all 18 routers plus the <code>/mcp</code>
+          mount; the root <code>README.md</code> drops the nonexistent GitHub Pages workflow and lists
+          the real CI/release workflows and project layout; <code>TODO.md</code> is now a pointer at
+          the issue tracker; <code>docs/project-comparison.md</code>, <code>docs/alignment-summary.md</code>,
+          and <code>docs/optimization-plan.md</code> carry dated superseded banners; and
+          <code>AGENTS.md</code> now credits the backend's own shift-logic implementation. Fixed in
+          this PR.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a>
           <span class="area">frontend</span>
           <span class="area">docs</span>
           <h3>In-app changelog shows a stale roadmap and one wrong entry</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>User-visible, not just repo docs. <code>futurePlans</code> promises a
           <strong>v4.8.0</strong> that can't exist under CalVer, and lists multi-language support and
@@ -1406,6 +1427,12 @@
           and prune what shipped. <code>CHANGELOG.md</code> needs the same correction via
           <code>generate-changelog</code>.</span></div>
         <div class="refs"><b>frontend/src/data/changelog.ts:707</b> <b>changelog.ts:64</b></div>
+        <div class="verified"><span><code>futurePlans</code> is now a flat, unversioned string
+          array (no more version-keyed grouping to rot under CalVer), pruned of the two shipped
+          items (multi-language support, data export/backup). The 2026.7.1 entry now correctly
+          says <code>VERSION</code> syncs to <code>frontend/package.json</code> and is read at
+          runtime by <code>backend/app/version.py</code>, and <code>CHANGELOG.md</code> was
+          regenerated via <code>generate-changelog</code> to match. Fixed in this PR.</span></div>
       </div>
 
       <div class="finding low">
@@ -1472,7 +1499,7 @@
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a></td>
               <td>#274</td>
               <td>ScheduleDetailModal team info <strong>and iCal export</strong> — check what it ships
-                before starting low&nbsp;#10 (#1118); it may already cover the feed.</td>
+                before starting low&nbsp;#9 (#1118); it may already cover the feed.</td>
             </tr>
           </tbody>
         </table>
@@ -1480,7 +1507,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">13</span></h3>
+      <h3>Medium <span class="sec-count">7</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1490,32 +1517,18 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
-              <td>The dead Notifications toggle it cross-linked to #1112 for now works (see
-                #1112 — built rather than removed). What's left here is Settings' duplicated
-                headers and opaque section labels.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a></td>
               <td>Dutch parity plus the CI parity check — the check is what stops this specific class
                 of drift recurring, so it's worth doing before more translated surface ships.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a></td>
-              <td>Docs pass (backend README, root README, TODO.md). Fold
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a> (low)
-                into the same PR — it's a two-paragraph fix in a file this already touches.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
               <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
                 decision needed.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
               <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
@@ -1523,13 +1536,13 @@
                 patch.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
               <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
                 values but no architecture decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1537,14 +1550,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
-                before code — sequence it after the Settings cleanup in row&nbsp;1 (#1129) is
-                settled, since that decision feeds it directly.</td>
+                before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
+                so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">9</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once
@@ -1556,7 +1569,7 @@
     </div>
 
     <div class="seq-block" style="margin-top:2rem">
-      <h3>Low <span class="sec-count">13</span></h3>
+      <h3>Low <span class="sec-count">11</span></h3>
       <p>Cheapest and most isolated first; the two items that gain from a predecessor (#1111→#1121)
         are placed back to back; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
@@ -1594,7 +1607,7 @@
               <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a></td>
               <td>TransferView cross-schedule overlap and time-off overlays — the real fix behind
-                medium&nbsp;#6's stopgap. Do it once that's landed; reuses the same
+                medium&nbsp;#3's stopgap. Do it once that's landed; reuses the same
                 <code>viewingScheduleType</code> plumbing.</td>
             </tr>
             <tr>
@@ -1674,19 +1687,20 @@
               delivery paths.</td>
           </tr>
           <tr>
+            <td>—</td>
             <td>Smart PWA installation prompts based on user engagement — <strong>Resolved</strong></td>
             <td>Resolved directly (not via the stale <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
               draft): a <code>PwaInstallContext</code> captures <code>beforeinstallprompt</code>,
               waits for a visit-count-plus-in-session-delay engagement threshold before
               auto-prompting via a dismissible toast (7-day cooldown either way), tracks
               install/dismiss outcomes, and exposes a manual "Install App" action in Settings &gt;
-              Quick Actions that works independently of the auto-prompt's engagement gate.</td>
+              About that works independently of the auto-prompt's engagement gate.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
             <td>Enhance ScheduleDetailModal with export and improved schedule display</td>
             <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a>,
-              which already includes iCal export — check it before starting low&nbsp;#10 (#1118);
+              which already includes iCal export — check it before starting low&nbsp;#9 (#1118);
               it may cover the export half already.</td>
           </tr>
           <tr>
@@ -1713,7 +1727,7 @@
       their absence in #1100 and #1105 stands out; stale-cache fallbacks on holiday fetches; a
       supervised-background-task pattern in the JWKS refresh loop that #1102 can copy.
       <br><br>
-      The pattern across all thirty-six: almost every finding is a place where a correct
+      The pattern across all thirty-seven: almost every finding is a place where a correct
       implementation already exists somewhere else in the codebase and one call site didn't get it.
     </div>
   </section>

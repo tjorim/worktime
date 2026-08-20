@@ -540,7 +540,7 @@ describe("WelcomeWizard", () => {
 
       // Simulate reset from the routed settings page
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
+      await user.click(await screen.findByRole("button", { name: "Data & backup", exact: true }));
       await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
@@ -580,7 +580,7 @@ describe("WelcomeWizard", () => {
 
       // Should be able to open settings and reset again
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
+      await user.click(await screen.findByRole("button", { name: "Data & backup", exact: true }));
       await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 

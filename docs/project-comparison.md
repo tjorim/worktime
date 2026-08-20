@@ -1,5 +1,10 @@
 # Project Comparison: HdayPlanner vs NextShift
 
+> **Historical record, superseded 2026-08.** HdayPlanner is this project's former name (now
+> Worktime); NextShift was a separate project it was compared against. The table contains
+> historical versions for both projects and is not a description of the current Worktime stack —
+> see #1123. Kept for context, not as a current comparison.
+
 This document tracks the differences between HdayPlanner and NextShift, along with planned improvements for both projects.
 
 ## Current Differences

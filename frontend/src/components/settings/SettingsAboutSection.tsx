@@ -3,6 +3,10 @@ import * as m from "@/paraglide/messages.js";
 
 interface SettingsAboutSectionProps {
   isDevMode: boolean;
+  onShareApp: () => void;
+  canInstallApp: boolean;
+  isAppInstalled: boolean;
+  onInstallApp: () => void;
   onShowChangelog: () => void;
   onShowAboutHelp: () => void;
   onShowShortcuts: () => void;
@@ -11,6 +15,10 @@ interface SettingsAboutSectionProps {
 
 export function SettingsAboutSection({
   isDevMode,
+  onShareApp,
+  canInstallApp,
+  isAppInstalled,
+  onInstallApp,
   onShowChangelog,
   onShowAboutHelp,
   onShowShortcuts,
@@ -58,6 +66,40 @@ export function SettingsAboutSection({
                 <small className="text-muted">{m.keyboard_shortcuts_description()}</small>
               </div>
               <i className="bi bi-chevron-right text-muted"></i>
+            </div>
+          </ListGroup.Item>
+          <ListGroup.Item action onClick={onShareApp}>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <div className="fw-medium">
+                  <i className="bi bi-share me-2"></i>
+                  {m.share_app_label()}
+                </div>
+                <small className="text-muted">{m.share_app_description()}</small>
+              </div>
+              <i className="bi bi-share text-muted"></i>
+            </div>
+          </ListGroup.Item>
+          <ListGroup.Item action onClick={onInstallApp} disabled={!canInstallApp}>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <div className="fw-medium">
+                  <i className="bi bi-phone me-2"></i>
+                  {isAppInstalled ? m.pwa_install_installed_label() : m.pwa_install_app_label()}
+                </div>
+                <small className="text-muted">
+                  {isAppInstalled
+                    ? m.pwa_install_installed_description()
+                    : canInstallApp
+                      ? m.pwa_install_app_description()
+                      : m.pwa_install_unavailable_description()}
+                </small>
+              </div>
+              {isAppInstalled ? (
+                <i className="bi bi-check-circle-fill text-success"></i>
+              ) : (
+                <i className="bi bi-chevron-right text-muted"></i>
+              )}
             </div>
           </ListGroup.Item>
           {isDevMode && (

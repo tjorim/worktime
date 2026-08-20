@@ -27,8 +27,18 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    Link: ({ to, className, children }: { to: string; className?: string; children: React.ReactNode }) => (
-      <a href={to} className={className}>{children}</a>
+    Link: ({
+      to,
+      className,
+      children,
+    }: {
+      to: string;
+      className?: string;
+      children: React.ReactNode;
+    }) => (
+      <a href={to} className={className}>
+        {children}
+      </a>
     ),
   };
 });
@@ -262,9 +272,7 @@ describe("SettingsPage Account Section", () => {
 
     expect(await screen.findByDisplayValue("Dev User")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        (_content, element) => element?.textContent === "Username: dev-user",
-      ),
+      screen.getByText((_content, element) => element?.textContent === "Username: dev-user"),
     ).toBeInTheDocument();
   });
 
@@ -321,7 +329,10 @@ describe("SettingsPage Account Section", () => {
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(fetchFn).not.toHaveBeenCalledWith("/api/me", expect.objectContaining({ method: "DELETE" }));
+    expect(fetchFn).not.toHaveBeenCalledWith(
+      "/api/me",
+      expect.objectContaining({ method: "DELETE" }),
+    );
   });
 
   it("deletes the account and signs out after confirmation", async () => {
@@ -360,7 +371,10 @@ describe("SettingsPage Account Section", () => {
   it("shows an inline error when self-service account deletion fails", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/me" && init?.method === "DELETE") {
-        return jsonResponse({ detail: "Could not delete your account right now." }, { status: 500 });
+        return jsonResponse(
+          { detail: "Could not delete your account right now." },
+          { status: 500 },
+        );
       }
       if (input === "/api/me") {
         return jsonResponse({
@@ -428,7 +442,9 @@ describe("SettingsPage Account Section", () => {
   it("shows signed-out sync messaging when unauthenticated", () => {
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText(m.sync_signed_out_description())).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: m.sync_manual_pull_btn() })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: m.sync_manual_pull_btn() }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders sync status alongside the account profile and calls pull action when enabled", async () => {
@@ -638,7 +654,9 @@ describe("SettingsPage API Tokens Section", () => {
 
     renderSettingsApiTokensHarness({ fetchFn });
 
-    expect(await screen.findByText("Could not load your API tokens right now.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Could not load your API tokens right now."),
+    ).toBeInTheDocument();
   });
 });
 
@@ -833,7 +851,9 @@ describe("SettingsPage Data Section", () => {
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={onHide} activeSection="data" />);
 
-    await user.click(screen.getByRole("button", { name: new RegExp(`^${m.reset_settings_label()}`) }));
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(`^${m.reset_settings_label()}`) }),
+    );
     const resetDialog = screen.getByRole("dialog");
 
     const clearTimeTracking = within(resetDialog).getByRole("checkbox", {
@@ -867,10 +887,12 @@ describe("SettingsPage Data Section", () => {
     expect(stored).not.toBeNull();
     expect(JSON.parse(stored ?? "{}").scheduleType).toBeNull();
   });
+});
 
+describe("SettingsPage About Section", () => {
   it("enables the Install App action once the browser offers a prompt, and installs on click", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="data" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="about" />);
 
     const installButton = screen.getByRole("button", {
       name: new RegExp(`^${m.pwa_install_app_label()}`),
@@ -906,7 +928,7 @@ describe("SettingsPage Data Section", () => {
 
   it("does not show a success toast when the install prompt is dismissed", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="data" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="about" />);
 
     const installButton = screen.getByRole("button", {
       name: new RegExp(`^${m.pwa_install_app_label()}`),
@@ -930,10 +952,10 @@ describe("SettingsPage Data Section", () => {
   });
 });
 
-describe("SettingsPage General Section", () => {
+describe("SettingsPage Schedule & Team Section", () => {
   it("handles schedule selection clicks and shows team selection for multi-team schedules", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
 
     expect(screen.queryByText(m.select_team_label())).not.toBeInTheDocument();
 
@@ -946,7 +968,9 @@ describe("SettingsPage General Section", () => {
     await user.click(teamOneButton);
     expect(teamOneButton).toHaveAttribute("aria-pressed", "true");
   });
+});
 
+describe("SettingsPage General Section", () => {
   it("enables notifications after requesting and receiving browser permission", async () => {
     const user = userEvent.setup();
     const requestPermission = vi.fn().mockResolvedValue("granted");
@@ -1036,7 +1060,9 @@ describe("SettingsPage General Section", () => {
     await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
     await screen.findByText(m.notification_quiet_hours_label());
 
-    const quietHoursToggle = screen.getByRole("checkbox", { name: m.notification_quiet_hours_label() });
+    const quietHoursToggle = screen.getByRole("checkbox", {
+      name: m.notification_quiet_hours_label(),
+    });
     expect(quietHoursToggle).not.toBeChecked();
 
     await user.click(quietHoursToggle);
@@ -1044,7 +1070,9 @@ describe("SettingsPage General Section", () => {
     const startSelect = await screen.findByLabelText<HTMLSelectElement>(
       m.notification_quiet_hours_start_aria(),
     );
-    const endSelect = screen.getByLabelText<HTMLSelectElement>(m.notification_quiet_hours_end_aria());
+    const endSelect = screen.getByLabelText<HTMLSelectElement>(
+      m.notification_quiet_hours_end_aria(),
+    );
     expect(startSelect.value).toBe("22");
     expect(endSelect.value).toBe("6");
 
@@ -1056,8 +1084,12 @@ describe("SettingsPage General Section", () => {
     expect(settings.notificationQuietHoursEnd).toBe(6);
 
     await user.click(quietHoursToggle);
-    expect(screen.queryByLabelText(m.notification_quiet_hours_start_aria())).not.toBeInTheDocument();
-    const clearedSettings = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}").settings;
+    expect(
+      screen.queryByLabelText(m.notification_quiet_hours_start_aria()),
+    ).not.toBeInTheDocument();
+    const clearedSettings = JSON.parse(
+      localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}",
+    ).settings;
     expect(clearedSettings.notificationQuietHoursStart).toBe(null);
     expect(clearedSettings.notificationQuietHoursEnd).toBe(null);
   });
@@ -1083,7 +1115,9 @@ describe("SettingsPage Features Section", () => {
     const timeOffToggle = screen.getByRole("checkbox", { name: "Toggle time off" });
     const timeTrackingToggle = screen.getByRole("checkbox", { name: "Toggle time tracking" });
     const ganttToggle = screen.getByRole("checkbox", { name: "Toggle personal gantt" });
-    const crossBorderToggle = screen.getByRole("checkbox", { name: "Toggle cross-border tracking" });
+    const crossBorderToggle = screen.getByRole("checkbox", {
+      name: "Toggle cross-border tracking",
+    });
 
     expect(timeOffToggle).not.toBeChecked();
     expect(timeTrackingToggle).not.toBeChecked();

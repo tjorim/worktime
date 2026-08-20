@@ -38,6 +38,7 @@
     "generate-changelog": "tsx scripts/generate-changelog.ts",
     "generate-icons": "tsx scripts/generate-icons.ts",
     "check-version-consistency": "tsx scripts/check-version-consistency.ts",
+    "check-message-parity": "tsx scripts/check-message-parity.ts",
     "sync-version": "tsx scripts/sync-version.ts"
   },
   "dependencies": {

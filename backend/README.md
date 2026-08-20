@@ -52,20 +52,36 @@ Important variables:
 
 - `ENVIRONMENT` — `development` or `production`
 - `HOST` / `PORT` — bind address and port
+- `CORS_ORIGINS` / `TRUSTED_HOSTS` — allowed origins and Host-header allowlist
 - `CACHE_ENABLED` / `CACHE_TTL` — holiday-cache behavior
-- `DATABASE_ENABLED` / `DATABASE_URL` — PostgreSQL database behavior
-- `JWT_SECRET_KEY` / `JWT_ALGORITHM` / `JWT_ACCESS_TOKEN_EXPIRE_SECONDS` — auth settings for DB endpoints
+- `DATABASE_ENABLED` / `DATABASE_URL` — PostgreSQL database behavior (or `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD_FILE`)
+- `OIDC_ISSUER_URL` / `OIDC_AUDIENCE` / `OIDC_JWKS_URI` / `OIDC_ALGORITHMS` — OIDC provider settings
+- `DEV_AUTH_BYPASS_TOKEN` — local-dev-only shortcut that skips OIDC/JWKS verification (refuses to start outside `ENVIRONMENT=development`)
+- `RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT` — per-client-IP rate limiting
+- `SENTRY_DSN` / `SENTRY_TRACES_SAMPLE_RATE` — error tracking (disabled when `SENTRY_DSN` is empty)
+- `METRICS_HMAC_SECRET` — required for `/api/metrics` to respond (404s otherwise)
+- `INTEGRATION_KEY_HASH_SECRET` — HMAC secret for hashing stored integration-client keys
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — Web Push shift-reminder notifications (feature is a no-op when unset)
 
-See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details.
+See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/config/settings.py` for the full list.
 
 ## API Groups
 
-- `/api/health`
-- Auth endpoints:
-  - internal SuperTokens base path: `/auth/*`
-  - public shared-host path in this repo: `/auth/*`
+Auth is OIDC/Keycloak-based (`app/config/settings.py`, `app/config/oidc_config.py`), plus personal
+access tokens (`wtpat_...`) for non-interactive clients like the Pebble companion app — see
+`AGENTS.md` for how the two are gated.
+
+- `/api/health`, `/api/health/liveness`, `/api/health/readiness`
+- `/api/auth/oidc-config` — OIDC discovery info for frontend clients
+- `/api/metrics` — HMAC-protected request metrics
+- `/api/holidays/*` — public/school holidays, long weekends, pay dates
 - Registration endpoint (admin-only pre-provisioning): `POST /api/users/register`
-- Database endpoints: `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`
+- Database endpoints (require `DATABASE_ENABLED=true`): `/api/me`, `/api/access-tokens/*`,
+  `/api/audit/*`, `/api/integration-clients/*`, `/api/users/*`, `/api/time-tracking/*`,
+  `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*` (including the `/api/sync/events`
+  SSE stream), `/api/preferences`, `/api/read-models/*`, `/api/pebble/*`, `/api/time-off/*`,
+  `/api/push/*`
+- `/mcp` — Model Context Protocol server mount
 
 Use `/docs` or `/redoc` for the full OpenAPI view while the server is running.
 

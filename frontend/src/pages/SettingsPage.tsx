@@ -27,6 +27,7 @@ import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection
 import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
 import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
 import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSection";
+import { SettingsScheduleSection } from "@/components/settings/SettingsScheduleSection";
 import { SettingsTimeTrackingSection } from "@/components/settings/SettingsTimeTrackingSection";
 import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -47,6 +48,7 @@ const SETTINGS_SECTIONS: Array<{
   label: () => string;
   adminOnly?: boolean;
 }> = [
+  { key: "scheduleTeam", icon: "bi-calendar-week", label: m.schedule_team_section_title },
   { key: "general", icon: "bi-sliders", label: m.preferences_title },
   { key: "features", icon: "bi-grid", label: m.features_title },
   { key: "timeTracking", icon: "bi-clock-history", label: m.time_tracking_section_title },
@@ -149,6 +151,7 @@ export function SettingsPage() {
 }
 
 export type SettingsSection =
+  | "scheduleTeam"
   | "general"
   | "features"
   | "timeTracking"
@@ -191,8 +194,15 @@ export function SettingsContent({
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
   const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
-  const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter, triggerPull } =
-    useOngoingSyncContext();
+  const {
+    isSyncing,
+    lastSyncedAt,
+    outboxCount,
+    hasSyncError,
+    conflictCount,
+    retryAfter,
+    triggerPull,
+  } = useOngoingSyncContext();
   const {
     settings,
     scheduleType,
@@ -480,10 +490,16 @@ export function SettingsContent({
           onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
         />
       ) : null,
-    general: () => (
-      <SettingsGeneralSection
+    scheduleTeam: () => (
+      <SettingsScheduleSection
         scheduleType={scheduleType}
         myTeam={myTeam}
+        onScheduleChange={handleScheduleChange}
+        onTeamChange={setMyTeam}
+      />
+    ),
+    general: () => (
+      <SettingsGeneralSection
         timeFormat={settings.timeFormat}
         theme={settings.theme}
         locale={getLocale() === "nl" ? "nl" : "en"}
@@ -491,8 +507,6 @@ export function SettingsContent({
         notificationLeadTimeMinutes={settings.notificationLeadTimeMinutes}
         notificationQuietHoursStart={settings.notificationQuietHoursStart}
         notificationQuietHoursEnd={settings.notificationQuietHoursEnd}
-        onScheduleChange={handleScheduleChange}
-        onTeamChange={setMyTeam}
         onTimeFormatChange={updateTimeFormat}
         onThemeChange={updateTheme}
         onLocaleChange={setLocale}
@@ -523,6 +537,10 @@ export function SettingsContent({
     about: () => (
       <SettingsAboutSection
         isDevMode={isDevMode}
+        onShareApp={handleShareApp}
+        canInstallApp={canInstall}
+        isAppInstalled={isInstalled}
+        onInstallApp={() => void handleInstallApp()}
         onShowChangelog={() => setShowChangelog(true)}
         onShowAboutHelp={() => onShowAbout?.()}
         onShowShortcuts={() => onShowShortcuts?.()}
@@ -531,10 +549,6 @@ export function SettingsContent({
     ),
     data: () => (
       <SettingsDataSection
-        onShareApp={handleShareApp}
-        canInstallApp={canInstall}
-        isAppInstalled={isInstalled}
-        onInstallApp={() => void handleInstallApp()}
         onShowBackupDialog={() => setShowBackupDialog(true)}
         onRestoreBackup={() => restoreFileInputRef.current?.click()}
         isRestoringBackup={isRestoringBackup}
@@ -547,10 +561,6 @@ export function SettingsContent({
   return (
     <>
       <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-bottom bg-body-tertiary">
-          <h2 className="h5 mb-1">{m.settings_title()}</h2>
-          <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
-        </div>
         <div>{sectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
           <button
