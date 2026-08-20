@@ -166,12 +166,18 @@ async def _maybe_send_reminder(
     if result is PushSendResult.SUBSCRIPTION_GONE:
         await delete_subscription_by_id(session, subscription.id)
     elif result is PushSendResult.FAILED:
-        # Release the claim so a later tick retries the send.
+        # Release the claim so a later tick retries the send -- but only if it's
+        # still ours. A slow/hung send that outlives its shift's start could
+        # otherwise fail after a *different* process has already moved this same
+        # subscription on to a newer reminder_key (the next shift); blindly
+        # clearing it would erase that newer claim and cause a duplicate send.
         await session.execute(
-            update(PushSubscription).where(PushSubscription.id == subscription.id).values(last_reminder_key=None)
+            update(PushSubscription)
+            .where(PushSubscription.id == subscription.id)
+            .where(PushSubscription.last_reminder_key == reminder_key)
+            .values(last_reminder_key=None)
         )
         await session.commit()
-        subscription.last_reminder_key = None
     # SENT: last_reminder_key is already set from the claim above.
 
 
