@@ -199,6 +199,63 @@ describe("useTransferCalculations", () => {
       expect(result.current.overlaps[0]?.end.format("HH:mm")).toBe("15:00");
     });
 
+    it("finds an overlap spanning a midnight boundary", () => {
+      // 5-shift Team 1 works Night on 2025-01-01: 23:00 -> 07:00 the next day.
+      // 2-shift Team 1 works Morning on 2025-01-02: 06:30 -> 15:30. The two
+      // windows overlap 06:30-07:00 on Jan 2nd, only found by comparing Jan
+      // 1st's window against Jan 2nd's — the scan's adjacent-day comparison.
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            otherScheduleType: "2-shift",
+            customStartDate: "2025-01-01",
+            customEndDate: "2025-01-02",
+          }),
+        { wrapper },
+      );
+
+      expect(result.current.overlaps).toHaveLength(1);
+      expect(result.current.overlaps[0]?.start.format("YYYY-MM-DD HH:mm")).toBe(
+        "2025-01-02 06:30",
+      );
+      expect(result.current.overlaps[0]?.end.format("YYYY-MM-DD HH:mm")).toBe("2025-01-02 07:00");
+    });
+
+    it("paginates overlaps identically regardless of limit (early-exit scan doesn't drop or reorder results)", () => {
+      // Team 1 works Morning (5-shift, 2 of every 10 days) against "9-5"'s
+      // fixed weekday Day shift, producing many overlapping days across six
+      // months. A small limit forces the scan's early exit (see
+      // useTransferCalculations); a large one effectively disables it. The
+      // two must agree, proving the early exit doesn't drop or misorder
+      // overlaps relative to an (almost) unbounded scan.
+      const range = {
+        customStartDate: "2025-01-01",
+        customEndDate: "2025-06-30",
+      };
+      const { result: smallLimit } = renderHook(
+        () =>
+          useTransferCalculations({ myTeam: 1, otherScheduleType: "9-5", ...range, limit: 3 }),
+        { wrapper },
+      );
+      const { result: largeLimit } = renderHook(
+        () =>
+          useTransferCalculations({ myTeam: 1, otherScheduleType: "9-5", ...range, limit: 1000 }),
+        { wrapper },
+      );
+
+      // Sanity check: there must be more overlapping days than the small
+      // limit for this to actually exercise the early exit.
+      expect(largeLimit.current.overlaps.length).toBeGreaterThan(3);
+      expect(largeLimit.current.hasMoreOverlaps).toBe(false);
+
+      expect(smallLimit.current.overlaps).toHaveLength(3);
+      expect(smallLimit.current.hasMoreOverlaps).toBe(true);
+      expect(smallLimit.current.overlaps.map((o) => o.start.format() + o.end.format())).toEqual(
+        largeLimit.current.overlaps.slice(0, 3).map((o) => o.start.format() + o.end.format()),
+      );
+    });
+
     it("does not compute handover/takeover transfers across different schedules", () => {
       const { result } = renderHook(
         () =>

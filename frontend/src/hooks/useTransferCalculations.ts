@@ -195,8 +195,9 @@ export function useTransferCalculations({
     }
 
     const foundTransfers: TransferInfo[] = [];
-    const myWindows: ShiftWindow[] = [];
-    const otherWindows: ShiftWindow[] = [];
+    const allOverlaps: ShiftWindow[] = [];
+    let prevMyWindow: ShiftWindow | null = null;
+    let prevOtherWindow: ShiftWindow | null = null;
 
     // Determine date range
     const startDate = customStartDate ? dayjs(customStartDate) : dayjs();
@@ -213,11 +214,16 @@ export function useTransferCalculations({
       );
     }
 
-    // Bounded by the transfer limit, same as before: cross-schedule scans (the
-    // only realistic source of non-empty overlaps — see below) never satisfy
-    // this early since foundTransfers stays empty, so they still run the full
-    // maxDaysToScan window.
-    for (let day = 0; day < maxDaysToScan && foundTransfers.length < limit; day++) {
+    // Bounded by both the transfer limit and the overlap limit: cross-schedule
+    // scans (the only realistic source of non-empty overlaps — see below)
+    // never satisfy the transfer condition since foundTransfers stays empty,
+    // so the overlap condition is what actually bounds them once enough
+    // overlaps are found.
+    for (
+      let day = 0;
+      day < maxDaysToScan && foundTransfers.length < limit && allOverlaps.length <= limit;
+      day++
+    ) {
       const scanDate = startDate.add(day, "day");
       const nextDate = scanDate.add(1, "day");
 
@@ -229,9 +235,27 @@ export function useTransferCalculations({
       // Collect shift windows for overlap detection — each side uses its own
       // schedule, so this works whether or not the two teams share one.
       const myWindow = getShiftWindow(scanDate, validatedMyTeam, scheduleType);
-      if (myWindow) myWindows.push(myWindow);
       const otherWindow = getShiftWindow(scanDate, otherTeam, effectiveOtherScheduleType);
-      if (otherWindow) otherWindows.push(otherWindow);
+
+      // A window spans at most ~24h from its own scan day, so two windows can
+      // only possibly overlap when they're from the same day or adjacent
+      // days — comparing today's windows against yesterday's (already
+      // collected) is sufficient; no need to keep or re-scan the full
+      // history. Overlaps are discovered in non-decreasing start-time order
+      // this way, which is what makes the loop's early exit above safe: once
+      // more than `limit` are found, the first `limit` sorted by start are
+      // already final and no later day can insert an earlier one.
+      const otherCandidates = [otherWindow, prevOtherWindow].filter(
+        (window): window is ShiftWindow => window !== null,
+      );
+      if (myWindow && otherCandidates.length > 0) {
+        allOverlaps.push(...findOverlaps([myWindow], otherCandidates));
+      }
+      if (otherWindow && prevMyWindow) {
+        allOverlaps.push(...findOverlaps([prevMyWindow], [otherWindow]));
+      }
+      prevMyWindow = myWindow;
+      prevOtherWindow = otherWindow;
 
       // Handover/takeover moments only make sense when both teams share a
       // schedule — the M/L/N code vocabulary (and its meaning) isn't
@@ -338,15 +362,13 @@ export function useTransferCalculations({
     const hasMoreTransfers =
       foundTransfers.length >= limit && (!endDate || lastScannedDate.isBefore(endDate, "day"));
 
-    // Overlaps: real simultaneous working time between the two teams, computed
-    // from every window collected during the scan above (not gated by the
-    // same-schedule guard, so this is the one place cross-schedule
-    // comparisons produce results). In a well-formed same-schedule rotation
-    // teams are staggered specifically to avoid overlap, so this is normally
-    // only non-empty when the two schedules differ.
-    const allOverlaps = findOverlaps(myWindows, otherWindows).sort(
-      (a, b) => a.start.valueOf() - b.start.valueOf(),
-    );
+    // Overlaps: real simultaneous working time between the two teams,
+    // accumulated during the scan above (not gated by the same-schedule
+    // guard, so this is the one place cross-schedule comparisons produce
+    // results). In a well-formed same-schedule rotation teams are staggered
+    // specifically to avoid overlap, so this is normally only non-empty when
+    // the two schedules differ.
+    allOverlaps.sort((a, b) => a.start.valueOf() - b.start.valueOf());
     const overlaps = allOverlaps.slice(0, limit);
     const hasMoreOverlaps = allOverlaps.length > overlaps.length;
 
