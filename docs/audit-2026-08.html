@@ -535,17 +535,17 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">23</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">3</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">24</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">2</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">11</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">14</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">13</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
       marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for what's left — 3 medium, 11 low — is at the bottom of the page, along with three
+      order for what's left — 2 medium, 11 low — is at the bottom of the page, along with three
       in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
@@ -1398,13 +1398,13 @@
     </div>
     <div class="findings">
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a>
           <span class="area">backend</span>
           <span class="area">cross-cutting</span>
           <h3>Backend re-implements the shift logic AGENTS.md calls single-source-of-truth</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>read_models_service.py</code> hand-copies all four rosters — team counts, cycle
           lengths, reference dates, shift patterns — and reimplements six frontend functions. The
@@ -1419,6 +1419,15 @@
           a generated <code>(schedule, team, date) → code</code> table to catch algorithm
           drift.</span></div>
         <div class="refs"><b>backend/app/services/read_models_service.py:70</b> <b>frontend/src/utils/shiftCalculations.ts</b> <b>AGENTS.md — Source Of Truth</b></div>
+        <div class="verified"><span><code>frontend/scripts/generate-roster-fixture.ts</code> exports
+          <code>rosters.ts</code>'s config plus a two-cycle <code>(schedule, team, date) → code</code>
+          table from <code>getShiftCode()</code> into
+          <code>backend/tests/fixtures/roster_golden.json</code>;
+          <code>check-roster-fixture.ts</code> fails frontend CI if it's stale, and
+          <code>backend/tests/test_roster_golden_fixture.py</code> asserts <code>_SCHEDULES</code>
+          and <code>_shift_code_for()</code> reproduce it exactly. The 9-5 flex-window omission from
+          <code>ReadModelShift</code> is now a documented, deliberate decision in
+          <code>read_models_service.py</code> rather than a silent gap.</span></div>
       </div>
 
       <div class="finding med resolved">
@@ -1546,9 +1555,9 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">3</span></h3>
-      <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
-        (#1131, #1115) come last, once everything upstream of them has landed.</p>
+      <h3>Medium <span class="sec-count">2</span></h3>
+      <p>Ordered so the item needing a product decision (#1131) comes before the biggest single item
+        (#1115), once everything upstream of them has landed.</p>
       <div class="tablewrap">
         <table class="seq">
           <colgroup><col class="n"><col><col></colgroup>
@@ -1556,25 +1565,17 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
-              <td>Golden-file cross-check between <code>rosters.ts</code> and
-                <code>read_models_service.py</code>. Higher effort, but the one item here that
-                prevents a future bug class rather than fixing a present one — worth landing before
-                #1115 below builds more on <code>read_models_service.py</code>.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
                 so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
-                open question ("does the read model carry a date range") is easier to answer once
-                #1107 has forced a closer look at the same file.</td>
+                open question ("does the read model carry a date range") is easier to answer now that
+                #1107's golden-fixture work has forced a closer look at the same file.</td>
             </tr>
           </tbody>
         </table>

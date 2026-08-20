@@ -39,7 +39,9 @@
     "generate-icons": "tsx scripts/generate-icons.ts",
     "check-version-consistency": "tsx scripts/check-version-consistency.ts",
     "check-message-parity": "tsx scripts/check-message-parity.ts",
-    "sync-version": "tsx scripts/sync-version.ts"
+    "sync-version": "tsx scripts/sync-version.ts",
+    "generate-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/generate-roster-fixture.ts",
+    "check-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts"
   },
   "dependencies": {
     "@schedule-x/calendar": "^4.6.1",

@@ -79,7 +79,11 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
 - `frontend/src/data/rosters.ts` for roster and schedule definitions
 - `frontend/src/utils/shiftCalculations.ts` for shift logic (frontend). The backend keeps its own
   Python implementation — `backend/app/services/read_models_service.py` — that serves
-  Android/Pebble/MCP read-only clients; see #1119 for keeping the two in sync
+  Android/Pebble/MCP read-only clients. Changes flow frontend → backend: after editing
+  `rosters.ts`, update `_SCHEDULES` (and the resolution logic, if it changed) to match, then run
+  `pnpm run generate-roster-fixture` in `frontend/` and commit the regenerated
+  `backend/tests/fixtures/roster_golden.json`. `backend/tests/test_roster_golden_fixture.py` and
+  frontend CI's `check-roster-fixture` step catch drift between the two (#1107)
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
