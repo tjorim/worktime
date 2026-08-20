@@ -85,6 +85,12 @@
   --wt-team-cal-weekend-cell: #e0e0e0;
   --wt-team-cal-today-ring: var(--bs-warning);
   --wt-navbar-height: 60px;
+
+  /* --- Navbar Surface --- */
+  /* Kept equal to Bootstrap's primary in light mode; overridden below for dark.
+     Separate from --wt-primary-color, which stays pinned across themes for
+     .team-btn.selected contrast (see the dark-mode comment on that variable). */
+  --wt-navbar-bg: #0d6efd;
 }
 
 /* ============================================================================
@@ -165,12 +171,21 @@
   --wt-team-cal-weekend-cell: #383838;
   --wt-team-cal-today-ring: #ffda6a;
 
+  /* --- Surface Elevation (THM-1) --- */
+  /* Three-tier surface ramp so page → card → nested card reads as elevation
+     instead of collapsing into one dark field. Body-to-card and card-to-nested
+     each get a bigger numeric jump than their light-theme counterparts need,
+     since dark surfaces read as "flat" at deltas that look fine in light mode. */
+  --wt-surface-1: #181a1b; /* page body — matches $body-bg-dark in main.scss */
+  --wt-surface-2: #262b31; /* first-level cards, modals, dropdowns, offcanvas */
+  --wt-surface-3: #333a42; /* nested cards, tables */
+
   /* ==========================================================================
      BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)
      ==========================================================================
      These override Bootstrap's default dark mode values to match Worktime's
-     dark theme design (--bs-body-secondary-bg-dark: #23272b).
-     
+     dark theme design.
+
      Why these overrides exist:
      - Consistent card/modal/dropdown backgrounds across the app
      - Match dark theme background colors used in Sass configuration
@@ -178,17 +193,31 @@
      - Customize tab navigation styling for better visibility
      ======================================================================= */
 
-  /* Component backgrounds - use secondary background color (#23272b) */
-  --bs-card-bg: #23272b;
-  --bs-modal-bg: #23272b;
-  --bs-offcanvas-bg: #23272b;
-  --bs-dropdown-bg: #23272b;
-  --bs-table-bg: #23272b;
+  /* Component backgrounds - surface-2 for top-level elevated surfaces */
+  --bs-card-bg: var(--wt-surface-2);
+  --bs-modal-bg: var(--wt-surface-2);
+  --bs-offcanvas-bg: var(--wt-surface-2);
+  --bs-dropdown-bg: var(--wt-surface-2);
+
+  /* Tables read as content nested inside a surface-2 container */
+  --bs-table-bg: var(--wt-surface-3);
 
   /* Table text color - ensure readability on dark backgrounds */
   --bs-table-color: #e0e0e0;
 
   /* Tab navigation borders - match dark theme styling */
   --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
-  --bs-nav-tabs-link-active-border-color: #495057 #495057 #23272b;
+  --bs-nav-tabs-link-active-border-color: #495057 #495057 var(--wt-surface-2);
+}
+
+/* Scoped to :root specifically, not the bare [data-bs-theme="dark"] attribute
+   selector used above: Header.tsx also sets data-bs-theme="dark" locally on
+   the Navbar (for readable text on its colored background), so a bare
+   attribute selector would match that nested element too and always apply,
+   even while the app itself is in light mode. */
+:root[data-bs-theme="dark"] {
+  /* --- Navbar Surface (THM-2) --- */
+  /* A deep, desaturated blue instead of the fully-saturated --bs-primary band,
+     for an app whose users check it during night shifts. */
+  --wt-navbar-bg: #1b3a5c;
 }
