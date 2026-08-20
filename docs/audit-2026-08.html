@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">19</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">6</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">20</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">5</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">18</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">17</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -820,18 +820,18 @@
 
   <section>
     <div class="sec-head">
-      <h2>Frontend correctness and i18n<span class="sec-count">5</span></h2>
+      <h2>Frontend correctness and i18n<span class="sec-count">5 · 2 fixed</span></h2>
       <p>Controls that lie about what they do, and text that doesn't translate.</p>
     </div>
     <div class="findings">
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a>
           <span class="area">frontend</span>
           <span class="area">i18n</span>
           <h3>Dutch is missing 22 keys, including the entire first-sync conflict dialog</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>nl.json</code> has 1171 keys to <code>en.json</code>'s 1193, and nothing in CI
           catches the drift. The worst gap is the 11-key first-sync conflict dialog — a Dutch user
@@ -842,6 +842,14 @@
           the existing version-consistency check — same pattern, and it stops this
           recurring.</span></div>
         <div class="refs"><b>frontend/messages/nl.json</b> <b>.github/workflows/frontend-ci.yml:49</b></div>
+        <div class="verified"><span>PR #1155 translated all 22 missing keys — the first-sync
+          conflict dialog, the long-weekend feature, the two calendar-legend entries, and the two
+          Gantt aria labels — following the terminology already established elsewhere in
+          <code>nl.json</code>. Added <code>frontend/scripts/check-message-parity.ts</code>, which
+          reads the base locale from <code>project.inlang/settings.json</code> and diffs every other
+          locale's keys against it, wired in as a new step in <code>frontend-ci.yml</code> beside
+          <code>check-version-consistency</code>, so this class of drift now fails CI instead of
+          shipping silently.</span></div>
       </div>
 
       <div class="finding med resolved">
@@ -1516,7 +1524,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">6</span></h3>
+      <h3>Medium <span class="sec-count">5</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1526,12 +1534,6 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a></td>
-              <td>Dutch parity plus the CI parity check — the check is what stops this specific class
-                of drift recurring, so it's worth doing before more translated surface ships.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
               <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
@@ -1539,13 +1541,13 @@
                 patch.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
               <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
                 values but no architecture decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1553,14 +1555,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
                 so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once
