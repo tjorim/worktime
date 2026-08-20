@@ -4,8 +4,10 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "@/components/TransferView";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
 import { useTransferCalculations, TransferType } from "@/hooks/useTransferCalculations";
 import { dayjs } from "@/utils/dateTimeUtils";
+import type { CalendarEvent } from "@/lib/events/types";
 
 // Mock useSettings to provide scheduleType
 vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
@@ -33,8 +35,24 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
   };
 });
 
+// Mock useEventStore so tests can seed time-off events without wiring up the
+// real TanStack DB-backed collection.
+vi.mock("@/contexts/EventStoreContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/EventStoreContext")>();
+  return {
+    ...actual,
+    useEventStore: vi.fn(() => ({ getEventsInRange: () => [] })),
+  };
+});
+
+const mockUseEventStore = vi.mocked(useEventStore);
+
 function renderWithProviders(ui: React.ReactElement) {
-  return render(<SettingsProvider>{ui}</SettingsProvider>);
+  return render(
+    <SettingsProvider>
+      <EventStoreProvider>{ui}</EventStoreProvider>
+    </SettingsProvider>,
+  );
 }
 
 // Mock the useTransferCalculations hook
@@ -113,10 +131,13 @@ let mockConsoleWarn: ReturnType<typeof vi.spyOn>;
 const defaultHookReturn = {
   transfers: [],
   hasMoreTransfers: false,
+  overlaps: [],
+  hasMoreOverlaps: false,
   availableOtherTeams: [2, 3, 4, 5],
   otherTeam: 2,
   setOtherTeam: vi.fn(),
   validatedMyTeam: 1, // Add validated team
+  otherScheduleType: "5-shift" as const, // Same as the mocked scheduleType — same-schedule by default
 };
 
 const defaultProps = {
@@ -137,6 +158,7 @@ function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
 describe("TransferView", () => {
   beforeEach(() => {
     mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+    mockUseEventStore.mockReturnValue({ getEventsInRange: () => [] });
     mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
@@ -640,6 +662,226 @@ describe("TransferView", () => {
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(1, 3);
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(2, 4);
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(3, 5);
+    });
+  });
+
+  describe("Cross-schedule overlaps (#1111)", () => {
+    it("shows the comparing-schedule note and overlaps instead of handover/takeover results", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [
+          {
+            start: dayjs("2025-01-15 09:00"),
+            end: dayjs("2025-01-15 15:00"),
+          },
+        ],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      // Comparing-schedule note names the other schedule
+      expect(screen.getByText(/Comparing your schedule with 9-5/)).toBeInTheDocument();
+
+      // Overlap row is shown with its time range
+      expect(screen.getByText("Overlapping Hours")).toBeInTheDocument();
+      expect(screen.getByText(/09:00.*15:00/)).toBeInTheDocument();
+
+      // No handover/takeover UI — that vocabulary doesn't apply across schedules
+      expect(screen.queryByText("Handover")).not.toBeInTheDocument();
+      expect(screen.queryByText("Takeover")).not.toBeInTheDocument();
+      expect(screen.queryByText("Transfer Flow")).not.toBeInTheDocument();
+    });
+
+    it("shows a dedicated empty state when no overlaps are found across schedules", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("No Overlapping Hours")).toBeInTheDocument();
+      // Not the same-schedule "No Transfers Found" empty state
+      expect(screen.queryByText("No Transfers Found")).not.toBeInTheDocument();
+    });
+
+    it("relabels the team selector for overlap comparisons", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        overlaps: [],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByLabelText("View overlapping hours with Team:")).toBeInTheDocument();
+      expect(screen.queryByLabelText("View transfers with Team:")).not.toBeInTheDocument();
+    });
+
+    it("does not show the comparing-schedule note for a same-schedule comparison", () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.queryByText(/Comparing your schedule with/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Compare-with-schedule selector", () => {
+    // Regression coverage for the Today/Week merge: the "Compare with schedule"
+    // selector now lives inside TransferView's own controls (grouped with the
+    // team selector) instead of ScheduleTabView's shared header row.
+    it("does not render the schedule selector when no change handler is provided", () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.queryByLabelText(/Compare with schedule:/i)).not.toBeInTheDocument();
+    });
+
+    it("renders and wires up the schedule selector when a change handler is provided", async () => {
+      const user = userEvent.setup();
+      const onOtherScheduleTypeChange = vi.fn();
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          otherScheduleType="5-shift"
+          onOtherScheduleTypeChange={onOtherScheduleTypeChange}
+        />,
+      );
+
+      const selector = screen.getByLabelText(/Compare with schedule:/i);
+      expect(selector).toBeInTheDocument();
+
+      await user.selectOptions(selector, "9-5");
+      expect(onOtherScheduleTypeChange).toHaveBeenCalledWith("9-5");
+    });
+
+    it("marks the user's own schedule in the selector options", () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          otherScheduleType="5-shift"
+          onOtherScheduleTypeChange={vi.fn()}
+        />,
+      );
+
+      const selector = screen.getByLabelText(/Compare with schedule:/i) as HTMLSelectElement;
+      const option = Array.from(selector.options).find((opt) => opt.value === "5-shift");
+      expect(option?.text).toContain("Your schedule");
+    });
+  });
+
+  describe("Time-off indicators", () => {
+    const timeOffEvent: CalendarEvent = {
+      id: "time-off-1",
+      start: "2025-01-15",
+      end: "2025-01-15",
+      type: "holiday",
+      meta: {
+        type: "holiday",
+        color: "#fca5a5",
+        textColor: "#7f1d1d",
+        flags: [],
+        typeLabel: "Vacation",
+      },
+    };
+
+    it("flags a transfer row that falls on the user's own recorded time off", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [
+          {
+            date: dayjs("2025-01-15"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M" as const,
+            toShiftType: "L" as const,
+            type: "handover" as TransferType,
+          },
+        ],
+      });
+      mockUseEventStore.mockReturnValue({ getEventsInRange: () => [timeOffEvent] });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
+    });
+
+    it("flags an overlap row that falls on the user's own recorded time off", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [{ start: dayjs("2025-01-15 09:00"), end: dayjs("2025-01-15 15:00") }],
+        otherScheduleType: "9-5",
+      });
+      mockUseEventStore.mockReturnValue({ getEventsInRange: () => [timeOffEvent] });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
+    });
+  });
+
+  describe("Stacked transfer + overlap results", () => {
+    it("shows both transfers and overlaps together when both have content on the same schedule", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [
+          {
+            date: dayjs("2025-01-15"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M" as const,
+            toShiftType: "L" as const,
+            type: "handover" as TransferType,
+          },
+        ],
+        overlaps: [{ start: dayjs("2025-01-15 09:00"), end: dayjs("2025-01-15 15:00") }],
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getAllByText(/Handover/).length).toBeGreaterThan(0);
+      expect(screen.getByText("Overlapping Hours")).toBeInTheDocument();
+      expect(screen.getByText(/09:00.*15:00/)).toBeInTheDocument();
+    });
+
+    it("hides the overlaps section entirely when there are none on the same schedule", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [],
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("No Transfers Found")).toBeInTheDocument();
+      expect(screen.queryByText("Overlapping Hours")).not.toBeInTheDocument();
+      expect(screen.queryByText("No Overlapping Hours")).not.toBeInTheDocument();
+    });
+
+    it("shows only the overlaps empty state across schedules, with no transfers section at all", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("No Overlapping Hours")).toBeInTheDocument();
+      expect(screen.queryByText("No Transfers Found")).not.toBeInTheDocument();
+      expect(screen.queryByText("Transfer Flow")).not.toBeInTheDocument();
     });
   });
 });

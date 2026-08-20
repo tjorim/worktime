@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -88,11 +88,9 @@ function renderWithProviders(ui: React.ReactElement) {
 
 const defaultProps = {
   myTeam: 1,
-  currentDate: dayjs("2025-01-15"),
-  onPreviousDay: vi.fn(),
-  onNextDay: vi.fn(),
-  onTodayClick: vi.fn(),
-  onDateSelect: vi.fn(),
+  viewingScheduleType: "5-shift" as const,
+  userScheduleType: "5-shift" as const,
+  onViewingScheduleTypeChange: vi.fn(),
 };
 
 describe("TodayView", () => {
@@ -114,11 +112,6 @@ describe("TodayView", () => {
       expect(screen.getByText(/Off/)).toBeInTheDocument();
       expect(screen.getByText(/Not working today/)).toBeInTheDocument();
     });
-
-    it("shows Today button", () => {
-      renderWithProviders(<TodayView {...defaultProps} />);
-      expect(screen.getByText("Today")).toBeInTheDocument();
-    });
   });
 
   describe("Team highlighting", () => {
@@ -138,31 +131,37 @@ describe("TodayView", () => {
     });
   });
 
-  describe("Today button functionality", () => {
-    it("calls onTodayClick when Today button is clicked", async () => {
-      const user = userEvent.setup();
-      const mockOnTodayClick = vi.fn();
+  describe("Schedule selector", () => {
+    it("shows a select-schedule hint instead of team cards when no schedule is chosen", () => {
+      renderWithProviders(
+        <TodayView {...defaultProps} viewingScheduleType={null} userScheduleType={null} />,
+      );
 
-      renderWithProviders(<TodayView {...defaultProps} onTodayClick={mockOnTodayClick} />);
-
-      const todayButton = screen.getByRole("button", { name: /today/i });
-      await user.click(todayButton);
-
-      expect(mockOnTodayClick).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByText("Select a schedule to view the team lineup and shift details."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
     });
-  });
 
-  describe("Date selector", () => {
-    it("calls onDateSelect when direct date selector changes", async () => {
-      const onDateSelect = vi.fn();
-      renderWithProviders(<TodayView {...defaultProps} onDateSelect={onDateSelect} />);
+    it("calls onViewingScheduleTypeChange when the schedule selector changes", async () => {
+      const user = userEvent.setup();
+      const onViewingScheduleTypeChange = vi.fn();
+      renderWithProviders(
+        <TodayView {...defaultProps} onViewingScheduleTypeChange={onViewingScheduleTypeChange} />,
+      );
 
-      const dateInput = screen.getByLabelText(/Jump to date/i);
-      fireEvent.change(dateInput, { target: { value: "2025-01-20" } });
+      const selector = screen.getByLabelText(/View schedule:/i);
+      await user.selectOptions(selector, "9-5");
 
-      expect(onDateSelect).toHaveBeenCalled();
-      const selected = onDateSelect.mock.calls.at(-1)?.[0];
-      expect(selected?.format("YYYY-MM-DD")).toBe("2025-01-20");
+      expect(onViewingScheduleTypeChange).toHaveBeenCalledWith("9-5");
+    });
+
+    it("marks the user's own schedule in the selector options", () => {
+      renderWithProviders(<TodayView {...defaultProps} userScheduleType="9-5" />);
+
+      const selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
+      const option = Array.from(selector.options).find((opt) => opt.value === "9-5");
+      expect(option?.text).toContain("Your schedule");
     });
   });
 

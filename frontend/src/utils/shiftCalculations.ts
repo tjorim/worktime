@@ -67,7 +67,7 @@
 
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "@/data/rosters";
-import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
+import { dayjs, formatYYWWD, getLocalizedShiftTime, setTimeFromFractionalHour } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 import { logger } from "@/utils/logger";
 
@@ -347,6 +347,69 @@ export function calculateShift(
     return getShift("O", schedule.value);
   }
   return getShift(shiftCode as ShiftType, schedule.value);
+}
+
+export interface ShiftWindow {
+  start: Dayjs;
+  end: Dayjs;
+}
+
+/**
+ * Compute the absolute start/end instants of a team's shift on a given date.
+ *
+ * Handles shifts that cross midnight (e.g. a night shift starting at 23:00 and
+ * ending at 07:00 the next calendar day) by rolling the end time onto the
+ * following day whenever it is not later than the start time.
+ *
+ * @param date - The shift day to evaluate (same convention as `calculateShift`)
+ * @param teamNumber - Team index starting at 1
+ * @param scheduleOption - Schedule type to use
+ * @returns The shift's `{ start, end }` instants, or `null` for a non-working (OFF) shift
+ */
+export function getShiftWindow(
+  date: string | Date | Dayjs,
+  teamNumber: number,
+  scheduleOption?: NullableScheduleOption,
+): ShiftWindow | null {
+  const shift = calculateShift(date, teamNumber, scheduleOption);
+  if (!shift.isWorking || shift.start == null || shift.end == null) {
+    return null;
+  }
+
+  const day = dayjs(date).startOf("day");
+  const spansMidnight = shift.end <= shift.start;
+  const start = setTimeFromFractionalHour(day, shift.start);
+  const end = setTimeFromFractionalHour(spansMidnight ? day.add(1, "day") : day, shift.end);
+
+  return { start, end };
+}
+
+/**
+ * Find the intersecting intervals between two sets of shift windows.
+ *
+ * Compares every window in `windowsA` against every window in `windowsB` and
+ * returns the overlapping portion of each pair, dropping pairs that don't
+ * overlap (or touch only at a single instant, i.e. a zero-length intersection
+ * such as a handover where one shift ends exactly as the other begins).
+ *
+ * @param windowsA - First set of shift windows (e.g. the user's own team)
+ * @param windowsB - Second set of shift windows (e.g. another team, possibly on a different schedule)
+ * @returns Overlapping intervals, unsorted
+ */
+export function findOverlaps(windowsA: ShiftWindow[], windowsB: ShiftWindow[]): ShiftWindow[] {
+  const overlaps: ShiftWindow[] = [];
+
+  for (const a of windowsA) {
+    for (const b of windowsB) {
+      const start = a.start.isAfter(b.start) ? a.start : b.start;
+      const end = a.end.isBefore(b.end) ? a.end : b.end;
+      if (start.isBefore(end)) {
+        overlaps.push({ start, end });
+      }
+    }
+  }
+
+  return overlaps;
 }
 
 const getShiftDurationHours = (shift: Shift): number => {
