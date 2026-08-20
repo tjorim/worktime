@@ -107,7 +107,7 @@ export const changelogData: ChangelogVersion[] = [
     status: "released",
     added: [],
     changed: [
-      "Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and backend/pyproject.toml; Android's versionName/versionCode are derived from it at build time (#993)",
+      "Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and read at runtime by backend/app/version.py; Android's versionName/versionCode are derived from it at build time (#993)",
     ],
     fixed: [],
   },
@@ -749,22 +749,12 @@ export const changelogData: ChangelogVersion[] = [
   },
 ];
 
-export const futurePlans = {
-  "v4.8.0": {
-    title: "Advanced Features",
-    features: [
-      "Calendar export (.ics format)",
-      "Notification system",
-      "Cross-schedule transfer view",
-    ],
-  },
-  future: {
-    title: "Future Releases",
-    features: [
-      "Multi-language support",
-      "Data export capabilities",
-      "Mobile carousel for team browsing",
-      "Advanced accessibility features",
-    ],
-  },
-};
+// Unversioned on purpose: under CalVer the next release is whatever ships next
+// (e.g. 2026.9.1), so a version-keyed grouping here would just go stale again.
+// Prune an item once it ships instead of moving it to a new version key.
+export const futurePlans: string[] = [
+  "Calendar export (.ics format)",
+  "Cross-schedule transfer overlap detection",
+  "Mobile carousel for team browsing",
+  "Advanced accessibility features (high-contrast mode, font scaling)",
+];

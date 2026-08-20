@@ -1,5 +1,10 @@
 # Project Comparison: HdayPlanner vs NextShift
 
+> **Historical record, superseded 2026-08.** HdayPlanner is this project's former name (now
+> Worktime); NextShift was a separate project it was compared against. Versions below (React
+> 18.2/TS 5.6/Vite 7) predate the current stack (React 19.2/TS 7.0/Vite 8) — see #1123. Kept for
+> context, not as a current comparison.
+
 This document tracks the differences between HdayPlanner and NextShift, along with planned improvements for both projects.
 
 ## Current Differences

@@ -7,8 +7,13 @@ Shift tracking and time-off management with a web frontend and a local/shared ba
 ```text
 worktime/
 ├── frontend/      # Web app (Vite, pnpm)
-├── backend/       # FastAPI service (uv, SQLite, Alembic)
+├── backend/       # FastAPI service (uv, PostgreSQL, Alembic)
+├── android/       # Android app
+├── pebble/        # Pebble (Alloy) companion watch app
+├── hday-helper/   # Local helper for shared `.hday` file access
 ├── examples/      # Example `.hday` files and sample share data
+├── docs/          # Design docs, specs, and audit records
+├── infra/         # Example env file for the separate production infra stack
 └── AGENTS.md      # Repo-specific contributor guidance
 ```
 
@@ -36,10 +41,14 @@ uv run uvicorn app.main:app --reload
 
 ## What It Does
 
-- Shift and roster tracking across multiple schedule types
+- Shift and roster tracking across multiple schedule types, with Gantt and unified-calendar views
 - `.hday` import, export, and parsing for time-off management
-- Shared team/time-off reads through the backend
+- OIDC accounts with cross-device sync (live updates over SSE) and shared team/time-off reads
 - Database-backed time tracking, work locations, and personal Gantt tasks
+- Public/school holidays, long weekends, and pay dates
+- An MCP server exposing schedule and status tools to LLM clients
+- Companion apps: Android and a Pebble (Alloy) watch app
+- Internationalized UI (English/Dutch)
 
 ## More Details
 
@@ -55,15 +64,22 @@ Each workflow is scoped to the paths it validates:
 - `Frontend CI` — `frontend/**`
 - `.hday Helper CI` — `hday-helper/**`, `frontend/src/lib/hday/**`
 - `Android CI` — `android/**`
+- `Pebble CI` — `pebble/**` plus the phone-side pairing files it depends on; installs the Pebble
+  SDK, builds the package, boots it on the Emery emulator, checks a screenshot, and runs the
+  watch-logic tests
+- `PR Preview Build` — `frontend/**`, on PR open/sync/reopen
 - `CodeQL Python` — `backend/**`
-- `CodeQL JavaScript` — `frontend/**`
+- `CodeQL JavaScript` — `frontend/**`, `hday-helper/**`
 - `CodeQL Actions` — `.github/workflows/**`
 - `CodeQL Android` — `android/**`
+
+Production hosting for `worktime.tjor.im` is handled by the separate infra stack in
+`/opt/apps/infra` (see `AGENTS.md`) — there is no GitHub Pages deploy workflow in this repo.
 
 ### Release and Artifact Workflows
 
 These workflows are intentionally separated from normal CI:
 
-- `Deploy Worktime to GitHub Pages` runs only on release publish or manual dispatch and enforces frontend lint/test/build before deploy.
+- `Draft Release` — runs on `v*` tag pushes to prepare a draft GitHub release.
 - `Build .hday Helper EXE` remains scoped to `hday-helper/**`, `frontend/src/lib/hday/**`, and its workflow file.
-- Android release/manual artifact workflows should be separate from Android CI and scoped to `android/**`. When signing secrets are unavailable, they should skip artifact publishing gracefully instead of failing unrelated checks.
+- `Android Release APK` is a manual (`workflow_dispatch`) artifact build, separate from Android CI. When signing secrets are unavailable, it skips artifact publishing gracefully instead of failing unrelated checks.

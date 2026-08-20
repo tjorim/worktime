@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">8</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">21</span><span class="k">Open</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">20</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">7</span><span class="k">Medium</span></div>
+      <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">18</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1382,12 +1382,12 @@
         <div class="refs"><b>backend/app/services/read_models_service.py:70</b> <b>frontend/src/utils/shiftCalculations.ts</b> <b>AGENTS.md — Source Of Truth</b></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a>
           <span class="area">docs</span>
           <h3>Repo documentation is substantially out of sync with the codebase</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>backend/README.md</code> is the worst: it documents <strong>SuperTokens</strong>
           auth and <code>JWT_*</code> settings that don't exist, while omitting every
@@ -1400,15 +1400,23 @@
           issue tracker rather than maintaining a second drifting copy of it, and move the historical
           comparison docs under <code>docs/history/</code>.</span></div>
         <div class="refs"><b>backend/README.md</b> <b>README.md</b> <b>TODO.md</b> <b>docs/project-comparison.md</b></div>
+        <div class="verified"><span><code>backend/README.md</code> and <code>backend/BACKEND_GUIDE.md</code>
+          now document OIDC/PAT auth, the real env vars, and all 18 routers plus the <code>/mcp</code>
+          mount; the root <code>README.md</code> drops the nonexistent GitHub Pages workflow and lists
+          the real CI/release workflows and project layout; <code>TODO.md</code> is now a pointer at
+          the issue tracker; <code>docs/project-comparison.md</code>, <code>docs/alignment-summary.md</code>,
+          and <code>docs/optimization-plan.md</code> carry dated superseded banners; and
+          <code>AGENTS.md</code> now credits the backend's own shift-logic implementation. Fixed in
+          this PR.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a>
           <span class="area">frontend</span>
           <span class="area">docs</span>
           <h3>In-app changelog shows a stale roadmap and one wrong entry</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>User-visible, not just repo docs. <code>futurePlans</code> promises a
           <strong>v4.8.0</strong> that can't exist under CalVer, and lists multi-language support and
@@ -1419,6 +1427,12 @@
           and prune what shipped. <code>CHANGELOG.md</code> needs the same correction via
           <code>generate-changelog</code>.</span></div>
         <div class="refs"><b>frontend/src/data/changelog.ts:707</b> <b>changelog.ts:64</b></div>
+        <div class="verified"><span><code>futurePlans</code> is now a flat, unversioned string
+          array (no more version-keyed grouping to rot under CalVer), pruned of the two shipped
+          items (multi-language support, data export/backup). The 2026.7.1 entry now correctly
+          says <code>VERSION</code> syncs to <code>frontend/package.json</code> and is read at
+          runtime by <code>backend/app/version.py</code>, and <code>CHANGELOG.md</code> was
+          regenerated via <code>generate-changelog</code> to match. Fixed in this PR.</span></div>
       </div>
 
       <div class="finding low">
@@ -1493,7 +1507,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">12</span></h3>
+      <h3>Medium <span class="sec-count">11</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1509,19 +1523,12 @@
             </tr>
             <tr>
               <td class="seq-n">2</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a></td>
-              <td>Docs pass (backend README, root README, TODO.md). Fold
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a> (low)
-                into the same PR — it's a two-paragraph fix in a file this already touches.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
               <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
                 decision needed.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
               <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
@@ -1529,13 +1536,13 @@
                 patch.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
               <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
                 values but no architecture decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1543,14 +1550,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
                 so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once

@@ -8,9 +8,8 @@ import { changelogData, futurePlans } from "../src/data/changelog";
  * Build the repository changelog content as a single Markdown string.
  *
  * Includes an "Unreleased" Future Enhancements section, per-version sections
- * (Added, Changed, Fixed, Planned, and optional technical details), a
- * "Version Planning" footer constructed from future plans, and Keep a Changelog
- * style comparison links for each version.
+ * (Added, Changed, Fixed, Planned, and optional technical details), and Keep a
+ * Changelog style comparison links for each version.
  *
  * @returns The complete changelog content formatted as Markdown
  */
@@ -29,14 +28,7 @@ below predate that switch.
 
 ### Planned
 
-${Object.entries(futurePlans)
-  .filter(([key]) => key.startsWith("v"))
-  .flatMap(([version, plan]) => {
-    void version;
-    return plan.features;
-  })
-  .map((feature) => `- ${feature}`)
-  .join("\n")}
+${futurePlans.map((feature) => `- ${feature}`).join("\n")}
 
 `;
 
@@ -100,18 +92,6 @@ ${Object.entries(futurePlans)
         ];
 
   const footer = `---
-
-## Version Planning
-
-${Object.entries(futurePlans)
-  .filter(([key]) => key.startsWith("v"))
-  .map(
-    ([version, plan]) =>
-      `### ${version} - ${plan.title}\n\n${plan.features.map((feature) => `- ${feature}`).join("\n")}`,
-  )
-  .join("\n\n")}
-
-### ${futurePlans.future.title}\n\n${futurePlans.future.features.map((feature) => `- ${feature}`).join("\n")}
 
 ${versionLinks.join("\n")}
 `;

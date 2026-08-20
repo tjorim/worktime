@@ -13,8 +13,9 @@ below predate that switch.
 ### Planned
 
 - Calendar export (.ics format)
-- Notification system
-- Cross-schedule transfer view
+- Cross-schedule transfer overlap detection
+- Mobile carousel for team browsing
+- Advanced accessibility features (high-contrast mode, font scaling)
 
 ## [2026.8.6] - 2026-08-19
 
@@ -90,7 +91,7 @@ below predate that switch.
 
 ### Changed
 
-- Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and backend/pyproject.toml; Android's versionName/versionCode are derived from it at build time (#993)
+- Versioning: switched from SemVer to CalVer (YYYY.MM.MICRO). The repo-root VERSION file is now the single source of truth for the app version, synced to frontend/package.json and read at runtime by backend/app/version.py; Android's versionName/versionCode are derived from it at build time (#993)
 
 ## [4.7.1] - 2026-07-22
 
@@ -703,21 +704,6 @@ This release focused on UX improvements and code quality, adding 42 comprehensiv
 Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js for date handling, React Bootstrap components, Vitest testing framework, and Biome for linting and formatting.
 
 ---
-
-## Version Planning
-
-### v4.8.0 - Advanced Features
-
-- Calendar export (.ics format)
-- Notification system
-- Cross-schedule transfer view
-
-### Future Releases
-
-- Multi-language support
-- Data export capabilities
-- Mobile carousel for team browsing
-- Advanced accessibility features
 
 [Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.6...HEAD
 [2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6
