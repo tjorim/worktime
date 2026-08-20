@@ -3,7 +3,6 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
@@ -16,12 +15,7 @@ import { useEventStore } from "@/contexts/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
 import { dayjs, formatDisplayDate, formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
-import {
-  getShift,
-  getWorkingShiftTypes,
-  type ShiftType,
-  type ShiftWindow,
-} from "@/utils/shiftCalculations";
+import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
@@ -38,12 +32,6 @@ interface TransferViewProps {
   otherScheduleType?: ScheduleOption | null;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
-}
-
-/** Human-readable label for a shift type on a given schedule, e.g. "🌆 Evening". */
-function formatShiftTypeLabel(code: ShiftType, scheduleOption: ScheduleOption): string {
-  const shift = getShift(code, scheduleOption);
-  return `${shift.emoji} ${shift.name}`;
 }
 
 /** Find the current user's own time-off event covering the given date, if any. */
@@ -299,12 +287,6 @@ export function TransferView({
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [currentDay, setCurrentDay] = useState(() => dayjs().startOf("day"));
-  // "Teamless" lookup for the other side only — the user is always
-  // represented by their own real team; the other person may be identified
-  // by shift type instead ("whoever's on Evening") when their exact team
-  // isn't known.
-  const [otherMode, setOtherMode] = useState<"team" | "shiftType">("team");
-  const [otherShiftType, setOtherShiftType] = useState<ShiftType | null>(null);
 
   const { scheduleType, settings } = useSettings();
   const { timeFormat } = settings;
@@ -336,14 +318,13 @@ export function TransferView({
     customStartDate: useCustomRange && !isDateRangeInvalid ? customStartDate : undefined,
     customEndDate: useCustomRange && !isDateRangeInvalid ? customEndDate : undefined,
     otherScheduleType,
-    otherShiftType: otherMode === "shiftType" ? otherShiftType : null,
   });
 
-  // Same-schedule, team-only comparisons show handover/takeover points;
-  // everything else (cross-schedule, or the other side matched by shift type
-  // instead of a fixed team) only shows overlapping hours.
+  // Same-schedule comparisons show handover/takeover points (plus overlaps,
+  // when there happen to be any); cross-schedule comparisons only ever show
+  // overlapping hours, since the M/L/N handover vocabulary isn't comparable
+  // across different schedule types.
   const sameSchedule = effectiveOtherScheduleType === scheduleType;
-  const usingShiftTypeMode = otherMode === "shiftType";
   const otherScheduleTitle = sameSchedule
     ? null
     : (SCHEDULE_OPTIONS.find((option) => option.value === effectiveOtherScheduleType)?.title ??
@@ -351,23 +332,13 @@ export function TransferView({
 
   // Use validated team for display
   const myTeam = validatedMyTeam;
-  // Handover/takeover points require a fixed team identity on both sides.
-  const showTransfers = Boolean(myTeam) && sameSchedule && !usingShiftTypeMode;
-
-  const otherWorkingShiftTypes = useMemo(
-    () => getWorkingShiftTypes(effectiveOtherScheduleType),
-    [effectiveOtherScheduleType],
-  );
-
-  // Keep the selected shift type valid as the underlying schedule changes.
-  useEffect(() => {
-    if (
-      otherMode === "shiftType" &&
-      (!otherShiftType || !otherWorkingShiftTypes.includes(otherShiftType))
-    ) {
-      setOtherShiftType(otherWorkingShiftTypes[0] ?? null);
-    }
-  }, [otherMode, otherShiftType, otherWorkingShiftTypes]);
+  const showTransfers = Boolean(myTeam) && sameSchedule;
+  // Overlaps are shown whenever they have content; in the same-schedule case
+  // that's rare (well-formed rotations hand over rather than overlap), so an
+  // empty overlaps section is only worth calling out with its own empty
+  // state when it's the sole result — i.e. cross-schedule.
+  const showOverlapsList = overlaps.length > 0;
+  const showOverlapsEmptyState = !sameSchedule && overlaps.length === 0;
 
   const myOverlapLabel = useMemo(
     () => (myTeam ? m.team_label({ team: String(myTeam) }) : ""),
@@ -376,24 +347,13 @@ export function TransferView({
 
   const otherOverlapLabel = useMemo(() => {
     const prefix = otherScheduleTitle ? `${otherScheduleTitle} ` : "";
-    if (otherMode === "shiftType" && otherShiftType) {
-      return `${prefix}${formatShiftTypeLabel(otherShiftType, effectiveOtherScheduleType ?? "5-shift")}`;
-    }
     return `${prefix}${m.team_label({ team: String(otherTeam) })}`;
-  }, [otherMode, otherShiftType, otherScheduleTitle, effectiveOtherScheduleType, otherTeam]);
+  }, [otherScheduleTitle, otherTeam]);
 
   // Reset pagination when filters change
   useEffect(() => {
     setTransfersToShow(10);
-  }, [
-    otherTeam,
-    useCustomRange,
-    customStartDate,
-    customEndDate,
-    effectiveOtherScheduleType,
-    otherMode,
-    otherShiftType,
-  ]);
+  }, [otherTeam, useCustomRange, customStartDate, customEndDate, effectiveOtherScheduleType]);
 
   // Set initial other team if provided (e.g., when coming from Team Detail Modal)
   const initialSetRef = useRef(false);
@@ -624,7 +584,7 @@ export function TransferView({
               mode="team"
             />
           </div>
-        ) : availableOtherTeams.length === 0 && otherMode !== "shiftType" ? (
+        ) : availableOtherTeams.length === 0 ? (
           <EmptyState
             icon="bi-people"
             title={m.transfer_no_teams_title()}
@@ -637,62 +597,24 @@ export function TransferView({
               <Col md={4}>
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
-                  {otherMode === "shiftType"
-                    ? m.transfer_view_overlaps_with_shift_label()
-                    : sameSchedule
-                      ? m.transfer_view_with_team_label()
-                      : m.transfer_view_overlaps_with_team_label()}
+                  {sameSchedule
+                    ? m.transfer_view_with_team_label()
+                    : m.transfer_view_overlaps_with_team_label()}
                 </Form.Label>
-                {otherMode === "team" ? (
-                  <Form.Select
-                    id={otherTeamSelectId}
-                    value={otherTeam}
-                    onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
-                    aria-label={m.transfer_select_team_aria()}
-                  >
-                    {availableOtherTeams.map((teamNumber) => (
-                      <option key={teamNumber} value={teamNumber}>
-                        {m.team_label({ team: String(teamNumber) })}
-                      </option>
-                    ))}
-                  </Form.Select>
-                ) : (
-                  <Form.Select
-                    id={otherTeamSelectId}
-                    value={otherShiftType ?? ""}
-                    onChange={(e) => {
-                      const next = otherWorkingShiftTypes.find((code) => code === e.target.value);
-                      setOtherShiftType(next ?? null);
-                    }}
-                    aria-label={m.transfer_select_shift_aria()}
-                  >
-                    <option value="" disabled>
-                      {m.transfer_select_shift_placeholder()}
+                <Form.Select
+                  id={otherTeamSelectId}
+                  value={otherTeam}
+                  onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
+                  aria-label={m.transfer_select_team_aria()}
+                >
+                  {availableOtherTeams.map((teamNumber) => (
+                    <option key={teamNumber} value={teamNumber}>
+                      {m.team_label({ team: String(teamNumber) })}
                     </option>
-                    {otherWorkingShiftTypes.map((code) => (
-                      <option key={code} value={code}>
-                        {formatShiftTypeLabel(code, effectiveOtherScheduleType ?? "5-shift")}
-                      </option>
-                    ))}
-                  </Form.Select>
-                )}
-                <ButtonGroup size="sm" className="mt-2">
-                  <Button
-                    variant={otherMode === "team" ? "primary" : "outline-primary"}
-                    disabled={availableOtherTeams.length === 0}
-                    onClick={() => setOtherMode("team")}
-                  >
-                    {m.transfer_mode_team()}
-                  </Button>
-                  <Button
-                    variant={otherMode === "shiftType" ? "primary" : "outline-primary"}
-                    onClick={() => setOtherMode("shiftType")}
-                  >
-                    {m.transfer_mode_shift_type()}
-                  </Button>
-                </ButtonGroup>
+                  ))}
+                </Form.Select>
 
-                {myTeam && sameSchedule && !usingShiftTypeMode && transferStats && (
+                {showTransfers && transferStats && (
                   <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
                     <span className="text-muted small text-uppercase">
                       {m.transfer_flow_label()}
@@ -707,7 +629,7 @@ export function TransferView({
                     </Badge>
                   </div>
                 )}
-                {!(myTeam && sameSchedule && !usingShiftTypeMode) && (
+                {(showOverlapsList || showOverlapsEmptyState) && (
                   <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
                     <span className="text-muted small text-uppercase">
                       {m.transfer_overlaps_section_title()}
@@ -804,12 +726,10 @@ export function TransferView({
               </Col>
             </Row>
 
-            {!showTransfers && (
+            {!sameSchedule && otherScheduleTitle && (
               <Alert variant="secondary" className="d-flex align-items-center gap-2 py-2 mb-3">
                 <i className="bi bi-info-circle" aria-hidden="true"></i>
-                {!sameSchedule && otherScheduleTitle
-                  ? m.transfer_comparing_schedule_note({ scheduleTitle: otherScheduleTitle })
-                  : m.transfer_comparing_shift_type_note()}
+                {m.transfer_comparing_schedule_note({ scheduleTitle: otherScheduleTitle })}
               </Alert>
             )}
 
@@ -818,129 +738,139 @@ export function TransferView({
               <Alert variant="warning" className="mb-0">
                 {m.transfer_date_range_invalid()}
               </Alert>
-            ) : myTeam && showTransfers ? (
-              transfers.length === 0 ? (
-                <EmptyState
-                  icon="bi-calendar-x"
-                  title={m.transfer_no_results_title()}
-                  description={
-                    useCustomRange && (customStartDate || customEndDate)
-                      ? m.transfer_no_results_range({
-                          myTeam: String(myTeam),
-                          otherTeam: String(otherTeam),
-                        })
-                      : m.transfer_no_results_between({
-                          myTeam: String(myTeam),
-                          otherTeam: String(otherTeam),
-                        })
-                  }
-                />
-              ) : (
-                <>
-                  <ErrorBoundary>
-                    <Accordion
-                      defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
-                      alwaysOpen
-                    >
-                      {nonEmptyGroupedTransfers.map((group) => (
-                        <Accordion.Item eventKey={group.key} key={group.key}>
-                          <Accordion.Header>
-                            {group.title}
-                            <Badge bg="secondary" pill className="ms-2">
-                              {group.items.length}
-                            </Badge>
-                          </Accordion.Header>
-                          <Accordion.Body>
-                            <TransferItemsList
-                              transfers={group.items}
-                              myTeam={myTeam}
-                              scheduleType={scheduleType}
-                              timeOffEvents={timeOffEvents}
-                            />
-                          </Accordion.Body>
-                        </Accordion.Item>
-                      ))}
-                    </Accordion>
-                  </ErrorBoundary>
-
-                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
-                    <small className="text-muted">
-                      {transferCountCategory === "one"
-                        ? m.transfer_showing_count_one({ count: String(transfers.length) })
-                        : m.transfer_showing_count_other({ count: String(transfers.length) })}
-                      {hasMoreTransfers && ` ${m.transfer_more_available()}`}
-                    </small>
-                    {hasMoreTransfers && (
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => setTransfersToShow((prev) => prev + 10)}
-                      >
-                        <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
-                        {m.transfer_load_more()}
-                      </Button>
-                    )}
-                  </div>
-                </>
-              )
-            ) : overlaps.length === 0 ? (
-              <EmptyState
-                icon="bi-calendar-x"
-                title={m.transfer_no_overlaps_title()}
-                description={
-                  otherMode === "shiftType"
-                    ? m.transfer_no_overlaps_shift_desc({ label: otherOverlapLabel })
-                    : m.transfer_no_overlaps_desc({ otherTeam: String(otherTeam) })
-                }
-              />
             ) : (
               <>
-                <p className="text-muted small">{m.transfer_overlaps_help()}</p>
-                <ErrorBoundary>
-                  <Accordion
-                    defaultActiveKey={nonEmptyGroupedOverlaps.map((group) => group.key)}
-                    alwaysOpen
-                  >
-                    {nonEmptyGroupedOverlaps.map((group) => (
-                      <Accordion.Item eventKey={group.key} key={group.key}>
-                        <Accordion.Header>
-                          {group.title}
-                          <Badge bg="secondary" pill className="ms-2">
-                            {group.items.length}
-                          </Badge>
-                        </Accordion.Header>
-                        <Accordion.Body>
-                          <OverlapItemsList
-                            overlaps={group.items}
-                            myLabel={myOverlapLabel}
-                            otherLabel={otherOverlapLabel}
-                            timeFormat={timeFormat}
-                            timeOffEvents={timeOffEvents}
-                          />
-                        </Accordion.Body>
-                      </Accordion.Item>
-                    ))}
-                  </Accordion>
-                </ErrorBoundary>
+                {showTransfers && myTeam && (
+                  <>
+                    {transfers.length === 0 ? (
+                      <EmptyState
+                        icon="bi-calendar-x"
+                        title={m.transfer_no_results_title()}
+                        description={
+                          useCustomRange && (customStartDate || customEndDate)
+                            ? m.transfer_no_results_range({
+                                myTeam: String(myTeam),
+                                otherTeam: String(otherTeam),
+                              })
+                            : m.transfer_no_results_between({
+                                myTeam: String(myTeam),
+                                otherTeam: String(otherTeam),
+                              })
+                        }
+                      />
+                    ) : (
+                      <>
+                        <ErrorBoundary>
+                          <Accordion
+                            defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
+                            alwaysOpen
+                          >
+                            {nonEmptyGroupedTransfers.map((group) => (
+                              <Accordion.Item eventKey={group.key} key={group.key}>
+                                <Accordion.Header>
+                                  {group.title}
+                                  <Badge bg="secondary" pill className="ms-2">
+                                    {group.items.length}
+                                  </Badge>
+                                </Accordion.Header>
+                                <Accordion.Body>
+                                  <TransferItemsList
+                                    transfers={group.items}
+                                    myTeam={myTeam}
+                                    scheduleType={scheduleType}
+                                    timeOffEvents={timeOffEvents}
+                                  />
+                                </Accordion.Body>
+                              </Accordion.Item>
+                            ))}
+                          </Accordion>
+                        </ErrorBoundary>
 
-                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
-                  <small className="text-muted">
-                    {overlapCountCategory === "one"
-                      ? m.transfer_showing_overlap_count_one({ count: String(overlaps.length) })
-                      : m.transfer_showing_overlap_count_other({ count: String(overlaps.length) })}
-                    {hasMoreOverlaps && ` ${m.transfer_more_available()}`}
-                  </small>
-                  {hasMoreOverlaps && (
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={() => setTransfersToShow((prev) => prev + 10)}
-                    >
-                      <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
-                      {m.transfer_load_more_overlaps()}
-                    </Button>
-                  )}
-                </div>
+                        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
+                          <small className="text-muted">
+                            {transferCountCategory === "one"
+                              ? m.transfer_showing_count_one({ count: String(transfers.length) })
+                              : m.transfer_showing_count_other({ count: String(transfers.length) })}
+                            {hasMoreTransfers && ` ${m.transfer_more_available()}`}
+                          </small>
+                          {hasMoreTransfers && (
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => setTransfersToShow((prev) => prev + 10)}
+                            >
+                              <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                              {m.transfer_load_more()}
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {showOverlapsEmptyState && (
+                  <div className={showTransfers ? "mt-4" : undefined}>
+                    <EmptyState
+                      icon="bi-calendar-x"
+                      title={m.transfer_no_overlaps_title()}
+                      description={m.transfer_no_overlaps_desc({ otherTeam: String(otherTeam) })}
+                    />
+                  </div>
+                )}
+
+                {showOverlapsList && (
+                  <div className={showTransfers ? "mt-4" : undefined}>
+                    <p className="text-muted small">{m.transfer_overlaps_help()}</p>
+                    <ErrorBoundary>
+                      <Accordion
+                        defaultActiveKey={nonEmptyGroupedOverlaps.map((group) => group.key)}
+                        alwaysOpen
+                      >
+                        {nonEmptyGroupedOverlaps.map((group) => (
+                          <Accordion.Item eventKey={group.key} key={group.key}>
+                            <Accordion.Header>
+                              {group.title}
+                              <Badge bg="secondary" pill className="ms-2">
+                                {group.items.length}
+                              </Badge>
+                            </Accordion.Header>
+                            <Accordion.Body>
+                              <OverlapItemsList
+                                overlaps={group.items}
+                                myLabel={myOverlapLabel}
+                                otherLabel={otherOverlapLabel}
+                                timeFormat={timeFormat}
+                                timeOffEvents={timeOffEvents}
+                              />
+                            </Accordion.Body>
+                          </Accordion.Item>
+                        ))}
+                      </Accordion>
+                    </ErrorBoundary>
+
+                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
+                      <small className="text-muted">
+                        {overlapCountCategory === "one"
+                          ? m.transfer_showing_overlap_count_one({ count: String(overlaps.length) })
+                          : m.transfer_showing_overlap_count_other({
+                              count: String(overlaps.length),
+                            })}
+                        {hasMoreOverlaps && ` ${m.transfer_more_available()}`}
+                      </small>
+                      {hasMoreOverlaps && (
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => setTransfersToShow((prev) => prev + 10)}
+                        >
+                          <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                          {m.transfer_load_more_overlaps()}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </>

@@ -98,7 +98,6 @@ vi.mock("@/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
-  getWorkingShiftTypes: vi.fn(() => ["M", "L", "N"]),
 }));
 
 vi.mock("@/utils/config", async (importOriginal) => {
@@ -718,71 +717,57 @@ describe("TransferView", () => {
     });
   });
 
-  describe("Teamless shift-type lookups", () => {
-    it("still blocks with the team prompt when the user has no team — only the other side can be teamless", () => {
+  describe("Stacked transfer + overlap results", () => {
+    it("shows both transfers and overlaps together when both have content on the same schedule", () => {
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
-        validatedMyTeam: null,
-      });
-
-      renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
-
-      expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: /match by your current shift type/i }),
-      ).not.toBeInTheDocument();
-    });
-
-    it("toggles the other side to shift-type mode", async () => {
-      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
-      const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
-
-      expect(screen.getByLabelText("View transfers with Team:")).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: "Shift type" }));
-
-      expect(screen.queryByLabelText("View transfers with Team:")).not.toBeInTheDocument();
-      expect(screen.getByLabelText(/View overlapping hours with shift:/i)).toBeInTheDocument();
-    });
-
-    it("shows the shift-type comparing note once toggled, even on the same schedule", async () => {
-      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
-      const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
-
-      await user.click(screen.getByRole("button", { name: "Shift type" }));
-
-      expect(screen.getByText(/Matching by shift type instead of a fixed team/i)).toBeInTheDocument();
-    });
-
-    it("shows a shift-type-specific empty state when no overlaps are found in shift mode", async () => {
-      mockUseTransferCalculations.mockReturnValue({
-        ...defaultHookReturn,
-        overlaps: [],
-      });
-      const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
-
-      await user.click(screen.getByRole("button", { name: "Shift type" }));
-
-      expect(screen.getByText("No Overlapping Hours")).toBeInTheDocument();
-      expect(screen.getByText(/No overlapping working hours found for/i)).toBeInTheDocument();
-    });
-
-    it("labels overlap rows by shift type instead of team number in shift mode", async () => {
-      mockUseTransferCalculations.mockReturnValue({
-        ...defaultHookReturn,
+        transfers: [
+          {
+            date: dayjs("2025-01-15"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M" as const,
+            toShiftType: "L" as const,
+            type: "handover" as TransferType,
+          },
+        ],
         overlaps: [{ start: dayjs("2025-01-15 09:00"), end: dayjs("2025-01-15 15:00") }],
       });
-      const user = userEvent.setup();
+
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      await user.click(screen.getByRole("button", { name: "Shift type" }));
+      expect(screen.getAllByText(/Handover/).length).toBeGreaterThan(0);
+      expect(screen.getByText("Overlapping Hours")).toBeInTheDocument();
+      expect(screen.getByText(/09:00.*15:00/)).toBeInTheDocument();
+    });
 
-      // Default shift-type selection is the first working type ("M" -> Morning per the mock)
-      expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
-      expect(screen.queryByText(/^Team 2$/)).not.toBeInTheDocument();
+    it("hides the overlaps section entirely when there are none on the same schedule", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [],
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("No Transfers Found")).toBeInTheDocument();
+      expect(screen.queryByText("Overlapping Hours")).not.toBeInTheDocument();
+      expect(screen.queryByText("No Overlapping Hours")).not.toBeInTheDocument();
+    });
+
+    it("shows only the overlaps empty state across schedules, with no transfers section at all", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("No Overlapping Hours")).toBeInTheDocument();
+      expect(screen.queryByText("No Transfers Found")).not.toBeInTheDocument();
+      expect(screen.queryByText("Transfer Flow")).not.toBeInTheDocument();
     });
   });
 });

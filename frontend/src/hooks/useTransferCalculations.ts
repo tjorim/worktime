@@ -8,7 +8,6 @@ import { getEffectiveTeam, getTeamCountForOption } from "@/utils/scheduleUtils";
 import {
   calculateShift,
   findOverlaps,
-  findTeamWorkingShift,
   getShiftWindow,
   type ShiftType,
   type ShiftWindow,
@@ -35,14 +34,6 @@ interface UseTransferCalculationsProps {
   // (scheduleType from settings), which reproduces the original same-schedule
   // behavior for existing callers.
   otherScheduleType?: ScheduleOption | null;
-  // "Teamless" lookup for the other side only — the user is always
-  // represented by their own real team; the other person may not have a
-  // known team number, so they can be identified by shift type instead
-  // ("whoever's on Evening"). The team behind a shift type can rotate day to
-  // day, so this is resolved fresh per scanned date — see
-  // findTeamWorkingShift. When set, otherTeam is ignored for window
-  // computation and a team number no longer needs to be selected.
-  otherShiftType?: ShiftType | null;
 }
 
 interface UseTransferCalculationsReturn {
@@ -145,13 +136,11 @@ export function useTransferCalculations({
   customStartDate,
   customEndDate,
   otherScheduleType,
-  otherShiftType,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
   const { scheduleType } = useSettings();
   const { lastUsed, updateLastOtherTeam } = useLastUsed();
   const effectiveOtherScheduleType = otherScheduleType ?? scheduleType;
   const sameSchedule = effectiveOtherScheduleType === scheduleType;
-  const usingOtherShiftType = Boolean(otherShiftType);
   // The "other team" belongs to effectiveOtherScheduleType, which may have a
   // different team count than the user's own schedule.
   const teamCount = getTeamCountForOption(effectiveOtherScheduleType);
@@ -195,15 +184,13 @@ export function useTransferCalculations({
 
   // Calculate transfers and overlaps based on current parameters
   const transfersResult = useMemo(() => {
-    // Early return if no valid team, or (for the other side, unless it's
-    // resolved from a shift type instead) no other teams to compare with.
-    if (!validatedMyTeam) {
+    // Early return if no valid team or no other teams to compare with
+    if (!validatedMyTeam || availableOtherTeams.length === 0) {
       return { transfers: [], hasMoreTransfers: false, overlaps: [], hasMoreOverlaps: false };
     }
-    if (
-      !usingOtherShiftType &&
-      (availableOtherTeams.length === 0 || !availableOtherTeams.includes(otherTeam))
-    ) {
+
+    // Guard against stale otherTeam value during schedule transitions
+    if (!availableOtherTeams.includes(otherTeam)) {
       return { transfers: [], hasMoreTransfers: false, overlaps: [], hasMoreOverlaps: false };
     }
 
@@ -239,29 +226,17 @@ export function useTransferCalculations({
         break;
       }
 
-      // Resolve the other side's team for this date — a fixed number
-      // normally, or (in "teamless" mode) whichever team is working the
-      // requested shift type today, which can be a different team from one
-      // date to the next. The user's own side is always their real team.
-      const otherTeamForDate = usingOtherShiftType
-        ? findTeamWorkingShift(scanDate, otherShiftType as ShiftType, effectiveOtherScheduleType)
-        : otherTeam;
-
       // Collect shift windows for overlap detection — each side uses its own
       // schedule, so this works whether or not the two teams share one.
       const myWindow = getShiftWindow(scanDate, validatedMyTeam, scheduleType);
       if (myWindow) myWindows.push(myWindow);
-      const otherWindow = otherTeamForDate
-        ? getShiftWindow(scanDate, otherTeamForDate, effectiveOtherScheduleType)
-        : null;
+      const otherWindow = getShiftWindow(scanDate, otherTeam, effectiveOtherScheduleType);
       if (otherWindow) otherWindows.push(otherWindow);
 
-      // Handover/takeover moments need a fixed team identity on both sides to
-      // label "from"/"to" — they don't apply in teamless (shift-type) mode —
-      // and only make sense when both teams share a schedule, since the
-      // M/L/N code vocabulary (and its meaning) isn't comparable across
-      // different schedule types.
-      if (!sameSchedule || usingOtherShiftType) {
+      // Handover/takeover moments only make sense when both teams share a
+      // schedule — the M/L/N code vocabulary (and its meaning) isn't
+      // comparable across different schedule types.
+      if (!sameSchedule) {
         lastScannedDate = scanDate;
         continue;
       }
@@ -391,8 +366,6 @@ export function useTransferCalculations({
     scheduleType,
     effectiveOtherScheduleType,
     sameSchedule,
-    otherShiftType,
-    usingOtherShiftType,
   ]);
 
   return {

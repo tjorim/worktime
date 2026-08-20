@@ -4,7 +4,6 @@ import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
 import {
   calculateShift,
   findOverlaps,
-  findTeamWorkingShift,
   getAllTeamsShifts,
   getCurrentShiftDay,
   getNextShift,
@@ -12,7 +11,6 @@ import {
   getShift,
   getShiftCode,
   getShiftWindow,
-  getWorkingShiftTypes,
   isCurrentlyWorking,
   SHIFTS,
   calculateWeeklyShiftTarget,
@@ -1236,44 +1234,6 @@ describe("getOffDayProgress Function Tests", () => {
 
     it("returns no overlaps when neither set has any windows", () => {
       expect(findOverlaps([], [])).toEqual([]);
-    });
-  });
-
-  describe("getWorkingShiftTypes", () => {
-    it("lists a schedule's working codes, excluding OFF", () => {
-      expect(getWorkingShiftTypes("5-shift")).toEqual(["M", "L", "N"]);
-      expect(getWorkingShiftTypes("2-shift")).toEqual(["M", "L", "D"]);
-      expect(getWorkingShiftTypes("9-5")).toEqual(["D"]);
-    });
-  });
-
-  describe("findTeamWorkingShift", () => {
-    it("resolves the team currently working a shift type", () => {
-      // On the 5-shift reference date: team 1 Morning, team 4 Night, team 5 Evening (team 2/3 off)
-      expect(findTeamWorkingShift("2025-07-16", "M", "5-shift")).toBe(1);
-      expect(findTeamWorkingShift("2025-07-16", "N", "5-shift")).toBe(4);
-      expect(findTeamWorkingShift("2025-07-16", "L", "5-shift")).toBe(5);
-    });
-
-    it("returns null when the shift type isn't part of the schedule at all", () => {
-      // 9-5 only ever produces "D" or "O" codes — "N" never matches any team.
-      expect(findTeamWorkingShift("2025-07-16", "N", "9-5")).toBeNull();
-    });
-
-    it("resolves to a different team week over week as 2-shift teams rotate", () => {
-      // 2-shift alternates each team between Morning and Evening by week. The
-      // team on Morning this week is on Evening next week — so "who's on
-      // Morning" isn't a fixed team, which is exactly why this resolver exists
-      // instead of a static team lookup.
-      const week1Morning = findTeamWorkingShift("2025-07-14", "M", "2-shift");
-      const week2Morning = findTeamWorkingShift("2025-07-21", "M", "2-shift");
-      expect(week1Morning).not.toBeNull();
-      expect(week2Morning).not.toBeNull();
-      expect(week2Morning).not.toBe(week1Morning);
-
-      // Confirm it's the *same* team that flipped from Morning to Evening,
-      // not just "some other team also happens to be on Evening".
-      expect(findTeamWorkingShift("2025-07-21", "L", "2-shift")).toBe(week1Morning);
     });
   });
 });
