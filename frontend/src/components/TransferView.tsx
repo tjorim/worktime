@@ -42,7 +42,9 @@ interface TransferViewProps {
 /** Find the current user's own time-off event covering the given date, if any. */
 function findTimeOffOnDate(events: CalendarEvent[], date: Dayjs): CalendarEvent | undefined {
   const dateStr = date.format("YYYY-MM-DD");
-  return events.find((event) => event.start <= dateStr && dateStr <= event.end);
+  return events.find(
+    (event) => event.type === "holiday" && event.start <= dateStr && dateStr <= event.end,
+  );
 }
 
 /** Small pill flagging that the user has time off recorded on this date. */

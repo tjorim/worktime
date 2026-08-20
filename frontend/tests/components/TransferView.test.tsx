@@ -140,6 +140,21 @@ const defaultHookReturn = {
   otherScheduleType: "5-shift" as const, // Same as the mocked scheduleType — same-schedule by default
 };
 
+// Default useEventStore return value — satisfies EventStoreContextType so
+// per-test overrides only need to spread and replace getEventsInRange.
+const defaultEventStoreReturn = {
+  rawText: "",
+  entries: [],
+  getEventsInRange: () => [],
+  addEntries: vi.fn(),
+  replaceEntries: vi.fn(),
+  updateEntry: vi.fn(),
+  deleteEntry: vi.fn(),
+  deleteEntries: vi.fn(),
+  importHday: vi.fn(),
+  clearAll: vi.fn(),
+};
+
 const defaultProps = {
   myTeam: 1,
 };
@@ -158,7 +173,7 @@ function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
 describe("TransferView", () => {
   beforeEach(() => {
     mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
-    mockUseEventStore.mockReturnValue({ getEventsInRange: () => [] });
+    mockUseEventStore.mockReturnValue(defaultEventStoreReturn);
     mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
@@ -809,7 +824,10 @@ describe("TransferView", () => {
           },
         ],
       });
-      mockUseEventStore.mockReturnValue({ getEventsInRange: () => [timeOffEvent] });
+      mockUseEventStore.mockReturnValue({
+        ...defaultEventStoreReturn,
+        getEventsInRange: () => [timeOffEvent],
+      });
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
@@ -823,7 +841,10 @@ describe("TransferView", () => {
         overlaps: [{ start: dayjs("2025-01-15 09:00"), end: dayjs("2025-01-15 15:00") }],
         otherScheduleType: "9-5",
       });
-      mockUseEventStore.mockReturnValue({ getEventsInRange: () => [timeOffEvent] });
+      mockUseEventStore.mockReturnValue({
+        ...defaultEventStoreReturn,
+        getEventsInRange: () => [timeOffEvent],
+      });
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
