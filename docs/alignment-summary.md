@@ -1,5 +1,9 @@
 # HdayPlanner - NextShift Alignment Summary
 
+> **Historical record, superseded 2026-08.** HdayPlanner is this project's former name (now
+> Worktime); NextShift was a separate project it was aligned against. Kept as a record of that
+> alignment work, not as current guidance — see #1123.
+
 This document summarizes the alignment work completed to bring HdayPlanner's DevOps and code quality practices in line with NextShift.
 
 ## What Was Added

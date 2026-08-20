@@ -77,7 +77,9 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
 
 - `VERSION` (repo root) for the app version — see "Versioning" above
 - `frontend/src/data/rosters.ts` for roster and schedule definitions
-- `frontend/src/utils/shiftCalculations.ts` for shift logic
+- `frontend/src/utils/shiftCalculations.ts` for shift logic (frontend). The backend keeps its own
+  Python implementation — `backend/app/services/read_models_service.py` — that serves
+  Android/Pebble/MCP read-only clients; see #1119 for keeping the two in sync
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
