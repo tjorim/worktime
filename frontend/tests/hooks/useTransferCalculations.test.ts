@@ -153,4 +153,65 @@ describe("useTransferCalculations", () => {
       });
     });
   });
+
+  describe("Cross-schedule overlaps (#1111)", () => {
+    it("defaults otherScheduleType to the user's own schedule", () => {
+      const { result } = renderHook(() => useTransferCalculations({ myTeam: 1 }), { wrapper });
+      // No scheduleType configured in this wrapper — both sides fall back the same way.
+      expect(result.current.otherScheduleType).toBeNull();
+    });
+
+    it("reflects an explicit otherScheduleType", () => {
+      const { result } = renderHook(
+        () => useTransferCalculations({ myTeam: 1, otherScheduleType: "9-5" }),
+        { wrapper },
+      );
+      expect(result.current.otherScheduleType).toBe("9-5");
+    });
+
+    it("does not exclude the user's own team number when the other schedule differs", () => {
+      // Team numbers on different rosters are unrelated identities — team 1 on
+      // "9-5" isn't "my" team just because I'm also team 1 on my own schedule.
+      const { result } = renderHook(
+        () => useTransferCalculations({ myTeam: 1, otherScheduleType: "9-5" }),
+        { wrapper },
+      );
+      expect(result.current.availableOtherTeams).toEqual([1]);
+    });
+
+    it("computes real overlap windows between two different schedules", () => {
+      // My team 1 on the (default, 5-shift) schedule works Morning 07:00-15:00
+      // on 2025-07-16 (the 5-shift reference date); "9-5" team 1 works Day
+      // 09:00-17:00 that same Wednesday. Overlap should be 09:00-15:00.
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            otherScheduleType: "9-5",
+            customStartDate: "2025-07-16",
+            customEndDate: "2025-07-16",
+          }),
+        { wrapper },
+      );
+
+      expect(result.current.overlaps).toHaveLength(1);
+      expect(result.current.overlaps[0]?.start.format("HH:mm")).toBe("09:00");
+      expect(result.current.overlaps[0]?.end.format("HH:mm")).toBe("15:00");
+    });
+
+    it("does not compute handover/takeover transfers across different schedules", () => {
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            otherScheduleType: "9-5",
+            customStartDate: "2025-07-01",
+            customEndDate: "2025-07-31",
+          }),
+        { wrapper },
+      );
+
+      expect(result.current.transfers).toEqual([]);
+    });
+  });
 });

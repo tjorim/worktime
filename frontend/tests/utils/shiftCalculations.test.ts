@@ -3,12 +3,14 @@ import { SCHEDULE_OPTIONS } from "@/data/rosters";
 import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
 import {
   calculateShift,
+  findOverlaps,
   getAllTeamsShifts,
   getCurrentShiftDay,
   getNextShift,
   getOffDayProgress,
   getShift,
   getShiftCode,
+  getShiftWindow,
   isCurrentlyWorking,
   SHIFTS,
   calculateWeeklyShiftTarget,
@@ -1171,6 +1173,67 @@ describe("getOffDayProgress Function Tests", () => {
 
       expect(weekOne).toEqual({ weeklyHours: 25.5, workingDays: 3 });
       expect(yearBoundaryWeek).toEqual({ weeklyHours: 25.5, workingDays: 3 });
+    });
+  });
+
+  describe("getShiftWindow", () => {
+    it("returns absolute start/end instants for a same-day shift", () => {
+      // Team 1 works Morning (07:00-15:00) on the 5-shift reference date
+      const window = getShiftWindow("2025-07-16", 1, "5-shift");
+
+      expect(window?.start.format("YYYY-MM-DD HH:mm")).toBe("2025-07-16 07:00");
+      expect(window?.end.format("YYYY-MM-DD HH:mm")).toBe("2025-07-16 15:00");
+    });
+
+    it("rolls the end time onto the next day for shifts crossing midnight", () => {
+      // Team 4 works Night (23:00-07:00) on the 5-shift reference date
+      const window = getShiftWindow("2025-07-16", 4, "5-shift");
+
+      expect(window?.start.format("YYYY-MM-DD HH:mm")).toBe("2025-07-16 23:00");
+      expect(window?.end.format("YYYY-MM-DD HH:mm")).toBe("2025-07-17 07:00");
+    });
+
+    it("returns null for a team that is off", () => {
+      // Team 3 is off on the 5-shift reference date
+      const window = getShiftWindow("2025-07-16", 3, "5-shift");
+
+      expect(window).toBeNull();
+    });
+  });
+
+  describe("findOverlaps", () => {
+    it("finds the intersecting portion of two overlapping windows", () => {
+      // 9-5 team (Day: 09:00-17:00) vs 5-shift Team 1 (Morning: 07:00-15:00)
+      const nineToFiveWindow = getShiftWindow("2025-07-16", 1, "9-5");
+      const fiveShiftWindow = getShiftWindow("2025-07-16", 1, "5-shift");
+      expect(nineToFiveWindow).not.toBeNull();
+      expect(fiveShiftWindow).not.toBeNull();
+
+      const overlaps = findOverlaps(
+        nineToFiveWindow ? [nineToFiveWindow] : [],
+        fiveShiftWindow ? [fiveShiftWindow] : [],
+      );
+
+      expect(overlaps).toHaveLength(1);
+      expect(overlaps[0]?.start.format("HH:mm")).toBe("09:00");
+      expect(overlaps[0]?.end.format("HH:mm")).toBe("15:00");
+    });
+
+    it("drops zero-length intersections at a handover boundary", () => {
+      // Team 1 Morning (07:00-15:00) hands over to Team 5 Evening (15:00-23:00) —
+      // they touch at 15:00 but never actually work at the same time.
+      const morning = getShiftWindow("2025-07-16", 1, "5-shift");
+      const evening = getShiftWindow("2025-07-16", 5, "5-shift");
+      expect(morning).not.toBeNull();
+      expect(evening).not.toBeNull();
+
+      const overlaps = findOverlaps(morning ? [morning] : [], evening ? [evening] : []);
+
+      expect(overlaps).toEqual([]);
+    });
+
+    it("returns no overlaps when neither set has any windows", () => {
+      expect(findOverlaps([], [])).toEqual([]);
     });
   });
 });

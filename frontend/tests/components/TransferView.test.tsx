@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "@/components/TransferView";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { useTransferCalculations, TransferType } from "@/hooks/useTransferCalculations";
 import { dayjs } from "@/utils/dateTimeUtils";
 
@@ -34,7 +35,11 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
 });
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(<SettingsProvider>{ui}</SettingsProvider>);
+  return render(
+    <SettingsProvider>
+      <EventStoreProvider>{ui}</EventStoreProvider>
+    </SettingsProvider>,
+  );
 }
 
 // Mock the useTransferCalculations hook
@@ -113,10 +118,13 @@ let mockConsoleWarn: ReturnType<typeof vi.spyOn>;
 const defaultHookReturn = {
   transfers: [],
   hasMoreTransfers: false,
+  overlaps: [],
+  hasMoreOverlaps: false,
   availableOtherTeams: [2, 3, 4, 5],
   otherTeam: 2,
   setOtherTeam: vi.fn(),
   validatedMyTeam: 1, // Add validated team
+  otherScheduleType: "5-shift", // Same as the mocked scheduleType — same-schedule by default
 };
 
 const defaultProps = {
@@ -640,6 +648,72 @@ describe("TransferView", () => {
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(1, 3);
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(2, 4);
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(3, 5);
+    });
+  });
+
+  describe("Cross-schedule overlaps (#1111)", () => {
+    it("shows the comparing-schedule note and overlaps instead of handover/takeover results", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [
+          {
+            start: dayjs("2025-01-15 09:00"),
+            end: dayjs("2025-01-15 15:00"),
+          },
+        ],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      // Comparing-schedule note names the other schedule
+      expect(screen.getByText(/Comparing your schedule with 9-5/)).toBeInTheDocument();
+
+      // Overlap row is shown with its time range
+      expect(screen.getByText("Overlapping Hours")).toBeInTheDocument();
+      expect(screen.getByText(/09:00.*15:00/)).toBeInTheDocument();
+
+      // No handover/takeover UI — that vocabulary doesn't apply across schedules
+      expect(screen.queryByText("Handover")).not.toBeInTheDocument();
+      expect(screen.queryByText("Takeover")).not.toBeInTheDocument();
+      expect(screen.queryByText("Transfer Flow")).not.toBeInTheDocument();
+    });
+
+    it("shows a dedicated empty state when no overlaps are found across schedules", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("No Overlapping Hours")).toBeInTheDocument();
+      // Not the same-schedule "No Transfers Found" empty state
+      expect(screen.queryByText("No Transfers Found")).not.toBeInTheDocument();
+    });
+
+    it("relabels the team selector for overlap comparisons", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        overlaps: [],
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByLabelText("View overlapping hours with Team:")).toBeInTheDocument();
+      expect(screen.queryByLabelText("View transfers with Team:")).not.toBeInTheDocument();
+    });
+
+    it("does not show the comparing-schedule note for a same-schedule comparison", () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.queryByText(/Comparing your schedule with/)).not.toBeInTheDocument();
     });
   });
 });

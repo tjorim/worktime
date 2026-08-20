@@ -40,8 +40,16 @@ vi.mock("@/components/schedule/WeekView", () => ({
 }));
 
 vi.mock("@/components/TransferView", () => ({
-  TransferView: ({ myTeam }: { myTeam: number | null }) => (
-    <div data-testid="transfer-view">TransferView - Team {myTeam}</div>
+  TransferView: ({
+    myTeam,
+    otherScheduleType,
+  }: {
+    myTeam: number | null;
+    otherScheduleType?: ScheduleOption | null;
+  }) => (
+    <div data-testid="transfer-view">
+      TransferView - Team {myTeam} - OtherSchedule: {otherScheduleType || "none"}
+    </div>
   ),
 }));
 
@@ -131,28 +139,34 @@ describe("ScheduleTabView", () => {
       expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
     });
 
-    it("hides the schedule selector on the Transfers tab instead of silently ignoring it", async () => {
-      // Regression test for #1110: the selector let users pick a schedule that
-      // TransferView never honored (it reads the user's own schedule from
-      // settings, not the "viewing schedule" selection). Hiding the selector
-      // in transfer mode keeps the UI from promising something it doesn't do.
+    it("relabels the schedule selector and wires it into TransferView on the Transfers tab (#1110, #1111)", async () => {
+      // Regression test for #1110/#1111: the selector used to stay mounted on
+      // the Transfers tab while TransferView silently ignored it. It's now
+      // relabeled ("Compare with schedule:") and its value is actually passed
+      // through as otherScheduleType, so the selection does something.
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
-      // Selector is visible on Today/Week
+      // Labeled "View schedule:" on Today/Week
       expect(screen.getByLabelText(/View schedule:/i)).toBeInTheDocument();
 
       const transferButton = screen.getByRole("button", { name: /Transfers/i });
       await user.click(transferButton);
 
-      // Selector must not be rendered once on the Transfers tab
+      // Same control, relabeled for the transfer context — not hidden
       expect(screen.queryByLabelText(/View schedule:/i)).not.toBeInTheDocument();
-      expect(screen.getByTestId("transfer-view")).toBeInTheDocument();
+      const selector = screen.getByLabelText(/Compare with schedule:/i);
+      expect(selector).toBeInTheDocument();
+      expect(screen.getByTestId("transfer-view")).toHaveTextContent("OtherSchedule: none");
 
-      // Switching back to Today restores the selector
+      await user.selectOptions(selector, "9-5");
+      expect(screen.getByTestId("transfer-view")).toHaveTextContent("OtherSchedule: 9-5");
+
+      // Switching back to Today restores the original label
       const todayButton = screen.getByRole("button", { name: /Today/i });
       await user.click(todayButton);
       expect(screen.getByLabelText(/View schedule:/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Compare with schedule:/i)).not.toBeInTheDocument();
     });
   });
 

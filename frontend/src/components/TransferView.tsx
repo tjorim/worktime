@@ -1,3 +1,4 @@
+import type { Dayjs } from "dayjs";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -8,11 +9,13 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Accordion from "react-bootstrap/Accordion";
-import type { ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useEventStore } from "@/contexts/EventStoreContext";
+import type { CalendarEvent } from "@/lib/events/types";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
-import { dayjs, formatDisplayDate, formatYYWWD } from "@/utils/dateTimeUtils";
-import { getShift } from "@/utils/shiftCalculations";
+import { dayjs, formatDisplayDate, formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
+import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
@@ -23,17 +26,53 @@ import { getLocale } from "@/paraglide/runtime.js";
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
   initialOtherTeam?: number | null; // Initial other team (e.g., from Team Detail Modal)
+  // Schedule to compare with. When it differs from the user's own schedule,
+  // handover/takeover points aren't shown (the underlying shift-code
+  // vocabulary isn't comparable across schedules) — only overlapping hours.
+  otherScheduleType?: ScheduleOption | null;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+}
+
+/** Find the current user's own time-off event covering the given date, if any. */
+function findTimeOffOnDate(events: CalendarEvent[], date: Dayjs): CalendarEvent | undefined {
+  const dateStr = date.format("YYYY-MM-DD");
+  return events.find((event) => event.start <= dateStr && dateStr <= event.end);
+}
+
+/** Small pill flagging that the user has time off recorded on this date. */
+function TimeOffIndicator({ event }: { event: CalendarEvent | undefined }) {
+  if (!event || event.type !== "holiday") return null;
+  const { color, textColor, typeLabel } = event.meta;
+  const label = m.transfer_you_on_leave({ label: typeLabel });
+
+  return (
+    <span
+      className="badge rounded-pill d-inline-flex align-items-center gap-1"
+      style={{ backgroundColor: color, color: textColor }}
+      title={label}
+    >
+      <i className="bi bi-airplane-fill" aria-hidden="true"></i>
+      <span className="visually-hidden">{label}</span>
+    </span>
+  );
+}
+
+function formatOverlapDuration(overlap: ShiftWindow): string {
+  const totalMinutes = overlap.end.diff(overlap.start, "minute");
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
 interface TransferItemsListProps {
   transfers: TransferInfo[];
   scheduleType: ScheduleOption;
   myTeam: number;
+  timeOffEvents: CalendarEvent[];
 }
 
-function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsListProps) {
+function TransferItemsList({ transfers, scheduleType, myTeam, timeOffEvents }: TransferItemsListProps) {
   return (
     <ListGroup variant="flush">
       {transfers.map((transfer, index) => {
@@ -55,7 +94,10 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
                   ></i>
                   {formatYYWWD(transfer.date)}
                 </div>
-                <small className="text-muted">{formatDisplayDate(transfer.date.toDate())}</small>
+                <small className="text-muted d-flex align-items-center gap-1">
+                  {formatDisplayDate(transfer.date.toDate())}
+                  <TimeOffIndicator event={findTimeOffOnDate(timeOffEvents, transfer.date)} />
+                </small>
               </Col>
               <Col xs={8} md={4}>
                 <small className="text-muted text-uppercase mb-1 d-none d-md-block">
@@ -137,6 +179,84 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
   );
 }
 
+interface OverlapItemsListProps {
+  overlaps: ShiftWindow[];
+  myTeam: number;
+  otherTeam: number;
+  otherScheduleTitle: string | null;
+  timeFormat: "12h" | "24h";
+  timeOffEvents: CalendarEvent[];
+}
+
+function OverlapItemsList({
+  overlaps,
+  myTeam,
+  otherTeam,
+  otherScheduleTitle,
+  timeFormat,
+  timeOffEvents,
+}: OverlapItemsListProps) {
+  return (
+    <ListGroup variant="flush">
+      {overlaps.map((overlap, index) => {
+        const isLast = index === overlaps.length - 1;
+
+        return (
+          <ListGroup.Item
+            key={`${overlap.start.toISOString()}-${overlap.end.toISOString()}-${index}`}
+            className={`px-0 py-2 border-0 border-bottom${isLast ? " border-bottom-0" : ""}`}
+          >
+            <Row className="g-2 align-items-center">
+              <Col xs={5} md={3}>
+                <div className="fw-semibold d-flex align-items-center gap-2">
+                  <i className="bi bi-people-fill text-primary" aria-hidden="true"></i>
+                  {formatYYWWD(overlap.start)}
+                </div>
+                <small className="text-muted d-flex align-items-center gap-1">
+                  {formatDisplayDate(overlap.start.toDate())}
+                  <TimeOffIndicator event={findTimeOffOnDate(timeOffEvents, overlap.start)} />
+                </small>
+              </Col>
+              <Col xs={7} md={4}>
+                <small className="text-muted text-uppercase mb-1 d-none d-md-block">
+                  {m.transfer_teams_column()}
+                </small>
+                <div className="d-flex align-items-center gap-1 flex-wrap">
+                  <Badge bg="primary" className="text-nowrap" pill>
+                    <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
+                    {m.team_label({ team: String(myTeam) })}
+                  </Badge>
+                  <i className="bi bi-arrow-left-right text-muted" aria-hidden="true"></i>
+                  <Badge bg="secondary" className="text-nowrap" pill>
+                    {otherScheduleTitle ? `${otherScheduleTitle} ` : ""}
+                    {m.team_label({ team: String(otherTeam) })}
+                  </Badge>
+                </div>
+              </Col>
+              <Col xs={12} md={5}>
+                <div className="d-flex flex-column align-items-start align-items-md-end">
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">
+                    {m.transfer_shift_column()}
+                  </small>
+                  <div className="d-flex align-items-center gap-2 flex-nowrap">
+                    <span className="fw-semibold">
+                      {formatTimeByPreference(overlap.start, timeFormat)}–
+                      {formatTimeByPreference(overlap.end, timeFormat)}
+                    </span>
+                    <Badge bg="light" text="dark" pill>
+                      {formatOverlapDuration(overlap)}
+                    </Badge>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          </ListGroup.Item>
+        );
+      })}
+    </ListGroup>
+  );
+}
+
 /**
  * Display transfer events between the user's team and a selected other team.
  *
@@ -154,6 +274,7 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
 export function TransferView({
   myTeam: inputMyTeam,
   initialOtherTeam,
+  otherScheduleType,
   onChangeSchedule,
   onChangeTeam,
 }: TransferViewProps) {
@@ -170,7 +291,9 @@ export function TransferView({
   const [customEndDate, setCustomEndDate] = useState("");
   const [currentDay, setCurrentDay] = useState(() => dayjs().startOf("day"));
 
-  const { scheduleType } = useSettings();
+  const { scheduleType, settings } = useSettings();
+  const { timeFormat } = settings;
+  const { getEventsInRange } = useEventStore();
   const locale = getLocale();
   const isDateRangeInvalid = useMemo(
     () =>
@@ -184,17 +307,29 @@ export function TransferView({
   // Use the transfer calculations hook - it validates the team number
   const {
     transfers,
+    overlaps,
+    hasMoreOverlaps,
     availableOtherTeams,
     otherTeam,
     setOtherTeam,
     hasMoreTransfers,
     validatedMyTeam,
+    otherScheduleType: effectiveOtherScheduleType,
   } = useTransferCalculations({
     myTeam: inputMyTeam,
     limit: transfersToShow,
     customStartDate: useCustomRange && !isDateRangeInvalid ? customStartDate : undefined,
     customEndDate: useCustomRange && !isDateRangeInvalid ? customEndDate : undefined,
+    otherScheduleType,
   });
+
+  // Same-schedule comparisons show handover/takeover points; cross-schedule
+  // comparisons only show overlapping hours (see TransferViewProps).
+  const sameSchedule = effectiveOtherScheduleType === scheduleType;
+  const otherScheduleTitle = sameSchedule
+    ? null
+    : (SCHEDULE_OPTIONS.find((option) => option.value === effectiveOtherScheduleType)?.title ??
+      effectiveOtherScheduleType);
 
   // Use validated team for display
   const myTeam = validatedMyTeam;
@@ -202,7 +337,7 @@ export function TransferView({
   // Reset pagination when filters change
   useEffect(() => {
     setTransfersToShow(10);
-  }, [otherTeam, useCustomRange, customStartDate, customEndDate]);
+  }, [otherTeam, useCustomRange, customStartDate, customEndDate, effectiveOtherScheduleType]);
 
   // Set initial other team if provided (e.g., when coming from Team Detail Modal)
   const initialSetRef = useRef(false);
@@ -241,6 +376,39 @@ export function TransferView({
     };
   }, [transfers]);
 
+  const overlapStats = useMemo(() => {
+    const firstOverlap = overlaps[0];
+    if (!firstOverlap) {
+      return null;
+    }
+
+    const { earliest, latest } = overlaps.reduce(
+      (acc, overlap) => ({
+        earliest: overlap.start.isBefore(acc.earliest) ? overlap.start : acc.earliest,
+        latest: overlap.end.isAfter(acc.latest) ? overlap.end : acc.latest,
+      }),
+      { earliest: firstOverlap.start, latest: firstOverlap.end },
+    );
+
+    return { earliest, latest };
+  }, [overlaps]);
+
+  // Current user's own time off covering the visible transfers/overlaps —
+  // used to flag handovers or overlaps that fall on a day the user is away.
+  const timeOffRange = useMemo(() => {
+    const dates = [...transfers.map((t) => t.date), ...overlaps.map((o) => o.start)];
+    const firstDate = dates[0];
+    if (!firstDate) return null;
+    const earliest = dates.reduce((min, d) => (d.isBefore(min) ? d : min), firstDate);
+    const latest = dates.reduce((max, d) => (d.isAfter(max) ? d : max), firstDate);
+    return { start: earliest.toDate(), end: latest.toDate() };
+  }, [transfers, overlaps]);
+
+  const timeOffEvents = useMemo(
+    () => (timeOffRange ? getEventsInRange(timeOffRange.start, timeOffRange.end) : []),
+    [getEventsInRange, timeOffRange],
+  );
+
   // {m.timeoff_clear_selection_btn()} dates when custom range is disabled
   useEffect(() => {
     if (!useCustomRange) {
@@ -261,18 +429,19 @@ export function TransferView({
   }, [currentDay]);
 
   const transferDateRange = useMemo(() => {
-    if (!transferStats?.earliest || !transferStats?.latest) {
+    const stats = sameSchedule ? transferStats : overlapStats;
+    if (!stats?.earliest || !stats?.latest) {
       return "-";
     }
-    if (transferStats.earliest.isSame(transferStats.latest, "day")) {
-      return formatDisplayDate(transferStats.earliest.toDate());
+    if (stats.earliest.isSame(stats.latest, "day")) {
+      return formatDisplayDate(stats.earliest.toDate());
     }
     return (
-      formatDisplayDate(transferStats.earliest.toDate()) +
+      formatDisplayDate(stats.earliest.toDate()) +
       m.transfer_range_to() +
-      formatDisplayDate(transferStats.latest.toDate())
+      formatDisplayDate(stats.latest.toDate())
     );
-  }, [transferStats]);
+  }, [sameSchedule, transferStats, overlapStats]);
 
   const displayedDateRangeValue = useMemo(() => {
     if (!useCustomRange) {
@@ -331,6 +500,43 @@ export function TransferView({
     [transfers.length, locale],
   );
 
+  const groupedOverlaps = useMemo(() => {
+    const todayStart = currentDay.startOf("day");
+    const nextWeek: typeof overlaps = [];
+    const nextMonth: typeof overlaps = [];
+    const future: typeof overlaps = [];
+    const past: typeof overlaps = [];
+
+    overlaps.forEach((overlap) => {
+      const diffDays = overlap.start.startOf("day").diff(todayStart, "day");
+      if (diffDays < 0) {
+        past.push(overlap);
+      } else if (diffDays < 7) {
+        nextWeek.push(overlap);
+      } else if (diffDays <= 30) {
+        nextMonth.push(overlap);
+      } else {
+        future.push(overlap);
+      }
+    });
+
+    return [
+      { key: "next-7", title: m.transfer_next_7_days(), items: nextWeek },
+      { key: "next-30", title: m.transfer_next_30_days(), items: nextMonth },
+      { key: "further", title: m.transfer_further_ahead(), items: future },
+      { key: "past", title: m.transfer_past(), items: past },
+    ];
+  }, [currentDay, overlaps]);
+
+  const nonEmptyGroupedOverlaps = useMemo(
+    () => groupedOverlaps.filter((group) => group.items.length > 0),
+    [groupedOverlaps],
+  );
+  const overlapCountCategory = useMemo(
+    () => new Intl.PluralRules(locale).select(overlaps.length),
+    [overlaps.length, locale],
+  );
+
   return (
     <Card>
       <Card.Header className="d-flex justify-content-between align-items-center">
@@ -375,7 +581,9 @@ export function TransferView({
               <Col md={4}>
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
-                  {m.transfer_view_with_team_label()}
+                  {sameSchedule
+                    ? m.transfer_view_with_team_label()
+                    : m.transfer_view_overlaps_with_team_label()}
                 </Form.Label>
                 <Form.Select
                   id={otherTeamSelectId}
@@ -389,7 +597,7 @@ export function TransferView({
                     </option>
                   ))}
                 </Form.Select>
-                {transferStats && (
+                {sameSchedule && transferStats && (
                   <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
                     <span className="text-muted small text-uppercase">
                       {m.transfer_flow_label()}
@@ -401,6 +609,17 @@ export function TransferView({
                     <Badge bg="info" pill className="d-inline-flex align-items-center gap-1">
                       <i className="bi bi-arrow-left-circle" aria-hidden="true"></i>
                       {m.transfer_takeovers_count({ count: String(transferStats.takeovers) })}
+                    </Badge>
+                  </div>
+                )}
+                {!sameSchedule && (
+                  <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
+                    <span className="text-muted small text-uppercase">
+                      {m.transfer_overlaps_section_title()}
+                    </span>
+                    <Badge bg="primary" pill className="d-inline-flex align-items-center gap-1">
+                      <i className="bi bi-people-fill" aria-hidden="true"></i>
+                      {overlaps.length}
                     </Badge>
                   </div>
                 )}
@@ -490,35 +709,98 @@ export function TransferView({
               </Col>
             </Row>
 
-            {/* Transfer Results */}
+            {!sameSchedule && otherScheduleTitle && (
+              <Alert variant="secondary" className="d-flex align-items-center gap-2 py-2 mb-3">
+                <i className="bi bi-info-circle" aria-hidden="true"></i>
+                {m.transfer_comparing_schedule_note({ scheduleTitle: otherScheduleTitle })}
+              </Alert>
+            )}
+
+            {/* Results */}
             {isDateRangeInvalid ? (
               <Alert variant="warning" className="mb-0">
                 {m.transfer_date_range_invalid()}
               </Alert>
-            ) : transfers.length === 0 ? (
+            ) : sameSchedule ? (
+              transfers.length === 0 ? (
+                <EmptyState
+                  icon="bi-calendar-x"
+                  title={m.transfer_no_results_title()}
+                  description={
+                    useCustomRange && (customStartDate || customEndDate)
+                      ? m.transfer_no_results_range({
+                          myTeam: String(myTeam),
+                          otherTeam: String(otherTeam),
+                        })
+                      : m.transfer_no_results_between({
+                          myTeam: String(myTeam),
+                          otherTeam: String(otherTeam),
+                        })
+                  }
+                />
+              ) : (
+                <>
+                  <ErrorBoundary>
+                    <Accordion
+                      defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
+                      alwaysOpen
+                    >
+                      {nonEmptyGroupedTransfers.map((group) => (
+                        <Accordion.Item eventKey={group.key} key={group.key}>
+                          <Accordion.Header>
+                            {group.title}
+                            <Badge bg="secondary" pill className="ms-2">
+                              {group.items.length}
+                            </Badge>
+                          </Accordion.Header>
+                          <Accordion.Body>
+                            <TransferItemsList
+                              transfers={group.items}
+                              myTeam={myTeam}
+                              scheduleType={scheduleType}
+                              timeOffEvents={timeOffEvents}
+                            />
+                          </Accordion.Body>
+                        </Accordion.Item>
+                      ))}
+                    </Accordion>
+                  </ErrorBoundary>
+
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
+                    <small className="text-muted">
+                      {transferCountCategory === "one"
+                        ? m.transfer_showing_count_one({ count: String(transfers.length) })
+                        : m.transfer_showing_count_other({ count: String(transfers.length) })}
+                      {hasMoreTransfers && ` ${m.transfer_more_available()}`}
+                    </small>
+                    {hasMoreTransfers && (
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => setTransfersToShow((prev) => prev + 10)}
+                      >
+                        <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                        {m.transfer_load_more()}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )
+            ) : overlaps.length === 0 ? (
               <EmptyState
                 icon="bi-calendar-x"
-                title={m.transfer_no_results_title()}
-                description={
-                  useCustomRange && (customStartDate || customEndDate)
-                    ? m.transfer_no_results_range({
-                        myTeam: String(myTeam),
-                        otherTeam: String(otherTeam),
-                      })
-                    : m.transfer_no_results_between({
-                        myTeam: String(myTeam),
-                        otherTeam: String(otherTeam),
-                      })
-                }
+                title={m.transfer_no_overlaps_title()}
+                description={m.transfer_no_overlaps_desc({ otherTeam: String(otherTeam) })}
               />
             ) : (
               <>
+                <p className="text-muted small">{m.transfer_overlaps_help()}</p>
                 <ErrorBoundary>
                   <Accordion
-                    defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
+                    defaultActiveKey={nonEmptyGroupedOverlaps.map((group) => group.key)}
                     alwaysOpen
                   >
-                    {nonEmptyGroupedTransfers.map((group) => (
+                    {nonEmptyGroupedOverlaps.map((group) => (
                       <Accordion.Item eventKey={group.key} key={group.key}>
                         <Accordion.Header>
                           {group.title}
@@ -527,10 +809,13 @@ export function TransferView({
                           </Badge>
                         </Accordion.Header>
                         <Accordion.Body>
-                          <TransferItemsList
-                            transfers={group.items}
+                          <OverlapItemsList
+                            overlaps={group.items}
                             myTeam={myTeam}
-                            scheduleType={scheduleType}
+                            otherTeam={otherTeam}
+                            otherScheduleTitle={otherScheduleTitle}
+                            timeFormat={timeFormat}
+                            timeOffEvents={timeOffEvents}
                           />
                         </Accordion.Body>
                       </Accordion.Item>
@@ -540,19 +825,19 @@ export function TransferView({
 
                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
                   <small className="text-muted">
-                    {transferCountCategory === "one"
-                      ? m.transfer_showing_count_one({ count: String(transfers.length) })
-                      : m.transfer_showing_count_other({ count: String(transfers.length) })}
-                    {hasMoreTransfers && ` ${m.transfer_more_available()}`}
+                    {overlapCountCategory === "one"
+                      ? m.transfer_showing_overlap_count_one({ count: String(overlaps.length) })
+                      : m.transfer_showing_overlap_count_other({ count: String(overlaps.length) })}
+                    {hasMoreOverlaps && ` ${m.transfer_more_available()}`}
                   </small>
-                  {hasMoreTransfers && (
+                  {hasMoreOverlaps && (
                     <Button
                       variant="outline-primary"
                       size="sm"
                       onClick={() => setTransfersToShow((prev) => prev + 10)}
                     >
                       <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
-                      {m.transfer_load_more()}
+                      {m.transfer_load_more_overlaps()}
                     </Button>
                   )}
                 </div>
