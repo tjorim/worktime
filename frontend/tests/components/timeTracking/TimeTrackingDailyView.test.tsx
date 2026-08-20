@@ -34,6 +34,7 @@ describe("TimeTrackingDailyView", () => {
     selectedDate: string;
     onSelectedDateChange: (date: string) => void;
     onAddTask: (payload: StoredTimeTrackingTask) => Promise<boolean>;
+    onUpdateLabels: (labels: typeof TEST_LABELS) => void;
     onUpdateTaskTimes: (payload: {
       id: string;
       newStartTime: string;
@@ -54,6 +55,7 @@ describe("TimeTrackingDailyView", () => {
       selectedDate: dayjs().format("YYYY-MM-DD"),
       onSelectedDateChange: vi.fn(),
       onAddTask: vi.fn().mockResolvedValue(true),
+      onUpdateLabels: vi.fn(),
       onUpdateTaskTimes: vi.fn(),
       onRemoveTask: vi.fn(),
       onToggleBreak: vi.fn(),
@@ -317,6 +319,31 @@ describe("TimeTrackingDailyView", () => {
       expect(screen.getByLabelText(/^Label$/i)).toHaveValue("Support");
       expect(screen.getByLabelText(/^Start$/i)).toHaveValue("08:00");
       expect(screen.getByLabelText(/^Stop$/i)).toHaveValue("12:00");
+    });
+  });
+
+  describe("Label Creation", () => {
+    it("shows help text and a create-label action when no labels exist", () => {
+      renderView({ labels: [] });
+
+      expect(
+        screen.getByText(/Add at least one label before you can log tasks/i),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Create a label/i })).toBeInTheDocument();
+    });
+
+    it("creates a label from the inline modal and selects it", async () => {
+      const user = userEvent.setup();
+      const onUpdateLabels = vi.fn();
+      renderView({ labels: [], onUpdateLabels });
+
+      await user.click(screen.getByRole("button", { name: /Create a label/i }));
+      const dialog = screen.getByRole("dialog");
+      await user.type(within(dialog).getByLabelText(/Label name/i), "Support");
+      await user.click(within(dialog).getByRole("button", { name: /Save Label/i }));
+
+      expect(onUpdateLabels).toHaveBeenCalledWith([expect.objectContaining({ name: "Support" })]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 

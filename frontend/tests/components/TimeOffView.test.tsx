@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
@@ -47,7 +47,7 @@ describe("TimeOffView", () => {
       expect(addButton).toBeInTheDocument();
     });
 
-    it("should show Import and Export buttons", () => {
+    it("should show the Import button but not Export until an event exists", async () => {
       render(
         <AllProviders>
           <TimeOffView />
@@ -55,6 +55,15 @@ describe("TimeOffView", () => {
       );
 
       expect(screen.getByRole("button", { name: /Import/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Export/i })).not.toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-01-15");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
       expect(screen.getByRole("button", { name: /Export/i })).toBeInTheDocument();
     });
 
@@ -347,25 +356,33 @@ describe("TimeOffView", () => {
   });
 
   describe("Export", () => {
-    it("should show error when exporting with no events", async () => {
+    it("hides the Export button when there are no events", () => {
       render(
         <AllProviders>
           <TimeOffView />
         </AllProviders>,
       );
 
-      const user = userEvent.setup();
+      expect(screen.queryByRole("button", { name: /Export events/i })).not.toBeInTheDocument();
+    });
 
-      // With no events, clicking Export shows an error toast directly (no dialog)
-      await user.click(screen.getByRole("button", { name: /Export events/i }));
+    it("should show error when exporting with no events via keyboard shortcut", () => {
+      render(
+        <AllProviders>
+          <TimeOffView isActive />
+        </AllProviders>,
+      );
 
-      // Verify error toast appears
+      // The Export button is hidden with no events, but the Ctrl+S shortcut still
+      // reaches the guarded handler directly.
+      fireEvent.keyDown(document, { key: "s", ctrlKey: true });
+
       expect(screen.getByText("No events to export")).toBeInTheDocument();
     });
   });
 
   describe("Accessibility", () => {
-    it("should have proper ARIA labels on buttons", () => {
+    it("should have proper ARIA labels on buttons", async () => {
       render(
         <AllProviders>
           <TimeOffView />
@@ -374,6 +391,14 @@ describe("TimeOffView", () => {
 
       expect(screen.getByRole("button", { name: /Add Event/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Import/i })).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-01-15");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
       expect(screen.getByRole("button", { name: /Export/i })).toBeInTheDocument();
     });
 
@@ -403,6 +428,34 @@ describe("TimeOffView", () => {
   });
 
   describe("Bulk Actions", () => {
+    it("hides the selection toolbar until a row is selected", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      expect(screen.queryByRole("button", { name: /Delete Selected/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Select all events/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Clear selection/i })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-01-15");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      expect(screen.queryByRole("button", { name: /Delete Selected/i })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("checkbox", { name: /Select Holiday/i }));
+
+      expect(screen.getByRole("button", { name: /Delete Selected/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Select all events/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Clear selection/i })).toBeInTheDocument();
+    });
+
     it("should toggle bulk selection using the header checkbox", async () => {
       render(
         <AllProviders>

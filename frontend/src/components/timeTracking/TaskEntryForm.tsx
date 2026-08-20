@@ -37,6 +37,7 @@ type TaskEntryFormProps = {
   addDisabledReason?: string;
   onSubmit: () => void;
   onStartNow: () => void;
+  onCreateLabel?: () => void;
 };
 
 export function TaskEntryForm({
@@ -59,6 +60,7 @@ export function TaskEntryForm({
   addDisabledReason,
   onSubmit,
   onStartNow,
+  onCreateLabel,
 }: TaskEntryFormProps) {
   const selectedLabelOption = useSelectedLabelOption(labels, label);
   const selectedGanttTaskOption = useSelectedGanttTaskOption(ganttTasks, ganttTaskId);
@@ -112,11 +114,27 @@ export function TaskEntryForm({
             inputId="timeTrackerLabel"
             isDisabled={labels.length === 0}
             placeholder={labels.length === 0 ? m.tt_add_labels_first() : m.tt_choose_label()}
+            aria-describedby={labels.length === 0 ? "timeTrackerLabelHelp" : undefined}
             options={labels.map((item) => ({ value: item.id, label: item.name }))}
             value={selectedLabelOption}
             onChange={(selected) => onLabelChange(selected?.value ?? "")}
             classNames={bootstrapSelectClassNames}
           />
+          {labels.length === 0 && (
+            <Form.Text id="timeTrackerLabelHelp" muted className="d-block">
+              {m.tt_add_labels_first_task_help()}
+              {onCreateLabel && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="p-0 ms-1 align-baseline"
+                  onClick={onCreateLabel}
+                >
+                  {m.tt_create_label_action()}
+                </Button>
+              )}
+            </Form.Text>
+          )}
         </Form.Group>
       </Col>
       {showGanttPicker && (

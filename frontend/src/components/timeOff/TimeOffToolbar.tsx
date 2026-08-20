@@ -47,29 +47,7 @@ function TimeOffToolbarComponent({
           {m.timeoff_management_heading()}
         </span>
         <div className="d-flex flex-wrap gap-2">
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={onImport}
-            aria-label={m.timeoff_import_events_aria()}
-          >
-            <i className="bi bi-download me-1" aria-hidden="true"></i>
-            {m.timeoff_import_btn()}
-          </Button>
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={onExport}
-            aria-label={m.timeoff_export_events_aria()}
-          >
-            <i className="bi bi-upload me-1" aria-hidden="true"></i>
-            {m.timeoff_export_btn()}
-          </Button>
-        </div>
-      </div>
-      <div className="d-flex flex-wrap gap-2">
-        {viewMode === "table" && (
-          <>
+          {viewMode === "table" && (
             <Button
               variant="primary"
               size="sm"
@@ -79,37 +57,59 @@ function TimeOffToolbarComponent({
               <i className="bi bi-plus-lg me-1" aria-hidden="true"></i>
               {m.timeoff_add_event_btn()}
             </Button>
+          )}
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={onImport}
+            aria-label={m.timeoff_import_events_aria()}
+          >
+            <i className="bi bi-download me-1" aria-hidden="true"></i>
+            {m.timeoff_import_btn()}
+          </Button>
+          {eventCount > 0 && (
             <Button
-              variant="outline-danger"
+              variant="outline-primary"
               size="sm"
-              onClick={onBulkDelete}
-              disabled={selectedCount === 0}
-              aria-label={m.timeoff_delete_selected_events_aria()}
+              onClick={onExport}
+              aria-label={m.timeoff_export_events_aria()}
             >
-              <i className="bi bi-trash me-1" aria-hidden="true"></i>
-              {m.timeoff_delete_selected_btn()}
+              <i className="bi bi-upload me-1" aria-hidden="true"></i>
+              {m.timeoff_export_btn()}
             </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={onSelectAll}
-              disabled={eventCount === 0 || selectedCount === eventCount}
-              aria-label={m.timeoff_select_all_events_aria()}
-            >
-              {m.timeoff_select_all_btn()}
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={onClearSelection}
-              disabled={selectedCount === 0}
-              aria-label={m.timeoff_clear_selection_aria()}
-            >
-              {m.timeoff_clear_selection_btn()}
-            </Button>
-          </>
-        )}
+          )}
+        </div>
       </div>
+      {viewMode === "table" && selectedCount > 0 && (
+        <div className="d-flex flex-wrap gap-2">
+          <Button
+            variant="outline-danger"
+            size="sm"
+            onClick={onBulkDelete}
+            aria-label={m.timeoff_delete_selected_events_aria()}
+          >
+            <i className="bi bi-trash me-1" aria-hidden="true"></i>
+            {m.timeoff_delete_selected_btn()}
+          </Button>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={onSelectAll}
+            disabled={selectedCount === eventCount}
+            aria-label={m.timeoff_select_all_events_aria()}
+          >
+            {m.timeoff_select_all_btn()}
+          </Button>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={onClearSelection}
+            aria-label={m.timeoff_clear_selection_aria()}
+          >
+            {m.timeoff_clear_selection_btn()}
+          </Button>
+        </div>
+      )}
     </Card.Header>
   );
 }

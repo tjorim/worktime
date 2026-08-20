@@ -15,9 +15,12 @@ import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
+import { LabelModal } from "./LabelModal";
 import {
   buildLabelColorMap,
   buildLabelNameMap,
+  isHexColor,
+  normalizeLabelName,
   useDefaultLabelColor,
   type Label,
 } from "./constants";
@@ -32,6 +35,7 @@ type TimeTrackingDailyViewProps = {
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   onAddTask: (payload: StoredTimeTrackingTask) => Promise<boolean>;
+  onUpdateLabels: (labels: Label[]) => void;
   onUpdateTaskTimes: (payload: {
     id: string;
     newStartTime: string;
@@ -58,6 +62,7 @@ export function TimeTrackingDailyView({
   selectedDate,
   onSelectedDateChange,
   onAddTask,
+  onUpdateLabels,
   onUpdateTaskTimes,
   onRemoveTask,
   onToggleBreak,
@@ -85,6 +90,8 @@ export function TimeTrackingDailyView({
   const showGanttPicker = settings.enableGantt && ganttTasks.length > 0;
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
+  const [createLabelForm, setCreateLabelForm] = useState({ name: "", color: "" });
   const liveTime = useLiveTime({ precision: "second" });
   const isDailyCurrent = dayjs(date).isSame(dayjs(), "day");
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
@@ -321,6 +328,37 @@ export function TimeTrackingDailyView({
     toast.showSuccess(m.tt_template_applied({ name: template.text }));
   };
 
+  const handleOpenCreateLabelModal = () => {
+    setCreateLabelForm({ name: "", color: defaultLabelColor });
+    setShowCreateLabelModal(true);
+  };
+
+  const handleCloseCreateLabelModal = () => {
+    setShowCreateLabelModal(false);
+  };
+
+  const handleCreateLabelSubmit = () => {
+    const name = normalizeLabelName(createLabelForm.name);
+    if (!name) {
+      toast.showError(m.tt_label_name_required());
+      return;
+    }
+    if (!isHexColor(createLabelForm.color)) {
+      toast.showError(m.tt_label_color_invalid());
+      return;
+    }
+    if (labels.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+      toast.showError(m.tt_label_name_unique());
+      return;
+    }
+
+    const newLabel: Label = { id: crypto.randomUUID(), name, color: createLabelForm.color };
+    onUpdateLabels([...labels, newLabel]);
+    setSelectedLabel(newLabel.id);
+    toast.showSuccess(m.tt_label_added());
+    setShowCreateLabelModal(false);
+  };
+
   return (
     <Card className="shadow-sm">
       <Card.Header>
@@ -372,6 +410,7 @@ export function TimeTrackingDailyView({
           addDisabledReason={addDisabledReason}
           onSubmit={handleAddTask}
           onStartNow={handleStartNow}
+          onCreateLabel={handleOpenCreateLabelModal}
         />
 
         <TimelineProgressBar
@@ -401,6 +440,16 @@ export function TimeTrackingDailyView({
         runningTask={runningTask}
         onRemoveTask={onRemoveTask}
         onClose={() => setShowDiscardConfirm(false)}
+      />
+
+      <LabelModal
+        show={showCreateLabelModal}
+        title={m.tt_add_label_title()}
+        submitLabel={m.tt_save_label()}
+        value={createLabelForm}
+        onChange={setCreateLabelForm}
+        onClose={handleCloseCreateLabelModal}
+        onSubmit={handleCreateLabelSubmit}
       />
     </Card>
   );

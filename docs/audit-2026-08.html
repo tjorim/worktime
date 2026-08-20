@@ -535,17 +535,17 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">7</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">19</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">6</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">19</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">18</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
       marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for what's left — 7 medium, 12 low — is at the bottom of the page, along with three
+      order for what's left — 6 medium, 12 low — is at the bottom of the page, along with three
       in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
@@ -1144,12 +1144,12 @@
           backup/restore/reset only.</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a>
           <span class="area">frontend</span>
           <h3>Disabled actions and empty states don't explain themselves</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>"Start Now" and "Add Task" disable with no stated reason and, on mobile, full-width pale
           fills that read as enabled. The Label field's only guidance is the placeholder "Add labels
@@ -1158,6 +1158,15 @@
           every day, doesn't. Separately, the empty Time Off tab ships Delete&nbsp;Selected,
           Select&nbsp;All and Clear&nbsp;Selection above a table that doesn't exist.</p>
         <div class="refs"><b>timeTracking/TaskEntryForm.tsx:114</b> <b>TaskEntryForm.tsx:171</b> <b>timeOff/TimeOffToolbar.tsx:97</b></div>
+        <div class="verified"><span>The disabled Start Now/Add Task buttons already carried
+          <code>aria-describedby</code> tooltips naming the missing field. Added the missing half:
+          <code>TaskEntryForm.tsx</code> now renders <code>tt_add_labels_first_task_help()</code>
+          under the Label field when empty, with an inline "Create a label" action that opens a
+          <code>LabelModal</code> without leaving the form (<code>TimeTrackingDailyView.tsx</code>,
+          wired to <code>updateLabels</code> via <code>TimeTrackingView.tsx</code>). For the Time Off
+          tab, <code>TimeOffToolbar.tsx</code> now hides Export until an event exists and only reveals
+          the Delete&nbsp;Selected/Select&nbsp;All/Clear&nbsp;Selection group once a row is actually
+          selected, with Add&nbsp;Event moved to primary position in the header row.</span></div>
       </div>
 
       <div class="finding med">
@@ -1507,7 +1516,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">7</span></h3>
+      <h3>Medium <span class="sec-count">6</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1523,12 +1532,6 @@
             </tr>
             <tr>
               <td class="seq-n">2</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
-              <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
-                decision needed.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
               <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
@@ -1536,13 +1539,13 @@
                 patch.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
               <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
                 values but no architecture decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1550,14 +1553,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
                 so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once

@@ -257,6 +257,8 @@
   "form_label_color": "Labelkleur",
   "form_label_color_hex_aria": "Labelkleur (hex)",
   "tt_add_labels_first_help": "Voeg ten minste één label toe in de instellingen voor tijdregistratie voordat u sjablonen maakt.",
+  "tt_add_labels_first_task_help": "Voeg ten minste één label toe voordat u taken kunt registreren.",
+  "tt_create_label_action": "Label aanmaken",
   "tt_templates_heading": "Sjablonen",
   "tt_add_template_btn": "Sjabloon toevoegen",
   "tt_no_templates_title": "Nog geen sjablonen",

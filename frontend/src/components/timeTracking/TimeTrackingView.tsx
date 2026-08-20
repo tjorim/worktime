@@ -35,8 +35,16 @@ export function TimeTrackingView({
   const { myTeam, scheduleType } = useSettings();
   const { lastUsed, updateLastTimeTrackingView } = useLastUsed();
   const toast = useToast();
-  const { tasks, templates, labels, addTask, updateTaskTimes, toggleBreak, removeTask } =
-    useTimeTrackingStorage();
+  const {
+    tasks,
+    templates,
+    labels,
+    addTask,
+    updateTaskTimes,
+    toggleBreak,
+    removeTask,
+    updateLabels,
+  } = useTimeTrackingStorage();
 
   // Delete immediately, then offer undo. Re-adding restores the same task id
   // via the existing store API, so sync sees a restore rather than a duplicate.
@@ -121,6 +129,7 @@ export function TimeTrackingView({
           selectedDate={selectedDailyDate}
           onSelectedDateChange={setSelectedDailyDate}
           onAddTask={addTask}
+          onUpdateLabels={updateLabels}
           onUpdateTaskTimes={updateTaskTimes}
           onRemoveTask={handleRemoveTask}
           onToggleBreak={toggleBreak}

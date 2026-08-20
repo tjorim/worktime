@@ -264,6 +264,8 @@
   "form_label_color": "Label color",
   "form_label_color_hex_aria": "Label color (hex)",
   "tt_add_labels_first_help": "Add at least one label in Time Tracking Settings before creating templates.",
+  "tt_add_labels_first_task_help": "Add at least one label before you can log tasks.",
+  "tt_create_label_action": "Create a label",
   "tt_templates_heading": "Templates",
   "tt_add_template_btn": "Add Template",
   "tt_no_templates_title": "No Templates Yet",
