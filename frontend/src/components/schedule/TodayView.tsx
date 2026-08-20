@@ -10,11 +10,12 @@ import clsx from "clsx";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import { hasMultipleTeams, isValidScheduleType } from "@/utils/scheduleUtils";
-import { dayjs, getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
+import { getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import { getAllTeamsShifts, isCurrentlyWorking } from "@/utils/shiftCalculations";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import { useLiveTime } from "@/hooks/useLiveTime";
 import * as m from "@/paraglide/messages.js";
 
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
@@ -184,14 +185,14 @@ export function TodayView({
 }: TodayViewProps) {
   const scheduleSelectId = useId();
   const hasTeams = viewingScheduleType ? hasMultipleTeams(viewingScheduleType) : false;
-  const today = dayjs();
+  const today = useLiveTime({ precision: "minute" });
 
   // Calculate shifts for the viewing schedule
   const todayShifts = viewingScheduleType ? getAllTeamsShifts(today, viewingScheduleType) : [];
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!viewingScheduleType || !shiftResult.shift.isWorking) return false;
-    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, dayjs(), viewingScheduleType);
+    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, today, viewingScheduleType);
   };
 
   return (

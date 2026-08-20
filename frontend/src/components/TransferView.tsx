@@ -65,6 +65,34 @@ function TimeOffIndicator({ event }: { event: CalendarEvent | undefined }) {
   );
 }
 
+/** Bucket items into next-7-days/next-30-days/further-ahead/past groups, keyed and titled for display. */
+function groupByDayBucket<T>(items: T[], getDate: (item: T) => Dayjs, todayStart: Dayjs) {
+  const nextWeek: T[] = [];
+  const nextMonth: T[] = [];
+  const future: T[] = [];
+  const past: T[] = [];
+
+  items.forEach((item) => {
+    const diffDays = getDate(item).startOf("day").diff(todayStart, "day");
+    if (diffDays < 0) {
+      past.push(item);
+    } else if (diffDays < 7) {
+      nextWeek.push(item);
+    } else if (diffDays <= 30) {
+      nextMonth.push(item);
+    } else {
+      future.push(item);
+    }
+  });
+
+  return [
+    { key: "next-7", title: m.transfer_next_7_days(), items: nextWeek },
+    { key: "next-30", title: m.transfer_next_30_days(), items: nextMonth },
+    { key: "further", title: m.transfer_further_ahead(), items: future },
+    { key: "past", title: m.transfer_past(), items: past },
+  ];
+}
+
 function formatOverlapDuration(overlap: ShiftWindow): string {
   const totalMinutes = overlap.end.diff(overlap.start, "minute");
   const hours = Math.floor(totalMinutes / 60);
@@ -490,33 +518,10 @@ export function TransferView({
     return m.transfer_until_date({ date: formatDisplayDate(dayjs(customEndDate).toDate()) });
   }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
 
-  const groupedTransfers = useMemo(() => {
-    const todayStart = currentDay.startOf("day");
-    const nextWeek: typeof transfers = [];
-    const nextMonth: typeof transfers = [];
-    const future: typeof transfers = [];
-    const past: typeof transfers = [];
-
-    transfers.forEach((transfer) => {
-      const diffDays = transfer.date.startOf("day").diff(todayStart, "day");
-      if (diffDays < 0) {
-        past.push(transfer);
-      } else if (diffDays < 7) {
-        nextWeek.push(transfer);
-      } else if (diffDays <= 30) {
-        nextMonth.push(transfer);
-      } else {
-        future.push(transfer);
-      }
-    });
-
-    return [
-      { key: "next-7", title: m.transfer_next_7_days(), items: nextWeek },
-      { key: "next-30", title: m.transfer_next_30_days(), items: nextMonth },
-      { key: "further", title: m.transfer_further_ahead(), items: future },
-      { key: "past", title: m.transfer_past(), items: past },
-    ];
-  }, [currentDay, transfers]);
+  const groupedTransfers = useMemo(
+    () => groupByDayBucket(transfers, (transfer) => transfer.date, currentDay.startOf("day")),
+    [currentDay, transfers],
+  );
 
   const nonEmptyGroupedTransfers = useMemo(
     () => groupedTransfers.filter((group) => group.items.length > 0),
@@ -527,33 +532,10 @@ export function TransferView({
     [transfers.length, locale],
   );
 
-  const groupedOverlaps = useMemo(() => {
-    const todayStart = currentDay.startOf("day");
-    const nextWeek: typeof overlaps = [];
-    const nextMonth: typeof overlaps = [];
-    const future: typeof overlaps = [];
-    const past: typeof overlaps = [];
-
-    overlaps.forEach((overlap) => {
-      const diffDays = overlap.start.startOf("day").diff(todayStart, "day");
-      if (diffDays < 0) {
-        past.push(overlap);
-      } else if (diffDays < 7) {
-        nextWeek.push(overlap);
-      } else if (diffDays <= 30) {
-        nextMonth.push(overlap);
-      } else {
-        future.push(overlap);
-      }
-    });
-
-    return [
-      { key: "next-7", title: m.transfer_next_7_days(), items: nextWeek },
-      { key: "next-30", title: m.transfer_next_30_days(), items: nextMonth },
-      { key: "further", title: m.transfer_further_ahead(), items: future },
-      { key: "past", title: m.transfer_past(), items: past },
-    ];
-  }, [currentDay, overlaps]);
+  const groupedOverlaps = useMemo(
+    () => groupByDayBucket(overlaps, (overlap) => overlap.start, currentDay.startOf("day")),
+    [currentDay, overlaps],
+  );
 
   const nonEmptyGroupedOverlaps = useMemo(
     () => groupedOverlaps.filter((group) => group.items.length > 0),
