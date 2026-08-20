@@ -155,3 +155,8 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
   and mutation-testing them where the fix is non-trivial, to confirm the test would actually catch a
   regression), or skip it with a one-line reason if it isn't. Keep fixes minimal and scoped to the
   finding itself.
+- CodeRabbit's "nitpick" findings usually aren't posted as separate inline review-comment threads —
+  they're plain text inside the main review body/summary, under a heading like "🧹 Nitpick comments".
+  Fetching only inline review threads (e.g. `pull_request_read` with `get_review_comments`) will miss
+  them entirely; also read the review body itself (`get_reviews`, or the `pull_request_review.submitted`
+  webhook payload) to see the full finding set before deciding what to address.
