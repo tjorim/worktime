@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import { readErrorDetail } from "@/utils/apiClient";
@@ -15,6 +15,14 @@ export interface PushReminderSettings {
 export interface UsePushSubscriptionReturn {
   /** The browser supports both the service worker and Push APIs. */
   isSupported: boolean;
+  /**
+   * Whether this device currently has a push subscription registered for the
+   * signed-in account. Kept here (rather than each caller polling
+   * getActiveSubscription separately) so callers like App.tsx's foreground-reminder
+   * fallback always see the post-reconciliation state, not a stale snapshot from
+   * before an account-mismatch teardown completed.
+   */
+  hasActiveSubscription: boolean;
   /**
    * Registers (or updates, by re-calling with new settings) a push
    * subscription with the backend so shift reminders arrive even when the
@@ -41,6 +49,7 @@ export interface UsePushSubscriptionReturn {
 export function usePushSubscription(): UsePushSubscriptionReturn {
   const apiFetch = useApiClient();
   const { userId } = useAuth();
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
   const getActiveSubscription = useCallback(async (): Promise<PushSubscription | null> => {
     if (!isPushSupported()) return null;
@@ -110,6 +119,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
         if (userId) {
           localStorage.setItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY, userId);
         }
+        setHasActiveSubscription(true);
         return true;
       } catch (error) {
         logger.warn("Push subscription failed:", error);
@@ -122,6 +132,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
   const unsubscribeFromPush = useCallback(async (): Promise<void> => {
     const subscription = await getActiveSubscription();
     localStorage.removeItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
+    setHasActiveSubscription(false);
     if (!subscription) return;
 
     const endpoint = subscription.endpoint;
@@ -140,21 +151,30 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     }
   }, [apiFetch, getActiveSubscription]);
 
-  // A push subscription is a browser/device-level object, not scoped to whichever
-  // app account is currently signed in - on a shared device, a subscription
-  // registered by one account would otherwise silently keep belonging to that
-  // account's backend row after a different account signs in, suppressing the new
-  // account's foreground fallback (see App.tsx) and risking that account's shift
-  // details being pushed to a device someone else is now using. Tear it down
-  // whenever the signed-in account no longer matches whoever last registered it.
+  // Resolves hasActiveSubscription for the currently signed-in account whenever that
+  // account changes (including signing out). A push subscription is a browser/device-level
+  // object, not scoped to whichever app account is signed in - on a shared device, a
+  // subscription registered by one account would otherwise silently keep belonging to
+  // that account's backend row after a different account signs in, suppressing the new
+  // account's foreground fallback and risking that account's shift details being pushed
+  // to a device someone else is now using. Tear it down whenever the signed-in account no
+  // longer matches whoever last registered it, and only report it active otherwise -
+  // computed and stored here (rather than left for each caller to poll separately) so
+  // every consumer sees the post-reconciliation state, never a stale pre-teardown snapshot.
   useEffect(() => {
-    const owner = localStorage.getItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
-    if (owner === null || owner === userId) return;
-
     let cancelled = false;
     void getActiveSubscription().then((subscription) => {
-      if (cancelled || subscription === null) return;
-      void unsubscribeFromPush();
+      if (cancelled) return;
+      if (subscription === null) {
+        setHasActiveSubscription(false);
+        return;
+      }
+      const owner = localStorage.getItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
+      if (owner !== null && owner !== userId) {
+        void unsubscribeFromPush();
+        return;
+      }
+      setHasActiveSubscription(true);
     });
     return () => {
       cancelled = true;
@@ -166,6 +186,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
 
   return {
     isSupported: isPushSupported(),
+    hasActiveSubscription,
     subscribeToPush,
     unsubscribeFromPush,
     getActiveSubscription,

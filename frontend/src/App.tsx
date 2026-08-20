@@ -96,21 +96,7 @@ function AppContent() {
     }
   }, [syncPhase, showInfo, showSuccess, showError]);
 
-  const { getActiveSubscription } = usePushSubscription();
-  const [hasActivePushSubscription, setHasActivePushSubscription] = useState(false);
-  useEffect(() => {
-    if (settings.notifications !== "on") {
-      setHasActivePushSubscription(false);
-      return;
-    }
-    let cancelled = false;
-    void getActiveSubscription().then((subscription) => {
-      if (!cancelled) setHasActivePushSubscription(subscription != null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [settings.notifications, getActiveSubscription]);
+  const { hasActiveSubscription: hasActivePushSubscription } = usePushSubscription();
 
   useShiftNotifications({
     enabled: settings.notifications === "on",
