@@ -140,6 +140,24 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 - **Stay request/poll-based** for user-triggered actions, infrequent state changes, or anything that needs the full response payload inline (not a separate fetch). Adding SSE complexity for those cases is not worth it.
 - The transport abstraction also decouples the wire protocol: replacing SSE with WebSockets later only requires a new adapter — no changes to `useSyncSignal` or its callers.
 
+## Git branches
+
+A branch you're handed to work from may already be stacked on another unmerged
+branch instead of `main` — this repo uses stacked PRs. Before touching an
+unfamiliar branch's existing commits:
+
+- Check what it's actually based on — `git merge-base --is-ancestor origin/main
+  origin/<branch>` (and the reverse) tells you whether `main` or something else
+  is the real parent. Existing commits are not stale leftovers to reset away;
+  assume they're an intentional stack until you've confirmed otherwise (e.g.
+  checking whether they match a PR already merged into a different base).
+- When opening a PR, set `base` to the branch's actual fork point, not `main`
+  by default.
+- If a PR shows a merge conflict or a base that looks wrong, find out *why*
+  before changing anything. Don't "fix" a conflict by repointing the base to
+  whatever branch happens to be conflict-free — that hides the mismatch
+  instead of resolving it.
+
 ## Conventions
 
 - Use American English in code, comments, and UI text
