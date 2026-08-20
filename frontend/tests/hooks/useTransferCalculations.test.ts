@@ -238,27 +238,6 @@ describe("useTransferCalculations", () => {
       expect(result.current.overlaps[0]?.end.format("HH:mm")).toBe("15:00");
     });
 
-    it("resolves overlaps by shift type on the user's own side even without a team", () => {
-      // No myTeam at all — matched purely by "which team is on Morning today"
-      // on the user's own (default 5-shift) schedule.
-      const { result } = renderHook(
-        () =>
-          useTransferCalculations({
-            myTeam: null,
-            myShiftType: "M",
-            otherScheduleType: "9-5",
-            otherShiftType: "D",
-            customStartDate: "2025-07-16",
-            customEndDate: "2025-07-16",
-          }),
-        { wrapper },
-      );
-
-      expect(result.current.overlaps).toHaveLength(1);
-      expect(result.current.overlaps[0]?.start.format("HH:mm")).toBe("09:00");
-      expect(result.current.overlaps[0]?.end.format("HH:mm")).toBe("15:00");
-    });
-
     it("resolves to a different team as the schedule rotates across the scan range", () => {
       // 2-shift alternates each team between Morning/Evening by week. Looking
       // for "whoever is on Morning" across two weeks should follow the
@@ -297,14 +276,13 @@ describe("useTransferCalculations", () => {
       expect(result.current.transfers).toEqual([]);
     });
 
-    it("computes overlaps with no team selected on either side", () => {
-      // The clearest proof of the bypass: myTeam is null and no otherTeam is
-      // ever set — both sides are resolved purely from shift type.
+    it("still requires the user's own team, even when the other side is teamless", () => {
+      // The user is always represented by their own real team — shift-type
+      // matching only ever applies to the other side.
       const { result } = renderHook(
         () =>
           useTransferCalculations({
             myTeam: null,
-            myShiftType: "M",
             otherScheduleType: "9-5",
             otherShiftType: "D",
             customStartDate: "2025-07-16",
@@ -314,7 +292,7 @@ describe("useTransferCalculations", () => {
       );
 
       expect(result.current.validatedMyTeam).toBeNull();
-      expect(result.current.overlaps).toHaveLength(1);
+      expect(result.current.overlaps).toEqual([]);
     });
   });
 });

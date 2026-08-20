@@ -289,7 +289,6 @@ export function TransferView({
 }: TransferViewProps) {
   // Generate unique IDs for form elements
   const otherTeamSelectId = useId();
-  const myShiftSelectId = useId();
   const showPastCheckboxId = useId();
   const startDateId = useId();
   const endDateId = useId();
@@ -300,12 +299,10 @@ export function TransferView({
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [currentDay, setCurrentDay] = useState(() => dayjs().startOf("day"));
-  // "Teamless" lookups: match by shift type instead of a fixed team number.
-  // myMode only matters while the user has no team of their own; otherMode is
-  // the general case ("I don't know/care which team, just show me whoever's
-  // on Evening").
-  const [myMode, setMyMode] = useState<"team" | "shiftType">("team");
-  const [myShiftType, setMyShiftType] = useState<ShiftType | null>(null);
+  // "Teamless" lookup for the other side only — the user is always
+  // represented by their own real team; the other person may be identified
+  // by shift type instead ("whoever's on Evening") when their exact team
+  // isn't known.
   const [otherMode, setOtherMode] = useState<"team" | "shiftType">("team");
   const [otherShiftType, setOtherShiftType] = useState<ShiftType | null>(null);
 
@@ -339,15 +336,14 @@ export function TransferView({
     customStartDate: useCustomRange && !isDateRangeInvalid ? customStartDate : undefined,
     customEndDate: useCustomRange && !isDateRangeInvalid ? customEndDate : undefined,
     otherScheduleType,
-    myShiftType: myMode === "shiftType" ? myShiftType : null,
     otherShiftType: otherMode === "shiftType" ? otherShiftType : null,
   });
 
   // Same-schedule, team-only comparisons show handover/takeover points;
-  // everything else (cross-schedule, or either side matched by shift type
+  // everything else (cross-schedule, or the other side matched by shift type
   // instead of a fixed team) only shows overlapping hours.
   const sameSchedule = effectiveOtherScheduleType === scheduleType;
-  const usingShiftTypeMode = myMode === "shiftType" || otherMode === "shiftType";
+  const usingShiftTypeMode = otherMode === "shiftType";
   const otherScheduleTitle = sameSchedule
     ? null
     : (SCHEDULE_OPTIONS.find((option) => option.value === effectiveOtherScheduleType)?.title ??
@@ -358,21 +354,12 @@ export function TransferView({
   // Handover/takeover points require a fixed team identity on both sides.
   const showTransfers = Boolean(myTeam) && sameSchedule && !usingShiftTypeMode;
 
-  const myWorkingShiftTypes = useMemo(
-    () => (scheduleType ? getWorkingShiftTypes(scheduleType) : []),
-    [scheduleType],
-  );
   const otherWorkingShiftTypes = useMemo(
     () => getWorkingShiftTypes(effectiveOtherScheduleType),
     [effectiveOtherScheduleType],
   );
 
   // Keep the selected shift type valid as the underlying schedule changes.
-  useEffect(() => {
-    if (myMode === "shiftType" && (!myShiftType || !myWorkingShiftTypes.includes(myShiftType))) {
-      setMyShiftType(myWorkingShiftTypes[0] ?? null);
-    }
-  }, [myMode, myShiftType, myWorkingShiftTypes]);
   useEffect(() => {
     if (
       otherMode === "shiftType" &&
@@ -382,12 +369,10 @@ export function TransferView({
     }
   }, [otherMode, otherShiftType, otherWorkingShiftTypes]);
 
-  const myOverlapLabel = useMemo(() => {
-    if (myMode === "shiftType" && myShiftType && scheduleType) {
-      return formatShiftTypeLabel(myShiftType, scheduleType);
-    }
-    return myTeam ? m.team_label({ team: String(myTeam) }) : "";
-  }, [myMode, myShiftType, scheduleType, myTeam]);
+  const myOverlapLabel = useMemo(
+    () => (myTeam ? m.team_label({ team: String(myTeam) }) : ""),
+    [myTeam],
+  );
 
   const otherOverlapLabel = useMemo(() => {
     const prefix = otherScheduleTitle ? `${otherScheduleTitle} ` : "";
@@ -406,8 +391,6 @@ export function TransferView({
     customStartDate,
     customEndDate,
     effectiveOtherScheduleType,
-    myMode,
-    myShiftType,
     otherMode,
     otherShiftType,
   ]);
@@ -617,17 +600,12 @@ export function TransferView({
           <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
           {m.transfer_team_transfers()}
         </span>
-        {myTeam ? (
+        {myTeam && (
           <Badge bg="primary" pill>
             <i className="bi bi-person-check me-1" aria-hidden="true"></i>
             {m.transfer_your_team({ team: String(myTeam) })}
           </Badge>
-        ) : myMode === "shiftType" && myShiftType && scheduleType ? (
-          <Badge bg="primary" pill>
-            <i className="bi bi-person-check me-1" aria-hidden="true"></i>
-            {m.transfer_your_shift_type({ label: formatShiftTypeLabel(myShiftType, scheduleType) })}
-          </Badge>
-        ) : null}
+        )}
       </Card.Header>
       <Card.Body>
         {!scheduleType ? (
@@ -636,7 +614,7 @@ export function TransferView({
             <p className="text-muted mb-3">{m.transfer_select_schedule_prompt()}</p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </div>
-        ) : !myTeam && myMode !== "shiftType" ? (
+        ) : !myTeam ? (
           <div className="text-center py-4">
             <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
             <p className="text-muted mb-3">{m.transfer_select_team_prompt()}</p>
@@ -645,11 +623,6 @@ export function TransferView({
               onChangeTeam={onChangeTeam}
               mode="team"
             />
-            <div className="mt-3">
-              <Button variant="link" size="sm" className="p-0" onClick={() => setMyMode("shiftType")}>
-                {m.transfer_match_by_shift_instead()}
-              </Button>
-            </div>
           </div>
         ) : availableOtherTeams.length === 0 && otherMode !== "shiftType" ? (
           <EmptyState
@@ -662,41 +635,6 @@ export function TransferView({
             {/* Controls */}
             <Row className="mb-3 gy-3">
               <Col md={4}>
-                {!myTeam && myMode === "shiftType" && (
-                  <div className="mb-3">
-                    <Form.Label htmlFor={myShiftSelectId} className="fw-semibold">
-                      <i className="bi bi-person-check me-1" aria-hidden="true"></i>
-                      {m.transfer_my_shift_label()}
-                    </Form.Label>
-                    <Form.Select
-                      id={myShiftSelectId}
-                      size="sm"
-                      value={myShiftType ?? ""}
-                      onChange={(e) => {
-                        const next = myWorkingShiftTypes.find((code) => code === e.target.value);
-                        setMyShiftType(next ?? null);
-                      }}
-                    >
-                      <option value="" disabled>
-                        {m.transfer_select_shift_placeholder()}
-                      </option>
-                      {myWorkingShiftTypes.map((code) => (
-                        <option key={code} value={code}>
-                          {scheduleType && formatShiftTypeLabel(code, scheduleType)}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="p-0 mt-1"
-                      onClick={() => setMyMode("team")}
-                    >
-                      {m.transfer_match_by_team_instead()}
-                    </Button>
-                  </div>
-                )}
-
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
                   {otherMode === "shiftType"

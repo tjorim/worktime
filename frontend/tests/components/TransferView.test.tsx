@@ -719,22 +719,18 @@ describe("TransferView", () => {
   });
 
   describe("Teamless shift-type lookups", () => {
-    it("offers matching by shift type instead of blocking when no team is set", async () => {
+    it("still blocks with the team prompt when the user has no team — only the other side can be teamless", () => {
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         validatedMyTeam: null,
       });
 
-      const user = userEvent.setup();
       renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
 
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
-
-      const link = screen.getByRole("button", { name: /match by your current shift type/i });
-      await user.click(link);
-
-      expect(screen.queryByText(/Please select your team/)).not.toBeInTheDocument();
-      expect(screen.getByLabelText(/Match your shift:/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /match by your current shift type/i }),
+      ).not.toBeInTheDocument();
     });
 
     it("toggles the other side to shift-type mode", async () => {
