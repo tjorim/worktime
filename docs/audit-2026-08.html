@@ -1133,8 +1133,11 @@
           (<code>SettingsPage.tsx</code>) so the hero title is the only page-level heading, and
           renamed the two opaque nav labels to <code>Data &amp; backup</code> and
           <code>About</code> (<code>messages/en.json</code>, <code>messages/nl.json</code>). The
-          "Schedule &amp; team" section-promotion idea in the issue was called out as a
-          "Consider" — left open rather than folded into this cheap fix.</span></div>
+          issue's "Schedule &amp; team" section-promotion suggestion — the highest-consequence
+          setting in the app, buried under "Preferences" — was folded in too: schedule/team
+          selection now has its own top-level nav section
+          (<code>SettingsScheduleSection.tsx</code>, new), leaving
+          <code>SettingsGeneralSection.tsx</code> with just display/notification prefs.</span></div>
       </div>
 
       <div class="finding med">

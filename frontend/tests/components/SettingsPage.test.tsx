@@ -930,10 +930,10 @@ describe("SettingsPage Data Section", () => {
   });
 });
 
-describe("SettingsPage General Section", () => {
+describe("SettingsPage Schedule & Team Section", () => {
   it("handles schedule selection clicks and shows team selection for multi-team schedules", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
 
     expect(screen.queryByText(m.select_team_label())).not.toBeInTheDocument();
 
@@ -946,6 +946,9 @@ describe("SettingsPage General Section", () => {
     await user.click(teamOneButton);
     expect(teamOneButton).toHaveAttribute("aria-pressed", "true");
   });
+});
+
+describe("SettingsPage General Section", () => {
 
   it("enables notifications after requesting and receiving browser permission", async () => {
     const user = userEvent.setup();

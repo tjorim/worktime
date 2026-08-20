@@ -23,7 +23,15 @@ const settingsRoute = createRoute({
   validateSearch: (
     search: Record<string, unknown>,
   ): {
-    section?: "general" | "features" | "timeTracking" | "account" | "admin" | "data" | "about";
+    section?:
+      | "scheduleTeam"
+      | "general"
+      | "features"
+      | "timeTracking"
+      | "account"
+      | "admin"
+      | "data"
+      | "about";
   } => {
     const section = typeof search.section === "string" ? search.section : undefined;
     // "sync" was folded into "account" when the two settings sections were combined;
@@ -32,6 +40,7 @@ const settingsRoute = createRoute({
       return { section: "account" };
     }
     if (
+      section === "scheduleTeam" ||
       section === "general" ||
       section === "features" ||
       section === "timeTracking" ||

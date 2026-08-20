@@ -27,6 +27,7 @@ import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection
 import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
 import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
 import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSection";
+import { SettingsScheduleSection } from "@/components/settings/SettingsScheduleSection";
 import { SettingsTimeTrackingSection } from "@/components/settings/SettingsTimeTrackingSection";
 import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -47,6 +48,7 @@ const SETTINGS_SECTIONS: Array<{
   label: () => string;
   adminOnly?: boolean;
 }> = [
+  { key: "scheduleTeam", icon: "bi-calendar-week", label: m.schedule_team_section_title },
   { key: "general", icon: "bi-sliders", label: m.preferences_title },
   { key: "features", icon: "bi-grid", label: m.features_title },
   { key: "timeTracking", icon: "bi-clock-history", label: m.time_tracking_section_title },
@@ -149,6 +151,7 @@ export function SettingsPage() {
 }
 
 export type SettingsSection =
+  | "scheduleTeam"
   | "general"
   | "features"
   | "timeTracking"
@@ -480,10 +483,16 @@ export function SettingsContent({
           onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
         />
       ) : null,
-    general: () => (
-      <SettingsGeneralSection
+    scheduleTeam: () => (
+      <SettingsScheduleSection
         scheduleType={scheduleType}
         myTeam={myTeam}
+        onScheduleChange={handleScheduleChange}
+        onTeamChange={setMyTeam}
+      />
+    ),
+    general: () => (
+      <SettingsGeneralSection
         timeFormat={settings.timeFormat}
         theme={settings.theme}
         locale={getLocale() === "nl" ? "nl" : "en"}
@@ -491,8 +500,6 @@ export function SettingsContent({
         notificationLeadTimeMinutes={settings.notificationLeadTimeMinutes}
         notificationQuietHoursStart={settings.notificationQuietHoursStart}
         notificationQuietHoursEnd={settings.notificationQuietHoursEnd}
-        onScheduleChange={handleScheduleChange}
-        onTeamChange={setMyTeam}
         onTimeFormatChange={updateTimeFormat}
         onThemeChange={updateTheme}
         onLocaleChange={setLocale}
