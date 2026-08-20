@@ -148,6 +148,33 @@ body {
 }
 
 /* ============================================================================
+   NAVBAR (THM-2)
+   ============================================================================
+   Header.tsx uses this class instead of Bootstrap's bg="primary" so dark mode
+   can tone the navbar down (see --wt-navbar-bg, _variables.scss) instead of
+   keeping a fully-saturated blue band across a near-black page.
+   ========================================================================= */
+
+.navbar-worktime {
+  background-color: var(--wt-navbar-bg);
+}
+
+/* ============================================================================
+   DARK MODE CARD ELEVATION (THM-1)
+   ========================================================================= */
+
+[data-bs-theme="dark"] .card {
+  /* Subtle top highlight so cards read as elevated without directional light. */
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+
+[data-bs-theme="dark"] .card .card {
+  /* Bump nested cards (e.g. Today / Up Next inside Current Status) to the
+     next surface tier — otherwise both resolve to the same --bs-card-bg. */
+  --bs-card-bg: var(--wt-surface-3);
+}
+
+/* ============================================================================
    MAIN TAB NAVIGATION
    ========================================================================= */
 
@@ -254,4 +281,22 @@ body {
   background: rgb(255 255 255 / 10%);
   color: rgb(255 255 255 / 88%);
   border-color: rgb(255 255 255 / 12%);
+}
+
+/* The base and neutral pills above are translucent white and were tuned
+   against the fully-saturated --bs-primary navbar. Now that dark mode uses a
+   deeper --wt-navbar-bg (THM-2), bump their opacity so they still read as a
+   distinct pill against the darker ground. Scoped to :root specifically —
+   see the comment on the equivalent selector in _variables.scss for why a
+   bare [data-bs-theme="dark"] selector would be wrong here. */
+:root[data-bs-theme="dark"] {
+  .sync-indicator {
+    background: rgb(255 255 255 / 16%);
+    border-color: rgb(255 255 255 / 20%);
+  }
+
+  .sync-indicator--neutral {
+    background: rgb(255 255 255 / 14%);
+    border-color: rgb(255 255 255 / 18%);
+  }
 }
