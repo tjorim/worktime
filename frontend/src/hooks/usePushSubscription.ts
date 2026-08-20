@@ -1,8 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import { readErrorDetail } from "@/utils/apiClient";
 import { isPushSupported, urlBase64ToUint8Array } from "@/utils/pushNotifications";
 import { logger } from "@/utils/logger";
+import { PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
 
 export interface PushReminderSettings {
   leadTimeMinutes: number;
@@ -38,6 +40,7 @@ export interface UsePushSubscriptionReturn {
  */
 export function usePushSubscription(): UsePushSubscriptionReturn {
   const apiFetch = useApiClient();
+  const { userId } = useAuth();
 
   const getActiveSubscription = useCallback(async (): Promise<PushSubscription | null> => {
     if (!isPushSupported()) return null;
@@ -101,17 +104,24 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
           }
           return false;
         }
+        // Record which account this device's subscription now belongs to, so a later
+        // sign-in as a different account can detect the mismatch and tear it down
+        // (see the reconciliation effect below) instead of silently reusing it.
+        if (userId) {
+          localStorage.setItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY, userId);
+        }
         return true;
       } catch (error) {
         logger.warn("Push subscription failed:", error);
         return false;
       }
     },
-    [apiFetch],
+    [apiFetch, userId],
   );
 
   const unsubscribeFromPush = useCallback(async (): Promise<void> => {
     const subscription = await getActiveSubscription();
+    localStorage.removeItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
     if (!subscription) return;
 
     const endpoint = subscription.endpoint;
@@ -129,6 +139,30 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
       logger.warn("Failed to remove push subscription server-side:", error);
     }
   }, [apiFetch, getActiveSubscription]);
+
+  // A push subscription is a browser/device-level object, not scoped to whichever
+  // app account is currently signed in - on a shared device, a subscription
+  // registered by one account would otherwise silently keep belonging to that
+  // account's backend row after a different account signs in, suppressing the new
+  // account's foreground fallback (see App.tsx) and risking that account's shift
+  // details being pushed to a device someone else is now using. Tear it down
+  // whenever the signed-in account no longer matches whoever last registered it.
+  useEffect(() => {
+    const owner = localStorage.getItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
+    if (owner === null || owner === userId) return;
+
+    let cancelled = false;
+    void getActiveSubscription().then((subscription) => {
+      if (cancelled || subscription === null) return;
+      void unsubscribeFromPush();
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Only re-run when the signed-in account itself changes; getActiveSubscription
+    // and unsubscribeFromPush are stable across renders in practice here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   return {
     isSupported: isPushSupported(),

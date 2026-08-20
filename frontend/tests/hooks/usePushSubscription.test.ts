@@ -1,15 +1,33 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useApiClient } from "@/hooks/useApiClient";
+import { useAuth } from "@/contexts/AuthContext";
+import { PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
+import type { AuthContextType } from "@/contexts/AuthContext";
 
 vi.mock("@/hooks/useApiClient");
+vi.mock("@/contexts/AuthContext");
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
     headers: { "Content-Type": "application/json" },
     ...init,
   });
+}
+
+function mockAuth(userId: string | null): void {
+  vi.mocked(useAuth).mockReturnValue({
+    isAuthenticated: userId !== null,
+    isValidating: false,
+    userId,
+    displayName: null,
+    getAccessToken: () => null,
+    triggerLogin: vi.fn(),
+    triggerSignup: vi.fn(),
+    logout: vi.fn(),
+    renewSession: vi.fn(),
+  } satisfies AuthContextType);
 }
 
 describe("usePushSubscription", () => {
@@ -30,6 +48,8 @@ describe("usePushSubscription", () => {
     getSubscription.mockReset().mockResolvedValue(null);
     subscribe.mockReset().mockResolvedValue(mockSubscription);
     mockSubscription.unsubscribe.mockClear();
+    localStorage.removeItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
+    mockAuth("user-1");
 
     vi.stubGlobal("navigator", {
       ...navigator,
@@ -41,6 +61,7 @@ describe("usePushSubscription", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.mocked(useApiClient).mockReset();
+    localStorage.removeItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY);
   });
 
   it("reports supported when serviceWorker and PushManager are both available", () => {
@@ -98,6 +119,9 @@ describe("usePushSubscription", () => {
       quiet_hours_start: 22,
       quiet_hours_end: 6,
     });
+    // Records who this device's subscription now belongs to (see the
+    // account-reconciliation tests below).
+    expect(localStorage.getItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY)).toBe("user-1");
   });
 
   it("reuses an existing subscription instead of creating a new one", async () => {
@@ -202,5 +226,70 @@ describe("usePushSubscription", () => {
     await result.current.unsubscribeFromPush();
 
     expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it("clears the owner marker on unsubscribe", async () => {
+    localStorage.setItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY, "user-1");
+    getSubscription.mockResolvedValue(mockSubscription);
+    const apiFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.mocked(useApiClient).mockReturnValue(apiFetch);
+
+    const { result } = renderHook(() => usePushSubscription());
+    await result.current.unsubscribeFromPush();
+
+    expect(localStorage.getItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY)).toBeNull();
+  });
+
+  describe("account-boundary reconciliation", () => {
+    it("tears down a subscription left behind by a different account", async () => {
+      localStorage.setItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY, "user-1");
+      getSubscription.mockResolvedValue(mockSubscription);
+      const apiFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+      vi.mocked(useApiClient).mockReturnValue(apiFetch);
+      mockAuth("user-2");
+
+      renderHook(() => usePushSubscription());
+
+      await waitFor(() => expect(mockSubscription.unsubscribe).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
+      const [url, init] = apiFetch.mock.calls[0];
+      expect(url).toBe(
+        `/api/push/subscribe?endpoint=${encodeURIComponent("https://push.example.com/ep1")}`,
+      );
+      expect((init as RequestInit).method).toBe("DELETE");
+    });
+
+    it("tears down a subscription left behind after signing out", async () => {
+      localStorage.setItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY, "user-1");
+      getSubscription.mockResolvedValue(mockSubscription);
+      const apiFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+      vi.mocked(useApiClient).mockReturnValue(apiFetch);
+      mockAuth(null);
+
+      renderHook(() => usePushSubscription());
+
+      await waitFor(() => expect(mockSubscription.unsubscribe).toHaveBeenCalledTimes(1));
+    });
+
+    it("leaves the subscription alone when the marker matches the signed-in account", async () => {
+      localStorage.setItem(PUSH_SUBSCRIPTION_OWNER_STORAGE_KEY, "user-1");
+      getSubscription.mockResolvedValue(mockSubscription);
+      vi.mocked(useApiClient).mockReturnValue(vi.fn());
+
+      renderHook(() => usePushSubscription());
+      await act(async () => {});
+
+      expect(mockSubscription.unsubscribe).not.toHaveBeenCalled();
+    });
+
+    it("leaves the subscription alone when no owner has ever been recorded", async () => {
+      getSubscription.mockResolvedValue(mockSubscription);
+      vi.mocked(useApiClient).mockReturnValue(vi.fn());
+
+      renderHook(() => usePushSubscription());
+      await act(async () => {});
+
+      expect(mockSubscription.unsubscribe).not.toHaveBeenCalled();
+    });
   });
 });

@@ -202,6 +202,11 @@ async def _check_and_send_reminders() -> None:
                     subscription.id,
                     exc_info=True,
                 )
+                # A DB-level failure mid-statement leaves Postgres refusing further
+                # commands until the transaction is rolled back -- without this,
+                # one bad subscription would poison the shared session and silently
+                # break every subscription still left in this batch, not just this one.
+                await session.rollback()
         await session.commit()
 
 
