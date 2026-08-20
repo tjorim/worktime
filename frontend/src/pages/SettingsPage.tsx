@@ -194,8 +194,15 @@ export function SettingsContent({
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
   const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
-  const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter, triggerPull } =
-    useOngoingSyncContext();
+  const {
+    isSyncing,
+    lastSyncedAt,
+    outboxCount,
+    hasSyncError,
+    conflictCount,
+    retryAfter,
+    triggerPull,
+  } = useOngoingSyncContext();
   const {
     settings,
     scheduleType,
@@ -530,6 +537,10 @@ export function SettingsContent({
     about: () => (
       <SettingsAboutSection
         isDevMode={isDevMode}
+        onShareApp={handleShareApp}
+        canInstallApp={canInstall}
+        isAppInstalled={isInstalled}
+        onInstallApp={() => void handleInstallApp()}
         onShowChangelog={() => setShowChangelog(true)}
         onShowAboutHelp={() => onShowAbout?.()}
         onShowShortcuts={() => onShowShortcuts?.()}
@@ -538,10 +549,6 @@ export function SettingsContent({
     ),
     data: () => (
       <SettingsDataSection
-        onShareApp={handleShareApp}
-        canInstallApp={canInstall}
-        isAppInstalled={isInstalled}
-        onInstallApp={() => void handleInstallApp()}
         onShowBackupDialog={() => setShowBackupDialog(true)}
         onRestoreBackup={() => restoreFileInputRef.current?.click()}
         isRestoringBackup={isRestoringBackup}

@@ -1137,7 +1137,11 @@
           setting in the app, buried under "Preferences" — was folded in too: schedule/team
           selection now has its own top-level nav section
           (<code>SettingsScheduleSection.tsx</code>, new), leaving
-          <code>SettingsGeneralSection.tsx</code> with just display/notification prefs.</span></div>
+          <code>SettingsGeneralSection.tsx</code> with just display/notification prefs. One more
+          pass beyond the issue: renaming "Quick Actions" to "Data &amp; backup" exposed a
+          mismatch — Share App and Install App aren't data operations — so those two moved to
+          <code>SettingsAboutSection.tsx</code>, leaving <code>SettingsDataSection.tsx</code> as
+          backup/restore/reset only.</span></div>
       </div>
 
       <div class="finding med">
