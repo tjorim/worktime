@@ -130,6 +130,30 @@ describe("ScheduleTabView", () => {
       expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
       expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
     });
+
+    it("hides the schedule selector on the Transfers tab instead of silently ignoring it", async () => {
+      // Regression test for #1110: the selector let users pick a schedule that
+      // TransferView never honored (it reads the user's own schedule from
+      // settings, not the "viewing schedule" selection). Hiding the selector
+      // in transfer mode keeps the UI from promising something it doesn't do.
+      const user = userEvent.setup();
+      renderWithProviders(<ScheduleTabView {...defaultProps} />);
+
+      // Selector is visible on Today/Week
+      expect(screen.getByLabelText(/View schedule:/i)).toBeInTheDocument();
+
+      const transferButton = screen.getByRole("button", { name: /Transfers/i });
+      await user.click(transferButton);
+
+      // Selector must not be rendered once on the Transfers tab
+      expect(screen.queryByLabelText(/View schedule:/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId("transfer-view")).toBeInTheDocument();
+
+      // Switching back to Today restores the selector
+      const todayButton = screen.getByRole("button", { name: /Today/i });
+      await user.click(todayButton);
+      expect(screen.getByLabelText(/View schedule:/i)).toBeInTheDocument();
+    });
   });
 
   describe("Props passing", () => {

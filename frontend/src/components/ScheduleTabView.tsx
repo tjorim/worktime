@@ -128,34 +128,36 @@ export function ScheduleTabView({
           </Button>
         </ButtonGroup>
 
-        <div className="d-flex align-items-center gap-2 flex-wrap">
-          <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-            <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
-            {m.schedule_view_label()}
-          </Form.Label>
-          <Form.Select
-            id={scheduleSelectId}
-            size="sm"
-            value={viewingScheduleType || ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              const next = isValidScheduleType(value) ? value : null;
-              setViewingScheduleType(next);
-              updateLastOtherSchedule(next);
-            }}
-            style={{ width: "auto" }}
-          >
-            <option value="" disabled>
-              {m.schedule_select_placeholder()}
-            </option>
-            {availableSchedules.map((schedule) => (
-              <option key={schedule.value} value={schedule.value}>
-                {schedule.title}
-                {schedule.value === userScheduleType ? ` ${m.schedule_your_schedule_suffix()}` : ""}
+        {viewMode !== "transfer" && (
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
+              <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+              {m.schedule_view_label()}
+            </Form.Label>
+            <Form.Select
+              id={scheduleSelectId}
+              size="sm"
+              value={viewingScheduleType || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                const next = isValidScheduleType(value) ? value : null;
+                setViewingScheduleType(next);
+                updateLastOtherSchedule(next);
+              }}
+              style={{ width: "auto" }}
+            >
+              <option value="" disabled>
+                {m.schedule_select_placeholder()}
               </option>
-            ))}
-          </Form.Select>
-        </div>
+              {availableSchedules.map((schedule) => (
+                <option key={schedule.value} value={schedule.value}>
+                  {schedule.title}
+                  {schedule.value === userScheduleType ? ` ${m.schedule_your_schedule_suffix()}` : ""}
+                </option>
+              ))}
+            </Form.Select>
+          </div>
+        )}
       </div>
 
       {!viewingScheduleType && viewMode !== "transfer" && (
