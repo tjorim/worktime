@@ -351,6 +351,13 @@ class PushSubscription(Base):
     # Dedup key for the shift a reminder was last sent for (f"{date}-{shift_code}"),
     # so the periodic loop doesn't re-send while the same shift is still upcoming.
     last_reminder_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    # When last_reminder_key was set, identifying that specific claim attempt --
+    # not just which shift it's for. A settings upsert can reset last_reminder_key
+    # to None and a different worker can then reclaim the *same* key string for a
+    # legitimate newer attempt; comparing on this timestamp (rather than the key
+    # itself) lets a stale failed-send cleanup recognize it's no longer the current
+    # claim and back off, instead of clobbering it. See shift_reminder_scheduler.py.
+    last_reminder_claimed_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )

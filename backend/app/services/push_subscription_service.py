@@ -42,6 +42,7 @@ async def upsert_subscription(session: AsyncSession, user_id: int, payload: Push
     # shorter lead time might mean the reminder window for the same shift
     # hasn't opened yet from this subscription's point of view).
     subscription.last_reminder_key = None
+    subscription.last_reminder_claimed_at = None
 
     await session.flush()
     await session.refresh(subscription)

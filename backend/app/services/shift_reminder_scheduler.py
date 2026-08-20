@@ -133,6 +133,7 @@ async def _maybe_send_reminder(
         # than firing late the moment quiet hours end -- a reminder that arrives
         # after the window it was meant to warn about opened is worse than none.
         subscription.last_reminder_key = reminder_key
+        subscription.last_reminder_claimed_at = now_utc
         return
 
     # Atomically claim this reminder before sending: if more than one backend
@@ -140,19 +141,29 @@ async def _maybe_send_reminder(
     # and would otherwise all decide to send. Only the process whose UPDATE
     # actually changes the row (rowcount 1) proceeds -- the rest see rowcount 0
     # and back off, so the push is delivered at most once per shift.
+    #
+    # claimed_at identifies this specific claim *attempt*, not just which shift
+    # it's for: a settings upsert (push_subscription_service.upsert_subscription)
+    # resets last_reminder_key to None, so a different process can legitimately
+    # reclaim the very same reminder_key string for a newer attempt. Comparing the
+    # failed-send cleanup below against reminder_key alone couldn't tell that newer
+    # claim apart from this one; comparing against claimed_at can, since a reclaim
+    # always re-stamps it.
+    claimed_at = now_utc
     claim = cast(
         "CursorResult[Any]",
         await session.execute(
             update(PushSubscription)
             .where(PushSubscription.id == subscription.id)
             .where(PushSubscription.last_reminder_key.is_distinct_from(reminder_key))
-            .values(last_reminder_key=reminder_key)
+            .values(last_reminder_key=reminder_key, last_reminder_claimed_at=claimed_at)
         ),
     )
     await session.commit()
     if claim.rowcount == 0:
         return  # another process already claimed (or sent) this reminder
     subscription.last_reminder_key = reminder_key
+    subscription.last_reminder_claimed_at = claimed_at
 
     result = await asyncio.to_thread(
         send_push,
@@ -167,18 +178,15 @@ async def _maybe_send_reminder(
         await delete_subscription_by_id(session, subscription.id)
     elif result is PushSendResult.FAILED:
         # Release the claim so a later tick retries the send -- but only if it's
-        # still ours. A slow/hung send that outlives its shift's start could
-        # otherwise fail after a *different* process has already moved this same
-        # subscription on to a newer reminder_key (the next shift); blindly
-        # clearing it would erase that newer claim and cause a duplicate send.
+        # still ours, identified by claimed_at rather than reminder_key (see above).
         await session.execute(
             update(PushSubscription)
             .where(PushSubscription.id == subscription.id)
-            .where(PushSubscription.last_reminder_key == reminder_key)
-            .values(last_reminder_key=None)
+            .where(PushSubscription.last_reminder_claimed_at == claimed_at)
+            .values(last_reminder_key=None, last_reminder_claimed_at=None)
         )
         await session.commit()
-    # SENT: last_reminder_key is already set from the claim above.
+    # SENT: last_reminder_key/last_reminder_claimed_at are already set from the claim above.
 
 
 async def _check_and_send_reminders() -> None:
