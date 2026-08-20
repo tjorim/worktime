@@ -134,7 +134,7 @@ describe("usePushSubscription", () => {
     expect(subscribe).not.toHaveBeenCalled();
   });
 
-  it("returns false when the backend rejects the subscription", async () => {
+  it("returns false and rolls back a freshly created subscription when the backend rejects it", async () => {
     const apiFetch = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
@@ -149,6 +149,31 @@ describe("usePushSubscription", () => {
     });
 
     expect(outcome).toBe(false);
+    // Without this, a browser-side subscription with no backend record would make
+    // getActiveSubscription() report "active" while nothing can ever be delivered.
+    expect(mockSubscription.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a pre-existing subscription alone when a settings update is rejected", async () => {
+    getSubscription.mockResolvedValue(mockSubscription);
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }));
+    vi.mocked(useApiClient).mockReturnValue(apiFetch);
+
+    const { result } = renderHook(() => usePushSubscription());
+    const outcome = await result.current.subscribeToPush({
+      leadTimeMinutes: 60,
+      quietHoursStart: null,
+      quietHoursEnd: null,
+    });
+
+    expect(outcome).toBe(false);
+    expect(subscribe).not.toHaveBeenCalled();
+    // The backend most likely already has this subscription registered from a prior
+    // successful call - a failed update shouldn't tear down a working subscription.
+    expect(mockSubscription.unsubscribe).not.toHaveBeenCalled();
   });
 
   it("unsubscribes locally and server-side when a subscription exists", async () => {

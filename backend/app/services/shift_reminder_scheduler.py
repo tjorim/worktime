@@ -14,9 +14,14 @@ import logging
 from datetime import UTC, timedelta
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
+from typing import TYPE_CHECKING, Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
 
 from app.database.engine import get_session_factory
 from app.database.models import PushSubscription
@@ -130,6 +135,25 @@ async def _maybe_send_reminder(
         subscription.last_reminder_key = reminder_key
         return
 
+    # Atomically claim this reminder before sending: if more than one backend
+    # process/replica runs this loop, each reads the same unset last_reminder_key
+    # and would otherwise all decide to send. Only the process whose UPDATE
+    # actually changes the row (rowcount 1) proceeds -- the rest see rowcount 0
+    # and back off, so the push is delivered at most once per shift.
+    claim = cast(
+        "CursorResult[Any]",
+        await session.execute(
+            update(PushSubscription)
+            .where(PushSubscription.id == subscription.id)
+            .where(PushSubscription.last_reminder_key.is_distinct_from(reminder_key))
+            .values(last_reminder_key=reminder_key)
+        ),
+    )
+    await session.commit()
+    if claim.rowcount == 0:
+        return  # another process already claimed (or sent) this reminder
+    subscription.last_reminder_key = reminder_key
+
     result = await asyncio.to_thread(
         send_push,
         subscription,
@@ -141,9 +165,14 @@ async def _maybe_send_reminder(
     )
     if result is PushSendResult.SUBSCRIPTION_GONE:
         await delete_subscription_by_id(session, subscription.id)
-    elif result is PushSendResult.SENT:
-        subscription.last_reminder_key = reminder_key
-    # FAILED: leave last_reminder_key untouched so the next tick retries.
+    elif result is PushSendResult.FAILED:
+        # Release the claim so a later tick retries the send.
+        await session.execute(
+            update(PushSubscription).where(PushSubscription.id == subscription.id).values(last_reminder_key=None)
+        )
+        await session.commit()
+        subscription.last_reminder_key = None
+    # SENT: last_reminder_key is already set from the claim above.
 
 
 async def _check_and_send_reminders() -> None:

@@ -62,6 +62,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
 
         const registration = await navigator.serviceWorker.ready;
         let subscription = await registration.pushManager.getSubscription();
+        const isNewSubscription = subscription === null;
         if (!subscription) {
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
@@ -85,6 +86,19 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
         });
         if (!response.ok) {
           logger.warn("Failed to register push subscription:", await readErrorDetail(response));
+          // Only a subscription created in this call is rolled back - an existing one
+          // (e.g. a settings update that failed) is left alone, since the backend most
+          // likely already has it registered from a prior successful call. Without this,
+          // a fresh browser-side subscription with no backend record would make
+          // getActiveSubscription() report "active" while nothing can ever be delivered,
+          // silently disabling the foreground fallback too (see App.tsx).
+          if (isNewSubscription) {
+            try {
+              await subscription.unsubscribe();
+            } catch (unsubscribeError) {
+              logger.warn("Failed to roll back orphaned push subscription:", unsubscribeError);
+            }
+          }
           return false;
         }
         return true;

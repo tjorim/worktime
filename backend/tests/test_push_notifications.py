@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
@@ -53,7 +54,7 @@ def _seed_work_context(
     assert response.status_code == 200, response.text
 
 
-def _subscribe_payload(endpoint: str = "https://push.example.com/ep1", **overrides: object) -> dict:
+def _subscribe_payload(endpoint: str = "https://fcm.googleapis.com/fcm/send/ep1", **overrides: object) -> dict:
     payload = {
         "endpoint": endpoint,
         "keys": {"p256dh": "test-p256dh", "auth": "test-auth"},
@@ -62,6 +63,37 @@ def _subscribe_payload(endpoint: str = "https://push.example.com/ep1", **overrid
     }
     payload.update(overrides)
     return payload
+
+
+class TestPushSubscriptionEndpointValidation:
+    """Pure Pydantic validation -- no DB needed, runs locally without Postgres."""
+
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            "https://fcm.googleapis.com/fcm/send/abc123",
+            "https://updates.push.services.mozilla.com/wpush/v2/abc123",
+            "https://web.push.apple.com/abc123",
+            "https://wns2-abc.notify.windows.com/w/abc123",
+        ],
+    )
+    def test_accepts_known_push_service_hosts(self, endpoint: str) -> None:
+        PushSubscriptionCreate(endpoint=endpoint, keys=PushSubscriptionKeys(p256dh="a", auth="b"))
+
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            "http://fcm.googleapis.com/fcm/send/abc123",  # not https
+            "https://169.254.169.254/latest/meta-data/",  # cloud metadata endpoint
+            "https://localhost:8000/admin",  # loopback
+            "https://internal-service.local/webhook",  # unrelated host
+            "https://evil.com/fcm.googleapis.com",  # allowed host as a path, not the host
+            "not-a-url",
+        ],
+    )
+    def test_rejects_endpoints_outside_the_known_push_service_allowlist(self, endpoint: str) -> None:
+        with pytest.raises(ValidationError):
+            PushSubscriptionCreate(endpoint=endpoint, keys=PushSubscriptionKeys(p256dh="a", auth="b"))
 
 
 class TestPushRouter:
@@ -125,7 +157,7 @@ class TestPushRouter:
         )
         assert created.status_code == 201, created.text
         body = created.json()
-        assert body["endpoint"] == "https://push.example.com/ep1"
+        assert body["endpoint"] == "https://fcm.googleapis.com/fcm/send/ep1"
         assert body["quiet_hours_start"] == 22
         assert body["quiet_hours_end"] == 6
         assert "p256dh_key" not in body
@@ -144,12 +176,12 @@ class TestPushRouter:
         assert updated.json()["quiet_hours_start"] is None
 
         deleted = db_client.delete(
-            "/api/push/subscribe", params={"endpoint": "https://push.example.com/ep1"}, headers=headers
+            "/api/push/subscribe", params={"endpoint": "https://fcm.googleapis.com/fcm/send/ep1"}, headers=headers
         )
         assert deleted.status_code == 204
 
         deleted_again = db_client.delete(
-            "/api/push/subscribe", params={"endpoint": "https://push.example.com/ep1"}, headers=headers
+            "/api/push/subscribe", params={"endpoint": "https://fcm.googleapis.com/fcm/send/ep1"}, headers=headers
         )
         assert deleted_again.status_code == 404
 
@@ -188,13 +220,13 @@ class TestPushRouter:
 
         db_client.post(
             "/api/push/subscribe",
-            json=_subscribe_payload(endpoint="https://push.example.com/owner-ep"),
+            json=_subscribe_payload(endpoint="https://fcm.googleapis.com/fcm/send/owner-ep"),
             headers=auth_headers(owner_id),
         )
 
         response = db_client.delete(
             "/api/push/subscribe",
-            params={"endpoint": "https://push.example.com/owner-ep"},
+            params={"endpoint": "https://fcm.googleapis.com/fcm/send/owner-ep"},
             headers=auth_headers(other_id),
         )
         assert response.status_code == 404
@@ -206,7 +238,7 @@ class TestPushSubscriptionService:
         second_owner = await create_user(db_session, UserCreate(username="reuse-owner-2", display_name="Reuse Owner 2"))
 
         payload = PushSubscriptionCreate(
-            endpoint="https://push.example.com/shared",
+            endpoint="https://fcm.googleapis.com/fcm/send/shared",
             keys=PushSubscriptionKeys(p256dh="a", auth="b"),
         )
         first = await upsert_subscription(db_session, first_owner.id, payload)
@@ -222,15 +254,15 @@ class TestPushSubscriptionService:
         owner = await create_user(db_session, UserCreate(username="delete-owner", display_name="Delete Owner"))
         other = await create_user(db_session, UserCreate(username="delete-other", display_name="Delete Other"))
         payload = PushSubscriptionCreate(
-            endpoint="https://push.example.com/delete-me",
+            endpoint="https://fcm.googleapis.com/fcm/send/delete-me",
             keys=PushSubscriptionKeys(p256dh="a", auth="b"),
         )
         await upsert_subscription(db_session, owner.id, payload)
 
         with pytest.raises(NotFoundError):
-            await delete_subscription(db_session, other.id, "https://push.example.com/delete-me")
+            await delete_subscription(db_session, other.id, "https://fcm.googleapis.com/fcm/send/delete-me")
 
-        await delete_subscription(db_session, owner.id, "https://push.example.com/delete-me")
+        await delete_subscription(db_session, owner.id, "https://fcm.googleapis.com/fcm/send/delete-me")
         assert await list_all_subscriptions(db_session) == []
 
     async def test_delete_subscription_by_id_is_a_noop_when_already_gone(self, db_session: AsyncSession) -> None:
@@ -261,7 +293,7 @@ class TestShiftReminderScheduler:
         _seed_work_context(db_client, headers, schedule_type=schedule_type, team_number=team_number)
 
         payload = PushSubscriptionCreate(
-            endpoint=f"https://push.example.com/{username}",
+            endpoint=f"https://fcm.googleapis.com/fcm/send/{username}",
             keys=PushSubscriptionKeys(p256dh="a", auth="b"),
             timezone="UTC",
             lead_time_minutes=lead_time_minutes,
@@ -416,7 +448,7 @@ class TestShiftReminderScheduler:
         admin_headers = auth_headers(1, is_admin=True)
         user_id = create_user_factory(db_client, admin_headers, "reminder-no-schedule")
         payload = PushSubscriptionCreate(
-            endpoint="https://push.example.com/no-schedule",
+            endpoint="https://fcm.googleapis.com/fcm/send/no-schedule",
             keys=PushSubscriptionKeys(p256dh="a", auth="b"),
         )
         subscription = await upsert_subscription(db_session, user_id, payload)
