@@ -514,7 +514,7 @@
     <h1>What's broken, and in what order</h1>
     <p class="lede">Thirty-seven findings across sync, backend, interface and documentation, from
       three reviews run against <span class="mono">main</span> — each traced to the code that
-      produces it and filed as a GitHub issue. Eighteen are now fixed and verified; nineteen
+      produces it and filed as a GitHub issue. Twenty-three are now fixed and verified; fourteen
       remain, with a suggested order below. The app is well built; the failures cluster in the
       places where two subsystems meet and neither owns the seam.</p>
     <div class="method">
@@ -535,17 +535,17 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">7</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">19</span><span class="k">Open</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">23</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">3</span><span class="k">Medium</span></div>
+      <div class="score low"><span class="n">11</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">14</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
       marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for what's left — 7 medium, 12 low — is at the bottom of the page, along with three
+      order for what's left — 3 medium, 11 low — is at the bottom of the page, along with three
       in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
@@ -820,18 +820,18 @@
 
   <section>
     <div class="sec-head">
-      <h2>Frontend correctness and i18n<span class="sec-count">5</span></h2>
+      <h2>Frontend correctness and i18n<span class="sec-count">5 · 3 fixed</span></h2>
       <p>Controls that lie about what they do, and text that doesn't translate.</p>
     </div>
     <div class="findings">
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a>
           <span class="area">frontend</span>
           <span class="area">i18n</span>
           <h3>Dutch is missing 22 keys, including the entire first-sync conflict dialog</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>nl.json</code> has 1171 keys to <code>en.json</code>'s 1193, and nothing in CI
           catches the drift. The worst gap is the 11-key first-sync conflict dialog — a Dutch user
@@ -842,6 +842,14 @@
           the existing version-consistency check — same pattern, and it stops this
           recurring.</span></div>
         <div class="refs"><b>frontend/messages/nl.json</b> <b>.github/workflows/frontend-ci.yml:49</b></div>
+        <div class="verified"><span>PR #1155 translated all 22 missing keys — the first-sync
+          conflict dialog, the long-weekend feature, the two calendar-legend entries, and the two
+          Gantt aria labels — following the terminology already established elsewhere in
+          <code>nl.json</code>. Added <code>frontend/scripts/check-message-parity.ts</code>, which
+          reads the base locale from <code>project.inlang/settings.json</code> and diffs every other
+          locale's keys against it, wired in as a new step in <code>frontend-ci.yml</code> beside
+          <code>check-version-consistency</code>, so this class of drift now fails CI instead of
+          shipping silently.</span></div>
       </div>
 
       <div class="finding med resolved">
@@ -878,12 +886,12 @@
           half (see its row in the older backlog below).</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a>
           <span class="area">frontend</span>
           <h3>Schedule selector is silently ignored on the Transfers tab</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>ScheduleTabView</code> renders the schedule dropdown unconditionally, but
           <code>TransferView</code> never receives <code>viewingScheduleType</code> — it reads the
@@ -894,6 +902,11 @@
           promising something it doesn't deliver — two lines. Wiring it through properly is the
           cross-schedule work in #1111.</span></div>
         <div class="refs"><b>components/ScheduleTabView.tsx:130</b> <b>ScheduleTabView.tsx:191</b> <b>hooks/useTransferCalculations.ts:119</b></div>
+        <div class="verified"><span>Resolved via the real fix rather than the two-line stopgap:
+          <code>ScheduleTabView</code>'s selector now stays mounted on the Transfers tab (relabeled
+          "Compare with schedule:") and its value is passed to <code>TransferView</code> as
+          <code>otherScheduleType</code>, which the hook now actually consumes — landed together with
+          #1111's cross-schedule overlap work in the same PR.</span></div>
       </div>
 
       <div class="finding low">
@@ -935,7 +948,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Interface<span class="sec-count">11 · 6 fixed</span></h2>
+      <h2>Interface<span class="sec-count">11 · 8 fixed</span></h2>
       <p>Twenty findings from driving the app (nineteen from the original pass, plus
         <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a> found while verifying
         #1126), grouped into eleven issues. Tracked in
@@ -1144,12 +1157,12 @@
           backup/restore/reset only.</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a>
           <span class="area">frontend</span>
           <h3>Disabled actions and empty states don't explain themselves</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>"Start Now" and "Add Task" disable with no stated reason and, on mobile, full-width pale
           fills that read as enabled. The Label field's only guidance is the placeholder "Add labels
@@ -1158,6 +1171,15 @@
           every day, doesn't. Separately, the empty Time Off tab ships Delete&nbsp;Selected,
           Select&nbsp;All and Clear&nbsp;Selection above a table that doesn't exist.</p>
         <div class="refs"><b>timeTracking/TaskEntryForm.tsx:114</b> <b>TaskEntryForm.tsx:171</b> <b>timeOff/TimeOffToolbar.tsx:97</b></div>
+        <div class="verified"><span>The disabled Start Now/Add Task buttons already carried
+          <code>aria-describedby</code> tooltips naming the missing field. Added the missing half:
+          <code>TaskEntryForm.tsx</code> now renders <code>tt_add_labels_first_task_help()</code>
+          under the Label field when empty, with an inline "Create a label" action that opens a
+          <code>LabelModal</code> without leaving the form (<code>TimeTrackingDailyView.tsx</code>,
+          wired to <code>updateLabels</code> via <code>TimeTrackingView.tsx</code>). For the Time Off
+          tab, <code>TimeOffToolbar.tsx</code> now hides Export until an event exists and only reveals
+          the Delete&nbsp;Selected/Select&nbsp;All/Clear&nbsp;Selection group once a row is actually
+          selected, with Add&nbsp;Event moved to primary position in the header row.</span></div>
       </div>
 
       <div class="finding med">
@@ -1179,12 +1201,12 @@
         <div class="refs"><b>components/WelcomeWizard.tsx</b> <b>wizardStepConfig.ts</b> <b>contexts/SettingsContext.tsx:488</b></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a>
           <span class="area">frontend</span>
           <h3>Dark mode flattens card hierarchy and keeps a full-saturation navbar</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Body <code>#181a1b</code> to card <code>#23272b</code> is too small a step to read as
           elevation, so the nesting that's obvious in light mode collapses into one dark field held
@@ -1195,6 +1217,12 @@
           separate navbar token rather than touching <code>--wt-primary-color</code>, which is
           deliberately pinned for <code>.team-btn.selected</code> contrast.</span></div>
         <div class="refs"><b>styles/main.scss</b> <b>styles/_variables.scss</b> <b>components/Header.tsx</b></div>
+        <div class="verified"><span>Added a three-tier <code>--wt-surface-1/2/3</code> ramp in
+          <code>_variables.scss</code> (card/modal/dropdown at surface-2, nested cards and tables at
+          surface-3) plus a top-highlight box-shadow on <code>.card</code>, and a separate
+          <code>--wt-navbar-bg</code> token (deep desaturated blue in dark mode) that
+          <code>Header.tsx</code> now uses instead of <code>bg="primary"</code>, leaving
+          <code>--wt-primary-color</code> untouched.</span></div>
       </div>
 
       <div class="finding low">
@@ -1236,7 +1264,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Product gaps<span class="sec-count">6</span></h2>
+      <h2>Product gaps<span class="sec-count">6 · 1 fixed</span></h2>
       <p>Capability that exists on one side of the wire and can't be reached from the other.</p>
     </div>
     <div class="findings">
@@ -1281,12 +1309,12 @@
         <div class="refs"><b>backend/app/services/read_models_service.py</b> <b>services/access_token_service.py</b></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a>
           <span class="area">frontend</span>
           <h3>TransferView: cross-schedule overlap and time-off overlays</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Transfers computes handover moments for two teams on <em>one</em> schedule, so a 9-5 user
           can't see when their hours overlap a 5-shift team's. And a handover with someone on
@@ -1297,6 +1325,17 @@
           with an <code>otherScheduleType</code>, and pass <code>viewingScheduleType</code> through —
           which also fixes #1110. Watch the team-count mismatch when schedules differ.</span></div>
         <div class="refs"><b>hooks/useTransferCalculations.ts:198</b> <b>utils/shiftCalculations.ts</b></div>
+        <div class="verified"><span>Built as planned: <code>getShiftWindow</code>/<code>findOverlaps</code>
+          added to <code>shiftCalculations.ts</code> with unit tests; <code>useTransferCalculations</code>
+          takes an <code>otherScheduleType</code> (defaulting to the user's own schedule), scopes
+          <code>availableOtherTeams</code>/team count to it instead of excluding the user's own team
+          number cross-schedule, keeps handover/takeover points same-schedule-only, and returns a new
+          <code>overlaps</code> list. <code>TransferView</code> renders overlaps in a grouped accordion
+          (parallel to the transfer list) with a "Compare with schedule" note, and flags rows that fall
+          on the user's own recorded time off using <code>EventStoreContext</code> + the existing
+          <code>HolidayMetadata</code> color/label. <code>ScheduleTabView</code>'s selector now feeds
+          <code>otherScheduleType</code> into <code>TransferView</code> directly, superseding #1110's
+          stopgap.</span></div>
       </div>
 
       <div class="finding low">
@@ -1507,7 +1546,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">7</span></h3>
+      <h3>Medium <span class="sec-count">3</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1517,32 +1556,6 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a></td>
-              <td>Dutch parity plus the CI parity check — the check is what stops this specific class
-                of drift recurring, so it's worth doing before more translated surface ships.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
-              <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
-                decision needed.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">3</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
-              <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
-                the low list; sequence that right after if you want the whole feature rather than the
-                patch.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">4</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
-              <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
-                values but no architecture decision.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1550,14 +1563,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
                 so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once
@@ -1569,9 +1582,8 @@
     </div>
 
     <div class="seq-block" style="margin-top:2rem">
-      <h3>Low <span class="sec-count">11</span></h3>
-      <p>Cheapest and most isolated first; the two items that gain from a predecessor (#1111→#1121)
-        are placed back to back; the largest and least-constrained items — new capability, pure
+      <h3>Low <span class="sec-count">10</span></h3>
+      <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
         <table class="seq">
@@ -1605,38 +1617,30 @@
             </tr>
             <tr>
               <td class="seq-n">5</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a></td>
-              <td>TransferView cross-schedule overlap and time-off overlays — the real fix behind
-                medium&nbsp;#3's stopgap. Do it once that's landed; reuses the same
-                <code>viewingScheduleType</code> plumbing.</td>
+              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
+              <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
+                once a third call site exists — #1111 added one, so this is its natural follow-up.</td>
             </tr>
             <tr>
               <td class="seq-n">6</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
-              <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
-                once a third call site exists — #1111 just added one, so this is its natural
-                follow-up.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
               <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
                 decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
               <td>Integration-client management UI. Mirrors the existing PAT section's patterns
                 closely enough to copy rather than design.</td>
             </tr>
             <tr>
-              <td class="seq-n">9</td>
+              <td class="seq-n">8</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
               <td>iCal subscription feed. <span class="stale">check PR #448</span> before starting —
                 it may already ship the export half of this.</td>
             </tr>
             <tr>
-              <td class="seq-n">10</td>
+              <td class="seq-n">9</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
               <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
                 designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
@@ -1645,7 +1649,7 @@
                 hypothetical one the issue was written against.</td>
             </tr>
             <tr>
-              <td class="seq-n">11</td>
+              <td class="seq-n">10</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge

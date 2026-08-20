@@ -43,7 +43,7 @@ export function Header() {
       <a href="#main-content" className="visually-hidden-focusable">
         {m.skip_to_content()}
       </a>
-      <Navbar fixed="top" bg="primary" data-bs-theme="dark" className="shadow-sm">
+      <Navbar fixed="top" data-bs-theme="dark" className="shadow-sm navbar-worktime">
         <Container fluid>
           <Navbar.Brand
             as="button"

@@ -20,7 +20,7 @@ export type TabKey =
   | "timeoff"
   | "timetracking"
   | "gantt";
-export type ScheduleViewKey = "today" | "week" | "transfer";
+export type ScheduleViewKey = "schedule" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
 export type TimeTrackingViewKey = "daily" | "weekly";
 export type GanttViewMode = "Day" | "Week" | "Month" | "Year";
@@ -125,7 +125,7 @@ export const defaultSettings: UserSettings = {
 
 export const defaultLastUsed: LastUsed = {
   activeTab: "calendar",
-  scheduleView: "today",
+  scheduleView: "schedule",
   otherSchedule: null,
   timeOffView: "table",
   timeTrackingView: "daily",
@@ -142,7 +142,7 @@ const validTabKeys = new Set<TabKey>([
   "timetracking",
   "gantt",
 ]);
-const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
+const validScheduleViewKeys = new Set<ScheduleViewKey>(["schedule", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
 const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Year"]);

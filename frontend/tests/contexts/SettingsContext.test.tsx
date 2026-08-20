@@ -163,7 +163,7 @@ describe("SettingsContext unified user state", () => {
       },
       lastUsed: {
         activeTab: "calendar",
-        scheduleView: "today",
+        scheduleView: "schedule",
         otherSchedule: null,
         timeOffView: "table",
         timeTrackingView: "daily",
@@ -282,7 +282,7 @@ describe("SettingsContext unified user state", () => {
           },
           lastUsed: {
             activeTab: "schedule",
-            scheduleView: "week",
+            scheduleView: "transfer",
             otherSchedule: "9-5",
             timeOffView: "raw",
             timeTrackingView: "weekly",
@@ -294,7 +294,7 @@ describe("SettingsContext unified user state", () => {
       const { result } = renderHook(() => useLastUsed(), { wrapper });
 
       expect(result.current.lastUsed.activeTab).toBe("schedule");
-      expect(result.current.lastUsed.scheduleView).toBe("week");
+      expect(result.current.lastUsed.scheduleView).toBe("transfer");
       expect(result.current.lastUsed.otherSchedule).toBe("9-5");
       expect(result.current.lastUsed.timeOffView).toBe("table"); // "raw" was removed, defaults to "table"
       expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
@@ -360,7 +360,7 @@ describe("SettingsContext unified user state", () => {
       const { result } = renderHook(() => useLastUsed(), { wrapper });
       expect(result.current.lastUsed).toEqual({
         activeTab: "calendar",
-        scheduleView: "today",
+        scheduleView: "schedule",
         otherSchedule: null,
         timeOffView: "table",
         timeTrackingView: "daily",

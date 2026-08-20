@@ -166,3 +166,15 @@ unfamiliar branch's existing commits:
 - Always include screenshots in PR comments when making UI changes (all visible states)
 - Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
 - All storage keys live in `frontend/src/constants/storageKeys.ts`
+- Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
+  authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,
+  and a "potential issue" flagged as high-confidence still needs verifying against current code before
+  it's trusted. For each finding: verify it against the actual code, fix it if still valid (with tests
+  and mutation-testing them where the fix is non-trivial, to confirm the test would actually catch a
+  regression), or skip it with a one-line reason if it isn't. Keep fixes minimal and scoped to the
+  finding itself.
+- CodeRabbit's "nitpick" findings usually aren't posted as separate inline review-comment threads —
+  they're plain text inside the main review body/summary, under a heading like "🧹 Nitpick comments".
+  Fetching only inline review threads (e.g. `pull_request_read` with `get_review_comments`) will miss
+  them entirely; also read the review body itself (`get_reviews`, or the `pull_request_review.submitted`
+  webhook payload) to see the full finding set before deciding what to address.

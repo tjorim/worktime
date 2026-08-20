@@ -1,34 +1,32 @@
-import { useId, useMemo } from "react";
+import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
-import type { Dayjs } from "dayjs";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
-import type { ScheduleOption } from "@/data/rosters";
-import { hasMultipleTeams } from "@/utils/scheduleUtils";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { dayjs, getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
+import { hasMultipleTeams, isValidScheduleType } from "@/utils/scheduleUtils";
+import { getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import { getAllTeamsShifts, isCurrentlyWorking } from "@/utils/shiftCalculations";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import { useLiveTime } from "@/hooks/useLiveTime";
 import * as m from "@/paraglide/messages.js";
+
+// Pre-compute available schedules since SCHEDULE_OPTIONS is static
+const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding
-  currentDate: Dayjs;
-  onPreviousDay: () => void;
-  onNextDay: () => void;
-  onTodayClick: () => void;
-  onDateSelect?: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
-  isActive?: boolean;
-  viewingScheduleType: ScheduleOption;
+  viewingScheduleType: ScheduleOption | null;
+  userScheduleType: ScheduleOption | null;
+  onViewingScheduleTypeChange: (next: ScheduleOption | null) => void;
 }
 
 /**
@@ -164,73 +162,43 @@ function TeamCard({
 }
 
 /**
- * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
+ * Render a card listing all teams scheduled for today, with a schedule selector and optional
+ * per-team interactivity. Today always reflects the actual current date — it has no date
+ * navigation of its own (see WeekView for browsing other days/weeks).
  *
  * Works with any schedule type - automatically adapts to single-user or multi-team schedules. Shifts are calculated
  * internally based on the selected viewing schedule, supporting cross-schedule viewing functionality.
  *
  * @param myTeam - Current user's team number, or `null`; used to visually highlight the user's team card.
- * @param currentDate - The date being displayed
- * @param onPreviousDay - Handler invoked when the "Previous" button is pressed
- * @param onNextDay - Handler invoked when the "Next" button is pressed
- * @param onTodayClick - Handler invoked when the "Today" button is pressed.
  * @param onTeamClick - Optional handler invoked with a team number and schedule type when a team card is activated (click or keyboard).
- * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
+ * @param viewingScheduleType - The schedule currently being browsed, or `null` if none is selected yet.
+ * @param userScheduleType - The user's own schedule, used to mark it in the selector.
+ * @param onViewingScheduleTypeChange - Callback invoked when the schedule selector changes.
+ * @returns A React element representing the Today card containing a schedule selector and a responsive grid of team cards.
  */
 export function TodayView({
   myTeam,
-  currentDate,
-  onPreviousDay,
-  onNextDay,
-  onTodayClick,
-  onDateSelect,
   onTeamClick,
-  isActive = false,
   viewingScheduleType,
+  userScheduleType,
+  onViewingScheduleTypeChange,
 }: TodayViewProps) {
-  const datePickerId = useId();
-  const scheduleType = viewingScheduleType;
-  const hasTeams = hasMultipleTeams(viewingScheduleType);
+  const scheduleSelectId = useId();
+  const hasTeams = viewingScheduleType ? hasMultipleTeams(viewingScheduleType) : false;
+  const today = useLiveTime({ precision: "minute" });
 
   // Calculate shifts for the viewing schedule
-  const todayShifts = useMemo(() => {
-    return getAllTeamsShifts(currentDate, viewingScheduleType);
-  }, [currentDate, viewingScheduleType]);
-
-  // Keyboard shortcuts (only active when this tab is visible)
-  const shortcuts = useMemo(
-    () =>
-      isActive
-        ? {
-            onToday: onTodayClick,
-            onPrevious: onPreviousDay,
-            onNext: onNextDay,
-          }
-        : {},
-    [isActive, onTodayClick, onPreviousDay, onNextDay],
-  );
-  useKeyboardShortcuts(shortcuts);
+  const todayShifts = viewingScheduleType ? getAllTeamsShifts(today, viewingScheduleType) : [];
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
-    if (!shiftResult.shift.isWorking) return false;
-    const now = dayjs();
-    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now, scheduleType);
-  };
-
-  const today = dayjs();
-  const displayDate = currentDate;
-  const isToday = displayDate.isSame(today, "day");
-  const canSelectDate = Boolean(onDateSelect);
-  const handleDateChange = (dateString: string) => {
-    if (dateString && onDateSelect) {
-      onDateSelect(dayjs(dateString));
-    }
+    if (!viewingScheduleType || !shiftResult.shift.isWorking) return false;
+    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, today, viewingScheduleType);
   };
 
   return (
     <Card>
       <Card.Header>
-        <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
           <span className="fw-semibold">
             <i
               className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
@@ -238,54 +206,70 @@ export function TodayView({
             ></i>
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
-          <DayNavigationButtonGroup
-            isCurrent={isToday}
-            onPrevious={onPreviousDay}
-            onCurrent={onTodayClick}
-            onNext={onNextDay}
-            selectorLabel={canSelectDate ? m.tt_jump_to_date() : undefined}
-            selectorId={canSelectDate ? datePickerId : undefined}
-            selectorValue={canSelectDate ? displayDate.format("YYYY-MM-DD") : undefined}
-            onSelectorChange={canSelectDate ? handleDateChange : undefined}
-          />
-        </div>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
-            <div className="text-muted small">
-              {new Intl.DateTimeFormat(getLocale(), {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              }).format(displayDate.toDate())}
-              {isToday && (
-                <Badge bg="success" className="ms-2" aria-label={m.today_view_current_day_aria()}>
-                  {m.today()}
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="small text-muted d-none d-lg-block">
-            <i className="bi bi-keyboard me-1" aria-hidden="true"></i>
-            {m.week_view_keyboard_hint()}
+            <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
+              <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+              {m.schedule_view_label()}
+            </Form.Label>
+            <Form.Select
+              id={scheduleSelectId}
+              size="sm"
+              value={viewingScheduleType || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                onViewingScheduleTypeChange(isValidScheduleType(value) ? value : null);
+              }}
+              style={{ width: "auto" }}
+            >
+              <option value="" disabled>
+                {m.schedule_select_placeholder()}
+              </option>
+              {availableSchedules.map((schedule) => (
+                <option key={schedule.value} value={schedule.value}>
+                  {schedule.title}
+                  {schedule.value === userScheduleType
+                    ? ` ${m.schedule_your_schedule_suffix()}`
+                    : ""}
+                </option>
+              ))}
+            </Form.Select>
           </div>
         </div>
+        {viewingScheduleType && (
+          <div className="text-muted small">
+            {new Intl.DateTimeFormat(getLocale(), {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            }).format(today.toDate())}
+            <Badge bg="success" className="ms-2" aria-label={m.today_view_current_day_aria()}>
+              {m.today()}
+            </Badge>
+          </div>
+        )}
       </Card.Header>
       <Card.Body>
-        <Row className="g-2">
-          {todayShifts.map((shiftResult) => (
-            <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
-              <TeamCard
-                shiftResult={shiftResult}
-                isMyTeam={myTeam === shiftResult.teamNumber}
-                isCurrentlyActive={isCurrentlyActive(shiftResult)}
-                hasTeams={hasTeams}
-                onTeamClick={onTeamClick}
-                scheduleType={scheduleType}
-              />
-            </Col>
-          ))}
-        </Row>
+        {!viewingScheduleType ? (
+          <div className="alert alert-info mb-0" role="status">
+            {m.schedule_select_hint()}
+          </div>
+        ) : (
+          <Row className="g-2">
+            {todayShifts.map((shiftResult) => (
+              <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
+                <TeamCard
+                  shiftResult={shiftResult}
+                  isMyTeam={myTeam === shiftResult.teamNumber}
+                  isCurrentlyActive={isCurrentlyActive(shiftResult)}
+                  hasTeams={hasTeams}
+                  onTeamClick={onTeamClick}
+                  scheduleType={viewingScheduleType}
+                />
+              </Col>
+            ))}
+          </Row>
+        )}
       </Card.Body>
     </Card>
   );

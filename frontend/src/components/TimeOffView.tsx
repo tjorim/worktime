@@ -476,9 +476,11 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             </Button>
           )}
         </ButtonGroup>
-        <span className="text-muted small">
-          {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
-        </span>
+        {(viewMode !== "table" || entries.length > 0) && (
+          <span className="text-muted small">
+            {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
+          </span>
+        )}
       </div>
 
       {viewMode === "table" && (

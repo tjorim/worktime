@@ -605,13 +605,13 @@
 [data-bs-theme="dark"] {
   .schedule-table th,
   .schedule-table .team-header {
-    background-color: var(--bs-table-bg, #23272b);
+    background-color: var(--bs-table-bg, #333a42);
     color: var(--bs-table-color, #e0e0e0);
   }
 
   .schedule-table th:first-child,
   .schedule-table td:first-child {
-    background-color: var(--bs-table-bg, #23272b);
+    background-color: var(--bs-table-bg, #333a42);
   }
 }
 
