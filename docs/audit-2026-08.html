@@ -514,9 +514,9 @@
     <h1>What's broken, and in what order</h1>
     <p class="lede">Thirty-seven findings across sync, backend, interface and documentation, from
       three reviews run against <span class="mono">main</span> — each traced to the code that
-      produces it and filed as a GitHub issue. The eight high-severity ones are now fixed and
-      verified; twenty-nine remain, with a suggested order below. The app is well built; the
-      failures cluster in the places where two subsystems meet and neither owns the seam.</p>
+      produces it and filed as a GitHub issue. Eighteen are now fixed and verified; nineteen
+      remain, with a suggested order below. The app is well built; the failures cluster in the
+      places where two subsystems meet and neither owns the seam.</p>
     <div class="method">
       <span>Full-codebase read</span>
       <span>App driven in Chromium, desktop and phone, both themes</span>
@@ -535,18 +535,18 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">20</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">7</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">18</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">19</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
-      marker on each of the 9 resolved cards below for what changed and where. A suggested order for
-      what's left — 15 medium, 13 low — is at the bottom of the page, along with three in-flight PRs
-      from other tools worth checking before you duplicate their work.
+      marker on each resolved card below (scoreboard above) for what changed and where. A suggested
+      order for what's left — 7 medium, 12 low — is at the bottom of the page, along with three
+      in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
 
@@ -935,7 +935,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Interface<span class="sec-count">11 · 5 fixed</span></h2>
+      <h2>Interface<span class="sec-count">11 · 6 fixed</span></h2>
       <p>Twenty findings from driving the app (nineteen from the original pass, plus
         <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a> found while verifying
         #1126), grouped into eleven issues. Tracked in
@@ -1125,8 +1125,8 @@
             first control; "Preferences" appears three times.</li>
           <li>"Quick Actions" is backup/restore/reset; "Information" is About. Neither predicts its
             contents, so finding "export my data" means opening sections at random.</li>
-          <li>The Notifications switch now works (#1112); this card's other two bullets —
-            duplicated headers and opaque labels — remain open.</li>
+          <li>The Notifications switch now works (#1112), resolved separately ahead of this
+            card's headers/labels fix below.</li>
         </ul>
         <div class="refs"><b>pages/SettingsPage.tsx:44</b> <b>settings/SettingsGeneralSection.tsx:61</b></div>
         <div class="verified"><span>Dropped the content card's duplicate header/description
@@ -1694,7 +1694,7 @@
               waits for a visit-count-plus-in-session-delay engagement threshold before
               auto-prompting via a dismissible toast (7-day cooldown either way), tracks
               install/dismiss outcomes, and exposes a manual "Install App" action in Settings &gt;
-              Data &amp; backup that works independently of the auto-prompt's engagement gate.</td>
+              About that works independently of the auto-prompt's engagement gate.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
@@ -1727,7 +1727,7 @@
       their absence in #1100 and #1105 stands out; stale-cache fallbacks on holiday fetches; a
       supervised-background-task pattern in the JWKS refresh loop that #1102 can copy.
       <br><br>
-      The pattern across all thirty-six: almost every finding is a place where a correct
+      The pattern across all thirty-seven: almost every finding is a place where a correct
       implementation already exists somewhere else in the codebase and one call site didn't get it.
     </div>
   </section>

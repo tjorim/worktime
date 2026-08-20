@@ -219,15 +219,15 @@ describe("ChangelogModal", () => {
   });
 
   describe("Footer Links", () => {
-    it("includes semantic versioning reference", () => {
+    it("includes CalVer versioning reference", () => {
       render(<ChangelogModal {...defaultProps} />);
 
       expect(screen.getByText("Worktime follows")).toBeInTheDocument();
 
-      const semverLink = screen.getByText("Semantic Versioning");
-      expect(semverLink).toHaveAttribute("href", "https://semver.org/");
-      expect(semverLink).toHaveAttribute("target", "_blank");
-      expect(semverLink).toHaveAttribute("rel", "noopener noreferrer");
+      const versioningLink = screen.getByText("CalVer");
+      expect(versioningLink).toHaveAttribute("href", "https://calver.org/");
+      expect(versioningLink).toHaveAttribute("target", "_blank");
+      expect(versioningLink).toHaveAttribute("rel", "noopener noreferrer");
     });
   });
 

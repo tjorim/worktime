@@ -21,7 +21,7 @@ below predate that switch.
 
 ### Added
 
-- The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual "Install App" action in Settings > Quick Actions (#273)
+- The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual "Install App" action in Settings > About (#273)
 
 ## [2026.8.5] - 2026-08-19
 

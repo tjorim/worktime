@@ -168,9 +168,9 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
       </Modal.Body>
       <Modal.Footer>
         <small className="text-muted me-auto">
-          {m.changelog_semver_text()}{" "}
-          <a href="https://semver.org/" target="_blank" rel="noopener noreferrer">
-            {m.changelog_semver_link()}
+          {m.changelog_versioning_text()}{" "}
+          <a href="https://calver.org/" target="_blank" rel="noopener noreferrer">
+            {m.changelog_versioning_link()}
           </a>
         </small>
         <Button variant="secondary" onClick={onHide}>

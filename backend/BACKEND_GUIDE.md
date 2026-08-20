@@ -173,8 +173,8 @@ Under `/api/sync`:
 
 ## Storage Model
 
-The database layer is PostgreSQL-only and expects an async SQLAlchemy URL using the `asyncpg` driver
-(a `sqlite+aiosqlite://` URL is also accepted, but only as a local-dev convenience with no container).
+The database layer is PostgreSQL-backed and expects an async SQLAlchemy URL using the `asyncpg` driver
+(a `sqlite+aiosqlite://` URL is also accepted as a local-development convenience without a container).
 
 Schema management is handled through Alembic. The backend can be started with DB routes disabled, but the current app is clearly designed to support DB-backed features as a first-class path.
 
