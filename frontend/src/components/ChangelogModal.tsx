@@ -163,16 +163,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
             <i className={clsx("bi", "bi-rocket", "me-2")}></i>
             {m.changelog_coming_soon_heading()}
           </h6>
-          {Object.entries(futurePlans).map(([version, plan], index, array) => (
-            <p
-              key={version}
-              className={
-                index === array.length - 1 ? "mb-0 small text-muted" : "mb-1 small text-muted"
-              }
-            >
-              <strong>{version}:</strong> {plan.features.join(", ")}
-            </p>
-          ))}
+          <p className="mb-0 small text-muted">{futurePlans.join(", ")}</p>
         </div>
       </Modal.Body>
       <Modal.Footer>

@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">19</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">8</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">20</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">12</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">19</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1397,13 +1397,13 @@
           this PR.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a>
           <span class="area">frontend</span>
           <span class="area">docs</span>
           <h3>In-app changelog shows a stale roadmap and one wrong entry</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>User-visible, not just repo docs. <code>futurePlans</code> promises a
           <strong>v4.8.0</strong> that can't exist under CalVer, and lists multi-language support and
@@ -1414,6 +1414,12 @@
           and prune what shipped. <code>CHANGELOG.md</code> needs the same correction via
           <code>generate-changelog</code>.</span></div>
         <div class="refs"><b>frontend/src/data/changelog.ts:707</b> <b>changelog.ts:64</b></div>
+        <div class="verified"><span><code>futurePlans</code> is now a flat, unversioned string
+          array (no more version-keyed grouping to rot under CalVer), pruned of the two shipped
+          items (multi-language support, data export/backup). The 2026.7.1 entry now correctly
+          says <code>VERSION</code> syncs to <code>frontend/package.json</code> and is read at
+          runtime by <code>backend/app/version.py</code>, and <code>CHANGELOG.md</code> was
+          regenerated via <code>generate-changelog</code> to match. Fixed in this PR.</span></div>
       </div>
 
       <div class="finding low">

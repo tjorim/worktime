@@ -204,23 +204,16 @@ describe("ChangelogModal", () => {
   });
 
   describe("Coming Soon Section", () => {
-    it("displays future version plans", () => {
+    it("displays future plans", () => {
       render(<ChangelogModal {...defaultProps} />);
 
       expect(screen.getByText("Coming Soon")).toBeInTheDocument();
 
-      // Dynamically check for all versions in futurePlans
-      Object.keys(futurePlans).forEach((version) => {
-        expect(screen.getByText(new RegExp(`${version}:`))).toBeInTheDocument();
-      });
-
-      // Dynamically check that each version's features are rendered
-      Object.entries(futurePlans).forEach(([_version, plan]) => {
-        // Check that first two features from each plan are shown (features are comma-separated in display)
-        const firstTwoFeatures = plan.features.slice(0, 2).join(", ");
+      // Dynamically check that each planned feature is rendered
+      futurePlans.forEach((feature) => {
         // Escape all regex special characters for safe use in RegExp
-        const escapedFeatures = firstTwoFeatures.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        expect(screen.getByText(new RegExp(escapedFeatures))).toBeInTheDocument();
+        const escapedFeature = feature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        expect(screen.getByText(new RegExp(escapedFeature))).toBeInTheDocument();
       });
     });
   });
