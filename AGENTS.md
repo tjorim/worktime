@@ -148,3 +148,10 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 - Always include screenshots in PR comments when making UI changes (all visible states)
 - Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
 - All storage keys live in `frontend/src/constants/storageKeys.ts`
+- Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
+  authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,
+  and a "potential issue" flagged as high-confidence still needs verifying against current code before
+  it's trusted. For each finding: verify it against the actual code, fix it if still valid (with tests
+  and mutation-testing them where the fix is non-trivial, to confirm the test would actually catch a
+  regression), or skip it with a one-line reason if it isn't. Keep fixes minimal and scoped to the
+  finding itself.
