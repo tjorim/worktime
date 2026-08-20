@@ -4,9 +4,10 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "@/components/TransferView";
 import { SettingsProvider } from "@/contexts/SettingsContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
 import { useTransferCalculations, TransferType } from "@/hooks/useTransferCalculations";
 import { dayjs } from "@/utils/dateTimeUtils";
+import type { CalendarEvent } from "@/lib/events/types";
 
 // Mock useSettings to provide scheduleType
 vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
@@ -33,6 +34,18 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
     })),
   };
 });
+
+// Mock useEventStore so tests can seed time-off events without wiring up the
+// real TanStack DB-backed collection.
+vi.mock("@/contexts/EventStoreContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/EventStoreContext")>();
+  return {
+    ...actual,
+    useEventStore: vi.fn(() => ({ getEventsInRange: () => [] })),
+  };
+});
+
+const mockUseEventStore = vi.mocked(useEventStore);
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -145,6 +158,7 @@ function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
 describe("TransferView", () => {
   beforeEach(() => {
     mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+    mockUseEventStore.mockReturnValue({ getEventsInRange: () => [] });
     mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
@@ -763,6 +777,57 @@ describe("TransferView", () => {
       const selector = screen.getByLabelText(/Compare with schedule:/i) as HTMLSelectElement;
       const option = Array.from(selector.options).find((opt) => opt.value === "5-shift");
       expect(option?.text).toContain("Your schedule");
+    });
+  });
+
+  describe("Time-off indicators", () => {
+    const timeOffEvent: CalendarEvent = {
+      id: "time-off-1",
+      start: "2025-01-15",
+      end: "2025-01-15",
+      type: "holiday",
+      meta: {
+        type: "holiday",
+        color: "#fca5a5",
+        textColor: "#7f1d1d",
+        flags: [],
+        typeLabel: "Vacation",
+      },
+    };
+
+    it("flags a transfer row that falls on the user's own recorded time off", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [
+          {
+            date: dayjs("2025-01-15"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M" as const,
+            toShiftType: "L" as const,
+            type: "handover" as TransferType,
+          },
+        ],
+      });
+      mockUseEventStore.mockReturnValue({ getEventsInRange: () => [timeOffEvent] });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
+    });
+
+    it("flags an overlap row that falls on the user's own recorded time off", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        overlaps: [{ start: dayjs("2025-01-15 09:00"), end: dayjs("2025-01-15 15:00") }],
+        otherScheduleType: "9-5",
+      });
+      mockUseEventStore.mockReturnValue({ getEventsInRange: () => [timeOffEvent] });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
     });
   });
 
