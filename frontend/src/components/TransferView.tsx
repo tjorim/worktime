@@ -15,6 +15,7 @@ import { useEventStore } from "@/contexts/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
 import { dayjs, formatDisplayDate, formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
+import { isValidScheduleType } from "@/utils/scheduleUtils";
 import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
@@ -23,6 +24,9 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 
+// Pre-compute available schedules since SCHEDULE_OPTIONS is static
+const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
+
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
   initialOtherTeam?: number | null; // Initial other team (e.g., from Team Detail Modal)
@@ -30,6 +34,7 @@ interface TransferViewProps {
   // handover/takeover points aren't shown (the underlying shift-code
   // vocabulary isn't comparable across schedules) — only overlapping hours.
   otherScheduleType?: ScheduleOption | null;
+  onOtherScheduleTypeChange?: (next: ScheduleOption | null) => void;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
 }
@@ -272,10 +277,12 @@ export function TransferView({
   myTeam: inputMyTeam,
   initialOtherTeam,
   otherScheduleType,
+  onOtherScheduleTypeChange,
   onChangeSchedule,
   onChangeTeam,
 }: TransferViewProps) {
   // Generate unique IDs for form elements
+  const compareScheduleSelectId = useId();
   const otherTeamSelectId = useId();
   const showPastCheckboxId = useId();
   const startDateId = useId();
@@ -595,6 +602,36 @@ export function TransferView({
             {/* Controls */}
             <Row className="mb-3 gy-3">
               <Col md={4}>
+                {onOtherScheduleTypeChange && (
+                  <>
+                    <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
+                      <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+                      {m.schedule_compare_label()}
+                    </Form.Label>
+                    <Form.Select
+                      id={compareScheduleSelectId}
+                      className="mb-3"
+                      value={otherScheduleType || ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        onOtherScheduleTypeChange(isValidScheduleType(value) ? value : null);
+                      }}
+                    >
+                      <option value="" disabled>
+                        {m.schedule_select_placeholder()}
+                      </option>
+                      {availableSchedules.map((schedule) => (
+                        <option key={schedule.value} value={schedule.value}>
+                          {schedule.title}
+                          {schedule.value === scheduleType
+                            ? ` ${m.schedule_your_schedule_suffix()}`
+                            : ""}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </>
+                )}
+
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
                   {sameSchedule

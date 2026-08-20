@@ -717,6 +717,55 @@ describe("TransferView", () => {
     });
   });
 
+  describe("Compare-with-schedule selector", () => {
+    // Regression coverage for the Today/Week merge: the "Compare with schedule"
+    // selector now lives inside TransferView's own controls (grouped with the
+    // team selector) instead of ScheduleTabView's shared header row.
+    it("does not render the schedule selector when no change handler is provided", () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.queryByLabelText(/Compare with schedule:/i)).not.toBeInTheDocument();
+    });
+
+    it("renders and wires up the schedule selector when a change handler is provided", async () => {
+      const user = userEvent.setup();
+      const onOtherScheduleTypeChange = vi.fn();
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          otherScheduleType="5-shift"
+          onOtherScheduleTypeChange={onOtherScheduleTypeChange}
+        />,
+      );
+
+      const selector = screen.getByLabelText(/Compare with schedule:/i);
+      expect(selector).toBeInTheDocument();
+
+      await user.selectOptions(selector, "9-5");
+      expect(onOtherScheduleTypeChange).toHaveBeenCalledWith("9-5");
+    });
+
+    it("marks the user's own schedule in the selector options", () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          otherScheduleType="5-shift"
+          onOtherScheduleTypeChange={vi.fn()}
+        />,
+      );
+
+      const selector = screen.getByLabelText(/Compare with schedule:/i) as HTMLSelectElement;
+      const option = Array.from(selector.options).find((opt) => opt.value === "5-shift");
+      expect(option?.text).toContain("Your schedule");
+    });
+  });
+
   describe("Stacked transfer + overlap results", () => {
     it("shows both transfers and overlaps together when both have content on the same schedule", () => {
       mockUseTransferCalculations.mockReturnValue({
