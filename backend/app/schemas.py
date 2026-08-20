@@ -295,9 +295,7 @@ _ALLOWED_PUSH_ENDPOINT_HOST_SUFFIXES = (".notify.windows.com",)  # Edge/Windows 
 
 def _is_allowed_push_endpoint_host(hostname: str) -> bool:
     hostname = hostname.lower()
-    return hostname in _ALLOWED_PUSH_ENDPOINT_HOSTS or hostname.endswith(
-        _ALLOWED_PUSH_ENDPOINT_HOST_SUFFIXES
-    )
+    return hostname in _ALLOWED_PUSH_ENDPOINT_HOSTS or hostname.endswith(_ALLOWED_PUSH_ENDPOINT_HOST_SUFFIXES)
 
 
 class PushSubscriptionCreate(BaseModel):
@@ -317,9 +315,7 @@ class PushSubscriptionCreate(BaseModel):
     @classmethod
     def validate_endpoint(cls, value: str) -> str:
         parsed = urlparse(value)
-        if parsed.scheme != "https" or not parsed.hostname or not _is_allowed_push_endpoint_host(
-            parsed.hostname
-        ):
+        if parsed.scheme != "https" or not parsed.hostname or not _is_allowed_push_endpoint_host(parsed.hostname):
             raise ValueError("endpoint must be a known browser push service URL")
         return value
 
