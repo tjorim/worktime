@@ -547,10 +547,6 @@ export function SettingsContent({
   return (
     <>
       <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-bottom bg-body-tertiary">
-          <h2 className="h5 mb-1">{m.settings_title()}</h2>
-          <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
-        </div>
         <div>{sectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
           <button

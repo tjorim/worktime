@@ -535,8 +535,8 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">17</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">9</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">18</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">8</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">13</span><span class="k">Low</span></div>
       <div class="score"><span class="n">21</span><span class="k">Open</span></div>
     </div>
@@ -1113,12 +1113,12 @@
           bottom-bar redesign — see the sequencing note below. Merged via #1144.</span></div>
       </div>
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a>
           <span class="area">frontend</span>
           <h3>Settings: duplicated headers, opaque labels, dead toggle</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
         <ul>
           <li>Three stacked headings and two competing page descriptions fill the screen above the
@@ -1129,6 +1129,12 @@
             duplicated headers and opaque labels — remain open.</li>
         </ul>
         <div class="refs"><b>pages/SettingsPage.tsx:44</b> <b>settings/SettingsGeneralSection.tsx:61</b></div>
+        <div class="verified"><span>Dropped the content card's duplicate header/description
+          (<code>SettingsPage.tsx</code>) so the hero title is the only page-level heading, and
+          renamed the two opaque nav labels to <code>Data &amp; backup</code> and
+          <code>About</code> (<code>messages/en.json</code>, <code>messages/nl.json</code>). The
+          "Schedule &amp; team" section-promotion idea in the issue was called out as a
+          "Consider" — left open rather than folded into this cheap fix.</span></div>
       </div>
 
       <div class="finding med">
@@ -1480,7 +1486,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">13</span></h3>
+      <h3>Medium <span class="sec-count">12</span></h3>
       <p>Ordered so cheap, context-warm fixes come first and the two items needing a product decision
         (#1131, #1115) come last, once everything upstream of them has landed.</p>
       <div class="tablewrap">
@@ -1490,32 +1496,25 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1129">#1129</a></td>
-              <td>The dead Notifications toggle it cross-linked to #1112 for now works (see
-                #1112 — built rather than removed). What's left here is Settings' duplicated
-                headers and opaque section labels.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1113">#1113</a></td>
               <td>Dutch parity plus the CI parity check — the check is what stops this specific class
                 of drift recurring, so it's worth doing before more translated surface ships.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1123">#1123</a></td>
               <td>Docs pass (backend README, root README, TODO.md). Fold
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1124">#1124</a> (low)
                 into the same PR — it's a two-paragraph fix in a file this already touches.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1130">#1130</a></td>
               <td>Disabled-action hints and empty-state toolbars. Small, independent, no design
                 decision needed.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1110">#1110</a></td>
               <td>Hide the Transfers schedule selector — a two-line stopgap. The real fix is
                 <a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a> in
@@ -1523,13 +1522,13 @@
                 patch.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1132">#1132</a></td>
               <td>Dark mode elevation and a navbar token. Needs a short design pass on the token
                 values but no architecture decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1107">#1107</a></td>
               <td>Golden-file cross-check between <code>rosters.ts</code> and
                 <code>read_models_service.py</code>. Higher effort, but the one item here that
@@ -1537,14 +1536,14 @@
                 #1115 below builds more on <code>read_models_service.py</code>.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1131">#1131</a></td>
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
-                before code — sequence it after the Settings cleanup in row&nbsp;1 (#1129) is
-                settled, since that decision feeds it directly.</td>
+                before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
+                so nothing upstream is left blocking it.</td>
             </tr>
             <tr>
-              <td class="seq-n">9</td>
+              <td class="seq-n">8</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
               <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
                 open question ("does the read model carry a date range") is easier to answer once
@@ -1594,7 +1593,7 @@
               <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1111">#1111</a></td>
               <td>TransferView cross-schedule overlap and time-off overlays — the real fix behind
-                medium&nbsp;#6's stopgap. Do it once that's landed; reuses the same
+                medium&nbsp;#4's stopgap. Do it once that's landed; reuses the same
                 <code>viewingScheduleType</code> plumbing.</td>
             </tr>
             <tr>
@@ -1680,7 +1679,7 @@
               waits for a visit-count-plus-in-session-delay engagement threshold before
               auto-prompting via a dismissible toast (7-day cooldown either way), tracks
               install/dismiss outcomes, and exposes a manual "Install App" action in Settings &gt;
-              Quick Actions that works independently of the auto-prompt's engagement gate.</td>
+              Data &amp; backup that works independently of the auto-prompt's engagement gate.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
