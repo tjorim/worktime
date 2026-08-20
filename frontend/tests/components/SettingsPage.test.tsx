@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
@@ -13,9 +13,10 @@ import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { server } from "@/mocks/server";
 import { labelsCollection } from "@/db/collections";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY, PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
@@ -62,8 +63,10 @@ afterEach(() => {
   useOngoingSyncContextSpy?.mockRestore();
   useOngoingSyncContextSpy = undefined;
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 
   localStorage.removeItem(USER_STATE_STORAGE_KEY);
+  localStorage.removeItem(PWA_INSTALL_STATE_STORAGE_KEY);
 
   const labelsSnapshot = [...labelsCollection.toArray];
   labelsSnapshot.forEach((label) => {
@@ -77,7 +80,9 @@ function renderWithProviders(ui: React.ReactElement) {
       <EventStoreProvider>
         <DeveloperOptionsProvider>
           <ToastProvider>
-            <AuthProvider>{ui}</AuthProvider>
+            <PwaInstallProvider>
+              <AuthProvider>{ui}</AuthProvider>
+            </PwaInstallProvider>
           </ToastProvider>
         </DeveloperOptionsProvider>
       </EventStoreProvider>
@@ -862,6 +867,67 @@ describe("SettingsPage Data Section", () => {
     expect(stored).not.toBeNull();
     expect(JSON.parse(stored ?? "{}").scheduleType).toBeNull();
   });
+
+  it("enables the Install App action once the browser offers a prompt, and installs on click", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="data" />);
+
+    const installButton = screen.getByRole("button", {
+      name: new RegExp(`^${m.pwa_install_app_label()}`),
+    });
+    // ListGroup.Item's `disabled` sets aria-disabled + blocks its onClick handler
+    // internally rather than the native `disabled` attribute, so toBeDisabled() (which
+    // checks the native attribute) doesn't apply here.
+    expect(installButton).toHaveAttribute("aria-disabled", "true");
+
+    const promptSpy = vi.fn().mockResolvedValue(undefined);
+    act(() => {
+      const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+      };
+      event.prompt = promptSpy;
+      event.userChoice = Promise.resolve({ outcome: "accepted" as const, platform: "web" });
+      window.dispatchEvent(event);
+    });
+
+    await waitFor(() => expect(installButton).not.toHaveAttribute("aria-disabled"));
+
+    await user.click(installButton);
+
+    expect(promptSpy).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("button", {
+        name: new RegExp(`^${m.pwa_install_installed_label()}`),
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(await screen.findByText(m.pwa_install_success())).toBeInTheDocument();
+  });
+
+  it("does not show a success toast when the install prompt is dismissed", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="data" />);
+
+    const installButton = screen.getByRole("button", {
+      name: new RegExp(`^${m.pwa_install_app_label()}`),
+    });
+
+    act(() => {
+      const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+      };
+      event.prompt = vi.fn().mockResolvedValue(undefined);
+      event.userChoice = Promise.resolve({ outcome: "dismissed" as const, platform: "web" });
+      window.dispatchEvent(event);
+    });
+
+    await waitFor(() => expect(installButton).not.toHaveAttribute("aria-disabled"));
+    await user.click(installButton);
+
+    await waitFor(() => expect(installButton).toHaveAttribute("aria-disabled", "true"));
+    expect(screen.queryByText(m.pwa_install_success())).not.toBeInTheDocument();
+  });
 });
 
 describe("SettingsPage General Section", () => {
@@ -879,6 +945,121 @@ describe("SettingsPage General Section", () => {
     });
     await user.click(teamOneButton);
     expect(teamOneButton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("enables notifications after requesting and receiving browser permission", async () => {
+    const user = userEvent.setup();
+    const requestPermission = vi.fn().mockResolvedValue("granted");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+
+    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+
+    expect(requestPermission).toHaveBeenCalled();
+    await waitFor(() => expect(toggle).toBeChecked());
+
+    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    expect(JSON.parse(stored ?? "{}").settings.notifications).toBe("on");
+  });
+
+  it("shows a warning and stays off when notification permission is denied", async () => {
+    const user = userEvent.setup();
+    const requestPermission = vi.fn().mockResolvedValue("denied");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+
+    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    await user.click(toggle);
+
+    expect(await screen.findByText(m.notifications_permission_denied())).toBeInTheDocument();
+    expect(toggle).not.toBeChecked();
+  });
+
+  it("does not re-request permission when already granted, and turns off without checking permission", async () => {
+    const user = userEvent.setup();
+    const requestPermission = vi.fn();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+
+    await user.click(toggle);
+    expect(requestPermission).not.toHaveBeenCalled();
+    await waitFor(() => expect(toggle).toBeChecked());
+
+    await user.click(toggle);
+    expect(requestPermission).not.toHaveBeenCalled();
+    await waitFor(() => expect(toggle).not.toBeChecked());
+  });
+
+  it("shows lead-time and quiet-hours controls only once notifications are on", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission: vi.fn() });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+
+    expect(screen.queryByText(m.notification_lead_time_label())).not.toBeInTheDocument();
+    expect(screen.queryByText(m.notification_quiet_hours_label())).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
+
+    expect(await screen.findByText(m.notification_lead_time_label())).toBeInTheDocument();
+    expect(screen.getByText(m.notification_quiet_hours_label())).toBeInTheDocument();
+  });
+
+  it("changes the reminder lead time and persists it", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission: vi.fn() });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
+    await screen.findByText(m.notification_lead_time_label());
+
+    const oneHourButton = screen.getByRole("button", { name: m.notification_lead_time_1h() });
+    await user.click(oneHourButton);
+
+    expect(oneHourButton).toHaveAttribute("aria-pressed", "true");
+    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    expect(JSON.parse(stored ?? "{}").settings.notificationLeadTimeMinutes).toBe(60);
+  });
+
+  it("enables quiet hours with default bounds and lets them be adjusted", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("Notification", { permission: "granted", requestPermission: vi.fn() });
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
+    await user.click(screen.getByRole("checkbox", { name: m.notifications_label() }));
+    await screen.findByText(m.notification_quiet_hours_label());
+
+    const quietHoursToggle = screen.getByRole("checkbox", { name: m.notification_quiet_hours_label() });
+    expect(quietHoursToggle).not.toBeChecked();
+
+    await user.click(quietHoursToggle);
+
+    const startSelect = await screen.findByLabelText<HTMLSelectElement>(
+      m.notification_quiet_hours_start_aria(),
+    );
+    const endSelect = screen.getByLabelText<HTMLSelectElement>(m.notification_quiet_hours_end_aria());
+    expect(startSelect.value).toBe("22");
+    expect(endSelect.value).toBe("6");
+
+    await user.selectOptions(startSelect, "23");
+
+    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    const settings = JSON.parse(stored ?? "{}").settings;
+    expect(settings.notificationQuietHoursStart).toBe(23);
+    expect(settings.notificationQuietHoursEnd).toBe(6);
+
+    await user.click(quietHoursToggle);
+    expect(screen.queryByLabelText(m.notification_quiet_hours_start_aria())).not.toBeInTheDocument();
+    const clearedSettings = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}").settings;
+    expect(clearedSettings.notificationQuietHoursStart).toBe(null);
+    expect(clearedSettings.notificationQuietHoursEnd).toBe(null);
   });
 });
 

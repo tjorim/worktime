@@ -16,7 +16,23 @@ below predate that switch.
 - Notification system
 - Cross-schedule transfer view
 
+## [2026.8.6] - 2026-08-19
+
+### Added
+
+- The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual "Install App" action in Settings > Quick Actions (#273)
+
+## [2026.8.5] - 2026-08-19
+
+### Added
+
+- Shift reminders now work even when Worktime isn't open: turning on Notifications registers a push subscription, and the backend sends a reminder before your next shift via your browser's push service. Configurable lead time (15m/1h/2h) and quiet hours are shared with the existing in-app reminder (#271)
+
 ## [2026.8.4] - 2026-08-19
+
+### Added
+
+- The web Notifications toggle in Settings now does something: turning it on asks your browser for permission and shows a reminder about 15 minutes before your next shift starts, while the app is open (#1112)
 
 ### Changed
 
@@ -703,7 +719,9 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.4...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.6...HEAD
+[2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6
+[2026.8.5]: https://github.com/tjorim/worktime/compare/v2026.8.4...v2026.8.5
 [2026.8.4]: https://github.com/tjorim/worktime/compare/v2026.8.3...v2026.8.4
 [2026.8.3]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.8.3
 [2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2

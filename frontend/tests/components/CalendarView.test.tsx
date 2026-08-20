@@ -57,7 +57,6 @@ describe("CalendarView", () => {
           settings: {
             timeFormat: "24h",
             theme: "system",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: false,
@@ -107,7 +106,6 @@ describe("CalendarView", () => {
           settings: {
             timeFormat: "24h",
             theme: "system",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: false,

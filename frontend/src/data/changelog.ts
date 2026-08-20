@@ -14,10 +14,32 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "2026.8.4",
+    version: "2026.8.6",
     date: "2026-08-19",
     status: "current",
-    added: [],
+    added: [
+      "The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual \"Install App\" action in Settings > Quick Actions (#273)",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
+    version: "2026.8.5",
+    date: "2026-08-19",
+    status: "released",
+    added: [
+      "Shift reminders now work even when Worktime isn't open: turning on Notifications registers a push subscription, and the backend sends a reminder before your next shift via your browser's push service. Configurable lead time (15m/1h/2h) and quiet hours are shared with the existing in-app reminder (#271)",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
+    version: "2026.8.4",
+    date: "2026-08-19",
+    status: "released",
+    added: [
+      "The web Notifications toggle in Settings now does something: turning it on asks your browser for permission and shows a reminder about 15 minutes before your next shift starts, while the app is open (#1112)",
+    ],
     changed: [
       "The mobile tab bar now shows labels stacked under the icons instead of hiding them, and the Calendar, Unified, Schedule, and Time Off tabs use distinct icons instead of four near-identical calendar variants (#1128)",
       "Month calendar cells now size to their content instead of reserving a fixed 140px (110px on mobile), so a full month fits on screen without scrolling (#1127)",

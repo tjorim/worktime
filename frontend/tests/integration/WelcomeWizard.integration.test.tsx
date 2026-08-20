@@ -29,7 +29,6 @@ const defaultUserState: {
   settings: {
     timeFormat: "24h";
     theme: "auto";
-    notifications: "off";
     vacationAllowance: {
       yearlyAmounts: Record<string, number>;
       unit: "days";
@@ -54,7 +53,6 @@ const defaultUserState: {
   settings: {
     timeFormat: "24h" as const,
     theme: "auto" as const,
-    notifications: "off" as const,
     vacationAllowance: {
       yearlyAmounts: {},
       unit: "days" as const,

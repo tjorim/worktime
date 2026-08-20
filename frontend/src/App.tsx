@@ -6,6 +6,7 @@ import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PwaUpdateToast } from "@/components/PwaUpdateToast";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppShellProvider } from "@/contexts/AppShellContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -15,8 +16,11 @@ import { SettingsProvider, type TabKey, useSettings } from "@/contexts/SettingsC
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
+import { useShiftNotifications } from "@/hooks/useShiftNotifications";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
@@ -91,6 +95,18 @@ function AppContent() {
         break;
     }
   }, [syncPhase, showInfo, showSuccess, showError]);
+
+  const { hasActiveSubscription: hasActivePushSubscription } = usePushSubscription();
+
+  useShiftNotifications({
+    enabled: settings.notifications === "on",
+    myTeam,
+    scheduleType,
+    leadTimeMinutes: settings.notificationLeadTimeMinutes,
+    quietHoursStart: settings.notificationQuietHoursStart,
+    quietHoursEnd: settings.notificationQuietHoursEnd,
+    hasActivePushSubscription,
+  });
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.
@@ -264,6 +280,7 @@ function AppContent() {
   return (
     <OngoingSyncProvider isSyncEstablished={isSyncEstablished}>
       <PwaUpdateToast />
+      <PwaInstallPrompt />
       <ErrorBoundary>
         <AppShellProvider
           value={{
@@ -344,9 +361,11 @@ function App() {
           <EventStoreProvider>
             <DeveloperOptionsProvider>
               <ToastProvider>
-                <AuthProvider>
-                  <AppContent />
-                </AuthProvider>
+                <PwaInstallProvider>
+                  <AuthProvider>
+                    <AppContent />
+                  </AuthProvider>
+                </PwaInstallProvider>
               </ToastProvider>
             </DeveloperOptionsProvider>
           </EventStoreProvider>

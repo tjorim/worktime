@@ -7,11 +7,15 @@ rosters.test.ts while adding deterministic shift-resolution assertions.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
-from app.services.read_models_service import compute_next_shifts_for_team
+from app.services.read_models_service import (
+    compute_current_shift_day,
+    compute_next_shifts_for_team,
+    compute_shift_for_team,
+)
 
 # Anchor used in test_read_models.py and the frontend rosters.test.ts examples.
 _AS_OF_5SHIFT = datetime(2025, 7, 17, 8, 30, tzinfo=UTC)
@@ -122,3 +126,42 @@ class TestComputeNextShiftsForTeam:
     def test_team_number_zero_raises(self) -> None:
         with pytest.raises(ValueError, match="Invalid team number"):
             compute_next_shifts_for_team("5-shift", 0, as_of=_AS_OF_5SHIFT, limit=1)
+
+
+class TestComputeShiftForTeam:
+    """Public wrapper used by the push reminder scheduler to check "today's shift"."""
+
+    def test_returns_team1_morning_shift_on_anchor_date(self) -> None:
+        shift = compute_shift_for_team("5-shift", 1, date(2025, 7, 17))
+        assert shift.code == "M"
+        assert shift.is_working is True
+        assert shift.start_hour == 7.0
+        assert shift.end_hour == 15.0
+
+    def test_off_day_is_not_working(self) -> None:
+        # Team 1 is off 2025-07-22 through 07-25 (see the M/L/L/N/N/O/O/O/O cycle
+        # anchored at the 07-17 reference date above).
+        shift = compute_shift_for_team("5-shift", 1, date(2025, 7, 22))
+        assert shift.is_working is False
+        assert shift.start_hour is None
+        assert shift.end_hour is None
+
+    def test_invalid_team_number_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid team number"):
+            compute_shift_for_team("5-shift", 6, date(2025, 7, 17))
+
+
+class TestComputeCurrentShiftDay:
+    """Public wrapper for the night-shift day-boundary handling."""
+
+    def test_before_night_shift_end_belongs_to_previous_day(self) -> None:
+        as_of = datetime(2025, 7, 17, 2, 30, tzinfo=UTC)
+        assert compute_current_shift_day(as_of, "5-shift") == date(2025, 7, 16)
+
+    def test_after_night_shift_end_belongs_to_same_day(self) -> None:
+        as_of = datetime(2025, 7, 17, 8, 30, tzinfo=UTC)
+        assert compute_current_shift_day(as_of, "5-shift") == date(2025, 7, 17)
+
+    def test_schedule_without_night_shift_always_returns_calendar_date(self) -> None:
+        as_of = datetime(2025, 7, 17, 2, 30, tzinfo=UTC)
+        assert compute_current_shift_day(as_of, "9-5") == date(2025, 7, 17)

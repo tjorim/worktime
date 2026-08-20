@@ -176,7 +176,6 @@ describe("TimeTrackingView Integration Tests", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: true,
@@ -223,7 +222,6 @@ describe("TimeTrackingView Integration Tests", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: true,
@@ -285,7 +283,6 @@ describe("TimeTrackingView Integration Tests", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: true,
@@ -323,7 +320,6 @@ describe("TimeTrackingView Integration Tests", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: true,
@@ -410,7 +406,6 @@ describe("TimeTrackingView Integration Tests", () => {
           settings: {
             timeFormat: "24h",
             theme: "auto",
-            notifications: "off",
             vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: true,

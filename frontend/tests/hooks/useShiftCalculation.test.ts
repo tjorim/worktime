@@ -24,7 +24,6 @@ function createWrapperWithSettings(scheduleType: "5-shift" | "9-5", myTeam: numb
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        notifications: "off",
         vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,

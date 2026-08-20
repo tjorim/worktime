@@ -21,7 +21,6 @@ function makeWrapper(homeCountry: string | null = "NL", officeCountry: string | 
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        notifications: "off",
         vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,

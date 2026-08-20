@@ -31,7 +31,6 @@ function renderWithProviders(ui: React.ReactElement) {
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        notifications: "off",
         vacationAllowance: {
           amount: 0,
           unit: "days",
