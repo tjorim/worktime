@@ -412,6 +412,46 @@ export function findOverlaps(windowsA: ShiftWindow[], windowsB: ShiftWindow[]): 
   return overlaps;
 }
 
+/**
+ * List the working (non-OFF) shift codes defined for a schedule, in the
+ * schedule's own configuration order.
+ *
+ * @param scheduleOption - Schedule type to look up; defaults to 5-shift if not provided
+ * @returns The schedule's working shift codes (e.g. `["M", "L", "N"]` for 5-shift)
+ */
+export function getWorkingShiftTypes(scheduleOption?: NullableScheduleOption): ShiftType[] {
+  const schedule = getScheduleForOption(scheduleOption);
+  return (Object.keys(schedule.shiftConfig.shiftTimes) as ShiftType[]).filter(
+    (code) => code !== "O",
+  );
+}
+
+/**
+ * Find which team, if any, is working the given shift type on a date.
+ *
+ * For "teamless" lookups where the caller cares about a shift type (e.g.
+ * "Evening") rather than a specific team number — which team works that
+ * shift type can rotate day to day or week to week (e.g. 2-shift's weekly
+ * Morning/Evening rotation), so this resolves it fresh per date rather than
+ * assuming a fixed team owns a shift type.
+ *
+ * @param date - Date to evaluate (string, Date or Dayjs)
+ * @param shiftType - The shift code to search for (e.g. "M", "L", "N")
+ * @param scheduleOption - Schedule type to search within; defaults to 5-shift if not provided
+ * @returns The team number working that shift type on the date, or `null` if no team is
+ *  (e.g. the shift type isn't scheduled that day, or isn't part of the schedule at all)
+ */
+export function findTeamWorkingShift(
+  date: string | Date | Dayjs,
+  shiftType: ShiftType,
+  scheduleOption?: NullableScheduleOption,
+): number | null {
+  const match = getAllTeamsShifts(date, scheduleOption).find(
+    (result) => result.shift.code === shiftType,
+  );
+  return match ? match.teamNumber : null;
+}
+
 const getShiftDurationHours = (shift: Shift): number => {
   if (shift.start == null || shift.end == null || !shift.isWorking) {
     return 0;

@@ -98,6 +98,7 @@ vi.mock("@/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
+  getWorkingShiftTypes: vi.fn(() => ["M", "L", "N"]),
 }));
 
 vi.mock("@/utils/config", async (importOriginal) => {
@@ -714,6 +715,78 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.queryByText(/Comparing your schedule with/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Teamless shift-type lookups", () => {
+    it("offers matching by shift type instead of blocking when no team is set", async () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        validatedMyTeam: null,
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
+
+      expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
+
+      const link = screen.getByRole("button", { name: /match by your current shift type/i });
+      await user.click(link);
+
+      expect(screen.queryByText(/Please select your team/)).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/Match your shift:/i)).toBeInTheDocument();
+    });
+
+    it("toggles the other side to shift-type mode", async () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+      const user = userEvent.setup();
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.getByLabelText("View transfers with Team:")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Shift type" }));
+
+      expect(screen.queryByLabelText("View transfers with Team:")).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/View overlapping hours with shift:/i)).toBeInTheDocument();
+    });
+
+    it("shows the shift-type comparing note once toggled, even on the same schedule", async () => {
+      mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+      const user = userEvent.setup();
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      await user.click(screen.getByRole("button", { name: "Shift type" }));
+
+      expect(screen.getByText(/Matching by shift type instead of a fixed team/i)).toBeInTheDocument();
+    });
+
+    it("shows a shift-type-specific empty state when no overlaps are found in shift mode", async () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        overlaps: [],
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      await user.click(screen.getByRole("button", { name: "Shift type" }));
+
+      expect(screen.getByText("No Overlapping Hours")).toBeInTheDocument();
+      expect(screen.getByText(/No overlapping working hours found for/i)).toBeInTheDocument();
+    });
+
+    it("labels overlap rows by shift type instead of team number in shift mode", async () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        overlaps: [{ start: dayjs("2025-01-15 09:00"), end: dayjs("2025-01-15 15:00") }],
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      await user.click(screen.getByRole("button", { name: "Shift type" }));
+
+      // Default shift-type selection is the first working type ("M" -> Morning per the mock)
+      expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/^Team 2$/)).not.toBeInTheDocument();
     });
   });
 });
