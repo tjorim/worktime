@@ -3,6 +3,7 @@ import { labelsCollection, tasksCollection, templatesCollection } from "@/db/col
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
+import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/utils/syncClient";
 
 interface UseSettingsResetFlowParams {
   resetSettings: () => void;
@@ -10,6 +11,11 @@ interface UseSettingsResetFlowParams {
   onHide: () => void;
   showSuccessToast: (message: string, icon?: string) => void;
   showWarningToast: (message: string) => void;
+  /** When true and `fetchFn` is provided, a successful reset re-pulls the
+   * account's saved preferences afterward — see the comment on the pull call
+   * below for why this matters for a signed-in user. */
+  isAuthenticated?: boolean;
+  fetchFn?: FetchFn | null;
 }
 
 function clearCollectionById(collection: {
@@ -30,6 +36,8 @@ export function useSettingsResetFlow({
   onHide,
   showSuccessToast,
   showWarningToast,
+  isAuthenticated = false,
+  fetchFn = null,
 }: UseSettingsResetFlowParams) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
@@ -58,6 +66,24 @@ export function useSettingsResetFlow({
     } catch (error) {
       logger.error("Failed to reset settings:", error);
       errors.push(m.reset_item_settings());
+    }
+
+    // Reset only clears this device's local preferences — it never signs the
+    // user out, and it never touches the sync cursor (this device is already
+    // established as synced for this account, so useFirstSyncFlow won't run
+    // again on its own). Without this, a signed-in user who resets settings
+    // gets walked through onboarding from scratch even though their real
+    // schedule/team/settings are still saved on the account. Pull them back
+    // in the background rather than leaving the device looking unconfigured.
+    if (settingsCleared && isAuthenticated && fetchFn) {
+      const fetch = fetchFn;
+      void fetchPreferences(fetch)
+        .then((prefs) => {
+          if (prefs) applyPreferencesPull(prefs.data);
+        })
+        .catch((error: unknown) => {
+          logger.error("Failed to restore preferences from account after reset:", error);
+        });
     }
 
     if (clearTimeTrackingData) {

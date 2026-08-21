@@ -1499,6 +1499,36 @@ describe("syncClient", () => {
       localStorage.setItem(USER_STATE_STORAGE_KEY, "not-valid-json{");
       expect(buildLocalPreferencesPayload()).toBeNull();
     });
+
+    it("excludes lastUsed from the payload — it's per-device UI state, not a synced preference", () => {
+      const userState = {
+        hasCompletedOnboarding: true,
+        scheduleType: "9-5",
+        lastUsed: { activeTab: "gantt", scheduleView: "transfer" },
+      };
+      localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(userState));
+      const result = buildLocalPreferencesPayload();
+      expect(result?.data).toEqual({ hasCompletedOnboarding: true, scheduleType: "9-5" });
+      expect(result?.data).not.toHaveProperty("lastUsed");
+    });
+
+    it("excludes device-local settings fields (theme, notification lead time/quiet hours) from the payload", () => {
+      const userState = {
+        hasCompletedOnboarding: true,
+        settings: {
+          timeFormat: "24h",
+          theme: "dark",
+          notifications: "on",
+          notificationLeadTimeMinutes: 60,
+          notificationQuietHoursStart: 22,
+          notificationQuietHoursEnd: 7,
+          enableTimeOff: true,
+        },
+      };
+      localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(userState));
+      const result = buildLocalPreferencesPayload();
+      expect(result?.data.settings).toEqual({ timeFormat: "24h", enableTimeOff: true });
+    });
   });
 
   describe("applyPreferencesPull", () => {
@@ -1518,6 +1548,77 @@ describe("syncClient", () => {
       applyPreferencesPull({ hasCompletedOnboarding: true });
       const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
       expect(stored.hasCompletedOnboarding).toBe(true);
+    });
+
+    it("preserves this device's local lastUsed instead of taking the pulled value", () => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          hasCompletedOnboarding: false,
+          lastUsed: { activeTab: "timetracking", scheduleView: "schedule" },
+        }),
+      );
+      // Simulates a legacy server record pushed before lastUsed was excluded.
+      applyPreferencesPull({
+        hasCompletedOnboarding: true,
+        lastUsed: { activeTab: "calendar", scheduleView: "transfer" },
+      });
+      const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(stored.hasCompletedOnboarding).toBe(true);
+      expect(stored.lastUsed).toEqual({ activeTab: "timetracking", scheduleView: "schedule" });
+    });
+
+    it("omits lastUsed entirely when there is no local state to preserve it from", () => {
+      applyPreferencesPull({
+        hasCompletedOnboarding: true,
+        lastUsed: { activeTab: "calendar" },
+      });
+      const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(stored).not.toHaveProperty("lastUsed");
+    });
+
+    it("preserves this device's local theme and notification settings instead of taking the pulled values", () => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          hasCompletedOnboarding: false,
+          settings: {
+            timeFormat: "24h",
+            theme: "dark",
+            notifications: "on",
+            notificationLeadTimeMinutes: 60,
+            notificationQuietHoursStart: 22,
+            notificationQuietHoursEnd: 7,
+            enableTimeOff: false,
+          },
+        }),
+      );
+      // Simulates a legacy server record pushed before these fields were excluded.
+      applyPreferencesPull({
+        hasCompletedOnboarding: true,
+        settings: {
+          timeFormat: "12h",
+          theme: "light",
+          notifications: "off",
+          notificationLeadTimeMinutes: 15,
+          notificationQuietHoursStart: null,
+          notificationQuietHoursEnd: null,
+          enableTimeOff: true,
+        },
+      });
+      const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(stored.hasCompletedOnboarding).toBe(true);
+      expect(stored.settings).toEqual({
+        // Synced from the pull.
+        timeFormat: "12h",
+        enableTimeOff: true,
+        // Preserved from this device's local state.
+        theme: "dark",
+        notifications: "on",
+        notificationLeadTimeMinutes: 60,
+        notificationQuietHoursStart: 22,
+        notificationQuietHoursEnd: 7,
+      });
     });
   });
 

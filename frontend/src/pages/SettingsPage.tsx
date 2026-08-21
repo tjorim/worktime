@@ -301,6 +301,8 @@ export function SettingsContent({
     resetSettings,
     clearTimeOffEvents,
     onHide,
+    isAuthenticated,
+    fetchFn,
     showSuccessToast: toast.showSuccess,
     showWarningToast: toast.showWarning,
   });

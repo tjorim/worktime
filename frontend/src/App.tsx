@@ -110,11 +110,24 @@ function AppContent() {
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.
+  // Gated on isSyncEstablished rather than bare isAuthenticated: writing to
+  // worktime_user_state stamps a fresh _updatedAt, and preferences reconcile by
+  // last-write-wins timestamp. Firing this the instant auth resolves — before
+  // useFirstSyncFlow has had a chance to pull the account's real data — would
+  // make this device's (still-default) local state look newer than the
+  // account's actual saved preferences and win the reconciliation, silently
+  // overwriting them. isSyncEstablished only turns true once first-sync has
+  // settled (or immediately, if this device was already synced before).
   useEffect(() => {
-    if (isAuthenticated && accountSyncAnnouncementSeen !== true) {
+    if (isSyncEstablished && isAuthenticated && accountSyncAnnouncementSeen !== true) {
       setAccountSyncAnnouncementSeen(true);
     }
-  }, [isAuthenticated, accountSyncAnnouncementSeen, setAccountSyncAnnouncementSeen]);
+  }, [
+    isSyncEstablished,
+    isAuthenticated,
+    accountSyncAnnouncementSeen,
+    setAccountSyncAnnouncementSeen,
+  ]);
 
   // Per-feature announcements: each flag drives an independent banner entry.
   // undefined = user hasn't interacted with the feature yet → show announcement.
@@ -164,13 +177,19 @@ function AppContent() {
     [updateLastActiveTab],
   );
 
-  // Show welcome wizard only on first visit (never completed onboarding).
+  // Show welcome wizard only on first visit (never completed onboarding). If
+  // hasCompletedOnboarding flips to true while the wizard is already open in
+  // onboarding mode — e.g. a signed-in user's account data restores it via
+  // useFirstSyncFlow, or the "sign in to sync" link on the welcome step pulls
+  // it in — close it instead of leaving it stuck open with nothing left to ask.
   useEffect(() => {
     if (!hasCompletedOnboarding) {
       setTeamModalMode("onboarding");
       setShowTeamModal(true);
+    } else if (teamModalMode === "onboarding") {
+      setShowTeamModal(false);
     }
-  }, [hasCompletedOnboarding]);
+  }, [hasCompletedOnboarding, teamModalMode]);
 
   // Theme switching effect - following Bootstrap 5.3 best practices
   useEffect(() => {

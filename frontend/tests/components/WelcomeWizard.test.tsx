@@ -211,7 +211,7 @@ const finishOnboardingSetup = async (user: ReturnType<typeof userEvent.setup>) =
   await user.click(screen.getByRole("button", { name: /Continue/i }));
 
   await waitFor(() => {
-    expect(screen.getByRole("heading", { name: /Personal Gantt Chart/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Set Up Personal Gantt/i })).toBeInTheDocument();
   });
   await user.click(screen.getByRole("button", { name: /Continue/i }));
 
@@ -230,7 +230,7 @@ describe("WelcomeWizard", () => {
   describe("Basic rendering", () => {
     it("renders modal when show is true", () => {
       renderWithProviders(<WelcomeWizard {...defaultProps} />);
-      expect(screen.getByRole("heading", { name: /Welcome to Worktime!/i })).toBeInTheDocument();
+      expect(screen.getByText(/Welcome to Worktime!/i)).toBeInTheDocument();
     });
 
     it("does not render modal when show is false", () => {
@@ -1022,9 +1022,7 @@ describe("WelcomeWizard", () => {
       render(<App />);
 
       // Wait for wizard to appear
-      await findModalTitle(/Welcome to Worktime/i);
-
-      const modalHeading = await screen.findByRole("heading", { name: /Welcome to Worktime/i });
+      const modalHeading = await findModalTitle(/Welcome to Worktime/i);
       expect(modalHeading).toBeInTheDocument();
     });
   });
