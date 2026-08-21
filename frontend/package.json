@@ -56,7 +56,7 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "clsx": "^2.1.1",
-    "dayjs": "^1.11.21",
+    "dayjs": "^1.11.23",
     "eventsource-parser": "^4.0.0",
     "frappe-gantt": "^1.2.2",
     "idb-keyval": "6.3.0",
