@@ -130,7 +130,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "gantt-setup",
-    title: m.wizard_gantt_heading,
+    title: m.wizard_gantt_title,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "work-location-setup",
     getPrevStep: () => "time-tracking-setup",
@@ -144,7 +144,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "account-setup",
-    title: m.wizard_account_heading,
+    title: m.wizard_account_title,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => null,
     getPrevStep: () => "work-location-setup",

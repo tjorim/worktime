@@ -196,6 +196,65 @@ describe("SettingsContext unified user state", () => {
     expect(document.documentElement.getAttribute("data-bs-theme")).toBeNull();
   });
 
+  describe("Device-local settings (not synced across devices)", () => {
+    // theme and notification lead time/quiet hours are per-device state, not
+    // real cross-device preferences (see constants/deviceLocalSettings.ts) —
+    // updating them must not bump _updatedAt, the timestamp sync's
+    // last-write-wins reconciliation compares, or a device-local change could
+    // make this device's stale settings look "newer" than a real change
+    // synced from another device.
+    it("does not stamp _updatedAt when updateTheme changes", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      act(() => {
+        result.current.updateTheme("dark");
+      });
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
+      expect(stored._updatedAt).toBeUndefined();
+      expect(stored.settings.theme).toBe("dark");
+    });
+
+    it("does not stamp _updatedAt when updateNotifications changes", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      act(() => {
+        result.current.updateNotifications("on");
+      });
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
+      expect(stored._updatedAt).toBeUndefined();
+      expect(stored.settings.notifications).toBe("on");
+    });
+
+    it("does not stamp _updatedAt when updateNotificationLeadTime changes", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      act(() => {
+        result.current.updateNotificationLeadTime(60);
+      });
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
+      expect(stored._updatedAt).toBeUndefined();
+      expect(stored.settings.notificationLeadTimeMinutes).toBe(60);
+    });
+
+    it("does not stamp _updatedAt when updateNotificationQuietHours changes", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      act(() => {
+        result.current.updateNotificationQuietHours({ start: 22, end: 7 });
+      });
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
+      expect(stored._updatedAt).toBeUndefined();
+      expect(stored.settings.notificationQuietHoursStart).toBe(22);
+      expect(stored.settings.notificationQuietHoursEnd).toBe(7);
+    });
+
+    it("still stamps _updatedAt for a real synced setting like updateTimeOffEnabled", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      act(() => {
+        result.current.updateTimeOffEnabled(true);
+      });
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
+      expect(stored._updatedAt).toEqual(expect.any(String));
+      expect(stored.settings.enableTimeOff).toBe(true);
+    });
+  });
+
   describe("Cross-border tracking settings", () => {
     it("defaults enableCrossBorderTracking to false", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
@@ -307,6 +366,21 @@ describe("SettingsContext unified user state", () => {
         result.current.updateLastActiveTab("schedule");
       });
       expect(result.current.lastUsed.activeTab).toBe("schedule");
+    });
+
+    it("does not stamp _updatedAt when only lastUsed changes", async () => {
+      const { result } = renderHook(() => useLastUsed(), { wrapper });
+      await act(async () => {
+        result.current.updateLastActiveTab("schedule");
+      });
+
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
+      // lastUsed is per-device UI state, not a synced preference — updating it
+      // must not bump _updatedAt, or a plain tab switch could make this
+      // device's stale settings look "newer" than a real change synced from
+      // another device and win last-write-wins reconciliation.
+      expect(stored._updatedAt).toBeUndefined();
+      expect(stored.lastUsed.activeTab).toBe("schedule");
     });
 
     it("updates lastUsed.otherSchedule via updateLastOtherSchedule", async () => {

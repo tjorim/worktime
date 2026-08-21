@@ -7,6 +7,7 @@ import type { CountryCode } from "@/types/countries";
 import { isValidCountryCode } from "@/types/countries";
 
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
 import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
@@ -404,14 +405,34 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [_setRawUserState],
   );
 
+  // `lastUsed` (active tab, last-viewed sub-view per tab) and a handful of
+  // UserSettings fields (theme, notification lead time/quiet hours — see
+  // DEVICE_LOCAL_SETTING_KEYS) are per-device state, not real cross-device
+  // preferences — they're deliberately excluded from what syncs (see
+  // buildLocalPreferencesPayload/applyPreferencesPull in syncClient.ts).
+  // Routing their updates through this setter instead of setUserState keeps
+  // it that way: bumping the shared _updatedAt for a purely local change
+  // (a tab switch, a theme toggle) would make sync's last-write-wins
+  // comparison pick this device's copy for that reason alone, discarding a
+  // genuinely newer settings change synced from elsewhere.
+  const setDeviceLocalState = useCallback(
+    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
+      _setRawUserState((prev) => (typeof updater === "function" ? updater(prev) : updater));
+    },
+    [_setRawUserState],
+  );
+
   const userState: WorktimeUserState = normalizeUserState(rawUserState);
   const stableSettings = useStableShallowObject(userState.settings);
   const stableLastUsed = useStableShallowObject(userState.lastUsed);
 
   const settingUpdaters = useMemo(() => {
+    const deviceLocalSettingKeys: ReadonlySet<string> = new Set(DEVICE_LOCAL_SETTING_KEYS);
+
     const updateSetting = <K extends keyof UserSettings>(key: K) => {
+      const setter = deviceLocalSettingKeys.has(key) ? setDeviceLocalState : setUserState;
       return (value: UserSettings[K]) => {
-        setUserState((prev) => {
+        setter((prev) => {
           // `prev` is the raw localStorage value, which can be null or
           // corrupted at runtime despite its static type; guard before spreading.
           const base = isObjectRecord(prev) ? prev : defaultUserState;
@@ -425,7 +446,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     };
 
     const updateNotificationQuietHours = (range: { start: number; end: number } | null) => {
-      setUserState((prev) => {
+      setDeviceLocalState((prev) => {
         const base = isObjectRecord(prev) ? prev : defaultUserState;
         const prevSettings = isObjectRecord(base.settings) ? base.settings : defaultSettings;
         return {
@@ -453,12 +474,12 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateHomeCountry: updateSetting("homeCountry"),
       updateOfficeCountry: updateSetting("officeCountry"),
     };
-  }, [setUserState]);
+  }, [setUserState, setDeviceLocalState]);
 
   const lastUsedUpdaters = useMemo(() => {
     const updateLastUsed = <K extends keyof LastUsed>(key: K) => {
       return (value: LastUsed[K]) => {
-        setUserState((prev) => {
+        setDeviceLocalState((prev) => {
           // `prev` is the raw localStorage value, which can be null or
           // corrupted at runtime despite its static type; guard before spreading.
           const base = isObjectRecord(prev) ? prev : defaultUserState;
@@ -481,7 +502,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastGanttViewMode: updateLastUsed("ganttViewMode"),
       updateLastGanttView: updateLastUsed("ganttView"),
     };
-  }, [setUserState]);
+  }, [setDeviceLocalState]);
 
   const {
     updateTimeFormat,

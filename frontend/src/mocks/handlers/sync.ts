@@ -5,7 +5,7 @@
  *  GET  /api/sync/events  (SSE — controllable via sseEmitter)
  *  GET  /api/sync/status
  *  POST /api/sync/push
- *  POST /api/sync/pull
+ *  GET  /api/sync/pull
  *  GET  /api/preferences
  *  PUT  /api/preferences
  *  GET  /api/me
@@ -66,8 +66,12 @@ export const syncHandlers = [
     return HttpResponse.json(syncStore.pushResponse);
   }),
 
-  // POST /api/sync/pull
-  http.post("*/api/sync/pull", () => {
+  // GET /api/sync/pull — matches the real backend (backend/app/routers/db_sync.py's
+  // @router.get("/pull")) and the frontend client's pullSyncData(), which sends no
+  // method (defaulting to GET). This handler previously mocked it as POST, so any
+  // test exercising the real fetch path (not the injected-fetch harness) would 404
+  // here silently — see AccountSyncFlow.integration.test.tsx's full-App sync tests.
+  http.get("*/api/sync/pull", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     if (syncStore.pullError !== null) {

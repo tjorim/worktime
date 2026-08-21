@@ -83,7 +83,16 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
   );
 
+  // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
+  // so persisting it back on mount would be a no-op write that still bumps the shared
+  // preferences blob's _updatedAt — making local state look newer than it really is
+  // and winning last-write-wins reconciliation against genuinely newer server data.
+  const isInitialTimeOffViewRender = useRef(true);
   useEffect(() => {
+    if (isInitialTimeOffViewRender.current) {
+      isInitialTimeOffViewRender.current = false;
+      return;
+    }
     if (isValidTimeOffView(viewMode)) {
       updateLastTimeOffView(viewMode);
     }

@@ -30,6 +30,7 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
 import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
@@ -672,10 +673,45 @@ export async function pushPreferences(
   }
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+/** Remove device-local settings fields (see DEVICE_LOCAL_SETTING_KEYS) before a settings object is pushed. */
+function omitDeviceLocalSettings(settings: unknown): unknown {
+  if (!isRecord(settings)) return settings;
+  const result = { ...settings };
+  for (const key of DEVICE_LOCAL_SETTING_KEYS) {
+    delete result[key];
+  }
+  return result;
+}
+
+/** Overlay this device's own device-local settings values onto pulled settings. */
+function withLocalDeviceSettings(incomingSettings: unknown, localSettings: unknown): unknown {
+  const overlay: Record<string, unknown> = {};
+  if (isRecord(localSettings)) {
+    for (const key of DEVICE_LOCAL_SETTING_KEYS) {
+      if (key in localSettings) overlay[key] = localSettings[key];
+    }
+  }
+  if (isRecord(incomingSettings)) {
+    return { ...incomingSettings, ...overlay };
+  }
+  return Object.keys(overlay).length > 0 ? overlay : incomingSettings;
+}
+
 /**
  * Read the current worktime_user_state from localStorage and return it as a
  * preferences payload suitable for pushPreferences().
  * Returns null if there is no local user state to push.
+ *
+ * `lastUsed` (active tab, last-viewed sub-view per tab) and the
+ * DEVICE_LOCAL_SETTING_KEYS settings fields (theme, notification lead
+ * time/quiet hours) are deliberately excluded: they're per-device state, not
+ * real cross-device preferences, and SettingsContext already keeps them out
+ * of _updatedAt's bumps for the same reason — sending them here would let a
+ * device's local-only changes (a tab switch, a theme toggle) poison the
+ * account's synced preferences.
  */
 export function buildLocalPreferencesPayload(): {
   data: Record<string, unknown>;
@@ -689,8 +725,9 @@ export function buildLocalPreferencesPayload(): {
     const stored = parsed as Record<string, unknown>;
     const storedTimestamp =
       typeof stored._updatedAt === "string" ? stored._updatedAt : dayjs().toISOString();
+    const { lastUsed: _lastUsed, settings, ...restTop } = stored;
     return {
-      data: stored,
+      data: { ...restTop, settings: omitDeviceLocalSettings(settings) },
       clientUpdatedAt: storedTimestamp,
     };
   } catch {
@@ -700,19 +737,44 @@ export function buildLocalPreferencesPayload(): {
 
 /**
  * Write pulled preferences data to worktime_user_state in localStorage,
- * replacing any existing value.
+ * replacing any existing value except `lastUsed` and the
+ * DEVICE_LOCAL_SETTING_KEYS settings fields, which stay local to this device
+ * (see buildLocalPreferencesPayload) — a pull must not let the account's
+ * synced blob (or values pushed before this device excluded them) overwrite
+ * this device's own navigation state or device-local settings.
  */
 export function applyPreferencesPull(data: Record<string, unknown>): void {
   try {
-    const serialized = JSON.stringify(data);
-    const oldValue = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    let localLastUsed: unknown;
+    let localSettings: unknown;
+    if (raw) {
+      try {
+        const parsedLocal: unknown = JSON.parse(raw);
+        if (isRecord(parsedLocal)) {
+          localLastUsed = parsedLocal.lastUsed;
+          localSettings = parsedLocal.settings;
+        }
+      } catch {
+        // Malformed local state; nothing to preserve.
+      }
+    }
+    const { lastUsed: _incomingLastUsed, settings: incomingSettings, ...rest } = data;
+    const merged: Record<string, unknown> = {
+      ...rest,
+      settings: withLocalDeviceSettings(incomingSettings, localSettings),
+    };
+    if (localLastUsed !== undefined) {
+      merged.lastUsed = localLastUsed;
+    }
+    const serialized = JSON.stringify(merged);
     localStorage.setItem(USER_STATE_STORAGE_KEY, serialized);
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new StorageEvent("storage", {
           key: USER_STATE_STORAGE_KEY,
           newValue: serialized,
-          oldValue,
+          oldValue: raw,
           storageArea: localStorage,
         }),
       );
