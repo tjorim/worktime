@@ -1,0 +1,158 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";
+
+const jsonResponse = (body: unknown, init?: ResponseInit) =>
+  new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" }, ...init });
+
+function renderHarness(fetchFn: (input: string, init?: RequestInit) => Promise<Response>, isAdmin = false) {
+  function Harness() {
+    const state = useSettingsIntegrationClients({ isAuthenticated: true, accountIdentity: "user-a", fetchFn });
+    return <SettingsIntegrationClientsSection
+      clients={state.clients} isLoading={state.isLoading} error={state.error}
+      isCreating={state.isCreating} createdClient={state.createdClient}
+      busyClientId={state.busyClientId} isAdmin={isAdmin}
+      onDismissCreatedClient={state.dismissCreatedClient} onCreateClient={state.createClient}
+      onRotateClient={state.rotateClient} onRevokeClient={state.revokeClient}
+    />;
+  }
+  render(<ToastProvider><Harness /></ToastProvider>);
+}
+
+describe("Settings integration clients", () => {
+  it("creates a client and only offers admin scope to admins", async () => {
+    let created = false;
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients" && init?.method === "POST") {
+        created = true;
+        return jsonResponse({ id: 7, name: "Home hub", key: "wtic_secret", scopes: ["worktime:mcp", "worktime:admin"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" }, { status: 201 });
+      }
+      if (input === "/api/integration-clients") return jsonResponse({ items: created ? [{ id: 7, name: "Home hub", key_preview: "secret", scopes: ["worktime:mcp", "worktime:admin"], rate_limit_per_minute: 120, is_active: true, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: null }] : [], total: created ? 1 : 0 });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const user = userEvent.setup();
+    renderHarness(fetchFn, true);
+    await screen.findByText("No integration clients yet.");
+    await user.type(screen.getByLabelText("Client name"), "Home hub");
+    await user.click(screen.getByLabelText("worktime:admin (team-wide administration)"));
+    await user.click(screen.getByRole("button", { name: "Create client" }));
+    expect(await screen.findByText("wtic_secret")).toBeInTheDocument();
+    expect(fetchFn).toHaveBeenCalledWith("/api/integration-clients", expect.objectContaining({ body: JSON.stringify({ name: "Home hub", scopes: ["worktime:mcp", "worktime:admin"] }) }));
+  });
+
+  it("hides admin scope from non-admin users", async () => {
+    renderHarness(async () => jsonResponse({ items: [], total: 0 }));
+    await screen.findByText("No integration clients yet.");
+    expect(screen.queryByLabelText(/worktime:admin/)).not.toBeInTheDocument();
+  });
+
+  it("rotates a key after confirmation and reveals the replacement once", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients/7/rotate" && init?.method === "POST") return jsonResponse({ id: 7, name: "Home hub", key: "wtic_replacement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" });
+      if (input === "/api/integration-clients") return jsonResponse({ items: [{ id: 7, name: "Home hub", key_preview: "ement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: true, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: null }], total: 1 });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const user = userEvent.setup();
+    renderHarness(fetchFn);
+    await user.click(await screen.findByRole("button", { name: "Rotate" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Rotate" }));
+    expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledWith("/api/integration-clients/7/rotate", { method: "POST" }));
+  });
+
+  it("rejects overlapping key-issuing mutations invoked in the same tick", async () => {
+    let resolveCreate: ((response: Response) => void) | undefined;
+    const createResponse = new Promise<Response>((resolve) => { resolveCreate = resolve; });
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients" && init?.method === "POST") return createResponse;
+      if (input === "/api/integration-clients") return jsonResponse({ items: [], total: 0 });
+      if (input === "/api/integration-clients/7/rotate") throw new Error("overlapping rotation was issued");
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    function MutationHarness() {
+      const state = useSettingsIntegrationClients({ isAuthenticated: true, accountIdentity: "user-a", fetchFn });
+      return <button onClick={() => {
+        state.createClient("Home hub", ["worktime:mcp"]);
+        state.rotateClient(7);
+      }}>Issue twice</button>;
+    }
+
+    const user = userEvent.setup();
+    render(<MutationHarness />);
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledWith("/api/integration-clients"));
+    await user.click(screen.getByRole("button", { name: "Issue twice" }));
+    expect(fetchFn).not.toHaveBeenCalledWith("/api/integration-clients/7/rotate", expect.anything());
+
+    resolveCreate?.(jsonResponse({ id: 7, name: "Home hub", key: "wtic_secret", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" }, { status: 201 }));
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(3));
+  });
+
+  it("clears a displayed one-time key when its client is revoked", async () => {
+    let revoked = false;
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients/7/rotate" && init?.method === "POST") return jsonResponse({ id: 7, name: "Home hub", key: "wtic_replacement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" });
+      if (input === "/api/integration-clients/7" && init?.method === "DELETE") {
+        revoked = true;
+        return new Response(null, { status: 204 });
+      }
+      if (input === "/api/integration-clients") return jsonResponse({ items: revoked ? [{ id: 7, name: "Home hub", key_preview: "ement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: false, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: "2026-08-22T01:00:00Z" }] : [{ id: 7, name: "Home hub", key_preview: "ement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: true, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: null }], total: 1 });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderHarness(fetchFn);
+    await user.click(await screen.findByRole("button", { name: "Rotate" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Rotate" }));
+    expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Revoke" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke" }));
+    await waitFor(() => expect(screen.queryByText("wtic_replacement")).not.toBeInTheDocument());
+    expect(await screen.findByText("Revoked")).toBeInTheDocument();
+  });
+
+  it("cannot restore a one-time key from the previous account after an account change", async () => {
+    let currentAccount = "user-a";
+    let oldCreateCompleted = false;
+    let resolveCreate: ((response: Response) => void) | undefined;
+    const createResponse = new Promise<Response>((resolve) => { resolveCreate = resolve; });
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients" && init?.method === "POST") {
+        const response = await createResponse;
+        oldCreateCompleted = true;
+        return response;
+      }
+      if (input === "/api/integration-clients") return jsonResponse({
+        items: currentAccount === "user-a" ? [] : [{ id: 8, name: "Account B client", key_preview: "bbbb", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: true, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: null }],
+        total: 1,
+      });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    function AccountHarness({ accountIdentity }: { accountIdentity: string }) {
+      const state = useSettingsIntegrationClients({ isAuthenticated: true, accountIdentity, fetchFn });
+      return <div>
+        <span>{state.createdClient?.key ?? "No key"}</span>
+        <span>{state.clients?.map((client) => client.name).join(", ") ?? "No clients loaded"}</span>
+        <button onClick={() => state.createClient("Account A client", ["worktime:mcp"])}>Create</button>
+      </div>;
+    }
+
+    const user = userEvent.setup();
+    const { rerender } = render(<AccountHarness accountIdentity="user-a" />);
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    currentAccount = "user-b";
+    rerender(<AccountHarness accountIdentity="user-b" />);
+    expect(await screen.findByText("Account B client")).toBeInTheDocument();
+    resolveCreate?.(jsonResponse({ id: 7, name: "Account A client", key: "wtic_account_a_secret", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" }, { status: 201 }));
+
+    await waitFor(() => expect(oldCreateCompleted).toBe(true));
+    await waitFor(() => expect(screen.queryByText("wtic_account_a_secret")).not.toBeInTheDocument());
+    expect(screen.getByText("Account B client")).toBeInTheDocument();
+  });
+});

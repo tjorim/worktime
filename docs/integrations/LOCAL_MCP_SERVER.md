@@ -21,7 +21,8 @@ Configure backend auth as usual (`OIDC_ISSUER_URL`, optional `OIDC_AUDIENCE`, et
 Automation callers (e.g. a home automation hub, a personal script) authenticate
 with a **managed integration client** instead of an interactive OIDC login:
 
-1. Sign in normally and create one via `POST /api/integration-clients`
+1. Sign in normally, then open **Settings → Account → Integration clients** and
+   create one. For automation, the equivalent endpoint is `POST /api/integration-clients`
    (`name`, optional `scopes` — defaults to `["worktime:mcp"]` — and
    `rate_limit_per_minute`, default 120). The response includes the raw key
    **once**; only its hash is stored server-side.
