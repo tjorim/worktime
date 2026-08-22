@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
@@ -15,6 +15,7 @@ interface UseSettingsResetFlowParams {
    * account's saved preferences afterward — see the comment on the pull call
    * below for why this matters for a signed-in user. */
   isAuthenticated?: boolean;
+  accountId?: string | null;
   fetchFn?: FetchFn | null;
 }
 
@@ -37,11 +38,15 @@ export function useSettingsResetFlow({
   showSuccessToast,
   showWarningToast,
   isAuthenticated = false,
+  accountId = null,
   fetchFn = null,
 }: UseSettingsResetFlowParams) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
+  const activeAccountIdRef = useRef(isAuthenticated ? accountId : null);
+  const resetGenerationRef = useRef(0);
+  activeAccountIdRef.current = isAuthenticated ? accountId : null;
 
   const handleClearData = () => {
     setShowResetConfirm(true);
@@ -54,6 +59,8 @@ export function useSettingsResetFlow({
   };
 
   const handleConfirmReset = () => {
+    const resetGeneration = ++resetGenerationRef.current;
+    const resetAccountId = activeAccountIdRef.current;
     const listFormat = new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" });
     let settingsCleared = false;
     let timeTrackingCleared = false;
@@ -75,11 +82,17 @@ export function useSettingsResetFlow({
     // gets walked through onboarding from scratch even though their real
     // schedule/team/settings are still saved on the account. Pull them back
     // in the background rather than leaving the device looking unconfigured.
-    if (settingsCleared && isAuthenticated && fetchFn) {
+    if (settingsCleared && resetAccountId && fetchFn) {
       const fetch = fetchFn;
       void fetchPreferences(fetch)
         .then((prefs) => {
-          if (prefs) applyPreferencesPull(prefs.data);
+          if (
+            prefs &&
+            resetGenerationRef.current === resetGeneration &&
+            activeAccountIdRef.current === resetAccountId
+          ) {
+            applyPreferencesPull(prefs.data);
+          }
         })
         .catch((error: unknown) => {
           logger.error("Failed to restore preferences from account after reset:", error);
@@ -147,5 +160,4 @@ export function useSettingsResetFlow({
     handleConfirmReset,
   };
 }
-
 

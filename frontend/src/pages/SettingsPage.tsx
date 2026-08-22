@@ -302,6 +302,7 @@ export function SettingsContent({
     clearTimeOffEvents,
     onHide,
     isAuthenticated,
+    accountId: userId,
     fetchFn,
     showSuccessToast: toast.showSuccess,
     showWarningToast: toast.showWarning,

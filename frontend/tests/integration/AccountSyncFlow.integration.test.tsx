@@ -76,22 +76,7 @@ const emptyStatus = {
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
 
-const populatedStatus = {
-  ...emptyStatus,
-  labels_updated_at: "2026-01-01T00:00:00.000Z",
-};
-
 const emptyPushResponse = { results: {} };
-
-const emptyPullResponse = {
-  labels: [],
-  tasks: [],
-  templates: [],
-  work_locations: [],
-  time_off_entries: [],
-  gantt_tasks: [],
-  server_timestamp: "2026-01-02T00:00:00.000Z",
-};
 
 /** A server side holding one live label, matching `populatedStatus`. */
 const populatedPullResponse = {

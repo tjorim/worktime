@@ -186,7 +186,11 @@ function AppContent() {
     if (!hasCompletedOnboarding) {
       setTeamModalMode("onboarding");
       setShowTeamModal(true);
-    } else if (teamModalMode === "onboarding") {
+    }
+  }, [hasCompletedOnboarding]);
+
+  useEffect(() => {
+    if (hasCompletedOnboarding && teamModalMode === "onboarding") {
       setShowTeamModal(false);
     }
   }, [hasCompletedOnboarding, teamModalMode]);
@@ -395,4 +399,3 @@ function App() {
 }
 
 export default App;
-

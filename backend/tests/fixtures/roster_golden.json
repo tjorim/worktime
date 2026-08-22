@@ -184,6 +184,48 @@
     {
       "schedule": "9-5",
       "team": 1,
+      "date": "2024-12-27",
+      "code": "2452.5D"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
+      "date": "2024-12-28",
+      "code": "2452.6O"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
+      "date": "2024-12-29",
+      "code": "2452.7O"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
+      "date": "2024-12-30",
+      "code": "2501.1D"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
+      "date": "2024-12-31",
+      "code": "2501.2D"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
+      "date": "2025-01-01",
+      "code": "2501.3D"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
+      "date": "2025-01-02",
+      "code": "2501.4D"
+    },
+    {
+      "schedule": "9-5",
+      "team": 1,
       "date": "2025-01-03",
       "code": "2501.5D"
     },
@@ -300,6 +342,174 @@
       "team": 1,
       "date": "2025-01-22",
       "code": "2504.3D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-13",
+      "code": "2524.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-14",
+      "code": "2524.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-15",
+      "code": "2524.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-16",
+      "code": "2525.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-17",
+      "code": "2525.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-18",
+      "code": "2525.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-19",
+      "code": "2525.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-20",
+      "code": "2525.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-21",
+      "code": "2525.6D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-22",
+      "code": "2525.7D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-23",
+      "code": "2526.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-24",
+      "code": "2526.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-25",
+      "code": "2526.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-26",
+      "code": "2526.4L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-27",
+      "code": "2526.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-28",
+      "code": "2526.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-29",
+      "code": "2526.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-06-30",
+      "code": "2527.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-01",
+      "code": "2527.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-02",
+      "code": "2527.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-03",
+      "code": "2527.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-04",
+      "code": "2527.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-05",
+      "code": "2527.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-06",
+      "code": "2527.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-07",
+      "code": "2528.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-08",
+      "code": "2528.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-09",
+      "code": "2528.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 1,
+      "date": "2025-07-10",
+      "code": "2528.4L"
     },
     {
       "schedule": "2-shift",
@@ -676,6 +886,174 @@
     {
       "schedule": "2-shift",
       "team": 2,
+      "date": "2025-06-13",
+      "code": "2524.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-14",
+      "code": "2524.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-15",
+      "code": "2524.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-16",
+      "code": "2525.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-17",
+      "code": "2525.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-18",
+      "code": "2525.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-19",
+      "code": "2525.4L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-20",
+      "code": "2525.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-21",
+      "code": "2525.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-22",
+      "code": "2525.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-23",
+      "code": "2526.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-24",
+      "code": "2526.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-25",
+      "code": "2526.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-26",
+      "code": "2526.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-27",
+      "code": "2526.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-28",
+      "code": "2526.6D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-29",
+      "code": "2526.7D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-06-30",
+      "code": "2527.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-01",
+      "code": "2527.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-02",
+      "code": "2527.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-03",
+      "code": "2527.4L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-04",
+      "code": "2527.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-05",
+      "code": "2527.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-06",
+      "code": "2527.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-07",
+      "code": "2528.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-08",
+      "code": "2528.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-09",
+      "code": "2528.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
+      "date": "2025-07-10",
+      "code": "2528.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 2,
       "date": "2025-07-11",
       "code": "2528.5M"
     },
@@ -1044,6 +1422,174 @@
       "team": 2,
       "date": "2025-09-10",
       "code": "2537.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-13",
+      "code": "2524.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-14",
+      "code": "2524.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-15",
+      "code": "2524.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-16",
+      "code": "2525.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-17",
+      "code": "2525.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-18",
+      "code": "2525.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-19",
+      "code": "2525.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-20",
+      "code": "2525.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-21",
+      "code": "2525.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-22",
+      "code": "2525.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-23",
+      "code": "2526.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-24",
+      "code": "2526.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-25",
+      "code": "2526.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-26",
+      "code": "2526.4L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-27",
+      "code": "2526.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-28",
+      "code": "2526.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-29",
+      "code": "2526.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-06-30",
+      "code": "2527.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-01",
+      "code": "2527.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-02",
+      "code": "2527.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-03",
+      "code": "2527.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-04",
+      "code": "2527.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-05",
+      "code": "2527.6D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-06",
+      "code": "2527.7D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-07",
+      "code": "2528.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-08",
+      "code": "2528.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-09",
+      "code": "2528.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 3,
+      "date": "2025-07-10",
+      "code": "2528.4L"
     },
     {
       "schedule": "2-shift",
@@ -1420,6 +1966,174 @@
     {
       "schedule": "2-shift",
       "team": 4,
+      "date": "2025-06-13",
+      "code": "2524.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-14",
+      "code": "2524.6D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-15",
+      "code": "2524.7D"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-16",
+      "code": "2525.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-17",
+      "code": "2525.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-18",
+      "code": "2525.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-19",
+      "code": "2525.4L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-20",
+      "code": "2525.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-21",
+      "code": "2525.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-22",
+      "code": "2525.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-23",
+      "code": "2526.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-24",
+      "code": "2526.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-25",
+      "code": "2526.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-26",
+      "code": "2526.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-27",
+      "code": "2526.5M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-28",
+      "code": "2526.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-29",
+      "code": "2526.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-06-30",
+      "code": "2527.1L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-01",
+      "code": "2527.2L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-02",
+      "code": "2527.3L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-03",
+      "code": "2527.4L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-04",
+      "code": "2527.5L"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-05",
+      "code": "2527.6O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-06",
+      "code": "2527.7O"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-07",
+      "code": "2528.1M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-08",
+      "code": "2528.2M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-09",
+      "code": "2528.3M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
+      "date": "2025-07-10",
+      "code": "2528.4M"
+    },
+    {
+      "schedule": "2-shift",
+      "team": 4,
       "date": "2025-07-11",
       "code": "2528.5M"
     },
@@ -1792,6 +2506,90 @@
     {
       "schedule": "weekend-shift",
       "team": 1,
+      "date": "2024-12-20",
+      "code": "2451.5D"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-21",
+      "code": "2451.6L"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-22",
+      "code": "2451.7L"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-23",
+      "code": "2452.1O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-24",
+      "code": "2452.2O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-25",
+      "code": "2452.3O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-26",
+      "code": "2452.4O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-27",
+      "code": "2452.5D"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-28",
+      "code": "2452.6M"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-29",
+      "code": "2452.7M"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-30",
+      "code": "2501.1O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2024-12-31",
+      "code": "2501.2O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2025-01-01",
+      "code": "2501.3O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
+      "date": "2025-01-02",
+      "code": "2501.4O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 1,
       "date": "2025-01-03",
       "code": "2501.5D"
     },
@@ -1992,6 +2790,90 @@
       "team": 1,
       "date": "2025-02-05",
       "code": "2506.3O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-20",
+      "code": "2451.5D"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-21",
+      "code": "2451.6M"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-22",
+      "code": "2451.7M"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-23",
+      "code": "2452.1O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-24",
+      "code": "2452.2O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-25",
+      "code": "2452.3O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-26",
+      "code": "2452.4O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-27",
+      "code": "2452.5D"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-28",
+      "code": "2452.6L"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-29",
+      "code": "2452.7L"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-30",
+      "code": "2501.1O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2024-12-31",
+      "code": "2501.2O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2025-01-01",
+      "code": "2501.3O"
+    },
+    {
+      "schedule": "weekend-shift",
+      "team": 2,
+      "date": "2025-01-02",
+      "code": "2501.4O"
     },
     {
       "schedule": "weekend-shift",
@@ -2200,6 +3082,66 @@
     {
       "schedule": "5-shift",
       "team": 1,
+      "date": "2025-07-03",
+      "code": "2527.4O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-04",
+      "code": "2527.5O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-05",
+      "code": "2527.6O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-06",
+      "code": "2527.7M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-07",
+      "code": "2528.1M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-08",
+      "code": "2528.2L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-09",
+      "code": "2528.3L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-10",
+      "code": "2528.3N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-11",
+      "code": "2528.4N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
+      "date": "2025-07-12",
+      "code": "2528.6O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 1,
       "date": "2025-07-13",
       "code": "2528.7O"
     },
@@ -2352,6 +3294,66 @@
       "team": 1,
       "date": "2025-08-07",
       "code": "2532.4L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-03",
+      "code": "2527.3N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-04",
+      "code": "2527.5O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-05",
+      "code": "2527.6O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-06",
+      "code": "2527.7O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-07",
+      "code": "2528.1O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-08",
+      "code": "2528.2M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-09",
+      "code": "2528.3M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-10",
+      "code": "2528.4L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-11",
+      "code": "2528.5L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 2,
+      "date": "2025-07-12",
+      "code": "2528.5N"
     },
     {
       "schedule": "5-shift",
@@ -2512,6 +3514,66 @@
     {
       "schedule": "5-shift",
       "team": 3,
+      "date": "2025-07-03",
+      "code": "2527.4L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-04",
+      "code": "2527.4N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-05",
+      "code": "2527.5N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-06",
+      "code": "2527.7O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-07",
+      "code": "2528.1O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-08",
+      "code": "2528.2O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-09",
+      "code": "2528.3O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-10",
+      "code": "2528.4M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-11",
+      "code": "2528.5M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
+      "date": "2025-07-12",
+      "code": "2528.6L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 3,
       "date": "2025-07-13",
       "code": "2528.7L"
     },
@@ -2668,6 +3730,66 @@
     {
       "schedule": "5-shift",
       "team": 4,
+      "date": "2025-07-03",
+      "code": "2527.4M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-04",
+      "code": "2527.5L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-05",
+      "code": "2527.6L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-06",
+      "code": "2527.6N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-07",
+      "code": "2527.7N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-08",
+      "code": "2528.2O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-09",
+      "code": "2528.3O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-10",
+      "code": "2528.4O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-11",
+      "code": "2528.5O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
+      "date": "2025-07-12",
+      "code": "2528.6M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 4,
       "date": "2025-07-13",
       "code": "2528.7M"
     },
@@ -2820,6 +3942,66 @@
       "team": 4,
       "date": "2025-08-07",
       "code": "2532.4O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-03",
+      "code": "2527.4O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-04",
+      "code": "2527.5M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-05",
+      "code": "2527.6M"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-06",
+      "code": "2527.7L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-07",
+      "code": "2528.1L"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-08",
+      "code": "2528.1N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-09",
+      "code": "2528.2N"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-10",
+      "code": "2528.4O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-11",
+      "code": "2528.5O"
+    },
+    {
+      "schedule": "5-shift",
+      "team": 5,
+      "date": "2025-07-12",
+      "code": "2528.6O"
     },
     {
       "schedule": "5-shift",
