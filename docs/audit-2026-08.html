@@ -514,7 +514,7 @@
     <h1>What's broken, and in what order</h1>
     <p class="lede">Thirty-seven findings across sync, backend, interface and documentation, from
       three reviews run against <span class="mono">main</span> — each traced to the code that
-      produces it and filed as a GitHub issue. Thirty-three are now fixed and verified; four
+      produces it and filed as a GitHub issue. Thirty-four are now fixed and verified; three
       remain, with a suggested order below. The app is well built; the failures cluster in the
       places where two subsystems meet and neither owns the seam.</p>
     <div class="method">
@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">33</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">34</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">4</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">4</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">3</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">3</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1379,19 +1379,22 @@
         <div class="refs"><b>settings/account/SettingsApiTokensSection.tsx</b> <b>backend/app/routers/integration_clients.py</b></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a>
           <span class="area">frontend</span>
           <span class="area">observability</span>
           <h3>Audit trail has no UI</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>/api/audit</code> serves a per-user trail and an admin-only team trail, with tests.
           Nothing in the frontend calls it. So the data is captured and queryable but invisible —
           and "why did this entry change?", the obvious question in a multi-device sync story, is
           currently unanswerable in-app.</p>
         <div class="refs"><b>backend/app/routers/audit.py</b> <b>settings/admin/SettingsAdminUsersSection.tsx</b></div>
+        <div class="verified"><span>Resolved in the current PR: <code>SettingsAuditTrailSection.tsx</code>
+          now shows a caller-scoped recent-activity view under Account and an admin-only team-wide
+          view, both backed by tested <code>before_id</code> pagination.</span></div>
       </div>
 
       <div class="finding low resolved">
@@ -1584,7 +1587,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Low <span class="sec-count">4</span></h3>
+      <h3>Low <span class="sec-count">3</span></h3>
       <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
@@ -1594,24 +1597,18 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
-              <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
-                decision.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
               <td>Integration-client management UI. Mirrors the existing PAT section's patterns
                 closely enough to copy rather than design.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
               <td>iCal subscription feed. Outdated PR #448 is reference material for downloadable
                 export, but it does not replace the feed and scoped-token design.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge

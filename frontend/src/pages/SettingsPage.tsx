@@ -20,6 +20,7 @@ import { ChangelogModal } from "@/components/ChangelogModal";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
+import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
 import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
@@ -35,6 +36,7 @@ import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
+import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
 import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
 import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
 import * as m from "@/paraglide/messages.js";
@@ -284,6 +286,15 @@ export function SettingsContent({
     fetchFn,
     showSuccessToast: toast.showSuccess,
   });
+  const personalAuditTrail = useSettingsAuditTrail({
+    enabled: isAuthenticated && accountProfile?.id !== undefined,
+    userId: accountProfile?.id,
+    fetchFn,
+  });
+  const teamAuditTrail = useSettingsAuditTrail({
+    enabled: isAuthenticated && isAdmin,
+    fetchFn,
+  });
 
   useEffect(() => {
     onAdminStatusChange?.(isAdmin);
@@ -469,33 +480,46 @@ export function SettingsContent({
           onTriggerPull={triggerPull}
         />
         {isAuthenticated ? (
-          <SettingsApiTokensSection
-            apiTokens={apiTokens}
-            isApiTokensLoading={isApiTokensLoading}
-            apiTokensError={apiTokensError}
-            isCreatingApiToken={isCreatingApiToken}
-            createApiTokenError={createApiTokenError}
-            createdApiToken={createdApiToken}
-            onDismissCreatedApiToken={dismissCreatedApiToken}
-            onCreateApiToken={handleCreateApiToken}
-            revokingApiTokenId={revokingApiTokenId}
-            revokeApiTokenError={revokeApiTokenError}
-            onRevokeApiToken={handleRevokeApiToken}
-          />
+          <>
+            <SettingsAuditTrailSection
+              {...personalAuditTrail}
+              onLoadMore={() => void personalAuditTrail.loadMore()}
+            />
+            <SettingsApiTokensSection
+              apiTokens={apiTokens}
+              isApiTokensLoading={isApiTokensLoading}
+              apiTokensError={apiTokensError}
+              isCreatingApiToken={isCreatingApiToken}
+              createApiTokenError={createApiTokenError}
+              createdApiToken={createdApiToken}
+              onDismissCreatedApiToken={dismissCreatedApiToken}
+              onCreateApiToken={handleCreateApiToken}
+              revokingApiTokenId={revokingApiTokenId}
+              revokeApiTokenError={revokeApiTokenError}
+              onRevokeApiToken={handleRevokeApiToken}
+            />
+          </>
         ) : null}
       </>
     ),
     admin: () =>
       isAdmin ? (
-        <SettingsAdminUsersSection
-          currentAccountId={accountProfile?.id ?? null}
-          adminUsers={adminUsers}
-          isAdminUsersLoading={isAdminUsersLoading}
-          adminUsersError={adminUsersError}
-          adminUsersDeleteError={adminUsersDeleteError}
-          deletingAdminUserId={deletingAdminUserId}
-          onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
-        />
+        <>
+          <SettingsAdminUsersSection
+            currentAccountId={accountProfile?.id ?? null}
+            adminUsers={adminUsers}
+            isAdminUsersLoading={isAdminUsersLoading}
+            adminUsersError={adminUsersError}
+            adminUsersDeleteError={adminUsersDeleteError}
+            deletingAdminUserId={deletingAdminUserId}
+            onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
+          />
+          <SettingsAuditTrailSection
+            {...teamAuditTrail}
+            teamWide
+            onLoadMore={() => void teamAuditTrail.loadMore()}
+          />
+        </>
       ) : null,
     scheduleTeam: () => (
       <SettingsScheduleSection
