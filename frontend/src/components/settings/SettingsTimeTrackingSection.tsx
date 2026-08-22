@@ -1,10 +1,10 @@
-import { LabelsPanel } from "@/components/timeTracking/LabelsPanel";
-import { TemplatesPanel } from "@/components/timeTracking/TemplatesPanel";
-import type { Label } from "@/components/timeTracking/constants";
+import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
+import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
+import type { Label } from "@/lib/timeTracking/constants";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
-} from "@/components/timeTracking/types";
+} from "@/lib/timeTracking/types";
 
 type SettingsTimeTrackingSectionProps = {
   labels: Label[];

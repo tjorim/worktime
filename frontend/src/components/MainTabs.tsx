@@ -29,12 +29,12 @@ const TimeOffView = lazy(() =>
   })),
 );
 const TimeTrackingView = lazy(() =>
-  import("@/components/timeTracking/TimeTrackingView").then((module) => ({
+  import("@/features/timeTracking/TimeTrackingView").then((module) => ({
     default: module.TimeTrackingView,
   })),
 );
 const GanttView = lazy(() =>
-  import("@/components/gantt/GanttView").then((module) => ({
+  import("@/features/gantt/GanttView").then((module) => ({
     default: module.GanttView,
   })),
 );

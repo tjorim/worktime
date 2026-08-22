@@ -11,8 +11,8 @@
  */
 
 import { dayjs } from "@/utils/dateTimeUtils";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { Label } from "@/components/timeTracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import type { Label } from "@/lib/timeTracking/constants";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
 import {

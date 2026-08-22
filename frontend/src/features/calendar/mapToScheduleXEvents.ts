@@ -1,7 +1,7 @@
 import type { CalendarEvent, CalendarType } from "@schedule-x/calendar";
 import { Temporal } from "temporal-polyfill";
-import type { Label } from "@/components/timeTracking/constants";
-import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
+import type { Label } from "@/lib/timeTracking/constants";
+import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/timeOff/types";
 import { SHIFT_CODES, type ShiftCode } from "@/data/rosters";
 import type { Shift, ShiftResult } from "@/utils/shiftCalculations";
