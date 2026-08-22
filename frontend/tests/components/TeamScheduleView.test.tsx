@@ -47,9 +47,7 @@ function teamHdayPayload(teamId: string, name = "Engineering") {
     sections: [
       {
         title: null,
-        members: [
-          { username: "alice", display_name: "Alice", raw: "", events: [], etag: null },
-        ],
+        members: [{ username: "alice", display_name: "Alice", raw: "", events: [], etag: null }],
       },
     ],
     members: [{ username: "alice", display_name: "Alice", raw: "", events: [], etag: null }],
@@ -62,14 +60,15 @@ describe("TeamScheduleView", () => {
     server.use(http.get("*/api/health", () => HttpResponse.json({ status: "ok" })));
   });
 
-  it("shows a backend-required message until the connection is established", () => {
+  it("guards direct rendering when no helper is configured", () => {
     render(
       <TestProviders>
         <TeamScheduleView />
       </TestProviders>,
     );
 
-    expect(screen.getByText(m.team_backend_required_heading())).toBeInTheDocument();
+    expect(screen.getByText(m.team_helper_required_heading())).toBeInTheDocument();
+    expect(screen.queryByText(m.team_backend_required_heading())).not.toBeInTheDocument();
   });
 
   it("requires a configured helper and never falls back to the app's own origin", async () => {

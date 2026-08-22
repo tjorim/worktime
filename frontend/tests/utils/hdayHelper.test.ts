@@ -19,9 +19,16 @@ describe("isHdayHelperMixedContentBlocked", () => {
     vi.unstubAllGlobals();
   });
 
-  it("flags an http:// helper URL when the app is served over https", () => {
+  it("allows an http:// localhost helper when the app is served over https", () => {
     vi.stubGlobal("location", { ...window.location, protocol: "https:" });
-    expect(isHdayHelperMixedContentBlocked("http://localhost:8080")).toBe(true);
+    expect(isHdayHelperMixedContentBlocked("http://localhost:8080")).toBe(false);
+    expect(isHdayHelperMixedContentBlocked("http://127.0.0.1:8080")).toBe(false);
+    expect(isHdayHelperMixedContentBlocked("http://[::1]:8080")).toBe(false);
+  });
+
+  it("flags a non-loopback http:// helper URL when the app is served over https", () => {
+    vi.stubGlobal("location", { ...window.location, protocol: "https:" });
+    expect(isHdayHelperMixedContentBlocked("http://planner-proxy.lan:8080")).toBe(true);
   });
 
   it("does not flag an https:// helper URL when the app is served over https", () => {

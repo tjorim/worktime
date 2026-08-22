@@ -832,7 +832,7 @@
   "team_backend_required_help": "Open Settings → Developer Options and configure your backend API URL.",
   "team_helper_required_heading": "Local .hday Helper Required",
   "team_helper_required_body": "This server never exposes team schedules directly — they're only ever loaded from a local .hday helper you run yourself.",
-  "team_helper_required_help": "Open Settings → Developer Options → .hday File Helper and set its URL to get started.",
+  "team_helper_required_help": "Open Settings → Developer Options → .hday File Helper and connect it to get started.",
   "team_viewer_title": "Team Schedule Viewer",
   "team_viewer_desc": "Enter a team ID to view the team roster and .hday schedules for all members.",
   "team_id_label": "Team ID",

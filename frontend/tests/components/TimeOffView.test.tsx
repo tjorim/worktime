@@ -7,6 +7,7 @@ import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
@@ -25,6 +26,31 @@ describe("TimeOffView", () => {
   });
 
   describe("Empty State", () => {
+    it("hides the Team view until an .hday helper is configured", () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+    });
+
+    it("shows the Team view when an .hday helper is configured", () => {
+      localStorage.setItem(
+        DEVELOPER_OPTIONS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(screen.getByRole("button", { name: "Team" })).toBeInTheDocument();
+    });
+
     it("should render empty state when no events", () => {
       render(
         <AllProviders>
@@ -80,9 +106,7 @@ describe("TimeOffView", () => {
 
       await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
 
-      const errors = await screen.findAllByText(
-        "Failed to import file. Please check the format.",
-      );
+      const errors = await screen.findAllByText("Failed to import file. Please check the format.");
       expect(errors.length).toBeGreaterThanOrEqual(2);
     });
   });

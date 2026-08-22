@@ -83,8 +83,8 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
 
 /**
  * Team Schedule Viewer - displays team members and their .hday schedules in a calendar grid.
- * Only usable when developer options are enabled, the backend is connected, and a
- * local .hday helper URL is configured — this server never mounts these routes itself.
+ * Team data remains in the legacy holiday planner, so this view talks to the
+ * local .hday helper configured in Developer Options.
  *
  * Shows a calendar-style grid with:
  * - Dates as columns (horizontal timeline)
@@ -96,7 +96,6 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
  */
 export function TeamScheduleView() {
   const { options } = useDeveloperOptions();
-  const connectionStatus = options.connectionStatus;
   const { baseUrl, usesHelper } = resolveHdayHelperTarget(options.hdayHelperUrl);
 
   const [teamId, setTeamId] = useState(() => {
@@ -121,15 +120,6 @@ export function TeamScheduleView() {
     // Reset attempt flag when team ID changes to allow auto-fetch for new team
     setHasAttemptedFetch(false);
   }, [teamId]);
-
-  // Reset state when connection is lost
-  useEffect(() => {
-    if (connectionStatus !== "connected") {
-      setTeamData(null);
-      setError(null);
-      setHasAttemptedFetch(false);
-    }
-  }, [connectionStatus]);
 
   // Reset state when the target helper changes — otherwise data fetched from
   // the previous helper stays on screen (or a stale in-flight request from it
@@ -215,20 +205,13 @@ export function TeamScheduleView() {
     }
   }, [teamId, baseUrl]);
 
-  // Auto-load team data if team ID is available and connected (only once per team ID).
-  // Requires a configured helper — the app origin never exposes these routes in production.
+  // Auto-load team data if the team and helper are available (only once per team ID).
+  // Helper connectivity is independent of the hosted Worktime backend connection.
   useEffect(() => {
-    if (
-      teamId &&
-      connectionStatus === "connected" &&
-      usesHelper &&
-      !teamData &&
-      !isLoading &&
-      !hasAttemptedFetch
-    ) {
+    if (teamId && usesHelper && !teamData && !isLoading && !hasAttemptedFetch) {
       fetchTeamData();
     }
-  }, [teamId, connectionStatus, usesHelper, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
+  }, [teamId, usesHelper, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -273,18 +256,8 @@ export function TeamScheduleView() {
     return groups;
   }, [dateRange]);
 
-  if (connectionStatus !== "connected") {
-    return (
-      <Alert variant="info" className="mt-3">
-        <Alert.Heading>{m.team_backend_required_heading()}</Alert.Heading>
-        <p>{m.team_backend_required_body()}</p>
-        <p className="mb-0 small">{m.team_backend_required_help()}</p>
-      </Alert>
-    );
-  }
-
-  // This server never exposes team schedules directly (see backend LEGACY_FILESHARE_ENABLED) —
-  // a local .hday helper is the only way to load them, so require one before fetching anything.
+  // This is normally unreachable because TimeOffView only exposes the Team tab
+  // after a helper is configured. Keep a guard for direct rendering and stale state.
   if (!usesHelper) {
     return (
       <Alert variant="info" className="mt-3">
@@ -627,4 +600,3 @@ export function TeamScheduleView() {
     </div>
   );
 }
-

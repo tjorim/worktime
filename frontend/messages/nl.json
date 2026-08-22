@@ -825,7 +825,7 @@
   "team_backend_required_help": "Open Instellingen → Ontwikkelaarsopties en configureer uw backend-API-URL.",
   "team_helper_required_heading": "Lokale .hday-helper vereist",
   "team_helper_required_body": "Deze server toont teamroosters nooit rechtstreeks — ze worden uitsluitend geladen via een lokale .hday-helper die u zelf uitvoert.",
-  "team_helper_required_help": "Open Instellingen → Ontwikkelaarsopties → .hday-bestandshelper en stel de URL ervan in om te beginnen.",
+  "team_helper_required_help": "Open Instellingen → Ontwikkelaarsopties → .hday-bestandshelper en verbind deze om te beginnen.",
   "team_viewer_title": "Teamroosterweergave",
   "team_viewer_desc": "Voer een team-ID in om het teamrooster en .hday-roosters voor alle leden te bekijken.",
   "team_id_label": "Team-ID",

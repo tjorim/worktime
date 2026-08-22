@@ -9,8 +9,8 @@ import {
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
@@ -72,11 +72,11 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
+  const { options } = useDeveloperOptions();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
   const { lastUsed, updateLastTimeOffView } = useLastUsed();
-  const { options } = useDeveloperOptions();
   const toast = useToast();
 
   const [viewMode, setViewMode] = useState(
@@ -473,7 +473,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             {m.timeoff_view_statistics()}
           </Button>
-          {options.connectionStatus === "connected" && (
+          {options.hdayHelperUrl && (
             <Button
               variant={viewMode === "team" ? "primary" : "outline-primary"}
               size="sm"
@@ -598,4 +598,3 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     </div>
   );
 }
-
