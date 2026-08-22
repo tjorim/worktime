@@ -20,8 +20,10 @@ export interface DeveloperOptions {
 interface DeveloperOptionsContextType {
   options: DeveloperOptions;
   isDevMode: boolean;
+  helperConnectionStatus: ConnectionStatus;
   updateAutoConnect: (autoConnect: boolean) => void;
   updateHdayHelperUrl: (url: string | null) => void;
+  testHdayHelperConnection: (url: string) => Promise<boolean>;
   toggleDevMode: () => void;
   testConnection: () => Promise<boolean>;
   disconnect: () => void;
@@ -37,6 +39,8 @@ const defaultOptions: DeveloperOptions = {
 };
 
 const DeveloperOptionsContext = createContext<DeveloperOptionsContextType | null>(null);
+const HELPER_CONNECTION_TIMEOUT_MS = 5000;
+const HELPER_HEALTH_POLL_MS = 30000;
 
 export function useDeveloperOptions(): DeveloperOptionsContextType {
   const context = useContext(DeveloperOptionsContext);
@@ -65,6 +69,8 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
 
   // Use persisted isDevMode from options
   const [isDevMode, setIsDevMode] = useState(normalizedOptions.isDevMode);
+  const [helperConnectionStatus, setHelperConnectionStatus] =
+    useState<ConnectionStatus>("disconnected");
 
   // Sync isDevMode changes to localStorage
   useEffect(() => {
@@ -101,9 +107,64 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
   const updateHdayHelperUrl = useCallback(
     (url: string | null) => {
       setOptions((prev) => ({ ...prev, hdayHelperUrl: url || null }));
+      setHelperConnectionStatus("disconnected");
     },
     [setOptions],
   );
+
+  const testHdayHelperConnection = useCallback(
+    async (url: string): Promise<boolean> => {
+      const normalizedUrl = url.trim().replace(/\/+$/, "");
+      if (!normalizedUrl) {
+        setHelperConnectionStatus("disconnected");
+        return false;
+      }
+
+      setHelperConnectionStatus((current) => (current === "connected" ? current : "connecting"));
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), HELPER_CONNECTION_TIMEOUT_MS);
+      try {
+        const response = await fetch(`${normalizedUrl}/health`, {
+          method: "GET",
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) {
+          setHelperConnectionStatus("error");
+          return false;
+        }
+        setOptions((prev) =>
+          prev.hdayHelperUrl === normalizedUrl ? prev : { ...prev, hdayHelperUrl: normalizedUrl },
+        );
+        setHelperConnectionStatus("connected");
+        return true;
+      } catch {
+        setHelperConnectionStatus("error");
+        return false;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    [setOptions],
+  );
+
+  // A saved URL is only configuration, not proof that the helper is still up.
+  // Probe immediately and periodically while configured; Team disappears if
+  // the helper later becomes unhealthy and returns after a successful probe.
+  useEffect(() => {
+    const helperUrl = normalizedOptions.hdayHelperUrl;
+    if (!helperUrl) {
+      setHelperConnectionStatus("disconnected");
+      return;
+    }
+
+    void testHdayHelperConnection(helperUrl);
+    const intervalId = window.setInterval(
+      () => void testHdayHelperConnection(helperUrl),
+      HELPER_HEALTH_POLL_MS,
+    );
+    return () => clearInterval(intervalId);
+  }, [normalizedOptions.hdayHelperUrl, testHdayHelperConnection]);
 
   const toggleDevMode = useCallback(() => {
     setIsDevMode((prev) => !prev);
@@ -172,8 +233,10 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     () => ({
       options: normalizedOptions,
       isDevMode,
+      helperConnectionStatus,
       updateAutoConnect,
       updateHdayHelperUrl,
+      testHdayHelperConnection,
       toggleDevMode,
       testConnection,
       disconnect,
@@ -181,8 +244,10 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     [
       normalizedOptions,
       isDevMode,
+      helperConnectionStatus,
       updateAutoConnect,
       updateHdayHelperUrl,
+      testHdayHelperConnection,
       toggleDevMode,
       testConnection,
       disconnect,

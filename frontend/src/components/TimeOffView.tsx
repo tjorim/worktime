@@ -72,7 +72,7 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
-  const { options } = useDeveloperOptions();
+  const { helperConnectionStatus } = useDeveloperOptions();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
@@ -473,7 +473,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             {m.timeoff_view_statistics()}
           </Button>
-          {options.hdayHelperUrl && (
+          {helperConnectionStatus === "connected" && (
             <Button
               variant={viewMode === "team" ? "primary" : "outline-primary"}
               size="sm"

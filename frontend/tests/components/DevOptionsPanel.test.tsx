@@ -27,7 +27,21 @@ describe("DevOptionsPanel", () => {
     vi.unstubAllGlobals();
   });
 
-  it("warns about mixed content when the app is https and the helper URL is http", async () => {
+  it("warns about mixed content when the app is https and a LAN helper URL is http", async () => {
+    vi.stubGlobal("location", { ...window.location, protocol: "https:" });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DevOptionsPanel show onHide={vi.fn()} />);
+
+    await user.type(
+      screen.getByLabelText(m.dev_hday_helper_url_label()),
+      "http://planner.local:8080",
+    );
+
+    expect(await screen.findByText(m.dev_hday_helper_mixed_content_warning())).toBeInTheDocument();
+  });
+
+  it("does not warn for an http localhost helper on an https page", async () => {
     vi.stubGlobal("location", { ...window.location, protocol: "https:" });
 
     const user = userEvent.setup();
@@ -35,7 +49,7 @@ describe("DevOptionsPanel", () => {
 
     await user.type(screen.getByLabelText(m.dev_hday_helper_url_label()), "http://localhost:8080");
 
-    expect(await screen.findByText(m.dev_hday_helper_mixed_content_warning())).toBeInTheDocument();
+    expect(screen.queryByText(m.dev_hday_helper_mixed_content_warning())).not.toBeInTheDocument();
   });
 
   it("does not warn when the helper URL is https", async () => {

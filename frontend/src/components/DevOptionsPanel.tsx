@@ -16,8 +16,6 @@ interface DevOptionsPanelProps {
   onHide: () => void;
 }
 
-const HELPER_CONNECTION_TIMEOUT_MS = 5000;
-
 /**
  * Developer options panel for managing backend API connectivity and the local .hday helper.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
@@ -27,8 +25,15 @@ const HELPER_CONNECTION_TIMEOUT_MS = 5000;
  * @returns The rendered developer options modal
  */
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
-  const { options, updateAutoConnect, updateHdayHelperUrl, testConnection, disconnect } =
-    useDeveloperOptions();
+  const {
+    options,
+    helperConnectionStatus,
+    updateAutoConnect,
+    updateHdayHelperUrl,
+    testHdayHelperConnection,
+    testConnection,
+    disconnect,
+  } = useDeveloperOptions();
   const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
   const [isTesting, setIsTesting] = useState(false);
@@ -88,27 +93,11 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     setHelperTestResult(null);
 
     try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), HELPER_CONNECTION_TIMEOUT_MS);
-      try {
-        const response = await fetch(`${normalizedUrl}/health`, {
-          method: "GET",
-          signal: controller.signal,
-          headers: { Accept: "application/json" },
-        });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          // Save the normalized URL on successful connection
-          updateHdayHelperUrl(normalizedUrl);
-          setHelperTestResult({ success: true, message: m.dev_hday_helper_connected() });
-        } else {
-          setHelperTestResult({ success: false, message: m.dev_hday_helper_failed() });
-        }
-      } catch {
-        clearTimeout(timeoutId);
-        setHelperTestResult({ success: false, message: m.dev_hday_helper_failed() });
-      }
+      const success = await testHdayHelperConnection(normalizedUrl);
+      setHelperTestResult({
+        success,
+        message: success ? m.dev_hday_helper_connected() : m.dev_hday_helper_failed(),
+      });
     } finally {
       setIsTestingHelper(false);
     }
@@ -116,6 +105,20 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
   const getStatusBadge = () => {
     switch (options.connectionStatus) {
+      case "connected":
+        return <Badge bg="success">{m.dev_connected()}</Badge>;
+      case "connecting":
+        return <Badge bg="info">{m.dev_connecting()}</Badge>;
+      case "error":
+        return <Badge bg="danger">{m.error()}</Badge>;
+      case "disconnected":
+      default:
+        return <Badge bg="secondary">{m.dev_disconnected()}</Badge>;
+    }
+  };
+
+  const getHelperStatusBadge = () => {
+    switch (helperConnectionStatus) {
       case "connected":
         return <Badge bg="success">{m.dev_connected()}</Badge>;
       case "connecting":
@@ -253,10 +256,13 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
         {/* .hday Helper Configuration */}
         <div className="mb-4">
-          <h6 className="mb-1">
-            <i className="bi bi-file-earmark-text me-2"></i>
-            {m.dev_hday_helper_heading()}
-          </h6>
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <h6 className="mb-0">
+              <i className="bi bi-file-earmark-text me-2"></i>
+              {m.dev_hday_helper_heading()}
+            </h6>
+            {getHelperStatusBadge()}
+          </div>
           <p className="text-muted small mb-3">{m.dev_hday_helper_desc()}</p>
 
           <Form.Group controlId="hday-helper-url" className="mb-2">
@@ -340,4 +346,3 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     </Modal>
   );
 }
-

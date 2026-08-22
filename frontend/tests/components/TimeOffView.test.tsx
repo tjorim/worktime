@@ -8,6 +8,8 @@ import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
+import { http, HttpResponse } from "msw";
+import { server } from "@/mocks/server";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
@@ -36,10 +38,13 @@ describe("TimeOffView", () => {
       expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
     });
 
-    it("shows the Team view when an .hday helper is configured", () => {
+    it("shows the Team view only after the configured helper passes its health check", async () => {
       localStorage.setItem(
         DEVELOPER_OPTIONS_STORAGE_KEY,
         JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
       );
 
       render(
@@ -48,7 +53,26 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      expect(screen.getByRole("button", { name: "Team" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "Team" })).toBeInTheDocument();
+    });
+
+    it("keeps the Team view hidden when the configured helper is unhealthy", async () => {
+      localStorage.setItem(
+        DEVELOPER_OPTIONS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      const healthCheck = vi.fn(() => new HttpResponse(null, { status: 503 }));
+      server.use(http.get("http://localhost:8080/health", healthCheck));
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await waitFor(() => expect(healthCheck).toHaveBeenCalled());
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
     });
 
     it("should render empty state when no events", () => {
