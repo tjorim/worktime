@@ -78,6 +78,17 @@ describe("TimeTrackingDailyView", () => {
   };
 
   describe("Quick Timer", () => {
+    it("puts the idle state and single helper sentence on the form without a wrapper card", () => {
+      renderView();
+
+      expect(screen.queryByText("Quick Timer")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Start a task now and stop it when you're done."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Start Now · Idle/i })).toBeInTheDocument();
+      expect(screen.queryByText("Idle", { selector: ".badge" })).not.toBeInTheDocument();
+    });
+
     it("starts a timer when a task name is provided", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-01T10:15:30"));
@@ -133,12 +144,30 @@ describe("TimeTrackingDailyView", () => {
 
       renderView({ tasks: [runningTask], selectedDate: "2025-01-01" });
 
-      expect(screen.getByText("Running", { selector: "span" })).toBeInTheDocument();
-      // Task title appears in both Quick Timer UI and the daily task list.
       expect(screen.getAllByText("On call")).toHaveLength(2);
-      expect(screen.getByText(/Started 10:00/i)).toBeInTheDocument();
-      expect(screen.getByText(/Elapsed 00:00:05/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Stop Timer/i })).toBeInTheDocument();
+      expect(screen.getAllByText("Support", { selector: ".time-tracking-label" })).toHaveLength(2);
+      expect(screen.queryByText(/Started 2025-01-01 10:00/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:00:05/i })).toBeInTheDocument();
+      expect(screen.getByText("Running", { selector: ".badge" })).toBeInTheDocument();
+    });
+
+    it("identifies a running task started on another date", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-02T10:00:00"));
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-elsewhere",
+        text: "Night handover",
+        label: "Support",
+        startTime: "2025-01-01T23:30",
+      };
+
+      renderView({ tasks: [runningTask], selectedDate: "2025-01-02" });
+
+      expect(screen.getByText("Night handover")).toBeInTheDocument();
+      expect(screen.getByText("Support", { selector: ".time-tracking-label" })).toBeInTheDocument();
+      expect(screen.getByText("Started 2025-01-01 23:30")).toBeInTheDocument();
+      expect(screen.queryByText("Night handover", { selector: ".list-group-item *" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Stop Timer · 10:30:00/i })).toBeInTheDocument();
     });
 
     it("stops a same-day running task", async () => {
@@ -161,6 +190,191 @@ describe("TimeTrackingDailyView", () => {
         newStartTime: "2025-01-01T10:00",
         newStopTime: "2025-01-01T10:30",
       });
+    });
+
+    it("previews and shortens a planned task when stopping across its boundary", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T18:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "running",
+          text: "Current work",
+          label: "Development",
+          startTime: "2025-01-01T16:50",
+        },
+        {
+          id: "planned",
+          text: "Prepare report",
+          label: "Meeting",
+          startTime: "2025-01-01T18:00",
+          stopTime: "2025-01-01T19:00",
+        },
+      ];
+
+      renderView({ tasks, selectedDate: "2025-01-01", onUpdateTaskTimes });
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByLabelText("Stop time")).toHaveValue("18:05");
+      expect(within(dialog).getByText(/Prepare report will be shortened/)).toHaveTextContent(
+        "18:00–19:00 to 18:05–19:00",
+      );
+      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
+
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "16:00" },
+      });
+      expect(within(dialog).queryByText(/Prepare report will be/)).not.toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: /Stop & apply changes/i })).toBeDisabled();
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "18:05" },
+      });
+
+      fireEvent.click(within(dialog).getByRole("button", { name: /Stop & apply changes/i }));
+
+      expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(1, {
+        id: "planned",
+        newStartTime: "2025-01-01T18:05",
+        newStopTime: "2025-01-01T19:00",
+      });
+      expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(2, {
+        id: "running",
+        newStartTime: "2025-01-01T16:50",
+        newStopTime: "2025-01-01T18:05",
+      });
+    });
+
+    it("keeps the plan unchanged when an earlier stop time is chosen", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T18:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "running",
+          text: "Current work",
+          label: "Development",
+          startTime: "2025-01-01T16:50",
+        },
+        {
+          id: "planned",
+          text: "Prepare report",
+          label: "Meeting",
+          startTime: "2025-01-01T18:00",
+          stopTime: "2025-01-01T19:00",
+        },
+      ];
+
+      renderView({ tasks, selectedDate: "2025-01-01", onUpdateTaskTimes });
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+      const dialog = screen.getByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "17:55" },
+      });
+
+      expect(within(dialog).getByText(/Prepare report stays at 18:00–19:00/)).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: /Stop & apply changes/i }));
+
+      expect(onUpdateTaskTimes).toHaveBeenCalledTimes(1);
+      expect(onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "running",
+        newStartTime: "2025-01-01T16:50",
+        newStopTime: "2025-01-01T17:55",
+      });
+    });
+
+    it("removes consumed plans and shortens the plan currently being overrun", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T19:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const onRemoveTask = vi.fn();
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "running",
+          text: "Current work",
+          label: "Development",
+          startTime: "2025-01-01T16:50",
+        },
+        {
+          id: "planned",
+          text: "Prepare report",
+          label: "Meeting",
+          startTime: "2025-01-01T18:00",
+          stopTime: "2025-01-01T19:00",
+        },
+        {
+          id: "planned-next",
+          text: "Review notes",
+          label: "Support",
+          startTime: "2025-01-01T19:00",
+          stopTime: "2025-01-01T20:00",
+        },
+      ];
+
+      renderView({ tasks, selectedDate: "2025-01-01", onUpdateTaskTimes, onRemoveTask });
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByText(/Prepare report.*will be removed/)).toBeInTheDocument();
+
+      fireEvent.click(within(dialog).getByRole("button", { name: /Stop & apply changes/i }));
+
+      expect(onRemoveTask).toHaveBeenCalledWith("planned");
+      expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(1, {
+        id: "planned-next",
+        newStartTime: "2025-01-01T19:05",
+        newStopTime: "2025-01-01T20:00",
+      });
+      expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(2, {
+        id: "running",
+        newStartTime: "2025-01-01T16:50",
+        newStopTime: "2025-01-01T19:05",
+      });
+    });
+
+    it("leaves both tasks untouched when stop conflict resolution is canceled", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T18:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const onRemoveTask = vi.fn();
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "running",
+          text: "Current work",
+          label: "Development",
+          startTime: "2025-01-01T16:50",
+        },
+        {
+          id: "planned",
+          text: "Prepare report",
+          label: "Meeting",
+          startTime: "2025-01-01T18:00",
+          stopTime: "2025-01-01T19:00",
+        },
+      ];
+
+      renderView({ tasks, selectedDate: "2025-01-01", onUpdateTaskTimes, onRemoveTask });
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+      fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
+      expect(onRemoveTask).not.toHaveBeenCalled();
+    });
+
+    it("does not allow starting a timer inside an existing scheduled block", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T18:05:00"));
+      const scheduled: StoredTimeTrackingTask = {
+        id: "scheduled",
+        text: "Prepare report",
+        label: "Meeting",
+        startTime: "2025-01-01T18:00",
+        stopTime: "2025-01-01T19:00",
+      };
+
+      renderView({ tasks: [scheduled], selectedDate: "2025-01-01" });
+
+      expect(screen.getByRole("button", { name: /Start Now/i })).toBeDisabled();
     });
 
     it("opens edit modal for a cross-day running task with info message", async () => {
@@ -277,15 +491,18 @@ describe("TimeTrackingDailyView", () => {
       fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
       const dialog = screen.getByRole("dialog");
       fireEvent.change(within(dialog).getByLabelText(/^Stop$/i), { target: { value: "16:30" } });
-      fireEvent.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
 
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();
-      const alerts = screen.getAllByRole("alert");
       expect(
-        alerts.some((alert) =>
-          /Time range overlaps an existing task/i.test(alert.textContent ?? ""),
-        ),
+        within(dialog)
+          .getAllByRole("alert")
+          .some((alert) =>
+            /Unable to update task.*Time range overlaps an existing task/i.test(
+              alert.textContent ?? "",
+            ),
+          ),
       ).toBe(true);
+      expect(within(dialog).getByRole("button", { name: /Save Changes/i })).toBeDisabled();
     });
   });
 
@@ -519,6 +736,35 @@ describe("TimeTrackingDailyView", () => {
         newStartTime: `${today}T09:00`,
         newStopTime: `${today}T11:00`,
       });
+    });
+
+    it("does not allow moving a planned task before the current time", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:00:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const planned: StoredTimeTrackingTask = {
+        id: "planned",
+        text: "Prepare report",
+        label: "Meeting",
+        startTime: "2025-01-01T11:00",
+        stopTime: "2025-01-01T12:00",
+      };
+
+      const { container } = renderView({
+        tasks: [planned],
+        selectedDate: "2025-01-01",
+        onUpdateTaskTimes,
+      });
+      fireEvent.contextMenu(container.querySelector(".list-group-item")!);
+      fireEvent.click(screen.getByText("Edit"));
+
+      const dialog = screen.getByRole("dialog");
+      const startInput = within(dialog).getByLabelText(/^Start$/i);
+      fireEvent.change(startInput, { target: { value: "09:00" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
+
+      expect(screen.getByText("A planned task must start in the future.")).toBeInTheDocument();
+      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
     });
   });
 

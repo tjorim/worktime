@@ -653,6 +653,32 @@ describe("TransferView", () => {
         screen.getByText("No other teams available for transfer analysis."),
       ).toBeInTheDocument();
     });
+
+    it("keeps schedule comparison available for a single-team roster", async () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        availableOtherTeams: [],
+        otherScheduleType: "9-5",
+      });
+      const handleScheduleChange = vi.fn();
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          otherScheduleType="9-5"
+          onOtherScheduleTypeChange={handleScheduleChange}
+        />,
+      );
+
+      const scheduleSelect = screen.getByLabelText("Compare with schedule:");
+      expect(scheduleSelect).toBeInTheDocument();
+      expect(screen.getByText("No Other Teams Available")).toBeInTheDocument();
+
+      await user.selectOptions(scheduleSelect, "5-shift");
+
+      expect(handleScheduleChange).toHaveBeenCalledWith("5-shift");
+    });
   });
 
   describe("Advanced interactions", () => {
@@ -724,17 +750,38 @@ describe("TransferView", () => {
       expect(screen.queryByText("No Transfers Found")).not.toBeInTheDocument();
     });
 
-    it("relabels the team selector for overlap comparisons", () => {
+    it("relabels the team selector for multi-team overlap comparisons", () => {
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         overlaps: [],
-        otherScheduleType: "9-5",
+        otherScheduleType: "2-shift",
       });
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.getByLabelText("View overlapping hours with Team:")).toBeInTheDocument();
       expect(screen.queryByLabelText("View transfers with Team:")).not.toBeInTheDocument();
+    });
+
+    it("omits the team selector and number for a single-team comparison schedule", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        overlaps: [
+          {
+            start: dayjs("2025-01-15 09:00"),
+            end: dayjs("2025-01-15 15:00"),
+          },
+        ],
+        availableOtherTeams: [1],
+        otherTeam: 1,
+        otherScheduleType: "9-5",
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      expect(screen.queryByLabelText("View overlapping hours with Team:")).not.toBeInTheDocument();
+      expect(screen.getByText("9-5", { selector: ".badge" })).toBeInTheDocument();
+      expect(screen.queryByText("9-5 Team 1", { selector: ".badge" })).not.toBeInTheDocument();
     });
 
     it("does not show the comparing-schedule note for a same-schedule comparison", () => {

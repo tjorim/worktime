@@ -38,6 +38,7 @@ type TaskSegment = {
   /** Effective working hours (break already deducted). */
   durationHours: number;
   percentage: number;
+  isPlanned: boolean;
   includesBreak?: boolean;
   /** Hours of work before the break slice. */
   beforeBreakHours?: number;
@@ -52,6 +53,7 @@ type GapSegment = {
   id: string;
   durationHours: number;
   percentage: number;
+  untilNext?: boolean;
 };
 
 type RenderSegment = TaskSegment | GapSegment;
@@ -88,6 +90,22 @@ export function TimelineProgressBar({
 
   const renderSegments = useMemo<RenderSegment[]>(() => {
     const result: RenderSegment[] = [];
+    const runningTask = tasks.find((task) => !task.stopTime);
+    const runningTaskStart = runningTask ? dayjs(runningTask.startTime) : null;
+
+    const firstTask = tasks[0];
+    if (isToday && liveTime && firstTask) {
+      const gapHours = dayjs(firstTask.startTime).diff(liveTime, "hour", true);
+      if (gapHours > 0) {
+        result.push({
+          type: "gap",
+          id: "gap-now-to-first-task",
+          durationHours: gapHours,
+          percentage: (gapHours / sanitizedTargetHours) * 100,
+          untilNext: true,
+        });
+      }
+    }
 
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
@@ -108,6 +126,12 @@ export function TimelineProgressBar({
         textColor,
         durationHours,
         percentage: (durationHours / sanitizedTargetHours) * 100,
+        isPlanned: Boolean(
+          task.stopTime &&
+            liveTime &&
+            (startDayjs.isAfter(liveTime) ||
+              (runningTaskStart && startDayjs.isAfter(runningTaskStart))),
+        ),
         includesBreak: task.includesBreak,
       };
 
@@ -134,28 +158,64 @@ export function TimelineProgressBar({
             percentage: (gapHours / sanitizedTargetHours) * 100,
           });
         }
+      } else if (!task.stopTime && liveTime && next?.startTime) {
+        const gapHours = dayjs(next.startTime).diff(liveTime, "hour", true);
+        if (gapHours > 0) {
+          result.push({
+            type: "gap",
+            id: `gap-until-${next.id}`,
+            durationHours: gapHours,
+            percentage: (gapHours / sanitizedTargetHours) * 100,
+            untilNext: true,
+          });
+        }
       }
     }
 
     return result;
-  }, [tasks, colorByLabelId, liveTime, sanitizedTargetHours]);
+  }, [tasks, colorByLabelId, liveTime, isToday, sanitizedTargetHours]);
 
-  const { totalHours, totalPercentage, totalBreakHours, totalGapHours } = useMemo(() => {
-    let hours = 0, percentage = 0, breakHours = 0, gapHours = 0;
+  const {
+    totalHours,
+    totalPercentage,
+    plannedHours,
+    plannedPercentage,
+    totalBreakHours,
+    totalGapHours,
+  } = useMemo(() => {
+    let hours = 0;
+    let percentage = 0;
+    let plannedHours = 0;
+    let plannedPercentage = 0;
+    let breakHours = 0;
+    let gapHours = 0;
     for (const s of renderSegments) {
       if (s.type === "task") {
-        hours += s.durationHours;
-        percentage += s.percentage;
+        if (s.isPlanned) {
+          plannedHours += s.durationHours;
+          plannedPercentage += s.percentage;
+        } else {
+          hours += s.durationHours;
+          percentage += s.percentage;
+        }
         breakHours += s.breakHours ?? 0;
       } else {
         gapHours += s.durationHours;
       }
     }
-    return { totalHours: hours, totalPercentage: percentage, totalBreakHours: breakHours, totalGapHours: gapHours };
+    return {
+      totalHours: hours,
+      totalPercentage: percentage,
+      plannedHours,
+      plannedPercentage,
+      totalBreakHours: breakHours,
+      totalGapHours: gapHours,
+    };
   }, [renderSegments]);
 
   const visualTotalPercentage =
     totalPercentage +
+    plannedPercentage +
     (totalBreakHours / sanitizedTargetHours) * 100 +
     (totalGapHours / sanitizedTargetHours) * 100;
   const normalizationFactor = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
@@ -180,7 +240,10 @@ export function TimelineProgressBar({
           <BootstrapProgressBar>
             {renderSegments.map((rs) => {
               if (rs.type === "gap") {
-                const gapLabel = m.tt_gap_aria({ minutes: Math.round(rs.durationHours * 60) });
+                const minutes = Math.round(rs.durationHours * 60);
+                const gapLabel = rs.untilNext
+                  ? m.tt_until_next_aria({ minutes })
+                  : m.tt_gap_aria({ minutes });
                 return (
                   <BootstrapProgressBar
                     key={rs.id}
@@ -221,6 +284,7 @@ export function TimelineProgressBar({
                       key={rs.id}
                       now={beforePct}
                       style={{ backgroundColor: rs.color, color: rs.textColor }}
+                      striped={rs.isPlanned}
                       aria-label={tooltipText}
                       label={labelOnBefore ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined}
                       onMouseEnter={showTooltip(tooltipText)}
@@ -234,6 +298,7 @@ export function TimelineProgressBar({
                     key={`${rs.id}-break`}
                     now={breakPct}
                     style={{ backgroundColor: rs.color, opacity: 0.3 }}
+                    striped={rs.isPlanned}
                     aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
                     data-testid={`break-segment-${rs.id}`}
                     onMouseEnter={showTooltip(breakTooltipText)}
@@ -247,6 +312,7 @@ export function TimelineProgressBar({
                       key={`${rs.id}-after`}
                       now={afterPct}
                       style={{ backgroundColor: rs.color, color: rs.textColor }}
+                      striped={rs.isPlanned}
                       aria-label={tooltipText}
                       label={labelOnAfter ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined}
                       onMouseEnter={showTooltip(tooltipText)}
@@ -264,6 +330,7 @@ export function TimelineProgressBar({
                   key={rs.id}
                   now={normalizedPercent}
                   style={{ backgroundColor: rs.color, color: rs.textColor }}
+                  striped={rs.isPlanned}
                   aria-label={tooltipText}
                   label={
                     normalizedPercent > 10 ? (
@@ -306,6 +373,11 @@ export function TimelineProgressBar({
         <span data-testid="timeline-total-duration">
           {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
         </span>
+        {plannedHours > 0 && (
+          <span className="small" data-testid="timeline-planned-duration">
+            {m.tt_planned_total({ hours: plannedHours.toFixed(2) })}
+          </span>
+        )}
         {isOvertime && (
           <span className="badge bg-warning text-dark">
             Overtime: +{(totalHours - sanitizedTargetHours).toFixed(2)}h

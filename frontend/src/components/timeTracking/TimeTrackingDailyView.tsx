@@ -3,29 +3,30 @@ import Alert from "react-bootstrap/Alert";
 import Card from "react-bootstrap/Card";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs, formatTimeByPreference } from "@/utils/dateTimeUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import * as m from "@/paraglide/messages.js";
 
 import { DailyDiscardConfirmation } from "./DailyDiscardConfirmation";
 import { DailyTaskList, type EditRequest } from "./DailyTaskList";
-import { DailyQuickTimer } from "./DailyQuickTimer";
 import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
+import { StopTimerConflictDialog } from "./StopTimerConflictDialog";
 import { LabelModal } from "./LabelModal";
 import {
   buildLabelColorMap,
   buildLabelNameMap,
+  getContrastingTextColor,
   isHexColor,
   normalizeLabelName,
   useDefaultLabelColor,
   type Label,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
-import { isValidRange, overlaps } from "./timeUtils";
+import { BREAK_DURATION_MINUTES, isValidRange, overlaps } from "./timeUtils";
 import { useDailyTaskSummary } from "./hooks/useDailyTaskSummary";
 
 type TimeTrackingDailyViewProps = {
@@ -53,6 +54,14 @@ type TimeTrackingDailyViewProps = {
 
 function todayIso() {
   return dayjs().format("YYYY-MM-DD");
+}
+
+function formatDuration(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return [hours, minutes, seconds].map((part) => part.toString().padStart(2, "0")).join(":");
 }
 
 export function TimeTrackingDailyView({
@@ -90,12 +99,17 @@ export function TimeTrackingDailyView({
   const showGanttPicker = settings.enableGantt && ganttTasks.length > 0;
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [stopConflict, setStopConflict] = useState<{
+    runningTask: StoredTimeTrackingTask;
+    tasks: StoredTimeTrackingTask[];
+    now: string;
+  } | null>(null);
   const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
   const [createLabelForm, setCreateLabelForm] = useState({ name: "", color: "" });
   const liveTime = useLiveTime({ precision: "second" });
   const isDailyCurrent = dayjs(date).isSame(dayjs(), "day");
-  const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const labelColorById = useMemo(() => buildLabelColorMap(labels), [labels]);
   const templateOptions = useMemo(
     () =>
       templates.map((template) => ({
@@ -118,13 +132,26 @@ export function TimeTrackingDailyView({
   }, [labels, selectedLabel]);
 
   const { dailyTasks, runningTask } = useDailyTaskSummary(tasks, date);
+  const nowFallsInsideTask = dailyTasks.some((task) => {
+    if (!task.stopTime || task.id === runningTask?.id) return false;
+    const startTime = dayjs(task.startTime);
+    return !liveTime.isBefore(startTime) && liveTime.isBefore(dayjs(task.stopTime));
+  });
+  const timerElapsed = runningTask
+    ? formatDuration(liveTime.diff(dayjs(runningTask.startTime), "second"))
+    : undefined;
+  const isRunningTaskVisible = runningTask
+    ? dailyTasks.some((task) => task.id === runningTask.id)
+    : false;
 
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
-  const canStartNow = !runningTask && selectedLabel.trim().length > 0;
+  const canStartNow = !runningTask && !nowFallsInsideTask && selectedLabel.trim().length > 0;
   const startDisabledReason = runningTask
     ? m.tt_reason_stopwatch_running()
+    : nowFallsInsideTask
+      ? m.tt_error_time_overlap()
     : !selectedLabel.trim()
       ? m.tt_reason_select_label()
       : undefined;
@@ -184,6 +211,10 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_task_already_running_start());
       return;
     }
+    if (nowFallsInsideTask) {
+      setError(m.tt_error_time_overlap());
+      return;
+    }
     if (!selectedLabel.trim()) {
       setError(m.tt_error_configure_label());
       return;
@@ -226,6 +257,21 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_stop_after_start());
       return;
     }
+    const reachedTasks = tasks
+      .filter((task) => task.id !== runningTask.id)
+      .filter((task) => {
+        const taskStart = dayjs(task.startTime);
+        return task.stopTime && taskStart.isAfter(startDayjs) && !taskStart.isAfter(now);
+      })
+      .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf());
+    if (reachedTasks.length > 0) {
+      setStopConflict({
+        runningTask,
+        tasks: reachedTasks,
+        now: now.format("HH:mm"),
+      });
+      return;
+    }
     if (now.diff(startDayjs, "minute") < 1) {
       setShowDiscardConfirm(true);
       return;
@@ -236,6 +282,39 @@ export function TimeTrackingDailyView({
       newStartTime: runningTask.startTime,
       newStopTime: stopTime,
     });
+  };
+
+  const handleResolveStopConflict = (stopTime: string) => {
+    if (!stopConflict) return;
+    const taskDate = dayjs(stopConflict.runningTask.startTime).format("YYYY-MM-DD");
+    const stopDateTime = `${taskDate}T${stopTime}`;
+
+    for (const plannedTask of stopConflict.tasks) {
+      if (!plannedTask.stopTime || !dayjs(plannedTask.startTime).isBefore(stopDateTime)) continue;
+      if (!dayjs(plannedTask.stopTime).isAfter(stopDateTime)) {
+        onRemoveTask(plannedTask.id);
+      } else {
+        onUpdateTaskTimes({
+          id: plannedTask.id,
+          newStartTime: stopDateTime,
+          newStopTime: plannedTask.stopTime,
+        });
+        if (
+          plannedTask.includesBreak &&
+          dayjs(plannedTask.stopTime).diff(dayjs(stopDateTime), "minute") <
+            BREAK_DURATION_MINUTES
+        ) {
+          onToggleBreak(plannedTask.id, false);
+        }
+      }
+    }
+
+    onUpdateTaskTimes({
+      id: stopConflict.runningTask.id,
+      newStartTime: stopConflict.runningTask.startTime,
+      newStopTime: stopDateTime,
+    });
+    setStopConflict(null);
   };
 
   const handleUpdateTask = async (payload: {
@@ -271,22 +350,31 @@ export function TimeTrackingDailyView({
       }
     }
     const taskDate = tasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
+    const originalTask = tasks.find((item) => item.id === payload.id);
     const newStartTime = `${taskDate}T${payload.start}`;
     const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
 
-    if (payload.stop) {
-      const sameDayTasks = tasks.filter(
-        (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
-      );
-      const dailyForOverlap = sameDayTasks.map((task) => ({
-        id: task.id,
-        start: dayjs(task.startTime).format("HH:mm"),
-        stop: (task.stopTime ? dayjs(task.stopTime) : dayjs()).format("HH:mm"),
-      }));
-      if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
-        setError(m.tt_error_time_overlap());
-        return false;
-      }
+    if (
+      originalTask &&
+      dayjs(originalTask.startTime).isAfter(liveTime) &&
+      !dayjs(newStartTime).isAfter(liveTime)
+    ) {
+      setError(m.tt_error_planned_task_in_past());
+      return false;
+    }
+
+    const sameDayTasks = tasks.filter(
+      (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
+    );
+    const dailyForOverlap = sameDayTasks.map((task) => ({
+      id: task.id,
+      start: dayjs(task.startTime).format("HH:mm"),
+      stop: (task.stopTime ? dayjs(task.stopTime) : liveTime).format("HH:mm"),
+    }));
+    const overlapStop = payload.stop || liveTime.format("HH:mm");
+    if (overlaps(payload.start, overlapStop, dailyForOverlap, payload.id)) {
+      setError(m.tt_error_time_overlap());
+      return false;
     }
 
     const currentGanttTaskId = tasks.find((item) => item.id === payload.id)?.ganttTaskId ?? "";
@@ -381,15 +469,6 @@ export function TimeTrackingDailyView({
           onApply={handleApplyTemplate}
         />
 
-        <DailyQuickTimer
-          runningTask={runningTask}
-          liveTime={liveTime}
-          colorByLabelId={colorByLabelId}
-          labelNameById={labelNameById}
-          defaultLabelColor={defaultLabelColor}
-          onStopNow={handleStopNow}
-        />
-
         <TaskEntryForm
           labels={labels}
           text={text}
@@ -406,10 +485,31 @@ export function TimeTrackingDailyView({
           onStopChange={setStop}
           canSubmit={canAddCompletedTask}
           canStartNow={canStartNow}
+          showTimerControls
+          isTimerRunning={runningTask !== null}
+          timerElapsed={timerElapsed}
+          runningTaskSummary={
+            runningTask
+              ? {
+                  task: runningTask.text,
+                  label: labelNameById[runningTask.label] ?? m.tt_unknown_label(),
+                  time: `${dayjs(runningTask.startTime).format("YYYY-MM-DD")} ${formatTimeByPreference(
+                    dayjs(runningTask.startTime),
+                    settings.timeFormat,
+                  )}`,
+                  labelColor: labelColorById[runningTask.label] ?? defaultLabelColor,
+                  labelTextColor: getContrastingTextColor(
+                    labelColorById[runningTask.label] ?? defaultLabelColor,
+                  ),
+                  showDetails: !isRunningTaskVisible,
+                }
+              : undefined
+          }
           startDisabledReason={startDisabledReason}
           addDisabledReason={addDisabledReason}
           onSubmit={handleAddTask}
           onStartNow={handleStartNow}
+          onStopNow={handleStopNow}
           onCreateLabel={handleOpenCreateLabelModal}
         />
 
@@ -422,6 +522,7 @@ export function TimeTrackingDailyView({
 
         <DailyTaskList
           tasks={dailyTasks}
+          validationTasks={tasks}
           labels={labels}
           ganttTasks={ganttTasks}
           showGanttPicker={showGanttPicker}
@@ -440,6 +541,16 @@ export function TimeTrackingDailyView({
         runningTask={runningTask}
         onRemoveTask={onRemoveTask}
         onClose={() => setShowDiscardConfirm(false)}
+      />
+
+      <StopTimerConflictDialog
+        key={`${stopConflict?.runningTask.id ?? "closed"}-${stopConflict?.now ?? ""}`}
+        isOpen={stopConflict !== null}
+        runningTask={stopConflict?.runningTask ?? null}
+        conflictingTasks={stopConflict?.tasks ?? []}
+        initialStopTime={stopConflict?.now ?? ""}
+        onConfirm={handleResolveStopConflict}
+        onClose={() => setStopConflict(null)}
       />
 
       <LabelModal

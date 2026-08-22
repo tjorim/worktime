@@ -68,16 +68,15 @@ describe("TimeTrackingView Integration Tests", () => {
 
       renderWithSettings();
 
-      // Verify running state is shown (task appears twice: in timer section and in list)
-      const runningBadge = screen.getAllByText(/Running/i)[0]; // Get the first Running badge
-      expect(runningBadge).toBeInTheDocument();
-      const activeTaskElements = screen.getAllByText(/Active Task/i);
-      expect(activeTaskElements.length).toBeGreaterThan(0);
+      expect(
+        screen.getByRole("button", { name: /Stop Timer · 00:30:00/i }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText(/Active Task/i)).toHaveLength(2);
       // Format expected start time in local timezone (same as component does)
       const expectedStart = dayjs("2025-01-06T08:30:00Z").format("HH:mm");
+      expect(screen.queryByText(new RegExp(`Started .* ${expectedStart}`, "i"))).not.toBeInTheDocument();
       const startTimeElements = screen.getAllByText(new RegExp(expectedStart));
-      expect(startTimeElements.length).toBeGreaterThan(0); // Appears in timer and task list
-      expect(screen.getByText(/00:30:00/i)).toBeInTheDocument(); // 30 minutes elapsed (only in timer)
+      expect(startTimeElements.length).toBeGreaterThan(0);
     });
 
     it("prevents starting a second timer when one is already running", () => {
@@ -97,9 +96,8 @@ describe("TimeTrackingView Integration Tests", () => {
 
       renderWithSettings();
 
-      // Verify start button is disabled
-      const startButton = screen.getByRole("button", { name: /Start Now/i });
-      expect(startButton).toBeDisabled();
+      expect(screen.queryByRole("button", { name: /Start Now/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:30:00/i })).toBeEnabled();
     });
 
     it("shows completed tasks in daily log with duration", () => {

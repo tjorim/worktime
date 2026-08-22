@@ -34,6 +34,7 @@ type TaskEditModalProps = {
   onChange: (value: TaskEditForm) => void;
   onClose: () => void;
   onSubmit: () => void;
+  canSubmit?: boolean;
   error: string;
   info?: string;
 };
@@ -47,6 +48,7 @@ export function TaskEditModal({
   onChange,
   onClose,
   onSubmit,
+  canSubmit = true,
   error,
   info,
 }: TaskEditModalProps) {
@@ -167,7 +169,7 @@ export function TaskEditModal({
         <Button variant="outline-secondary" onClick={onClose}>
           {m.cancel()}
         </Button>
-        <Button variant="primary" type="submit" form="taskEditForm">
+        <Button variant="primary" type="submit" form="taskEditForm" disabled={!canSubmit}>
           {m.tt_save_changes()}
         </Button>
       </Modal.Footer>

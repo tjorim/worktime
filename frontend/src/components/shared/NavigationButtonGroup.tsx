@@ -76,10 +76,10 @@ function NavigationButtonGroup({
   }
 
   return (
-    <div className="d-flex flex-wrap align-items-center gap-2">
+    <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
       {displayLabel && <span className="text-muted small">{displayLabel}</span>}
       {selectorLabel && selectorValue !== undefined && onSelectorChange && (
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center justify-content-between gap-2">
           <Form.Label htmlFor={effectiveSelectorId} className="mb-0 small text-muted">
             {selectorLabel}
           </Form.Label>

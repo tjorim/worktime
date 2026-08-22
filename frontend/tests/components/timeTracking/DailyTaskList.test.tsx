@@ -103,6 +103,31 @@ describe("DailyTaskList", () => {
     });
   });
 
+  it("shows start-only overlap validation before submitting an edit", () => {
+    const running = makeTask({
+      id: "running",
+      text: "Running work",
+      startTime: "2026-02-07T08:00",
+      stopTime: undefined,
+    });
+    const existing = makeTask({
+      id: "existing",
+      text: "Existing work",
+      startTime: "2026-02-07T09:00",
+      stopTime: "2026-02-07T10:00",
+    });
+
+    renderList([running, existing], TEST_LABELS, {
+      liveTime: dayjs("2026-02-07T09:30"),
+      isToday: true,
+    });
+    fireEvent.click(screen.getByLabelText("Edit Running work"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/Time range overlaps/i);
+    expect(screen.getByRole("button", { name: /Save Changes/i })).toBeDisabled();
+    expect(onUpdateTask).not.toHaveBeenCalled();
+  });
+
   describe("context menu break item", () => {
     it("shows 'Includes 30min break' for eligible task", () => {
       renderList([makeTask()]);
@@ -318,6 +343,81 @@ describe("DailyTaskList", () => {
       // Only inter-task gap, no gap-to-now (running task has no stopTime)
       const indicators = screen.getAllByTestId("gap-indicator");
       expect(indicators).toHaveLength(1);
+    });
+  });
+
+  describe("Planned tasks", () => {
+    it("marks a future entry as planned with an absolute and relative start", () => {
+      const task = makeTask({
+        text: "Prepare report",
+        startTime: "2026-02-07T14:30",
+        stopTime: "2026-02-07T15:30",
+      });
+
+      renderList([task], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T12:15"),
+        isToday: true,
+      });
+
+      expect(screen.getByText("Planned")).toBeInTheDocument();
+      expect(screen.getByText(/Starts 14:30 · in 2h 15m/)).toBeInTheDocument();
+      expect(screen.getByText(/Stop: 15:30/)).toBeInTheDocument();
+      expect(screen.getByText("135min until next")).toBeInTheDocument();
+    });
+
+    it("shows time until a planned entry after a running task", () => {
+      const running = makeTask({
+        id: "running",
+        text: "Current work",
+        startTime: "2026-02-07T16:50",
+        stopTime: undefined,
+      });
+      const planned = makeTask({
+        id: "planned",
+        text: "Prepare report",
+        startTime: "2026-02-07T18:00",
+        stopTime: "2026-02-07T19:00",
+      });
+
+      renderList([running, planned], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T17:00"),
+        isToday: true,
+      });
+
+      expect(screen.getByText("60min until next")).toBeInTheDocument();
+    });
+
+    it("keeps an entry marked as planned when a running task overruns its start", () => {
+      const running = makeTask({
+        id: "running",
+        text: "Current work",
+        startTime: "2026-02-07T16:50",
+        stopTime: undefined,
+      });
+      const planned = makeTask({
+        id: "planned",
+        text: "Prepare report",
+        startTime: "2026-02-07T18:00",
+        stopTime: "2026-02-07T19:00",
+      });
+
+      renderList([running, planned], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T18:05"),
+        isToday: true,
+      });
+
+      expect(screen.getByText("Planned")).toBeInTheDocument();
+      expect(screen.getByText(/Starts 18:00 · 5m overrun · Stop: 19:00/)).toBeInTheDocument();
+    });
+
+    it("does not mark an entry that has already started as planned", () => {
+      renderList([makeTask()], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T12:15"),
+        isToday: true,
+      });
+
+      expect(screen.queryByText("Planned")).not.toBeInTheDocument();
+      expect(screen.getByText(/Start: 08:00 · Stop: 16:00/)).toBeInTheDocument();
     });
   });
 

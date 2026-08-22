@@ -15,7 +15,7 @@ import { useEventStore } from "@/contexts/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
 import { dayjs, formatDisplayDate, formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
-import { isValidScheduleType } from "@/utils/scheduleUtils";
+import { getTeamCountForOption, isValidScheduleType } from "@/utils/scheduleUtils";
 import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
@@ -364,6 +364,8 @@ export function TransferView({
   // overlapping hours, since the M/L/N handover vocabulary isn't comparable
   // across different schedule types.
   const sameSchedule = effectiveOtherScheduleType === scheduleType;
+  const myScheduleTeamCount = getTeamCountForOption(scheduleType);
+  const otherScheduleTeamCount = getTeamCountForOption(effectiveOtherScheduleType);
   const otherScheduleTitle = sameSchedule
     ? null
     : (SCHEDULE_OPTIONS.find((option) => option.value === effectiveOtherScheduleType)?.title ??
@@ -380,14 +382,19 @@ export function TransferView({
   const showOverlapsEmptyState = !sameSchedule && overlaps.length === 0;
 
   const myOverlapLabel = useMemo(
-    () => (myTeam ? m.team_label({ team: String(myTeam) }) : ""),
-    [myTeam],
+    () => {
+      if (!myTeam) return "";
+      if (myScheduleTeamCount > 1) return m.team_label({ team: String(myTeam) });
+      return SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)?.title ?? "";
+    },
+    [myScheduleTeamCount, myTeam, scheduleType],
   );
 
   const otherOverlapLabel = useMemo(() => {
+    if (otherScheduleTeamCount === 1 && otherScheduleTitle) return otherScheduleTitle;
     const prefix = otherScheduleTitle ? `${otherScheduleTitle} ` : "";
     return `${prefix}${m.team_label({ team: String(otherTeam) })}`;
-  }, [otherScheduleTitle, otherTeam]);
+  }, [otherScheduleTeamCount, otherScheduleTitle, otherTeam]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -518,6 +525,34 @@ export function TransferView({
     return m.transfer_until_date({ date: formatDisplayDate(dayjs(customEndDate).toDate()) });
   }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
 
+  const comparisonScheduleSelector = onOtherScheduleTypeChange && (
+    <>
+      <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
+        <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+        {m.schedule_compare_label()}
+      </Form.Label>
+      <Form.Select
+        id={compareScheduleSelectId}
+        className="mb-3"
+        value={otherScheduleType || ""}
+        onChange={(e) => {
+          const value = e.target.value;
+          onOtherScheduleTypeChange(isValidScheduleType(value) ? value : null);
+        }}
+      >
+        <option value="" disabled>
+          {m.schedule_select_placeholder()}
+        </option>
+        {availableSchedules.map((schedule) => (
+          <option key={schedule.value} value={schedule.value}>
+            {schedule.title}
+            {schedule.value === scheduleType ? ` ${m.schedule_your_schedule_suffix()}` : ""}
+          </option>
+        ))}
+      </Form.Select>
+    </>
+  );
+
   const groupedTransfers = useMemo(
     () => groupByDayBucket(transfers, (transfer) => transfer.date, currentDay.startOf("day")),
     [currentDay, transfers],
@@ -553,7 +588,7 @@ export function TransferView({
           <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
           {m.transfer_team_transfers()}
         </span>
-        {myTeam && (
+        {myTeam && myScheduleTeamCount > 1 && (
           <Badge bg="primary" pill>
             <i className="bi bi-person-check me-1" aria-hidden="true"></i>
             {m.transfer_your_team({ team: String(myTeam) })}
@@ -578,64 +613,47 @@ export function TransferView({
             />
           </div>
         ) : availableOtherTeams.length === 0 ? (
-          <EmptyState
-            icon="bi-people"
-            title={m.transfer_no_teams_title()}
-            description={m.transfer_no_teams_desc()}
-          />
+          <>
+            {comparisonScheduleSelector && (
+              <Row className="mb-3">
+                <Col md={4}>{comparisonScheduleSelector}</Col>
+              </Row>
+            )}
+            <EmptyState
+              icon="bi-people"
+              title={m.transfer_no_teams_title()}
+              description={m.transfer_no_teams_desc()}
+            />
+          </>
         ) : (
           <>
             {/* Controls */}
             <Row className="mb-3 gy-3">
               <Col md={4}>
-                {onOtherScheduleTypeChange && (
+                {comparisonScheduleSelector}
+
+                {otherScheduleTeamCount > 1 && (
                   <>
-                    <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
-                      <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
-                      {m.schedule_compare_label()}
+                    <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
+                      <i className="bi bi-people me-1" aria-hidden="true"></i>
+                      {sameSchedule
+                        ? m.transfer_view_with_team_label()
+                        : m.transfer_view_overlaps_with_team_label()}
                     </Form.Label>
                     <Form.Select
-                      id={compareScheduleSelectId}
-                      className="mb-3"
-                      value={otherScheduleType || ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        onOtherScheduleTypeChange(isValidScheduleType(value) ? value : null);
-                      }}
+                      id={otherTeamSelectId}
+                      value={otherTeam}
+                      onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
+                      aria-label={m.transfer_select_team_aria()}
                     >
-                      <option value="" disabled>
-                        {m.schedule_select_placeholder()}
-                      </option>
-                      {availableSchedules.map((schedule) => (
-                        <option key={schedule.value} value={schedule.value}>
-                          {schedule.title}
-                          {schedule.value === scheduleType
-                            ? ` ${m.schedule_your_schedule_suffix()}`
-                            : ""}
+                      {availableOtherTeams.map((teamNumber) => (
+                        <option key={teamNumber} value={teamNumber}>
+                          {m.team_label({ team: String(teamNumber) })}
                         </option>
                       ))}
                     </Form.Select>
                   </>
                 )}
-
-                <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
-                  <i className="bi bi-people me-1" aria-hidden="true"></i>
-                  {sameSchedule
-                    ? m.transfer_view_with_team_label()
-                    : m.transfer_view_overlaps_with_team_label()}
-                </Form.Label>
-                <Form.Select
-                  id={otherTeamSelectId}
-                  value={otherTeam}
-                  onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
-                  aria-label={m.transfer_select_team_aria()}
-                >
-                  {availableOtherTeams.map((teamNumber) => (
-                    <option key={teamNumber} value={teamNumber}>
-                      {m.team_label({ team: String(teamNumber) })}
-                    </option>
-                  ))}
-                </Form.Select>
 
                 {showTransfers && transferStats && (
                   <div className="d-flex flex-wrap align-items-center gap-2 mt-3">

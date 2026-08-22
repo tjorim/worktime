@@ -18,7 +18,7 @@ import {
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import type { GanttTask } from "@/types/gantt";
-import { BREAK_DURATION_MINUTES } from "./timeUtils";
+import { BREAK_DURATION_MINUTES, isValidRange, overlaps } from "./timeUtils";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 
@@ -34,6 +34,7 @@ type NowPosition =
 
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
+  validationTasks?: StoredTimeTrackingTask[];
   labels: Label[];
   ganttTasks: GanttTask[];
   showGanttPicker: boolean;
@@ -73,13 +74,25 @@ function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
   );
 }
 
-function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
+function GapIndicator({
+  durationMinutes,
+  untilNext = false,
+}: {
+  durationMinutes: number;
+  untilNext?: boolean;
+}) {
   const tooltipId = useId();
+  const ariaLabel = untilNext
+    ? m.tt_until_next_aria({ minutes: durationMinutes })
+    : m.tt_gap_aria({ minutes: durationMinutes });
+  const label = untilNext
+    ? m.tt_until_next_label({ minutes: durationMinutes })
+    : m.tt_gap_label({ minutes: durationMinutes });
   return (
     <div
       className="d-flex align-items-center gap-2 px-3 py-1"
       role="separator"
-      aria-label={m.tt_gap_aria({ minutes: durationMinutes })}
+      aria-label={ariaLabel}
       data-testid="gap-indicator"
     >
       <div
@@ -88,7 +101,7 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
       />
       <OverlayTrigger
         placement="top"
-        overlay={<Tooltip id={tooltipId}>{m.tt_gap_aria({ minutes: durationMinutes })}</Tooltip>}
+        overlay={<Tooltip id={tooltipId}>{ariaLabel}</Tooltip>}
       >
         <Badge
           bg="warning"
@@ -99,7 +112,7 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
           tabIndex={0}
         >
           <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
-          {m.tt_gap_label({ minutes: durationMinutes })}
+          {label}
         </Badge>
       </OverlayTrigger>
       <div
@@ -110,8 +123,28 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
   );
 }
 
+function formatPlannedStart(start: Dayjs, liveTime: Dayjs) {
+  const diffMinutes = start.diff(liveTime, "minute");
+  const time = start.format("HH:mm");
+  if (diffMinutes < 0) {
+    return m.tt_plan_overrun({ time, minutes: String(Math.abs(diffMinutes)) });
+  }
+  const totalMinutes = diffMinutes;
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) {
+    return m.tt_starts_in_days({ time, days: String(days), hours: String(hours) });
+  }
+  if (hours > 0) {
+    return m.tt_starts_in_hours({ time, hours: String(hours), minutes: String(minutes) });
+  }
+  return m.tt_starts_in_minutes({ time, minutes: String(minutes) });
+}
+
 export function DailyTaskList({
   tasks,
+  validationTasks = tasks,
   labels,
   ganttTasks,
   showGanttPicker,
@@ -177,21 +210,32 @@ export function DailyTaskList({
     : null;
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
+  const runningTaskStart = useMemo(() => {
+    const runningTask = tasks.find((task) => !task.stopTime);
+    return runningTask ? dayjs(runningTask.startTime) : null;
+  }, [tasks]);
 
-  // gapAfter[i] = gap in minutes between tasks[i].stopTime and tasks[i+1].startTime (if >= threshold)
+  // gapAfter[i] is either confirmed untracked time after a stopped task or,
+  // for a running task followed by a plan, the remaining time until that plan.
   const gapAfter = useMemo(() => {
-    const gaps: (number | null)[] = tasks.map(() => null);
+    const gaps: ({ minutes: number; untilNext: boolean } | null)[] = tasks.map(() => null);
 
     for (let i = 0; i < tasks.length - 1; i++) {
       const current = tasks[i];
       const next = tasks[i + 1];
-      if (!current?.stopTime || !next) continue;
-      const gap = dayjs(next.startTime).diff(dayjs(current.stopTime), "minute");
-      if (gap > 0) gaps[i] = gap;
+      if (!current || !next) continue;
+      const nextStart = dayjs(next.startTime);
+      if (current.stopTime) {
+        const gap = nextStart.diff(dayjs(current.stopTime), "minute");
+        if (gap > 0) gaps[i] = { minutes: gap, untilNext: false };
+      } else if (liveTime) {
+        const remaining = nextStart.diff(liveTime, "minute");
+        if (remaining > 0) gaps[i] = { minutes: remaining, untilNext: true };
+      }
     }
 
     return gaps;
-  }, [tasks]);
+  }, [liveTime, tasks]);
 
   const nowPosition = useMemo<NowPosition>(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
@@ -219,6 +263,20 @@ export function DailyTaskList({
 
     return { type: "separator", insertBeforeIndex: tasks.length };
   }, [isToday, liveTime, tasks]);
+
+  const gapUntilNextTask = useMemo(() => {
+    if (
+      nowPosition?.type !== "separator" ||
+      nowPosition.insertBeforeIndex !== 0 ||
+      !liveTime
+    ) {
+      return null;
+    }
+    const firstTask = tasks[0];
+    if (!firstTask) return null;
+    const minutes = dayjs(firstTask.startTime).diff(liveTime, "minute");
+    return minutes > 0 ? minutes : null;
+  }, [liveTime, nowPosition, tasks]);
 
   const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
@@ -259,6 +317,28 @@ export function DailyTaskList({
       onEditRequestHandled?.();
     }
   }, [editRequest, openEditModal, onEditRequestHandled]);
+
+  const editValidationError = useMemo(() => {
+    if (!editingTask || !editForm.start) return "";
+    if (editForm.stop && !isValidRange(editForm.start, editForm.stop)) {
+      return `${m.tt_unable_to_update_task()} ${m.tt_error_stop_after_start()}`;
+    }
+    const taskDate = dayjs(editingTask.startTime).format("YYYY-MM-DD");
+    const tasksForOverlap = validationTasks
+      .filter((task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate)
+      .map((task) => ({
+        id: task.id,
+        start: dayjs(task.startTime).format("HH:mm"),
+        stop: task.stopTime
+          ? dayjs(task.stopTime).format("HH:mm")
+          : (liveTime ?? dayjs()).format("HH:mm"),
+      }));
+    const effectiveStop = editForm.stop || (liveTime ?? dayjs()).format("HH:mm");
+    if (overlaps(editForm.start, effectiveStop, tasksForOverlap, editingTask.id)) {
+      return `${m.tt_unable_to_update_task()} ${m.tt_error_time_overlap()}`;
+    }
+    return "";
+  }, [editForm.start, editForm.stop, editingTask, liveTime, validationTasks]);
 
   const submitEditModal = async () => {
     if (!editingTask) {
@@ -447,7 +527,12 @@ export function DailyTaskList({
       {tasks.length === 0 ? null : (
         <ListGroup className="mt-3">
           {nowPosition?.type === "separator" && nowPosition.insertBeforeIndex === 0 && liveTime && (
-            <NowIndicator liveTime={liveTime} />
+            <>
+              <NowIndicator liveTime={liveTime} />
+              {gapUntilNextTask !== null && (
+                <GapIndicator durationMinutes={gapUntilNextTask} untilNext />
+              )}
+            </>
           )}
           {tasks.map((task, index) => {
             const startDisplay = dayjs(task.startTime).format("HH:mm");
@@ -458,6 +543,13 @@ export function DailyTaskList({
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
+            const taskStart = dayjs(task.startTime);
+            const isPlanned = Boolean(
+              task.stopTime &&
+                liveTime &&
+                (taskStart.isAfter(liveTime) ||
+                  (runningTaskStart && taskStart.isAfter(runningTaskStart))),
+            );
             const gap = gapAfter[index] ?? null;
             const ganttTaskName = task.ganttTaskId
               ? ganttTaskNameById[task.ganttTaskId]
@@ -466,7 +558,14 @@ export function DailyTaskList({
               <Fragment key={task.id}>
                 <ListGroup.Item
                   onContextMenu={(e) => handleContextMenu(e, task.id)}
-                  style={isCurrentTask ? { borderLeft: "3px solid var(--bs-danger)" } : undefined}
+                  className={isPlanned ? "bg-body-tertiary" : undefined}
+                  style={
+                    isCurrentTask
+                      ? { borderLeft: "3px solid var(--bs-danger)" }
+                      : isPlanned
+                        ? { borderLeft: "3px dashed var(--bs-secondary)" }
+                        : undefined
+                  }
                 >
                   <div className="d-flex justify-content-between align-items-start gap-2">
                     <div className="flex-grow-1">
@@ -485,6 +584,12 @@ export function DailyTaskList({
                           <Badge bg="danger" className="ms-2" aria-label={m.tt_now_aria()}>
                             <i className="bi bi-clock me-1" aria-hidden="true" />
                             {m.tt_now()}
+                          </Badge>
+                        )}
+                        {isPlanned && (
+                          <Badge bg="secondary" className="ms-2">
+                            <i className="bi bi-calendar-event me-1" aria-hidden="true" />
+                            {m.tt_planned_status()}
                           </Badge>
                         )}
                         {task.includesBreak && (
@@ -529,7 +634,10 @@ export function DailyTaskList({
                         )}
                       </div>
                       <div className="small text-muted">
-                        {m.form_start()}: {startDisplay} · {m.form_stop()}: {stopDisplay}
+                        {isPlanned && liveTime
+                          ? formatPlannedStart(dayjs(task.startTime), liveTime)
+                          : `${m.form_start()}: ${startDisplay}`}
+                        {` · ${m.form_stop()}: ${stopDisplay}`}
                       </div>
                     </div>
                     <div className="d-none d-md-flex gap-1 flex-shrink-0">
@@ -552,7 +660,9 @@ export function DailyTaskList({
                     </div>
                   </div>
                 </ListGroup.Item>
-                {gap != null && <GapIndicator durationMinutes={gap} />}
+                {gap != null && (
+                  <GapIndicator durationMinutes={gap.minutes} untilNext={gap.untilNext} />
+                )}
                 {nowPosition?.type === "separator" &&
                   nowPosition.insertBeforeIndex === index + 1 &&
                   liveTime && <NowIndicator liveTime={liveTime} />}
@@ -571,7 +681,8 @@ export function DailyTaskList({
         onChange={setEditForm}
         onClose={closeEditModal}
         onSubmit={submitEditModal}
-        error={editError}
+        error={editError || editValidationError}
+        canSubmit={!editValidationError}
         info={editInfo}
       />
 
