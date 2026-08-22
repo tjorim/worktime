@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 function renderWithSettings(ui: React.ReactElement) {
   return render(
@@ -15,6 +16,8 @@ function renderWithSettings(ui: React.ReactElement) {
 }
 
 describe("ScheduleDetailModal", () => {
+  const originalLocale = getLocale();
+
   beforeEach(() => {
     // Set user state with the unified storage structure
     window.localStorage.setItem(
@@ -41,8 +44,9 @@ describe("ScheduleDetailModal", () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     window.localStorage.clear();
+    await setLocale(originalLocale, { reload: false });
   });
 
   it("shows Schedule Details for single-user schedules", () => {
@@ -89,6 +93,22 @@ describe("ScheduleDetailModal", () => {
     expect(screen.getAllByText("07:00–15:00").length).toBeGreaterThan(0);
     expect(screen.getAllByText("15:00–23:00").length).toBeGreaterThan(0);
     expect(screen.getAllByText("23:00–07:00").length).toBeGreaterThan(0);
+  });
+
+  it("localizes schedule metadata", async () => {
+    await setLocale("nl", { reload: false });
+
+    renderWithSettings(
+      <ScheduleDetailModal
+        show={true}
+        onHide={() => {}}
+        teamNumber={2}
+        scheduleType="5-shift"
+      />,
+    );
+
+    expect(screen.getByText("5-ploegenrooster")).toBeInTheDocument();
+    expect(screen.getByText("Continu roterende diensten voor meerdere teams.")).toBeInTheDocument();
   });
 
   it("throws an error when team number is out of range", () => {

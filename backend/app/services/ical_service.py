@@ -17,7 +17,8 @@ _WORKTIME_TIMEZONE = ZoneInfo("Europe/Brussels")
 
 
 def _escape(value: str) -> str:
-    return value.replace("\\", "\\\\").replace("\n", "\\n").replace(",", "\\,").replace(";", "\\;")
+    normalized = value.replace("\r\n", "\n").replace("\r", "\n")
+    return normalized.replace("\\", "\\\\").replace("\n", "\\n").replace(",", "\\,").replace(";", "\\;")
 
 
 def _fold(line: str) -> list[str]:

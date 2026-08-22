@@ -108,7 +108,7 @@ describe("Header", () => {
       // Open Settings panel
       const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
-      await user.click(await screen.findByRole("button", { name: "Preferences", exact: true }));
+      await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
       // Find and click the dark theme button
       const darkThemeButton = await screen.findByRole("button", {
@@ -127,7 +127,7 @@ describe("Header", () => {
       // Open Settings panel
       const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
-      await user.click(await screen.findByRole("button", { name: "Preferences", exact: true }));
+      await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
       // Find and click the light theme button
       const lightThemeButton = await screen.findByRole("button", {
@@ -162,7 +162,7 @@ describe("Header", () => {
       // Open Settings panel
       const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
-      await user.click(await screen.findByRole("button", { name: "Preferences", exact: true }));
+      await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
       // Find and click the auto theme button (should be default)
       const autoThemeButton = await screen.findByRole("button", {
@@ -201,7 +201,7 @@ describe("Header", () => {
       // Open Settings panel and ensure auto theme is selected (default)
       const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
-      await user.click(await screen.findByRole("button", { name: "Preferences", exact: true }));
+      await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
       const autoThemeButton = await screen.findByRole("button", {
         name: /Auto/i,

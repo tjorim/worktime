@@ -63,6 +63,22 @@ function getShiftLabel(code: ShiftCode): string {
   }
 }
 
+function getLocalizedScheduleMetadata(scheduleType: ScheduleOption) {
+  switch (scheduleType) {
+    case "9-5":
+      return { title: m.schedule_9_5_title(), description: m.schedule_9_5_description() };
+    case "2-shift":
+      return { title: m.schedule_2_shift_title(), description: m.schedule_2_shift_description() };
+    case "weekend-shift":
+      return {
+        title: m.schedule_weekend_shift_title(),
+        description: m.schedule_weekend_shift_description(),
+      };
+    case "5-shift":
+      return { title: m.schedule_5_shift_title(), description: m.schedule_5_shift_description() };
+  }
+}
+
 interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
@@ -89,6 +105,7 @@ export function ScheduleDetailModal({
 }: ScheduleDetailModalProps) {
   const { settings } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
+  const scheduleMetadata = getLocalizedScheduleMetadata(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount;
   const hasTeams = teamCount > 1;
   const isValidTeamNumber = hasTeams
@@ -230,7 +247,7 @@ export function ScheduleDetailModal({
             <Row className="g-3">
               <Col xs={6} md={3}>
                 <small className="text-muted d-block">{m.schedule_info_type()}</small>
-                <span className="fw-semibold">{scheduleConfig.title}</span>
+                <span className="fw-semibold">{scheduleMetadata.title}</span>
               </Col>
               {hasTeams ? (
                 <Col xs={6} md={3}>
@@ -277,7 +294,7 @@ export function ScheduleDetailModal({
               </Col>
               <Col xs={12}>
                 <small className="text-muted d-block">{m.schedule_info_description()}</small>
-                <span>{scheduleConfig.description}</span>
+                <span>{scheduleMetadata.description}</span>
               </Col>
             </Row>
           </Card.Body>

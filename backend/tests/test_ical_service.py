@@ -7,6 +7,10 @@ import pytest
 from app.services import ical_service
 
 
+def test_escape_normalizes_all_line_endings() -> None:
+    assert ical_service._escape("one\r\ntwo\rthree\nfour") == "one\\ntwo\\nthree\\nfour"
+
+
 @pytest.mark.asyncio
 async def test_feed_contains_stable_utc_shift_and_time_off_events(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
