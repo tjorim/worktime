@@ -236,6 +236,14 @@ class IcalFeedCreated(BaseModel):
     url_path: str
 
 
+class IcalFeedStatus(BaseModel):
+    """Whether the user currently has an active calendar subscription."""
+
+    configured: bool
+    token_preview: str | None = None
+    created_at: dt_datetime | None = None
+
+
 class AccessTokenCreate(BaseModel):
     """Payload for minting a new personal access token."""
 

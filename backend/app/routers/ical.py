@@ -5,15 +5,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
-from app.schemas import IcalFeedCreated
+from app.schemas import IcalFeedCreated, IcalFeedStatus
 from app.services.access_token_service import (
     authenticate_ical_feed_token,
+    get_ical_feed_token,
     revoke_ical_feed_token,
     rotate_ical_feed_token,
 )
 from app.services.ical_service import build_ical_feed
 
 router = APIRouter(prefix="/ical", tags=["Calendar Feed"])
+
+
+@router.get("", response_model=IcalFeedStatus)
+async def feed_status(
+    response: Response,
+    principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
+    session: AsyncSession = Depends(get_session),
+) -> IcalFeedStatus:
+    response.headers["Cache-Control"] = "no-store"
+    token = await get_ical_feed_token(session, principal.user_id)
+    if token is None:
+        return IcalFeedStatus(configured=False)
+    return IcalFeedStatus(configured=True, token_preview=token.token_preview, created_at=token.created_at)
 
 
 @router.post("", response_model=IcalFeedCreated, status_code=status.HTTP_201_CREATED)

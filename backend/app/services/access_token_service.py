@@ -101,6 +101,16 @@ async def revoke_ical_feed_token(session: AsyncSession, user_id: int) -> None:
     await session.commit()
 
 
+async def get_ical_feed_token(session: AsyncSession, user_id: int) -> AccessToken | None:
+    result = await session.execute(
+        select(AccessToken).where(
+            AccessToken.user_id == user_id,
+            AccessToken.name == ICAL_TOKEN_NAME,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def authenticate_ical_feed_token(session: AsyncSession, raw_token: str) -> AccessToken | None:
     if not raw_token.startswith(ICAL_TOKEN_PREFIX):
         return None
