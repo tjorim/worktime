@@ -5,9 +5,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileQuickActions } from "@/components/MobileQuickActions";
 import { TestProviders } from "@tests/utils/testProviders";
 
-const { mockAddTask, mockStorage } = vi.hoisted(() => ({
+const { mockAddTask, mockUpdateTaskTimes, mockSwitchRunningTask, mockStorage } = vi.hoisted(() => ({
   mockAddTask: vi.fn().mockResolvedValue(true),
-  mockStorage: { tasks: [] as Array<{ startTime: string; stopTime?: string }> },
+  mockUpdateTaskTimes: vi.fn(),
+  mockSwitchRunningTask: vi.fn().mockReturnValue(true),
+  mockStorage: {
+    tasks: [] as Array<{
+      id: string;
+      text: string;
+      label: string;
+      startTime: string;
+      stopTime?: string;
+    }>,
+  },
 }));
 
 vi.mock("@/hooks/useTimeTrackingStorage", () => ({
@@ -15,12 +25,16 @@ vi.mock("@/hooks/useTimeTrackingStorage", () => ({
     tasks: mockStorage.tasks,
     labels: [{ id: "support", name: "Support", color: "#0d6efd" }],
     addTask: mockAddTask,
+    updateTaskTimes: mockUpdateTaskTimes,
+    switchRunningTask: mockSwitchRunningTask,
   }),
 }));
 
 describe("MobileQuickActions", () => {
   beforeEach(() => {
     mockAddTask.mockClear();
+    mockUpdateTaskTimes.mockClear();
+    mockSwitchRunningTask.mockClear();
     mockStorage.tasks = [];
     vi.useRealTimers();
   });
@@ -73,6 +87,67 @@ describe("MobileQuickActions", () => {
 
     expect(onAddTimeOff).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows a running timer and lets the user stop it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-08-22T10:00:00"));
+    mockStorage.tasks = [
+      { id: "running", text: "Customer support", label: "support", startTime: "2026-08-22T09:00" },
+    ];
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <TestProviders>
+        <MobileQuickActions
+          canAddTimeOff
+          canTrackTime
+          onAddTimeOff={vi.fn()}
+          onTrackTime={vi.fn()}
+          onOpenCalendar={vi.fn()}
+        />
+      </TestProviders>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open quick actions" }));
+    expect(screen.getByText("Customer support")).toBeInTheDocument();
+    expect(screen.getByText(/01:00:00/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Stop Timer" }));
+
+    expect(mockUpdateTaskTimes).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "running", newStopTime: "2026-08-22T10:00" }),
+    );
+  });
+
+  it("switches directly from the running timer", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-08-22T10:00:00"));
+    mockStorage.tasks = [
+      { id: "running", text: "First task", label: "support", startTime: "2026-08-22T09:00" },
+    ];
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <TestProviders>
+        <MobileQuickActions
+          canAddTimeOff
+          canTrackTime
+          onAddTimeOff={vi.fn()}
+          onTrackTime={vi.fn()}
+          onOpenCalendar={vi.fn()}
+        />
+      </TestProviders>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open quick actions" }));
+    await user.click(screen.getByRole("button", { name: "Switch" }));
+    await user.type(screen.getByRole("textbox", { name: "Task" }), "Second task");
+    await user.click(screen.getByRole("button", { name: "Switch now" }));
+
+    expect(mockSwitchRunningTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runningTaskId: "running",
+        nextTask: expect.objectContaining({ text: "Second task", label: "support" }),
+      }),
+    );
   });
 
   it("rechecks overlaps when starting after the sheet has been open", async () => {

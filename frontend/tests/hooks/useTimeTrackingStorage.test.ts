@@ -249,6 +249,48 @@ describe("useTimeTrackingStorage", () => {
     });
   });
 
+  describe("switchRunningTask", () => {
+    it("stops the running task and starts its replacement together", async () => {
+      const runningId = nextId("running-task");
+      const nextTaskId = nextId("next-task");
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      await act(async () => {
+        await result.current.addTask({
+          id: runningId,
+          text: "First task",
+          label: "Support",
+          startTime: "2026-02-07T08:00",
+        });
+      });
+      await waitFor(() => expect(result.current.tasks).toHaveLength(1));
+
+      let switched = false;
+      act(() => {
+        switched = result.current.switchRunningTask({
+          runningTaskId: runningId,
+          stopTime: "2026-02-07T09:00",
+          nextTask: {
+            id: nextTaskId,
+            text: "Second task",
+            label: "Support",
+            startTime: "2026-02-07T09:00",
+          },
+        });
+      });
+
+      expect(switched).toBe(true);
+      await waitFor(() => {
+        expect(result.current.tasks.find((task) => task.id === runningId)?.stopTime).toBe(
+          "2026-02-07T09:00",
+        );
+        expect(
+          result.current.tasks.find((task) => task.id === nextTaskId)?.stopTime,
+        ).toBeUndefined();
+      });
+    });
+  });
+
   describe("removeTask", () => {
     it("removes a task by id", async () => {
       const keepId = nextId("task");

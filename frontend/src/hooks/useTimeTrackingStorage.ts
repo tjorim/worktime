@@ -104,10 +104,7 @@ export function useTimeTrackingStorage() {
     [rawTemplateData],
   );
 
-  const labels = useMemo(
-    () => sanitizeLabels((rawLabelData ?? []) as Label[]),
-    [rawLabelData],
-  );
+  const labels = useMemo(() => sanitizeLabels((rawLabelData ?? []) as Label[]), [rawLabelData]);
 
   const addTask = useCallback(
     async (payload: StoredTimeTrackingTask): Promise<boolean> => {
@@ -155,6 +152,27 @@ export function useTimeTrackingStorage() {
           d.includesBreak = payload.includesBreak || undefined;
         }
       });
+    },
+    [tasks],
+  );
+
+  const switchRunningTask = useCallback(
+    (payload: {
+      runningTaskId: string;
+      stopTime: string;
+      nextTask: StoredTimeTrackingTask;
+    }): boolean => {
+      const runningTask = tasks.find((task) => task.id === payload.runningTaskId && !task.stopTime);
+      if (!runningTask || !isValidTaskDateRange(runningTask.startTime, payload.stopTime)) {
+        return false;
+      }
+      runMutationBatch(tasksCollection, true, () => {
+        tasksCollection.update(runningTask.id, (draft) => {
+          draft.stopTime = payload.stopTime;
+        });
+        tasksCollection.insert(convertToTask(payload.nextTask));
+      });
+      return true;
     },
     [tasks],
   );
@@ -251,9 +269,7 @@ export function useTimeTrackingStorage() {
   const updateLabels = useCallback((nextLabels: Label[]) => {
     const sanitized = sanitizeLabels(nextLabels);
     const nextIds = new Set(sanitized.map((l) => l.id));
-    const toDelete = (labelsCollection.toArray as Label[]).filter(
-      (l) => !nextIds.has(l.id),
-    );
+    const toDelete = (labelsCollection.toArray as Label[]).filter((l) => !nextIds.has(l.id));
     const hasWork = sanitized.length > 0 || toDelete.length > 0;
     runMutationBatch(labelsCollection, hasWork, () => {
       // Upsert all labels in the new list
@@ -279,6 +295,7 @@ export function useTimeTrackingStorage() {
     labels,
     addTask,
     updateTaskTimes,
+    switchRunningTask,
     toggleBreak,
     removeTask,
     addTemplate,
