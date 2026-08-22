@@ -72,8 +72,13 @@ export function buildRosterFixture(): RosterFixture {
     };
 
     const referenceDate = dayjs(shiftConfig.referenceDate, "YYYY-MM-DD", true);
-    const rangeStart = referenceDate.subtract(PADDING_DAYS, "day");
-    const totalDays = shiftConfig.cycleLengthDays * SAMPLE_CYCLES + PADDING_DAYS * 2;
+    // Include a full cycle before the reference date so negative cycle offsets
+    // (whose remainder semantics differ between JavaScript and Python) are covered.
+    const rangeStart = referenceDate
+      .subtract(shiftConfig.cycleLengthDays, "day")
+      .subtract(PADDING_DAYS, "day");
+    const totalDays =
+      shiftConfig.cycleLengthDays * (SAMPLE_CYCLES + 1) + PADDING_DAYS * 2;
 
     for (let team = 1; team <= shiftConfig.teamCount; team++) {
       for (let offset = 0; offset < totalDays; offset++) {

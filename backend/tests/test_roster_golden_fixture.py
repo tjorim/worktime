@@ -27,11 +27,12 @@ from app.read_models import ScheduleType
 from app.services.read_models_service import _SCHEDULES, _shift_code_for  # noqa: PLC2701
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "roster_golden.json"
+_FIXTURE: dict[str, Any] = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def golden_fixture() -> dict[str, Any]:
-    return json.loads(_FIXTURE_PATH.read_text())
+    return _FIXTURE
 
 
 class TestRosterConfigMatchesFrontend:
@@ -40,7 +41,7 @@ class TestRosterConfigMatchesFrontend:
     def test_schedule_types_match(self, golden_fixture: dict[str, Any]) -> None:
         assert set(_SCHEDULES.keys()) == set(golden_fixture["schedules"].keys())
 
-    @pytest.mark.parametrize("schedule_type", ["9-5", "2-shift", "weekend-shift", "5-shift"])
+    @pytest.mark.parametrize("schedule_type", sorted(_FIXTURE["schedules"]))
     def test_schedule_config_matches(self, golden_fixture: dict[str, Any], schedule_type: ScheduleType) -> None:
         expected = golden_fixture["schedules"][schedule_type]
         actual = _SCHEDULES[schedule_type]
