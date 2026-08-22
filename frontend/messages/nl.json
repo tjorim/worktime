@@ -720,7 +720,7 @@
   "shortcuts_delete_events": "Geselecteerde gebeurtenissen verwijderen",
   "shortcuts_cancel_edit": "Bewerken annuleren",
   "dev_api_integration_title": "Backend API-integratie",
-  "dev_api_integration_desc": "Configureer een verbinding met een lokaal actieve backend-API-server. De backend biedt teamconfiguratie en .hday-bestandsbeheer vanuit een gedeelde netwerkschijf.",
+  "dev_api_integration_desc": "Test en inspecteer de verbinding met de Worktime-backend-API.",
   "dev_connection_status_heading": "Verbindingsstatus",
   "dev_status_label": "Status:",
   "dev_backend_enabled": "Backend ingeschakeld",

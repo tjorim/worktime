@@ -1279,15 +1279,15 @@
         </div>
         <p>The hosted backend only contains time off for people who use Worktime; the complete team
           remains in the legacy holiday planner on a network share that the VPS cannot access. The
-          local <code>.hday</code> helper is therefore the authoritative bridge, but the Team tab was
-          incorrectly gated on the unrelated hosted-backend connection state.</p>
+          local <code>.hday</code> helper is therefore the authoritative bridge, but its configuration
+          was hidden in Developer Options and Team was gated on the unrelated backend connection.</p>
         <div class="fix"><span>Expose Team only while a configured helper passes its health check,
           independently of hosted-backend connectivity. Plain HTTP is valid for a loopback helper;
           browsers treat localhost as potentially trustworthy, so no local TLS certificate is required.</span></div>
         <div class="refs"><b>components/TeamScheduleView.tsx:180</b> <b>utils/hdayHelper.ts:18</b> <b>backend/app/routers/read_models.py:89</b></div>
-        <div class="verified"><span>Resolved in this PR: the Team tab now appears only for a healthy
-          local planner proxy, checked at startup and every 30 seconds, without exposing incomplete
-          Worktime-only data or depending on the hosted backend's connection status.</span></div>
+        <div class="verified"><span>Resolved in this PR: Schedule &amp; Team settings now own the helper
+          configuration, and the Team tab appears only for a healthy local planner proxy checked at
+          startup and every 30 seconds.</span></div>
       </div>
 
       <div class="finding low">

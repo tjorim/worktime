@@ -8,7 +8,6 @@ import Spinner from "react-bootstrap/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 
 interface DevOptionsPanelProps {
@@ -25,15 +24,7 @@ interface DevOptionsPanelProps {
  * @returns The rendered developer options modal
  */
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
-  const {
-    options,
-    helperConnectionStatus,
-    updateAutoConnect,
-    updateHdayHelperUrl,
-    testHdayHelperConnection,
-    testConnection,
-    disconnect,
-  } = useDeveloperOptions();
+  const { options, updateAutoConnect, testConnection, disconnect } = useDeveloperOptions();
   const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
   const [isTesting, setIsTesting] = useState(false);
@@ -41,16 +32,6 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
-
-  // Local state for the hday helper URL input (reflects saved value on open)
-  const [hdayHelperUrlDraft, setHdayHelperUrlDraft] = useState(options.hdayHelperUrl ?? "");
-  const [isTestingHelper, setIsTestingHelper] = useState(false);
-  const [helperTestResult, setHelperTestResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-  const hdayHelperMixedContentRisk =
-    hdayHelperUrlDraft.trim() !== "" && isHdayHelperMixedContentBlocked(hdayHelperUrlDraft.trim());
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -79,46 +60,8 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     setTestResult({ success: true, message: m.dev_disconnected_msg() });
   };
 
-  const handleSaveHdayHelperUrl = () => {
-    const normalized = hdayHelperUrlDraft.trim().replace(/\/+$/, "");
-    updateHdayHelperUrl(normalized || null);
-    setHelperTestResult(null);
-  };
-
-  const handleTestHelperConnection = async () => {
-    const normalizedUrl = hdayHelperUrlDraft.trim().replace(/\/+$/, "");
-    if (!normalizedUrl) return;
-
-    setIsTestingHelper(true);
-    setHelperTestResult(null);
-
-    try {
-      const success = await testHdayHelperConnection(normalizedUrl);
-      setHelperTestResult({
-        success,
-        message: success ? m.dev_hday_helper_connected() : m.dev_hday_helper_failed(),
-      });
-    } finally {
-      setIsTestingHelper(false);
-    }
-  };
-
   const getStatusBadge = () => {
     switch (options.connectionStatus) {
-      case "connected":
-        return <Badge bg="success">{m.dev_connected()}</Badge>;
-      case "connecting":
-        return <Badge bg="info">{m.dev_connecting()}</Badge>;
-      case "error":
-        return <Badge bg="danger">{m.error()}</Badge>;
-      case "disconnected":
-      default:
-        return <Badge bg="secondary">{m.dev_disconnected()}</Badge>;
-    }
-  };
-
-  const getHelperStatusBadge = () => {
-    switch (helperConnectionStatus) {
       case "connected":
         return <Badge bg="success">{m.dev_connected()}</Badge>;
       case "connecting":
@@ -252,87 +195,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
           </div>
         )}
 
-        <hr />
-
-        {/* .hday Helper Configuration */}
-        <div className="mb-4">
-          <div className="d-flex align-items-center gap-2 mb-1">
-            <h6 className="mb-0">
-              <i className="bi bi-file-earmark-text me-2"></i>
-              {m.dev_hday_helper_heading()}
-            </h6>
-            {getHelperStatusBadge()}
-          </div>
-          <p className="text-muted small mb-3">{m.dev_hday_helper_desc()}</p>
-
-          <Form.Group controlId="hday-helper-url" className="mb-2">
-            <Form.Label className="small fw-medium">{m.dev_hday_helper_url_label()}</Form.Label>
-            <div className="d-flex gap-2">
-              <Form.Control
-                type="url"
-                placeholder="http://localhost:8080"
-                value={hdayHelperUrlDraft}
-                onChange={(e) => {
-                  setHdayHelperUrlDraft(e.target.value);
-                  setHelperTestResult(null);
-                }}
-                size="sm"
-              />
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={handleSaveHdayHelperUrl}
-                disabled={hdayHelperUrlDraft.trim() === (options.hdayHelperUrl ?? "")}
-              >
-                {m.dev_save_url()}
-              </Button>
-              <Button
-                variant="outline-primary"
-                size="sm"
-                onClick={handleTestHelperConnection}
-                disabled={isTestingHelper || !hdayHelperUrlDraft.trim()}
-              >
-                {isTestingHelper && <Spinner animation="border" size="sm" className="me-1" />}
-                {m.dev_hday_helper_test()}
-              </Button>
-            </div>
-            <Form.Text className="text-muted">{m.dev_hday_helper_url_help()}</Form.Text>
-          </Form.Group>
-
-          {hdayHelperMixedContentRisk && (
-            <Alert variant="warning" className="mb-2 py-2 small">
-              {m.dev_hday_helper_mixed_content_warning()}
-            </Alert>
-          )}
-
-          {helperTestResult && (
-            <Alert
-              variant={helperTestResult.success ? "success" : "danger"}
-              className="mb-0 py-2 small"
-            >
-              {helperTestResult.message}
-            </Alert>
-          )}
-        </div>
-
         {/* Backend Information */}
         <div className="mt-4 p-3 bg-light rounded">
           <h6 className="mb-2">{m.dev_endpoints_heading()}</h6>
           <ul className="small mb-0">
             <li>
               <code>GET /health</code> - {m.dev_endpoint_health()}
-            </li>
-            <li>
-              <code>GET /hday/:username</code> - {m.dev_endpoint_read_hday()}
-            </li>
-            <li>
-              <code>PUT /hday/:username</code> - {m.dev_endpoint_write_hday()}
-            </li>
-            <li>
-              <code>GET /team/:id</code> - {m.dev_endpoint_read_team()}
-            </li>
-            <li>
-              <code>GET /team/:id/hday</code> - {m.dev_endpoint_read_team_hdays()}
             </li>
           </ul>
         </div>
