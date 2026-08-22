@@ -53,6 +53,7 @@ type GapSegment = {
   id: string;
   durationHours: number;
   percentage: number;
+  untilNext?: boolean;
 };
 
 type RenderSegment = TaskSegment | GapSegment;
@@ -89,10 +90,11 @@ export function TimelineProgressBar({
 
   const renderSegments = useMemo<RenderSegment[]>(() => {
     const result: RenderSegment[] = [];
+    const runningTask = tasks.find((task) => !task.stopTime);
+    const runningTaskStart = runningTask ? dayjs(runningTask.startTime) : null;
 
     const firstTask = tasks[0];
-    const hasRunningTask = tasks.some((task) => !task.stopTime);
-    if (isToday && liveTime && firstTask && !hasRunningTask) {
+    if (isToday && liveTime && firstTask) {
       const gapHours = dayjs(firstTask.startTime).diff(liveTime, "hour", true);
       if (gapHours > 0) {
         result.push({
@@ -100,6 +102,7 @@ export function TimelineProgressBar({
           id: "gap-now-to-first-task",
           durationHours: gapHours,
           percentage: (gapHours / sanitizedTargetHours) * 100,
+          untilNext: true,
         });
       }
     }
@@ -123,7 +126,12 @@ export function TimelineProgressBar({
         textColor,
         durationHours,
         percentage: (durationHours / sanitizedTargetHours) * 100,
-        isPlanned: Boolean(liveTime && startDayjs.isAfter(liveTime)),
+        isPlanned: Boolean(
+          task.stopTime &&
+            liveTime &&
+            (startDayjs.isAfter(liveTime) ||
+              (runningTaskStart && startDayjs.isAfter(runningTaskStart))),
+        ),
         includesBreak: task.includesBreak,
       };
 
@@ -148,6 +156,17 @@ export function TimelineProgressBar({
             id: `gap-${task.id}`,
             durationHours: gapHours,
             percentage: (gapHours / sanitizedTargetHours) * 100,
+          });
+        }
+      } else if (!task.stopTime && liveTime && next?.startTime) {
+        const gapHours = dayjs(next.startTime).diff(liveTime, "hour", true);
+        if (gapHours > 0) {
+          result.push({
+            type: "gap",
+            id: `gap-until-${next.id}`,
+            durationHours: gapHours,
+            percentage: (gapHours / sanitizedTargetHours) * 100,
+            untilNext: true,
           });
         }
       }
@@ -221,7 +240,10 @@ export function TimelineProgressBar({
           <BootstrapProgressBar>
             {renderSegments.map((rs) => {
               if (rs.type === "gap") {
-                const gapLabel = m.tt_gap_aria({ minutes: Math.round(rs.durationHours * 60) });
+                const minutes = Math.round(rs.durationHours * 60);
+                const gapLabel = rs.untilNext
+                  ? m.tt_until_next_aria({ minutes })
+                  : m.tt_gap_aria({ minutes });
                 return (
                   <BootstrapProgressBar
                     key={rs.id}

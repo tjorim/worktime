@@ -324,7 +324,7 @@ describe("DailyTaskList", () => {
   describe("Planned tasks", () => {
     it("marks a future entry as planned with an absolute and relative start", () => {
       const task = makeTask({
-        text: "Prepare handover",
+        text: "Prepare report",
         startTime: "2026-02-07T14:30",
         stopTime: "2026-02-07T15:30",
       });
@@ -337,7 +337,52 @@ describe("DailyTaskList", () => {
       expect(screen.getByText("Planned")).toBeInTheDocument();
       expect(screen.getByText(/Starts 14:30 · in 2h 15m/)).toBeInTheDocument();
       expect(screen.getByText(/Stop: 15:30/)).toBeInTheDocument();
-      expect(screen.getByText("135min gap")).toBeInTheDocument();
+      expect(screen.getByText("135min until next")).toBeInTheDocument();
+    });
+
+    it("shows time until a planned entry after a running task", () => {
+      const running = makeTask({
+        id: "running",
+        text: "Current work",
+        startTime: "2026-02-07T16:50",
+        stopTime: undefined,
+      });
+      const planned = makeTask({
+        id: "planned",
+        text: "Prepare report",
+        startTime: "2026-02-07T18:00",
+        stopTime: "2026-02-07T19:00",
+      });
+
+      renderList([running, planned], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T17:00"),
+        isToday: true,
+      });
+
+      expect(screen.getByText("60min until next")).toBeInTheDocument();
+    });
+
+    it("keeps an entry marked as planned when a running task overruns its start", () => {
+      const running = makeTask({
+        id: "running",
+        text: "Current work",
+        startTime: "2026-02-07T16:50",
+        stopTime: undefined,
+      });
+      const planned = makeTask({
+        id: "planned",
+        text: "Prepare report",
+        startTime: "2026-02-07T18:00",
+        stopTime: "2026-02-07T19:00",
+      });
+
+      renderList([running, planned], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T18:05"),
+        isToday: true,
+      });
+
+      expect(screen.getByText("Planned")).toBeInTheDocument();
+      expect(screen.getByText(/Starts 18:00 · 5m overrun · Stop: 19:00/)).toBeInTheDocument();
     });
 
     it("does not mark an entry that has already started as planned", () => {

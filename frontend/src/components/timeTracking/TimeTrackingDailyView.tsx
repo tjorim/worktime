@@ -14,6 +14,7 @@ import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
+import { StopTimerConflictDialog } from "./StopTimerConflictDialog";
 import { LabelModal } from "./LabelModal";
 import {
   buildLabelColorMap,
@@ -98,6 +99,11 @@ export function TimeTrackingDailyView({
   const showGanttPicker = settings.enableGantt && ganttTasks.length > 0;
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [stopConflict, setStopConflict] = useState<{
+    runningTask: StoredTimeTrackingTask;
+    tasks: StoredTimeTrackingTask[];
+    now: string;
+  } | null>(null);
   const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
   const [createLabelForm, setCreateLabelForm] = useState({ name: "", color: "" });
   const liveTime = useLiveTime({ precision: "second" });
@@ -126,6 +132,11 @@ export function TimeTrackingDailyView({
   }, [labels, selectedLabel]);
 
   const { dailyTasks, runningTask } = useDailyTaskSummary(tasks, date);
+  const nowFallsInsideTask = dailyTasks.some((task) => {
+    if (!task.stopTime || task.id === runningTask?.id) return false;
+    const startTime = dayjs(task.startTime);
+    return !liveTime.isBefore(startTime) && liveTime.isBefore(dayjs(task.stopTime));
+  });
   const timerElapsed = runningTask
     ? formatDuration(liveTime.diff(dayjs(runningTask.startTime), "second"))
     : undefined;
@@ -136,9 +147,11 @@ export function TimeTrackingDailyView({
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
-  const canStartNow = !runningTask && selectedLabel.trim().length > 0;
+  const canStartNow = !runningTask && !nowFallsInsideTask && selectedLabel.trim().length > 0;
   const startDisabledReason = runningTask
     ? m.tt_reason_stopwatch_running()
+    : nowFallsInsideTask
+      ? m.tt_error_time_overlap()
     : !selectedLabel.trim()
       ? m.tt_reason_select_label()
       : undefined;
@@ -198,6 +211,10 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_task_already_running_start());
       return;
     }
+    if (nowFallsInsideTask) {
+      setError(m.tt_error_time_overlap());
+      return;
+    }
     if (!selectedLabel.trim()) {
       setError(m.tt_error_configure_label());
       return;
@@ -240,6 +257,21 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_stop_after_start());
       return;
     }
+    const reachedTasks = tasks
+      .filter((task) => task.id !== runningTask.id)
+      .filter((task) => {
+        const taskStart = dayjs(task.startTime);
+        return task.stopTime && taskStart.isAfter(startDayjs) && !taskStart.isAfter(now);
+      })
+      .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf());
+    if (reachedTasks.length > 0) {
+      setStopConflict({
+        runningTask,
+        tasks: reachedTasks,
+        now: now.format("HH:mm"),
+      });
+      return;
+    }
     if (now.diff(startDayjs, "minute") < 1) {
       setShowDiscardConfirm(true);
       return;
@@ -250,6 +282,38 @@ export function TimeTrackingDailyView({
       newStartTime: runningTask.startTime,
       newStopTime: stopTime,
     });
+  };
+
+  const handleResolveStopConflict = (stopTime: string) => {
+    if (!stopConflict) return;
+    const taskDate = dayjs(stopConflict.runningTask.startTime).format("YYYY-MM-DD");
+    const stopDateTime = `${taskDate}T${stopTime}`;
+
+    for (const plannedTask of stopConflict.tasks) {
+      if (!plannedTask.stopTime || !dayjs(plannedTask.startTime).isBefore(stopDateTime)) continue;
+      if (!dayjs(plannedTask.stopTime).isAfter(stopDateTime)) {
+        onRemoveTask(plannedTask.id);
+      } else {
+        onUpdateTaskTimes({
+          id: plannedTask.id,
+          newStartTime: stopDateTime,
+          newStopTime: plannedTask.stopTime,
+        });
+        if (
+          plannedTask.includesBreak &&
+          dayjs(plannedTask.stopTime).diff(dayjs(stopDateTime), "minute") < 30
+        ) {
+          onToggleBreak(plannedTask.id, false);
+        }
+      }
+    }
+
+    onUpdateTaskTimes({
+      id: stopConflict.runningTask.id,
+      newStartTime: stopConflict.runningTask.startTime,
+      newStopTime: stopDateTime,
+    });
+    setStopConflict(null);
   };
 
   const handleUpdateTask = async (payload: {
@@ -285,8 +349,18 @@ export function TimeTrackingDailyView({
       }
     }
     const taskDate = tasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
+    const originalTask = tasks.find((item) => item.id === payload.id);
     const newStartTime = `${taskDate}T${payload.start}`;
     const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
+
+    if (
+      originalTask &&
+      dayjs(originalTask.startTime).isAfter(liveTime) &&
+      !dayjs(newStartTime).isAfter(liveTime)
+    ) {
+      setError(m.tt_error_planned_task_in_past());
+      return false;
+    }
 
     if (payload.stop) {
       const sameDayTasks = tasks.filter(
@@ -447,6 +521,7 @@ export function TimeTrackingDailyView({
 
         <DailyTaskList
           tasks={dailyTasks}
+          validationTasks={tasks}
           labels={labels}
           ganttTasks={ganttTasks}
           showGanttPicker={showGanttPicker}
@@ -465,6 +540,16 @@ export function TimeTrackingDailyView({
         runningTask={runningTask}
         onRemoveTask={onRemoveTask}
         onClose={() => setShowDiscardConfirm(false)}
+      />
+
+      <StopTimerConflictDialog
+        key={`${stopConflict?.runningTask.id ?? "closed"}-${stopConflict?.now ?? ""}`}
+        isOpen={stopConflict !== null}
+        runningTask={stopConflict?.runningTask ?? null}
+        conflictingTasks={stopConflict?.tasks ?? []}
+        initialStopTime={stopConflict?.now ?? ""}
+        onConfirm={handleResolveStopConflict}
+        onClose={() => setStopConflict(null)}
       />
 
       <LabelModal
