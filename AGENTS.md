@@ -88,34 +88,6 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
 
-## Audit Backlog (2026-08)
-
-`docs/audit-2026-08.html` tracks the findings from the 2026-08-18/19 codebase audit
-(issues #1098–#1145, plus the pre-existing #270/#271/#273/#274/#793). If your task
-closes or fixes one of those issues, update its card in that file in the same PR:
-
-- Add ` resolved` to the card's `class="finding <severity>"` (e.g. `finding high resolved`)
-  — this switches the stripe/badge to green via the existing CSS, no new styles needed.
-- Change its `<span class="sev">...</span>` text to `Resolved`.
-- Add a `<div class="verified">` block after `.refs`, one sentence on what changed, which
-  file, and the PR/commit — follow the pattern of the existing resolved cards in that file.
-- Update the scoreboard counts near the top (`Resolved`/`Medium`/`Low`/`Open`) and, if the
-  card was in the Medium or Low sequencing table further down, remove its row there and
-  renumber the rows that follow.
-
-Edit `docs/audit-2026-08.html` directly — it's a complete, standalone document (not
-generated from a template elsewhere), so changes there are the whole job for the
-repo-tracked copy. A matching copy is also published as a Claude Artifact for easier
-reading; if you have Artifact access and want to update it too, look up its URL first
-(`Artifact` tool, `action: "list"`, title "Worktime v2026.8.2 Audit") rather than
-assuming one — a fresh session has no memory of a prior session's publish. Publishing
-without a matching `url` creates a duplicate artifact instead of updating the existing
-one. If you can't find it or don't have Artifact access, updating `docs/` alone is fine;
-mention in the PR that the public copy is now stale so a human can refresh it.
-
-This only covers Claude Code sessions in this repo; PRs from other tools (Codex, Copilot,
-etc.) won't know to do this and may need it done for them after the fact.
-
 ## Live Updates
 
 Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that fresh data is available; the client fetches it via the existing incremental pull path.
