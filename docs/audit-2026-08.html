@@ -545,8 +545,8 @@
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
       marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for the remaining low findings is at the bottom of the page, along with three
-      in-flight PRs from other tools worth checking before you duplicate their work.
+      order for the remaining low finding is at the bottom of the page, along with older
+      tool-driven work worth checking before you duplicate it.
     </div>
   </section>
 
@@ -1566,9 +1566,9 @@
     </div>
 
     <div class="note">
-      <strong>Reference only.</strong> Two older tool-driven PRs overlap this backlog, but both are
-      outdated against the current product and are no longer implementation candidates. Their code
-      may still be useful as inspiration for the related issues. The stale
+      <strong>Reference only.</strong> One older tool-driven PR overlaps this backlog, but it is
+      outdated against the current product and is no longer an implementation candidate. Its code
+      may still be useful as inspiration for the related issue. The stale
       <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
       draft that used to cover #271/#273 is no longer the candidate for either: both were resolved
       independently (#271 above, #273 with its own dedicated PR) rather than by reviving it.
@@ -1581,12 +1581,6 @@
               <td>#270</td>
               <td>High contrast, reduced motion, and focus-indicator ideas. #1114 is now resolved
                 independently.</td>
-            </tr>
-            <tr>
-              <td><a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a></td>
-              <td>#274</td>
-              <td>ScheduleDetailModal team info and downloadable iCal export patterns that may
-                inform #1118's subscription-feed work.</td>
             </tr>
           </tbody>
         </table>
@@ -1618,9 +1612,9 @@
   <section>
     <div class="sec-head">
       <h2>Older backlog<span class="sec-count">5</span></h2>
-      <p>Open before this review. #271 and #273 are now resolved directly (see their rows below);
-        the older PRs for #270 and #274 are now reference material only — see the callout above for
-        what each explored.</p>
+      <p>Open before this review. #271, #273, and #274 are now resolved directly (see their rows
+        below); the older PR for #270 remains reference material only — see the callout above for
+        what it explored.</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -1656,9 +1650,12 @@
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
-            <td>Enhance ScheduleDetailModal with export and improved schedule display</td>
-            <td>Outdated PR <a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a>
-              includes iCal export ideas that may inspire #1118's distinct subscription feed.</td>
+            <td>Enhance ScheduleDetailModal with export and improved schedule display — <strong>Resolved</strong></td>
+            <td>Resolved by <a class="issue" href="https://github.com/tjorim/worktime/pull/1193">#1193</a>:
+              the modal now shows schedule type, team count, cycle length, shifts per day,
+              available shift times, and a localized description. The same PR superseded the
+              standalone export concept with a revocable calendar subscription feed; obsolete
+              PR #448 was closed.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/793">#793</a></td>
