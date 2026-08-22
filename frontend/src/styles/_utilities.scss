@@ -200,19 +200,55 @@ body {
   }
 }
 
+.mobile-quick-actions {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  z-index: 1020;
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  font-size: 1.35rem;
+}
+
+.modal-open .mobile-quick-actions {
+  display: none !important;
+}
+
 /* Below `sm`, stack the label under the icon instead of hiding it — six
    near-identical calendar-family glyphs aren't enough to navigate by on
    their own, so keep a (smaller) accessible name visible for sighted users
    too. Still fits the 44px touch target with room to spare. */
 @media (width <= 575.98px) {
+  .view-toggle-group {
+    width: 100%;
+
+    > .btn {
+      flex: 1 1 0;
+    }
+  }
+
+  .main-tabs {
+    overflow-x: hidden;
+  }
+
+  .main-tabs .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   .main-tabs .nav-link {
     flex-direction: column;
     gap: 0.125rem;
+    width: 100%;
+    padding-inline: 0.125rem;
+    white-space: normal;
   }
 
   .main-tab-label {
     font-size: 0.65rem;
     line-height: 1;
+    overflow-wrap: anywhere;
   }
 }
 

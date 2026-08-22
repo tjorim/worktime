@@ -20,8 +20,8 @@ interface CurrentStatusProps {
   myTeam: number | null;
   onChangeTeam: () => void;
   onChangeSchedule?: () => void;
-  /** "compact" renders a single-line summary strip, expandable to the full card. Default "full". */
-  variant?: "full" | "compact";
+  /** "compact" renders a summary strip; "responsive" does so only below Bootstrap's md breakpoint. */
+  variant?: "full" | "compact" | "responsive";
 }
 
 /**
@@ -44,15 +44,28 @@ export function CurrentStatus({
   const liveTime = useLiveTime({ precision: "minute" });
   const today = liveTime;
   const locale = getLocale();
+  const [isMobile, setIsMobile] = useState(
+    () => variant === "responsive" && window.matchMedia("(max-width: 767.98px)").matches,
+  );
+
+  useEffect(() => {
+    if (variant !== "responsive") return;
+    const query = window.matchMedia("(max-width: 767.98px)");
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, [variant]);
 
   // A user-initiated expand always wins over the tab-driven default, but resets
-  // when the default itself changes (e.g. switching to a tab that wants "compact").
+  // when the default itself changes (e.g. switching tabs or crossing the breakpoint).
   const [expanded, setExpanded] = useState(false);
+  const compactByDefault = variant === "compact" || (variant === "responsive" && isMobile);
   useEffect(() => {
     setExpanded(false);
-  }, [variant]);
-  const isCompact = variant === "compact" && !expanded;
-  const canCollapse = variant === "compact" && expanded;
+  }, [compactByDefault]);
+  const isCompact = compactByDefault && !expanded;
+  const canCollapse = compactByDefault && expanded;
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);

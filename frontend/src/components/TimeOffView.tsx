@@ -59,6 +59,7 @@ import { logger } from "@/utils/logger";
  */
 interface TimeOffViewProps {
   isActive?: boolean;
+  addEventRequest?: number;
 }
 
 /**
@@ -71,7 +72,7 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
   return typeof value === "string" && TIMEOFF_VIEWS.includes(value as any);
 };
 
-export function TimeOffView({ isActive = false }: TimeOffViewProps) {
+export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffViewProps) {
   const { options: hdayHelperOptions, helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
@@ -195,6 +196,13 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     setModalMode("add");
     setShowEventModal(true);
   }, [resetForm]);
+  const handledAddEventRequest = useRef(0);
+
+  useEffect(() => {
+    if (addEventRequest === 0 || addEventRequest === handledAddEventRequest.current) return;
+    handledAddEventRequest.current = addEventRequest;
+    handleOpenAddModal();
+  }, [addEventRequest, handleOpenAddModal]);
 
   const loadEntryIntoForm = useCallback(
     (entryId: string, mode: "view" | "edit") => {
@@ -479,7 +487,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   return (
     <div className="time-off-view py-3 d-flex flex-column gap-3">
       <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
-        <ButtonGroup aria-label={m.timeoff_toggle_view_aria()}>
+        <ButtonGroup className="view-toggle-group" aria-label={m.timeoff_toggle_view_aria()}>
           <Button
             variant={viewMode === "table" ? "primary" : "outline-primary"}
             size="sm"

@@ -20,6 +20,7 @@ import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
+import { TeamSelector } from "./shared/TeamSelector";
 import { ErrorBoundary } from "./ErrorBoundary";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -632,27 +633,23 @@ export function TransferView({
               <Col md={4}>
                 {comparisonScheduleSelector}
 
-                {otherScheduleTeamCount > 1 && (
-                  <>
-                    <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
+                {otherScheduleTeamCount > 1 && effectiveOtherScheduleType && (
+                  <TeamSelector
+                    inputId={otherTeamSelectId}
+                    scheduleType={effectiveOtherScheduleType}
+                    selectedTeam={otherTeam}
+                    availableTeams={availableOtherTeams}
+                    onChange={setOtherTeam}
+                    ariaLabel={m.transfer_select_team_aria()}
+                    label={
+                      <>
                       <i className="bi bi-people me-1" aria-hidden="true"></i>
                       {sameSchedule
                         ? m.transfer_view_with_team_label()
                         : m.transfer_view_overlaps_with_team_label()}
-                    </Form.Label>
-                    <Form.Select
-                      id={otherTeamSelectId}
-                      value={otherTeam}
-                      onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
-                      aria-label={m.transfer_select_team_aria()}
-                    >
-                      {availableOtherTeams.map((teamNumber) => (
-                        <option key={teamNumber} value={teamNumber}>
-                          {m.team_label({ team: String(teamNumber) })}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </>
+                      </>
+                    }
+                  />
                 )}
 
                 {showTransfers && transferStats && (

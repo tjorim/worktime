@@ -506,6 +506,29 @@ describe("CurrentStatus Component", () => {
   });
 
   describe("Compact variant", () => {
+    it("starts compact for the responsive variant on mobile", () => {
+      vi.spyOn(window, "matchMedia").mockImplementation(
+        (query) =>
+          ({
+            matches: query === "(max-width: 767.98px)",
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+          }) as MediaQueryList,
+      );
+
+      renderWithProviders(
+        <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} variant="responsive" />,
+      );
+
+      expect(screen.queryByText("Current Status")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /expand status/i })).toBeInTheDocument();
+    });
+
     it("renders a single-line summary without the full header, timeline, or Up Next tile", () => {
       renderWithProviders(
         <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} variant="compact" />,

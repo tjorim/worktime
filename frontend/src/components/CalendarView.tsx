@@ -109,11 +109,7 @@ export function CalendarView({
     periods: longWeekendPeriods,
     loading: longWeekendLoading,
     error: longWeekendError,
-  } = useLongWeekend(
-    currentYear,
-    bridgeDays,
-    isNineToFive,
-  );
+  } = useLongWeekend(currentYear, bridgeDays, isNineToFive);
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
@@ -169,14 +165,17 @@ export function CalendarView({
     initialFormState,
   );
 
-  const handleAddEventForDate = (date: Dayjs) => {
-    if (!timeOffEnabled) return;
-    resetForm();
-    setEditEntryId(null);
-    setModalMode("add");
-    setInitialFormState(initFormForDate(date));
-    setShowEventModal(true);
-  };
+  const handleAddEventForDate = useCallback(
+    (date: Dayjs) => {
+      if (!timeOffEnabled) return;
+      resetForm();
+      setEditEntryId(null);
+      setModalMode("add");
+      setInitialFormState(initFormForDate(date));
+      setShowEventModal(true);
+    },
+    [initFormForDate, resetForm, timeOffEnabled],
+  );
 
   const loadEntryIntoForm = (entryId: string, mode: "view" | "edit") => {
     const entry = entries.find((currentEntry) => currentEntry.id === entryId);

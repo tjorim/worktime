@@ -998,11 +998,9 @@ describe("SettingsPage Schedule & Team Section", () => {
     await user.click(screen.getByText("2-shift"));
 
     expect(screen.getByText(m.select_team_label())).toBeInTheDocument();
-    const teamOneButton = screen.getByRole("button", {
-      name: m.wizard_team_btn_aria({ team: "1" }),
-    });
-    await user.click(teamOneButton);
-    expect(teamOneButton).toHaveAttribute("aria-pressed", "true");
+    const teamSelector = screen.getByRole("combobox", { name: m.select_team_label() });
+    await user.selectOptions(teamSelector, "1");
+    expect(screen.getByText("Team 1")).toBeInTheDocument();
   });
 });
 

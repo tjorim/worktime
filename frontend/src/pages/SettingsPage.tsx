@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useSettings, type NotificationLeadTimeMinutes } from "@/contexts/SettingsContext";
@@ -75,24 +76,47 @@ export function SettingsPage() {
   return (
     <main id="main-content" className="py-4">
       <div className="mx-auto" style={{ maxWidth: "1080px" }}>
-        <div className="rounded-4 border bg-body-tertiary px-4 py-4 px-md-5 mb-4">
-          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div className="rounded-4 border bg-body-tertiary px-3 py-3 px-md-5 py-md-4 mb-3 mb-md-4">
+          <div>
             <div>
-              <div className="text-uppercase small text-muted fw-semibold mb-2">
+              <div className="text-uppercase small text-muted fw-semibold mb-1 mb-md-2">
                 {m.settings_title()}
               </div>
-              <h1 className="h3 mb-2">{sectionMeta.label()}</h1>
-              <p className="text-muted mb-0">{m.settings_page_description()}</p>
+              <h1 className="h3 mb-0 mb-md-2">{sectionMeta.label()}</h1>
+              <p className="text-muted mb-0 d-none d-md-block">{m.settings_page_description()}</p>
             </div>
-            <Button variant="outline-secondary" onClick={() => void navigate({ to: "/" })}>
-              <i className="bi bi-arrow-left me-2"></i>
-              {m.settings_page_back_btn()}
-            </Button>
           </div>
         </div>
 
-        <div className="row g-4 align-items-start">
-          <div className="col-12 col-lg-4 col-xl-3">
+        <div className="row gx-0 gx-lg-4 gy-3 gy-lg-4 align-items-start">
+          <div className="col-12 d-lg-none">
+            <div className="rounded-4 border bg-body shadow-sm p-3">
+              <Form.Label
+                htmlFor="settings-section-select"
+                className="small text-uppercase text-muted fw-semibold"
+              >
+                {m.settings_page_nav_title()}
+              </Form.Label>
+              <Form.Select
+                id="settings-section-select"
+                value={activeSection}
+                onChange={(event) =>
+                  void navigate({
+                    to: "/settings",
+                    search: { section: event.target.value as SettingsSection },
+                  })
+                }
+              >
+                {visibleSections.map((section) => (
+                  <option key={section.key} value={section.key}>
+                    {section.label()}
+                  </option>
+                ))}
+              </Form.Select>
+            </div>
+          </div>
+
+          <div className="d-none d-lg-block col-lg-4 col-xl-3">
             <div className="rounded-4 border bg-body shadow-sm overflow-hidden">
               <div className="px-3 py-3 border-bottom bg-body-tertiary">
                 <div className="small text-uppercase text-muted fw-semibold">

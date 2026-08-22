@@ -152,9 +152,9 @@ export function TimeTrackingDailyView({
     ? m.tt_reason_stopwatch_running()
     : nowFallsInsideTask
       ? m.tt_error_time_overlap()
-    : !selectedLabel.trim()
-      ? m.tt_reason_select_label()
-      : undefined;
+      : !selectedLabel.trim()
+        ? m.tt_reason_select_label()
+        : undefined;
   const addDisabledReason = !text.trim()
     ? m.tt_reason_enter_task_name()
     : !start.trim() || !stop.trim()
@@ -301,8 +301,7 @@ export function TimeTrackingDailyView({
         });
         if (
           plannedTask.includesBreak &&
-          dayjs(plannedTask.stopTime).diff(dayjs(stopDateTime), "minute") <
-            BREAK_DURATION_MINUTES
+          dayjs(plannedTask.stopTime).diff(dayjs(stopDateTime), "minute") < BREAK_DURATION_MINUTES
         ) {
           onToggleBreak(plannedTask.id, false);
         }

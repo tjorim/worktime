@@ -99,18 +99,18 @@ describe("TodayView", () => {
       renderWithProviders(<TodayView {...defaultProps} />);
 
       expect(screen.getByText("Today")).toBeInTheDocument();
-      expect(screen.getByText("Team 1")).toBeInTheDocument();
-      expect(screen.getByText("Team 2")).toBeInTheDocument();
-      expect(screen.getByText("Team 3")).toBeInTheDocument();
+      expect(screen.getAllByText("Team 1")).not.toHaveLength(0);
+      expect(screen.getAllByText("Team 2")).not.toHaveLength(0);
+      expect(screen.getAllByText("Team 3")).not.toHaveLength(0);
     });
 
     it("displays shift information for working teams", () => {
       renderWithProviders(<TodayView {...defaultProps} />);
 
-      expect(screen.getByText(/Morning/)).toBeInTheDocument();
-      expect(screen.getByText(/Evening/)).toBeInTheDocument();
-      expect(screen.getByText(/Off/)).toBeInTheDocument();
-      expect(screen.getByText(/Not working today/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Morning/)).not.toHaveLength(0);
+      expect(screen.getAllByText(/Evening/)).not.toHaveLength(0);
+      expect(screen.getAllByText(/Off/)).not.toHaveLength(0);
+      expect(screen.getAllByText(/Not working today/)).not.toHaveLength(0);
     });
   });
 
@@ -119,7 +119,7 @@ describe("TodayView", () => {
       renderWithProviders(<TodayView {...defaultProps} myTeam={1} />);
 
       // The my team should have my-team class on the div element
-      const team1Element = screen.getByText("Team 1").closest(".my-team");
+      const team1Element = screen.getAllByText("Team 1")[0]?.closest(".my-team");
       expect(team1Element).toBeInTheDocument();
     });
 
@@ -127,7 +127,22 @@ describe("TodayView", () => {
       renderWithProviders(<TodayView {...defaultProps} myTeam={null} />);
 
       // Should render without errors
-      expect(screen.getByText("Team 1")).toBeInTheDocument();
+      expect(screen.getAllByText("Team 1")).not.toHaveLength(0);
+    });
+  });
+
+  describe("Mobile team carousel", () => {
+    it("keeps swipe navigation separate from the desktop team grid", async () => {
+      const user = userEvent.setup();
+      const { container } = renderWithProviders(<TodayView {...defaultProps} />);
+
+      expect(container.querySelector(".team-mobile-carousel")).toBeInTheDocument();
+      expect(container.querySelector(".d-none.d-sm-flex")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 of 3")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Show next team" }));
+
+      expect(screen.getByText("Team 2 of 3")).toBeInTheDocument();
     });
   });
 
@@ -182,15 +197,15 @@ describe("TodayView", () => {
       renderWithProviders(<TodayView {...defaultProps} />);
 
       // Should show shift names
-      expect(screen.getByText(/Morning/)).toBeInTheDocument();
-      expect(screen.getByText(/Evening/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Morning/)).not.toHaveLength(0);
+      expect(screen.getAllByText(/Evening/)).not.toHaveLength(0);
     });
 
     it("shows off status for non-working teams", () => {
       renderWithProviders(<TodayView {...defaultProps} />);
 
-      expect(screen.getByText(/🏠 Off/)).toBeInTheDocument();
-      expect(screen.getByText(/Not working today/)).toBeInTheDocument();
+      expect(screen.getAllByText(/🏠 Off/)).not.toHaveLength(0);
+      expect(screen.getAllByText(/Not working today/)).not.toHaveLength(0);
     });
 
     // Note: Active badge functionality exists but requires complex time mocking

@@ -229,15 +229,15 @@ describe("TransferView", () => {
     it("displays team comparison dropdown with available teams", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const otherTeamSelect = screen.getByLabelText(/View transfers with Team/i);
+      const otherTeamSelect = screen.getByRole("combobox", {
+        name: "Select team to view transfers with",
+      });
       expect(otherTeamSelect).toBeInTheDocument();
-      expect(otherTeamSelect).toHaveValue("2"); // From mock hook
+      expect(screen.getByText("Team 2")).toBeInTheDocument(); // From mock hook
 
-      // Check that available teams are rendered
-      expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Team 3/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Team 4/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Team 5/).length).toBeGreaterThan(0);
+      expect(screen.getByRole("option", { name: "Team 3" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Team 4" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Team 5" })).toBeInTheDocument();
     });
 
     it("calls setOtherTeam when user selects different team", async () => {
@@ -250,7 +250,7 @@ describe("TransferView", () => {
       const user = userEvent.setup();
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const otherTeamSelect = screen.getByLabelText("View transfers with Team:");
+      const otherTeamSelect = screen.getByRole("combobox", { name: "Select team to view transfers with" });
       await user.selectOptions(otherTeamSelect, "3");
 
       expect(mockSetOtherTeam).toHaveBeenCalledWith(3);
