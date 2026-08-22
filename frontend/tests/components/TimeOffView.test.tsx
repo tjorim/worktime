@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -10,6 +10,7 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { HDAY_HELPER_SETTINGS_STORAGE_KEY } from "@/constants/storageKeys";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
+import * as m from "@/paraglide/messages.js";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
@@ -26,6 +27,7 @@ describe("TimeOffView", () => {
   beforeEach(() => {
     localStorage.clear();
   });
+  afterEach(() => vi.restoreAllMocks());
 
   describe("Empty State", () => {
     it("hides the Team view until an .hday helper is configured", () => {
@@ -72,6 +74,44 @@ describe("TimeOffView", () => {
       );
 
       await waitFor(() => expect(healthCheck).toHaveBeenCalled());
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+    });
+
+    it("leaves the Team view when a later helper health check fails", async () => {
+      localStorage.setItem(
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      let healthy = true;
+      const healthCheck = vi.fn(() =>
+        healthy ? HttpResponse.json({ status: "ok" }) : new HttpResponse(null, { status: 503 }),
+      );
+      const intervalCallbacks: TimerHandler[] = [];
+      vi.spyOn(window, "setInterval").mockImplementation((handler) => {
+        intervalCallbacks.push(handler);
+        return intervalCallbacks.length;
+      });
+      server.use(http.get("http://localhost:8080/health", healthCheck));
+      const user = userEvent.setup();
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Team" }));
+      expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
+
+      healthy = false;
+      intervalCallbacks.forEach((callback) => {
+        if (typeof callback === "function") callback();
+      });
+
+      await waitFor(() => expect(healthCheck).toHaveBeenCalledTimes(2));
+      await waitFor(() =>
+        expect(screen.queryByText(m.team_viewer_title())).not.toBeInTheDocument(),
+      );
       expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
     });
 

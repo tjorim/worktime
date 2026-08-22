@@ -83,6 +83,15 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
   );
 
+  // Do not leave a previously loaded Team schedule visible after the local
+  // helper becomes unhealthy. The Team button is health-gated, so its view
+  // must follow the same rule.
+  useEffect(() => {
+    if (viewMode === "team" && helperConnectionStatus !== "connected") {
+      setViewMode(DEFAULT_TIME_OFF_VIEW);
+    }
+  }, [helperConnectionStatus, viewMode]);
+
   // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
   // so persisting it back on mount would be a no-op write that still bumps the shared
   // preferences blob's _updatedAt — making local state look newer than it really is
