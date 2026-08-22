@@ -72,7 +72,7 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
-  const { helperConnectionStatus } = useHdayHelper();
+  const { options: hdayHelperOptions, helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
@@ -83,6 +83,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
   );
   const previousHelperStatusRef = useRef(helperConnectionStatus);
+  const hasCompletedInitialHelperProbeRef = useRef(!hdayHelperOptions.hdayHelperUrl);
 
   // Do not leave a previously loaded Team schedule visible after the local
   // helper becomes unhealthy. The Team button is health-gated, so its view
@@ -90,13 +91,22 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   useEffect(() => {
     const wasConnected = previousHelperStatusRef.current === "connected";
     previousHelperStatusRef.current = helperConnectionStatus;
-    if (viewMode === "team" && helperConnectionStatus !== "connected") {
+    const initialProbeFailed =
+      !hasCompletedInitialHelperProbeRef.current && helperConnectionStatus === "error";
+    if (helperConnectionStatus === "connected" || helperConnectionStatus === "error") {
+      hasCompletedInitialHelperProbeRef.current = true;
+    }
+    const helperLossConfirmed = wasConnected && helperConnectionStatus !== "connected";
+    if (
+      viewMode === "team" &&
+      (!hdayHelperOptions.hdayHelperUrl || initialProbeFailed || helperLossConfirmed)
+    ) {
       setViewMode(DEFAULT_TIME_OFF_VIEW);
       if (wasConnected) {
         toast.showWarning(m.team_helper_unavailable_toast(), "bi-plug");
       }
     }
-  }, [helperConnectionStatus, toast, viewMode]);
+  }, [hdayHelperOptions.hdayHelperUrl, helperConnectionStatus, toast, viewMode]);
 
   // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
   // so persisting it back on mount would be a no-op write that still bumps the shared
@@ -108,7 +118,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       isInitialTimeOffViewRender.current = false;
       return;
     }
-    if (isValidTimeOffView(viewMode)) {
+    if (hasCompletedInitialHelperProbeRef.current && isValidTimeOffView(viewMode)) {
       updateLastTimeOffView(viewMode);
     }
   }, [updateLastTimeOffView, viewMode]);

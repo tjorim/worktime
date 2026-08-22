@@ -26,7 +26,13 @@ function ProbeRaceHarness() {
       <button type="button" onClick={() => void testHdayHelperConnection("http://helper-a:8080")}>
         A
       </button>
-      <button type="button" onClick={() => updateHdayHelperUrl("http://helper-b:8080")}>
+      <button
+        type="button"
+        onClick={() => {
+          updateHdayHelperUrl("http://helper-b:8080");
+          void testHdayHelperConnection("http://helper-b:8080");
+        }}
+      >
         B
       </button>
     </>

@@ -11,7 +11,7 @@ import {
   LAST_TEAM_ID_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
-import { TestProviders } from "@/../tests/utils/testProviders";
+import { TestProviders } from "@tests/utils/testProviders";
 
 const HELPER_URL = "http://localhost:8080";
 const OTHER_HELPER_URL = "http://localhost:9090";

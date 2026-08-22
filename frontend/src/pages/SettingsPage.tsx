@@ -544,13 +544,9 @@ export function SettingsContent({
       <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
         <div>{sectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
-          <button
-            type="button"
-            className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
-            aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
-          >
+          <span className="text-muted d-block">
             {m.footer_version({ version: CONFIG.VERSION })}
-          </button>
+          </span>
           <small className="text-muted">{m.footer_built_by()}</small>
         </div>
       </section>

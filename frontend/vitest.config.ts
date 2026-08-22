@@ -22,6 +22,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      "@tests": resolve(__dirname, "tests"),
       "@": resolve(__dirname, "src"),
       "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
       "react-select": fileURLToPath(new URL("tests/__mocks__/react-select.tsx", import.meta.url)),

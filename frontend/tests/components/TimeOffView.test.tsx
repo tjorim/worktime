@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
@@ -7,7 +7,7 @@ import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { HDAY_HELPER_SETTINGS_STORAGE_KEY } from "@/constants/storageKeys";
+import { HDAY_HELPER_SETTINGS_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";
@@ -57,6 +57,36 @@ describe("TimeOffView", () => {
 
       expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
       expect(await screen.findByRole("button", { name: "Team" })).toBeInTheDocument();
+    });
+
+    it("preserves a saved Team view while the initial helper probe is pending", async () => {
+      localStorage.setItem(
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ lastUsed: { timeOffView: "team" } }),
+      );
+      let resolveHealth!: (response: Response) => void;
+      const healthResponse = new Promise<Response>((resolve) => {
+        resolveHealth = resolve;
+      });
+      server.use(http.get("http://localhost:8080/health", () => healthResponse));
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
+
+      await act(async () => {
+        resolveHealth(HttpResponse.json({ status: "ok" }));
+      });
+      expect(await screen.findByRole("button", { name: "Team" })).toHaveClass("btn-primary");
+      expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
     });
 
     it("keeps the Team view hidden when the configured helper is unhealthy", async () => {
