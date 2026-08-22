@@ -27,23 +27,40 @@ export function SettingsHdayHelper() {
   const [urlDraft, setUrlDraft] = useState(options.hdayHelperUrl ?? "");
   const [isTesting, setIsTesting] = useState(false);
   const [testSucceeded, setTestSucceeded] = useState<boolean | null>(null);
+  const [urlIsInvalid, setUrlIsInvalid] = useState(false);
 
   useEffect(() => setUrlDraft(options.hdayHelperUrl ?? ""), [options.hdayHelperUrl]);
 
   const normalizedUrl = urlDraft.trim().replace(/\/+$/, "");
   const mixedContentRisk = normalizedUrl !== "" && isHdayHelperMixedContentBlocked(normalizedUrl);
 
+  const validateUrl = () => {
+    if (!normalizedUrl) return null;
+    try {
+      const parsed = new URL(normalizedUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+      setUrlIsInvalid(false);
+      return parsed.href.replace(/\/+$/, "");
+    } catch {
+      setUrlIsInvalid(true);
+      return undefined;
+    }
+  };
+
   const handleSave = () => {
-    updateHdayHelperUrl(normalizedUrl || null);
+    const validUrl = validateUrl();
+    if (validUrl === undefined) return;
+    updateHdayHelperUrl(validUrl);
     setTestSucceeded(null);
   };
 
   const handleTest = async () => {
-    if (!normalizedUrl) return;
+    const validUrl = validateUrl();
+    if (!validUrl) return;
     setIsTesting(true);
     setTestSucceeded(null);
     try {
-      setTestSucceeded(await testHdayHelperConnection(normalizedUrl));
+      setTestSucceeded(await testHdayHelperConnection(validUrl));
     } finally {
       setIsTesting(false);
     }
@@ -70,7 +87,9 @@ export function SettingsHdayHelper() {
             onChange={(event) => {
               setUrlDraft(event.target.value);
               setTestSucceeded(null);
+              setUrlIsInvalid(false);
             }}
+            isInvalid={urlIsInvalid}
             size="sm"
           />
           <Button
@@ -91,6 +110,11 @@ export function SettingsHdayHelper() {
             {m.hday_helper_test()}
           </Button>
         </div>
+        {urlIsInvalid && (
+          <Form.Control.Feedback type="invalid" className="d-block">
+            {m.hday_helper_url_invalid()}
+          </Form.Control.Feedback>
+        )}
         <Form.Text className="text-muted">{m.hday_helper_url_help()}</Form.Text>
       </Form.Group>
 

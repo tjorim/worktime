@@ -128,6 +128,7 @@ export function TeamScheduleView() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    setIsLoading(false);
     setTeamData(null);
     setError(null);
     setHasAttemptedFetch(false);

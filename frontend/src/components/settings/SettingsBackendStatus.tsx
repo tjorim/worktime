@@ -6,17 +6,25 @@ import Spinner from "react-bootstrap/Spinner";
 import * as m from "@/paraglide/messages.js";
 
 type BackendStatus = "checking" | "available" | "unavailable";
+const BACKEND_HEALTH_TIMEOUT_MS = 5000;
 
 export function SettingsBackendStatus() {
   const [status, setStatus] = useState<BackendStatus>("checking");
 
   const checkHealth = useCallback(async () => {
     setStatus("checking");
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), BACKEND_HEALTH_TIMEOUT_MS);
     try {
-      const response = await fetch("/api/health", { headers: { Accept: "application/json" } });
+      const response = await fetch("/api/health", {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
       setStatus(response.ok ? "available" : "unavailable");
     } catch {
       setStatus("unavailable");
+    } finally {
+      clearTimeout(timeoutId);
     }
   }, []);
 

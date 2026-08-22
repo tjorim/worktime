@@ -1198,6 +1198,7 @@
   "hday_helper_heading": "Verouderde teambestanden (.hday-helper)",
   "hday_helper_desc": "De optionele lokale proxy van Worktime voor teambestanden in de verouderde verlofplanner. Deze draait op uw apparaat en leest de netwerkshare van de planner in plaats van de gehoste Worktime-service te gebruiken.",
   "hday_helper_url_label": "Helper-URL",
+  "hday_helper_url_invalid": "Voer een absolute HTTP- of HTTPS-URL in.",
   "hday_helper_url_help": "Basis-URL van de actieve worktime-hday-helper (bijv. http://localhost:8080). De CORS_ORIGINS-instelling ervan moet de origin van deze app bevatten.",
   "hday_helper_test": "Testen",
   "hday_helper_connected": "✓ Verbonden met .hday-helper",

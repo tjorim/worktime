@@ -1,12 +1,17 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { SettingsBackendStatus } from "@/components/settings/SettingsBackendStatus";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";
 
 describe("SettingsBackendStatus", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
   it("shows when the public backend is available", async () => {
     server.use(http.get("*/api/health", () => HttpResponse.json({ status: "ok" })));
     render(<SettingsBackendStatus />);
@@ -27,5 +32,25 @@ describe("SettingsBackendStatus", () => {
     await user.click(screen.getByRole("button", { name: m.backend_status_refresh() }));
     expect(await screen.findByText(m.backend_status_available())).toBeInTheDocument();
     expect(healthCheck).toHaveBeenCalledTimes(2);
+  });
+
+  it("marks a health check unavailable after the timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError")),
+            );
+          }),
+      ),
+    );
+
+    render(<SettingsBackendStatus />);
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+
+    expect(screen.getByText(m.backend_status_unavailable())).toBeInTheDocument();
   });
 });

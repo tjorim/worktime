@@ -5,9 +5,10 @@
  * outboxCount) to all descendant components after the first-sync flow has
  * completed.
  *
- * Rendering `<OngoingSyncProvider>` inside `<AuthProvider>` and
- * `<ToastProvider>` is required because it calls `useAuth()` and
- * `useApiClient()`. Sync does not depend on the local .hday helper.
+ * Rendering `<OngoingSyncProvider>` inside `<AuthProvider>`, `<ToastProvider>`,
+ * and `<SettingsProvider>` is required because it calls `useAuth()`,
+ * `useApiClient()`, and `useSettings()`. Sync does not depend on the local
+ * .hday helper.
  *
  * Incremental-pull data is applied directly to TanStack DB collections via
  * `applyIncrementalPullToCollections` — no EventStore dependency required.
@@ -93,8 +94,8 @@ interface OngoingSyncProviderProps {
  * Provider that wires `useOngoingSync` with the auth and event-store contexts
  * and makes sync operations available to the component tree.
  *
- * Must be rendered inside `<AuthProvider>`, `<ToastProvider>`, and
- * `<EventStoreProvider>`.
+ * Must be rendered inside `<AuthProvider>`, `<ToastProvider>`,
+ * `<SettingsProvider>`, and `<EventStoreProvider>`.
  */
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
   const { isAuthenticated, userId, getAccessToken } = useAuth();

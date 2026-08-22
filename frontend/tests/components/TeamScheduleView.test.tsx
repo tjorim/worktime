@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
@@ -11,7 +11,7 @@ import {
   LAST_TEAM_ID_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
-import { TestProviders } from "../utils/testProviders";
+import { TestProviders } from "@/../tests/utils/testProviders";
 
 const HELPER_URL = "http://localhost:8080";
 const OTHER_HELPER_URL = "http://localhost:9090";
@@ -121,5 +121,32 @@ describe("TeamScheduleView", () => {
 
     expect(await screen.findByText("Team from helper B")).toBeInTheDocument();
     expect(screen.queryByText("Team from helper A")).not.toBeInTheDocument();
+  });
+
+  it("refetches from a new helper while the previous helper is still loading", async () => {
+    seedHelperUrl(HELPER_URL);
+    window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
+    server.use(
+      http.get(`${HELPER_URL}/team/:teamId/hday`, async () => {
+        await delay("infinite");
+        return HttpResponse.json(teamHdayPayload("eng", "Never shown"));
+      }),
+      http.get(`${OTHER_HELPER_URL}/team/:teamId/hday`, ({ params }) =>
+        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper B")),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <HelperUrlSwitcher url={OTHER_HELPER_URL} />
+        <TeamScheduleView />
+      </TestProviders>,
+    );
+
+    expect(await screen.findByText(m.loading())).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "switch helper" }));
+
+    expect(await screen.findByText("Team from helper B")).toBeInTheDocument();
   });
 });

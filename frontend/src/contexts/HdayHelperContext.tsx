@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   HDAY_HELPER_SETTINGS_STORAGE_KEY,
@@ -67,6 +75,8 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
 
   const [helperConnectionStatus, setHelperConnectionStatus] =
     useState<HdayHelperStatus>("disconnected");
+  const probeIdRef = useRef(0);
+  const probeControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (initialOptions.hdayHelperUrl && !localStorage.getItem(HDAY_HELPER_SETTINGS_STORAGE_KEY)) {
@@ -77,6 +87,9 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
 
   const updateHdayHelperUrl = useCallback(
     (url: string | null) => {
+      probeIdRef.current += 1;
+      probeControllerRef.current?.abort();
+      probeControllerRef.current = null;
       setOptions((prev) => ({ ...prev, hdayHelperUrl: url || null }));
       setHelperConnectionStatus("disconnected");
     },
@@ -86,6 +99,8 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
   const testHdayHelperConnection = useCallback(
     async (url: string): Promise<boolean> => {
       const normalizedUrl = url.trim().replace(/\/+$/, "");
+      const probeId = ++probeIdRef.current;
+      probeControllerRef.current?.abort();
       if (!normalizedUrl) {
         setHelperConnectionStatus("disconnected");
         return false;
@@ -93,6 +108,7 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
 
       setHelperConnectionStatus((current) => (current === "connected" ? current : "connecting"));
       const controller = new AbortController();
+      probeControllerRef.current = controller;
       const timeoutId = window.setTimeout(() => controller.abort(), HELPER_CONNECTION_TIMEOUT_MS);
       try {
         const response = await fetch(`${normalizedUrl}/health`, {
@@ -100,6 +116,7 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
           signal: controller.signal,
           headers: { Accept: "application/json" },
         });
+        if (probeId !== probeIdRef.current) return false;
         if (!response.ok) {
           setHelperConnectionStatus("error");
           return false;
@@ -110,10 +127,12 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
         setHelperConnectionStatus("connected");
         return true;
       } catch {
+        if (probeId !== probeIdRef.current) return false;
         setHelperConnectionStatus("error");
         return false;
       } finally {
         clearTimeout(timeoutId);
+        if (probeId === probeIdRef.current) probeControllerRef.current = null;
       }
     },
     [setOptions],
@@ -134,7 +153,12 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
       () => void testHdayHelperConnection(helperUrl),
       HELPER_HEALTH_POLL_MS,
     );
-    return () => clearInterval(intervalId);
+    return () => {
+      clearInterval(intervalId);
+      probeIdRef.current += 1;
+      probeControllerRef.current?.abort();
+      probeControllerRef.current = null;
+    };
   }, [normalizedOptions.hdayHelperUrl, testHdayHelperConnection]);
 
   const contextValue = useMemo(
