@@ -1,6 +1,6 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -64,7 +64,16 @@ export function TimeTrackingView({
   const [selectedDailyDate, setSelectedDailyDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [selectedWeeklyDate, setSelectedWeeklyDate] = useState(dayjs().format("YYYY-MM-DD"));
 
+  // Skip the initial run: viewMode is already initialized from lastUsed.timeTrackingView,
+  // so persisting it back on mount would be a no-op write that still bumps the shared
+  // preferences blob's _updatedAt — making local state look newer than it really is
+  // and winning last-write-wins reconciliation against genuinely newer server data.
+  const isInitialTimeTrackingViewRender = useRef(true);
   useEffect(() => {
+    if (isInitialTimeTrackingViewRender.current) {
+      isInitialTimeTrackingViewRender.current = false;
+      return;
+    }
     updateLastTimeTrackingView(viewMode);
   }, [updateLastTimeTrackingView, viewMode]);
 

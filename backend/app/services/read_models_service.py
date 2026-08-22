@@ -42,6 +42,16 @@ from app.utils.datetime import as_utc
 
 @dataclass(frozen=True)
 class _ShiftDefinition:
+    """Backend copy of the frontend's ShiftTimeDefinition (rosters.ts), minus
+    the flex-time fields (flexStartEarliest/flexStartLatest/presenceHours).
+
+    Those are a UI affordance for the Current Status card's finish-time
+    countdown, not something Pebble/MCP read-only clients act on — so
+    ReadModelShift only ever carries the flat start/end window. If a
+    consumer needs the flex window, add the fields here and to
+    ReadModelShift/_to_shift_model rather than approximating it from start/end.
+    """
+
     name: str
     start: float | None
     end: float | None
@@ -69,6 +79,13 @@ class _ResolvedShift:
 
 _OFF_SHIFT = _ShiftDefinition(name="Off", start=None, end=None, display_code="O")
 
+# Hand-copied from frontend/src/data/rosters.ts (the source of truth per
+# AGENTS.md) because the frontend and backend build/deploy independently and
+# neither serves its roster config to the other at runtime (see #1107 for why
+# that tradeoff was made). tests/test_roster_golden_fixture.py cross-checks
+# this dict, and the algorithms below it, against a fixture generated from
+# rosters.ts/shiftCalculations.ts — after editing a schedule here, also edit
+# rosters.ts and run "pnpm run generate-roster-fixture" in frontend/.
 _SCHEDULES: dict[ScheduleType, _ScheduleConfig] = {
     "9-5": _ScheduleConfig(
         team_count=1,

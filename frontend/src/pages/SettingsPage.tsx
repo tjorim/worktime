@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
-import { useVersionClickEasterEgg } from "@/pages/settings/hooks/useVersionClickEasterEgg";
 import Button from "react-bootstrap/Button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
@@ -12,13 +11,11 @@ import { useEventStore } from "@/contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { logger } from "@/utils/logger";
 import { BackupDialog } from "@/components/BackupDialog";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { CONFIG } from "@/utils/config";
 import { hasMultipleTeams } from "@/utils/scheduleUtils";
 import { type ScheduleOption } from "@/data/rosters";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
-import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
@@ -64,15 +61,6 @@ export function SettingsPage() {
   const { openAbout, openShortcuts } = useAppShellContext();
   const activeSection = search.section ?? "general";
   const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    // validateSearch remaps the deprecated ?section=sync value to "account" internally,
-    // but that doesn't rewrite the address bar — do that explicitly so copied
-    // links/bookmarks point at the canonical URL going forward.
-    if (new URLSearchParams(window.location.search).get("section") === "sync") {
-      void navigate({ to: "/settings", search: { section: "account" }, replace: true });
-    }
-  }, [navigate]);
 
   const visibleSections = useMemo(
     () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
@@ -183,7 +171,6 @@ export function SettingsContent({
   onAdminStatusChange?: (isAdmin: boolean) => void;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
-  const [showDevOptions, setShowDevOptions] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
@@ -191,7 +178,6 @@ export function SettingsContent({
   const { subscribeToPush, unsubscribeFromPush } = usePushSubscription();
   const { canInstall, isInstalled, promptInstall } = usePwaInstall();
   const { clearAll: clearTimeOffEvents } = useEventStore();
-  const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
   const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
   const {
@@ -301,15 +287,12 @@ export function SettingsContent({
     resetSettings,
     clearTimeOffEvents,
     onHide,
+    isAuthenticated,
+    accountId: userId,
+    fetchFn,
     showSuccessToast: toast.showSuccess,
     showWarningToast: toast.showWarning,
   });
-  const { handleVersionClick, handleVersionKeyDown } = useVersionClickEasterEgg({
-    isDevMode,
-    toggleDevMode,
-    showInfoToast: toast.showInfo,
-  });
-
   const handleRestoreFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -536,7 +519,6 @@ export function SettingsContent({
     timeTracking: () => <SettingsTimeTrackingSectionContainer />,
     about: () => (
       <SettingsAboutSection
-        isDevMode={isDevMode}
         onShareApp={handleShareApp}
         canInstallApp={canInstall}
         isAppInstalled={isInstalled}
@@ -544,7 +526,6 @@ export function SettingsContent({
         onShowChangelog={() => setShowChangelog(true)}
         onShowAboutHelp={() => onShowAbout?.()}
         onShowShortcuts={() => onShowShortcuts?.()}
-        onShowDevOptions={() => setShowDevOptions(true)}
       />
     ),
     data: () => (
@@ -563,25 +544,15 @@ export function SettingsContent({
       <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
         <div>{sectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
-          <button
-            type="button"
-            className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
-            onClick={handleVersionClick}
-            onKeyDown={handleVersionKeyDown}
-            style={{ cursor: "pointer", userSelect: "none" }}
-            aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
-          >
+          <span className="text-muted d-block">
             {m.footer_version({ version: CONFIG.VERSION })}
-          </button>
+          </span>
           <small className="text-muted">{m.footer_built_by()}</small>
         </div>
       </section>
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={() => setShowChangelog(false)} />
-
-      {/* Developer Options Modal */}
-      <DevOptionsPanel show={showDevOptions} onHide={() => setShowDevOptions(false)} />
 
       {/* Backup Dialog */}
       <BackupDialog show={showBackupDialog} onHide={() => setShowBackupDialog(false)} />

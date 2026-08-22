@@ -89,7 +89,7 @@ export function WelcomeWizard({
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
   const { updateLabels } = useTimeTrackingStorage();
-  const { isAuthenticated, displayName, triggerSignup } = useAuth();
+  const { isAuthenticated, displayName, triggerSignup, triggerLogin } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
@@ -268,14 +268,11 @@ export function WelcomeWizard({
             style={{ height: "4px" }}
             className="mb-2"
           />
-          <div className="d-flex justify-content-between small text-muted">
-            <span>
-              {m.wizard_step_of({
-                step: String(getStepIndex(effectiveStep, wizardContext)),
-                total: String(getTotalSteps(wizardContext)),
-              })}
-            </span>
-            <span>{m.wizard_percent_complete({ percent: String(getProgressPercentage()) })}</span>
+          <div className="small text-muted">
+            {m.wizard_step_of({
+              step: String(getStepIndex(effectiveStep, wizardContext)),
+              total: String(getTotalSteps(wizardContext)),
+            })}
           </div>
         </div>
         {isLoading ? (
@@ -290,6 +287,8 @@ export function WelcomeWizard({
                 onDefer={onDefer}
                 onHide={onHide}
                 onNext={nextStep}
+                onSignIn={triggerLogin}
+                isAuthenticated={isAuthenticated}
                 firstButtonRef={firstButtonRef}
               />
             )}

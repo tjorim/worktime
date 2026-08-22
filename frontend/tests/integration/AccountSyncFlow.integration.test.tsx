@@ -31,13 +31,15 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as oidcContext from "react-oidc-context";
 import App from "@/App";
 import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getSyncCursorKey } from "@/constants/storageKeys";
-import { tasksCollection } from "@/db/collections";
+import { tasksCollection, setSyncCollectionAuth } from "@/db/collections";
+import { syncStore, populatedStatus, emptyPullResponse, resetSyncStore } from "@/mocks/data/syncStore";
 
 // ---------------------------------------------------------------------------
 // SuperTokens session mock — mutable so individual tests can override it.
@@ -74,22 +76,7 @@ const emptyStatus = {
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
 
-const populatedStatus = {
-  ...emptyStatus,
-  labels_updated_at: "2026-01-01T00:00:00.000Z",
-};
-
 const emptyPushResponse = { results: {} };
-
-const emptyPullResponse = {
-  labels: [],
-  tasks: [],
-  templates: [],
-  work_locations: [],
-  time_off_entries: [],
-  gantt_tasks: [],
-  server_timestamp: "2026-01-02T00:00:00.000Z",
-};
 
 /** A server side holding one live label, matching `populatedStatus`. */
 const populatedPullResponse = {
@@ -216,7 +203,7 @@ describe("§1 Local-only usage", () => {
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Welcome to Worktime/i })).toBeInTheDocument(),
+      expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument(),
     );
   });
 
@@ -229,12 +216,74 @@ describe("§1 Local-only usage", () => {
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Welcome to Worktime/i })).toBeInTheDocument(),
+      expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument(),
     );
 
     // When unauthenticated, no sync cursor should be stored — the sync flow never ran.
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).toBeNull();
   });
+});
+
+// ===========================================================================
+// Onboarding wizard reacts to a first-sync restore (full App)
+// ===========================================================================
+
+describe("Onboarding wizard closes once a signed-in user's data restores", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    resetSyncStore();
+    // This test renders the full App (unlike the lightweight harness used by
+    // the other sync tests below), which drives OngoingSyncProvider far enough
+    // to call setSyncCollectionAuth(userId) — a module-level singleton in
+    // db/collections.ts that RTL's cleanup() does not reset on unmount. Left
+    // pointing at this test's user, it makes later tests' collection reads
+    // (e.g. seedLocalTask() in the "keep local" conflict test) behave as if
+    // still scoped to a different, already-authenticated user.
+    setSyncCollectionAuth(null);
+  });
+
+  it("does not stay open once sync pulls hasCompletedOnboarding from the account", async () => {
+    // Simulates a signed-in user whose local onboarding state is missing (e.g.
+    // a fresh device, or Settings > Reset Settings, which never signs the user
+    // out) but whose account already has real preferences on the server.
+    vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        access_token: "tok-test",
+        profile: { sub: "sub-restore-1", name: "Alice" } as Record<string, unknown>,
+      },
+      signinRedirect: vi.fn(),
+      removeUser: vi.fn(),
+      signoutRedirect: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+    syncStore.status = { ...populatedStatus, preferences_updated_at: "2026-01-01T00:00:00.000Z" };
+    syncStore.pullData = emptyPullResponse;
+    syncStore.preferences = {
+      user_id: 1,
+      data: { hasCompletedOnboarding: true, scheduleType: "9-5", myTeam: null },
+      client_updated_at: "2026-01-01T00:00:00.000Z",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+    };
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(
+          JSON.parse(localStorage.getItem("worktime_user_state") ?? "{}").hasCompletedOnboarding,
+        ).toBe(true);
+      },
+      { timeout: 5000 },
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Welcome to Worktime!/i)).not.toBeInTheDocument(),
+    );
+  }, 15000);
 });
 
 // ===========================================================================

@@ -9,8 +9,8 @@ import {
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
+import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
@@ -72,19 +72,53 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
+  const { options: hdayHelperOptions, helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
   const { lastUsed, updateLastTimeOffView } = useLastUsed();
-  const { options } = useDeveloperOptions();
   const toast = useToast();
 
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
   );
+  const previousHelperStatusRef = useRef(helperConnectionStatus);
+  const hasCompletedInitialHelperProbeRef = useRef(!hdayHelperOptions.hdayHelperUrl);
 
+  // Do not leave a previously loaded Team schedule visible after the local
+  // helper becomes unhealthy. The Team button is health-gated, so its view
+  // must follow the same rule.
   useEffect(() => {
-    if (isValidTimeOffView(viewMode)) {
+    const wasConnected = previousHelperStatusRef.current === "connected";
+    previousHelperStatusRef.current = helperConnectionStatus;
+    const initialProbeFailed =
+      !hasCompletedInitialHelperProbeRef.current && helperConnectionStatus === "error";
+    if (helperConnectionStatus === "connected" || helperConnectionStatus === "error") {
+      hasCompletedInitialHelperProbeRef.current = true;
+    }
+    const helperLossConfirmed = wasConnected && helperConnectionStatus !== "connected";
+    if (
+      viewMode === "team" &&
+      (!hdayHelperOptions.hdayHelperUrl || initialProbeFailed || helperLossConfirmed)
+    ) {
+      setViewMode(DEFAULT_TIME_OFF_VIEW);
+      if (wasConnected) {
+        toast.showWarning(m.team_helper_unavailable_toast(), "bi-plug");
+      }
+    }
+  }, [hdayHelperOptions.hdayHelperUrl, helperConnectionStatus, toast, viewMode]);
+
+  // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
+  // so persisting it back on mount would be a no-op write that still bumps the shared
+  // preferences blob's _updatedAt — making local state look newer than it really is
+  // and winning last-write-wins reconciliation against genuinely newer server data.
+  const isInitialTimeOffViewRender = useRef(true);
+  useEffect(() => {
+    if (isInitialTimeOffViewRender.current) {
+      isInitialTimeOffViewRender.current = false;
+      return;
+    }
+    if (hasCompletedInitialHelperProbeRef.current && isValidTimeOffView(viewMode)) {
       updateLastTimeOffView(viewMode);
     }
   }, [updateLastTimeOffView, viewMode]);
@@ -464,7 +498,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             {m.timeoff_view_statistics()}
           </Button>
-          {options.connectionStatus === "connected" && (
+          {helperConnectionStatus === "connected" && (
             <Button
               variant={viewMode === "team" ? "primary" : "outline-primary"}
               size="sm"
@@ -589,4 +623,3 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     </div>
   );
 }
-

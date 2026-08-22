@@ -9,12 +9,13 @@ import { SettingsAccountSection } from "@/components/settings/account/SettingsAc
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { server } from "@/mocks/server";
+import { syncStore } from "@/mocks/data/syncStore";
 import { labelsCollection } from "@/db/collections";
 import { USER_STATE_STORAGE_KEY, PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
@@ -88,13 +89,13 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SettingsProvider>
       <EventStoreProvider>
-        <DeveloperOptionsProvider>
+        <HdayHelperProvider>
           <ToastProvider>
             <PwaInstallProvider>
               <AuthProvider>{ui}</AuthProvider>
             </PwaInstallProvider>
           </ToastProvider>
-        </DeveloperOptionsProvider>
+        </HdayHelperProvider>
       </EventStoreProvider>
     </SettingsProvider>,
   );
@@ -886,6 +887,41 @@ describe("SettingsPage Data Section", () => {
     const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
     expect(stored).not.toBeNull();
     expect(JSON.parse(stored ?? "{}").scheduleType).toBeNull();
+  });
+
+  it("restores preferences from the account after reset when signed in", async () => {
+    // Reset only clears this device's local settings — it never signs the user
+    // out or touches the sync cursor, so a signed-in user's real preferences
+    // are still on the server. Confirm the reset flow pulls them back instead
+    // of leaving the device looking like it was never set up.
+    mockAuthenticatedUser("Alice");
+    syncStore.preferences = {
+      user_id: 1,
+      data: { hasCompletedOnboarding: true, scheduleType: "9-5", myTeam: null },
+      client_updated_at: "2026-01-01T00:00:00.000Z",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+    };
+
+    const onHide = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={onHide} activeSection="data" />);
+
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(`^${m.reset_settings_label()}`) }),
+    );
+    const resetDialog = screen.getByRole("dialog");
+    await user.click(within(resetDialog).getByRole("button", { name: m.reset_now() }));
+
+    await waitFor(() => {
+      expect(onHide).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}");
+      expect(stored.hasCompletedOnboarding).toBe(true);
+      expect(stored.scheduleType).toBe("9-5");
+    });
   });
 });
 

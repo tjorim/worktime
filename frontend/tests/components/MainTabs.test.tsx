@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { MainTabs } from "@/components/MainTabs";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { TestProviders } from "../utils/testProviders";
+import { TestProviders } from "@tests/utils/testProviders";
 
 // Mock the child components
 vi.mock("@/components/ScheduleTabView", () => ({

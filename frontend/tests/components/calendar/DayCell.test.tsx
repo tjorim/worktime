@@ -5,7 +5,7 @@ import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Shift } from "@/utils/shiftCalculations";
-import { TestProviders } from "../../utils/testProviders";
+import { TestProviders } from "@tests/utils/testProviders";
 
 const OFF_SHIFT: Shift = {
   code: "O",

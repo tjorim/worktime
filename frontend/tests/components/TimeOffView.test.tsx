@@ -1,21 +1,25 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { HDAY_HELPER_SETTINGS_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { http, HttpResponse } from "msw";
+import { server } from "@/mocks/server";
+import * as m from "@/paraglide/messages.js";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
-    <DeveloperOptionsProvider>
+    <HdayHelperProvider>
       <SettingsProvider>
         <EventStoreProvider>{children}</EventStoreProvider>
       </SettingsProvider>
-    </DeveloperOptionsProvider>
+    </HdayHelperProvider>
   </ToastProvider>
 );
 
@@ -23,8 +27,125 @@ describe("TimeOffView", () => {
   beforeEach(() => {
     localStorage.clear();
   });
+  afterEach(() => vi.restoreAllMocks());
 
   describe("Empty State", () => {
+    it("hides the Team view until an .hday helper is configured", () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+    });
+
+    it("shows the Team view only after the configured helper passes its health check", async () => {
+      localStorage.setItem(
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "Team" })).toBeInTheDocument();
+    });
+
+    it("preserves a saved Team view while the initial helper probe is pending", async () => {
+      localStorage.setItem(
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ lastUsed: { timeOffView: "team" } }),
+      );
+      let resolveHealth!: (response: Response) => void;
+      const healthResponse = new Promise<Response>((resolve) => {
+        resolveHealth = resolve;
+      });
+      server.use(http.get("http://localhost:8080/health", () => healthResponse));
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
+
+      await act(async () => {
+        resolveHealth(HttpResponse.json({ status: "ok" }));
+      });
+      expect(await screen.findByRole("button", { name: "Team" })).toHaveClass("btn-primary");
+      expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
+    });
+
+    it("keeps the Team view hidden when the configured helper is unhealthy", async () => {
+      localStorage.setItem(
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      const healthCheck = vi.fn(() => new HttpResponse(null, { status: 503 }));
+      server.use(http.get("http://localhost:8080/health", healthCheck));
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await waitFor(() => expect(healthCheck).toHaveBeenCalled());
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+    });
+
+    it("leaves the Team view when a later helper health check fails", async () => {
+      localStorage.setItem(
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+      );
+      let healthy = true;
+      const healthCheck = vi.fn(() =>
+        healthy ? HttpResponse.json({ status: "ok" }) : new HttpResponse(null, { status: 503 }),
+      );
+      const intervalCallbacks: TimerHandler[] = [];
+      vi.spyOn(window, "setInterval").mockImplementation((handler) => {
+        intervalCallbacks.push(handler);
+        return intervalCallbacks.length;
+      });
+      server.use(http.get("http://localhost:8080/health", healthCheck));
+      const user = userEvent.setup();
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Team" }));
+      expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
+
+      healthy = false;
+      intervalCallbacks.forEach((callback) => {
+        if (typeof callback === "function") callback();
+      });
+
+      await waitFor(() => expect(healthCheck).toHaveBeenCalledTimes(2));
+      await waitFor(() =>
+        expect(screen.queryByText(m.team_viewer_title())).not.toBeInTheDocument(),
+      );
+      expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+      expect(screen.getByText(m.team_helper_unavailable_toast())).toBeInTheDocument();
+    });
+
     it("should render empty state when no events", () => {
       render(
         <AllProviders>
@@ -80,9 +201,7 @@ describe("TimeOffView", () => {
 
       await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
 
-      const errors = await screen.findAllByText(
-        "Failed to import file. Please check the format.",
-      );
+      const errors = await screen.findAllByText("Failed to import file. Please check the format.");
       expect(errors.length).toBeGreaterThanOrEqual(2);
     });
   });

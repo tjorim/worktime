@@ -1,23 +1,15 @@
 /**
  * Routing helpers for the local .hday helper server (see `hday-helper/`).
  *
- * The helper exposes unprefixed routes (`/team/:id/hday`), while the app's own
- * backend mounts the same handlers under `/api` (and only when
- * `LEGACY_FILESHARE_ENABLED=true`). Callers must pick the right base depending
- * on whether a helper URL is configured.
+ * The helper exposes unprefixed routes (`/team/:id/hday`). The hosted backend
+ * intentionally has no access to the legacy planner's network share, so callers
+ * must never send these requests to the app origin without a configured helper.
  */
 
-export interface HdayHelperTarget {
-  /** Request base to prepend to a route (e.g. "/team/:id/hday"). No trailing slash. */
-  baseUrl: string;
-  /** Whether requests are routed to a configured local helper rather than same-origin. */
-  usesHelper: boolean;
-}
-
-export function resolveHdayHelperTarget(hdayHelperUrl: string | null): HdayHelperTarget {
-  return hdayHelperUrl
-    ? { baseUrl: hdayHelperUrl, usesHelper: true }
-    : { baseUrl: "/api", usesHelper: false };
+/** Return the normalized helper base URL, or null when no helper is configured. */
+export function resolveHdayHelperBaseUrl(hdayHelperUrl: string | null): string | null {
+  const normalized = hdayHelperUrl?.trim().replace(/\/+$/, "");
+  return normalized || null;
 }
 
 /**
@@ -28,7 +20,16 @@ export function resolveHdayHelperTarget(hdayHelperUrl: string | null): HdayHelpe
 export function isHdayHelperMixedContentBlocked(hdayHelperUrl: string): boolean {
   try {
     const helperOrigin = new URL(hdayHelperUrl);
-    return window.location.protocol === "https:" && helperOrigin.protocol === "http:";
+    if (window.location.protocol !== "https:" || helperOrigin.protocol !== "http:") {
+      return false;
+    }
+
+    // Loopback origins are considered potentially trustworthy by browsers, so
+    // the expected local helper URL does not need TLS or a localhost certificate.
+    const hostname = helperOrigin.hostname.toLowerCase();
+    const isLoopback =
+      hostname === "localhost" || hostname === "[::1]" || /^127(?:\.\d{1,3}){3}$/.test(hostname);
+    return !isLoopback;
   } catch {
     return false;
   }

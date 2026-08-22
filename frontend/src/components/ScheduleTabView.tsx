@@ -71,7 +71,16 @@ export function ScheduleTabView({
     }
   }, [userScheduleType, updateLastOtherSchedule]);
 
+  // Skip the initial run: viewMode is already initialized from lastUsed.scheduleView,
+  // so persisting it back on mount would be a no-op write that still bumps the shared
+  // preferences blob's _updatedAt — making local state look newer than it really is
+  // and winning last-write-wins reconciliation against genuinely newer server data.
+  const isInitialScheduleViewRender = useRef(true);
   useEffect(() => {
+    if (isInitialScheduleViewRender.current) {
+      isInitialScheduleViewRender.current = false;
+      return;
+    }
     updateLastScheduleView(viewMode);
   }, [updateLastScheduleView, viewMode]);
 

@@ -48,45 +48,28 @@ export function getTimeLocationFlagOptions(): Array<[TimeLocationFlag | "none", 
 }
 
 /**
- * @deprecated Use getTypeFlagOptions() instead for locale-aware labels.
- * Static type flag options kept for backward compatibility.
- */
-export const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
-  ["none", "Holiday (default)"],
-  ["business", "Business trip"],
-  ["course", "Training/Course"],
-  ["in", "In office"],
-  ["weekend", "Weekend"],
-  ["birthday", "Birthday"],
-  ["ill", "Sick leave"],
-  ["other", "Other"],
-];
-
-/**
- * @deprecated Use getTimeLocationFlagOptions() instead for locale-aware labels.
- * Static time/location flag options kept for backward compatibility.
- */
-export const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", string]> = [
-  ["none", "Full day"],
-  ["half_am", "AM (half day)"],
-  ["half_pm", "PM (half day)"],
-  ["onsite", "Onsite"],
-  ["no_fly", "No fly"],
-  ["can_fly", "Can fly"],
-];
-
-/**
  * Type flags mapped to EventFlag type for use in flag filtering.
  */
-export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.flatMap(([flag]) =>
-  flag !== "none" ? [flag as EventFlag] : [],
-);
+export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = [
+  "business",
+  "course",
+  "in",
+  "weekend",
+  "birthday",
+  "ill",
+  "other",
+];
 
 /**
  * Time/Location flags mapped to EventFlag type for use in flag filtering.
  */
-export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] =
-  TIME_LOCATION_FLAG_OPTIONS.flatMap(([flag]) => (flag !== "none" ? [flag as EventFlag] : []));
+export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = [
+  "half_am",
+  "half_pm",
+  "onsite",
+  "no_fly",
+  "can_fly",
+];
 
 /**
  * Valid view modes for the Time Off tab.

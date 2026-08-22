@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Read version from package.json for injection in tests
-import * as packageJson from "./package.json";
+import packageJson from "./package.json" with { type: "json" };
 
 export default defineConfig({
   define: {
@@ -22,7 +22,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": resolve(__dirname, "src"),
+      "@tests": resolve(import.meta.dirname, "tests"),
+      "@": resolve(import.meta.dirname, "src"),
       "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
       "react-select": fileURLToPath(new URL("tests/__mocks__/react-select.tsx", import.meta.url)),
       "virtual:pwa-register/react": fileURLToPath(

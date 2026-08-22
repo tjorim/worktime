@@ -6,6 +6,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { getTeamCountForOption, hasMultipleTeams } from "@/utils/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
+import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
 
 interface SettingsScheduleSectionProps {
   scheduleType: ScheduleOption | null;
@@ -93,6 +94,9 @@ export function SettingsScheduleSection({
           {myTeam === null && <small className="text-muted">{m.settings_no_team_selected()}</small>}
         </>
       )}
+
+      <hr className="my-4" />
+      <SettingsHdayHelper />
     </div>
   );
 }
