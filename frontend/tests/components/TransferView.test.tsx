@@ -653,6 +653,32 @@ describe("TransferView", () => {
         screen.getByText("No other teams available for transfer analysis."),
       ).toBeInTheDocument();
     });
+
+    it("keeps schedule comparison available for a single-team roster", async () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        availableOtherTeams: [],
+        otherScheduleType: "9-5",
+      });
+      const handleScheduleChange = vi.fn();
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          otherScheduleType="9-5"
+          onOtherScheduleTypeChange={handleScheduleChange}
+        />,
+      );
+
+      const scheduleSelect = screen.getByLabelText("Compare with schedule:");
+      expect(scheduleSelect).toBeInTheDocument();
+      expect(screen.getByText("No Other Teams Available")).toBeInTheDocument();
+
+      await user.selectOptions(scheduleSelect, "5-shift");
+
+      expect(handleScheduleChange).toHaveBeenCalledWith("5-shift");
+    });
   });
 
   describe("Advanced interactions", () => {

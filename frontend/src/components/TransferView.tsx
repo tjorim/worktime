@@ -518,6 +518,34 @@ export function TransferView({
     return m.transfer_until_date({ date: formatDisplayDate(dayjs(customEndDate).toDate()) });
   }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
 
+  const comparisonScheduleSelector = onOtherScheduleTypeChange && (
+    <>
+      <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
+        <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+        {m.schedule_compare_label()}
+      </Form.Label>
+      <Form.Select
+        id={compareScheduleSelectId}
+        className="mb-3"
+        value={otherScheduleType || ""}
+        onChange={(e) => {
+          const value = e.target.value;
+          onOtherScheduleTypeChange(isValidScheduleType(value) ? value : null);
+        }}
+      >
+        <option value="" disabled>
+          {m.schedule_select_placeholder()}
+        </option>
+        {availableSchedules.map((schedule) => (
+          <option key={schedule.value} value={schedule.value}>
+            {schedule.title}
+            {schedule.value === scheduleType ? ` ${m.schedule_your_schedule_suffix()}` : ""}
+          </option>
+        ))}
+      </Form.Select>
+    </>
+  );
+
   const groupedTransfers = useMemo(
     () => groupByDayBucket(transfers, (transfer) => transfer.date, currentDay.startOf("day")),
     [currentDay, transfers],
@@ -578,45 +606,24 @@ export function TransferView({
             />
           </div>
         ) : availableOtherTeams.length === 0 ? (
-          <EmptyState
-            icon="bi-people"
-            title={m.transfer_no_teams_title()}
-            description={m.transfer_no_teams_desc()}
-          />
+          <>
+            {comparisonScheduleSelector && (
+              <Row className="mb-3">
+                <Col md={4}>{comparisonScheduleSelector}</Col>
+              </Row>
+            )}
+            <EmptyState
+              icon="bi-people"
+              title={m.transfer_no_teams_title()}
+              description={m.transfer_no_teams_desc()}
+            />
+          </>
         ) : (
           <>
             {/* Controls */}
             <Row className="mb-3 gy-3">
               <Col md={4}>
-                {onOtherScheduleTypeChange && (
-                  <>
-                    <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
-                      <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
-                      {m.schedule_compare_label()}
-                    </Form.Label>
-                    <Form.Select
-                      id={compareScheduleSelectId}
-                      className="mb-3"
-                      value={otherScheduleType || ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        onOtherScheduleTypeChange(isValidScheduleType(value) ? value : null);
-                      }}
-                    >
-                      <option value="" disabled>
-                        {m.schedule_select_placeholder()}
-                      </option>
-                      {availableSchedules.map((schedule) => (
-                        <option key={schedule.value} value={schedule.value}>
-                          {schedule.title}
-                          {schedule.value === scheduleType
-                            ? ` ${m.schedule_your_schedule_suffix()}`
-                            : ""}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </>
-                )}
+                {comparisonScheduleSelector}
 
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
