@@ -222,6 +222,15 @@ describe("TimeTrackingDailyView", () => {
       );
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();
 
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "16:00" },
+      });
+      expect(within(dialog).queryByText(/Prepare report will be/)).not.toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: /Stop & apply changes/i })).toBeDisabled();
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "18:05" },
+      });
+
       fireEvent.click(within(dialog).getByRole("button", { name: /Stop & apply changes/i }));
 
       expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(1, {

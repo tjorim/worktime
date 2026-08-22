@@ -16,8 +16,10 @@ describe("DayNavigationButtonGroup", () => {
       />,
     );
 
-    const container = screen.getByText("Jump to date").parentElement?.parentElement;
+    const selectorWrapper = screen.getByText("Jump to date").parentElement;
+    const container = selectorWrapper?.parentElement;
     expect(container).toHaveClass("flex-column", "flex-sm-row", "align-items-stretch");
+    expect(selectorWrapper).toHaveClass("justify-content-between");
     expect(screen.getByLabelText("Jump to date")).toHaveAttribute("type", "date");
   });
 });

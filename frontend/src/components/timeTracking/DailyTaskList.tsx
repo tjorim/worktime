@@ -319,8 +319,8 @@ export function DailyTaskList({
   }, [editRequest, openEditModal, onEditRequestHandled]);
 
   const editValidationError = useMemo(() => {
-    if (!editingTask || !editForm.stop) return "";
-    if (!isValidRange(editForm.start, editForm.stop)) {
+    if (!editingTask || !editForm.start) return "";
+    if (editForm.stop && !isValidRange(editForm.start, editForm.stop)) {
       return `${m.tt_unable_to_update_task()} ${m.tt_error_stop_after_start()}`;
     }
     const taskDate = dayjs(editingTask.startTime).format("YYYY-MM-DD");
@@ -333,7 +333,8 @@ export function DailyTaskList({
           ? dayjs(task.stopTime).format("HH:mm")
           : (liveTime ?? dayjs()).format("HH:mm"),
       }));
-    if (overlaps(editForm.start, editForm.stop, tasksForOverlap, editingTask.id)) {
+    const effectiveStop = editForm.stop || (liveTime ?? dayjs()).format("HH:mm");
+    if (overlaps(editForm.start, effectiveStop, tasksForOverlap, editingTask.id)) {
       return `${m.tt_unable_to_update_task()} ${m.tt_error_time_overlap()}`;
     }
     return "";

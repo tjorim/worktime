@@ -33,7 +33,8 @@ type TaskEntryFormProps = {
   onStopChange: (stop: string) => void;
   canSubmit: boolean;
   canStartNow: boolean;
-  isTimerRunning?: boolean;
+  showTimerControls: boolean;
+  isTimerRunning: boolean;
   timerElapsed?: string;
   runningTaskSummary?: {
     task: string;
@@ -47,7 +48,7 @@ type TaskEntryFormProps = {
   addDisabledReason?: string;
   onSubmit: () => void;
   onStartNow: () => void;
-  onStopNow?: () => void;
+  onStopNow: () => void;
   onCreateLabel?: () => void;
 };
 
@@ -67,6 +68,7 @@ export function TaskEntryForm({
   onStopChange,
   canSubmit,
   canStartNow,
+  showTimerControls,
   isTimerRunning,
   timerElapsed,
   runningTaskSummary,
@@ -109,12 +111,12 @@ export function TaskEntryForm({
 
   return (
     <>
-      {isTimerRunning && runningTaskSummary ? (
+      {showTimerControls && isTimerRunning ? (
         <div
           className="d-flex align-items-center gap-2 mb-3 p-2 rounded bg-body-tertiary"
           aria-live="polite"
         >
-          <div className="d-flex flex-column gap-1 flex-grow-1 min-w-0">
+          {runningTaskSummary && <div className="d-flex flex-column gap-1 flex-grow-1 min-w-0">
             <div className="d-flex align-items-center flex-wrap gap-2">
               <span className="badge text-bg-danger d-inline-flex align-items-center gap-1">
                 <i className="bi bi-record-fill" aria-hidden="true" />
@@ -136,17 +138,17 @@ export function TaskEntryForm({
                 {m.tt_started()} {runningTaskSummary.time}
               </span>
             )}
-          </div>
+          </div>}
           <Button
             size="sm"
             variant="danger"
             className="flex-shrink-0"
-            onClick={onStopNow ?? onStartNow}
+            onClick={onStopNow}
           >
             {m.tt_stop_timer()} · {timerElapsed}
           </Button>
         </div>
-      ) : isTimerRunning !== undefined ? (
+      ) : showTimerControls ? (
         <p className="small text-muted mb-2">
           {m.tt_quick_timer_desc()}
         </p>
@@ -237,7 +239,7 @@ export function TaskEntryForm({
         </Col>
         <Col md={2}>
           <div className="d-grid gap-2">
-            {!isTimerRunning &&
+            {showTimerControls && !isTimerRunning &&
               renderDisabledTooltipButton(
                 "start-now",
                 !canStartNow ? startDisabledReason : undefined,
@@ -248,7 +250,7 @@ export function TaskEntryForm({
                   disabled={!canStartNow}
                 >
                   {m.tt_start_now()}
-                  {isTimerRunning !== undefined && <> · {m.tt_idle_status()}</>}
+                  <> · {m.tt_idle_status()}</>
                 </Button>,
               )}
             {renderDisabledTooltipButton(

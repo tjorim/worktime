@@ -26,7 +26,7 @@ import {
   type Label,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
-import { isValidRange, overlaps } from "./timeUtils";
+import { BREAK_DURATION_MINUTES, isValidRange, overlaps } from "./timeUtils";
 import { useDailyTaskSummary } from "./hooks/useDailyTaskSummary";
 
 type TimeTrackingDailyViewProps = {
@@ -301,7 +301,8 @@ export function TimeTrackingDailyView({
         });
         if (
           plannedTask.includesBreak &&
-          dayjs(plannedTask.stopTime).diff(dayjs(stopDateTime), "minute") < 30
+          dayjs(plannedTask.stopTime).diff(dayjs(stopDateTime), "minute") <
+            BREAK_DURATION_MINUTES
         ) {
           onToggleBreak(plannedTask.id, false);
         }
@@ -362,19 +363,18 @@ export function TimeTrackingDailyView({
       return false;
     }
 
-    if (payload.stop) {
-      const sameDayTasks = tasks.filter(
-        (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
-      );
-      const dailyForOverlap = sameDayTasks.map((task) => ({
-        id: task.id,
-        start: dayjs(task.startTime).format("HH:mm"),
-        stop: (task.stopTime ? dayjs(task.stopTime) : dayjs()).format("HH:mm"),
-      }));
-      if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
-        setError(m.tt_error_time_overlap());
-        return false;
-      }
+    const sameDayTasks = tasks.filter(
+      (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
+    );
+    const dailyForOverlap = sameDayTasks.map((task) => ({
+      id: task.id,
+      start: dayjs(task.startTime).format("HH:mm"),
+      stop: (task.stopTime ? dayjs(task.stopTime) : liveTime).format("HH:mm"),
+    }));
+    const overlapStop = payload.stop || liveTime.format("HH:mm");
+    if (overlaps(payload.start, overlapStop, dailyForOverlap, payload.id)) {
+      setError(m.tt_error_time_overlap());
+      return false;
     }
 
     const currentGanttTaskId = tasks.find((item) => item.id === payload.id)?.ganttTaskId ?? "";
@@ -485,6 +485,7 @@ export function TimeTrackingDailyView({
           onStopChange={setStop}
           canSubmit={canAddCompletedTask}
           canStartNow={canStartNow}
+          showTimerControls
           isTimerRunning={runningTask !== null}
           timerElapsed={timerElapsed}
           runningTaskSummary={

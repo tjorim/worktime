@@ -24,19 +24,22 @@ export function StopTimerConflictDialog({
   onConfirm,
   onClose,
 }: StopTimerConflictDialogProps) {
+  // Captured on mount; the parent remounts this dialog with a key for each conflict.
   const [stopTime, setStopTime] = useState(initialStopTime);
   const startTime = runningTask ? dayjs(runningTask.startTime).format("HH:mm") : "";
   const isValid = Boolean(stopTime && stopTime > startTime && stopTime <= initialStopTime);
 
   const effects = useMemo(
     () =>
-      conflictingTasks.map((task) => {
+      isValid
+        ? conflictingTasks.map((task) => {
         const taskStart = dayjs(task.startTime).format("HH:mm");
         const taskStop = task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "";
         const outcome = stopTime <= taskStart ? "unchanged" : stopTime < taskStop ? "shortened" : "removed";
         return { task, taskStart, taskStop, outcome };
-      }),
-    [conflictingTasks, stopTime],
+          })
+        : [],
+    [conflictingTasks, isValid, stopTime],
   );
 
   return (

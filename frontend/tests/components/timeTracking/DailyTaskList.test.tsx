@@ -103,6 +103,31 @@ describe("DailyTaskList", () => {
     });
   });
 
+  it("shows start-only overlap validation before submitting an edit", () => {
+    const running = makeTask({
+      id: "running",
+      text: "Running work",
+      startTime: "2026-02-07T08:00",
+      stopTime: undefined,
+    });
+    const existing = makeTask({
+      id: "existing",
+      text: "Existing work",
+      startTime: "2026-02-07T09:00",
+      stopTime: "2026-02-07T10:00",
+    });
+
+    renderList([running, existing], TEST_LABELS, {
+      liveTime: dayjs("2026-02-07T09:30"),
+      isToday: true,
+    });
+    fireEvent.click(screen.getByLabelText("Edit Running work"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/Time range overlaps/i);
+    expect(screen.getByRole("button", { name: /Save Changes/i })).toBeDisabled();
+    expect(onUpdateTask).not.toHaveBeenCalled();
+  });
+
   describe("context menu break item", () => {
     it("shows 'Includes 30min break' for eligible task", () => {
       renderList([makeTask()]);

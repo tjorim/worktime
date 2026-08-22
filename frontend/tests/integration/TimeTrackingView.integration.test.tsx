@@ -72,9 +72,9 @@ describe("TimeTrackingView Integration Tests", () => {
         screen.getByRole("button", { name: /Stop Timer · 00:30:00/i }),
       ).toBeInTheDocument();
       expect(screen.getAllByText(/Active Task/i)).toHaveLength(2);
-      expect(screen.queryByText(/Started 2025-01-06 09:30/i)).not.toBeInTheDocument();
       // Format expected start time in local timezone (same as component does)
       const expectedStart = dayjs("2025-01-06T08:30:00Z").format("HH:mm");
+      expect(screen.queryByText(new RegExp(`Started .* ${expectedStart}`, "i"))).not.toBeInTheDocument();
       const startTimeElements = screen.getAllByText(new RegExp(expectedStart));
       expect(startTimeElements.length).toBeGreaterThan(0);
     });

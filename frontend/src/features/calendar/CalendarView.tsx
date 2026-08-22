@@ -313,10 +313,13 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
             onStopChange={setAddStop}
             canSubmit={canAddTask}
             canStartNow={false}
+            showTimerControls={false}
+            isTimerRunning={false}
             startDisabledReason="Use Time Tracking to start a live timer."
             addDisabledReason="Enter a task, label, and valid time range."
             onSubmit={saveNewTask}
             onStartNow={() => undefined}
+            onStopNow={() => undefined}
           />
         </Modal.Body>
       </Modal>
