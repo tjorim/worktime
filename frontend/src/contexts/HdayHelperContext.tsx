@@ -9,10 +9,7 @@ import {
   useState,
 } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import {
-  HDAY_HELPER_SETTINGS_STORAGE_KEY,
-  LEGACY_DEVELOPER_OPTIONS_STORAGE_KEY,
-} from "@/constants/storageKeys";
+import { HDAY_HELPER_SETTINGS_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type HdayHelperStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -35,21 +32,6 @@ const HdayHelperContext = createContext<HdayHelperContextType | null>(null);
 const HELPER_CONNECTION_TIMEOUT_MS = 5000;
 const HELPER_HEALTH_POLL_MS = 30000;
 
-function readLegacyOptions(): HdayHelperOptions {
-  if (typeof window === "undefined" || localStorage.getItem(HDAY_HELPER_SETTINGS_STORAGE_KEY)) {
-    return defaultOptions;
-  }
-  try {
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_DEVELOPER_OPTIONS_STORAGE_KEY) ?? "null");
-    return {
-      hdayHelperUrl:
-        legacy && typeof legacy.hdayHelperUrl === "string" ? legacy.hdayHelperUrl : null,
-    };
-  } catch {
-    return defaultOptions;
-  }
-}
-
 export function useHdayHelper(): HdayHelperContextType {
   const context = useContext(HdayHelperContext);
   if (!context) {
@@ -63,10 +45,9 @@ interface HdayHelperProviderProps {
 }
 
 export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
-  const initialOptions = useMemo(readLegacyOptions, []);
   const [options, setOptions] = useLocalStorage<HdayHelperOptions>(
     HDAY_HELPER_SETTINGS_STORAGE_KEY,
-    initialOptions,
+    defaultOptions,
   );
   const normalizedOptions: HdayHelperOptions = useMemo(
     () => ({ hdayHelperUrl: options.hdayHelperUrl ?? null }),
@@ -77,13 +58,6 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
     useState<HdayHelperStatus>("disconnected");
   const probeIdRef = useRef(0);
   const probeControllerRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    if (initialOptions.hdayHelperUrl && !localStorage.getItem(HDAY_HELPER_SETTINGS_STORAGE_KEY)) {
-      setOptions(initialOptions);
-      localStorage.removeItem(LEGACY_DEVELOPER_OPTIONS_STORAGE_KEY);
-    }
-  }, [initialOptions, setOptions]);
 
   const updateHdayHelperUrl = useCallback(
     (url: string | null) => {
