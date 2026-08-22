@@ -31,7 +31,10 @@ from app.schemas import AccessTokenCreate, UserCreate
 from app.services.access_token_service import (
     authenticate_access_token,
     create_access_token,
+    list_access_tokens_for_user,
     revoke_access_token,
+    revoke_ical_feed_token,
+    rotate_ical_feed_token,
     rotate_pebble_access_token,
 )
 from app.services.db_service import NotFoundError, create_user
@@ -126,6 +129,22 @@ async def test_rotate_pebble_access_token_replaces_previous_pairing(
     )
     assert [token.id for token in tokens.scalars()] == [second.id]
     assert first.id != second.id
+
+
+async def test_ical_rotation_does_not_hide_or_revoke_pat_with_reserved_name(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="ical-owner", display_name="iCal Owner"))
+    pat, pat_raw = await create_access_token(
+        db_session,
+        user_id=user.id,
+        payload=AccessTokenCreate(name="Calendar subscription"),
+    )
+
+    await rotate_ical_feed_token(db_session, user.id)
+    await rotate_ical_feed_token(db_session, user.id)
+
+    assert [token.id for token in await list_access_tokens_for_user(db_session, user.id)] == [pat.id]
+    await revoke_ical_feed_token(db_session, user.id)
+    assert await authenticate_access_token(db_session, pat_raw) is not None
 
 
 async def test_concurrent_pebble_rotations_leave_one_active_token(

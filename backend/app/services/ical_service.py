@@ -56,7 +56,7 @@ def _time_off_dates(entry: TimeOffEntry, start: date, end: date) -> Iterable[dat
             yield entry.date
     elif entry.entry_kind == "range" and entry.start_date is not None and entry.end_date is not None:
         day = max(start, entry.start_date)
-        while day < min(end, entry.end_date):
+        while day < end and day <= entry.end_date:
             yield day
             day += timedelta(days=1)
     elif entry.entry_kind == "weekly" and entry.weekday is not None:

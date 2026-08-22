@@ -77,3 +77,38 @@ async def test_weekly_time_off_is_bounded_and_expanded(monkeypatch: pytest.Monke
 
     assert "UID:time-off-weekly-2026-05-25@worktime" in feed
     assert "UID:time-off-weekly-2027-08-23@worktime" not in feed
+
+
+@pytest.mark.asyncio
+async def test_range_time_off_includes_its_end_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        ical_service,
+        "get_work_context_for_user",
+        AsyncMock(return_value=SimpleNamespace(schedule_type=None, effective_team_number=None)),
+    )
+    monkeypatch.setattr(
+        ical_service,
+        "list_time_off_entries",
+        AsyncMock(
+            return_value=[
+                SimpleNamespace(
+                    entry_id="range",
+                    entry_kind="range",
+                    date=None,
+                    start_date=date(2026, 8, 24),
+                    end_date=date(2026, 8, 26),
+                    weekday=None,
+                    entry_type="vacation",
+                    note=None,
+                    deleted_at=None,
+                )
+            ]
+        ),
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:time-off-range-2026-08-24@worktime" in feed
+    assert "UID:time-off-range-2026-08-25@worktime" in feed
+    assert "UID:time-off-range-2026-08-26@worktime" in feed
+    assert "UID:time-off-range-2026-08-27@worktime" not in feed
