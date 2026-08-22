@@ -13,7 +13,7 @@ import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColorClass } from "@/lib/hday/presentation";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
-import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
@@ -96,12 +96,10 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
  */
 export function TeamScheduleView() {
   const { options } = useHdayHelper();
+  const { preferences, setPreferences } = useDevicePreferences();
   const helperBaseUrl = resolveHdayHelperBaseUrl(options.hdayHelperUrl);
 
-  const [teamId, setTeamId] = useState(() => {
-    // Load saved team ID from localStorage
-    return localStorage.getItem(LAST_TEAM_ID_STORAGE_KEY) || "";
-  });
+  const [teamId, setTeamId] = useState(() => preferences?.lastHdayTeamId ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
@@ -112,14 +110,14 @@ export function TeamScheduleView() {
   const [startMonth, setStartMonth] = useState(() => dayjs().subtract(1, "month").startOf("month"));
   const [endMonth, setEndMonth] = useState(() => dayjs().add(1, "month").endOf("month"));
 
-  // Save team ID to localStorage when it changes and reset attempt flag for new team
+  // Save the team selection with the other device-local preferences.
   useEffect(() => {
     if (teamId) {
-      localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, teamId);
+      setPreferences((current) => ({ ...current, lastHdayTeamId: teamId }));
     }
     // Reset attempt flag when team ID changes to allow auto-fetch for new team
     setHasAttemptedFetch(false);
-  }, [teamId]);
+  }, [setPreferences, teamId]);
 
   // Reset state when the target helper changes — otherwise data fetched from
   // the previous helper stays on screen (or a stale in-flight request from it

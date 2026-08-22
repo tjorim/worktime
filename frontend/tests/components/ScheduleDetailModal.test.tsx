@@ -76,6 +76,21 @@ describe("ScheduleDetailModal", () => {
     expect(screen.queryByText("Night Shifts")).not.toBeInTheDocument();
   });
 
+  it("shows responsive schedule information for a multi-team roster", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={2} scheduleType="5-shift" />,
+    );
+
+    expect(screen.getByText("Schedule information")).toBeInTheDocument();
+    expect(screen.getByText("5-shift")).toBeInTheDocument();
+    expect(screen.getByText("Team 2 of 5")).toBeInTheDocument();
+    expect(screen.getByText("10 days")).toBeInTheDocument();
+    expect(screen.getByText("Continuous rotating shifts across multiple teams.")).toBeInTheDocument();
+    expect(screen.getAllByText("07:00–15:00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("15:00–23:00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("23:00–07:00").length).toBeGreaterThan(0);
+  });
+
   it("throws an error when team number is out of range", () => {
     expect(() =>
       renderWithSettings(

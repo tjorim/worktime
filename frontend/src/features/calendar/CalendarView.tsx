@@ -11,6 +11,7 @@ import { createDragAndDropPlugin } from "@/features/calendar/dragAndDropAdapter"
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
 import Alert from "react-bootstrap/Alert";
+import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
 import { TaskEditModal, type TaskEditForm } from "@/components/timeTracking/TaskEditModal";
@@ -20,11 +21,13 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { buildCalendarConfig } from "@/features/calendar/mapToScheduleXEvents";
 import { useCalendarRangeData, type CalendarRange } from "@/features/calendar/useCalendarRangeData";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import "@schedule-x/theme-default/dist/index.css";
 import "@/features/calendar/calendar.css";
+import * as m from "@/paraglide/messages.js";
 
 const EMPTY_EDIT_FORM: TaskEditForm = {
   text: "",
@@ -87,10 +90,20 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
   const [addLabel, setAddLabel] = useState("");
   const [addStart, setAddStart] = useState("");
   const [addStop, setAddStop] = useState("");
+  const { isHintDismissed, setHintDismissed } = useDevicePreferences();
+  const showHelp = !isHintDismissed("unifiedCalendar");
   const eventRef = useRef(events);
   const taskRef = useRef(tasks);
   const updateTaskTimesRef = useRef(updateTaskTimes);
   const dragAndDropPlugin = useMemo(() => createDragAndDropPlugin(15), []);
+
+  const dismissHelp = () => {
+    setHintDismissed("unifiedCalendar", true);
+  };
+
+  const restoreHelp = () => {
+    setHintDismissed("unifiedCalendar", false);
+  };
 
   useEffect(() => {
     eventRef.current = events;
@@ -258,10 +271,18 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
 
   return (
     <section className="unified-calendar px-0 py-3 px-sm-3" aria-label="Unified calendar">
-      <Alert variant="info" className="py-2">
-        Shifts, time off, and time tracking are shown together. Drag a time-tracking task to
-        reschedule it.
-      </Alert>
+      {showHelp ? (
+        <Alert variant="info" className="py-2" dismissible onClose={dismissHelp}>
+          {m.unified_calendar_help()}
+        </Alert>
+      ) : (
+        <div className="d-flex justify-content-end mb-2">
+          <Button variant="link" size="sm" className="text-muted p-0" onClick={restoreHelp}>
+            <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
+            {m.unified_calendar_show_help()}
+          </Button>
+        </div>
+      )}
       {effectiveTeam === null && (
         <Alert variant="warning" className="d-flex align-items-center gap-2 py-2">
           <i className="bi bi-exclamation-triangle" aria-hidden="true"></i>

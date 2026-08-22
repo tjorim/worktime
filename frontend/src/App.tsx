@@ -23,7 +23,7 @@ import { useShiftNotifications } from "@/hooks/useShiftNotifications";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { getScheduleChangeTeamAction, getScheduleConfig } from "@/utils/scheduleUtils";
 
 import * as m from "@/paraglide/messages.js";
 import { router } from "@/router";
@@ -228,22 +228,12 @@ function AppContent() {
 
   const handleScheduleSelect = (schedule: ScheduleOption) => {
     try {
-      const nextScheduleConfig = getScheduleConfig(schedule);
-      // Always reset team when changing schedules, regardless of team count
-      // Teams in different schedules represent different rosters
-      const scheduleChanged = schedule !== scheduleType;
-      const teamsDisabled = nextScheduleConfig.shiftConfig.teamCount <= 1;
-
-      if (scheduleChanged || teamsDisabled) {
-        // Only show notification if user had a team selected
-        if (myTeam !== null) {
-          setMyTeam(null);
-          // Provide appropriate message based on the reason for reset
-          if (scheduleChanged) {
-            showInfo(m.schedule_team_reset_changed());
-          } else {
-            showInfo(m.schedule_team_reset_no_teams());
-          }
+      getScheduleConfig(schedule);
+      const teamAction = getScheduleChangeTeamAction(scheduleType, schedule, myTeam);
+      if (teamAction !== "keep") {
+        setMyTeam(null);
+        if (teamAction === "clear-and-prompt") {
+          showInfo(m.schedule_team_reset_changed());
         }
       }
       setScheduleType(schedule);

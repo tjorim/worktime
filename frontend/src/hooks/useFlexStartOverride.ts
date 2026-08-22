@@ -1,15 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
-import { FLEX_START_OVERRIDE_STORAGE_KEY } from "@/constants/storageKeys";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { dayjs } from "@/utils/dateTimeUtils";
-
-interface StoredFlexStartOverride {
-  /** Day the override applies to, `YYYY-MM-DD`. */
-  date: string;
-  /** Clock-in time, 24-hour `HH:mm`. */
-  time: string;
-}
 
 export interface FlexStartOverride {
   startTime: Dayjs | null;
@@ -24,10 +16,8 @@ export interface FlexStartOverride {
  * stored date matches `day`.
  */
 export function useFlexStartOverride(day: Dayjs): FlexStartOverride {
-  const [stored, setStored] = useLocalStorage<StoredFlexStartOverride | null>(
-    FLEX_START_OVERRIDE_STORAGE_KEY,
-    null,
-  );
+  const { preferences, setPreferences } = useDevicePreferences();
+  const stored = preferences?.flexStartOverride ?? null;
   const dayKey = day.format("YYYY-MM-DD");
 
   const startTime = useMemo(() => {
@@ -38,12 +28,18 @@ export function useFlexStartOverride(day: Dayjs): FlexStartOverride {
 
   const setStartTime = useCallback(
     (time: string) => {
-      setStored({ date: dayKey, time });
+      setPreferences((current) => ({
+        ...current,
+        flexStartOverride: { date: dayKey, time },
+      }));
     },
-    [dayKey, setStored],
+    [dayKey, setPreferences],
   );
 
-  const clear = useCallback(() => setStored(null), [setStored]);
+  const clear = useCallback(
+    () => setPreferences((current) => ({ ...current, flexStartOverride: null })),
+    [setPreferences],
+  );
 
   return { startTime, setStartTime, clear };
 }

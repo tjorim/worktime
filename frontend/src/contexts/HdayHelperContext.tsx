@@ -8,8 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { HDAY_HELPER_SETTINGS_STORAGE_KEY } from "@/constants/storageKeys";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 
 export type HdayHelperStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -23,10 +22,6 @@ interface HdayHelperContextType {
   updateHdayHelperUrl: (url: string | null) => void;
   testHdayHelperConnection: (url: string) => Promise<boolean>;
 }
-
-const defaultOptions: HdayHelperOptions = {
-  hdayHelperUrl: null,
-};
 
 const HdayHelperContext = createContext<HdayHelperContextType | null>(null);
 const HELPER_CONNECTION_TIMEOUT_MS = 5000;
@@ -45,13 +40,16 @@ interface HdayHelperProviderProps {
 }
 
 export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
-  const [options, setOptions] = useLocalStorage<HdayHelperOptions>(
-    HDAY_HELPER_SETTINGS_STORAGE_KEY,
-    defaultOptions,
-  );
+  const { preferences, setPreferences } = useDevicePreferences();
   const normalizedOptions: HdayHelperOptions = useMemo(
-    () => ({ hdayHelperUrl: options.hdayHelperUrl ?? null }),
-    [options.hdayHelperUrl],
+    () => ({ hdayHelperUrl: preferences?.hdayHelper?.url ?? null }),
+    [preferences?.hdayHelper?.url],
+  );
+  const setHelperUrl = useCallback(
+    (url: string | null) => {
+      setPreferences((current) => ({ ...current, hdayHelper: { url } }));
+    },
+    [setPreferences],
   );
 
   const [helperConnectionStatus, setHelperConnectionStatus] =
@@ -64,10 +62,10 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
       probeIdRef.current += 1;
       probeControllerRef.current?.abort();
       probeControllerRef.current = null;
-      setOptions((prev) => ({ ...prev, hdayHelperUrl: url || null }));
+      setHelperUrl(url || null);
       setHelperConnectionStatus("disconnected");
     },
-    [setOptions],
+    [setHelperUrl],
   );
 
   const testHdayHelperConnection = useCallback(
@@ -95,9 +93,7 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
           setHelperConnectionStatus("error");
           return false;
         }
-        setOptions((prev) =>
-          prev.hdayHelperUrl === normalizedUrl ? prev : { ...prev, hdayHelperUrl: normalizedUrl },
-        );
+        if (normalizedOptions.hdayHelperUrl !== normalizedUrl) setHelperUrl(normalizedUrl);
         setHelperConnectionStatus("connected");
         return true;
       } catch {
@@ -109,7 +105,7 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
         if (probeId === probeIdRef.current) probeControllerRef.current = null;
       }
     },
-    [setOptions],
+    [normalizedOptions.hdayHelperUrl, setHelperUrl],
   );
 
   // A saved URL is only configuration, not proof that the helper is still up.

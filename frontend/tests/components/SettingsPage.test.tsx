@@ -17,7 +17,7 @@ import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { server } from "@/mocks/server";
 import { syncStore } from "@/mocks/data/syncStore";
 import { labelsCollection } from "@/db/collections";
-import { USER_STATE_STORAGE_KEY, PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
@@ -77,7 +77,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 
   localStorage.removeItem(USER_STATE_STORAGE_KEY);
-  localStorage.removeItem(PWA_INSTALL_STATE_STORAGE_KEY);
+  localStorage.removeItem(DEVICE_PREFERENCES_STORAGE_KEY);
 
   const labelsSnapshot = [...labelsCollection.toArray];
   labelsSnapshot.forEach((label) => {
