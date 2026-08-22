@@ -33,14 +33,18 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   const holidayDates = useMemo(() => [...publicHolidayMap.keys()], [publicHolidayMap]);
   const { entries: timeOffEntries } = useEventStore();
   const { tasks: timeTrackingTasks, labels: timeTrackingLabels } = useTimeTrackingStorage();
-  const labelColorById = useMemo(() => buildLabelColorMap(timeTrackingLabels), [timeTrackingLabels]);
+  const labelColorById = useMemo(
+    () => buildLabelColorMap(timeTrackingLabels),
+    [timeTrackingLabels],
+  );
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { settings } = useSettings();
   const { lastUsed, updateLastGanttView, updateLastGanttViewMode } = useLastUsed();
   const timeOffDates = useMemo(
-    () => (settings.enableTimeOff ? getGanttTimeOffDates(timeOffEntries, currentYear) : EMPTY_ARRAY),
+    () =>
+      settings.enableTimeOff ? getGanttTimeOffDates(timeOffEntries, currentYear) : EMPTY_ARRAY,
     [currentYear, settings.enableTimeOff, timeOffEntries],
   );
   const view = lastUsed.ganttView;
@@ -125,7 +129,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   return (
     <div className="gantt-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <ButtonGroup aria-label={m.gantt_toggle_view_aria()}>
+        <ButtonGroup className="view-toggle-group" aria-label={m.gantt_toggle_view_aria()}>
           <Button
             variant={view === "chart" ? "primary" : "outline-primary"}
             size="sm"

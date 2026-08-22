@@ -91,7 +91,7 @@ export function ScheduleTabView({
 
   return (
     <div className="schedule-tab-view py-3 d-flex flex-column gap-3">
-      <ButtonGroup aria-label={m.schedule_toggle_view_aria()}>
+      <ButtonGroup className="view-toggle-group" aria-label={m.schedule_toggle_view_aria()}>
         <Button
           variant={viewMode === "schedule" ? "primary" : "outline-primary"}
           size="sm"

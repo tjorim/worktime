@@ -60,12 +60,20 @@ export function Header() {
               variant={isSettingsPage ? "light" : "outline-light"}
               size="sm"
               onClick={handleToggleSettings}
-              aria-label={m.settings_title()}
-              title={isMac ? m.settings_cmd() : m.settings_ctrl()}
+              aria-label={isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
+              title={
+                isSettingsPage
+                  ? m.settings_page_back_btn()
+                  : isMac
+                    ? m.settings_cmd()
+                    : m.settings_ctrl()
+              }
               aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
             >
-              <i className="bi bi-gear"></i>
-              <span className="d-none d-lg-inline ms-1">{m.settings_title()}</span>
+              <i className={`bi ${isSettingsPage ? "bi-arrow-left" : "bi-gear"}`}></i>
+              <span className="d-none d-lg-inline ms-1">
+                {isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
+              </span>
             </Button>
           </div>
         </Container>

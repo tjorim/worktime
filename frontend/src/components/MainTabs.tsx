@@ -11,6 +11,7 @@ import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
+import { MobileQuickActions } from "./MobileQuickActions";
 
 const CalendarView = lazy(() =>
   import("@/components/CalendarView").then((module) => ({
@@ -89,6 +90,7 @@ export function MainTabs({
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
     null,
   );
+  const [timeOffAddRequest, setTimeOffAddRequest] = useState(0);
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
   const ganttEnabled = settings.enableGantt;
@@ -258,7 +260,10 @@ export function MainTabs({
               tabAttrs={{ "aria-label": m.tab_time_off() }}
             >
               <Suspense fallback={loadingFallback}>
-                <TimeOffView isActive={activeKey === "timeoff"} />
+                <TimeOffView
+                  isActive={activeKey === "timeoff"}
+                  addEventRequest={timeOffAddRequest}
+                />
               </Suspense>
             </Tab>
           )}
@@ -305,6 +310,19 @@ export function MainTabs({
           )}
         </Tabs>
       </div>
+
+      <MobileQuickActions
+        canAddTimeOff={timeOffEnabled}
+        canTrackTime={timeTrackingEnabled}
+        onAddTimeOff={() => {
+          setTimeOffAddRequest((request) => request + 1);
+          setActiveTab("timeoff");
+        }}
+        onTrackTime={() => {
+          setActiveTab("timetracking");
+        }}
+        onOpenCalendar={() => setActiveTab("calendar")}
+      />
 
       {/* Schedule Detail Modal */}
       {selectedScheduleForDetail && (

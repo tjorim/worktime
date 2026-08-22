@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">32</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">33</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">5</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">5</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">4</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">4</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1284,7 +1284,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Product gaps<span class="sec-count">6 · 2 fixed</span></h2>
+      <h2>Product gaps<span class="sec-count">6 · 3 fixed</span></h2>
       <p>Capability that exists on one side of the wire and can't be reached from the other.</p>
     </div>
     <div class="findings">
@@ -1394,19 +1394,24 @@
         <div class="refs"><b>backend/app/routers/audit.py</b> <b>settings/admin/SettingsAdminUsersSection.tsx</b></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a>
           <span class="area">frontend</span>
           <h3>Mobile ergonomics: team carousel and floating action button</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Two mobile navigation ideas with no code yet. Worth deciding whether the carousel replaces
           the team selector on mobile or supplements it — two ways to do one thing on a small screen
           is usually worse than one good one. <strong>Overlaps #1128:</strong> a fixed FAB and a
           bottom tab bar can't both own the bottom of a 390&nbsp;px viewport, so settle that layout
           once across both.</p>
-        <div class="refs"><b>components/MainTabs.tsx</b> <b>components/TeamScheduleView.tsx</b></div>
+        <div class="refs"><b>components/MainTabs.tsx</b> <b>components/schedule/TodayView.tsx</b></div>
+        <div class="verified"><span>Resolved in the current PR: <code>TodayView.tsx</code> uses a
+          touch carousel with explicit previous/next controls on phones while retaining its grid on
+          larger screens; <code>MobileQuickActions.tsx</code> adds a safe-area-aware action button and
+          focus-trapped quick sheet for starting a timer or opening the existing time-off, time-tracking,
+          and calendar flows.</span></div>
       </div>
 
     </div>
@@ -1579,7 +1584,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Low <span class="sec-count">5</span></h3>
+      <h3>Low <span class="sec-count">4</span></h3>
       <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
@@ -1607,15 +1612,6 @@
             </tr>
             <tr>
               <td class="seq-n">4</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
-              <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
-                designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
-                stacked icon+labels, not a bottom-bar redesign, so there's no fixed bottom element left
-                to collide with. Worth a design pass against the shipped tab bar rather than the
-                hypothetical one the issue was written against.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge

@@ -3,9 +3,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainTabs } from "@/components/MainTabs";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 
-// The status card is only central to the Calendar and Schedule tabs — everywhere
-// else it collapses to a single-line strip so tab content is visible without
-// scrolling (see #1126).
+// The status card is central to Calendar and Schedule on larger screens. On
+// mobile it starts compact everywhere so the selected tab remains in reach.
 const FULL_STATUS_TABS = new Set(["calendar", "unified-calendar", "schedule"]);
 
 export function HomePage() {
@@ -22,7 +21,7 @@ export function HomePage() {
     clearPendingTaskEdit,
   } = useAppShellContext();
 
-  const statusVariant = FULL_STATUS_TABS.has(activeTab) ? "full" : "compact";
+  const statusVariant = FULL_STATUS_TABS.has(activeTab) ? "responsive" : "compact";
 
   return (
     <main id="main-content">

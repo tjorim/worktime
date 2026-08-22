@@ -257,7 +257,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
   };
 
   return (
-    <section className="unified-calendar p-3" aria-label="Unified calendar">
+    <section className="unified-calendar px-0 py-3 px-sm-3" aria-label="Unified calendar">
       <Alert variant="info" className="py-2">
         Shifts, time off, and time tracking are shown together. Drag a time-tracking task to
         reschedule it.

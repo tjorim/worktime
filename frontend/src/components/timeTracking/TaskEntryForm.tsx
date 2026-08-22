@@ -116,42 +116,37 @@ export function TaskEntryForm({
           className="d-flex align-items-center gap-2 mb-3 p-2 rounded bg-body-tertiary"
           aria-live="polite"
         >
-          {runningTaskSummary && <div className="d-flex flex-column gap-1 flex-grow-1 min-w-0">
-            <div className="d-flex align-items-center flex-wrap gap-2">
-              <span className="badge text-bg-danger d-inline-flex align-items-center gap-1">
-                <i className="bi bi-record-fill" aria-hidden="true" />
-                {m.tt_running_status()}
-              </span>
-              <span className="fw-semibold text-truncate">{runningTaskSummary.task}</span>
-              <span
-                className="time-tracking-label"
-                style={{
-                  backgroundColor: runningTaskSummary.labelColor,
-                  color: runningTaskSummary.labelTextColor,
-                }}
-              >
-                {runningTaskSummary.label}
-              </span>
+          {runningTaskSummary && (
+            <div className="d-flex flex-column gap-1 flex-grow-1 min-w-0">
+              <div className="d-flex align-items-center flex-wrap gap-2">
+                <span className="badge text-bg-danger d-inline-flex align-items-center gap-1">
+                  <i className="bi bi-record-fill" aria-hidden="true" />
+                  {m.tt_running_status()}
+                </span>
+                <span className="fw-semibold text-truncate">{runningTaskSummary.task}</span>
+                <span
+                  className="time-tracking-label"
+                  style={{
+                    backgroundColor: runningTaskSummary.labelColor,
+                    color: runningTaskSummary.labelTextColor,
+                  }}
+                >
+                  {runningTaskSummary.label}
+                </span>
+              </div>
+              {runningTaskSummary.showDetails && (
+                <span className="small text-muted">
+                  {m.tt_started()} {runningTaskSummary.time}
+                </span>
+              )}
             </div>
-            {runningTaskSummary.showDetails && (
-              <span className="small text-muted">
-                {m.tt_started()} {runningTaskSummary.time}
-              </span>
-            )}
-          </div>}
-          <Button
-            size="sm"
-            variant="danger"
-            className="flex-shrink-0"
-            onClick={onStopNow}
-          >
+          )}
+          <Button size="sm" variant="danger" className="flex-shrink-0" onClick={onStopNow}>
             {m.tt_stop_timer()} · {timerElapsed}
           </Button>
         </div>
       ) : showTimerControls ? (
-        <p className="small text-muted mb-2">
-          {m.tt_quick_timer_desc()}
-        </p>
+        <p className="small text-muted mb-2">{m.tt_quick_timer_desc()}</p>
       ) : null}
       <Row className="g-3 align-items-end">
         <Col md={primaryFieldWidth}>
@@ -215,7 +210,7 @@ export function TaskEntryForm({
             </Form.Group>
           </Col>
         )}
-        <Col md={2}>
+        <Col xs={6} md={2}>
           <Form.Group controlId="timeTrackerStart">
             <Form.Label>{m.form_start()}</Form.Label>
             <Form.Control
@@ -226,7 +221,7 @@ export function TaskEntryForm({
             />
           </Form.Group>
         </Col>
-        <Col md={2}>
+        <Col xs={6} md={2}>
           <Form.Group controlId="timeTrackerStop">
             <Form.Label>{m.form_stop()}</Form.Label>
             <Form.Control
@@ -239,7 +234,8 @@ export function TaskEntryForm({
         </Col>
         <Col md={2}>
           <div className="d-grid gap-2">
-            {showTimerControls && !isTimerRunning &&
+            {showTimerControls &&
+              !isTimerRunning &&
               renderDisabledTooltipButton(
                 "start-now",
                 !canStartNow ? startDisabledReason : undefined,

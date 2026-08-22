@@ -264,6 +264,17 @@ describe("TimeOffView", () => {
   });
 
   describe("Add Event Modal", () => {
+    it("opens from an external quick-action request on mount", () => {
+      render(
+        <AllProviders>
+          <TimeOffView addEventRequest={1} />
+        </AllProviders>,
+      );
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText(/New event/i)).toBeInTheDocument();
+    });
+
     it("should open modal when Add Event button is clicked", async () => {
       render(
         <AllProviders>

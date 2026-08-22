@@ -52,6 +52,8 @@
 .month-calendar-day {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: clip;
   border-radius: 0.75rem;
   border: 1px solid var(--wt-month-calendar-border);
   background: var(--wt-month-calendar-day-bg);
@@ -157,7 +159,8 @@
     opacity: 0.8;
     visibility: visible;
     box-shadow: 0 0 0 1px var(--wt-month-calendar-focus-outline);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--wt-month-calendar-focus-outline) 35%, transparent);
+    box-shadow: 0 0 0 1px
+      color-mix(in srgb, var(--wt-month-calendar-focus-outline) 35%, transparent);
     pointer-events: auto;
   }
 
@@ -188,6 +191,7 @@
   width: 100%;
   font-weight: 600;
   color: inherit;
+  min-width: 0;
 }
 
 .month-calendar-day-number {
@@ -199,6 +203,8 @@
   display: inline-flex;
   gap: 0.2rem;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .month-calendar-day-indicator {
@@ -446,6 +452,30 @@
 
   .month-calendar-events {
     padding: 0.15rem 0.25rem 0.35rem;
+  }
+}
+
+@media (width <= 360px) {
+  .month-calendar-grid {
+    gap: 0.2rem;
+  }
+
+  .month-calendar-day {
+    padding-inline: 0.125rem;
+  }
+
+  .month-calendar-day-header {
+    padding-inline: 0;
+  }
+
+  .month-calendar-day-number {
+    font-size: 0.85rem;
+  }
+
+  .month-calendar-add-btn {
+    width: 1.1rem;
+    height: 1.1rem;
+    font-size: 0.75rem;
   }
 }
 

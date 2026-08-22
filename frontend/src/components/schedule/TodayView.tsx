@@ -1,6 +1,8 @@
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
+import Carousel from "react-bootstrap/Carousel";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -186,9 +188,14 @@ export function TodayView({
   const scheduleSelectId = useId();
   const hasTeams = viewingScheduleType ? hasMultipleTeams(viewingScheduleType) : false;
   const today = useLiveTime({ precision: "minute" });
+  const [mobileTeamIndex, setMobileTeamIndex] = useState(0);
 
   // Calculate shifts for the viewing schedule
   const todayShifts = viewingScheduleType ? getAllTeamsShifts(today, viewingScheduleType) : [];
+
+  useEffect(() => {
+    setMobileTeamIndex(0);
+  }, [viewingScheduleType]);
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!viewingScheduleType || !shiftResult.shift.isWorking) return false;
@@ -255,20 +262,77 @@ export function TodayView({
             {m.schedule_select_hint()}
           </div>
         ) : (
-          <Row className="g-2">
-            {todayShifts.map((shiftResult) => (
-              <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
-                <TeamCard
-                  shiftResult={shiftResult}
-                  isMyTeam={myTeam === shiftResult.teamNumber}
-                  isCurrentlyActive={isCurrentlyActive(shiftResult)}
-                  hasTeams={hasTeams}
-                  onTeamClick={onTeamClick}
-                  scheduleType={viewingScheduleType}
-                />
-              </Col>
-            ))}
-          </Row>
+          <>
+            {todayShifts.length > 1 && (
+              <div className="d-sm-none">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    aria-label={m.today_view_previous_team()}
+                    onClick={() =>
+                      setMobileTeamIndex(
+                        (mobileTeamIndex - 1 + todayShifts.length) % todayShifts.length,
+                      )
+                    }
+                  >
+                    <i className="bi bi-chevron-left" aria-hidden="true" />
+                  </Button>
+                  <span className="small text-muted" aria-live="polite">
+                    {m.today_view_team_position({
+                      current: String(mobileTeamIndex + 1),
+                      total: String(todayShifts.length),
+                    })}
+                  </span>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    aria-label={m.today_view_next_team()}
+                    onClick={() => setMobileTeamIndex((mobileTeamIndex + 1) % todayShifts.length)}
+                  >
+                    <i className="bi bi-chevron-right" aria-hidden="true" />
+                  </Button>
+                </div>
+                <Carousel
+                  activeIndex={mobileTeamIndex}
+                  onSelect={setMobileTeamIndex}
+                  controls={false}
+                  indicators={false}
+                  interval={null}
+                  touch
+                  wrap
+                  className="team-mobile-carousel"
+                >
+                  {todayShifts.map((shiftResult) => (
+                    <Carousel.Item key={shiftResult.teamNumber}>
+                      <TeamCard
+                        shiftResult={shiftResult}
+                        isMyTeam={myTeam === shiftResult.teamNumber}
+                        isCurrentlyActive={isCurrentlyActive(shiftResult)}
+                        hasTeams={hasTeams}
+                        onTeamClick={onTeamClick}
+                        scheduleType={viewingScheduleType}
+                      />
+                    </Carousel.Item>
+                  ))}
+                </Carousel>
+              </div>
+            )}
+            <Row className={todayShifts.length > 1 ? "g-2 d-none d-sm-flex" : "g-2"}>
+              {todayShifts.map((shiftResult) => (
+                <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
+                  <TeamCard
+                    shiftResult={shiftResult}
+                    isMyTeam={myTeam === shiftResult.teamNumber}
+                    isCurrentlyActive={isCurrentlyActive(shiftResult)}
+                    hasTeams={hasTeams}
+                    onTeamClick={onTeamClick}
+                    scheduleType={viewingScheduleType}
+                  />
+                </Col>
+              ))}
+            </Row>
+          </>
         )}
       </Card.Body>
     </Card>

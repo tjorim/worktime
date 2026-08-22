@@ -22,6 +22,13 @@ const baseProps = {
 };
 
 describe("TaskEntryForm timer controls", () => {
+  it("keeps the start and stop fields side by side on mobile", () => {
+    render(<TaskEntryForm {...baseProps} />);
+
+    expect(screen.getByLabelText("Start").closest(".col-6")).toBeInTheDocument();
+    expect(screen.getByLabelText("Stop").closest(".col-6")).toBeInTheDocument();
+  });
+
   it("keeps Stop available without a running-task summary and never calls Start", () => {
     const onStartNow = vi.fn();
     const onStopNow = vi.fn();

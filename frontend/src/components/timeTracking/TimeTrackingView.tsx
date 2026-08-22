@@ -78,7 +78,8 @@ export function TimeTrackingView({
   }, [updateLastTimeTrackingView, viewMode]);
 
   const pendingEditTask = useMemo(
-    () => (pendingTaskEditId ? (tasks.find((item) => item.id === pendingTaskEditId) ?? null) : null),
+    () =>
+      pendingTaskEditId ? (tasks.find((item) => item.id === pendingTaskEditId) ?? null) : null,
     [pendingTaskEditId, tasks],
   );
 
@@ -92,6 +93,7 @@ export function TimeTrackingView({
     setViewMode("daily");
     setSelectedDailyDate(pendingEditTask.startTime.slice(0, 10));
   }, [pendingTaskEditId, pendingEditTask, onClearPendingTaskEdit]);
+
 
   const effectiveTeam = useMemo(
     () => getEffectiveTeam(myTeam, scheduleType),
@@ -108,7 +110,7 @@ export function TimeTrackingView({
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center gap-2 flex-wrap">
-        <ButtonGroup aria-label={m.tt_toggle_view_aria()}>
+        <ButtonGroup className="view-toggle-group" aria-label={m.tt_toggle_view_aria()}>
           <Button
             variant={viewMode === "daily" ? "primary" : "outline-primary"}
             size="sm"

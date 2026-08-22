@@ -35,6 +35,18 @@ describe("Header", () => {
       render(<App />);
       expect(screen.getByLabelText("Settings")).toBeInTheDocument();
     });
+
+    it("turns the Settings control into a clearly labelled back control on Settings", async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      await user.click(screen.getByLabelText("Settings"));
+
+      const backButton = await screen.findByLabelText("Back to app");
+      expect(backButton.querySelector(".bi-arrow-left")).toBeInTheDocument();
+      await user.click(backButton);
+      expect(await screen.findByLabelText("Settings")).toBeInTheDocument();
+    });
   });
 
   describe("About modal", () => {
@@ -144,7 +156,6 @@ describe("Header", () => {
       });
 
       render(<App />);
-
 
       // Open Settings panel
       const settingsButton = await screen.findByLabelText("Settings");
