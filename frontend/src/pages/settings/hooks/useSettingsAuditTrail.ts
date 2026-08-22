@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 
@@ -30,6 +30,7 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const requestGenerationRef = useRef(0);
 
   const fetchPage = useCallback(
     async (beforeId?: number) => {
@@ -46,6 +47,7 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
   );
 
   useEffect(() => {
+    const requestGeneration = ++requestGenerationRef.current;
     if (!enabled) {
       setEntries([]);
       setError(null);
@@ -57,21 +59,24 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
 
     let isCancelled = false;
     setIsLoading(true);
+    setIsLoadingMore(false);
     setError(null);
 
     fetchPage()
       .then((items) => {
-        if (isCancelled) return;
+        if (isCancelled || requestGenerationRef.current !== requestGeneration) return;
         setEntries(items);
         setHasMore(items.length === PAGE_SIZE);
       })
       .catch((loadError) => {
-        if (isCancelled) return;
+        if (isCancelled || requestGenerationRef.current !== requestGeneration) return;
         logger.error("Failed to load audit trail:", loadError);
         setError(m.audit_trail_load_failed());
       })
       .finally(() => {
-        if (!isCancelled) setIsLoading(false);
+        if (!isCancelled && requestGenerationRef.current === requestGeneration) {
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -82,18 +87,23 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
   const loadMore = async () => {
     const beforeId = entries.at(-1)?.id;
     if (beforeId === undefined || isLoadingMore) return;
+    const requestGeneration = requestGenerationRef.current;
 
     setIsLoadingMore(true);
     setError(null);
     try {
       const items = await fetchPage(beforeId);
+      if (requestGenerationRef.current !== requestGeneration) return;
       setEntries((current) => [...current, ...items]);
       setHasMore(items.length === PAGE_SIZE);
     } catch (loadError) {
+      if (requestGenerationRef.current !== requestGeneration) return;
       logger.error("Failed to load more audit entries:", loadError);
       setError(m.audit_trail_load_failed());
     } finally {
-      setIsLoadingMore(false);
+      if (requestGenerationRef.current === requestGeneration) {
+        setIsLoadingMore(false);
+      }
     }
   };
 

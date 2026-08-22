@@ -4,6 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 const entry = (id: number) => ({
   id,
   actor_user_id: 7,
@@ -70,5 +78,34 @@ describe("SettingsAuditTrailSection", () => {
       expect(fetchFn).toHaveBeenLastCalledWith("/api/audit?limit=25&before_id=76");
     });
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+  });
+
+  it("ignores a stale pagination response after the API client changes", async () => {
+    const stalePage = deferred<Response>();
+    const firstPage = Array.from({ length: 25 }, (_, index) => entry(100 - index));
+    const initialFetch = vi
+      .fn<(input: string) => Promise<Response>>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: firstPage })))
+      .mockReturnValueOnce(stalePage.promise);
+    const renewedFetch = vi.fn(async () =>
+      new Response(JSON.stringify({ items: [entry(200)] }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness fetchFn={initialFetch} teamWide />);
+
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+    rerender(<Harness fetchFn={renewedFetch} teamWide />);
+    expect(await screen.findByText("update · time entry entry-200")).toBeInTheDocument();
+
+    stalePage.resolve(
+      new Response(JSON.stringify({ items: [entry(75)] }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await waitFor(() => expect(screen.queryByText("update · time entry entry-75")).not.toBeInTheDocument());
+    expect(screen.queryByText("update · time entry entry-100")).not.toBeInTheDocument();
   });
 });
