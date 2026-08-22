@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { readErrorDetail } from "@/utils/apiClient";
 import { logger } from "@/utils/logger";
@@ -38,6 +38,10 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
   const [isCreating, setIsCreating] = useState(false);
   const [createdClient, setCreatedClient] = useState<CreatedIntegrationClient | null>(null);
   const [busyClientId, setBusyClientId] = useState<number | null>(null);
+  // State updates do not become visible until the next render. Keep a synchronous
+  // guard as well so two mutation callbacks invoked in the same tick cannot issue
+  // overlapping one-time keys and overwrite the only copy of either secret.
+  const mutationInFlight = useRef(false);
 
   const loadClients = useCallback(async () => {
     setIsLoading(true);
@@ -65,11 +69,13 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
   }, [isAuthenticated, loadClients]);
 
   const createClient = async (name: string, scopes: IntegrationClientScope[]) => {
+    if (mutationInFlight.current || createdClient) return;
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError(m.integration_clients_name_required());
       return;
     }
+    mutationInFlight.current = true;
     setIsCreating(true);
     setError(null);
     try {
@@ -85,11 +91,14 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
       logger.error("Failed to create integration client:", createError);
       setError(createError instanceof Error ? createError.message : m.integration_clients_create_failed());
     } finally {
+      mutationInFlight.current = false;
       setIsCreating(false);
     }
   };
 
   const rotateClient = async (clientId: number) => {
+    if (mutationInFlight.current || createdClient) return;
+    mutationInFlight.current = true;
     setBusyClientId(clientId);
     setError(null);
     try {
@@ -101,11 +110,14 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
       logger.error("Failed to rotate integration client:", rotateError);
       setError(rotateError instanceof Error ? rotateError.message : m.integration_clients_rotate_failed());
     } finally {
+      mutationInFlight.current = false;
       setBusyClientId(null);
     }
   };
 
   const revokeClient = async (clientId: number) => {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
     setBusyClientId(clientId);
     setError(null);
     try {
@@ -113,11 +125,13 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
       if (!response.ok && response.status !== 404) {
         throw new Error((await readErrorDetail(response)) ?? m.integration_clients_revoke_failed());
       }
+      setCreatedClient((current) => current?.id === clientId ? null : current);
       await loadClients();
     } catch (revokeError) {
       logger.error("Failed to revoke integration client:", revokeError);
       setError(revokeError instanceof Error ? revokeError.message : m.integration_clients_revoke_failed());
     } finally {
+      mutationInFlight.current = false;
       setBusyClientId(null);
     }
   };

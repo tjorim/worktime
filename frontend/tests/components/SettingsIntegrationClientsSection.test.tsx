@@ -62,4 +62,55 @@ describe("Settings integration clients", () => {
     expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
     await waitFor(() => expect(fetchFn).toHaveBeenCalledWith("/api/integration-clients/7/rotate", { method: "POST" }));
   });
+
+  it("rejects overlapping key-issuing mutations invoked in the same tick", async () => {
+    let resolveCreate: ((response: Response) => void) | undefined;
+    const createResponse = new Promise<Response>((resolve) => { resolveCreate = resolve; });
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients" && init?.method === "POST") return createResponse;
+      if (input === "/api/integration-clients") return jsonResponse({ items: [], total: 0 });
+      if (input === "/api/integration-clients/7/rotate") throw new Error("overlapping rotation was issued");
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    function MutationHarness() {
+      const state = useSettingsIntegrationClients({ isAuthenticated: true, fetchFn });
+      return <button onClick={() => {
+        state.createClient("Home hub", ["worktime:mcp"]);
+        state.rotateClient(7);
+      }}>Issue twice</button>;
+    }
+
+    const user = userEvent.setup();
+    render(<MutationHarness />);
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledWith("/api/integration-clients"));
+    await user.click(screen.getByRole("button", { name: "Issue twice" }));
+    expect(fetchFn).not.toHaveBeenCalledWith("/api/integration-clients/7/rotate", expect.anything());
+
+    resolveCreate?.(jsonResponse({ id: 7, name: "Home hub", key: "wtic_secret", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" }, { status: 201 }));
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(3));
+  });
+
+  it("clears a displayed one-time key when its client is revoked", async () => {
+    let revoked = false;
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients/7/rotate" && init?.method === "POST") return jsonResponse({ id: 7, name: "Home hub", key: "wtic_replacement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" });
+      if (input === "/api/integration-clients/7" && init?.method === "DELETE") {
+        revoked = true;
+        return new Response(null, { status: 204 });
+      }
+      if (input === "/api/integration-clients") return jsonResponse({ items: revoked ? [{ id: 7, name: "Home hub", key_preview: "ement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: false, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: "2026-08-22T01:00:00Z" }] : [{ id: 7, name: "Home hub", key_preview: "ement", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: true, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: null }], total: 1 });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    const user = userEvent.setup();
+    renderHarness(fetchFn);
+    await user.click(await screen.findByRole("button", { name: "Rotate" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Rotate" }));
+    expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Revoke" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke" }));
+    await waitFor(() => expect(screen.queryByText("wtic_replacement")).not.toBeInTheDocument());
+    expect(await screen.findByText("Revoked")).toBeInTheDocument();
+  });
 });

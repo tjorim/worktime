@@ -30,6 +30,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
   const [name, setName] = useState("");
   const [adminScope, setAdminScope] = useState(false);
   const [confirmation, setConfirmation] = useState<{ action: "rotate" | "revoke"; client: IntegrationClient } | null>(null);
+  const mutationInFlight = props.isCreating || props.busyClientId !== null;
 
   useEffect(() => {
     if (props.createdClient) {
@@ -62,11 +63,11 @@ export function SettingsIntegrationClientsSection(props: Props) {
     </Alert> : null}
     <Form.Group className="mb-2" controlId="integration-client-name">
       <Form.Label className="fw-medium mb-1">{m.integration_clients_name_label()}</Form.Label>
-      <Form.Control size="sm" value={name} onChange={(event) => setName(event.target.value)} placeholder={m.integration_clients_name_placeholder()} disabled={props.isCreating} />
+      <Form.Control size="sm" value={name} onChange={(event) => setName(event.target.value)} placeholder={m.integration_clients_name_placeholder()} disabled={mutationInFlight || props.createdClient !== null} />
     </Form.Group>
     <Form.Check className="mb-3" id="integration-client-mcp-scope" checked readOnly label="worktime:mcp" />
-    {props.isAdmin ? <Form.Check className="mb-3" id="integration-client-admin-scope" checked={adminScope} onChange={(event) => setAdminScope(event.target.checked)} label={m.integration_clients_admin_scope_label()} /> : null}
-    <Button className="mb-3" size="sm" disabled={props.isCreating || !name.trim()} onClick={() => props.onCreateClient(name, adminScope ? ["worktime:mcp", "worktime:admin"] : ["worktime:mcp"])}>
+    {props.isAdmin ? <Form.Check className="mb-3" id="integration-client-admin-scope" checked={adminScope} disabled={mutationInFlight || props.createdClient !== null} onChange={(event) => setAdminScope(event.target.checked)} label={m.integration_clients_admin_scope_label()} /> : null}
+    <Button className="mb-3" size="sm" disabled={mutationInFlight || props.createdClient !== null || !name.trim()} onClick={() => props.onCreateClient(name, adminScope ? ["worktime:mcp", "worktime:admin"] : ["worktime:mcp"])}>
       {props.isCreating ? m.integration_clients_creating_btn() : m.integration_clients_create_btn()}
     </Button>
     {props.error ? <Alert variant="danger" className="py-2">{props.error}</Alert> : null}
@@ -79,8 +80,8 @@ export function SettingsIntegrationClientsSection(props: Props) {
             <div className="text-muted small">{m.api_tokens_scopes_label()}: {client.scopes.join(", ")} · {m.integration_clients_rate_limit({ count: client.rate_limit_per_minute })}</div>
           </div>
           {client.is_active ? <div className="d-flex gap-2">
-            <Button variant="outline-secondary" size="sm" disabled={props.busyClientId === client.id} onClick={() => setConfirmation({ action: "rotate", client })}>{m.integration_clients_rotate_btn()}</Button>
-            <Button variant="outline-danger" size="sm" disabled={props.busyClientId === client.id} onClick={() => setConfirmation({ action: "revoke", client })}>{m.api_tokens_revoke_btn()}</Button>
+            <Button variant="outline-secondary" size="sm" disabled={mutationInFlight || props.createdClient !== null} onClick={() => setConfirmation({ action: "rotate", client })}>{m.integration_clients_rotate_btn()}</Button>
+            <Button variant="outline-danger" size="sm" disabled={mutationInFlight} onClick={() => setConfirmation({ action: "revoke", client })}>{m.api_tokens_revoke_btn()}</Button>
           </div> : null}
         </div>
       </ListGroup.Item>)}
