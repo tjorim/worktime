@@ -7,6 +7,7 @@ import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import { isValidDate } from "@/lib/hday/validation";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { serializeEventFormState } from "@/utils/eventFormState";
+import * as m from "@/paraglide/messages.js";
 import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
@@ -59,10 +60,10 @@ export function useEventForm() {
 
     // Validate start date
     if (!eventStart) {
-      setStartDateError("Start date is required");
+      setStartDateError(m.timeoff_start_date_required());
       valid = false;
     } else if (!isValidDate(eventStart)) {
-      setStartDateError("Invalid date (e.g., Feb 30 or April 31)");
+      setStartDateError(m.timeoff_date_invalid());
       valid = false;
     } else {
       setStartDateError("");
@@ -70,7 +71,7 @@ export function useEventForm() {
 
     // Validate end date
     if (eventEnd && !isValidDate(eventEnd)) {
-      setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
+      setEndDateError(m.timeoff_date_invalid());
       valid = false;
     } else if (
       eventEnd &&
@@ -78,7 +79,7 @@ export function useEventForm() {
       isValidDate(eventStart) &&
       dayjs(eventEnd).isBefore(dayjs(eventStart))
     ) {
-      setEndDateError("End date must be after start date");
+      setEndDateError(m.timeoff_end_before_start());
       valid = false;
     } else {
       setEndDateError("");

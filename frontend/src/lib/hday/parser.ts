@@ -67,6 +67,7 @@
    hday-helper (see hday-helper/src/main.ts), so it must stay free of the "@/"
    alias and import.meta.env; console is the portable logging primitive here. */
 import { normalizeEventFlags } from "./flags";
+import { isValidHdayDate } from "./dateValidation";
 import type { EventFlag, HdayEvent } from "./types";
 
 /**
@@ -219,9 +220,14 @@ export function parseHday(text: string): HdayEvent[] {
     if (rangeMatch?.groups) {
       const { prefix = "", end, comment = "", replacement = "" } = rangeMatch.groups;
       const start = rangeMatch.groups.start!;
-      const flags = parsePrefixFlags(prefix);
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
+      if (!isValidHdayDate(normalizedStart) || !isValidHdayDate(normalizedEnd)) {
+        events.push({ type: "unknown", raw: originalLine, flags: ["holiday"] });
+        continue;
+      }
+
+      const flags = parsePrefixFlags(prefix);
       // In .hday syntax this is technically a comment; we map it to event title in the UI.
       const title = comment || replacement;
 

@@ -120,4 +120,25 @@ describe("useLocalStorage", () => {
     // Hook B should also reflect the update without a page reload
     expect(hookB.result.current[0]).toBe("updated-by-a");
   });
+
+  it("resets to the initial value when another tab removes the key", () => {
+    window.localStorage.setItem("test_cross_tab_removal", '"stored"');
+    const { result } = renderHook(() => useLocalStorage("test_cross_tab_removal", "default"));
+
+    expect(result.current[0]).toBe("stored");
+
+    act(() => {
+      window.localStorage.removeItem("test_cross_tab_removal");
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "test_cross_tab_removal",
+          oldValue: '"stored"',
+          newValue: null,
+          storageArea: window.localStorage,
+        }),
+      );
+    });
+
+    expect(result.current[0]).toBe("default");
+  });
 });

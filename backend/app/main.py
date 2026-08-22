@@ -4,9 +4,10 @@ This FastAPI application provides database-backed Worktime features over
 PostgreSQL.
 """
 
+import asyncio
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any
 
 from fastapi import FastAPI
@@ -119,8 +120,12 @@ async def lifespan(app: FastAPI):
     logger.info("Worktime Backend API shutting down...")
     if jwks_refresh_task is not None:
         jwks_refresh_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await jwks_refresh_task
     if shift_reminder_task is not None:
         shift_reminder_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await shift_reminder_task
     if settings.DATABASE_ENABLED:
         await sync_event_manager.stop_pg_listener()
 

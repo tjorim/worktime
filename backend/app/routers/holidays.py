@@ -15,7 +15,9 @@ payday dates server-side from the cached public holiday data.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections import defaultdict
 from collections.abc import Callable
 from datetime import UTC, timedelta
 from datetime import date as dt_date
@@ -50,6 +52,7 @@ _PAYDAY_DOM = 25
 
 router = APIRouter(tags=["Holidays"])
 YearQuery = Annotated[int, Query(description="Year, e.g. 2026", ge=1900, le=2100)]
+_holiday_fetch_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +115,7 @@ def _is_stale(fetched_at: dt_datetime, year: int) -> bool:
 # ---------------------------------------------------------------------------
 
 
-async def _get_or_fetch_holidays(
+async def _get_or_fetch_holidays_once(
     holiday_type: str,
     country: str,
     year: int,
@@ -239,6 +242,42 @@ async def _get_or_fetch_holidays(
     return data
 
 
+async def _get_or_fetch_holidays(
+    holiday_type: str,
+    country: str,
+    year: int,
+    language: str | None,
+    subdivision: str | None,
+    upstream_url: str,
+    upstream_params: dict[str, str],
+    db: AsyncSession,
+    *,
+    response_filter: Callable[[list[Any]], list[Any]] | None = None,
+) -> list[Any] | None:
+    """Coalesce concurrent cold-cache requests for the same holiday data."""
+    cache_key = _make_cache_key(holiday_type, country, year, language, subdivision)
+    mem_cache = get_cache()
+    cached_entry = mem_cache.get_holiday(cache_key)
+    if cached_entry is not None:
+        return cached_entry.data
+
+    async with _holiday_fetch_locks[cache_key]:
+        cached_entry = mem_cache.get_holiday(cache_key)
+        if cached_entry is not None:
+            return cached_entry.data
+        return await _get_or_fetch_holidays_once(
+            holiday_type,
+            country,
+            year,
+            language,
+            subdivision,
+            upstream_url,
+            upstream_params,
+            db,
+            response_filter=response_filter,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Payday computation
 # ---------------------------------------------------------------------------
@@ -252,13 +291,18 @@ def _build_holiday_date_set(holidays: list[Any]) -> set[str]:
     """
     dates: set[str] = set()
     for h in holidays:
-        if "date" in h:
+        if not isinstance(h, dict):
+            continue
+        if isinstance(h.get("date"), str):
             # Nager.At format: single date field
             dates.add(h["date"])
-        else:
+        elif isinstance(h.get("startDate"), str) and isinstance(h.get("endDate"), str):
             # OpenHolidays format: date range
-            start = dt_date.fromisoformat(h["startDate"])
-            end = dt_date.fromisoformat(h["endDate"])
+            try:
+                start = dt_date.fromisoformat(h["startDate"])
+                end = dt_date.fromisoformat(h["endDate"])
+            except ValueError:
+                continue
             current = start
             while current <= end:
                 dates.add(current.isoformat())

@@ -14,6 +14,7 @@ from app.config import settings
 from app.database.models import CachedHoliday
 from app.routers.holidays import (
     _build_holiday_date_set,
+    _get_or_fetch_holidays,
     _is_business_day,
     _is_stale,
     _payday_for_month,
@@ -104,6 +105,59 @@ class TestGetPublicHolidays:
         assert len(data) == 1
         assert data[0]["date"] == "2026-01-01"
         assert data[0]["name"] == "New Year's Day"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_cold_cache_requests_share_one_upstream_fetch(self, monkeypatch):
+        """Concurrent requests for one key are coalesced within the worker."""
+        monkeypatch.setattr(settings, "CACHE_ENABLED", True)
+        first_started = asyncio.Event()
+        release_first = asyncio.Event()
+        call_count = 0
+
+        async def get(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            first_started.set()
+            await release_first.wait()
+            response = MagicMock()
+            response.is_success = True
+            response.json.return_value = SAMPLE_PUBLIC_HOLIDAYS
+            return response
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = get
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=None)
+
+        def db_session():
+            db = AsyncMock()
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = None
+            db.execute.return_value = result
+            return db
+
+        kwargs = {
+            "holiday_type": "public",
+            "country": "NL",
+            "year": 2099,
+            "language": None,
+            "subdivision": None,
+            "upstream_url": "https://example.test/holidays",
+            "upstream_params": {},
+        }
+
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
+            first = asyncio.create_task(_get_or_fetch_holidays(**kwargs, db=db_session()))
+            await first_started.wait()
+            second = asyncio.create_task(_get_or_fetch_holidays(**kwargs, db=db_session()))
+            await asyncio.sleep(0)
+            release_first.set()
+            first_result, second_result = await asyncio.gather(first, second)
+
+        assert call_count == 1
+        assert first_result == SAMPLE_PUBLIC_HOLIDAYS
+        assert second_result == SAMPLE_PUBLIC_HOLIDAYS
 
     def test_non_public_types_are_filtered_out(self, db_client: TestClient):
         """Entries whose types do not include 'Public' are excluded from the response."""
@@ -456,6 +510,25 @@ class TestPaydayComputation:
         holidays = [{"startDate": "2026-12-24", "endDate": "2026-12-26"}]
         dates = _build_holiday_date_set(holidays)
         assert dates == {"2026-12-24", "2026-12-25", "2026-12-26"}
+
+    def test_build_holiday_date_set_skips_malformed_entries(self):
+        """Malformed upstream elements do not prevent valid dates being used."""
+        holidays = [
+            None,
+            "not-an-object",
+            {},
+            {"date": None},
+            {"date": "2026-01-01"},
+            {"startDate": "bad", "endDate": "2026-02-02"},
+            {"startDate": "2026-02-01"},
+            {"startDate": "2026-02-01", "endDate": "2026-02-02"},
+        ]
+
+        assert _build_holiday_date_set(holidays) == {
+            "2026-01-01",
+            "2026-02-01",
+            "2026-02-02",
+        }
 
     def test_is_business_day_weekday_no_holiday(self):
         """A regular Monday is a business day."""
