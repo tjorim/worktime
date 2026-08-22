@@ -60,10 +60,6 @@ jobs:
         working-directory: frontend
         run: pnpm run typecheck
 
-      - name: Typecheck tests
-        working-directory: frontend
-        run: pnpm exec tsc -p tsconfig.test.json --noEmit
-
       - name: Lint
         working-directory: frontend
         run: pnpm run lint

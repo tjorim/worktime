@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { CalendarView } from "@/features/calendar/CalendarView";
-import { TestProviders } from "../../utils/testProviders";
+import { TestProviders } from "@tests/utils/testProviders";
 
 function setUserState(overrides: { myTeam: number | null; scheduleType: string | null }) {
   localStorage.setItem(
