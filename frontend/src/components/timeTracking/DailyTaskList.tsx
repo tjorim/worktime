@@ -110,6 +110,22 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
   );
 }
 
+function formatPlannedStart(start: Dayjs, liveTime: Dayjs) {
+  const totalMinutes = Math.max(0, start.diff(liveTime, "minute"));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  const time = start.format("HH:mm");
+
+  if (days > 0) {
+    return m.tt_starts_in_days({ time, days: String(days), hours: String(hours) });
+  }
+  if (hours > 0) {
+    return m.tt_starts_in_hours({ time, hours: String(hours), minutes: String(minutes) });
+  }
+  return m.tt_starts_in_minutes({ time, minutes: String(minutes) });
+}
+
 export function DailyTaskList({
   tasks,
   labels,
@@ -219,6 +235,20 @@ export function DailyTaskList({
 
     return { type: "separator", insertBeforeIndex: tasks.length };
   }, [isToday, liveTime, tasks]);
+
+  const gapUntilNextTask = useMemo(() => {
+    if (
+      nowPosition?.type !== "separator" ||
+      nowPosition.insertBeforeIndex !== 0 ||
+      !liveTime
+    ) {
+      return null;
+    }
+    const firstTask = tasks[0];
+    if (!firstTask) return null;
+    const minutes = dayjs(firstTask.startTime).diff(liveTime, "minute");
+    return minutes > 0 ? minutes : null;
+  }, [liveTime, nowPosition, tasks]);
 
   const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
@@ -447,7 +477,10 @@ export function DailyTaskList({
       {tasks.length === 0 ? null : (
         <ListGroup className="mt-3">
           {nowPosition?.type === "separator" && nowPosition.insertBeforeIndex === 0 && liveTime && (
-            <NowIndicator liveTime={liveTime} />
+            <>
+              <NowIndicator liveTime={liveTime} />
+              {gapUntilNextTask !== null && <GapIndicator durationMinutes={gapUntilNextTask} />}
+            </>
           )}
           {tasks.map((task, index) => {
             const startDisplay = dayjs(task.startTime).format("HH:mm");
@@ -458,6 +491,7 @@ export function DailyTaskList({
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
+            const isPlanned = Boolean(liveTime && dayjs(task.startTime).isAfter(liveTime));
             const gap = gapAfter[index] ?? null;
             const ganttTaskName = task.ganttTaskId
               ? ganttTaskNameById[task.ganttTaskId]
@@ -466,7 +500,14 @@ export function DailyTaskList({
               <Fragment key={task.id}>
                 <ListGroup.Item
                   onContextMenu={(e) => handleContextMenu(e, task.id)}
-                  style={isCurrentTask ? { borderLeft: "3px solid var(--bs-danger)" } : undefined}
+                  className={isPlanned ? "bg-body-tertiary" : undefined}
+                  style={
+                    isCurrentTask
+                      ? { borderLeft: "3px solid var(--bs-danger)" }
+                      : isPlanned
+                        ? { borderLeft: "3px dashed var(--bs-secondary)" }
+                        : undefined
+                  }
                 >
                   <div className="d-flex justify-content-between align-items-start gap-2">
                     <div className="flex-grow-1">
@@ -485,6 +526,12 @@ export function DailyTaskList({
                           <Badge bg="danger" className="ms-2" aria-label={m.tt_now_aria()}>
                             <i className="bi bi-clock me-1" aria-hidden="true" />
                             {m.tt_now()}
+                          </Badge>
+                        )}
+                        {isPlanned && (
+                          <Badge bg="secondary" className="ms-2">
+                            <i className="bi bi-calendar-event me-1" aria-hidden="true" />
+                            {m.tt_planned_status()}
                           </Badge>
                         )}
                         {task.includesBreak && (
@@ -529,7 +576,10 @@ export function DailyTaskList({
                         )}
                       </div>
                       <div className="small text-muted">
-                        {m.form_start()}: {startDisplay} · {m.form_stop()}: {stopDisplay}
+                        {isPlanned && liveTime
+                          ? formatPlannedStart(dayjs(task.startTime), liveTime)
+                          : `${m.form_start()}: ${startDisplay}`}
+                        {` · ${m.form_stop()}: ${stopDisplay}`}
                       </div>
                     </div>
                     <div className="d-none d-md-flex gap-1 flex-shrink-0">

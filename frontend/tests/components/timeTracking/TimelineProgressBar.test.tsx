@@ -88,6 +88,55 @@ describe("TimelineProgressBar", () => {
     });
   });
 
+  describe("planned time", () => {
+    it("shows future duration separately without counting it as worked", () => {
+      const completed = makeTask({
+        id: "completed",
+        startTime: "2026-02-07T08:00",
+        stopTime: "2026-02-07T10:00",
+      });
+      const planned = makeTask({
+        id: "planned",
+        text: "Planned handover",
+        startTime: "2026-02-07T14:00",
+        stopTime: "2026-02-07T16:00",
+      });
+
+      render(
+        <TimelineProgressBar
+          tasks={[completed, planned]}
+          labels={TEST_LABELS}
+          liveTime={dayjs("2026-02-07T12:00")}
+          isToday
+        />,
+      );
+
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("2.00h (25.0%)");
+      expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 2.00h");
+      expect(screen.getByLabelText("Planned handover: 2.00h")).toHaveClass("progress-bar-striped");
+    });
+
+    it("shows the known gap from now until the first planned task", () => {
+      const planned = makeTask({
+        id: "planned",
+        text: "Planned handover",
+        startTime: "2026-02-07T14:00",
+        stopTime: "2026-02-07T16:00",
+      });
+
+      render(
+        <TimelineProgressBar
+          tasks={[planned]}
+          labels={TEST_LABELS}
+          liveTime={dayjs("2026-02-07T12:00")}
+          isToday
+        />,
+      );
+
+      expect(screen.getByLabelText("120 minutes of untracked time")).toBeInTheDocument();
+    });
+  });
+
   describe("Now line", () => {
     const getNowLineLeft = () => screen.getByTestId("now-line").style.left;
 

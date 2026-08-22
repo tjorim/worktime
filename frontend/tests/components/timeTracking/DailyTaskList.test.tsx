@@ -321,6 +321,36 @@ describe("DailyTaskList", () => {
     });
   });
 
+  describe("Planned tasks", () => {
+    it("marks a future entry as planned with an absolute and relative start", () => {
+      const task = makeTask({
+        text: "Prepare handover",
+        startTime: "2026-02-07T14:30",
+        stopTime: "2026-02-07T15:30",
+      });
+
+      renderList([task], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T12:15"),
+        isToday: true,
+      });
+
+      expect(screen.getByText("Planned")).toBeInTheDocument();
+      expect(screen.getByText(/Starts 14:30 · in 2h 15m/)).toBeInTheDocument();
+      expect(screen.getByText(/Stop: 15:30/)).toBeInTheDocument();
+      expect(screen.getByText("135min gap")).toBeInTheDocument();
+    });
+
+    it("does not mark an entry that has already started as planned", () => {
+      renderList([makeTask()], TEST_LABELS, {
+        liveTime: dayjs("2026-02-07T12:15"),
+        isToday: true,
+      });
+
+      expect(screen.queryByText("Planned")).not.toBeInTheDocument();
+      expect(screen.getByText(/Start: 08:00 · Stop: 16:00/)).toBeInTheDocument();
+    });
+  });
+
   describe("Now indicator", () => {
     const DATE = "2026-02-07";
     const task1 = makeTask({ id: "t1", startTime: `${DATE}T09:00`, stopTime: `${DATE}T11:00` });
