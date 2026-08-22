@@ -5,6 +5,7 @@ import Form from "react-bootstrap/Form";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { useToast } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 import { logger } from "@/utils/logger";
 
 interface Props {
@@ -15,6 +16,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState<string | null>(null);
   const [configured, setConfigured] = useState(false);
+  const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +27,11 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     void fetchFn("/api/ical")
       .then(async (response) => {
         if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
-        const payload = (await response.json()) as { configured: boolean };
-        if (active) setConfigured(payload.configured);
+        const payload = (await response.json()) as { configured: boolean; last_used_at?: string | null };
+        if (active) {
+          setConfigured(payload.configured);
+          setLastFetchedAt(payload.last_used_at ?? null);
+        }
       })
       .catch((caught) => {
         logger.error("Failed to load calendar feed status:", caught);
@@ -47,6 +52,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
       const payload = (await response.json()) as { url_path: string };
       setUrl(new URL(payload.url_path, window.location.origin).toString());
       setConfigured(true);
+      setLastFetchedAt(null);
     } catch (caught) {
       logger.error("Failed to rotate calendar feed:", caught);
       setError(m.calendar_feed_error());
@@ -63,6 +69,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
       if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
       setUrl(null);
       setConfigured(false);
+      setLastFetchedAt(null);
       toast?.showSuccess(m.calendar_feed_revoked());
     } catch (caught) {
       logger.error("Failed to revoke calendar feed:", caught);
@@ -108,7 +115,19 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
         <div className="text-muted small">{m.loading()}</div>
       ) : configured ? (
         <div className="d-flex flex-column align-items-start gap-2">
-          <Alert variant="success" className="small py-2 mb-0">{m.calendar_feed_configured()}</Alert>
+          <Alert variant="success" className="small py-2 mb-0">
+            <div>{m.calendar_feed_configured()}</div>
+            <div className="mt-1 fw-medium">
+              {lastFetchedAt
+                ? m.calendar_feed_last_fetched({
+                    date: new Intl.DateTimeFormat(getLocale(), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(lastFetchedAt)),
+                  })
+                : m.calendar_feed_never_fetched()}
+            </div>
+          </Alert>
           <div className="d-flex gap-2">
             <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => setConfirmRegenerate(true)}>{m.calendar_feed_regenerate()}</Button>
             <Button size="sm" variant="outline-danger" disabled={busy} onClick={() => void revoke()}>{m.calendar_feed_revoke()}</Button>

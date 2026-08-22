@@ -1144,6 +1144,8 @@
   "calendar_feed_copy": "Link kopiëren",
   "calendar_feed_open_app": "Openen in agenda-app",
   "calendar_feed_configured": "Er is een kalenderabonnement actief. De geheime link wordt na aanmaak verborgen; genereer hem alleen opnieuw als u een nieuwe link nodig hebt.",
+  "calendar_feed_last_fetched": "Laatst opgehaald: {date}",
+  "calendar_feed_never_fetched": "Nog niet opgehaald",
   "calendar_feed_copied": "Kalenderlink naar klembord gekopieerd.",
   "calendar_feed_copy_failed": "De link kon niet worden gekopieerd. Selecteer en kopieer hem handmatig.",
   "calendar_feed_revoked": "Kalenderabonnement ingetrokken.",

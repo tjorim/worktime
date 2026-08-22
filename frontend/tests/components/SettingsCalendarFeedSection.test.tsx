@@ -14,7 +14,7 @@ function renderSection(fetchFn: (input: string, init?: RequestInit) => Promise<R
 describe("SettingsCalendarFeedSection", () => {
   it("shows an existing subscription without rotating its secret", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ configured: true }), {
+      new Response(JSON.stringify({ configured: true, last_used_at: null }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -26,6 +26,19 @@ describe("SettingsCalendarFeedSection", () => {
     expect(fetchFn).toHaveBeenCalledOnce();
     expect(fetchFn).toHaveBeenCalledWith("/api/ical");
     expect(screen.queryByLabelText("Calendar subscription URL")).not.toBeInTheDocument();
+    expect(screen.getByText("Not fetched yet")).toBeInTheDocument();
+  });
+
+  it("shows when the calendar provider last fetched the feed", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ configured: true, last_used_at: "2026-08-22T18:30:00Z" }), {
+        status: 200,
+      }),
+    );
+
+    renderSection(fetchFn);
+
+    expect(await screen.findByText(/Last fetched:/)).toHaveTextContent("2026");
   });
 
   it("warns before replacing an active subscription", async () => {

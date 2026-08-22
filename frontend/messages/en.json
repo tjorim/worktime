@@ -1151,6 +1151,8 @@
   "calendar_feed_copy": "Copy link",
   "calendar_feed_open_app": "Open in calendar app",
   "calendar_feed_configured": "A calendar subscription is active. Its secret link is hidden after creation; regenerate it only if you need a new link.",
+  "calendar_feed_last_fetched": "Last fetched: {date}",
+  "calendar_feed_never_fetched": "Not fetched yet",
   "calendar_feed_copied": "Calendar link copied to clipboard.",
   "calendar_feed_copy_failed": "Could not copy the link. Select and copy it manually.",
   "calendar_feed_revoked": "Calendar subscription revoked.",

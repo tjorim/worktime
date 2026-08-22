@@ -27,7 +27,12 @@ async def feed_status(
     token = await get_ical_feed_token(session, principal.user_id)
     if token is None:
         return IcalFeedStatus(configured=False)
-    return IcalFeedStatus(configured=True, token_preview=token.token_preview, created_at=token.created_at)
+    return IcalFeedStatus(
+        configured=True,
+        token_preview=token.token_preview,
+        created_at=token.created_at,
+        last_used_at=token.last_used_at,
+    )
 
 
 @router.post("", response_model=IcalFeedCreated, status_code=status.HTTP_201_CREATED)

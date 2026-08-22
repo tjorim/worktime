@@ -242,6 +242,7 @@ class IcalFeedStatus(BaseModel):
     configured: bool
     token_preview: str | None = None
     created_at: dt_datetime | None = None
+    last_used_at: dt_datetime | None = None
 
 
 class AccessTokenCreate(BaseModel):
