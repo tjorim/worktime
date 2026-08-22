@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isHdayHelperMixedContentBlocked, resolveHdayHelperTarget } from "@/utils/hdayHelper";
+import { isHdayHelperMixedContentBlocked, resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
 
-describe("resolveHdayHelperTarget", () => {
-  it("routes to the same-origin API when no helper URL is configured", () => {
-    expect(resolveHdayHelperTarget(null)).toEqual({ baseUrl: "/api", usesHelper: false });
+describe("resolveHdayHelperBaseUrl", () => {
+  it("returns null when no helper URL is configured", () => {
+    expect(resolveHdayHelperBaseUrl(null)).toBeNull();
   });
 
-  it("routes to the configured helper when a URL is set", () => {
-    expect(resolveHdayHelperTarget("http://localhost:8080")).toEqual({
-      baseUrl: "http://localhost:8080",
-      usesHelper: true,
-    });
+  it("normalizes a configured helper URL", () => {
+    expect(resolveHdayHelperBaseUrl(" http://localhost:8080/ ")).toBe("http://localhost:8080");
   });
 });
 

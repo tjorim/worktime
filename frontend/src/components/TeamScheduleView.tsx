@@ -16,7 +16,7 @@ import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
-import { resolveHdayHelperTarget } from "@/utils/hdayHelper";
+import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
 
 interface TeamMember {
   username: string;
@@ -96,7 +96,7 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
  */
 export function TeamScheduleView() {
   const { options } = useHdayHelper();
-  const { baseUrl, usesHelper } = resolveHdayHelperTarget(options.hdayHelperUrl);
+  const helperBaseUrl = resolveHdayHelperBaseUrl(options.hdayHelperUrl);
 
   const [teamId, setTeamId] = useState(() => {
     // Load saved team ID from localStorage
@@ -131,7 +131,7 @@ export function TeamScheduleView() {
     setTeamData(null);
     setError(null);
     setHasAttemptedFetch(false);
-  }, [baseUrl]);
+  }, [helperBaseUrl]);
 
   // Cleanup: abort any pending requests on unmount
   useEffect(() => {
@@ -166,8 +166,9 @@ export function TeamScheduleView() {
     try {
       // Fetch team .hday data (includes team info) — routed to the configured local
       // helper when set, since production doesn't mount these routes on the app origin.
+      if (!helperBaseUrl) return;
       const response = await fetch(
-        `${baseUrl}/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
+        `${helperBaseUrl}/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
         {
           method: "GET",
           headers: {
@@ -203,15 +204,15 @@ export function TeamScheduleView() {
         setIsLoading(false);
       }
     }
-  }, [teamId, baseUrl]);
+  }, [teamId, helperBaseUrl]);
 
   // Auto-load team data if the team and helper are available (only once per team ID).
   // Helper connectivity is independent of the hosted Worktime backend connection.
   useEffect(() => {
-    if (teamId && usesHelper && !teamData && !isLoading && !hasAttemptedFetch) {
+    if (teamId && helperBaseUrl && !teamData && !isLoading && !hasAttemptedFetch) {
       fetchTeamData();
     }
-  }, [teamId, usesHelper, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
+  }, [teamId, helperBaseUrl, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -258,7 +259,7 @@ export function TeamScheduleView() {
 
   // This is normally unreachable because TimeOffView only exposes the Team tab
   // after a helper is configured. Keep a guard for direct rendering and stale state.
-  if (!usesHelper) {
+  if (!helperBaseUrl) {
     return (
       <Alert variant="info" className="mt-3">
         <Alert.Heading>{m.team_helper_required_heading()}</Alert.Heading>

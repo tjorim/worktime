@@ -6,17 +6,10 @@
  * must never send these requests to the app origin without a configured helper.
  */
 
-export interface HdayHelperTarget {
-  /** Request base to prepend to a route (e.g. "/team/:id/hday"). No trailing slash. */
-  baseUrl: string;
-  /** Whether requests are routed to a configured local helper rather than same-origin. */
-  usesHelper: boolean;
-}
-
-export function resolveHdayHelperTarget(hdayHelperUrl: string | null): HdayHelperTarget {
-  return hdayHelperUrl
-    ? { baseUrl: hdayHelperUrl, usesHelper: true }
-    : { baseUrl: "/api", usesHelper: false };
+/** Return the normalized helper base URL, or null when no helper is configured. */
+export function resolveHdayHelperBaseUrl(hdayHelperUrl: string | null): string | null {
+  const normalized = hdayHelperUrl?.trim().replace(/\/+$/, "");
+  return normalized || null;
 }
 
 /**
