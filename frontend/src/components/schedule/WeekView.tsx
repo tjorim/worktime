@@ -139,7 +139,7 @@ export function WeekView({
   return (
     <Card>
       <Card.Header>
-        <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
           <span className="fw-semibold">
             <i
               className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
@@ -305,4 +305,3 @@ export function WeekView({
     </Card>
   );
 }
-

@@ -78,6 +78,17 @@ describe("TimeTrackingDailyView", () => {
   };
 
   describe("Quick Timer", () => {
+    it("puts the idle state and single helper sentence on the form without a wrapper card", () => {
+      renderView();
+
+      expect(screen.queryByText("Quick Timer")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Start a task now and stop it when you're done."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Start Now · Idle/i })).toBeInTheDocument();
+      expect(screen.queryByText("Idle", { selector: ".badge" })).not.toBeInTheDocument();
+    });
+
     it("starts a timer when a task name is provided", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-01T10:15:30"));
@@ -133,12 +144,9 @@ describe("TimeTrackingDailyView", () => {
 
       renderView({ tasks: [runningTask], selectedDate: "2025-01-01" });
 
-      expect(screen.getByText("Running", { selector: "span" })).toBeInTheDocument();
-      // Task title appears in both Quick Timer UI and the daily task list.
-      expect(screen.getAllByText("On call")).toHaveLength(2);
-      expect(screen.getByText(/Started 10:00/i)).toBeInTheDocument();
-      expect(screen.getByText(/Elapsed 00:00:05/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Stop Timer/i })).toBeInTheDocument();
+      expect(screen.getAllByText("On call")).toHaveLength(1);
+      expect(screen.getByRole("button", { name: /Stop Timer · Running/i })).toBeInTheDocument();
+      expect(screen.queryByText("Running", { selector: ".badge" })).not.toBeInTheDocument();
     });
 
     it("stops a same-day running task", async () => {

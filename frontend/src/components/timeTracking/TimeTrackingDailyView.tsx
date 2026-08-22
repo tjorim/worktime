@@ -10,14 +10,12 @@ import * as m from "@/paraglide/messages.js";
 
 import { DailyDiscardConfirmation } from "./DailyDiscardConfirmation";
 import { DailyTaskList, type EditRequest } from "./DailyTaskList";
-import { DailyQuickTimer } from "./DailyQuickTimer";
 import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import { LabelModal } from "./LabelModal";
 import {
-  buildLabelColorMap,
   buildLabelNameMap,
   isHexColor,
   normalizeLabelName,
@@ -53,6 +51,14 @@ type TimeTrackingDailyViewProps = {
 
 function todayIso() {
   return dayjs().format("YYYY-MM-DD");
+}
+
+function formatDuration(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return [hours, minutes, seconds].map((part) => part.toString().padStart(2, "0")).join(":");
 }
 
 export function TimeTrackingDailyView({
@@ -94,7 +100,6 @@ export function TimeTrackingDailyView({
   const [createLabelForm, setCreateLabelForm] = useState({ name: "", color: "" });
   const liveTime = useLiveTime({ precision: "second" });
   const isDailyCurrent = dayjs(date).isSame(dayjs(), "day");
-  const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
   const templateOptions = useMemo(
     () =>
@@ -118,6 +123,9 @@ export function TimeTrackingDailyView({
   }, [labels, selectedLabel]);
 
   const { dailyTasks, runningTask } = useDailyTaskSummary(tasks, date);
+  const timerElapsed = runningTask
+    ? formatDuration(liveTime.diff(dayjs(runningTask.startTime), "second"))
+    : undefined;
 
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
@@ -381,15 +389,6 @@ export function TimeTrackingDailyView({
           onApply={handleApplyTemplate}
         />
 
-        <DailyQuickTimer
-          runningTask={runningTask}
-          liveTime={liveTime}
-          colorByLabelId={colorByLabelId}
-          labelNameById={labelNameById}
-          defaultLabelColor={defaultLabelColor}
-          onStopNow={handleStopNow}
-        />
-
         <TaskEntryForm
           labels={labels}
           text={text}
@@ -406,10 +405,13 @@ export function TimeTrackingDailyView({
           onStopChange={setStop}
           canSubmit={canAddCompletedTask}
           canStartNow={canStartNow}
+          isTimerRunning={runningTask !== null}
+          timerElapsed={timerElapsed}
           startDisabledReason={startDisabledReason}
           addDisabledReason={addDisabledReason}
           onSubmit={handleAddTask}
           onStartNow={handleStartNow}
+          onStopNow={handleStopNow}
           onCreateLabel={handleOpenCreateLabelModal}
         />
 

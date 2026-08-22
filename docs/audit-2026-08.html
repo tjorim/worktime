@@ -535,17 +535,17 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">29</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">31</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">8</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">8</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">6</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">6</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
       marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for what's left — 1 medium, 11 low — is at the bottom of the page, along with three
+      order for the remaining low findings is at the bottom of the page, along with three
       in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
@@ -959,7 +959,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Interface<span class="sec-count">11 · 8 fixed</span></h2>
+      <h2>Interface<span class="sec-count">11 · 9 fixed</span></h2>
       <p>Twenty findings from driving the app (nineteen from the original pass, plus
         <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a> found while verifying
         #1126), grouped into eleven issues. Tracked in
@@ -1239,12 +1239,12 @@
           <code>--wt-primary-color</code> untouched.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1133">#1133</a>
           <span class="area">frontend</span>
           <h3>Time tracking header collides on mobile; Quick Timer card is redundant</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>At 390&nbsp;px the title wraps to three lines while the date navigation crowds beside it,
           making the header taller than its content. Above the form sits a card holding two sentences
@@ -1252,15 +1252,18 @@
           task-entry form starts around y=890 — starting a timer, the tab's main action, is four
           layers of chrome down.</p>
         <div class="refs"><b>timeTracking/DailyViewHeader.tsx:33</b> <b>shared/NavigationButtonGroup.tsx</b></div>
+        <div class="verified"><span>Resolved in the current PR: daily and weekly headers now stack
+          cleanly on narrow screens, and <code>TaskEntryForm.tsx</code> replaces the redundant Quick
+          Timer card with one helper line and a single Idle/Running Start/Stop control.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1134">#1134</a>
           <span class="area">frontend</span>
           <span class="area">sync</span>
           <h3>No offline indicator — queued changes look identical to synced ones</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p><code>navigator.onLine</code> is read to skip a flush but nothing in the UI reflects it,
           and the sync indicator is hidden entirely when unauthenticated. For a PWA aimed at shift
@@ -1271,6 +1274,9 @@
           list — offline is the <em>explanation</em> for a failed flush, so it should win over the
           generic error.</span></div>
         <div class="refs"><b>hooks/useOngoingSync.ts:467</b> <b>sync/SyncStatusIndicator.tsx</b></div>
+        <div class="verified"><span>Resolved in the current PR: <code>useOnlineStatus.ts</code> tracks
+          browser connectivity events while successful syncs clear stale offline hints, and
+          <code>SyncStatusIndicator.tsx</code> gives offline and queued states priority over errors.</span></div>
       </div>
 
     </div>
@@ -1278,7 +1284,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Product gaps<span class="sec-count">6 · 2 fixed</span></h2>
+      <h2>Product gaps<span class="sec-count">6 · 3 fixed</span></h2>
       <p>Capability that exists on one side of the wire and can't be reached from the other.</p>
     </div>
     <div class="findings">
@@ -1569,7 +1575,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Low <span class="sec-count">8</span></h3>
+      <h3>Low <span class="sec-count">6</span></h3>
       <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
@@ -1579,42 +1585,30 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1134">#1134</a></td>
-              <td>Offline indicator. Was partly motivated by #1098 (queued writes vanishing); now
-                that's fixed, this is UX polish rather than a correctness signal, but the queued
-                state is still invisible.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1133">#1133</a></td>
-              <td>Mobile header layout and the Quick Timer card. Independent CSS-and-copy change.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
               <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
                 once a third call site exists — #1111 added one, so this is its natural follow-up.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
               <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
                 decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
               <td>Integration-client management UI. Mirrors the existing PAT section's patterns
                 closely enough to copy rather than design.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
               <td>iCal subscription feed. Outdated PR #448 is reference material for downloadable
                 export, but it does not replace the feed and scoped-token design.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
               <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
                 designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
@@ -1623,7 +1617,7 @@
                 hypothetical one the issue was written against.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge

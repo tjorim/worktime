@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as m from "@/paraglide/messages.js";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 const MS_PER_SECOND = 1_000;
 
@@ -16,21 +17,36 @@ const MS_PER_SECOND = 1_000;
  * timestamp).
  *
  * Priority order (highest wins):
- *  1. Error — last flush-and-pull failed
- *  2. Conflicts — last push had records reverted to server version
- *  3. Syncing — a network operation is in flight
- *  4. Pending — outbox has queued changes
- *  5. Synced — normal idle state with a known last-sync time
+ *  1. Offline — browser link state is offline
+ *  2. Error — last flush-and-pull failed
+ *  3. Conflicts — last push had records reverted to server version
+ *  4. Syncing — a network operation is in flight
+ *  5. Pending — outbox has queued changes
+ *  6. Synced — normal idle state with a known last-sync time
  */
 export function SyncStatusIndicator() {
   const tooltipId = useId();
   const { isAuthenticated } = useAuth();
   const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter } =
     useOngoingSyncContext();
+  const { isOnline, markOnline } = useOnlineStatus();
+  const previousLastSyncedAt = useRef(lastSyncedAt);
+
+  useEffect(() => {
+    if (lastSyncedAt !== null && lastSyncedAt !== previousLastSyncedAt.current) {
+      markOnline();
+    }
+    previousLastSyncedAt.current = lastSyncedAt;
+  }, [lastSyncedAt, markOnline]);
 
   const isVisible =
     isAuthenticated &&
-    (isSyncing || outboxCount > 0 || hasSyncError || conflictCount > 0 || lastSyncedAt !== null);
+    (!isOnline ||
+      isSyncing ||
+      outboxCount > 0 ||
+      hasSyncError ||
+      conflictCount > 0 ||
+      lastSyncedAt !== null);
 
   // Tick every minute so the "last synced" relative time stays fresh.
   const [, setMinuteTick] = useState(0);
@@ -55,6 +71,15 @@ export function SyncStatusIndicator() {
 
   // Icon, label, and tone are stable between minute ticks — memoize them.
   const { icon, label, tone } = useMemo(() => {
+    if (!isOnline)
+      return {
+        icon: "bi-cloud-slash",
+        label:
+          outboxCount > 0
+            ? m.sync_indicator_offline_pending({ count: String(outboxCount) })
+            : m.sync_indicator_offline(),
+        tone: "warning",
+      };
     if (hasSyncError)
       return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), tone: "danger" };
     if (conflictCount > 0)
@@ -74,11 +99,16 @@ export function SyncStatusIndicator() {
     if (lastSyncedAt)
       return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), tone: "success" };
     return { icon: "bi-cloud", label: "", tone: "neutral" };
-  }, [hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
+  }, [isOnline, hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
 
   // Tooltip text is computed fresh every render so fromNow() stays accurate
   // (the minute ticker above drives re-renders for the "synced" state).
   const tooltipText = (() => {
+    if (!isOnline) {
+      return outboxCount > 0
+        ? m.sync_indicator_tooltip_offline_pending({ count: String(outboxCount) })
+        : m.sync_indicator_tooltip_offline();
+    }
     if (hasSyncError) {
       if (retryAfter !== null) {
         const seconds = Math.max(0, Math.ceil((retryAfter - Date.now()) / MS_PER_SECOND));
@@ -98,7 +128,8 @@ export function SyncStatusIndicator() {
   if (!isVisible) return null;
 
   // Spin only when actively syncing with no error, conflict, or pending items.
-  const shouldSpin = isSyncing && !hasSyncError && conflictCount === 0 && outboxCount === 0;
+  const shouldSpin =
+    isOnline && isSyncing && !hasSyncError && conflictCount === 0 && outboxCount === 0;
 
   const indicator = (
     <span
