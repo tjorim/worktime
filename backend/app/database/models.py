@@ -91,7 +91,7 @@ class Label(ClientTimestampMixin, Base):
         # table RENAME does not carry over dependent index names — these three
         # single-column indexes keep their pre-rename names to match what's
         # actually live, same as the composite index above and the
-        # id/user_id constraint names in migrations/versions/001_initial.py.
+        # id/user_id constraint names in migrations/versions/000_baseline.py.
         Index("ix_time_tracking_labels_user_id", "user_id"),
         Index("ix_time_tracking_labels_updated_at", "updated_at"),
         Index("ix_time_tracking_labels_deleted_at", "deleted_at"),
