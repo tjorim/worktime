@@ -111,6 +111,13 @@ export const syncHandlers = [
     return HttpResponse.json(getMockScenario().auth.profile);
   }),
 
+  // GET /api/audit
+  http.get("*/api/audit", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
+    return HttpResponse.json({ items: [], total: 0 });
+  }),
+
   // GET /api/users/
   http.get("*/api/users/", () => {
     const authFailure = buildAuthFailureResponse();
