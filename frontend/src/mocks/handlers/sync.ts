@@ -113,6 +113,8 @@ export const syncHandlers = [
 
   // GET /api/audit
   http.get("*/api/audit", () => {
+    const authFailure = buildAuthFailureResponse();
+    if (authFailure) return authFailure;
     return HttpResponse.json({ items: [], total: 0 });
   }),
 

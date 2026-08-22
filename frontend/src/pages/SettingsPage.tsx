@@ -287,12 +287,13 @@ export function SettingsContent({
     showSuccessToast: toast.showSuccess,
   });
   const personalAuditTrail = useSettingsAuditTrail({
-    enabled: isAuthenticated && accountProfile?.id !== undefined,
+    enabled:
+      activeSection === "account" && isAuthenticated && accountProfile?.id !== undefined,
     userId: accountProfile?.id,
     fetchFn,
   });
   const teamAuditTrail = useSettingsAuditTrail({
-    enabled: isAuthenticated && isAdmin,
+    enabled: activeSection === "admin" && isAuthenticated && isAdmin,
     fetchFn,
   });
 

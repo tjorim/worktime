@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
@@ -99,13 +99,16 @@ describe("SettingsAuditTrailSection", () => {
     rerender(<Harness fetchFn={renewedFetch} teamWide />);
     expect(await screen.findByText("update · time entry entry-200")).toBeInTheDocument();
 
-    stalePage.resolve(
-      new Response(JSON.stringify({ items: [entry(75)] }), {
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    await act(async () => {
+      stalePage.resolve(
+        new Response(JSON.stringify({ items: [entry(75)] }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      await stalePage.promise;
+    });
 
-    await waitFor(() => expect(screen.queryByText("update · time entry entry-75")).not.toBeInTheDocument());
+    expect(screen.queryByText("update · time entry entry-75")).not.toBeInTheDocument();
     expect(screen.queryByText("update · time entry entry-100")).not.toBeInTheDocument();
   });
 });
