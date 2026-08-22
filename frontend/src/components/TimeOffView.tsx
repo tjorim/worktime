@@ -82,15 +82,21 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
   );
+  const previousHelperStatusRef = useRef(helperConnectionStatus);
 
   // Do not leave a previously loaded Team schedule visible after the local
   // helper becomes unhealthy. The Team button is health-gated, so its view
   // must follow the same rule.
   useEffect(() => {
+    const wasConnected = previousHelperStatusRef.current === "connected";
+    previousHelperStatusRef.current = helperConnectionStatus;
     if (viewMode === "team" && helperConnectionStatus !== "connected") {
       setViewMode(DEFAULT_TIME_OFF_VIEW);
+      if (wasConnected) {
+        toast.showWarning(m.team_helper_unavailable_toast(), "bi-plug");
+      }
     }
-  }, [helperConnectionStatus, viewMode]);
+  }, [helperConnectionStatus, toast, viewMode]);
 
   // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
   // so persisting it back on mount would be a no-op write that still bumps the shared

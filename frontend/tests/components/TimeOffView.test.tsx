@@ -113,6 +113,7 @@ describe("TimeOffView", () => {
         expect(screen.queryByText(m.team_viewer_title())).not.toBeInTheDocument(),
       );
       expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
+      expect(screen.getByText(m.team_helper_unavailable_toast())).toBeInTheDocument();
     });
 
     it("should render empty state when no events", () => {

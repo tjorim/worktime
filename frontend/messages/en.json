@@ -837,6 +837,7 @@
   "team_helper_required_heading": "Local .hday Helper Required",
   "team_helper_required_body": "The hosted service never exposes team schedules directly — they're loaded through the Worktime .hday helper running on your device.",
   "team_helper_required_help": "Open Settings → Schedule & team → Legacy team files and connect your local helper.",
+  "team_helper_unavailable_toast": "The local .hday helper became unavailable. Returned to your time-off table.",
   "team_viewer_title": "Team Schedule Viewer",
   "team_viewer_desc": "Enter a team ID to view the team roster and .hday schedules for all members.",
   "team_id_label": "Team ID",

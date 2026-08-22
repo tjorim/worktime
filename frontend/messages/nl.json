@@ -830,6 +830,7 @@
   "team_helper_required_heading": "Lokale .hday-helper vereist",
   "team_helper_required_body": "De gehoste service toont teamroosters nooit rechtstreeks — ze worden geladen via de Worktime-.hday-helper die op uw apparaat draait.",
   "team_helper_required_help": "Open Instellingen → Rooster & team → Verouderde teambestanden en verbind uw lokale helper.",
+  "team_helper_unavailable_toast": "De lokale .hday-helper is niet meer beschikbaar. U bent teruggebracht naar uw verloftabel.",
   "team_viewer_title": "Teamroosterweergave",
   "team_viewer_desc": "Voer een team-ID in om het teamrooster en .hday-roosters voor alle leden te bekijken.",
   "team_id_label": "Team-ID",
