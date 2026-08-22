@@ -137,20 +137,22 @@ class TestGetPublicHolidays:
             db.execute.return_value = result
             return db
 
-        kwargs = {
-            "holiday_type": "public",
-            "country": "NL",
-            "year": 2099,
-            "language": None,
-            "subdivision": None,
-            "upstream_url": "https://example.test/holidays",
-            "upstream_params": {},
-        }
+        async def fetch(db):
+            return await _get_or_fetch_holidays(
+                holiday_type="public",
+                country="NL",
+                year=2099,
+                language=None,
+                subdivision=None,
+                upstream_url="https://example.test/holidays",
+                upstream_params={},
+                db=db,
+            )
 
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            first = asyncio.create_task(_get_or_fetch_holidays(**kwargs, db=db_session()))
+            first = asyncio.create_task(fetch(db_session()))
             await first_started.wait()
-            second = asyncio.create_task(_get_or_fetch_holidays(**kwargs, db=db_session()))
+            second = asyncio.create_task(fetch(db_session()))
             await asyncio.sleep(0)
             release_first.set()
             first_result, second_result = await asyncio.gather(first, second)
