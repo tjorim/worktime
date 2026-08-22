@@ -933,6 +933,27 @@ describe("parseHday", () => {
         },
       ]);
     });
+
+    it.each(["2025/13/45", "2025/02/29", "2024/02/30-2024/03/01", "2024/02/29-2024/04/31"])(
+      "preserves impossible calendar date %s as unknown",
+      (input) => {
+        expect(parseHday(input)).toEqual([
+          {
+            type: "unknown",
+            raw: input,
+            flags: ["holiday"],
+          },
+        ]);
+      },
+    );
+
+    it("accepts leap day in a leap year", () => {
+      expect(parseHday("2024/02/29")[0]).toMatchObject({
+        type: "range",
+        start: "2024/02/29",
+        end: "2024/02/29",
+      });
+    });
   });
 
   describe("weekly events", () => {

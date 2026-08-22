@@ -81,7 +81,12 @@ export function useLocalStorage<T>(
     const handleStorageChange = (e: StorageEvent) => {
       // Skip events we dispatched ourselves (already updated state directly in setValue).
       if (isSelfDispatch.current) return;
-      if (e.key === key && e.newValue !== null) {
+      if (e.key !== key) return;
+
+      if (e.newValue === null) {
+        latestValueRef.current = initialValueRef.current;
+        setStoredValue(initialValueRef.current);
+      } else {
         try {
           const parsed = JSON.parse(e.newValue);
           latestValueRef.current = parsed;

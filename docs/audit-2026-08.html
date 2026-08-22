@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">26</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">29</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">11</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">11</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">8</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">8</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -659,7 +659,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Sync, API and platform correctness<span class="sec-count">6</span></h2>
+      <h2>Sync, API and platform correctness<span class="sec-count">6 · all fixed</span></h2>
       <p>Contracts that disagree with themselves — one path validating what another doesn't.</p>
     </div>
     <div class="findings">
@@ -797,12 +797,12 @@
           <code>TimeOffEntry</code>.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1109">#1109</a>
           <span class="area">backend</span>
           <h3>Three low-severity backend findings</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <ul>
           <li>JWKS refresh task is cancelled but never awaited on shutdown, so its own cancellation
@@ -813,6 +813,10 @@
             malformed response — the one unguarded spot in otherwise careful code.</li>
         </ul>
         <div class="refs"><b>backend/app/main.py:112</b> <b>routers/holidays.py:113</b> <b>holidays.py:246</b></div>
+        <div class="verified"><span>Resolved in the current PR: shutdown now awaits both cancelled
+          background loops in <code>backend/app/main.py</code>, holiday fetches use a per-key
+          single-flight lock in <code>backend/app/routers/holidays.py</code>, and payday parsing skips
+          malformed upstream entries; targeted tests cover all three behaviors.</span></div>
       </div>
 
     </div>
@@ -820,7 +824,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Frontend correctness and i18n<span class="sec-count">5 · 3 fixed</span></h2>
+      <h2>Frontend correctness and i18n<span class="sec-count">5 · all fixed</span></h2>
       <p>Controls that lie about what they do, and text that doesn't translate.</p>
     </div>
     <div class="findings">
@@ -909,12 +913,12 @@
           #1111's cross-schedule overlap work in the same PR.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1108">#1108</a>
           <span class="area">frontend</span>
           <h3>Three low-severity frontend findings</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <ul>
           <li><code>parseHday</code> accepts impossible dates — <code>2025/13/45</code> parses as a
@@ -926,21 +930,28 @@
             but the natural implementation of "sign out clears local state" would hit it.</li>
         </ul>
         <div class="refs"><b>lib/hday/parser.ts:206</b> <b>hooks/useEventForm.ts:63</b> <b>hooks/useLocalStorage.ts:85</b></div>
+        <div class="verified"><span>Resolved in the current PR: <code>parser.ts</code> now rejects
+          impossible calendar dates through a portable validator, <code>useEventForm.ts</code> uses
+          English and Dutch messages for every date error, and <code>useLocalStorage.ts</code> resets
+          on cross-tab removal; each behavior has a targeted regression test.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1114">#1114</a>
           <span class="area">frontend</span>
           <span class="area">a11y</span>
           <h3><code>.live-indicator</code> animates forever with no reduced-motion guard</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>An infinite opacity-plus-scale pulse with no motion query. The sync spinner immediately
           next to it does honor the preference, so the pattern already exists in the codebase — this
           one was missed. Two lines, and deliberately separate from the broader accessibility work
           in #270 so it can land now.</p>
         <div class="refs"><b>frontend/src/styles/_shifts.scss:331</b> <b>_utilities.scss:199</b></div>
+        <div class="verified"><span>Resolved in the current PR: <code>frontend/src/styles/_shifts.scss</code>
+          disables the live pulse under <code>prefers-reduced-motion: reduce</code>, matching the
+          existing sync-indicator behavior without adding a settings surface.</span></div>
       </div>
 
     </div>
@@ -1530,27 +1541,27 @@
     </div>
 
     <div class="note">
-      <strong>Check these two before you start.</strong> Independent tool-driven branches already
-      have open PRs against issues this backlog touches. Neither is on <code>main</code> yet, so treat
-      them as drafts to review/finish, not as done — but starting fresh work on the same ground would
-      duplicate effort. The stale <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
+      <strong>Reference only.</strong> Two older tool-driven PRs overlap this backlog, but both are
+      outdated against the current product and are no longer implementation candidates. Their code
+      may still be useful as inspiration for the related issues. The stale
+      <a class="issue" href="https://github.com/tjorim/worktime/pull/311">#311</a>
       draft that used to cover #271/#273 is no longer the candidate for either: both were resolved
       independently (#271 above, #273 with its own dedicated PR) rather than by reviving it.
       <div class="tablewrap" style="margin-top:0.75rem">
         <table>
-          <thead><tr><th>PR</th><th>Closes</th><th>Overlaps</th></tr></thead>
+          <thead><tr><th>PR</th><th>Originally targeted</th><th>Useful reference</th></tr></thead>
           <tbody>
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a></td>
               <td>#270</td>
-              <td>High contrast, reduced motion, focus indicators. Land before or alongside low&nbsp;#1
-                (#1114) so the two reduced-motion fixes don't conflict.</td>
+              <td>High contrast, reduced motion, and focus-indicator ideas. #1114 is now resolved
+                independently.</td>
             </tr>
             <tr>
               <td><a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a></td>
               <td>#274</td>
-              <td>ScheduleDetailModal team info <strong>and iCal export</strong> — check what it ships
-                before starting low&nbsp;#9 (#1118); it may already cover the feed.</td>
+              <td>ScheduleDetailModal team info and downloadable iCal export patterns that may
+                inform #1118's subscription-feed work.</td>
             </tr>
           </tbody>
         </table>
@@ -1558,7 +1569,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Low <span class="sec-count">10</span></h3>
+      <h3>Low <span class="sec-count">8</span></h3>
       <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
@@ -1568,55 +1579,42 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1114">#1114</a></td>
-              <td>Two-line reduced-motion guard — the cheapest fix on the whole backlog. Check PR
-                #447 first so the two motion fixes don't collide.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1108">#1108</a>
-                <a class="issue" href="https://github.com/tjorim/worktime/issues/1109">#1109</a></td>
-              <td>Two grab-bags of independent low-severity findings, already grouped by issue. No
-                reason not to clear both in one pass.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1134">#1134</a></td>
               <td>Offline indicator. Was partly motivated by #1098 (queued writes vanishing); now
                 that's fixed, this is UX polish rather than a correctness signal, but the queued
                 state is still invisible.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1133">#1133</a></td>
               <td>Mobile header layout and the Quick Timer card. Independent CSS-and-copy change.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
               <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
                 once a third call site exists — #1111 added one, so this is its natural follow-up.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
               <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
                 decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">7</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
               <td>Integration-client management UI. Mirrors the existing PAT section's patterns
                 closely enough to copy rather than design.</td>
             </tr>
             <tr>
-              <td class="seq-n">8</td>
+              <td class="seq-n">6</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
-              <td>iCal subscription feed. <span class="stale">check PR #448</span> before starting —
-                it may already ship the export half of this.</td>
+              <td>iCal subscription feed. Outdated PR #448 is reference material for downloadable
+                export, but it does not replace the feed and scoped-token design.</td>
             </tr>
             <tr>
-              <td class="seq-n">9</td>
+              <td class="seq-n">7</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
               <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
                 designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
@@ -1625,7 +1623,7 @@
                 hypothetical one the issue was written against.</td>
             </tr>
             <tr>
-              <td class="seq-n">10</td>
+              <td class="seq-n">8</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge
@@ -1641,8 +1639,8 @@
     <div class="sec-head">
       <h2>Older backlog<span class="sec-count">5</span></h2>
       <p>Open before this review. #271 and #273 are now resolved directly (see their rows below);
-        the other two non-chore items still have open PRs from other tools — see the callout above
-        the sequencing tables for what each covers and where it overlaps.</p>
+        the older PRs for #270 and #274 are now reference material only — see the callout above for
+        what each explored.</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -1653,8 +1651,8 @@
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/270">#270</a></td>
             <td>Advanced accessibility: high contrast, font scaling, reduced motion</td>
-            <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a>.
-              Low&nbsp;#1 (#1114) is the two-line subset that can land independently of it.</td>
+            <td>Outdated PR <a class="issue" href="https://github.com/tjorim/worktime/pull/447">#447</a>
+              remains useful for inspiration. The independent reduced-motion fix #1114 is resolved.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/271">#271</a></td>
@@ -1679,9 +1677,8 @@
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/274">#274</a></td>
             <td>Enhance ScheduleDetailModal with export and improved schedule display</td>
-            <td>Open PR <a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a>,
-              which already includes iCal export — check it before starting low&nbsp;#9 (#1118);
-              it may cover the export half already.</td>
+            <td>Outdated PR <a class="issue" href="https://github.com/tjorim/worktime/pull/448">#448</a>
+              includes iCal export ideas that may inspire #1118's distinct subscription feed.</td>
           </tr>
           <tr>
             <td><a class="issue" href="https://github.com/tjorim/worktime/issues/793">#793</a></td>

@@ -3,8 +3,7 @@
  */
 
 import { dayjs } from "@/utils/dateTimeUtils";
-
-const DATE_FORMAT_REGEX = /^\d{4}\/\d{2}\/\d{2}$/;
+import { isValidHdayDate } from "./dateValidation";
 
 /**
  * Determine whether a string represents a valid calendar date in YYYY/MM/DD format.
@@ -22,12 +21,7 @@ const DATE_FORMAT_REGEX = /^\d{4}\/\d{2}\/\d{2}$/;
  * isValidDate('not a date') // false - invalid format
  */
 export function isValidDate(dateString: string): boolean {
-  if (!DATE_FORMAT_REGEX.test(dateString)) {
-    return false;
-  }
-  // Parse using dayjs strict mode and verify it round-trips correctly
-  const parsed = dayjs(dateString, "YYYY/MM/DD", true);
-  return parsed.isValid() && parsed.format("YYYY/MM/DD") === dateString;
+  return isValidHdayDate(dateString);
 }
 
 /**

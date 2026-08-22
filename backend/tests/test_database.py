@@ -1,7 +1,8 @@
 """Tests for database engine, sessions, and initialization."""
 
+import asyncio
 from collections.abc import Generator
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -82,8 +83,6 @@ class TestLifespanInitialization:
             async with main.lifespan(main.app):
                 return None
 
-        import asyncio
-
         asyncio.run(run_lifespan())
 
         init_db_mock.assert_called_once()
@@ -109,8 +108,51 @@ class TestLifespanInitialization:
             async with main.lifespan(main.app):
                 return None
 
+        asyncio.run(run_lifespan())
+
+        init_db_mock.assert_not_called()
+
+    def test_lifespan_awaits_background_task_cancellation(self, monkeypatch):
+        """Shutdown lets each cancelled background task finish its cleanup."""
+        from app import main
+        from app.config import oidc_config
+        from app.services import shift_reminder_scheduler
+
+        fake_settings = Mock()
+        fake_settings.log_configuration = Mock()
+        fake_settings.get_share_dir_path.return_value.exists.return_value = True
+        fake_settings.get_share_dir_path.return_value.is_dir.return_value = True
+        fake_settings.CACHE_ENABLED = False
+        fake_settings.DATABASE_ENABLED = True
+        fake_settings.OIDC_ISSUER_URL = "https://issuer.test"
+        fake_settings.push_notifications_enabled = True
+
+        completed = []
+
+        async def background(name):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                completed.append(name)
+
+        monkeypatch.setattr(main, "settings", fake_settings)
+        monkeypatch.setattr(main, "init_db", Mock())
+        monkeypatch.setattr(main.os, "access", lambda *_: True)
+        monkeypatch.setattr(main.sync_event_manager, "start_pg_listener", AsyncMock())
+        monkeypatch.setattr(main.sync_event_manager, "stop_pg_listener", AsyncMock())
+        monkeypatch.setattr(oidc_config, "start_periodic_jwks_refresh", lambda: asyncio.create_task(background("jwks")))
+        monkeypatch.setattr(
+            shift_reminder_scheduler,
+            "start_periodic_shift_reminders",
+            lambda: asyncio.create_task(background("reminders")),
+        )
+
+        async def run_lifespan():
+            async with main.lifespan(main.app):
+                await asyncio.sleep(0)
+
         import asyncio
 
         asyncio.run(run_lifespan())
 
-        init_db_mock.assert_not_called()
+        assert completed == ["jwks", "reminders"]
