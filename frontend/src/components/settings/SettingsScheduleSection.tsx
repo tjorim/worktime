@@ -1,12 +1,12 @@
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
-import { getTeamCountForOption, hasMultipleTeams } from "@/utils/scheduleUtils";
+import { hasMultipleTeams } from "@/utils/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
 import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
+import { TeamSelector } from "@/components/shared/TeamSelector";
 
 interface SettingsScheduleSectionProps {
   scheduleType: ScheduleOption | null;
@@ -70,29 +70,16 @@ export function SettingsScheduleSection({
       </ListGroup>
 
       {scheduleType && hasMultipleTeams(scheduleType) && (
-        <>
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-people me-2"></i>
-            {m.select_team_label()}
-          </h6>
-          <div className="d-flex flex-wrap gap-2 mb-3">
-            {Array.from({ length: getTeamCountForOption(scheduleType) }, (_, i) => i + 1).map(
-              (team) => (
-                <Button
-                  key={team}
-                  size="sm"
-                  variant={myTeam === team ? "primary" : "outline-secondary"}
-                  aria-pressed={myTeam === team}
-                  aria-label={m.wizard_team_btn_aria({ team: String(team) })}
-                  onClick={() => onTeamChange(team)}
-                >
-                  {m.wizard_team_btn_label({ team: String(team) })}
-                </Button>
-              ),
-            )}
-          </div>
+        <div className="mb-3">
+          <TeamSelector
+            scheduleType={scheduleType}
+            selectedTeam={myTeam}
+            onChange={onTeamChange}
+            label={m.select_team_label()}
+            ariaLabel={m.select_team_label()}
+          />
           {myTeam === null && <small className="text-muted">{m.settings_no_team_selected()}</small>}
-        </>
+        </div>
       )}
 
       <hr className="my-4" />

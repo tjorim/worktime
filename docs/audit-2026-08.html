@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">31</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">32</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">6</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">6</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">5</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">5</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1414,7 +1414,7 @@
 
   <section>
     <div class="sec-head">
-      <h2>Documentation and technical debt<span class="sec-count">5</span></h2>
+      <h2>Documentation and technical debt<span class="sec-count">5 · 4 fixed</span></h2>
       <p>Nothing user-visible breaks today; these are the things that make the next change wrong.</p>
     </div>
     <div class="findings">
@@ -1522,18 +1522,22 @@
         <div class="refs"><b>docs/optimization-plan.md</b> <b>frontend/tests/architecture/</b></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a>
           <span class="area">frontend</span>
           <h3>Extract a shared TeamSelector component</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>A two-call-site refactor, not the four-file sweep <code>TODO.md</code> implies —
           <code>ScheduleDetailModal</code> now takes <code>teamNumber</code> as a prop and has no
           selector at all. Only worth doing if a third call site is coming, which the cross-schedule
           work in #1111 would add.</p>
-        <div class="refs"><b>components/TransferView.tsx:380</b> <b>components/ScheduleTabView.tsx:135</b></div>
+        <div class="refs"><b>components/shared/TeamSelector.tsx</b> <b>components/TransferView.tsx</b>
+          <b>components/settings/SettingsScheduleSection.tsx</b></div>
+        <div class="verified"><span>Resolved in the current PR: <code>TeamSelector.tsx</code>
+          centralizes schedule-aware team options in the established React Select style, with
+          Transfer supplying its filtered comparison teams and Settings reusing the full roster.</span></div>
       </div>
 
     </div>
@@ -1575,7 +1579,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Low <span class="sec-count">6</span></h3>
+      <h3>Low <span class="sec-count">5</span></h3>
       <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
@@ -1585,30 +1589,24 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1121">#1121</a></td>
-              <td>Extract <code>TeamSelector</code>. The issue explicitly says it's only worth doing
-                once a third call site exists — #1111 added one, so this is its natural follow-up.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1116">#1116</a></td>
               <td>Audit trail UI (user view + admin view). Independent, moderate effort, no design
                 decision.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
               <td>Integration-client management UI. Mirrors the existing PAT section's patterns
                 closely enough to copy rather than design.</td>
             </tr>
             <tr>
-              <td class="seq-n">4</td>
+              <td class="seq-n">3</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
               <td>iCal subscription feed. Outdated PR #448 is reference material for downloadable
                 export, but it does not replace the feed and scoped-token design.</td>
             </tr>
             <tr>
-              <td class="seq-n">5</td>
+              <td class="seq-n">4</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1120">#1120</a></td>
               <td>Mobile carousel and FAB. Its own body still says to reconcile with #1128 before
                 designing the FAB — <span class="stale">that caveat is now stale</span>: #1128 shipped
@@ -1617,7 +1615,7 @@
                 hypothetical one the issue was written against.</td>
             </tr>
             <tr>
-              <td class="seq-n">6</td>
+              <td class="seq-n">5</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge
