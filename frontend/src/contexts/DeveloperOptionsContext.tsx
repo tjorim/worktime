@@ -9,6 +9,7 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "er
 
 export interface DeveloperOptions {
   enabled: boolean;
+  /** Same-origin Worktime backend health status; unrelated to the local .hday helper. */
   connectionStatus: ConnectionStatus;
   lastConnectionTest: number | null; // timestamp
   autoConnect: boolean;

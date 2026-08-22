@@ -24,20 +24,8 @@ function HelperUrlSwitcher({ url }: { url: string }) {
   );
 }
 
-function seedConnectedOptions(hdayHelperUrl: string | null) {
-  window.localStorage.setItem(
-    DEVELOPER_OPTIONS_STORAGE_KEY,
-    JSON.stringify({
-      enabled: true,
-      // Autoconnect kicks off the mocked /api/health test-connection on mount;
-      // the provider always resets connectionStatus to "disconnected" first.
-      autoConnect: true,
-      connectionStatus: "disconnected",
-      lastConnectionTest: null,
-      isDevMode: true,
-      hdayHelperUrl,
-    }),
-  );
+function seedHelperUrl(hdayHelperUrl: string | null) {
+  window.localStorage.setItem(DEVELOPER_OPTIONS_STORAGE_KEY, JSON.stringify({ hdayHelperUrl }));
 }
 
 function teamHdayPayload(teamId: string, name = "Engineering") {
@@ -57,7 +45,6 @@ function teamHdayPayload(teamId: string, name = "Engineering") {
 describe("TeamScheduleView", () => {
   beforeEach(() => {
     localStorage.clear();
-    server.use(http.get("*/api/health", () => HttpResponse.json({ status: "ok" })));
   });
 
   it("guards direct rendering when no helper is configured", () => {
@@ -72,7 +59,7 @@ describe("TeamScheduleView", () => {
   });
 
   it("requires a configured helper and never falls back to the app's own origin", async () => {
-    seedConnectedOptions(null);
+    seedHelperUrl(null);
     // No handler for */api/team/*hday is registered — MSW's onUnhandledRequest: "error"
     // means the test fails loudly if the view ever attempts that request.
 
@@ -86,8 +73,8 @@ describe("TeamScheduleView", () => {
     expect(screen.queryByLabelText(m.team_id_label())).not.toBeInTheDocument();
   });
 
-  it("routes team requests to the configured local helper instead of the app origin", async () => {
-    seedConnectedOptions(HELPER_URL);
+  it("routes to the configured helper without checking backend connection status", async () => {
+    seedHelperUrl(HELPER_URL);
     window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
@@ -106,7 +93,7 @@ describe("TeamScheduleView", () => {
   });
 
   it("clears stale data and refetches when the configured helper changes", async () => {
-    seedConnectedOptions(HELPER_URL);
+    seedHelperUrl(HELPER_URL);
     window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
