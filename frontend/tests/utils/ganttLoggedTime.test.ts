@@ -4,7 +4,7 @@ import {
   getLoggedMinutes,
   getLoggedMinutesByTaskId,
 } from "@/utils/ganttLoggedTime";
-import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 
 describe("getLoggedMinutes", () => {
   it("computes elapsed minutes between start and stop", () => {

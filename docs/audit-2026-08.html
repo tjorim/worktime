@@ -535,18 +535,17 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">36</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">37</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">1</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">1</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">0</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">0</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
-      marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for the remaining low finding is at the bottom of the page, along with older
-      tool-driven work worth checking before you duplicate it.
+      marker on each resolved card below (scoreboard above) for what changed and where. All audit
+      findings are now resolved; older tool-driven work remains at the bottom as reference.
     </div>
   </section>
 
@@ -1519,12 +1518,12 @@
           regenerated via <code>generate-changelog</code> to match. Fixed in this PR.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a>
           <span class="area">frontend</span>
           <h3>Finish the feature-folder migration</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>Two parallel conventions: everything under <code>src/components/**</code> except the
           calendar, colocated under <code>src/features/calendar/**</code>. Time tracking is the
@@ -1535,6 +1534,10 @@
           architecture test forbidding cross-feature imports — that's what stops the convention
           decaying at two slices.</span></div>
         <div class="refs"><b>docs/optimization-plan.md</b> <b>frontend/tests/architecture/</b></div>
+        <div class="verified"><span>Time tracking and Gantt now live under
+          <code>frontend/src/features/</code>, shared task UI and domain utilities were extracted,
+          matching tests follow the feature layout, and an architecture test plus
+          <code>AGENTS.md</code> enforce the boundary. Fixed in this PR.</span></div>
       </div>
 
       <div class="finding low resolved">
@@ -1561,8 +1564,7 @@
   <section>
     <div class="sec-head">
       <h2>Suggested sequencing</h2>
-      <p>The high- and medium-severity batches are done, leaving the low-severity list below. Each
-        row is sized to land as one PR; a shared row is meant to ship together.</p>
+      <p>All findings are resolved. The older work below remains as historical reference only.</p>
     </div>
 
     <div class="note">
@@ -1587,26 +1589,6 @@
       </div>
     </div>
 
-    <div class="seq-block">
-      <h3>Low <span class="sec-count">1</span></h3>
-      <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
-        refactor — go last.</p>
-      <div class="tablewrap">
-        <table class="seq">
-          <colgroup><col class="n"><col><col></colgroup>
-          <thead><tr><th>#</th><th>Issue(s)</th><th>Why this slot</th></tr></thead>
-          <tbody>
-            <tr>
-              <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
-              <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
-                frontend change above already having landed, rather than fighting them for merge
-                conflicts.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </section>
 
   <section>

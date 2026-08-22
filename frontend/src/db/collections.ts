@@ -43,8 +43,8 @@ import {
   whenHydrated,
   type PersistableCollection,
 } from "@/db/persistence";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { Label } from "@/components/timeTracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import type { Label } from "@/lib/timeTracking/constants";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";

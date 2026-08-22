@@ -4,7 +4,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { timeOffCollection } from "@/db/collections";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import type { TimeOffEntry, TimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";

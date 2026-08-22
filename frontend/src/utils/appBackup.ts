@@ -36,8 +36,8 @@ import {
   type SyncPushPayload,
 } from "@/utils/syncClient";
 import { logger } from "@/utils/logger";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
-import type { Label } from "@/components/timeTracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import type { Label } from "@/lib/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";

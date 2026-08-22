@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { sanitizeLabels, type Label } from "@/components/timeTracking/constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
+import { sanitizeLabels, type Label } from "@/lib/timeTracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import {
   labelsCollection,
   hasSyncCollectionAuth,

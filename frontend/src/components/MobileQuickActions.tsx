@@ -4,7 +4,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Stack from "react-bootstrap/Stack";
-import { WorkLocationDayHeader } from "@/components/timeTracking/WorkLocationDayHeader";
+import { WorkLocationDayHeader } from "@/features/timeTracking/WorkLocationDayHeader";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";

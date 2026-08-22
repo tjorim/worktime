@@ -169,6 +169,10 @@ unfamiliar branch's existing commits:
 - Do not commit automatically unless explicitly asked
 - Always include screenshots in PR comments when making UI changes (all visible states)
 - Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
+- Frontend product slices with their own view and supporting components belong under
+  `frontend/src/features/<feature>/`, with matching tests under `frontend/tests/features/<feature>/`.
+  Feature folders may import shared code, but must not import another feature directly; move code used
+  by multiple features to `components/shared/`, `hooks/`, `lib/`, `types/`, or `utils/` as appropriate.
 - All storage keys live in `frontend/src/constants/storageKeys.ts`
 - Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
   authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,

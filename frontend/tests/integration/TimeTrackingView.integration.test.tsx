@@ -3,8 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { TimeTrackingView } from "@/components/timeTracking/TimeTrackingView";
-import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
+import { TimeTrackingView } from "@/features/timeTracking/TimeTrackingView";
+import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import { dayjs } from "@/utils/dateTimeUtils";
 
 const TEST_LABELS = [
