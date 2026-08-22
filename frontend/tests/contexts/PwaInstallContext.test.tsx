@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PwaInstallProvider, usePwaInstall } from "@/contexts/PwaInstallContext";
-import { PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
 
 function wrapper({ children }: { children: ReactNode }) {
   return <PwaInstallProvider>{children}</PwaInstallProvider>;
@@ -27,7 +27,7 @@ function dispatchBeforeInstallPrompt(overrides?: {
 
 describe("PwaInstallContext", () => {
   afterEach(() => {
-    window.localStorage.removeItem(PWA_INSTALL_STATE_STORAGE_KEY);
+    window.localStorage.removeItem(DEVICE_PREFERENCES_STORAGE_KEY);
     vi.restoreAllMocks();
   });
 
@@ -148,8 +148,10 @@ describe("PwaInstallContext", () => {
 
   it("resets a stale installed flag once the app is no longer running standalone", () => {
     window.localStorage.setItem(
-      PWA_INSTALL_STATE_STORAGE_KEY,
-      JSON.stringify({ visitCount: 3, installed: true, lastPromptedAt: null }),
+      DEVICE_PREFERENCES_STORAGE_KEY,
+      JSON.stringify({
+        pwaInstall: { visitCount: 3, installed: true, lastPromptedAt: null },
+      }),
     );
 
     const { result } = renderHook(() => usePwaInstall(), { wrapper });

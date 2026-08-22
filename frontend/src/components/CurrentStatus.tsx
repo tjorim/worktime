@@ -115,7 +115,7 @@ export function CurrentStatus({
   if (isCompact) {
     return (
       <Col className="mb-4">
-        <Card className="current-status-compact">
+        <Card className="current-status-card current-status-compact">
           <Card.Body className="d-flex align-items-center justify-content-between gap-2 py-2">
             {effectiveTeam ? (
               <PersonalizedStatusContent
@@ -145,7 +145,7 @@ export function CurrentStatus({
 
   return (
     <Col className="mb-4">
-      <Card>
+      <Card className="current-status-card">
         <Card.Body>
           {/* Common Header Row */}
           <div className="d-flex justify-content-between align-items-center mb-3">

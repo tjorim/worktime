@@ -13,13 +13,14 @@ import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { logger } from "@/utils/logger";
 import { BackupDialog } from "@/components/BackupDialog";
 import { CONFIG } from "@/utils/config";
-import { hasMultipleTeams } from "@/utils/scheduleUtils";
+import { getScheduleChangeTeamAction } from "@/utils/scheduleUtils";
 import { type ScheduleOption } from "@/data/rosters";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
+import { SettingsCalendarFeedSection } from "@/components/settings/account/SettingsCalendarFeedSection";
 import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
@@ -64,7 +65,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
   const { openAbout, openShortcuts } = useAppShellContext();
-  const activeSection = search.section ?? "general";
+  const activeSection = search.section ?? "scheduleTeam";
   const [isAdmin, setIsAdmin] = useState(false);
 
   const visibleSections = useMemo(
@@ -182,14 +183,14 @@ export type SettingsSection =
  * @param onHide - Callback invoked when a settings action should close the page
  * @param onShowAbout - Optional callback invoked to open the global About experience
  * @param onShowShortcuts - Optional callback invoked to open the global keyboard shortcuts overlay
- * @param activeSection - Active settings section key; defaults to "general" when unset
+ * @param activeSection - Active settings section key; defaults to "scheduleTeam" when unset
  * @returns Rendered settings page content
  */
 export function SettingsContent({
   onHide,
   onShowAbout,
   onShowShortcuts,
-  activeSection = "general",
+  activeSection = "scheduleTeam",
   onAdminStatusChange,
 }: {
   onHide: () => void;
@@ -364,13 +365,12 @@ export function SettingsContent({
   };
 
   const handleScheduleChange = (schedule: ScheduleOption) => {
-    const scheduleChanged = schedule !== scheduleType;
-    if (scheduleChanged && myTeam !== null) {
+    const teamAction = getScheduleChangeTeamAction(scheduleType, schedule, myTeam);
+    if (teamAction !== "keep") {
       setMyTeam(null);
-      toast?.showInfo(m.schedule_team_reset_changed());
-    } else if (!hasMultipleTeams(schedule) && myTeam !== null) {
-      setMyTeam(null);
-      toast?.showInfo(m.schedule_team_reset_no_teams());
+      if (teamAction === "clear-and-prompt") {
+        toast?.showInfo(m.schedule_team_reset_changed());
+      }
     }
     setScheduleType(schedule);
   };
@@ -502,6 +502,7 @@ export function SettingsContent({
               revokeApiTokenError={revokeApiTokenError}
               onRevokeApiToken={handleRevokeApiToken}
             />
+            <SettingsCalendarFeedSection fetchFn={fetchFn} />
             <SettingsIntegrationClientsSection
               clients={integrationClients.clients}
               isLoading={integrationClients.isLoading}
@@ -607,7 +608,9 @@ export function SettingsContent({
   return (
     <>
       <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
-        <div>{sectionContent}</div>
+        <div key={activeSection} className="app-view-enter">
+          {sectionContent}
+        </div>
         <div className="px-4 py-3 text-center border-top">
           <span className="text-muted d-block">
             {m.footer_version({ version: CONFIG.VERSION })}

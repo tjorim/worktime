@@ -215,19 +215,101 @@ body {
   display: none !important;
 }
 
+/* Keep the primary view switcher consistent across Schedule, Time Off,
+   Time Tracking, and Gantt. It fills narrow screens and uses the same
+   bounded width with equal segments on larger screens. */
+.view-toggle-group {
+  width: min(100%, 24rem);
+
+  > .btn {
+    flex: 1 1 0;
+  }
+}
+
+@keyframes wt-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wt-status-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Shared motion language: short feedback on controls and a restrained entrance
+   when the user deliberately switches app views. */
+.btn,
+.nav-link,
+.form-control,
+.form-select {
+  transition:
+    color var(--wt-motion-fast) var(--wt-motion-ease),
+    background-color var(--wt-motion-fast) var(--wt-motion-ease),
+    border-color var(--wt-motion-fast) var(--wt-motion-ease),
+    box-shadow var(--wt-motion-fast) var(--wt-motion-ease),
+    transform var(--wt-motion-fast) var(--wt-motion-ease);
+}
+
+.btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.card {
+  transition:
+    border-color var(--wt-motion-base) var(--wt-motion-ease),
+    box-shadow var(--wt-motion-base) var(--wt-motion-ease),
+    background-color var(--wt-motion-base) var(--wt-motion-ease);
+}
+
+.tab-pane.active,
+.app-view-enter {
+  animation: wt-view-enter var(--wt-motion-base) var(--wt-motion-ease) both;
+}
+
+.current-status-card {
+  transform-origin: top center;
+  animation: wt-status-enter var(--wt-motion-slow) var(--wt-motion-ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select,
+  .card {
+    transition-duration: 0.01ms !important;
+  }
+
+  .tab-pane.active,
+  .app-view-enter,
+  .current-status-card {
+    animation: none !important;
+  }
+
+  .btn:not(:disabled):active {
+    transform: none;
+  }
+}
+
 /* Below `sm`, stack the label under the icon instead of hiding it — six
    near-identical calendar-family glyphs aren't enough to navigate by on
    their own, so keep a (smaller) accessible name visible for sighted users
    too. Still fits the 44px touch target with room to spare. */
 @media (width <= 575.98px) {
-  .view-toggle-group {
-    width: 100%;
-
-    > .btn {
-      flex: 1 1 0;
-    }
-  }
-
   .main-tabs {
     overflow-x: hidden;
   }

@@ -14,9 +14,21 @@ from app.schemas import AccessTokenCreate
 from app.services.db_service import NotFoundError
 
 TOKEN_PREFIX = "wtpat_"
+ICAL_TOKEN_PREFIX = "wtical_"
+ICAL_TOKEN_NAME = "Calendar subscription"
+ICAL_READ_SCOPE = "ical:read"
 PEBBLE_PAIR_TOKEN_NAME = "Pebble watch"
 _TOKEN_PREVIEW_LENGTH = 4
 _LAST_USED_UPDATE_INTERVAL = timedelta(minutes=15)
+
+
+def _is_ical_token(token: AccessToken) -> bool:
+    return token.scopes == [ICAL_READ_SCOPE]
+
+
+async def _list_all_tokens_for_user(session: AsyncSession, user_id: int) -> list[AccessToken]:
+    result = await session.execute(select(AccessToken).where(AccessToken.user_id == user_id))
+    return list(result.scalars().all())
 
 
 def _hash_token(raw_token: str) -> str:
@@ -66,11 +78,51 @@ async def rotate_pebble_access_token(
     )
 
 
+async def rotate_ical_feed_token(session: AsyncSession, user_id: int) -> str:
+    """Replace the dedicated URL credential used by calendar subscribers."""
+    await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+    for existing_token in await _list_all_tokens_for_user(session, user_id):
+        if _is_ical_token(existing_token):
+            await session.delete(existing_token)
+    raw_token = ICAL_TOKEN_PREFIX + secrets.token_urlsafe(32)
+    session.add(
+        AccessToken(
+            user_id=user_id,
+            name=ICAL_TOKEN_NAME,
+            token_hash=_hash_token(raw_token),
+            token_preview=raw_token[-_TOKEN_PREVIEW_LENGTH:],
+            scopes=[ICAL_READ_SCOPE],
+        )
+    )
+    await session.commit()
+    return raw_token
+
+
+async def revoke_ical_feed_token(session: AsyncSession, user_id: int) -> None:
+    for token in await _list_all_tokens_for_user(session, user_id):
+        if _is_ical_token(token):
+            await session.delete(token)
+    await session.commit()
+
+
+async def get_ical_feed_token(session: AsyncSession, user_id: int) -> AccessToken | None:
+    return next((token for token in await _list_all_tokens_for_user(session, user_id) if _is_ical_token(token)), None)
+
+
+async def authenticate_ical_feed_token(session: AsyncSession, raw_token: str) -> AccessToken | None:
+    if not raw_token.startswith(ICAL_TOKEN_PREFIX):
+        return None
+    token = await authenticate_access_token(session, raw_token)
+    if token is None or not _is_ical_token(token):
+        return None
+    return token
+
+
 async def list_access_tokens_for_user(session: AsyncSession, user_id: int) -> list[AccessToken]:
     result = await session.execute(
         select(AccessToken).where(AccessToken.user_id == user_id).order_by(AccessToken.created_at.desc())
     )
-    return list(result.scalars().all())
+    return [token for token in result.scalars().all() if not _is_ical_token(token)]
 
 
 async def revoke_access_token(session: AsyncSession, user_id: int, token_id: str) -> None:

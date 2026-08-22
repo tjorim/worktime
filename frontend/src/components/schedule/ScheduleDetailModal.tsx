@@ -63,6 +63,22 @@ function getShiftLabel(code: ShiftCode): string {
   }
 }
 
+function getLocalizedScheduleMetadata(scheduleType: ScheduleOption) {
+  switch (scheduleType) {
+    case "9-5":
+      return { title: m.schedule_9_5_title(), description: m.schedule_9_5_description() };
+    case "2-shift":
+      return { title: m.schedule_2_shift_title(), description: m.schedule_2_shift_description() };
+    case "weekend-shift":
+      return {
+        title: m.schedule_weekend_shift_title(),
+        description: m.schedule_weekend_shift_description(),
+      };
+    case "5-shift":
+      return { title: m.schedule_5_shift_title(), description: m.schedule_5_shift_description() };
+  }
+}
+
 interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
@@ -89,6 +105,7 @@ export function ScheduleDetailModal({
 }: ScheduleDetailModalProps) {
   const { settings } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
+  const scheduleMetadata = getLocalizedScheduleMetadata(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount;
   const hasTeams = teamCount > 1;
   const isValidTeamNumber = hasTeams
@@ -165,6 +182,11 @@ export function ScheduleDetailModal({
   // Find current status (weekSchedule always has 7 elements)
   const currentStatus = weekSchedule[0]!;
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
+  const availableShifts = (
+    Object.entries(scheduleConfig.shiftConfig.shiftTimes) as Array<
+      [ShiftCode, (typeof scheduleConfig.shiftConfig.shiftTimes)[ShiftCode]]
+    >
+  ).filter(([code, definition]) => code !== "O" && definition !== undefined);
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
@@ -213,6 +235,68 @@ export function ScheduleDetailModal({
                 </div>
               )}
             </div>
+          </Card.Body>
+        </Card>
+
+        <Card className="mb-4">
+          <Card.Body>
+            <h6 className="mb-3">
+              <i className="bi bi-info-circle me-2" aria-hidden="true"></i>
+              {m.schedule_info_heading()}
+            </h6>
+            <Row className="g-3">
+              <Col xs={6} md={3}>
+                <small className="text-muted d-block">{m.schedule_info_type()}</small>
+                <span className="fw-semibold">{scheduleMetadata.title}</span>
+              </Col>
+              {hasTeams ? (
+                <Col xs={6} md={3}>
+                  <small className="text-muted d-block">{m.schedule_info_team()}</small>
+                  <span className="fw-semibold">
+                    {m.schedule_info_team_value({
+                      team: String(teamNumber),
+                      total: String(teamCount),
+                    })}
+                  </span>
+                </Col>
+              ) : null}
+              <Col xs={6} md={3}>
+                <small className="text-muted d-block">{m.schedule_info_cycle()}</small>
+                <span className="fw-semibold">
+                  {m.schedule_info_cycle_days({
+                    days: String(scheduleConfig.shiftConfig.cycleLengthDays),
+                  })}
+                </span>
+              </Col>
+              <Col xs={6} md={3}>
+                <small className="text-muted d-block">{m.schedule_info_shifts_per_day()}</small>
+                <span className="fw-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
+              </Col>
+              <Col xs={12}>
+                <small className="text-muted d-block mb-2">{m.schedule_info_available_shifts()}</small>
+                <div className="d-flex flex-wrap gap-2">
+                  {availableShifts.map(([code, definition]) => {
+                    const meta = SHIFT_DISPLAY_META[code] ?? { variant: "secondary" };
+                    return (
+                      <Badge key={code} bg={meta.variant} className="fw-normal">
+                        {definition?.displayCode ?? code}
+                        <span className="ms-1">
+                          {getLocalizedShiftTime(
+                            definition?.start ?? null,
+                            definition?.end ?? null,
+                            settings.timeFormat,
+                          )}
+                        </span>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </Col>
+              <Col xs={12}>
+                <small className="text-muted d-block">{m.schedule_info_description()}</small>
+                <span>{scheduleMetadata.description}</span>
+              </Col>
+            </Row>
           </Card.Body>
         </Card>
 

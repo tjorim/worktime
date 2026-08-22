@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { logger } from "@/utils/logger";
 
 /** Not yet part of TypeScript's DOM lib. */
@@ -55,9 +54,22 @@ interface PwaInstallProviderProps {
  * Settings — and tracks whether the app is already installed.
  */
 export function PwaInstallProvider({ children }: PwaInstallProviderProps) {
-  const [state, setState] = useLocalStorage<PwaInstallState>(
-    PWA_INSTALL_STATE_STORAGE_KEY,
-    defaultPwaInstallState,
+  const { preferences, setPreferences } = useDevicePreferences();
+  const state: PwaInstallState = {
+    ...defaultPwaInstallState,
+    ...preferences?.pwaInstall,
+  };
+  const setState = useCallback(
+    (update: PwaInstallState | ((current: PwaInstallState) => PwaInstallState)) => {
+      setPreferences((current) => {
+        const previous = { ...defaultPwaInstallState, ...current?.pwaInstall };
+        return {
+          ...current,
+          pwaInstall: typeof update === "function" ? update(previous) : update,
+        };
+      });
+    },
+    [setPreferences],
   );
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const [hasDeferredPrompt, setHasDeferredPrompt] = useState(false);

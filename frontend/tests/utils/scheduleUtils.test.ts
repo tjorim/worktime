@@ -1,7 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
-import { getEffectiveTeam, getScheduleConfig, getTeamCountForOption } from "@/utils/scheduleUtils";
+import {
+  getEffectiveTeam,
+  getScheduleChangeTeamAction,
+  getScheduleConfig,
+  getTeamCountForOption,
+} from "@/utils/scheduleUtils";
 
 describe("scheduleUtils", () => {
+  describe("getScheduleChangeTeamAction", () => {
+    it("silently clears a stale team when switching to a single-team schedule", () => {
+      expect(getScheduleChangeTeamAction("5-shift", "9-5", 3)).toBe("clear");
+    });
+
+    it("clears and prompts when switching between multi-team rosters", () => {
+      expect(getScheduleChangeTeamAction("5-shift", "2-shift", 3)).toBe("clear-and-prompt");
+    });
+
+    it("keeps the current selection when the roster did not change", () => {
+      expect(getScheduleChangeTeamAction("5-shift", "5-shift", 3)).toBe("keep");
+    });
+  });
+
   describe("getScheduleConfig", () => {
     it("should return 5-shift config when no option is provided", () => {
       const config = getScheduleConfig(null);

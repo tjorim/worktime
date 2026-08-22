@@ -6,10 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";
-import {
-  HDAY_HELPER_SETTINGS_STORAGE_KEY,
-  LAST_TEAM_ID_STORAGE_KEY,
-} from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { TestProviders } from "@tests/utils/testProviders";
 
@@ -28,7 +25,10 @@ function HelperUrlSwitcher({ url }: { url: string }) {
 }
 
 function seedHelperUrl(hdayHelperUrl: string | null) {
-  window.localStorage.setItem(HDAY_HELPER_SETTINGS_STORAGE_KEY, JSON.stringify({ hdayHelperUrl }));
+  window.localStorage.setItem(
+    DEVICE_PREFERENCES_STORAGE_KEY,
+    JSON.stringify({ hdayHelper: { url: hdayHelperUrl }, lastHdayTeamId: "eng" }),
+  );
 }
 
 function teamHdayPayload(teamId: string, name = "Engineering") {
@@ -78,7 +78,6 @@ describe("TeamScheduleView", () => {
 
   it("routes to the configured helper without checking backend connection status", async () => {
     seedHelperUrl(HELPER_URL);
-    window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
         HttpResponse.json(teamHdayPayload(params.teamId as string)),
@@ -97,7 +96,6 @@ describe("TeamScheduleView", () => {
 
   it("clears stale data and refetches when the configured helper changes", async () => {
     seedHelperUrl(HELPER_URL);
-    window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
         HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper A")),
@@ -125,7 +123,6 @@ describe("TeamScheduleView", () => {
 
   it("refetches from a new helper while the previous helper is still loading", async () => {
     seedHelperUrl(HELPER_URL);
-    window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, async () => {
         await delay("infinite");

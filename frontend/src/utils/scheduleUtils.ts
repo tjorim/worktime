@@ -76,6 +76,19 @@ export function hasMultipleTeams(scheduleOption: ScheduleOption | null | undefin
   return getTeamCountForOption(scheduleOption) > 1;
 }
 
+export type ScheduleChangeTeamAction = "keep" | "clear" | "clear-and-prompt";
+
+/** Decide how an existing team selection should be handled when selecting a schedule. */
+export function getScheduleChangeTeamAction(
+  currentSchedule: ScheduleOption | null,
+  nextSchedule: ScheduleOption,
+  currentTeam: number | null,
+): ScheduleChangeTeamAction {
+  if (currentTeam === null) return "keep";
+  if (!hasMultipleTeams(nextSchedule)) return "clear";
+  return currentSchedule === nextSchedule ? "keep" : "clear-and-prompt";
+}
+
 /**
  * Get the effective team number for the user, handling single-user schedules.
  *

@@ -7,7 +7,7 @@ import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { HDAY_HELPER_SETTINGS_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";
@@ -42,8 +42,8 @@ describe("TimeOffView", () => {
 
     it("shows the Team view only after the configured helper passes its health check", async () => {
       localStorage.setItem(
-        HDAY_HELPER_SETTINGS_STORAGE_KEY,
-        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
       );
       server.use(
         http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
@@ -61,8 +61,8 @@ describe("TimeOffView", () => {
 
     it("preserves a saved Team view while the initial helper probe is pending", async () => {
       localStorage.setItem(
-        HDAY_HELPER_SETTINGS_STORAGE_KEY,
-        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
       );
       localStorage.setItem(
         USER_STATE_STORAGE_KEY,
@@ -91,8 +91,8 @@ describe("TimeOffView", () => {
 
     it("keeps the Team view hidden when the configured helper is unhealthy", async () => {
       localStorage.setItem(
-        HDAY_HELPER_SETTINGS_STORAGE_KEY,
-        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
       );
       const healthCheck = vi.fn(() => new HttpResponse(null, { status: 503 }));
       server.use(http.get("http://localhost:8080/health", healthCheck));
@@ -109,8 +109,8 @@ describe("TimeOffView", () => {
 
     it("leaves the Team view when a later helper health check fails", async () => {
       localStorage.setItem(
-        HDAY_HELPER_SETTINGS_STORAGE_KEY,
-        JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
       );
       let healthy = true;
       const healthCheck = vi.fn(() =>

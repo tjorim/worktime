@@ -215,6 +215,7 @@ if settings.DATABASE_ENABLED:
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
+    from .routers.ical import router as ical_router
     from .routers.integration_clients import router as integration_clients_router
     from .routers.pebble import router as pebble_router
     from .routers.push import router as push_router
@@ -224,6 +225,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(account_router, prefix="/api")
     app.include_router(access_tokens_router, prefix="/api")
     app.include_router(integration_clients_router, prefix="/api")
+    app.include_router(ical_router, prefix="/api")
     app.include_router(audit_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(db_users_router, prefix="/api")

@@ -11,6 +11,12 @@
    ========================================================================= */
 
 :root {
+  /* --- Motion --- */
+  --wt-motion-fast: 120ms;
+  --wt-motion-base: 180ms;
+  --wt-motion-slow: 240ms;
+  --wt-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+
   /* --- Month Calendar Component --- */
   /* Background and borders */
   --wt-month-calendar-bg: #fff;

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { PWA_INSTALL_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 
 const VISIT_THRESHOLD = 3;
@@ -21,8 +21,10 @@ function dispatchBeforeInstallPrompt(promptSpy: () => Promise<void>) {
 
 function seedVisitCount(count: number) {
   window.localStorage.setItem(
-    PWA_INSTALL_STATE_STORAGE_KEY,
-    JSON.stringify({ visitCount: count - 1, installed: false, lastPromptedAt: null }),
+    DEVICE_PREFERENCES_STORAGE_KEY,
+    JSON.stringify({
+      pwaInstall: { visitCount: count - 1, installed: false, lastPromptedAt: null },
+    }),
   );
 }
 
@@ -43,7 +45,7 @@ describe("PwaInstallPrompt", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    window.localStorage.removeItem(PWA_INSTALL_STATE_STORAGE_KEY);
+    window.localStorage.removeItem(DEVICE_PREFERENCES_STORAGE_KEY);
   });
 
   it("does not show a toast before the engagement visit threshold is met", () => {
@@ -105,11 +107,13 @@ describe("PwaInstallPrompt", () => {
 
   it("does not show a toast again within the cooldown after a prior auto-prompt", () => {
     window.localStorage.setItem(
-      PWA_INSTALL_STATE_STORAGE_KEY,
+      DEVICE_PREFERENCES_STORAGE_KEY,
       JSON.stringify({
-        visitCount: VISIT_THRESHOLD,
-        installed: false,
-        lastPromptedAt: new Date().toISOString(),
+        pwaInstall: {
+          visitCount: VISIT_THRESHOLD,
+          installed: false,
+          lastPromptedAt: new Date().toISOString(),
+        },
       }),
     );
     renderPrompt();
