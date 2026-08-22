@@ -17,11 +17,21 @@ async def test_feed_contains_stable_utc_shift_and_time_off_events(monkeypatch: p
     monkeypatch.setattr(
         ical_service,
         "list_time_off_entries",
-        AsyncMock(return_value=[SimpleNamespace(
-            entry_id="leave-1", entry_kind="date", date=date(2026, 8, 24),
-            start_date=None, end_date=None, weekday=None, entry_type="vacation",
-            note="Beach, then home", deleted_at=None,
-        )]),
+        AsyncMock(
+            return_value=[
+                SimpleNamespace(
+                    entry_id="leave-1",
+                    entry_kind="date",
+                    date=date(2026, 8, 24),
+                    start_date=None,
+                    end_date=None,
+                    weekday=None,
+                    entry_type="vacation",
+                    note="Beach, then home",
+                    deleted_at=None,
+                )
+            ]
+        ),
     )
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
@@ -46,10 +56,21 @@ async def test_weekly_time_off_is_bounded_and_expanded(monkeypatch: pytest.Monke
     monkeypatch.setattr(
         ical_service,
         "list_time_off_entries",
-        AsyncMock(return_value=[SimpleNamespace(
-            entry_id="weekly", entry_kind="weekly", date=None, start_date=None, end_date=None,
-            weekday=1, entry_type="course", note=None, deleted_at=None,
-        )]),
+        AsyncMock(
+            return_value=[
+                SimpleNamespace(
+                    entry_id="weekly",
+                    entry_kind="weekly",
+                    date=None,
+                    start_date=None,
+                    end_date=None,
+                    weekday=1,
+                    entry_type="course",
+                    note=None,
+                    deleted_at=None,
+                )
+            ]
+        ),
     )
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))

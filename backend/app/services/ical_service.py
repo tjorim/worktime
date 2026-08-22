@@ -72,8 +72,13 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     context = await get_work_context_for_user(session, user_id)
     entries = await list_time_off_entries(session, user_id=user_id)
     lines = [
-        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Worktime//Calendar Feed//EN",
-        "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Worktime", "X-WR-TIMEZONE:Europe/Brussels",
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Worktime//Calendar Feed//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:Worktime",
+        "X-WR-TIMEZONE:Europe/Brussels",
     ]
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     if context.schedule_type is not None and context.effective_team_number is not None:
@@ -85,21 +90,34 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                 ends = _utc_at(day, shift.end_hour)
                 if ends <= starts:
                     ends += timedelta(days=1)
-                lines.extend([
-                    "BEGIN:VEVENT", f"UID:shift-{context.schedule_type}-{context.effective_team_number}-{day.isoformat()}@worktime",
-                    f"DTSTAMP:{stamp}", f"DTSTART:{starts:%Y%m%dT%H%M%SZ}", f"DTEND:{ends:%Y%m%dT%H%M%SZ}",
-                    f"SUMMARY:{_escape(shift.name)} shift", "END:VEVENT",
-                ])
+                lines.extend(
+                    [
+                        "BEGIN:VEVENT",
+                        f"UID:shift-{context.schedule_type}-{context.effective_team_number}-{day.isoformat()}@worktime",
+                        f"DTSTAMP:{stamp}",
+                        f"DTSTART:{starts:%Y%m%dT%H%M%SZ}",
+                        f"DTEND:{ends:%Y%m%dT%H%M%SZ}",
+                        f"SUMMARY:{_escape(shift.name)} shift",
+                        "END:VEVENT",
+                    ]
+                )
             day += timedelta(days=1)
     for entry in entries:
         if entry.deleted_at is not None:
             continue
         for day in _time_off_dates(entry, start, end):
             summary = entry.entry_type.replace("_", " ").title()
-            lines.extend([
-                "BEGIN:VEVENT", f"UID:time-off-{entry.entry_id}-{day.isoformat()}@worktime", f"DTSTAMP:{stamp}",
-                f"DTSTART;VALUE=DATE:{day:%Y%m%d}", f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}",
-                f"SUMMARY:{_escape(summary)}", *( [f"DESCRIPTION:{_escape(entry.note)}"] if entry.note else [] ), "END:VEVENT",
-            ])
+            lines.extend(
+                [
+                    "BEGIN:VEVENT",
+                    f"UID:time-off-{entry.entry_id}-{day.isoformat()}@worktime",
+                    f"DTSTAMP:{stamp}",
+                    f"DTSTART;VALUE=DATE:{day:%Y%m%d}",
+                    f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}",
+                    f"SUMMARY:{_escape(summary)}",
+                    *([f"DESCRIPTION:{_escape(entry.note)}"] if entry.note else []),
+                    "END:VEVENT",
+                ]
+            )
     lines.append("END:VCALENDAR")
     return "\r\n".join(part for line in lines for part in _fold(line)) + "\r\n"
