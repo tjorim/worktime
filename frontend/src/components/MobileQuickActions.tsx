@@ -37,12 +37,13 @@ export function MobileQuickActions({
   const today = dayjs().format("YYYY-MM-DD");
   const runningTask = useMemo(() => tasks.find((task) => !task.stopTime) ?? null, [tasks]);
   const taskAtCurrentTime = useMemo(() => {
-    const now = dayjs();
     return tasks.some(
       (task) =>
-        task.stopTime && !now.isBefore(dayjs(task.startTime)) && now.isBefore(dayjs(task.stopTime)),
+        task.stopTime &&
+        !liveTime.isBefore(dayjs(task.startTime)) &&
+        liveTime.isBefore(dayjs(task.stopTime)),
     );
-  }, [tasks]);
+  }, [liveTime, tasks]);
 
   useEffect(() => {
     if (!labelId && labels[0]) setLabelId(labels[0].id);

@@ -150,7 +150,7 @@ describe("MobileQuickActions", () => {
     );
   });
 
-  it("rechecks overlaps when starting after the sheet has been open", async () => {
+  it("disables quick start when a planned task begins while the sheet is open", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-08-22T10:00:00"));
     mockStorage.tasks = [{ startTime: "2026-08-22T10:01", stopTime: "2026-08-22T11:00" }];
@@ -168,11 +168,10 @@ describe("MobileQuickActions", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Open quick actions" }));
-    vi.setSystemTime(new Date("2026-08-22T10:01:00"));
-    await user.click(screen.getByRole("button", { name: "Start Now" }));
+    await vi.advanceTimersByTimeAsync(60_000);
 
+    expect(screen.getByRole("button", { name: "Start Now" })).toBeDisabled();
     expect(mockAddTask).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(/overlap/i);
   });
 
   it("hides actions that are unavailable", async () => {
