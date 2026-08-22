@@ -10,7 +10,7 @@ const jsonResponse = (body: unknown, init?: ResponseInit) =>
 
 function renderHarness(fetchFn: (input: string, init?: RequestInit) => Promise<Response>, isAdmin = false) {
   function Harness() {
-    const state = useSettingsIntegrationClients({ isAuthenticated: true, fetchFn });
+    const state = useSettingsIntegrationClients({ isAuthenticated: true, accountIdentity: "user-a", fetchFn });
     return <SettingsIntegrationClientsSection
       clients={state.clients} isLoading={state.isLoading} error={state.error}
       isCreating={state.isCreating} createdClient={state.createdClient}
@@ -74,7 +74,7 @@ describe("Settings integration clients", () => {
     });
 
     function MutationHarness() {
-      const state = useSettingsIntegrationClients({ isAuthenticated: true, fetchFn });
+      const state = useSettingsIntegrationClients({ isAuthenticated: true, accountIdentity: "user-a", fetchFn });
       return <button onClick={() => {
         state.createClient("Home hub", ["worktime:mcp"]);
         state.rotateClient(7);
@@ -112,5 +112,47 @@ describe("Settings integration clients", () => {
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke" }));
     await waitFor(() => expect(screen.queryByText("wtic_replacement")).not.toBeInTheDocument());
     expect(await screen.findByText("Revoked")).toBeInTheDocument();
+  });
+
+  it("cannot restore a one-time key from the previous account after an account change", async () => {
+    let currentAccount = "user-a";
+    let oldCreateCompleted = false;
+    let resolveCreate: ((response: Response) => void) | undefined;
+    const createResponse = new Promise<Response>((resolve) => { resolveCreate = resolve; });
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients" && init?.method === "POST") {
+        const response = await createResponse;
+        oldCreateCompleted = true;
+        return response;
+      }
+      if (input === "/api/integration-clients") return jsonResponse({
+        items: currentAccount === "user-a" ? [] : [{ id: 8, name: "Account B client", key_preview: "bbbb", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, is_active: true, created_at: "2026-08-22T00:00:00Z", last_used_at: null, revoked_at: null }],
+        total: 1,
+      });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+
+    function AccountHarness({ accountIdentity }: { accountIdentity: string }) {
+      const state = useSettingsIntegrationClients({ isAuthenticated: true, accountIdentity, fetchFn });
+      return <div>
+        <span>{state.createdClient?.key ?? "No key"}</span>
+        <span>{state.clients?.map((client) => client.name).join(", ") ?? "No clients loaded"}</span>
+        <button onClick={() => state.createClient("Account A client", ["worktime:mcp"])}>Create</button>
+      </div>;
+    }
+
+    const user = userEvent.setup();
+    const { rerender } = render(<AccountHarness accountIdentity="user-a" />);
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    currentAccount = "user-b";
+    rerender(<AccountHarness accountIdentity="user-b" />);
+    expect(await screen.findByText("Account B client")).toBeInTheDocument();
+    resolveCreate?.(jsonResponse({ id: 7, name: "Account A client", key: "wtic_account_a_secret", scopes: ["worktime:mcp"], rate_limit_per_minute: 120, created_at: "2026-08-22T00:00:00Z" }, { status: 201 }));
+
+    await waitFor(() => expect(oldCreateCompleted).toBe(true));
+    await waitFor(() => expect(screen.queryByText("wtic_account_a_secret")).not.toBeInTheDocument());
+    expect(screen.getByText("Account B client")).toBeInTheDocument();
   });
 });

@@ -28,10 +28,11 @@ export interface CreatedIntegrationClient {
 
 interface Params {
   isAuthenticated: boolean;
+  accountIdentity: string | null;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
-export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Params) {
+export function useSettingsIntegrationClients({ isAuthenticated, accountIdentity, fetchFn }: Params) {
   const [clients, setClients] = useState<IntegrationClient[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,31 +43,42 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
   // guard as well so two mutation callbacks invoked in the same tick cannot issue
   // overlapping one-time keys and overwrite the only copy of either secret.
   const mutationInFlight = useRef(false);
+  const sessionGeneration = useRef(0);
+  const loadGeneration = useRef(0);
 
-  const loadClients = useCallback(async () => {
+  const loadClients = useCallback(async (expectedSession = sessionGeneration.current) => {
+    const expectedLoad = ++loadGeneration.current;
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetchFn("/api/integration-clients");
       if (!response.ok) throw new Error((await readErrorDetail(response)) ?? m.integration_clients_load_failed());
       const payload = (await response.json()) as { items: IntegrationClient[] };
+      if (sessionGeneration.current !== expectedSession || loadGeneration.current !== expectedLoad) return;
       setClients(payload.items);
     } catch (loadError) {
+      if (sessionGeneration.current !== expectedSession || loadGeneration.current !== expectedLoad) return;
       logger.error("Failed to load integration clients:", loadError);
       setError(loadError instanceof Error ? loadError.message : m.integration_clients_load_failed());
     } finally {
-      setIsLoading(false);
+      if (sessionGeneration.current === expectedSession && loadGeneration.current === expectedLoad) {
+        setIsLoading(false);
+      }
     }
   }, [fetchFn]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setClients(null);
-      setError(null);
-      return;
-    }
-    void loadClients();
-  }, [isAuthenticated, loadClients]);
+    const generation = ++sessionGeneration.current;
+    loadGeneration.current += 1;
+    mutationInFlight.current = false;
+    setClients(null);
+    setError(null);
+    setCreatedClient(null);
+    setIsCreating(false);
+    setBusyClientId(null);
+    setIsLoading(false);
+    if (isAuthenticated && accountIdentity !== null) void loadClients(generation);
+  }, [isAuthenticated, accountIdentity, loadClients]);
 
   const createClient = async (name: string, scopes: IntegrationClientScope[]) => {
     if (mutationInFlight.current || createdClient) return;
@@ -76,6 +88,7 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
       return;
     }
     mutationInFlight.current = true;
+    const generation = sessionGeneration.current;
     setIsCreating(true);
     setError(null);
     try {
@@ -85,39 +98,51 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
         body: JSON.stringify({ name: trimmedName, scopes }),
       });
       if (!response.ok) throw new Error((await readErrorDetail(response)) ?? m.integration_clients_create_failed());
-      setCreatedClient((await response.json()) as CreatedIntegrationClient);
-      await loadClients();
+      const created = (await response.json()) as CreatedIntegrationClient;
+      if (sessionGeneration.current !== generation) return;
+      setCreatedClient(created);
+      await loadClients(generation);
     } catch (createError) {
+      if (sessionGeneration.current !== generation) return;
       logger.error("Failed to create integration client:", createError);
       setError(createError instanceof Error ? createError.message : m.integration_clients_create_failed());
     } finally {
-      mutationInFlight.current = false;
-      setIsCreating(false);
+      if (sessionGeneration.current === generation) {
+        mutationInFlight.current = false;
+        setIsCreating(false);
+      }
     }
   };
 
   const rotateClient = async (clientId: number) => {
     if (mutationInFlight.current || createdClient) return;
     mutationInFlight.current = true;
+    const generation = sessionGeneration.current;
     setBusyClientId(clientId);
     setError(null);
     try {
       const response = await fetchFn(`/api/integration-clients/${clientId}/rotate`, { method: "POST" });
       if (!response.ok) throw new Error((await readErrorDetail(response)) ?? m.integration_clients_rotate_failed());
-      setCreatedClient((await response.json()) as CreatedIntegrationClient);
-      await loadClients();
+      const rotated = (await response.json()) as CreatedIntegrationClient;
+      if (sessionGeneration.current !== generation) return;
+      setCreatedClient(rotated);
+      await loadClients(generation);
     } catch (rotateError) {
+      if (sessionGeneration.current !== generation) return;
       logger.error("Failed to rotate integration client:", rotateError);
       setError(rotateError instanceof Error ? rotateError.message : m.integration_clients_rotate_failed());
     } finally {
-      mutationInFlight.current = false;
-      setBusyClientId(null);
+      if (sessionGeneration.current === generation) {
+        mutationInFlight.current = false;
+        setBusyClientId(null);
+      }
     }
   };
 
   const revokeClient = async (clientId: number) => {
     if (mutationInFlight.current) return;
     mutationInFlight.current = true;
+    const generation = sessionGeneration.current;
     setBusyClientId(clientId);
     setError(null);
     try {
@@ -125,14 +150,18 @@ export function useSettingsIntegrationClients({ isAuthenticated, fetchFn }: Para
       if (!response.ok && response.status !== 404) {
         throw new Error((await readErrorDetail(response)) ?? m.integration_clients_revoke_failed());
       }
+      if (sessionGeneration.current !== generation) return;
       setCreatedClient((current) => current?.id === clientId ? null : current);
-      await loadClients();
+      await loadClients(generation);
     } catch (revokeError) {
+      if (sessionGeneration.current !== generation) return;
       logger.error("Failed to revoke integration client:", revokeError);
       setError(revokeError instanceof Error ? revokeError.message : m.integration_clients_revoke_failed());
     } finally {
-      mutationInFlight.current = false;
-      setBusyClientId(null);
+      if (sessionGeneration.current === generation) {
+        mutationInFlight.current = false;
+        setBusyClientId(null);
+      }
     }
   };
 

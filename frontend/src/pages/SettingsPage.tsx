@@ -274,7 +274,7 @@ export function SettingsContent({
     isAuthenticated,
     fetchFn,
   });
-  const integrationClients = useSettingsIntegrationClients({ isAuthenticated, fetchFn });
+  const integrationClients = useSettingsIntegrationClients({ isAuthenticated, accountIdentity: userId, fetchFn });
   const {
     adminUsers,
     isAdminUsersLoading,
