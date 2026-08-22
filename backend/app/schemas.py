@@ -230,6 +230,12 @@ class WorkLocationUpdate(BaseModel):
 AccessTokenScope = Literal["pebble:read", "pebble:write"]
 
 
+class IcalFeedCreated(BaseModel):
+    """New calendar subscription credential; the URL is only returned on rotation."""
+
+    url_path: str
+
+
 class AccessTokenCreate(BaseModel):
     """Payload for minting a new personal access token."""
 

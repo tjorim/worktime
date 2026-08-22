@@ -14,6 +14,8 @@ from app.schemas import AccessTokenCreate
 from app.services.db_service import NotFoundError
 
 TOKEN_PREFIX = "wtpat_"
+ICAL_TOKEN_PREFIX = "wtical_"
+ICAL_TOKEN_NAME = "Calendar subscription"
 PEBBLE_PAIR_TOKEN_NAME = "Pebble watch"
 _TOKEN_PREVIEW_LENGTH = 4
 _LAST_USED_UPDATE_INTERVAL = timedelta(minutes=15)
@@ -66,9 +68,53 @@ async def rotate_pebble_access_token(
     )
 
 
+async def rotate_ical_feed_token(session: AsyncSession, user_id: int) -> str:
+    """Replace the dedicated URL credential used by calendar subscribers."""
+    await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+    await session.execute(
+        delete(AccessToken).where(
+            AccessToken.user_id == user_id,
+            AccessToken.name == ICAL_TOKEN_NAME,
+        )
+    )
+    raw_token = ICAL_TOKEN_PREFIX + secrets.token_urlsafe(32)
+    session.add(
+        AccessToken(
+            user_id=user_id,
+            name=ICAL_TOKEN_NAME,
+            token_hash=_hash_token(raw_token),
+            token_preview=raw_token[-_TOKEN_PREVIEW_LENGTH:],
+            scopes=["ical:read"],
+        )
+    )
+    await session.commit()
+    return raw_token
+
+
+async def revoke_ical_feed_token(session: AsyncSession, user_id: int) -> None:
+    await session.execute(
+        delete(AccessToken).where(
+            AccessToken.user_id == user_id,
+            AccessToken.name == ICAL_TOKEN_NAME,
+        )
+    )
+    await session.commit()
+
+
+async def authenticate_ical_feed_token(session: AsyncSession, raw_token: str) -> AccessToken | None:
+    if not raw_token.startswith(ICAL_TOKEN_PREFIX):
+        return None
+    token = await authenticate_access_token(session, raw_token)
+    if token is None or "ical:read" not in token.scopes:
+        return None
+    return token
+
+
 async def list_access_tokens_for_user(session: AsyncSession, user_id: int) -> list[AccessToken]:
     result = await session.execute(
-        select(AccessToken).where(AccessToken.user_id == user_id).order_by(AccessToken.created_at.desc())
+        select(AccessToken)
+        .where(AccessToken.user_id == user_id, AccessToken.name != ICAL_TOKEN_NAME)
+        .order_by(AccessToken.created_at.desc())
     )
     return list(result.scalars().all())
 

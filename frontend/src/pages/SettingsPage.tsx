@@ -20,6 +20,7 @@ import { ChangelogModal } from "@/components/ChangelogModal";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
+import { SettingsCalendarFeedSection } from "@/components/settings/account/SettingsCalendarFeedSection";
 import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
@@ -502,6 +503,7 @@ export function SettingsContent({
               revokeApiTokenError={revokeApiTokenError}
               onRevokeApiToken={handleRevokeApiToken}
             />
+            <SettingsCalendarFeedSection fetchFn={fetchFn} />
             <SettingsIntegrationClientsSection
               clients={integrationClients.clients}
               isLoading={integrationClients.isLoading}

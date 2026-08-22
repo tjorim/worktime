@@ -69,10 +69,13 @@ class RequestIdMiddleware:
             elapsed_ms = (time.perf_counter() - start) * 1000
             user_id = scope["state"].get("user_id")
             auth_type = scope["state"].get("auth_type")
+            request_path = scope["path"]
+            if request_path.startswith("/api/ical/"):
+                request_path = "/api/ical/[redacted].ics"
             logger.info(
                 "%s %s %d %.3fms req_id=%s user=%s auth=%s",
                 scope["method"],
-                scope["path"],
+                request_path,
                 status_code,
                 elapsed_ms,
                 request_id,
