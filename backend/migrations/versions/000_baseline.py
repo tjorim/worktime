@@ -1,19 +1,19 @@
-"""Initial schema — all tables at final state, including OIDC integration.
+"""Create the complete schema baseline.
 
-Revision ID: 001
-Revises:
-Create Date: 2026-04-05
+Revision ID: 000
+Revises: None
 """
 
-from collections.abc import Sequence
+from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "001"
+revision: str = "000"
 down_revision: str | None = None
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
+branch_labels = None
+depends_on = None
+
 
 _SYNCED_TABLES = (
     "time_tracking_tasks",
@@ -25,6 +25,7 @@ _SYNCED_TABLES = (
 
 
 def upgrade() -> None:
+    # Legacy revision 001.
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
@@ -284,9 +285,242 @@ def upgrade() -> None:
         "time_tracking_tasks",
         ["user_id", "start_time"],
     )
+    # Legacy revision 002.
+    op.create_table(
+        "access_tokens",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("token_hash", sa.String(), nullable=False),
+        sa.Column("token_preview", sa.String(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_access_tokens_token_hash", "access_tokens", ["token_hash"], unique=True)
+    op.create_index("ix_access_tokens_user_id", "access_tokens", ["user_id"])
+    op.create_index("ix_access_tokens_user_id_created_at", "access_tokens", ["user_id", "created_at"])
+    # Legacy revision 003.
+    # Existing credentials were read-only in application code. Preserve that
+    # behavior while making the authorization contract explicit.
+    op.add_column(
+        "access_tokens",
+        sa.Column(
+            "scopes",
+            sa.JSON(),
+            nullable=False,
+            server_default='["pebble:read"]',
+        ),
+    )
+    # Legacy revision 004.
+    op.create_table(
+        "integration_clients",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column(
+            "user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("name", sa.String(length=120), nullable=False),
+        sa.Column("key_hash", sa.String(length=128), nullable=False),
+        sa.Column("key_preview", sa.String(length=8), nullable=False),
+        sa.Column(
+            "scopes",
+            sa.JSON(),
+            nullable=False,
+            server_default='["worktime:mcp"]',
+        ),
+        sa.Column(
+            "rate_limit_per_minute",
+            sa.Integer(),
+            nullable=False,
+            server_default="120",
+        ),
+        sa.Column(
+            "is_active",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.true(),
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rate_limit_window_started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rate_limit_window_count", sa.Integer(), nullable=False, server_default="0"),
+    )
+    op.create_index("ix_integration_clients_user_id", "integration_clients", ["user_id"])
+    op.create_index("ix_integration_clients_key_hash", "integration_clients", ["key_hash"], unique=True)
+    op.create_index(
+        "ix_integration_clients_user_id_created_at",
+        "integration_clients",
+        ["user_id", "created_at"],
+    )
+    # Legacy revision 005.
+    op.create_table(
+        "audit_entries",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column(
+            "actor_user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("actor_label", sa.String(), nullable=False),
+        sa.Column("subject", sa.String(), nullable=True),
+        sa.Column("auth_source", sa.String(), nullable=False),
+        sa.Column("action", sa.String(), nullable=False),
+        sa.Column("resource_type", sa.String(), nullable=False),
+        sa.Column("resource_id", sa.String(), nullable=False),
+        sa.Column("request_id", sa.String(), nullable=True),
+        sa.Column("details", sa.JSON(), nullable=False, server_default="{}"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+    op.create_index("ix_audit_entries_actor_user_id", "audit_entries", ["actor_user_id"])
+    op.create_index("ix_audit_entries_created_at_id", "audit_entries", ["created_at", "id"])
+    # Legacy revision 006.
+    # Data repair: close every running task except the most recently started
+    # one per user, so the unique index below can be created safely.
+    op.execute(
+        """
+        UPDATE time_tracking_tasks
+        SET stop_time = start_time,
+            updated_at = CURRENT_TIMESTAMP,
+            client_updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (
+            SELECT id FROM (
+                SELECT id,
+                       row_number() OVER (
+                           PARTITION BY user_id ORDER BY start_time DESC, id DESC
+                       ) AS rn
+                FROM time_tracking_tasks
+                WHERE stop_time IS NULL AND deleted_at IS NULL
+            ) ranked
+            WHERE rn > 1
+        )
+        """
+    )
+    # A plain CREATE UNIQUE INDEX holds a SHARE lock on the table for the
+    # entire index build, blocking every write to time_tracking_tasks until
+    # it completes — on a large production table that's a real outage risk.
+    # CONCURRENTLY avoids that (at the cost of not running inside this
+    # migration's transaction, so it commits the repair above first). If
+    # interrupted it can leave an INVALID index behind; rerunning this
+    # migration after `DROP INDEX CONCURRENTLY IF EXISTS
+    # uq_active_running_task_user` recovers. SQLite has no CONCURRENTLY and
+    # only ever meets this table freshly created (via
+    # Base.metadata.create_all() for local dev/tests), so it keeps the plain
+    # path.
+    if op.get_bind().dialect.name == "postgresql":
+        with op.get_context().autocommit_block():
+            op.execute(
+                "CREATE UNIQUE INDEX CONCURRENTLY uq_active_running_task_user "
+                "ON time_tracking_tasks (user_id) "
+                "WHERE stop_time IS NULL AND deleted_at IS NULL"
+            )
+    else:
+        op.create_index(
+            "uq_active_running_task_user",
+            "time_tracking_tasks",
+            ["user_id"],
+            unique=True,
+            sqlite_where=sa.text("stop_time IS NULL AND deleted_at IS NULL"),
+        )
+    # Legacy revision 007.
+    op.execute(
+        """
+        UPDATE gantt_tasks
+        SET start_date = end_date,
+            end_date = start_date,
+            updated_at = CURRENT_TIMESTAMP,
+            client_updated_at = CURRENT_TIMESTAMP
+        WHERE end_date < start_date
+        """
+    )
+    op.create_check_constraint("ck_gantt_tasks_date_range", "gantt_tasks", "start_date <= end_date")
+    # Legacy revision 008.
+    op.create_table(
+        "push_subscriptions",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("endpoint", sa.String(), nullable=False),
+        sa.Column("p256dh_key", sa.String(), nullable=False),
+        sa.Column("auth_key", sa.String(), nullable=False),
+        sa.Column("timezone", sa.String(), nullable=False, server_default="UTC"),
+        sa.Column("lead_time_minutes", sa.Integer(), nullable=False, server_default="15"),
+        sa.Column("quiet_hours_start", sa.Integer(), nullable=True),
+        sa.Column("quiet_hours_end", sa.Integer(), nullable=True),
+        sa.Column("last_reminder_key", sa.String(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_push_subscriptions_endpoint", "push_subscriptions", ["endpoint"], unique=True)
+    op.create_index("ix_push_subscriptions_user_id", "push_subscriptions", ["user_id"])
+    # Legacy revision 009.
+    op.add_column(
+        "push_subscriptions",
+        sa.Column("last_reminder_claimed_at", sa.DateTime(timezone=True), nullable=True),
+    )
 
 
 def downgrade() -> None:
+    # Legacy revision 009.
+    op.drop_column("push_subscriptions", "last_reminder_claimed_at")
+    # Legacy revision 008.
+    op.drop_index("ix_push_subscriptions_user_id", table_name="push_subscriptions")
+    op.drop_index("ix_push_subscriptions_endpoint", table_name="push_subscriptions")
+    op.drop_table("push_subscriptions")
+    # Legacy revision 007.
+    op.drop_constraint("ck_gantt_tasks_date_range", "gantt_tasks", type_="check")
+    # Legacy revision 006.
+    if op.get_bind().dialect.name == "postgresql":
+        with op.get_context().autocommit_block():
+            op.execute("DROP INDEX CONCURRENTLY IF EXISTS uq_active_running_task_user")
+    else:
+        op.drop_index("uq_active_running_task_user", table_name="time_tracking_tasks")
+    # Legacy revision 005.
+    op.drop_index("ix_audit_entries_created_at_id", table_name="audit_entries")
+    op.drop_index("ix_audit_entries_actor_user_id", table_name="audit_entries")
+    op.drop_table("audit_entries")
+    # Legacy revision 004.
+    op.drop_index("ix_integration_clients_user_id_created_at", table_name="integration_clients")
+    op.drop_index("ix_integration_clients_key_hash", table_name="integration_clients")
+    op.drop_index("ix_integration_clients_user_id", table_name="integration_clients")
+    op.drop_table("integration_clients")
+    # Legacy revision 003.
+    op.drop_column("access_tokens", "scopes")
+    # Legacy revision 002.
+    op.drop_index("ix_access_tokens_user_id_created_at", table_name="access_tokens")
+    op.drop_index("ix_access_tokens_user_id", table_name="access_tokens")
+    op.drop_index("ix_access_tokens_token_hash", table_name="access_tokens")
+    op.drop_table("access_tokens")
+    # Legacy revision 001.
     # No separate drop_constraint/drop_index calls needed for constraints or
     # indexes defined on a table: dropping the table removes them too (true
     # on every dialect, including SQLite, which has no standalone "drop
