@@ -84,7 +84,7 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
 /**
  * Team Schedule Viewer - displays team members and their .hday schedules in a calendar grid.
  * Team data remains in the legacy holiday planner, so this view talks to the
- * local .hday helper configured in Developer Options.
+ * local .hday helper configured in Schedule & team settings.
  *
  * Shows a calendar-style grid with:
  * - Dates as columns (horizontal timeline)
@@ -123,7 +123,7 @@ export function TeamScheduleView() {
 
   // Reset state when the target helper changes — otherwise data fetched from
   // the previous helper stays on screen (or a stale in-flight request from it
-  // resolves) after the user points Developer Options at a different one.
+  // resolves) after the user selects a different helper in settings.
   useEffect(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();

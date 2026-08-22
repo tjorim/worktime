@@ -6,7 +6,7 @@ import {
   LEGACY_DEVELOPER_OPTIONS_STORAGE_KEY,
 } from "@/constants/storageKeys";
 
-export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+export type HdayHelperStatus = "disconnected" | "connecting" | "connected" | "error";
 
 export interface HdayHelperOptions {
   hdayHelperUrl: string | null; // URL of the local .hday helper server
@@ -14,7 +14,7 @@ export interface HdayHelperOptions {
 
 interface HdayHelperContextType {
   options: HdayHelperOptions;
-  helperConnectionStatus: ConnectionStatus;
+  helperConnectionStatus: HdayHelperStatus;
   updateHdayHelperUrl: (url: string | null) => void;
   testHdayHelperConnection: (url: string) => Promise<boolean>;
 }
@@ -66,7 +66,7 @@ export function HdayHelperProvider({ children }: HdayHelperProviderProps) {
   );
 
   const [helperConnectionStatus, setHelperConnectionStatus] =
-    useState<ConnectionStatus>("disconnected");
+    useState<HdayHelperStatus>("disconnected");
 
   useEffect(() => {
     if (initialOptions.hdayHelperUrl && !localStorage.getItem(HDAY_HELPER_SETTINGS_STORAGE_KEY)) {

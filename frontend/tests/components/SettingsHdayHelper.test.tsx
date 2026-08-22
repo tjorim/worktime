@@ -27,11 +27,11 @@ describe("SettingsHdayHelper", () => {
     renderHelper();
 
     await user.type(
-      screen.getByLabelText(m.dev_hday_helper_url_label()),
+      screen.getByLabelText(m.hday_helper_url_label()),
       "http://planner.local:8080",
     );
 
-    expect(await screen.findByText(m.dev_hday_helper_mixed_content_warning())).toBeInTheDocument();
+    expect(await screen.findByText(m.hday_helper_mixed_content_warning())).toBeInTheDocument();
   });
 
   it("allows and health-checks an HTTP localhost helper", async () => {
@@ -40,11 +40,11 @@ describe("SettingsHdayHelper", () => {
     const user = userEvent.setup();
     renderHelper();
 
-    await user.type(screen.getByLabelText(m.dev_hday_helper_url_label()), "http://localhost:8080");
-    await user.click(screen.getByRole("button", { name: m.dev_hday_helper_test() }));
+    await user.type(screen.getByLabelText(m.hday_helper_url_label()), "http://localhost:8080");
+    await user.click(screen.getByRole("button", { name: m.hday_helper_test() }));
 
-    expect(screen.queryByText(m.dev_hday_helper_mixed_content_warning())).not.toBeInTheDocument();
-    expect(await screen.findByText(m.dev_hday_helper_connected())).toBeInTheDocument();
+    expect(screen.queryByText(m.hday_helper_mixed_content_warning())).not.toBeInTheDocument();
+    expect(await screen.findByText(m.hday_helper_connected())).toBeInTheDocument();
     expect(screen.getByText(m.dev_connected())).toBeInTheDocument();
   });
 

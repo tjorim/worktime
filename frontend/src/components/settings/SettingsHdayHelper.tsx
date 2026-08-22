@@ -4,11 +4,11 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import { useHdayHelper, type ConnectionStatus } from "@/contexts/HdayHelperContext";
+import { useHdayHelper, type HdayHelperStatus } from "@/contexts/HdayHelperContext";
 import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 
-function statusBadge(status: ConnectionStatus) {
+function statusBadge(status: HdayHelperStatus) {
   switch (status) {
     case "connected":
       return <Badge bg="success">{m.dev_connected()}</Badge>;
@@ -54,14 +54,14 @@ export function SettingsHdayHelper() {
       <div className="d-flex align-items-center gap-2 mb-1">
         <h6 className="text-muted mb-0">
           <i className="bi bi-file-earmark-text me-2" aria-hidden="true"></i>
-          {m.dev_hday_helper_heading()}
+          {m.hday_helper_heading()}
         </h6>
         {statusBadge(helperConnectionStatus)}
       </div>
-      <p className="text-muted small mb-3">{m.dev_hday_helper_desc()}</p>
+      <p className="text-muted small mb-3">{m.hday_helper_desc()}</p>
 
       <Form.Group controlId="hday-helper-url" className="mb-2">
-        <Form.Label className="small fw-medium">{m.dev_hday_helper_url_label()}</Form.Label>
+        <Form.Label className="small fw-medium">{m.hday_helper_url_label()}</Form.Label>
         <div className="d-flex flex-column flex-sm-row gap-2">
           <Form.Control
             type="url"
@@ -79,7 +79,7 @@ export function SettingsHdayHelper() {
             onClick={handleSave}
             disabled={normalizedUrl === (options.hdayHelperUrl ?? "")}
           >
-            {m.dev_save_url()}
+            {m.hday_helper_save_url()}
           </Button>
           <Button
             variant="outline-primary"
@@ -88,20 +88,20 @@ export function SettingsHdayHelper() {
             disabled={isTesting || !normalizedUrl}
           >
             {isTesting && <Spinner animation="border" size="sm" className="me-1" />}
-            {m.dev_hday_helper_test()}
+            {m.hday_helper_test()}
           </Button>
         </div>
-        <Form.Text className="text-muted">{m.dev_hday_helper_url_help()}</Form.Text>
+        <Form.Text className="text-muted">{m.hday_helper_url_help()}</Form.Text>
       </Form.Group>
 
       {mixedContentRisk && (
         <Alert variant="warning" className="mb-2 py-2 small">
-          {m.dev_hday_helper_mixed_content_warning()}
+          {m.hday_helper_mixed_content_warning()}
         </Alert>
       )}
       {testSucceeded !== null && (
         <Alert variant={testSucceeded ? "success" : "danger"} className="mb-0 py-2 small">
-          {testSucceeded ? m.dev_hday_helper_connected() : m.dev_hday_helper_failed()}
+          {testSucceeded ? m.hday_helper_connected() : m.hday_helper_failed()}
         </Alert>
       )}
     </div>
