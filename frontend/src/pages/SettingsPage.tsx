@@ -20,6 +20,7 @@ import { ChangelogModal } from "@/components/ChangelogModal";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
+import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
@@ -35,6 +36,7 @@ import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
+import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
 import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
 import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
@@ -272,6 +274,7 @@ export function SettingsContent({
     isAuthenticated,
     fetchFn,
   });
+  const integrationClients = useSettingsIntegrationClients({ isAuthenticated, fetchFn });
   const {
     adminUsers,
     isAdminUsersLoading,
@@ -498,6 +501,19 @@ export function SettingsContent({
               revokingApiTokenId={revokingApiTokenId}
               revokeApiTokenError={revokeApiTokenError}
               onRevokeApiToken={handleRevokeApiToken}
+            />
+            <SettingsIntegrationClientsSection
+              clients={integrationClients.clients}
+              isLoading={integrationClients.isLoading}
+              error={integrationClients.error}
+              isCreating={integrationClients.isCreating}
+              createdClient={integrationClients.createdClient}
+              busyClientId={integrationClients.busyClientId}
+              isAdmin={isAdmin}
+              onDismissCreatedClient={integrationClients.dismissCreatedClient}
+              onCreateClient={integrationClients.createClient}
+              onRotateClient={integrationClients.rotateClient}
+              onRevokeClient={integrationClients.revokeClient}
             />
           </>
         ) : null}

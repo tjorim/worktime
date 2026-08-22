@@ -535,10 +535,10 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">34</span><span class="k">Resolved</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">35</span><span class="k">Resolved</span></div>
       <div class="score med"><span class="n">0</span><span class="k">Medium</span></div>
-      <div class="score low"><span class="n">3</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">3</span><span class="k">Open</span></div>
+      <div class="score low"><span class="n">2</span><span class="k">Low</span></div>
+      <div class="score"><span class="n">2</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
@@ -1359,13 +1359,13 @@
           stopgap.</span></div>
       </div>
 
-      <div class="finding low">
+      <div class="finding low resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a>
           <span class="area">frontend</span>
           <span class="area">mcp</span>
           <h3>Integration clients can only be created with hand-written HTTP</h3>
-          <span class="sev">Low</span>
+          <span class="sev">Resolved</span>
         </div>
         <p>The full managed-credential API shipped in #1054, and every endpoint correctly requires
           an interactive OIDC session — deliberately unreachable by a PAT or by an integration client
@@ -1377,6 +1377,10 @@
           for non-admins to match the server's self-escalation guard instead of letting the request
           403.</span></div>
         <div class="refs"><b>settings/account/SettingsApiTokensSection.tsx</b> <b>backend/app/routers/integration_clients.py</b></div>
+        <div class="verified"><span>Resolved in the current #1117 change: Settings now lists,
+          creates, rotates, and revokes managed credentials in
+          <code>SettingsIntegrationClientsSection.tsx</code>, reveals new keys once, and only offers
+          the <code>worktime:admin</code> scope when the loaded account is an admin.</span></div>
       </div>
 
       <div class="finding low resolved">
@@ -1587,7 +1591,7 @@
     </div>
 
     <div class="seq-block">
-      <h3>Low <span class="sec-count">3</span></h3>
+      <h3>Low <span class="sec-count">2</span></h3>
       <p>Cheapest and most isolated first; the largest and least-constrained items — new capability, pure
         refactor — go last.</p>
       <div class="tablewrap">
@@ -1597,18 +1601,12 @@
           <tbody>
             <tr>
               <td class="seq-n">1</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1117">#1117</a></td>
-              <td>Integration-client management UI. Mirrors the existing PAT section's patterns
-                closely enough to copy rather than design.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1118">#1118</a></td>
               <td>iCal subscription feed. Outdated PR #448 is reference material for downloadable
                 export, but it does not replace the feed and scoped-token design.</td>
             </tr>
             <tr>
-              <td class="seq-n">3</td>
+              <td class="seq-n">2</td>
               <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1122">#1122</a></td>
               <td>Feature-folder migration. Pure refactor — do it last so it benefits from every other
                 frontend change above already having landed, rather than fighting them for merge
