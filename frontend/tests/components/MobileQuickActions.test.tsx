@@ -153,7 +153,15 @@ describe("MobileQuickActions", () => {
   it("disables quick start when a planned task begins while the sheet is open", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-08-22T10:00:00"));
-    mockStorage.tasks = [{ startTime: "2026-08-22T10:01", stopTime: "2026-08-22T11:00" }];
+    mockStorage.tasks = [
+      {
+        id: "planned",
+        text: "Planned task",
+        label: "support",
+        startTime: "2026-08-22T10:01",
+        stopTime: "2026-08-22T11:00",
+      },
+    ];
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(
       <TestProviders>
@@ -172,6 +180,38 @@ describe("MobileQuickActions", () => {
 
     expect(screen.getByRole("button", { name: "Start Now" })).toBeDisabled();
     expect(mockAddTask).not.toHaveBeenCalled();
+  });
+
+  it("enables quick start when the current planned task expires", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-08-22T10:59:00"));
+    mockStorage.tasks = [
+      {
+        id: "planned",
+        text: "Planned task",
+        label: "support",
+        startTime: "2026-08-22T10:00",
+        stopTime: "2026-08-22T11:00",
+      },
+    ];
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <TestProviders>
+        <MobileQuickActions
+          canAddTimeOff
+          canTrackTime
+          onAddTimeOff={vi.fn()}
+          onTrackTime={vi.fn()}
+          onOpenCalendar={vi.fn()}
+        />
+      </TestProviders>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open quick actions" }));
+    expect(screen.getByRole("button", { name: "Start Now" })).toBeDisabled();
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(screen.getByRole("button", { name: "Start Now" })).toBeEnabled();
   });
 
   it("hides actions that are unavailable", async () => {
