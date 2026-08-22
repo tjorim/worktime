@@ -4,19 +4,22 @@ import "@testing-library/jest-dom";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";
-import { DEVELOPER_OPTIONS_STORAGE_KEY, LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  HDAY_HELPER_SETTINGS_STORAGE_KEY,
+  LAST_TEAM_ID_STORAGE_KEY,
+} from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { TestProviders } from "../utils/testProviders";
 
 const HELPER_URL = "http://localhost:8080";
 const OTHER_HELPER_URL = "http://localhost:9090";
 
-// Test-only harness for driving updateHdayHelperUrl() from outside DevOptionsPanel,
-// sharing the same DeveloperOptionsContext instance as the rendered TeamScheduleView.
+// Test-only harness for driving updateHdayHelperUrl() from outside SettingsHdayHelper,
+// sharing the same HdayHelperContext instance as the rendered TeamScheduleView.
 function HelperUrlSwitcher({ url }: { url: string }) {
-  const { updateHdayHelperUrl } = useDeveloperOptions();
+  const { updateHdayHelperUrl } = useHdayHelper();
   return (
     <button type="button" onClick={() => updateHdayHelperUrl(url)}>
       switch helper
@@ -25,7 +28,7 @@ function HelperUrlSwitcher({ url }: { url: string }) {
 }
 
 function seedHelperUrl(hdayHelperUrl: string | null) {
-  window.localStorage.setItem(DEVELOPER_OPTIONS_STORAGE_KEY, JSON.stringify({ hdayHelperUrl }));
+  window.localStorage.setItem(HDAY_HELPER_SETTINGS_STORAGE_KEY, JSON.stringify({ hdayHelperUrl }));
 }
 
 function teamHdayPayload(teamId: string, name = "Engineering") {

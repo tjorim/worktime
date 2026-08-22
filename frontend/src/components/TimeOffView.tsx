@@ -10,7 +10,7 @@ import {
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
 import { useEventStore } from "@/contexts/EventStoreContext";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
@@ -72,7 +72,7 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
-  const { helperConnectionStatus } = useDeveloperOptions();
+  const { helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();

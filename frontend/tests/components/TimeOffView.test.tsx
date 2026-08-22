@@ -3,22 +3,22 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
+import { HDAY_HELPER_SETTINGS_STORAGE_KEY } from "@/constants/storageKeys";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
-    <DeveloperOptionsProvider>
+    <HdayHelperProvider>
       <SettingsProvider>
         <EventStoreProvider>{children}</EventStoreProvider>
       </SettingsProvider>
-    </DeveloperOptionsProvider>
+    </HdayHelperProvider>
   </ToastProvider>
 );
 
@@ -40,7 +40,7 @@ describe("TimeOffView", () => {
 
     it("shows the Team view only after the configured helper passes its health check", async () => {
       localStorage.setItem(
-        DEVELOPER_OPTIONS_STORAGE_KEY,
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
         JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
       );
       server.use(
@@ -59,7 +59,7 @@ describe("TimeOffView", () => {
 
     it("keeps the Team view hidden when the configured helper is unhealthy", async () => {
       localStorage.setItem(
-        DEVELOPER_OPTIONS_STORAGE_KEY,
+        HDAY_HELPER_SETTINGS_STORAGE_KEY,
         JSON.stringify({ hdayHelperUrl: "http://localhost:8080" }),
       );
       const healthCheck = vi.fn(() => new HttpResponse(null, { status: 503 }));

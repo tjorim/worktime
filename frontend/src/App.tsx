@@ -15,7 +15,7 @@ import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
 import { SettingsProvider, type TabKey, useSettings } from "@/contexts/SettingsContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
@@ -359,7 +359,7 @@ function AppContent() {
  * Root application component that composes context providers and renders the app content.
  *
  * @returns The root React element: OidcAuthProvider, SettingsProvider, EventStoreProvider,
- *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
+ *   HdayHelperProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
 
 // ---------------------------------------------------------------------------
@@ -382,7 +382,7 @@ function App() {
       <OidcAuthProvider {...oidcConfig}>
         <SettingsProvider>
           <EventStoreProvider>
-            <DeveloperOptionsProvider>
+            <HdayHelperProvider>
               <ToastProvider>
                 <PwaInstallProvider>
                   <AuthProvider>
@@ -390,7 +390,7 @@ function App() {
                   </AuthProvider>
                 </PwaInstallProvider>
               </ToastProvider>
-            </DeveloperOptionsProvider>
+            </HdayHelperProvider>
           </EventStoreProvider>
         </SettingsProvider>
       </OidcAuthProvider>

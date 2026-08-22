@@ -8,7 +8,7 @@ import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColorClass } from "@/lib/hday/presentation";
 import { dayjs } from "@/utils/dateTimeUtils";
@@ -95,7 +95,7 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
  * Inspired by example-team-overview.html.
  */
 export function TeamScheduleView() {
-  const { options } = useDeveloperOptions();
+  const { options } = useHdayHelper();
   const { baseUrl, usesHelper } = resolveHdayHelperTarget(options.hdayHelperUrl);
 
   const [teamId, setTeamId] = useState(() => {

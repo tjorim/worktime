@@ -4,7 +4,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import { useDeveloperOptions, type ConnectionStatus } from "@/contexts/DeveloperOptionsContext";
+import { useHdayHelper, type ConnectionStatus } from "@/contexts/HdayHelperContext";
 import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 
@@ -23,7 +23,7 @@ function statusBadge(status: ConnectionStatus) {
 
 export function SettingsHdayHelper() {
   const { options, helperConnectionStatus, updateHdayHelperUrl, testHdayHelperConnection } =
-    useDeveloperOptions();
+    useHdayHelper();
   const [urlDraft, setUrlDraft] = useState(options.hdayHelperUrl ?? "");
   const [isTesting, setIsTesting] = useState(false);
   const [testSucceeded, setTestSucceeded] = useState<boolean | null>(null);

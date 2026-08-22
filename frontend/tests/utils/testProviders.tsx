@@ -16,7 +16,7 @@
  */
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -32,7 +32,7 @@ export function createTestQueryClient() {
 /**
  * Full provider wrapper for component tests. Includes:
  * QueryClientProvider → SettingsProvider → EventStoreProvider →
- * DeveloperOptionsProvider → ToastProvider
+ * HdayHelperProvider → ToastProvider
  *
  * Each call creates a fresh QueryClient so tests are fully isolated.
  */
@@ -41,9 +41,9 @@ export function TestProviders({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={createTestQueryClient()}>
       <SettingsProvider>
         <EventStoreProvider>
-          <DeveloperOptionsProvider>
+          <HdayHelperProvider>
             <ToastProvider>{children}</ToastProvider>
-          </DeveloperOptionsProvider>
+          </HdayHelperProvider>
         </EventStoreProvider>
       </SettingsProvider>
     </QueryClientProvider>

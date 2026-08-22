@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
-import { useVersionClickEasterEgg } from "@/pages/settings/hooks/useVersionClickEasterEgg";
 import Button from "react-bootstrap/Button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
@@ -12,13 +11,11 @@ import { useEventStore } from "@/contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { logger } from "@/utils/logger";
 import { BackupDialog } from "@/components/BackupDialog";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { CONFIG } from "@/utils/config";
 import { hasMultipleTeams } from "@/utils/scheduleUtils";
 import { type ScheduleOption } from "@/data/rosters";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
-import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
@@ -183,7 +180,6 @@ export function SettingsContent({
   onAdminStatusChange?: (isAdmin: boolean) => void;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
-  const [showDevOptions, setShowDevOptions] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
@@ -191,7 +187,6 @@ export function SettingsContent({
   const { subscribeToPush, unsubscribeFromPush } = usePushSubscription();
   const { canInstall, isInstalled, promptInstall } = usePwaInstall();
   const { clearAll: clearTimeOffEvents } = useEventStore();
-  const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const fetchFn = useApiClient();
   const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
   const {
@@ -307,12 +302,6 @@ export function SettingsContent({
     showSuccessToast: toast.showSuccess,
     showWarningToast: toast.showWarning,
   });
-  const { handleVersionClick, handleVersionKeyDown } = useVersionClickEasterEgg({
-    isDevMode,
-    toggleDevMode,
-    showInfoToast: toast.showInfo,
-  });
-
   const handleRestoreFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -539,7 +528,6 @@ export function SettingsContent({
     timeTracking: () => <SettingsTimeTrackingSectionContainer />,
     about: () => (
       <SettingsAboutSection
-        isDevMode={isDevMode}
         onShareApp={handleShareApp}
         canInstallApp={canInstall}
         isAppInstalled={isInstalled}
@@ -547,7 +535,6 @@ export function SettingsContent({
         onShowChangelog={() => setShowChangelog(true)}
         onShowAboutHelp={() => onShowAbout?.()}
         onShowShortcuts={() => onShowShortcuts?.()}
-        onShowDevOptions={() => setShowDevOptions(true)}
       />
     ),
     data: () => (
@@ -569,9 +556,6 @@ export function SettingsContent({
           <button
             type="button"
             className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
-            onClick={handleVersionClick}
-            onKeyDown={handleVersionKeyDown}
-            style={{ cursor: "pointer", userSelect: "none" }}
             aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
           >
             {m.footer_version({ version: CONFIG.VERSION })}
@@ -582,9 +566,6 @@ export function SettingsContent({
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={() => setShowChangelog(false)} />
-
-      {/* Developer Options Modal */}
-      <DevOptionsPanel show={showDevOptions} onHide={() => setShowDevOptions(false)} />
 
       {/* Backup Dialog */}
       <BackupDialog show={showBackupDialog} onHide={() => setShowBackupDialog(false)} />
