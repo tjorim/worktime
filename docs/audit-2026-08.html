@@ -514,7 +514,7 @@
     <h1>What's broken, and in what order</h1>
     <p class="lede">Thirty-seven findings across sync, backend, interface and documentation, from
       three reviews run against <span class="mono">main</span> — each traced to the code that
-      produces it and filed as a GitHub issue. Twenty-four are now fixed and verified; thirteen
+      produces it and filed as a GitHub issue. Twenty-five are now fixed and verified; twelve
       remain, with a suggested order below. The app is well built; the failures cluster in the
       places where two subsystems meet and neither owns the seam.</p>
     <div class="method">
@@ -535,17 +535,17 @@
       <p>Severity is how often a user hits it and what it costs them — not effort to fix.</p>
     </div>
     <div class="scores">
-      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">24</span><span class="k">Resolved</span></div>
-      <div class="score med"><span class="n">2</span><span class="k">Medium</span></div>
+      <div class="score" style="border-color: color-mix(in srgb, var(--good) 35%, var(--line))"><span class="n" style="color: var(--good)">25</span><span class="k">Resolved</span></div>
+      <div class="score med"><span class="n">1</span><span class="k">Medium</span></div>
       <div class="score low"><span class="n">11</span><span class="k">Low</span></div>
-      <div class="score"><span class="n">13</span><span class="k">Open</span></div>
+      <div class="score"><span class="n">12</span><span class="k">Open</span></div>
     </div>
     <div class="note">
       <strong>Update, 2026-08-19:</strong> all 8 high-severity findings are fixed and verified on
       <code>main</code>, plus one new low finding — <a href="https://github.com/tjorim/worktime/issues/1145">#1145</a>,
       discovered while verifying #1126 and fixed the same day — see the <span class="mono">FIXED</span>
       marker on each resolved card below (scoreboard above) for what changed and where. A suggested
-      order for what's left — 2 medium, 11 low — is at the bottom of the page, along with three
+      order for what's left — 1 medium, 11 low — is at the bottom of the page, along with three
       in-flight PRs from other tools worth checking before you duplicate their work.
     </div>
   </section>
@@ -1264,30 +1264,31 @@
 
   <section>
     <div class="sec-head">
-      <h2>Product gaps<span class="sec-count">6 · 1 fixed</span></h2>
+      <h2>Product gaps<span class="sec-count">6 · 2 fixed</span></h2>
       <p>Capability that exists on one side of the wire and can't be reached from the other.</p>
     </div>
     <div class="findings">
 
-      <div class="finding med">
+      <div class="finding med resolved">
         <div class="f-top">
           <a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a>
           <span class="area">backend</span>
           <span class="area">frontend</span>
           <h3>Time Off → Team can never render in the hosted app</h3>
-          <span class="sev">Medium</span>
+          <span class="sev">Resolved</span>
         </div>
-        <p>The Team tab is a first-class view that, on worktime.tjor.im, can only ever show an info
-          alert: it fetches <code>/api/team/:id/hday</code>, a route the backend doesn't serve, and
-          the flag its comments reference doesn't exist in settings. Reaching the feature requires
-          setting a helper URL in Developer Options. Meanwhile the data <em>does</em> exist —
-          <code>/api/read-models/team-status</code> is live and consumed by Android and Pebble. There
-          are two team-data paths and the web app is wired to the dead one.</p>
-        <div class="fix"><span>Check whether the read model carries a date range or only today,
-          settle what "team" means for authorization, then read through the API and keep the
-          <code>.hday</code> helper as the local/offline fallback. It can piggyback the existing
-          <code>sync_changed</code> signal for live updates.</span></div>
+        <p>The hosted backend only contains time off for people who use Worktime; the complete team
+          remains in the legacy holiday planner on a network share that the VPS cannot access. The
+          local <code>.hday</code> helper is therefore the authoritative bridge, but its configuration
+          was hidden in Developer Options and Team was gated on the unrelated backend connection.</p>
+        <div class="fix"><span>Expose Team only while a configured helper passes its health check,
+          independently of hosted-backend connectivity. Plain HTTP is valid for a loopback helper;
+          browsers treat localhost as potentially trustworthy, so no local TLS certificate is required.</span></div>
         <div class="refs"><b>components/TeamScheduleView.tsx:180</b> <b>utils/hdayHelper.ts:18</b> <b>backend/app/routers/read_models.py:89</b></div>
+        <div class="verified"><span>Resolved in this PR: Schedule &amp; Team settings now own the helper
+          configuration, and the Team tab appears only for a healthy local planner proxy checked at
+          startup and every 30 seconds. The separate Developer Options modal was removed; public
+          backend availability now appears in About.</span></div>
       </div>
 
       <div class="finding low">
@@ -1555,9 +1556,8 @@
     </div>
 
     <div class="seq-block">
-      <h3>Medium <span class="sec-count">2</span></h3>
-      <p>Ordered so the item needing a product decision (#1131) comes before the biggest single item
-        (#1115), once everything upstream of them has landed.</p>
+      <h3>Medium <span class="sec-count">1</span></h3>
+      <p>The remaining item needs a product decision before implementation.</p>
       <div class="tablewrap">
         <table class="seq">
           <colgroup><col class="n"><col><col></colgroup>
@@ -1569,13 +1569,6 @@
               <td>Onboarding flow. Needs a product decision (which features get deferred setup)
                 before code — the Settings cleanup it was sequenced after (#1129) is now resolved,
                 so nothing upstream is left blocking it.</td>
-            </tr>
-            <tr>
-              <td class="seq-n">2</td>
-              <td class="seq-issues"><a class="issue" href="https://github.com/tjorim/worktime/issues/1115">#1115</a></td>
-              <td>Time Off → Team backed by read-models. The biggest single item (6–8h) — its first
-                open question ("does the read model carry a date range") is easier to answer now that
-                #1107's golden-fixture work has forced a closer look at the same file.</td>
             </tr>
           </tbody>
         </table>

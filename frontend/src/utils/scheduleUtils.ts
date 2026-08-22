@@ -27,10 +27,8 @@ export function isValidScheduleType(value: unknown): value is ScheduleOption {
 /**
  * Get the roster configuration for a given schedule option.
  *
- * **Default Behavior**: Falls back to "5-shift" when scheduleOption is null/undefined.
- * This fallback exists for backward compatibility with existing user data from before
- * the schedule selection feature was introduced. New users are required to explicitly
- * select a schedule during onboarding, but existing users may have null in localStorage.
+ * **Default Behavior**: Falls back to "5-shift" when scheduleOption is null/undefined,
+ * including before schedule selection is completed during onboarding.
  *
  * @param scheduleOption - The schedule option to look up, or null/undefined to use the default
  * @returns The roster configuration for the schedule
@@ -41,14 +39,13 @@ export function isValidScheduleType(value: unknown): value is ScheduleOption {
  * const config = getScheduleConfig("9-5");
  *
  * @example
- * // Fallback to default for backward compatibility
+ * // Fallback used before schedule selection
  * const config = getScheduleConfig(null); // Returns "5-shift" config
  */
 export function getScheduleConfig(
   scheduleOption: ScheduleOption | null | undefined,
 ): ScheduleRoster {
-  // Fallback to "5-shift" for backward compatibility with pre-schedule-selection user data.
-  // New users must explicitly select a schedule during onboarding (see WelcomeWizard).
+  // The app still renders schedule-aware shell content before onboarding is complete.
   const lookupKey = scheduleOption ?? "5-shift";
   const config = SCHEDULE_MAP.get(lookupKey);
 
@@ -121,4 +118,3 @@ export function getEffectiveTeam(
 
   return myTeam;
 }
-

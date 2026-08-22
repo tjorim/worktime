@@ -132,9 +132,6 @@ export function getTimeLocationSymbol(flags?: EventFlag[]): string {
   }
 }
 
-/** @deprecated Use getTimeLocationSymbol. */
-export const getHalfDaySymbol = getTimeLocationSymbol;
-
 export function getEventClass(flags?: EventFlag[]): string {
   const half = hasHalfDayFlag(flags) ? "half" : "full";
   const primaryType = getPrimaryTypeFlag(flags);

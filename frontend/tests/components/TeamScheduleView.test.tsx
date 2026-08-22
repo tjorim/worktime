@@ -1,22 +1,25 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";
-import { DEVELOPER_OPTIONS_STORAGE_KEY, LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  HDAY_HELPER_SETTINGS_STORAGE_KEY,
+  LAST_TEAM_ID_STORAGE_KEY,
+} from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
-import { TestProviders } from "../utils/testProviders";
+import { TestProviders } from "@/../tests/utils/testProviders";
 
 const HELPER_URL = "http://localhost:8080";
 const OTHER_HELPER_URL = "http://localhost:9090";
 
-// Test-only harness for driving updateHdayHelperUrl() from outside DevOptionsPanel,
-// sharing the same DeveloperOptionsContext instance as the rendered TeamScheduleView.
+// Test-only harness for driving updateHdayHelperUrl() from outside SettingsHdayHelper,
+// sharing the same HdayHelperContext instance as the rendered TeamScheduleView.
 function HelperUrlSwitcher({ url }: { url: string }) {
-  const { updateHdayHelperUrl } = useDeveloperOptions();
+  const { updateHdayHelperUrl } = useHdayHelper();
   return (
     <button type="button" onClick={() => updateHdayHelperUrl(url)}>
       switch helper
@@ -24,20 +27,8 @@ function HelperUrlSwitcher({ url }: { url: string }) {
   );
 }
 
-function seedConnectedOptions(hdayHelperUrl: string | null) {
-  window.localStorage.setItem(
-    DEVELOPER_OPTIONS_STORAGE_KEY,
-    JSON.stringify({
-      enabled: true,
-      // Autoconnect kicks off the mocked /api/health test-connection on mount;
-      // the provider always resets connectionStatus to "disconnected" first.
-      autoConnect: true,
-      connectionStatus: "disconnected",
-      lastConnectionTest: null,
-      isDevMode: true,
-      hdayHelperUrl,
-    }),
-  );
+function seedHelperUrl(hdayHelperUrl: string | null) {
+  window.localStorage.setItem(HDAY_HELPER_SETTINGS_STORAGE_KEY, JSON.stringify({ hdayHelperUrl }));
 }
 
 function teamHdayPayload(teamId: string, name = "Engineering") {
@@ -47,9 +38,7 @@ function teamHdayPayload(teamId: string, name = "Engineering") {
     sections: [
       {
         title: null,
-        members: [
-          { username: "alice", display_name: "Alice", raw: "", events: [], etag: null },
-        ],
+        members: [{ username: "alice", display_name: "Alice", raw: "", events: [], etag: null }],
       },
     ],
     members: [{ username: "alice", display_name: "Alice", raw: "", events: [], etag: null }],
@@ -59,21 +48,21 @@ function teamHdayPayload(teamId: string, name = "Engineering") {
 describe("TeamScheduleView", () => {
   beforeEach(() => {
     localStorage.clear();
-    server.use(http.get("*/api/health", () => HttpResponse.json({ status: "ok" })));
   });
 
-  it("shows a backend-required message until the connection is established", () => {
+  it("guards direct rendering when no helper is configured", () => {
     render(
       <TestProviders>
         <TeamScheduleView />
       </TestProviders>,
     );
 
-    expect(screen.getByText(m.team_backend_required_heading())).toBeInTheDocument();
+    expect(screen.getByText(m.team_helper_required_heading())).toBeInTheDocument();
+    expect(screen.queryByText(m.team_backend_required_heading())).not.toBeInTheDocument();
   });
 
   it("requires a configured helper and never falls back to the app's own origin", async () => {
-    seedConnectedOptions(null);
+    seedHelperUrl(null);
     // No handler for */api/team/*hday is registered — MSW's onUnhandledRequest: "error"
     // means the test fails loudly if the view ever attempts that request.
 
@@ -87,8 +76,8 @@ describe("TeamScheduleView", () => {
     expect(screen.queryByLabelText(m.team_id_label())).not.toBeInTheDocument();
   });
 
-  it("routes team requests to the configured local helper instead of the app origin", async () => {
-    seedConnectedOptions(HELPER_URL);
+  it("routes to the configured helper without checking backend connection status", async () => {
+    seedHelperUrl(HELPER_URL);
     window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
@@ -107,7 +96,7 @@ describe("TeamScheduleView", () => {
   });
 
   it("clears stale data and refetches when the configured helper changes", async () => {
-    seedConnectedOptions(HELPER_URL);
+    seedHelperUrl(HELPER_URL);
     window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
@@ -132,5 +121,32 @@ describe("TeamScheduleView", () => {
 
     expect(await screen.findByText("Team from helper B")).toBeInTheDocument();
     expect(screen.queryByText("Team from helper A")).not.toBeInTheDocument();
+  });
+
+  it("refetches from a new helper while the previous helper is still loading", async () => {
+    seedHelperUrl(HELPER_URL);
+    window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, "eng");
+    server.use(
+      http.get(`${HELPER_URL}/team/:teamId/hday`, async () => {
+        await delay("infinite");
+        return HttpResponse.json(teamHdayPayload("eng", "Never shown"));
+      }),
+      http.get(`${OTHER_HELPER_URL}/team/:teamId/hday`, ({ params }) =>
+        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper B")),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <HelperUrlSwitcher url={OTHER_HELPER_URL} />
+        <TeamScheduleView />
+      </TestProviders>,
+    );
+
+    expect(await screen.findByText(m.loading())).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "switch helper" }));
+
+    expect(await screen.findByText("Team from helper B")).toBeInTheDocument();
   });
 });

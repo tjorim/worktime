@@ -9,8 +9,8 @@ import {
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
+import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
@@ -72,16 +72,31 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
+  const { helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
   const { lastUsed, updateLastTimeOffView } = useLastUsed();
-  const { options } = useDeveloperOptions();
   const toast = useToast();
 
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
   );
+  const previousHelperStatusRef = useRef(helperConnectionStatus);
+
+  // Do not leave a previously loaded Team schedule visible after the local
+  // helper becomes unhealthy. The Team button is health-gated, so its view
+  // must follow the same rule.
+  useEffect(() => {
+    const wasConnected = previousHelperStatusRef.current === "connected";
+    previousHelperStatusRef.current = helperConnectionStatus;
+    if (viewMode === "team" && helperConnectionStatus !== "connected") {
+      setViewMode(DEFAULT_TIME_OFF_VIEW);
+      if (wasConnected) {
+        toast.showWarning(m.team_helper_unavailable_toast(), "bi-plug");
+      }
+    }
+  }, [helperConnectionStatus, toast, viewMode]);
 
   // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
   // so persisting it back on mount would be a no-op write that still bumps the shared
@@ -473,7 +488,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             {m.timeoff_view_statistics()}
           </Button>
-          {options.connectionStatus === "connected" && (
+          {helperConnectionStatus === "connected" && (
             <Button
               variant={viewMode === "team" ? "primary" : "outline-primary"}
               size="sm"
@@ -598,4 +613,3 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     </div>
   );
 }
-

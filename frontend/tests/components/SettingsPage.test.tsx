@@ -9,7 +9,7 @@ import { SettingsAccountSection } from "@/components/settings/account/SettingsAc
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -89,13 +89,13 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SettingsProvider>
       <EventStoreProvider>
-        <DeveloperOptionsProvider>
+        <HdayHelperProvider>
           <ToastProvider>
             <PwaInstallProvider>
               <AuthProvider>{ui}</AuthProvider>
             </PwaInstallProvider>
           </ToastProvider>
-        </DeveloperOptionsProvider>
+        </HdayHelperProvider>
       </EventStoreProvider>
     </SettingsProvider>,
   );

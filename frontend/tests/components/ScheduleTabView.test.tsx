@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ScheduleTabView } from "@/components/ScheduleTabView";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -71,11 +71,11 @@ const defaultProps = {
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <ToastProvider>
-      <DeveloperOptionsProvider>
+      <HdayHelperProvider>
         <SettingsProvider>
           <EventStoreProvider>{ui}</EventStoreProvider>
         </SettingsProvider>
-      </DeveloperOptionsProvider>
+      </HdayHelperProvider>
     </ToastProvider>,
   );
 }
@@ -218,13 +218,13 @@ describe("ScheduleTabView", () => {
 
       render(
         <ToastProvider>
-          <DeveloperOptionsProvider>
+          <HdayHelperProvider>
             <SettingsProvider>
               <EventStoreProvider>
                 <TestWrapper />
               </EventStoreProvider>
             </SettingsProvider>
-          </DeveloperOptionsProvider>
+          </HdayHelperProvider>
         </ToastProvider>,
       );
 

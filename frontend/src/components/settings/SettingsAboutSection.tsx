@@ -1,8 +1,8 @@
 import ListGroup from "react-bootstrap/ListGroup";
 import * as m from "@/paraglide/messages.js";
+import { SettingsBackendStatus } from "@/components/settings/SettingsBackendStatus";
 
 interface SettingsAboutSectionProps {
-  isDevMode: boolean;
   onShareApp: () => void;
   canInstallApp: boolean;
   isAppInstalled: boolean;
@@ -10,11 +10,9 @@ interface SettingsAboutSectionProps {
   onShowChangelog: () => void;
   onShowAboutHelp: () => void;
   onShowShortcuts: () => void;
-  onShowDevOptions: () => void;
 }
 
 export function SettingsAboutSection({
-  isDevMode,
   onShareApp,
   canInstallApp,
   isAppInstalled,
@@ -22,7 +20,6 @@ export function SettingsAboutSection({
   onShowChangelog,
   onShowAboutHelp,
   onShowShortcuts,
-  onShowDevOptions,
 }: SettingsAboutSectionProps) {
   return (
     <div className="border-bottom">
@@ -102,20 +99,7 @@ export function SettingsAboutSection({
               )}
             </div>
           </ListGroup.Item>
-          {isDevMode && (
-            <ListGroup.Item action onClick={onShowDevOptions}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-code-slash me-2"></i>
-                    {m.developer_options_label()}
-                  </div>
-                  <small className="text-muted">{m.developer_options_description()}</small>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            </ListGroup.Item>
-          )}
+          <SettingsBackendStatus />
         </ListGroup>
       </div>
     </div>
