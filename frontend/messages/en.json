@@ -48,7 +48,7 @@
   "calendar_legend_bridge_day": "Bridge Day",
   "information_title": "About",
   "backend_status_label": "Hosted Worktime service",
-  "backend_status_description": "Hosted service used for account and sync data. It should normally be available.",
+  "backend_status_description": "Hosted service for account and sync data.",
   "backend_status_checking": "Checking",
   "backend_status_available": "Available",
   "backend_status_unavailable": "Unavailable",

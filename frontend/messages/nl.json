@@ -41,7 +41,7 @@
   "office_country_description": "Land waar uw kantoor gevestigd is",
   "information_title": "Over",
   "backend_status_label": "Gehoste Worktime-service",
-  "backend_status_description": "Gehoste service voor account- en synchronisatiegegevens. Deze hoort normaal altijd beschikbaar te zijn.",
+  "backend_status_description": "Gehoste service voor account- en synchronisatiegegevens.",
   "backend_status_checking": "Controleren",
   "backend_status_available": "Beschikbaar",
   "backend_status_unavailable": "Niet beschikbaar",
