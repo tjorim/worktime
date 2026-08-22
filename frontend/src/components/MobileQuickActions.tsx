@@ -55,7 +55,12 @@ export function MobileQuickActions({
       setTimerError(m.tt_error_task_already_running_start());
       return;
     }
-    if (taskAtCurrentTime) {
+    const now = dayjs();
+    const overlapsCurrentTask = tasks.some(
+      (task) =>
+        task.stopTime && !now.isBefore(dayjs(task.startTime)) && now.isBefore(dayjs(task.stopTime)),
+    );
+    if (overlapsCurrentTask) {
       setTimerError(m.tt_error_time_overlap());
       return;
     }
@@ -67,7 +72,7 @@ export function MobileQuickActions({
       id: crypto.randomUUID(),
       text: taskText.trim() || m.tt_default_task_name(),
       label: labelId,
-      startTime: dayjs().format("YYYY-MM-DDTHH:mm"),
+      startTime: now.format("YYYY-MM-DDTHH:mm"),
     });
     if (!added) {
       setTimerError(m.tt_error_task_already_running_start());
