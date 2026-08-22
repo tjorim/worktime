@@ -10,7 +10,7 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import { DayCell, type DayEvent } from "./DayCell";
-import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import * as m from "@/paraglide/messages.js";
 
 interface MonthCalendarProps {

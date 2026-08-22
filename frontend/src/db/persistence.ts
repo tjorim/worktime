@@ -51,8 +51,8 @@ const SNAPSHOT_VERSION = 1;
 
 const ANONYMOUS_OWNER = "anonymous";
 
-/** Namespace used by snapshots created before owner generations were added. */
-const LEGACY_GENERATION = "legacy";
+/** Initial namespace used until an account transition creates a unique generation. */
+const DEFAULT_GENERATION = "default";
 
 /** How long to coalesce rapid changes before writing a snapshot. */
 const WRITE_DEBOUNCE_MS = 500;
@@ -72,10 +72,10 @@ export interface PersistableCollection<T> {
 
 export type SnapshotItemKey = (collectionName: string, item: unknown) => string;
 
-let activeGeneration = LEGACY_GENERATION;
+let activeGeneration = DEFAULT_GENERATION;
 
 function snapshotKey(name: string, generation = activeGeneration): string {
-  const generationPrefix = generation === LEGACY_GENERATION ? "" : `${generation}_`;
+  const generationPrefix = generation === DEFAULT_GENERATION ? "" : `${generation}_`;
   return `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generationPrefix}${name}`;
 }
 
@@ -150,10 +150,10 @@ export function hydrateSyncCollections(collectionNames: string[]): Promise<void>
   hydrationPromise ??= (async () => {
     try {
       activeGeneration =
-        (await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY)) ?? LEGACY_GENERATION;
+        (await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY)) ?? DEFAULT_GENERATION;
     } catch (err) {
       logger.error("Failed to read the snapshot generation:", err);
-      activeGeneration = LEGACY_GENERATION;
+      activeGeneration = DEFAULT_GENERATION;
     }
     await Promise.all(
       collectionNames.map(async (name) => {
@@ -317,7 +317,7 @@ export async function stopPersistingSyncCollections(): Promise<void> {
 export function resetHydrationForTests(): void {
   hydrationPromise = null;
   loadedSnapshots.clear();
-  activeGeneration = LEGACY_GENERATION;
+  activeGeneration = DEFAULT_GENERATION;
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +355,7 @@ export async function purgeSnapshotsOnOwnerChange(
       SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
       SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
     ]);
-    const persistedGeneration = storedGeneration ?? LEGACY_GENERATION;
+    const persistedGeneration = storedGeneration ?? DEFAULT_GENERATION;
     if (previous === owner) {
       if (persistedGeneration === activeGeneration) return false;
 

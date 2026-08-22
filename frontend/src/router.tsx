@@ -34,11 +34,6 @@ const settingsRoute = createRoute({
       | "about";
   } => {
     const section = typeof search.section === "string" ? search.section : undefined;
-    // "sync" was folded into "account" when the two settings sections were combined;
-    // keep old bookmarks/links working by redirecting them there.
-    if (section === "sync") {
-      return { section: "account" };
-    }
     if (
       section === "scheduleTeam" ||
       section === "general" ||

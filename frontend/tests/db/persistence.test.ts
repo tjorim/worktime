@@ -17,8 +17,8 @@ import {
   type PersistableCollection,
 } from "@/db/persistence";
 
-const snapshotKey = (name: string, generation = "legacy") =>
-  `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generation === "legacy" ? "" : `${generation}_`}${name}`;
+const snapshotKey = (name: string, generation = "default") =>
+  `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generation === "default" ? "" : `${generation}_`}${name}`;
 const getItemKey = (_name: string, item: unknown) => (item as { id: string }).id;
 
 class FakeBroadcastChannel {
@@ -231,12 +231,12 @@ describe("startPersistingSyncCollections", () => {
     expect(channel.postMessage).toHaveBeenCalledWith({
       type: "snapshot_changed",
       name: "tasks",
-      generation: "legacy",
+      generation: "default",
     });
 
     await set(snapshotKey("tasks"), { version: 1, items: [{ id: "remote" }] });
     channel.onmessage?.({
-      data: { type: "snapshot_changed", name: "tasks", generation: "legacy" },
+      data: { type: "snapshot_changed", name: "tasks", generation: "default" },
     } as MessageEvent<unknown>);
     await vi.waitFor(() => expect(getLoadedSnapshot("tasks")).toEqual([{ id: "remote" }]));
   });
@@ -327,7 +327,7 @@ describe("purgeSnapshotsOnOwnerChange", () => {
 
     const generation = await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY);
     expect(generation).toBeTypeOf("string");
-    expect(generation).not.toBe("legacy");
+    expect(generation).not.toBe("default");
     expect(await get(snapshotKey("tasks"))).toBeUndefined();
     expect(await get(snapshotKey("tasks", generation))).toBeUndefined();
   });
