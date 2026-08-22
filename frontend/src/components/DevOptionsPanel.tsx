@@ -16,7 +16,7 @@ interface DevOptionsPanelProps {
 }
 
 /**
- * Developer options panel for managing backend API connectivity and the local .hday helper.
+ * Developer options panel for inspecting same-origin backend API connectivity.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
  *
  * @param show - Whether the panel is visible
@@ -89,17 +89,6 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
       </Modal.Header>
 
       <Modal.Body>
-        <Alert variant="info" className="mb-4">
-          <Alert.Heading className="h6">
-            <i className="bi bi-info-circle me-2"></i>
-            {m.dev_api_integration_title()}
-          </Alert.Heading>
-          <p className="mb-0 small">
-            {m.dev_api_integration_desc()} {/* */}
-            {/* See backend/README.md for setup instructions */}
-          </p>
-        </Alert>
-
         {/* Connection Status */}
         <div className="mb-4">
           <h6 className="mb-3">{m.dev_connection_status_heading()}</h6>

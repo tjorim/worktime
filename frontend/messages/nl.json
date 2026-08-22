@@ -719,8 +719,6 @@
   "shortcuts_export_hday": ".hday-bestand exporteren",
   "shortcuts_delete_events": "Geselecteerde gebeurtenissen verwijderen",
   "shortcuts_cancel_edit": "Bewerken annuleren",
-  "dev_api_integration_title": "Backend API-integratie",
-  "dev_api_integration_desc": "Test en inspecteer de verbinding met de Worktime-backend-API.",
   "dev_connection_status_heading": "Verbindingsstatus",
   "dev_status_label": "Status:",
   "dev_backend_enabled": "Backend ingeschakeld",
