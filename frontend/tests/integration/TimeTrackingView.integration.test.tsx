@@ -69,9 +69,10 @@ describe("TimeTrackingView Integration Tests", () => {
       renderWithSettings();
 
       expect(
-        screen.getByRole("button", { name: /Stop Timer · Running 00:30:00/i }),
+        screen.getByRole("button", { name: /Stop Timer · 00:30:00/i }),
       ).toBeInTheDocument();
-      expect(screen.getByText(/Active Task/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Active Task/i)).toHaveLength(2);
+      expect(screen.queryByText(/Started 2025-01-06 09:30/i)).not.toBeInTheDocument();
       // Format expected start time in local timezone (same as component does)
       const expectedStart = dayjs("2025-01-06T08:30:00Z").format("HH:mm");
       const startTimeElements = screen.getAllByText(new RegExp(expectedStart));
@@ -96,7 +97,7 @@ describe("TimeTrackingView Integration Tests", () => {
       renderWithSettings();
 
       expect(screen.queryByRole("button", { name: /Start Now/i })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Stop Timer · Running/i })).toBeEnabled();
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:30:00/i })).toBeEnabled();
     });
 
     it("shows completed tasks in daily log with duration", () => {

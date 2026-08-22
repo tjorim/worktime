@@ -3,7 +3,7 @@ import Alert from "react-bootstrap/Alert";
 import Card from "react-bootstrap/Card";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs, formatTimeByPreference } from "@/utils/dateTimeUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import * as m from "@/paraglide/messages.js";
@@ -16,7 +16,9 @@ import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import { LabelModal } from "./LabelModal";
 import {
+  buildLabelColorMap,
   buildLabelNameMap,
+  getContrastingTextColor,
   isHexColor,
   normalizeLabelName,
   useDefaultLabelColor,
@@ -101,6 +103,7 @@ export function TimeTrackingDailyView({
   const liveTime = useLiveTime({ precision: "second" });
   const isDailyCurrent = dayjs(date).isSame(dayjs(), "day");
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const labelColorById = useMemo(() => buildLabelColorMap(labels), [labels]);
   const templateOptions = useMemo(
     () =>
       templates.map((template) => ({
@@ -126,6 +129,9 @@ export function TimeTrackingDailyView({
   const timerElapsed = runningTask
     ? formatDuration(liveTime.diff(dayjs(runningTask.startTime), "second"))
     : undefined;
+  const isRunningTaskVisible = runningTask
+    ? dailyTasks.some((task) => task.id === runningTask.id)
+    : false;
 
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
@@ -407,6 +413,23 @@ export function TimeTrackingDailyView({
           canStartNow={canStartNow}
           isTimerRunning={runningTask !== null}
           timerElapsed={timerElapsed}
+          runningTaskSummary={
+            runningTask
+              ? {
+                  task: runningTask.text,
+                  label: labelNameById[runningTask.label] ?? m.tt_unknown_label(),
+                  time: `${dayjs(runningTask.startTime).format("YYYY-MM-DD")} ${formatTimeByPreference(
+                    dayjs(runningTask.startTime),
+                    settings.timeFormat,
+                  )}`,
+                  labelColor: labelColorById[runningTask.label] ?? defaultLabelColor,
+                  labelTextColor: getContrastingTextColor(
+                    labelColorById[runningTask.label] ?? defaultLabelColor,
+                  ),
+                  showDetails: !isRunningTaskVisible,
+                }
+              : undefined
+          }
           startDisabledReason={startDisabledReason}
           addDisabledReason={addDisabledReason}
           onSubmit={handleAddTask}

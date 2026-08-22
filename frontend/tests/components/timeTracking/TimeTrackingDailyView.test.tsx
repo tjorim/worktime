@@ -144,9 +144,30 @@ describe("TimeTrackingDailyView", () => {
 
       renderView({ tasks: [runningTask], selectedDate: "2025-01-01" });
 
-      expect(screen.getAllByText("On call")).toHaveLength(1);
-      expect(screen.getByRole("button", { name: /Stop Timer · Running/i })).toBeInTheDocument();
-      expect(screen.queryByText("Running", { selector: ".badge" })).not.toBeInTheDocument();
+      expect(screen.getAllByText("On call")).toHaveLength(2);
+      expect(screen.getAllByText("Support", { selector: ".time-tracking-label" })).toHaveLength(2);
+      expect(screen.queryByText(/Started 2025-01-01 10:00/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:00:05/i })).toBeInTheDocument();
+      expect(screen.getByText("Running", { selector: ".badge" })).toBeInTheDocument();
+    });
+
+    it("identifies a running task started on another date", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-02T10:00:00"));
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-elsewhere",
+        text: "Night handover",
+        label: "Support",
+        startTime: "2025-01-01T23:30",
+      };
+
+      renderView({ tasks: [runningTask], selectedDate: "2025-01-02" });
+
+      expect(screen.getByText("Night handover")).toBeInTheDocument();
+      expect(screen.getByText("Support", { selector: ".time-tracking-label" })).toBeInTheDocument();
+      expect(screen.getByText("Started 2025-01-01 23:30")).toBeInTheDocument();
+      expect(screen.queryByText("Night handover", { selector: ".list-group-item *" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Stop Timer · 10:30:00/i })).toBeInTheDocument();
     });
 
     it("stops a same-day running task", async () => {

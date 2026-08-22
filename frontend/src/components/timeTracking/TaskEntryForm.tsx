@@ -35,6 +35,14 @@ type TaskEntryFormProps = {
   canStartNow: boolean;
   isTimerRunning?: boolean;
   timerElapsed?: string;
+  runningTaskSummary?: {
+    task: string;
+    label: string;
+    time: string;
+    labelColor: string;
+    labelTextColor: string;
+    showDetails: boolean;
+  };
   startDisabledReason?: string;
   addDisabledReason?: string;
   onSubmit: () => void;
@@ -61,6 +69,7 @@ export function TaskEntryForm({
   canStartNow,
   isTimerRunning,
   timerElapsed,
+  runningTaskSummary,
   startDisabledReason,
   addDisabledReason,
   onSubmit,
@@ -100,9 +109,48 @@ export function TaskEntryForm({
 
   return (
     <>
-      {isTimerRunning !== undefined && (
-        <p className="small text-muted mb-2">{m.tt_quick_timer_desc()}</p>
-      )}
+      {isTimerRunning && runningTaskSummary ? (
+        <div
+          className="d-flex align-items-center gap-2 mb-3 p-2 rounded bg-body-tertiary"
+          aria-live="polite"
+        >
+          <div className="d-flex flex-column gap-1 flex-grow-1 min-w-0">
+            <div className="d-flex align-items-center flex-wrap gap-2">
+              <span className="badge text-bg-danger d-inline-flex align-items-center gap-1">
+                <i className="bi bi-record-fill" aria-hidden="true" />
+                {m.tt_running_status()}
+              </span>
+              <span className="fw-semibold text-truncate">{runningTaskSummary.task}</span>
+              <span
+                className="time-tracking-label"
+                style={{
+                  backgroundColor: runningTaskSummary.labelColor,
+                  color: runningTaskSummary.labelTextColor,
+                }}
+              >
+                {runningTaskSummary.label}
+              </span>
+            </div>
+            {runningTaskSummary.showDetails && (
+              <span className="small text-muted">
+                {m.tt_started()} {runningTaskSummary.time}
+              </span>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="danger"
+            className="flex-shrink-0"
+            onClick={onStopNow ?? onStartNow}
+          >
+            {m.tt_stop_timer()} · {timerElapsed}
+          </Button>
+        </div>
+      ) : isTimerRunning !== undefined ? (
+        <p className="small text-muted mb-2">
+          {m.tt_quick_timer_desc()}
+        </p>
+      ) : null}
       <Row className="g-3 align-items-end">
         <Col md={primaryFieldWidth}>
           <Form.Group controlId="timeTrackerTask">
@@ -189,24 +237,20 @@ export function TaskEntryForm({
         </Col>
         <Col md={2}>
           <div className="d-grid gap-2">
-            {renderDisabledTooltipButton(
-              "start-now",
-              !isTimerRunning && !canStartNow ? startDisabledReason : undefined,
-              <Button
-                variant={isTimerRunning ? "danger" : "success"}
-                className="w-100"
-                onClick={isTimerRunning ? (onStopNow ?? onStartNow) : onStartNow}
-                disabled={!isTimerRunning && !canStartNow}
-              >
-                {isTimerRunning ? m.tt_stop_timer() : m.tt_start_now()}
-                {isTimerRunning !== undefined && (
-                  <>
-                    {" "}· {isTimerRunning ? m.tt_running_status() : m.tt_idle_status()}
-                    {isTimerRunning && timerElapsed ? ` ${timerElapsed}` : ""}
-                  </>
-                )}
-              </Button>,
-            )}
+            {!isTimerRunning &&
+              renderDisabledTooltipButton(
+                "start-now",
+                !canStartNow ? startDisabledReason : undefined,
+                <Button
+                  variant="success"
+                  className="w-100"
+                  onClick={onStartNow}
+                  disabled={!canStartNow}
+                >
+                  {m.tt_start_now()}
+                  {isTimerRunning !== undefined && <> · {m.tt_idle_status()}</>}
+                </Button>,
+              )}
             {renderDisabledTooltipButton(
               "add-task",
               !canSubmit ? addDisabledReason : undefined,
