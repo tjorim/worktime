@@ -14,10 +14,17 @@ Strategy
 
 Idempotency
 -----------
-Labels, tasks and templates use client-generated UUIDs as primary keys.
-Sending ``action='create'`` for an already-existing ID is treated as an
-update (idempotent re-play).  Work locations are identified by their natural
-key ``(user_id, date)`` and are always upserted.
+Labels, tasks, templates and Gantt tasks use client-generated UUIDs as primary
+keys. Time-off entries use the per-user key ``(user_id, entry_id)`` and work
+locations use ``(user_id, date)``. Sending ``action='create'`` for an existing
+identity is handled by the same last-write-wins path as an update; an exact
+replay is therefore a conflict/no-op rather than a second row. Deletes of an
+unknown or already-tombstoned identity are successful no-ops.
+
+The authenticated ``user_id`` is part of every lookup. For the globally unique
+UUID tables, a UUID owned by a different user produces the same conflict shape
+as a stale write and is never updated. See ``docs/idempotency-contract.md`` for
+the public retry contract and the audit of REST and MCP mutations.
 
 Soft deletes
 ------------

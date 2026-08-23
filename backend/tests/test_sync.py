@@ -406,6 +406,89 @@ class TestSyncPush:
         pull = db_client.get("/api/sync/pull", headers=headers)
         assert pull.json()["labels"][0]["name"] == "Second"
 
+    def test_exact_replay_contract_for_every_sync_entity(self, db_client: TestClient, auth_headers) -> None:
+        """Exact create/delete redelivery never duplicates or resurrects an entity."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "all-entity-replay-user")
+        headers = auth_headers(user_id)
+        entity_id = str(uuid4())
+
+        cases = [
+            (
+                "labels",
+                "id",
+                entity_id,
+                {"id": entity_id, "name": "Replay label", "color": "#AABBCC"},
+            ),
+            (
+                "tasks",
+                "id",
+                str(uuid4()),
+                {
+                    "id": "",
+                    "text": "Replay task",
+                    "start_time": "2026-08-01T09:00:00+00:00",
+                    "stop_time": "2026-08-01T10:00:00+00:00",
+                },
+            ),
+            (
+                "templates",
+                "id",
+                str(uuid4()),
+                {"id": "", "text": "Replay template", "start_time": "09:00:00", "stop_time": "10:00:00"},
+            ),
+            (
+                "gantt_tasks",
+                "id",
+                str(uuid4()),
+                {"id": "", "name": "Replay plan", "start_date": "2026-08-01", "end_date": "2026-08-02"},
+            ),
+            (
+                "time_off_entries",
+                "entry_id",
+                str(uuid4()),
+                {"id": "", "entry_kind": "date", "date": "2026-08-03", "entry_type": "vacation"},
+            ),
+            (
+                "work_locations",
+                "date",
+                "2026-08-04",
+                {"date": "2026-08-04", "country_code": "BE", "label": "Office"},
+            ),
+        ]
+
+        for collection, pull_key, identity, fields in cases:
+            create_item = {**fields, "action": "create", "client_updated_at": _ts(-60)}
+            if "id" in create_item and not create_item["id"]:
+                create_item["id"] = identity
+            create_payload = {collection: [create_item]}
+
+            first = db_client.post("/api/sync/push", json=create_payload, headers=headers)
+            replay = db_client.post("/api/sync/push", json=create_payload, headers=headers)
+            assert first.status_code == 200, first.text
+            assert first.json()["results"][collection][0]["status"] == "ok"
+            assert replay.status_code == 200, replay.text
+            assert replay.json()["results"][collection][0]["status"] == "conflict"
+
+            pulled = db_client.get("/api/sync/pull", headers=headers).json()[collection]
+            assert sum(row[pull_key] == identity for row in pulled) == 1
+
+            delete_key = "date" if collection == "work_locations" else "id"
+            delete_item = {delete_key: identity, "action": "delete", "client_updated_at": _ts(60)}
+            delete_payload = {collection: [delete_item]}
+            deleted = db_client.post("/api/sync/push", json=delete_payload, headers=headers)
+            delete_replay = db_client.post("/api/sync/push", json=delete_payload, headers=headers)
+            assert deleted.json()["results"][collection][0]["status"] == "ok"
+            assert delete_replay.json()["results"][collection][0]["status"] == "ok"
+
+            matching = [
+                row
+                for row in db_client.get("/api/sync/pull", headers=headers).json()[collection]
+                if row[pull_key] == identity
+            ]
+            assert len(matching) == 1
+            assert matching[0]["deleted_at"] is not None
+
     def test_push_task_rejects_foreign_label_on_update(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         owner_id = _create_user(db_client, admin_h, "sync-owner-user")

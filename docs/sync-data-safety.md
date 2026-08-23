@@ -3,6 +3,8 @@
 How Worktime tries to make it safe to put a user's data in the cloud, what is
 deliberately guarded against, and what is still open. Read alongside
 `backend/app/services/sync_service.py` and `frontend/src/hooks/useFirstSyncFlow.ts`.
+The stable-identity and retry rules are specified separately in
+[`idempotency-contract.md`](idempotency-contract.md).
 
 ## Resolving a first-sync conflict
 
