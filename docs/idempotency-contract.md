@@ -23,6 +23,11 @@ ship.
 the entire request; ordinary per-record conflicts are returned in the results
 and do not abort unrelated records. Clients keep an outbox item until they
 receive a successful response, so response loss causes exact redelivery.
+Established clients send their last pull cursor in `X-Sync-Cursor`. If that
+cursor is older than the supported offline window, the server rejects the
+entire push with `410 sync_cursor_expired` before applying any record. The
+client full-resyncs and quarantines the stale batch instead of automatically
+replaying changes that might resurrect a purged deletion.
 
 | Entity | Stable logical identity | Create/update replay | Delete replay |
 |---|---|---|---|

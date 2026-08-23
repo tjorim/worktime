@@ -6,7 +6,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +52,7 @@ _SSE_KEEPALIVE_TIMEOUT = 15.0
 @router.post("/push", response_model=SyncPushResponse, status_code=status.HTTP_200_OK)
 async def push_endpoint(
     payload: SyncPushRequest,
+    sync_cursor: datetime | None = Header(default=None, alias="X-Sync-Cursor"),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
@@ -62,6 +63,15 @@ async def push_endpoint(
     (server version was newer — client should accept server value).  Any
     unexpected error rolls back the entire batch.
     """
+    if sync_cursor is not None and as_utc(sync_cursor) < datetime.now(UTC) - MAX_SYNC_OFFLINE_PERIOD:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail={
+                "code": "sync_cursor_expired",
+                "message": "Sync cursor is outside the supported offline window; perform a full resync.",
+                "max_offline_days": MAX_SYNC_OFFLINE_PERIOD.days,
+            },
+        )
     timings: dict[str, float] = {}
     try:
         with time_operation("sync", timings):

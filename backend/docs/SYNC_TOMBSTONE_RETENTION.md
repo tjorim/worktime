@@ -16,11 +16,14 @@ only when `deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'`.
 ## Returning after the window
 
 `GET /api/sync/pull` returns HTTP 410 with the machine-readable code
-`sync_cursor_expired` when a supplied cursor predates the window. The client
-must then omit `since`, replace (not merge) all six local sync-managed
-collections with that full response, and only then retry pending changes. This
-replacement removes records whose tombstones have already been purged, so they
-cannot be resurrected merely because the late device missed a deletion.
+`sync_cursor_expired` when a supplied cursor predates the window. Sync pushes
+carry the client's cursor in `X-Sync-Cursor`; the server rejects an expired
+cursor with the same 410 before applying any mutation. The client then omits
+`since`, replaces (not merges) all six local sync-managed collections, and
+quarantines the rejected write or outbox for explicit user recovery instead of
+replaying it automatically. This ordering removes records whose tombstones
+have already been purged and prevents stale queued creates or updates from
+resurrecting them.
 
 Backups contain active application data, not server tombstones or device sync
 cursors. Restoring one remains an explicit user-confirmed replacement and is

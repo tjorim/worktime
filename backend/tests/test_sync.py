@@ -149,6 +149,38 @@ class TestSyncPull:
         retry = db_client.get("/api/sync/pull", headers=auth_headers(user_id))
         assert retry.status_code == 200
 
+    def test_expired_cursor_rejects_push_before_it_can_resurrect_a_purged_row(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "expired-push-cursor-user")
+        headers = {
+            **auth_headers(user_id),
+            "X-Sync-Cursor": _ts(-91 * 24 * 60 * 60),
+        }
+        label_id = str(uuid4())
+
+        response = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "name": "Stale offline copy",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 410
+        assert response.json()["detail"]["code"] == "sync_cursor_expired"
+        pull = db_client.get("/api/sync/pull", headers=auth_headers(user_id))
+        assert all(label["id"] != label_id for label in pull.json()["labels"])
+
     def test_pull_returns_all_records_without_since(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "pull-user-1")

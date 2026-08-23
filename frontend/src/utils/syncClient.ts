@@ -546,11 +546,15 @@ function isPermanentPushFailure(status: number): boolean {
 async function pushSinglePayload(
   fetch: FetchFn,
   payload: SyncPushPayload,
+  syncCursor?: string,
 ): Promise<PushOutcome> {
   try {
     const response = await fetch("/api/sync/push", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(syncCursor ? { "X-Sync-Cursor": syncCursor } : {}),
+      },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
@@ -580,17 +584,18 @@ async function pushSinglePayload(
 export async function pushSyncPayloadDetailed(
   fetch: FetchFn,
   payload: SyncPushPayload,
+  syncCursor?: string,
 ): Promise<PushOutcome> {
   const oversized = PUSH_ENTITY_ORDER.some(
     (key) => (payload[key] ?? []).length > MAX_SYNC_PUSH_ITEMS,
   );
   if (!oversized) {
-    return pushSinglePayload(fetch, payload);
+    return pushSinglePayload(fetch, payload, syncCursor);
   }
 
   const responses: SyncPushResponse[] = [];
   for (const chunk of chunkPushPayload(payload)) {
-    const outcome = await pushSinglePayload(fetch, chunk);
+    const outcome = await pushSinglePayload(fetch, chunk, syncCursor);
     if (!outcome.ok) return outcome;
     responses.push(outcome.response);
   }
@@ -601,8 +606,9 @@ export async function pushSyncPayloadDetailed(
 export async function pushSyncPayload(
   fetch: FetchFn,
   payload: SyncPushPayload,
+  syncCursor?: string,
 ): Promise<SyncPushResponse | null> {
-  const outcome = await pushSyncPayloadDetailed(fetch, payload);
+  const outcome = await pushSyncPayloadDetailed(fetch, payload, syncCursor);
   return outcome.ok ? outcome.response : null;
 }
 
