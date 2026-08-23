@@ -40,6 +40,7 @@ import com.worktime.android.core.auth.AuthErrorMessages
 import com.worktime.android.core.auth.BiometricAuthenticator
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.notifications.WorktimeNotifications
+import com.worktime.android.core.notifications.ReminderScheduler
 import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
@@ -56,15 +57,14 @@ import com.worktime.android.feature.timeoff.TimeOffUiState
 import com.worktime.android.feature.timeoff.TimeOffViewModel
 import com.worktime.android.feature.today.TodayScreen
 import com.worktime.android.ui.theme.WorktimeTheme
-import java.time.Duration
-import java.time.OffsetDateTime
 import kotlinx.coroutines.launch
 
 @Composable
 fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = WorktimeDestination.Today.route) {
     val context = LocalContext.current
     val notifications = remember { WorktimeNotifications(context) }
-    val sentNotificationKeys = remember { mutableSetOf<String>() }
+    val reminderScheduler = remember { ReminderScheduler(context.applicationContext) }
+    val sentSyncNotificationKeys = remember { mutableSetOf<String>() }
 
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(
@@ -103,43 +103,26 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
 
     LaunchedEffect(uiState, actionsState, notificationPreferences) {
         val dashboard = (uiState as? DashboardUiState.Success)?.dashboard ?: return@LaunchedEffect
-        if (notificationPreferences.shiftsEnabled) {
-            dashboard.nextShifts.items.firstOrNull()?.let { nextShift ->
-                val key = "shift-${nextShift.date}-${nextShift.shiftCode}"
-                if (sentNotificationKeys.add(key)) {
-                    notifications.showShiftReminder(
-                        "Upcoming shift ${nextShift.shift.displayCode} on ${nextShift.date}"
-                    )
-                }
-            }
-        }
-
-        if (notificationPreferences.timeTrackingEnabled) {
-            val runningTask = actionsState.runningTask
-            val isStale =
-                runningTask?.startTime?.let {
-                    runCatching {
-                        Duration.between(OffsetDateTime.parse(it), OffsetDateTime.now()).toHours() >= 8
-                    }.getOrDefault(false)
-                } ?: false
-            if (isStale && runningTask != null) {
-                val key = "stale-${runningTask.id}-${runningTask.startTime}"
-                if (sentNotificationKeys.add(key)) {
-                    notifications.showStaleTimer("Timer running for ${runningTask.text} appears stale")
-                }
-            }
-        }
+        reminderScheduler.reconcile(
+            dashboard.identity.id,
+            dashboard.nextShifts.items.firstOrNull(),
+            actionsState.runningTask,
+            notificationPreferences.shiftsEnabled,
+            notificationPreferences.timeTrackingEnabled
+        )
 
         if (notificationPreferences.syncConflictsEnabled) {
             actionsState.syncStatus?.let { status ->
-                val key = "sync-${status.serverTimestamp}"
-                if (sentNotificationKeys.add(key)) {
+                if (sentSyncNotificationKeys.add(status.serverTimestamp)) {
                     notifications.showSyncStatus("Sync checked at ${status.serverTimestamp}")
                 }
             }
         }
     }
     val sessionState by container.sessionManager.sessionState.collectAsStateWithLifecycle()
+    LaunchedEffect(sessionState) {
+        if (sessionState is SessionState.LoggedOut) reminderScheduler.cancelAll()
+    }
     val coroutineScope = rememberCoroutineScope()
     var loginError by rememberSaveable { mutableStateOf<String?>(null) }
     var loginInFlight by rememberSaveable { mutableStateOf(false) }
