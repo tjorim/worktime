@@ -8,6 +8,7 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -40,6 +41,14 @@ def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
 def _ts(offset_seconds: float = 0.0) -> str:
     """Return an ISO timestamp offset from now."""
     return (datetime.now(UTC) + timedelta(seconds=offset_seconds)).isoformat()
+
+
+def test_tombstone_cleanup_retains_a_margin_beyond_the_cursor_window() -> None:
+    """Cleanup must not race a cursor accepted at the 90-day boundary."""
+    cleanup_sql = (Path(__file__).parents[1] / "sql" / "purge_sync_tombstones.sql").read_text(encoding="utf-8")
+
+    assert cleanup_sql.count("INTERVAL '91 days'") == 6
+    assert "INTERVAL '90 days'" not in cleanup_sql
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +115,71 @@ class TestSyncStatus:
 
 class TestSyncPull:
     """GET /db/sync/pull"""
+
+    def test_timezone_naive_cursor_is_normalized(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "naive-cursor-user")
+        naive_since = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+        response = db_client.get(
+            "/api/sync/pull",
+            params={"since": naive_since},
+            headers=auth_headers(user_id),
+        )
+
+        assert response.status_code == 200
+
+    def test_expired_cursor_requires_full_resync(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "expired-cursor-user")
+
+        response = db_client.get(
+            "/api/sync/pull",
+            params={"since": _ts(-91 * 24 * 60 * 60)},
+            headers=auth_headers(user_id),
+        )
+
+        assert response.status_code == 410
+        assert response.json()["detail"] == {
+            "code": "sync_cursor_expired",
+            "message": "Sync cursor is outside the supported offline window; perform a full resync.",
+            "max_offline_days": 90,
+        }
+
+        retry = db_client.get("/api/sync/pull", headers=auth_headers(user_id))
+        assert retry.status_code == 200
+
+    def test_expired_cursor_rejects_push_before_it_can_resurrect_a_purged_row(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "expired-push-cursor-user")
+        headers = {
+            **auth_headers(user_id),
+            "X-Sync-Cursor": _ts(-91 * 24 * 60 * 60),
+        }
+        label_id = str(uuid4())
+
+        response = db_client.post(
+            "/api/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "name": "Stale offline copy",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 410
+        assert response.json()["detail"]["code"] == "sync_cursor_expired"
+        pull = db_client.get("/api/sync/pull", headers=auth_headers(user_id))
+        assert all(label["id"] != label_id for label in pull.json()["labels"])
 
     def test_pull_returns_all_records_without_since(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
@@ -405,6 +479,89 @@ class TestSyncPush:
 
         pull = db_client.get("/api/sync/pull", headers=headers)
         assert pull.json()["labels"][0]["name"] == "Second"
+
+    def test_exact_replay_contract_for_every_sync_entity(self, db_client: TestClient, auth_headers) -> None:
+        """Exact create/delete redelivery never duplicates or resurrects an entity."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "all-entity-replay-user")
+        headers = auth_headers(user_id)
+        entity_id = str(uuid4())
+
+        cases = [
+            (
+                "labels",
+                "id",
+                entity_id,
+                {"id": entity_id, "name": "Replay label", "color": "#AABBCC"},
+            ),
+            (
+                "tasks",
+                "id",
+                str(uuid4()),
+                {
+                    "id": "",
+                    "text": "Replay task",
+                    "start_time": "2026-08-01T09:00:00+00:00",
+                    "stop_time": "2026-08-01T10:00:00+00:00",
+                },
+            ),
+            (
+                "templates",
+                "id",
+                str(uuid4()),
+                {"id": "", "text": "Replay template", "start_time": "09:00:00", "stop_time": "10:00:00"},
+            ),
+            (
+                "gantt_tasks",
+                "id",
+                str(uuid4()),
+                {"id": "", "name": "Replay plan", "start_date": "2026-08-01", "end_date": "2026-08-02"},
+            ),
+            (
+                "time_off_entries",
+                "entry_id",
+                str(uuid4()),
+                {"id": "", "entry_kind": "date", "date": "2026-08-03", "entry_type": "vacation"},
+            ),
+            (
+                "work_locations",
+                "date",
+                "2026-08-04",
+                {"date": "2026-08-04", "country_code": "BE", "label": "Office"},
+            ),
+        ]
+
+        for collection, pull_key, identity, fields in cases:
+            create_item = {**fields, "action": "create", "client_updated_at": _ts(-60)}
+            if "id" in create_item and not create_item["id"]:
+                create_item["id"] = identity
+            create_payload = {collection: [create_item]}
+
+            first = db_client.post("/api/sync/push", json=create_payload, headers=headers)
+            replay = db_client.post("/api/sync/push", json=create_payload, headers=headers)
+            assert first.status_code == 200, first.text
+            assert first.json()["results"][collection][0]["status"] == "ok"
+            assert replay.status_code == 200, replay.text
+            assert replay.json()["results"][collection][0]["status"] == "conflict"
+
+            pulled = db_client.get("/api/sync/pull", headers=headers).json()[collection]
+            assert sum(row[pull_key] == identity for row in pulled) == 1
+
+            delete_key = "date" if collection == "work_locations" else "id"
+            delete_item = {delete_key: identity, "action": "delete", "client_updated_at": _ts(60)}
+            delete_payload = {collection: [delete_item]}
+            deleted = db_client.post("/api/sync/push", json=delete_payload, headers=headers)
+            delete_replay = db_client.post("/api/sync/push", json=delete_payload, headers=headers)
+            assert deleted.json()["results"][collection][0]["status"] == "ok"
+            assert delete_replay.json()["results"][collection][0]["status"] == "ok"
+
+            matching = [
+                row
+                for row in db_client.get("/api/sync/pull", headers=headers).json()[collection]
+                if row[pull_key] == identity
+            ]
+            assert len(matching) == 1
+            assert matching[0]["deleted_at"] is not None
 
     def test_push_task_rejects_foreign_label_on_update(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)

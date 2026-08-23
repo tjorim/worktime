@@ -36,7 +36,6 @@ import {
   getSyncQuarantineSize,
   maxConflictServerTimestamp,
   pullSyncData,
-  pushSyncPayload,
   pushSyncPayloadDetailed,
   quarantineSyncChange,
   reconcilePreferences,
@@ -282,7 +281,8 @@ export function useOngoingSync(
           const { merged, commit } = dequeued;
           let outcome: PushOutcome;
           try {
-            outcome = await pushSyncPayloadDetailed(syncFetch, merged);
+            const syncCursor = localStorage.getItem(getSyncCursorKey(userId)) ?? undefined;
+            outcome = await pushSyncPayloadDetailed(syncFetch, merged, syncCursor);
           } catch (err) {
             // Push threw (e.g. network error) — outbox stays intact for next retry.
             logger.error("useOngoingSync: outbox push threw:", err);
@@ -499,7 +499,21 @@ export function useOngoingSync(
         // push is in flight.
         const cursorBeforePush = localStorage.getItem(getSyncCursorKey(userId)) ?? undefined;
         // Attempt an immediate push.
-        const result = await pushSyncPayload(fetchFn, change);
+        const outcome = await pushSyncPayloadDetailed(fetchFn, change, cursorBeforePush);
+        if (!outcome.ok && outcome.status === 410 && cursorBeforePush) {
+          const replacement = await pullSyncData(fetchFn, cursorBeforePush);
+          if (replacement?.full_resync_required) {
+            onIncrementalPullRef.current?.(replacement);
+            storeSyncCursor(userId, replacement.server_timestamp);
+            setLastSyncedAt(replacement.server_timestamp);
+          }
+          quarantineSyncChange(userId, change, 410);
+          if (!mountedRef.current) return;
+          setQuarantineCount(getSyncQuarantineSize(userId));
+          setHasSyncError(true);
+          return;
+        }
+        const result = outcome.ok ? outcome.response : null;
         if (!result) {
           // Queue *before* the mounted check. Bailing out first (as this used
           // to) silently discarded the change whenever the provider unmounted

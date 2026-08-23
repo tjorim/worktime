@@ -357,6 +357,55 @@ describe("useOngoingSync", () => {
   });
 
   describe("permanently rejected batches", () => {
+    it("full-resyncs and quarantines a stale outbox when the server rejects its cursor", async () => {
+      storeSyncCursor("user-1", "2025-01-01T00:00:00.000Z");
+      const queued = emptySyncPayload();
+      queued.labels.push({
+        id: "deleted-on-server",
+        action: "create",
+        client_updated_at: "2025-01-02T00:00:00.000Z",
+        name: "Stale offline copy",
+        color: "#AABBCC",
+      });
+      appendToSyncOutbox("user-1", queued);
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url === "/api/sync/push") {
+          return Promise.resolve({ ok: false, status: 410 });
+        }
+        if (url.startsWith("/api/sync/pull?since=")) {
+          return Promise.resolve({ ok: false, status: 410 });
+        }
+        if (url === "/api/sync/pull") {
+          return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+        }
+        return Promise.resolve(failedResponse);
+      });
+
+      const onIncrementalPull = vi.fn();
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch, onIncrementalPull),
+      );
+
+      await waitFor(() => {
+        expect(result.current.quarantineCount).toBe(1);
+      });
+
+      const pushCall = mockFetch.mock.calls.find(([url]) => url === "/api/sync/push");
+      expect(pushCall?.[1]?.headers).toMatchObject({
+        "X-Sync-Cursor": "2025-01-01T00:00:00.000Z",
+      });
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+      expect(onIncrementalPull).toHaveBeenCalledWith(
+        expect.objectContaining({ full_resync_required: true }),
+      );
+      const quarantined = JSON.parse(
+        localStorage.getItem(getSyncQuarantineKey("user-1"))!,
+      );
+      expect(quarantined[0].status).toBe(410);
+      expect(quarantined[0].payload.labels[0].id).toBe("deleted-on-server");
+    });
+
     it("quarantines a batch the server refuses instead of retrying it forever", async () => {
       // A 4xx will never succeed on replay. Leaving it in the outbox wedges
       // every later change behind it; dropping it loses data silently. It gets

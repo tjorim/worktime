@@ -229,6 +229,8 @@ export interface SyncPullResponse {
   time_off_entries: TimeOffEntrySyncRead[];
   gantt_tasks: GanttTaskSyncRead[];
   server_timestamp: string;
+  /** Client-only marker: the server rejected an expired cursor and this is the replacement pull. */
+  full_resync_required?: boolean;
 }
 
 export interface SyncStatusResponse {
@@ -544,11 +546,15 @@ function isPermanentPushFailure(status: number): boolean {
 async function pushSinglePayload(
   fetch: FetchFn,
   payload: SyncPushPayload,
+  syncCursor?: string,
 ): Promise<PushOutcome> {
   try {
     const response = await fetch("/api/sync/push", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(syncCursor ? { "X-Sync-Cursor": syncCursor } : {}),
+      },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
@@ -578,17 +584,18 @@ async function pushSinglePayload(
 export async function pushSyncPayloadDetailed(
   fetch: FetchFn,
   payload: SyncPushPayload,
+  syncCursor?: string,
 ): Promise<PushOutcome> {
   const oversized = PUSH_ENTITY_ORDER.some(
     (key) => (payload[key] ?? []).length > MAX_SYNC_PUSH_ITEMS,
   );
   if (!oversized) {
-    return pushSinglePayload(fetch, payload);
+    return pushSinglePayload(fetch, payload, syncCursor);
   }
 
   const responses: SyncPushResponse[] = [];
   for (const chunk of chunkPushPayload(payload)) {
-    const outcome = await pushSinglePayload(fetch, chunk);
+    const outcome = await pushSinglePayload(fetch, chunk, syncCursor);
     if (!outcome.ok) return outcome;
     responses.push(outcome.response);
   }
@@ -599,8 +606,9 @@ export async function pushSyncPayloadDetailed(
 export async function pushSyncPayload(
   fetch: FetchFn,
   payload: SyncPushPayload,
+  syncCursor?: string,
 ): Promise<SyncPushResponse | null> {
-  const outcome = await pushSyncPayloadDetailed(fetch, payload);
+  const outcome = await pushSyncPayloadDetailed(fetch, payload, syncCursor);
   return outcome.ok ? outcome.response : null;
 }
 
@@ -615,6 +623,11 @@ export async function pullSyncData(
   try {
     const url = since ? `/api/sync/pull?since=${encodeURIComponent(since)}` : "/api/sync/pull";
     const response = await fetch(url);
+    if (response.status === 410 && since) {
+      const retry = await fetch("/api/sync/pull");
+      if (!retry.ok) return null;
+      return { ...((await retry.json()) as SyncPullResponse), full_resync_required: true };
+    }
     if (!response.ok) return null;
     return (await response.json()) as SyncPullResponse;
   } catch {

@@ -670,6 +670,27 @@ describe("syncClient", () => {
       await pullSyncData(mockFetch, "2026-01-01T00:00:00Z");
       expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("since="));
     });
+
+    it("retries an expired cursor as a marked full resync", async () => {
+      const pullResp = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+        server_timestamp: "2026-04-01T00:00:00Z",
+      };
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 410 })
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResp });
+
+      const result = await pullSyncData(mockFetch, "2025-01-01T00:00:00Z");
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenLastCalledWith("/api/sync/pull");
+      expect(result).toEqual({ ...pullResp, full_resync_required: true });
+    });
   });
 
   // ---------------------------------------------------------------------------
