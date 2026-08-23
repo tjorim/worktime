@@ -107,6 +107,39 @@ class TestSyncStatus:
 class TestSyncPull:
     """GET /db/sync/pull"""
 
+    def test_timezone_naive_cursor_is_normalized(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "naive-cursor-user")
+        naive_since = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+        response = db_client.get(
+            "/api/sync/pull",
+            params={"since": naive_since},
+            headers=auth_headers(user_id),
+        )
+
+        assert response.status_code == 200
+
+    def test_expired_cursor_requires_full_resync(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "expired-cursor-user")
+
+        response = db_client.get(
+            "/api/sync/pull",
+            params={"since": _ts(-91 * 24 * 60 * 60)},
+            headers=auth_headers(user_id),
+        )
+
+        assert response.status_code == 410
+        assert response.json()["detail"] == {
+            "code": "sync_cursor_expired",
+            "message": "Sync cursor is outside the supported offline window; perform a full resync.",
+            "max_offline_days": 90,
+        }
+
+        retry = db_client.get("/api/sync/pull", headers=auth_headers(user_id))
+        assert retry.status_code == 200
+
     def test_pull_returns_all_records_without_since(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "pull-user-1")
