@@ -26,6 +26,7 @@ from app.services.sync_service import (
     pull_changes,
     push_changes,
 )
+from app.utils.datetime import as_utc
 from app.utils.sse_manager import notify_sync_changed, sync_event_manager
 from app.utils.timing import time_operation
 
@@ -104,7 +105,8 @@ async def pull_endpoint(
     On the first sync, omit ``since`` to receive all records.  Store the
     returned ``server_timestamp`` and pass it as ``since`` on the next call.
     """
-    if since != _EPOCH and since < datetime.now(UTC) - MAX_SYNC_OFFLINE_PERIOD:
+    since_utc = as_utc(since)
+    if since_utc != _EPOCH and since_utc < datetime.now(UTC) - MAX_SYNC_OFFLINE_PERIOD:
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
             detail={
@@ -116,7 +118,7 @@ async def pull_endpoint(
 
     timings: dict[str, float] = {}
     with time_operation("sync", timings):
-        result = await pull_changes(session, authenticated_user_id, since)
+        result = await pull_changes(session, authenticated_user_id, since_utc)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
