@@ -229,6 +229,8 @@ export interface SyncPullResponse {
   time_off_entries: TimeOffEntrySyncRead[];
   gantt_tasks: GanttTaskSyncRead[];
   server_timestamp: string;
+  /** Client-only marker: the server rejected an expired cursor and this is the replacement pull. */
+  full_resync_required?: boolean;
 }
 
 export interface SyncStatusResponse {
@@ -615,6 +617,11 @@ export async function pullSyncData(
   try {
     const url = since ? `/api/sync/pull?since=${encodeURIComponent(since)}` : "/api/sync/pull";
     const response = await fetch(url);
+    if (response.status === 410 && since) {
+      const retry = await fetch("/api/sync/pull");
+      if (!retry.ok) return null;
+      return { ...((await retry.json()) as SyncPullResponse), full_resync_required: true };
+    }
     if (!response.ok) return null;
     return (await response.json()) as SyncPullResponse;
   } catch {

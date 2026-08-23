@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -34,6 +34,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sync", tags=["Sync"])
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+# Incremental sync is supported for devices that have been offline for at most
+# 90 days. Tombstones older than this window may have been physically purged,
+# so accepting an older cursor could omit a deletion and let stale local data
+# survive. A 410 tells the client to discard its incremental cursor and replace
+# its local sync-managed collections from a pull with no ``since`` parameter.
+MAX_SYNC_OFFLINE_PERIOD = timedelta(days=90)
 
 # Keepalive interval for SSE connections (seconds).  A comment line is sent
 # when no real event arrives within this window to prevent proxy/firewall
@@ -97,6 +104,16 @@ async def pull_endpoint(
     On the first sync, omit ``since`` to receive all records.  Store the
     returned ``server_timestamp`` and pass it as ``since`` on the next call.
     """
+    if since != _EPOCH and since < datetime.now(UTC) - MAX_SYNC_OFFLINE_PERIOD:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail={
+                "code": "sync_cursor_expired",
+                "message": "Sync cursor is outside the supported offline window; perform a full resync.",
+                "max_offline_days": MAX_SYNC_OFFLINE_PERIOD.days,
+            },
+        )
+
     timings: dict[str, float] = {}
     with time_operation("sync", timings):
         result = await pull_changes(session, authenticated_user_id, since)

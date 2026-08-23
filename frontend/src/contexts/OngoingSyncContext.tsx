@@ -31,7 +31,11 @@ import {
   createFetchSseTransport,
   type SyncSignalTransport,
 } from "@/hooks/useSyncSignal";
-import { setSyncCollectionAuth, applyIncrementalPullToCollections } from "@/db/collections";
+import {
+  setSyncCollectionAuth,
+  applyIncrementalPullToCollections,
+  applyPullToCollections,
+} from "@/db/collections";
 import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
 
 const PREFERENCES_PULL_DEBOUNCE_MS = 250;
@@ -122,7 +126,11 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   // Build the incremental-pull callback. When a pull returns data, apply it
   // to all collections via direct writes (no server re-push triggered).
   const onIncrementalPull = useCallback((data: SyncPullResponse) => {
-    applyIncrementalPullToCollections(data);
+    if (data.full_resync_required) {
+      applyPullToCollections(data);
+    } else {
+      applyIncrementalPullToCollections(data);
+    }
   }, []);
 
   const {
