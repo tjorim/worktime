@@ -8,6 +8,7 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -40,6 +41,14 @@ def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
 def _ts(offset_seconds: float = 0.0) -> str:
     """Return an ISO timestamp offset from now."""
     return (datetime.now(UTC) + timedelta(seconds=offset_seconds)).isoformat()
+
+
+def test_tombstone_cleanup_retains_a_margin_beyond_the_cursor_window() -> None:
+    """Cleanup must not race a cursor accepted at the 90-day boundary."""
+    cleanup_sql = (Path(__file__).parents[1] / "sql" / "purge_sync_tombstones.sql").read_text(encoding="utf-8")
+
+    assert cleanup_sql.count("INTERVAL '91 days'") == 6
+    assert "INTERVAL '90 days'" not in cleanup_sql
 
 
 # ---------------------------------------------------------------------------

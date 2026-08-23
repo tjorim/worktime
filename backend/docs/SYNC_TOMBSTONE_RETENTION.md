@@ -7,8 +7,11 @@ per-device acknowledgement: the service does not maintain a device registry.
 Every sync-managed model with a `deleted_at` marker follows the same rule:
 labels, time-tracking tasks, time-tracking templates, work locations, time-off
 entries, and Gantt tasks remain available to incremental pulls for the entire
-window. The cutoff is evaluated against server time and is strict: a tombstone
-is purgeable only when `deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'`.
+window. Physical cleanup retains tombstones for **91 days**, providing a
+one-day safety margin beyond the public 90-day cursor window. This prevents a
+cursor accepted near the boundary from racing a cleanup run whose cutoff is
+evaluated moments later. The purge cutoff is strict: a tombstone is purgeable
+only when `deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'`.
 
 ## Returning after the window
 

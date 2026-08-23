@@ -1,5 +1,7 @@
 -- Purge one bounded batch of sync tombstones that are older than the supported
--- 90-day offline window. Run repeatedly until all returned counts are zero.
+-- 90-day offline window, plus a one-day safety margin so a cursor accepted at
+-- the edge of that window cannot race cleanup. Run repeatedly until all
+-- returned counts are zero.
 --
 -- Child tables are processed before labels because their label_id foreign keys
 -- intentionally do not cascade. Every predicate requires deleted_at to be both
@@ -12,7 +14,7 @@ purged_tasks AS (
     DELETE FROM time_tracking_tasks
     WHERE id IN (
         SELECT id FROM time_tracking_tasks
-        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'
+        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'
         ORDER BY deleted_at, id LIMIT 1000
     )
     RETURNING 1
@@ -21,7 +23,7 @@ purged_templates AS (
     DELETE FROM time_tracking_templates
     WHERE id IN (
         SELECT id FROM time_tracking_templates
-        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'
+        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'
         ORDER BY deleted_at, id LIMIT 1000
     )
     RETURNING 1
@@ -30,7 +32,7 @@ purged_locations AS (
     DELETE FROM work_locations
     WHERE id IN (
         SELECT id FROM work_locations
-        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'
+        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'
         ORDER BY deleted_at, id LIMIT 1000
     )
     RETURNING 1
@@ -39,7 +41,7 @@ purged_time_off AS (
     DELETE FROM time_off_entries
     WHERE id IN (
         SELECT id FROM time_off_entries
-        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'
+        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'
         ORDER BY deleted_at, id LIMIT 1000
     )
     RETURNING 1
@@ -48,7 +50,7 @@ purged_gantt AS (
     DELETE FROM gantt_tasks
     WHERE id IN (
         SELECT id FROM gantt_tasks
-        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'
+        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'
         ORDER BY deleted_at, id LIMIT 1000
     )
     RETURNING 1
@@ -57,7 +59,7 @@ purged_labels AS (
     DELETE FROM labels
     WHERE id IN (
         SELECT id FROM labels
-        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'
+        WHERE deleted_at < CURRENT_TIMESTAMP - INTERVAL '91 days'
           AND NOT EXISTS (SELECT 1 FROM time_tracking_tasks t WHERE t.label_id = labels.id)
           AND NOT EXISTS (SELECT 1 FROM time_tracking_templates t WHERE t.label_id = labels.id)
           AND NOT EXISTS (SELECT 1 FROM gantt_tasks g WHERE g.label_id = labels.id)
