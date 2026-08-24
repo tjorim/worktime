@@ -37,8 +37,8 @@ class ReminderScheduler(private val context: Context) {
 
     fun restore() {
         listOf(TYPE_SHIFT, TYPE_TIMER).forEach { type ->
-            val account = store.getInt(KEY_ACCOUNT, -1)
-            if (account < 0) {
+            val account = store.getInt(KEY_ACCOUNT, INVALID_ID)
+            if (account < MIN_VALID_ID) {
                 cancel(type)
                 return@forEach
             }
@@ -61,7 +61,7 @@ class ReminderScheduler(private val context: Context) {
                             cancel(type)
                         }
                     } else {
-                        val at = store.getLong("${type}_at", -1)
+                        val at = store.getLong("${type}_at", INVALID_ID.toLong())
                         val message = store.getString("${type}_message", null)
                         if (at > System.currentTimeMillis() && message != null) {
                             set(type, at, account, message)
@@ -71,7 +71,7 @@ class ReminderScheduler(private val context: Context) {
                     }
                 }
                 TYPE_TIMER -> {
-                    val at = store.getLong("${type}_at", -1)
+                    val at = store.getLong("${type}_at", INVALID_ID.toLong())
                     val message = store.getString("${type}_message", null)
                     if (at > System.currentTimeMillis() && message != null) {
                         set(type, at, account, message)
@@ -80,7 +80,7 @@ class ReminderScheduler(private val context: Context) {
                     }
                 }
                 else -> {
-                    val at = store.getLong("${type}_at", -1)
+                    val at = store.getLong("${type}_at", INVALID_ID.toLong())
                     val message = store.getString("${type}_message", null)
                     if (at > System.currentTimeMillis() && message != null) {
                         set(type, at, account, message)
@@ -148,7 +148,7 @@ class ReminderScheduler(private val context: Context) {
             }
             else -> false
         }
-        val storedAt = store.getLong("${type}_at", -1)
+        val storedAt = store.getLong("${type}_at", INVALID_ID.toLong())
         val storedMessage = store.getString("${type}_message", null)
         if (!identityChanged && storedAt == at && storedMessage == message) return
         store.edit().apply {
@@ -175,7 +175,7 @@ class ReminderScheduler(private val context: Context) {
     }
 
     private fun cancel(type: String) {
-        alarms?.cancel(pendingIntent(type, 0, ""))
+        alarms?.cancel(pendingIntent(type, INVALID_ACCOUNT_SENTINEL, ""))
         store.edit().apply {
             remove("${type}_at")
             remove("${type}_message")
@@ -214,13 +214,15 @@ class ReminderScheduler(private val context: Context) {
         private const val REQUEST_CODE_TIMER = 2002
         private const val INVALID_ACCOUNT_SENTINEL = -2
         private const val MINUTES_PER_HOUR = 60
+        private const val INVALID_ID = -1
+        private const val MIN_VALID_ID = 0
     }
 }
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val store = context.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE)
-        if (intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, -1) !=
+        if (intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, INVALID_ID) !=
             store.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
         ) {
             return
