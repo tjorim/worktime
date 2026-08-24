@@ -214,7 +214,7 @@ class ReminderScheduler(private val context: Context) {
         private const val REQUEST_CODE_TIMER = 2002
         private const val INVALID_ACCOUNT_SENTINEL = -2
         private const val MINUTES_PER_HOUR = 60
-        private const val INVALID_ID = -1
+        internal const val INVALID_ID = -1
         private const val MIN_VALID_ID = 0
     }
 }
@@ -222,7 +222,7 @@ class ReminderScheduler(private val context: Context) {
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val store = context.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE)
-        if (intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, INVALID_ID) !=
+        if (intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, ReminderScheduler.INVALID_ID) !=
             store.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
         ) {
             return
