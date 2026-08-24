@@ -188,16 +188,15 @@ class ReminderScheduler(private val context: Context) {
         }
     }
 
-    private fun pendingIntent(type: String, account: Int, message: String) =
-        PendingIntent.getBroadcast(
-            context,
-            if (type == TYPE_SHIFT) REQUEST_CODE_SHIFT else REQUEST_CODE_TIMER,
-            Intent(context, ReminderReceiver::class.java)
-                .setAction(type)
-                .putExtra(EXTRA_ACCOUNT, account)
-                .putExtra(EXTRA_MESSAGE, message),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    private fun pendingIntent(type: String, account: Int, message: String) = PendingIntent.getBroadcast(
+        context,
+        if (type == TYPE_SHIFT) REQUEST_CODE_SHIFT else REQUEST_CODE_TIMER,
+        Intent(context, ReminderReceiver::class.java)
+            .setAction(type)
+            .putExtra(EXTRA_ACCOUNT, account)
+            .putExtra(EXTRA_MESSAGE, message),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
     companion object {
         internal const val STORE = "scheduled_reminders"
@@ -211,7 +210,7 @@ class ReminderScheduler(private val context: Context) {
         private const val MIN_SCHEDULE_DELAY_MILLIS = 1_000L
         private const val REQUEST_CODE_SHIFT = 2001
         private const val REQUEST_CODE_TIMER = 2002
-        private const val INVALID_ACCOUNT_SENTINEL = -2
+        internal const val INVALID_ACCOUNT_SENTINEL = -2
         private const val MINUTES_PER_HOUR = 60
         internal const val INVALID_ID = -1
         private const val MIN_VALID_ID = 0

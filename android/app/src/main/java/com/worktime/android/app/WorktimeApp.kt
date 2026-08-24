@@ -1,5 +1,4 @@
 package com.worktime.android.app
-
 import android.content.ContextWrapper
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,8 +38,8 @@ import com.worktime.android.app.navigation.WorktimeDestination
 import com.worktime.android.core.auth.AuthErrorMessages
 import com.worktime.android.core.auth.BiometricAuthenticator
 import com.worktime.android.core.auth.SessionState
-import com.worktime.android.core.notifications.WorktimeNotifications
 import com.worktime.android.core.notifications.ReminderScheduler
+import com.worktime.android.core.notifications.WorktimeNotifications
 import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
