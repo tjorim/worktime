@@ -42,6 +42,7 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import type { IsoAlpha2 } from "@/types/countries";
+import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import type { SyncPullResponse, TaskSyncRead, LabelSyncRead } from "@/utils/syncClient";
 
 const mockFetch = vi.fn();
@@ -847,7 +848,8 @@ describe("syncClient", () => {
         text: "Gone",
         label: "",
         startTime: "2026-01-01T10:00",
-      });
+        deleted_at: "2026-01-02T00:00:00.000Z",
+      } as StoredTimeTrackingTask & { deleted_at: string });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
