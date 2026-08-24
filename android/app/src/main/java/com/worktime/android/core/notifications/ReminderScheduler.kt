@@ -50,7 +50,9 @@ class ReminderScheduler(private val context: Context) {
                         val hour = hourStr.toDoubleOrNull() ?: return@forEach cancel(type)
                         val hours = hour.toInt()
                         val minutes = ((hour - hours) * 60).toInt()
-                        val start = java.time.LocalDate.parse(date).atTime(hours, minutes).atZone(ZoneId.systemDefault())
+                        val start = java.time.LocalDate.parse(date)
+                            .atTime(hours, minutes)
+                            .atZone(ZoneId.systemDefault())
                         val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
                         val message = store.getString("${type}_message", null)
                         if (at > System.currentTimeMillis() && message != null) {
@@ -94,7 +96,9 @@ class ReminderScheduler(private val context: Context) {
         val hour = shift.shift.startHour ?: return cancel(TYPE_SHIFT)
         val hours = hour.toInt()
         val minutes = ((hour - hours) * 60).toInt()
-        val start = shift.date.let(java.time.LocalDate::parse).atTime(hours, minutes).atZone(ZoneId.systemDefault())
+        val start = shift.date.let(java.time.LocalDate::parse)
+            .atTime(hours, minutes)
+            .atZone(ZoneId.systemDefault())
         val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
         if (start.toInstant().toEpochMilli() <= System.currentTimeMillis()) return cancel(TYPE_SHIFT)
         persistAndSet(
@@ -117,7 +121,9 @@ class ReminderScheduler(private val context: Context) {
             at,
             accountId,
             "Timer running for ${task.text} appears stale",
-            taskId = task.id
+            null,
+            null,
+            task.id
         )
     }
 
@@ -187,8 +193,10 @@ class ReminderScheduler(private val context: Context) {
         PendingIntent.getBroadcast(
             context,
             if (type == TYPE_SHIFT) REQUEST_CODE_SHIFT else REQUEST_CODE_TIMER,
-            Intent(context, ReminderReceiver::class.java).setAction(type)
-                .putExtra(EXTRA_ACCOUNT, account).putExtra(EXTRA_MESSAGE, message),
+            Intent(context, ReminderReceiver::class.java)
+                .setAction(type)
+                .putExtra(EXTRA_ACCOUNT, account)
+                .putExtra(EXTRA_MESSAGE, message),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
