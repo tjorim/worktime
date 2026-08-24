@@ -32,6 +32,7 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import type { TimeOffDateEntry, TimeOffRangeEntry, TimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import {
   ganttTasksCollection,
   labelsCollection,
@@ -40,6 +41,8 @@ import {
   timeOffCollection,
   workLocationsCollection,
 } from "@/db/collections";
+import type { IsoAlpha2 } from "@/types/countries";
+import type { SyncPullResponse, TaskSyncRead, LabelSyncRead } from "@/utils/syncClient";
 
 const mockFetch = vi.fn();
 
@@ -221,7 +224,7 @@ describe("syncClient", () => {
         },
       });
       expect(result.labels).toHaveLength(1);
-      expect(result.labels[0].id).toBe("l2");
+      expect(result.labels[0]!.id).toBe("l2");
       expect(result.tasks).toHaveLength(0);
     });
 
@@ -234,7 +237,7 @@ describe("syncClient", () => {
         },
       });
       expect(result.work_locations).toHaveLength(1);
-      expect(result.work_locations[0].date).toBe("2026-01-05");
+      expect(result.work_locations[0]!.date).toBe("2026-01-05");
     });
 
     it("returns empty arrays for entity types absent from response results", () => {
@@ -276,12 +279,12 @@ describe("syncClient", () => {
 
       const result = bumpClientTimestamps(payload);
 
-      expect(result.labels[0].client_updated_at).toBe(now);
-      expect(result.tasks[0].client_updated_at).toBe(now);
-      expect(result.templates[0].client_updated_at).toBe(now);
-      expect(result.work_locations[0].client_updated_at).toBe(now);
-      expect(result.time_off_entries[0].client_updated_at).toBe(now);
-      expect(result.gantt_tasks[0].client_updated_at).toBe(now);
+      expect(result.labels[0]!.client_updated_at).toBe(now);
+      expect(result.tasks[0]!.client_updated_at).toBe(now);
+      expect(result.templates[0]!.client_updated_at).toBe(now);
+      expect(result.work_locations[0]!.client_updated_at).toBe(now);
+      expect(result.time_off_entries[0]!.client_updated_at).toBe(now);
+      expect(result.gantt_tasks[0]!.client_updated_at).toBe(now);
 
       vi.useRealTimers();
     });
@@ -299,7 +302,7 @@ describe("syncClient", () => {
 
       bumpClientTimestamps(payload);
 
-      expect(payload.labels[0].client_updated_at).toBe(before);
+      expect(payload.labels[0]!.client_updated_at).toBe(before);
     });
 
     it("uses local clock when serverTimestampFloor is not provided", () => {
@@ -316,7 +319,7 @@ describe("syncClient", () => {
         gantt_tasks: [],
       };
       const result = bumpClientTimestamps(payload);
-      expect(result.labels[0].client_updated_at).toBe(now);
+      expect(result.labels[0]!.client_updated_at).toBe(now);
       vi.useRealTimers();
     });
 
@@ -335,7 +338,7 @@ describe("syncClient", () => {
         gantt_tasks: [],
       };
       const result = bumpClientTimestamps(payload, serverFloor);
-      expect(result.labels[0].client_updated_at).toBe(serverFloor);
+      expect(result.labels[0]!.client_updated_at).toBe(serverFloor);
       vi.useRealTimers();
     });
 
@@ -354,7 +357,7 @@ describe("syncClient", () => {
         gantt_tasks: [],
       };
       const result = bumpClientTimestamps(payload, serverFloor);
-      expect(result.labels[0].client_updated_at).toBe(now);
+      expect(result.labels[0]!.client_updated_at).toBe(now);
       vi.useRealTimers();
     });
 
@@ -372,7 +375,7 @@ describe("syncClient", () => {
         gantt_tasks: [],
       };
       const result = bumpClientTimestamps(payload, "not-a-date");
-      expect(result.labels[0].client_updated_at).toBe(now);
+      expect(result.labels[0]!.client_updated_at).toBe(now);
       vi.useRealTimers();
     });
   });
@@ -536,7 +539,14 @@ describe("syncClient", () => {
       const response = { results: { tasks: [] } };
       mockFetch.mockResolvedValue({ ok: true, json: async () => response });
 
-      const payload = { labels: [], tasks: [], templates: [], work_locations: [] };
+      const payload: SyncPushPayload = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
       const result = await pushSyncPayload(mockFetch, payload);
 
       expect(result).toEqual(response);
@@ -553,6 +563,8 @@ describe("syncClient", () => {
         tasks: [],
         templates: [],
         work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
       });
       expect(result).toBeNull();
     });
@@ -717,7 +729,7 @@ describe("syncClient", () => {
         name: "Work",
         color: "#FF0000",
       });
-      expect(typeof payload.labels[0].client_updated_at).toBe("string");
+      expect(typeof payload.labels[0]!.client_updated_at).toBe("string");
     });
 
     it("converts tasks to sync items with UTC start_time", () => {
@@ -741,8 +753,8 @@ describe("syncClient", () => {
         includes_break: true,
       });
       // start_time and stop_time should be ISO strings ending with Z (UTC)
-      expect(payload.tasks[0].start_time).toMatch(/Z$/);
-      expect(payload.tasks[0].stop_time).toMatch(/Z$/);
+      expect(payload.tasks[0]!.start_time).toMatch(/Z$/);
+      expect(payload.tasks[0]!.stop_time).toMatch(/Z$/);
     });
 
     it("handles tasks with no stopTime", () => {
@@ -754,7 +766,7 @@ describe("syncClient", () => {
       });
 
       const payload = buildLocalSyncPushPayload();
-      expect(payload.tasks[0].stop_time).toBeNull();
+      expect(payload.tasks[0]!.stop_time).toBeNull();
     });
 
     it("converts templates with HH:mm:ss time format", () => {
@@ -785,7 +797,7 @@ describe("syncClient", () => {
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(1);
-      expect(payload.labels[0].id).toBe("lbl-good");
+      expect(payload.labels[0]!.id).toBe("lbl-good");
     });
 
     it("excludes templates with missing required fields", () => {
@@ -820,7 +832,7 @@ describe("syncClient", () => {
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.templates).toHaveLength(1);
-      expect(payload.templates[0].id).toBe("tmpl-good");
+      expect(payload.templates[0]!.id).toBe("tmpl-good");
     });
 
     it("excludes soft-deleted tasks from the payload", () => {
@@ -835,12 +847,11 @@ describe("syncClient", () => {
         text: "Gone",
         label: "",
         startTime: "2026-01-01T10:00",
-        deleted_at: "2026-01-02T00:00:00.000Z" as never,
       });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
-      expect(payload.tasks[0].id).toBe("task-live");
+      expect(payload.tasks[0]!.id).toBe("task-live");
     });
 
     it("nulls out a task's label_id when the referenced label was dropped by the label filter", () => {
@@ -856,7 +867,7 @@ describe("syncClient", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(0);
       expect(payload.tasks).toHaveLength(1);
-      expect(payload.tasks[0].label_id).toBeNull();
+      expect(payload.tasks[0]!.label_id).toBeNull();
     });
 
     it("nulls out a template's label_id when the referenced label was dropped by the label filter", () => {
@@ -871,7 +882,7 @@ describe("syncClient", () => {
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.templates).toHaveLength(1);
-      expect(payload.templates[0].label_id).toBeNull();
+      expect(payload.templates[0]!.label_id).toBeNull();
     });
 
     it("nulls out a task's gantt_task_id when the referenced gantt task was dropped by the gantt filter", () => {
@@ -881,6 +892,7 @@ describe("syncClient", () => {
         name: "",
         start: "2026-01-01",
         end: "2026-01-02",
+        progress: 0,
       });
       tasksCollection.insert({
         id: "task-1",
@@ -893,7 +905,7 @@ describe("syncClient", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.gantt_tasks).toHaveLength(0);
       expect(payload.tasks).toHaveLength(1);
-      expect(payload.tasks[0].gantt_task_id).toBeNull();
+      expect(payload.tasks[0]!.gantt_task_id).toBeNull();
     });
 
     it("nulls out a gantt task's own label_id when the referenced label was dropped by the label filter", () => {
@@ -904,11 +916,12 @@ describe("syncClient", () => {
         label: "lbl-dropped",
         start: "2026-01-01",
         end: "2026-01-02",
+        progress: 0,
       });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.gantt_tasks).toHaveLength(1);
-      expect(payload.gantt_tasks[0].label_id).toBeNull();
+      expect(payload.gantt_tasks[0]!.label_id).toBeNull();
     });
 
     it("keeps label_id/gantt_task_id references that survive both filters", () => {
@@ -918,6 +931,7 @@ describe("syncClient", () => {
         name: "Plan release",
         start: "2026-01-01",
         end: "2026-01-02",
+        progress: 0,
       });
       tasksCollection.insert({
         id: "task-1",
@@ -928,18 +942,18 @@ describe("syncClient", () => {
       });
 
       const payload = buildLocalSyncPushPayload();
-      expect(payload.tasks[0].label_id).toBe("label-1");
-      expect(payload.tasks[0].gantt_task_id).toBe("gantt-1");
+      expect(payload.tasks[0]!.label_id).toBe("label-1");
+      expect(payload.tasks[0]!.gantt_task_id).toBe("gantt-1");
     });
 
     it("converts work locations from the flat collection", () => {
       workLocationsCollection.insert({
         date: "2026-01-05",
-        countryCode: "NL",
+        countryCode: "NL" as IsoAlpha2,
       });
       workLocationsCollection.insert({
         date: "2026-01-06",
-        countryCode: "DE",
+        countryCode: "DE" as IsoAlpha2,
         label: "Berlin",
       });
 
@@ -959,13 +973,13 @@ describe("syncClient", () => {
   // ---------------------------------------------------------------------------
 
   describe("buildKeepLocalReplacePayload", () => {
-    const makeEmptyPullResponse = () => ({
-      labels: [] as never[],
-      tasks: [] as never[],
-      templates: [] as never[],
-      work_locations: [] as never[],
-      time_off_entries: [] as never[],
-      gantt_tasks: [] as never[],
+    const makeEmptyPullResponse = (): SyncPullResponse => ({
+      labels: [],
+      tasks: [],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      gantt_tasks: [],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -1061,9 +1075,9 @@ describe("syncClient", () => {
       // anchor it with one unrelated local record.
       labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
-      const serverData = {
+      const serverData: SyncPullResponse = {
         ...makeEmptyPullResponse(),
-        tasks: [makeServerTask("server-task")],
+        tasks: [makeServerTask("server-task") as TaskSyncRead],
       };
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
@@ -1076,9 +1090,9 @@ describe("syncClient", () => {
       // anchor it with one unrelated local record.
       labelsCollection.insert({ id: "anchor-lbl", name: "Anchor", color: "#000000" });
       const localPayload = buildLocalSyncPushPayload();
-      const serverData = {
+      const serverData: SyncPullResponse = {
         ...makeEmptyPullResponse(),
-        tasks: [makeServerTask("deleted-task", "2026-01-02T00:00:00Z")],
+        tasks: [makeServerTask("deleted-task", "2026-01-02T00:00:00Z") as TaskSyncRead],
       };
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
@@ -1166,9 +1180,9 @@ describe("syncClient", () => {
       mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
       await pushSyncPayload(mockFetch, payload);
 
-      const bodies = mockFetch.mock.calls
-        .filter(([url]: [string]) => url === "/api/sync/push")
-        .map(([, init]: [string, RequestInit]) => JSON.parse(String(init.body)));
+      const bodies = (mockFetch.mock.calls as [string, RequestInit][])
+        .filter((call) => call[0] === "/api/sync/push")
+        .map((call) => JSON.parse(String(call[1].body)));
 
       expect(bodies.length).toBeGreaterThan(1);
       for (const body of bodies) {
@@ -1191,9 +1205,9 @@ describe("syncClient", () => {
       mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
       await pushSyncPayload(mockFetch, payload);
 
-      const bodies = mockFetch.mock.calls
-        .filter(([url]: [string]) => url === "/api/sync/push")
-        .map(([, init]: [string, RequestInit]) => JSON.parse(String(init.body)));
+      const bodies = (mockFetch.mock.calls as [string, RequestInit][])
+        .filter((call) => call[0] === "/api/sync/push")
+        .map((call) => JSON.parse(String(call[1].body)));
       expect(bodies.length).toBeGreaterThan(1);
       for (const body of bodies) {
         expect(body.declared_delete_total).toBeUndefined();
@@ -1203,10 +1217,10 @@ describe("syncClient", () => {
     it("refuses to build a replace payload when the local side is empty", () => {
       localStorage.clear();
       const localPayload = buildLocalSyncPushPayload();
-      const serverData = {
+      const serverData: SyncPullResponse = {
         ...makeEmptyPullResponse(),
-        labels: [makeServerLabel("server-lbl")],
-        tasks: [makeServerTask("server-task")],
+        labels: [makeServerLabel("server-lbl") as LabelSyncRead],
+        tasks: [makeServerTask("server-task") as TaskSyncRead],
       };
 
       // An empty local snapshot would turn "keep my local data" into a batch
@@ -1266,7 +1280,7 @@ describe("syncClient", () => {
         buildTimeOffEntryForRange({
           start: "2026-12-24",
           end: "2026-12-26",
-          note: null,
+          note: undefined,
           entryType: "vacation",
           entryFlag: "full_day",
         }),
@@ -1287,21 +1301,21 @@ describe("syncClient", () => {
         buildTimeOffEntryForRange({
           start: "2026-01-01",
           end: "2026-01-01",
-          note: null,
+          note: undefined,
           entryType: "business",
           entryFlag: "full_day",
         }),
         buildTimeOffEntryForRange({
           start: "2026-01-02",
           end: "2026-01-02",
-          note: null,
+          note: undefined,
           entryType: "ill",
           entryFlag: "full_day",
         }),
         buildTimeOffEntryForRange({
           start: "2026-01-03",
           end: "2026-01-03",
-          note: null,
+          note: undefined,
           entryType: "in",
           entryFlag: "full_day",
         }),
@@ -1318,7 +1332,7 @@ describe("syncClient", () => {
           buildTimeOffEntryForRange({
             start: "2026-06-01",
             end: "2026-06-01",
-            note: null,
+            note: undefined,
             entryType: "vacation",
             entryFlag: "half_am",
           }),
@@ -1333,7 +1347,7 @@ describe("syncClient", () => {
       const [entry] = [
         createWeeklyTimeOffEntry({
           weekday: 1,
-          note: null,
+          note: undefined,
           entryType: "in",
           entryFlag: "full_day",
         }),
@@ -1362,7 +1376,7 @@ describe("syncClient", () => {
           buildTimeOffEntryForRange({
             start: "2026-05-01",
             end: "2026-05-01",
-            note: null,
+            note: undefined,
             entryType: "vacation",
             entryFlag: "full_day",
           }),
@@ -1379,7 +1393,7 @@ describe("syncClient", () => {
 
   describe("buildLocalSyncPushPayload — time_off_entries", () => {
     it("includes time-off entries from canonical storage", () => {
-      const entry = {
+      const entry: TimeOffDateEntry = {
         id: "e1",
         entryKind: "date",
         date: "2026-07-14",
@@ -1401,7 +1415,7 @@ describe("syncClient", () => {
     });
 
     it("preserves multi-day range entries as single entries", () => {
-      const entry = {
+      const entry: TimeOffRangeEntry = {
         id: "e2",
         entryKind: "range",
         start: "2026-12-24",
@@ -1421,7 +1435,7 @@ describe("syncClient", () => {
     });
 
     it("includes weekly entries", () => {
-      const entry = {
+      const entry: TimeOffWeeklyEntry = {
         id: "e3",
         entryKind: "weekly",
         weekday: 1,
@@ -1700,7 +1714,7 @@ describe("syncClient", () => {
       expect(raw).not.toBeNull();
       const stored = JSON.parse(raw!);
       expect(stored).toHaveLength(1);
-      expect(stored[0].tasks[0].id).toBe("t1");
+      expect(stored[0]!.tasks[0]!.id).toBe("t1");
     });
 
     it("clearSyncOutbox removes the outbox key", () => {

@@ -13,7 +13,6 @@ const dateEntry = (date: string) =>
   buildTimeOffEntryForRange({
     start: date,
     end: date,
-    note: null,
     entryType: "vacation",
     entryFlag: "full_day",
   });
@@ -22,7 +21,6 @@ const rangeEntry = (start: string, end: string) =>
   buildTimeOffEntryForRange({
     start,
     end,
-    note: null,
     entryType: "vacation",
     entryFlag: "full_day",
   });
@@ -30,7 +28,6 @@ const rangeEntry = (start: string, end: string) =>
 const weeklyEntry = (weekday: number) =>
   createWeeklyTimeOffEntry({
     weekday,
-    note: null,
     entryType: "in",
     entryFlag: "full_day",
   });

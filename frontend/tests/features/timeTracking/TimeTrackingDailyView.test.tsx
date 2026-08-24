@@ -603,7 +603,7 @@ describe("TimeTrackingDailyView", () => {
       await user.click(screen.getByRole("button", { name: /Add Task/i }));
 
       const alerts = screen.getAllByRole("alert");
-      const mainAlert = alerts[0]; // First alert is the main validation alert
+      const mainAlert = alerts[0]!; // First alert is the main validation alert
       expect(mainAlert.textContent).toMatch(/Time range overlaps/i);
     });
   });

@@ -18,7 +18,6 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,
       },
@@ -138,7 +137,6 @@ describe("ShiftTimeline", () => {
       settings: {
         timeFormat: "24h" as const,
         theme: "auto" as const,
-        vacationAllowance: { yearlyAmounts: {}, unit: "days" as const, hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,
       },
@@ -155,7 +153,7 @@ describe("ShiftTimeline", () => {
 
     beforeEach(() => {
       // Reset to default 5-shift before each test
-      vi.mocked(useSettings).mockReturnValue(defaultSettings as ReturnType<typeof useSettings>);
+      vi.mocked(useSettings).mockReturnValue(defaultSettings as unknown as ReturnType<typeof useSettings>);
     });
 
     afterEach(() => {
@@ -167,7 +165,7 @@ describe("ShiftTimeline", () => {
       vi.mocked(useSettings).mockReturnValue({
         ...defaultSettings,
         scheduleType: "9-5", // Single-team schedule
-      } as ReturnType<typeof useSettings>);
+      } as unknown as ReturnType<typeof useSettings>);
 
       const currentWorkingTeam = createMockShiftResult(1, "M", today);
       const { container } = renderWithProviders(

@@ -8,6 +8,7 @@ import {
 } from "@/utils/appBackup";
 import { getSyncOutboxKey, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { IsoAlpha2 } from "@/types/countries";
 import {
   ganttTasksCollection,
   labelsCollection,
@@ -83,15 +84,15 @@ describe("appBackup", () => {
     });
 
     it("includes work locations for all stored years", () => {
-      const loc2025 = { "2025-06-01": { countryCode: "NL" } };
-      const loc2026 = { "2026-02-24": { countryCode: "DE" } };
+      const loc2025 = { "2025-06-01": { countryCode: "NL" as IsoAlpha2 } };
+      const loc2026 = { "2026-02-24": { countryCode: "DE" as IsoAlpha2 } };
       workLocationsCollection.insert({
         date: "2025-06-01",
-        countryCode: "NL",
+        countryCode: "NL" as IsoAlpha2,
       });
       workLocationsCollection.insert({
         date: "2026-02-24",
-        countryCode: "DE",
+        countryCode: "DE" as IsoAlpha2,
       });
       const payload = buildBackupPayload();
       expect(payload.workLocations).toEqual({ "2025": loc2025, "2026": loc2026 });
@@ -191,7 +192,7 @@ describe("appBackup", () => {
     it("detects work locations", () => {
       workLocationsCollection.insert({
         date: "2025-06-01",
-        countryCode: "NL",
+        countryCode: "NL" as IsoAlpha2,
       });
       const presence = checkBackupDataPresence();
       expect(presence.hasWorkLocations).toBe(true);
@@ -465,8 +466,8 @@ describe("appBackup", () => {
         expect(window.location.reload).not.toHaveBeenCalled();
         const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey("user-1"))!);
         expect(outbox).toHaveLength(1);
-        expect(outbox[0].allow_bulk_delete).toBe(true);
-        expect(outbox[0].labels).toEqual(
+        expect(outbox[0]!.allow_bulk_delete).toBe(true);
+        expect(outbox[0]!.labels).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ id: "l1", action: "create" }),
             expect.objectContaining({ id: "server-only", action: "delete" }),

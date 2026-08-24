@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { hdayToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
 import type { HdayEvent } from "@/lib/hday/types";
+import type { HolidayMetadata } from "@/lib/events/types";
 
 describe("Event Converters", () => {
   describe("hdayToCalendarEvents", () => {
@@ -18,11 +19,11 @@ describe("Event Converters", () => {
       const events = hdayToCalendarEvents(hdayEvent, startDate, endDate);
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe("holiday");
-      expect(events[0].start).toBe("2025-01-15");
-      expect(events[0].end).toBe("2025-01-15");
-      expect(events[0].label).toBe("Day off");
-      expect(events[0].id).toBeDefined();
+      expect(events[0]!!.type).toBe("holiday");
+      expect(events[0]!!.start).toBe("2025-01-15");
+      expect(events[0]!!.end).toBe("2025-01-15");
+      expect(events[0]!!.label).toBe("Day off");
+      expect(events[0]!!.id).toBeDefined();
     });
 
     it("should convert a multi-day range event to one CalendarEvent", () => {
@@ -39,10 +40,10 @@ describe("Event Converters", () => {
       const events = hdayToCalendarEvents(hdayEvent, startDate, endDate);
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe("holiday");
-      expect(events[0].start).toBe("2025-12-23");
-      expect(events[0].end).toBe("2025-12-27");
-      expect(events[0].label).toBe("Christmas vacation");
+      expect(events[0]!!.type).toBe("holiday");
+      expect(events[0]!!.start).toBe("2025-12-23");
+      expect(events[0]!!.end).toBe("2025-12-27");
+      expect(events[0]!!.label).toBe("Christmas vacation");
     });
 
     it("should convert a weekly event to multiple CalendarEvents within range", () => {
@@ -59,10 +60,10 @@ describe("Event Converters", () => {
       const events = hdayToCalendarEvents(hdayEvent, startDate, endDate);
 
       expect(events).toHaveLength(4);
-      expect(events[0].start).toBe("2025-01-06");
-      expect(events[1].start).toBe("2025-01-13");
-      expect(events[2].start).toBe("2025-01-20");
-      expect(events[3].start).toBe("2025-01-27");
+      expect(events[0]!!.start).toBe("2025-01-06");
+      expect(events[1]!!.start).toBe("2025-01-13");
+      expect(events[2]!!.start).toBe("2025-01-20");
+      expect(events[3]!!.start).toBe("2025-01-27");
 
       events.forEach((event) => {
         expect(event.type).toBe("holiday");
@@ -85,8 +86,8 @@ describe("Event Converters", () => {
       const events = hdayToCalendarEvents(hdayEvent, startDate, endDate);
 
       expect(events).toHaveLength(5);
-      expect(events[0].start).toBe("2025-01-03");
-      expect(events[4].start).toBe("2025-01-31");
+      expect(events[0]!!.start).toBe("2025-01-03");
+      expect(events[4]!!.start).toBe("2025-01-31");
     });
 
     it("should filter weekly events outside the date range", () => {
@@ -104,7 +105,7 @@ describe("Event Converters", () => {
 
       // Should only include Jan 6 (first Monday)
       expect(events).toHaveLength(1);
-      expect(events[0].start).toBe("2025-01-06");
+      expect(events[0]!!.start).toBe("2025-01-06");
     });
 
     it("should convert range events regardless of date range (filtering happens separately)", () => {
@@ -123,8 +124,8 @@ describe("Event Converters", () => {
 
       // Range events are always converted, filtering happens with filterEventsInRange
       expect(events).toHaveLength(1);
-      expect(events[0].start).toBe("2025-12-01");
-      expect(events[0].end).toBe("2025-12-31");
+      expect(events[0]!!.start).toBe("2025-12-01");
+      expect(events[0]!!.end).toBe("2025-12-31");
     });
 
     it("should include event metadata with color and flags", () => {
@@ -141,11 +142,11 @@ describe("Event Converters", () => {
       const events = hdayToCalendarEvents(hdayEvent, startDate, endDate);
 
       expect(events).toHaveLength(1);
-      expect(events[0].meta).toBeDefined();
-      expect(events[0].meta?.type).toBe("holiday");
-      expect(events[0].meta?.color).toBeDefined();
-      expect(events[0].meta?.flags).toEqual(["business", "half_am"]);
-      expect(events[0].meta?.typeLabel).toBeDefined();
+      expect(events[0]!!.meta).toBeDefined();
+      expect(events[0]!!.meta?.type).toBe("holiday");
+      expect((events[0]!!.meta as HolidayMetadata)?.color).toBeDefined();
+      expect((events[0]!!.meta as HolidayMetadata)?.flags).toEqual(["business", "half_am"]);
+      expect((events[0]!!.meta as HolidayMetadata)?.typeLabel).toBeDefined();
     });
 
     it("should handle events with no title", () => {
@@ -162,7 +163,7 @@ describe("Event Converters", () => {
 
       expect(events).toHaveLength(1);
       // When no title is provided, it falls back to the event type label
-      expect(events[0].label).toBe("Holiday");
+      expect(events[0]!!.label).toBe("Holiday");
     });
   });
 
@@ -175,6 +176,7 @@ describe("Event Converters", () => {
           start: "2025-01-05",
           end: "2025-01-05",
           label: "Event 1",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
         {
           id: "2",
@@ -182,6 +184,7 @@ describe("Event Converters", () => {
           start: "2025-01-15",
           end: "2025-01-15",
           label: "Event 2",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
         {
           id: "3",
@@ -189,14 +192,15 @@ describe("Event Converters", () => {
           start: "2025-01-25",
           end: "2025-01-25",
           label: "Event 3",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
       ];
 
       const filtered = filterEventsInRange(events, "2025-01-10", "2025-01-20");
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe("2");
-      expect(filtered[0].label).toBe("Event 2");
+      expect(filtered[0]!.id).toBe("2");
+      expect(filtered[0]!.label).toBe("Event 2");
     });
 
     it("should include events that overlap the date range", () => {
@@ -207,13 +211,14 @@ describe("Event Converters", () => {
           start: "2025-01-05",
           end: "2025-01-15", // Overlaps range
           label: "Multi-day event",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
       ];
 
       const filtered = filterEventsInRange(events, "2025-01-10", "2025-01-20");
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe("1");
+      expect(filtered[0]!.id).toBe("1");
     });
 
     it("should exclude events completely outside the date range", () => {
@@ -224,6 +229,7 @@ describe("Event Converters", () => {
           start: "2025-01-01",
           end: "2025-01-05",
           label: "Too early",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
         {
           id: "2",
@@ -231,6 +237,7 @@ describe("Event Converters", () => {
           start: "2025-01-25",
           end: "2025-01-31",
           label: "Too late",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
       ];
 
@@ -253,6 +260,7 @@ describe("Event Converters", () => {
           start: "2025-01-15",
           end: "2025-01-15",
           label: "Exact match",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
         {
           id: "2",
@@ -260,13 +268,14 @@ describe("Event Converters", () => {
           start: "2025-01-14",
           end: "2025-01-14",
           label: "Before",
+          meta: { type: "holiday" as const, color: "", textColor: "", flags: [], typeLabel: "" },
         },
       ];
 
       const filtered = filterEventsInRange(events, "2025-01-15", "2025-01-15");
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe("1");
+      expect(filtered[0]!.id).toBe("1");
     });
   });
 });

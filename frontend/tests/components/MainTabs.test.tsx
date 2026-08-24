@@ -4,6 +4,8 @@ import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { MainTabs } from "@/components/MainTabs";
 import { dayjs } from "@/utils/dateTimeUtils";
+import type { Dayjs } from "dayjs";
+import type { TabKey } from "@/contexts/SettingsContext";
 import { TestProviders } from "@tests/utils/testProviders";
 
 // Mock the child components
@@ -16,9 +18,9 @@ vi.mock("@/components/ScheduleTabView", () => ({
 const defaultProps = {
   myTeam: 1,
   currentDate: dayjs("2025-01-15"),
-  setCurrentDate: vi.fn(),
-  activeTab: "schedule",
-  onTabChange: vi.fn(),
+  setCurrentDate: vi.fn() as (date: Dayjs) => void,
+  activeTab: "schedule" as TabKey,
+  onTabChange: vi.fn() as (tab: TabKey) => void,
 };
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -81,7 +83,7 @@ describe("MainTabs", () => {
   describe("Tab navigation", () => {
     it("switches to Time Off tab when clicked", async () => {
       const user = userEvent.setup();
-      const mockOnTabChange = vi.fn();
+      const mockOnTabChange = vi.fn() as (tab: TabKey) => void;
 
       renderWithProviders(<MainTabs {...defaultProps} onTabChange={mockOnTabChange} />);
 
@@ -94,7 +96,7 @@ describe("MainTabs", () => {
 
   describe("Keyboard shortcuts", () => {
     it("calls onChangeTeam when Alt+T is pressed", () => {
-      const mockOnChangeTeam = vi.fn();
+      const mockOnChangeTeam = vi.fn() as () => void;
       renderWithProviders(<MainTabs {...defaultProps} onChangeTeam={mockOnChangeTeam} />);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", altKey: true }));

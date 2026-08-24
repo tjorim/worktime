@@ -228,16 +228,16 @@ describe("startPersistingSyncCollections", () => {
     await vi.advanceTimersByTimeAsync(600);
     vi.useRealTimers();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(channel.postMessage).toHaveBeenCalledWith({
+    expect(channel!.postMessage).toHaveBeenCalledWith({
       type: "snapshot_changed",
       name: "tasks",
       generation: "default",
     });
 
     await set(snapshotKey("tasks"), { version: 1, items: [{ id: "remote" }] });
-    channel.onmessage?.({
-      data: { type: "snapshot_changed", name: "tasks", generation: "default" },
-    } as MessageEvent<unknown>);
+    channel!.onmessage?.(
+      { data: { type: "snapshot_changed", name: "tasks", generation: "default" } } as MessageEvent<unknown>,
+    );
     await vi.waitFor(() => expect(getLoadedSnapshot("tasks")).toEqual([{ id: "remote" }]));
   });
 });

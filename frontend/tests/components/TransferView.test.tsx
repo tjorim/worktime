@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "@/components/TransferView";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
-import { useTransferCalculations, TransferType } from "@/hooks/useTransferCalculations";
+import { useTransferCalculations } from "@/hooks/useTransferCalculations";
+import type { TransferType } from "@/hooks/useTransferCalculations";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { CalendarEvent } from "@/lib/events/types";
 

@@ -64,7 +64,11 @@ describe("GanttTableView", () => {
   });
 
   it("shows a visible label for tasks with 0% progress", () => {
-    const emptyProgressTask: GanttTask = { ...tasks[1], id: "task-empty", progress: 0 };
+    const emptyProgressTask = {
+      ...tasks[1]!,
+      id: "task-empty",
+      progress: 0,
+    } satisfies GanttTask;
     render(
       <GanttTableView tasks={[emptyProgressTask]} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />,
     );

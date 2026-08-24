@@ -40,7 +40,7 @@ describe("useApiClient", () => {
 
     await result.current("/api/data", { headers: { "X-Test": "yes" } });
 
-    const [, init] = vi.mocked(apiFetch).mock.calls[0];
+    const [, init] = vi.mocked(apiFetch).mock.calls[0]!;
     const headers = new Headers(init?.headers);
     expect(headers.get("Authorization")).toBe("Bearer token-123");
     expect(headers.get("X-Test")).toBe("yes");
@@ -71,7 +71,7 @@ describe("useApiClient", () => {
       result.current("/api/data", { suppressUnauthorizedRedirect: true }),
     ).rejects.toThrow("Unauthorized");
 
-    const [, init] = vi.mocked(apiFetch).mock.calls[0];
+    const [, init] = vi.mocked(apiFetch).mock.calls[0]!;
     expect("suppressUnauthorizedRedirect" in (init ?? {})).toBe(false);
     expect(toast.showWarning).toHaveBeenCalledOnce();
     expect(auth.triggerLogin).not.toHaveBeenCalled();

@@ -111,10 +111,10 @@ describe("useLiveTime", () => {
     ];
 
     let callCount = 0;
-    vi.mocked(dayjs).mockImplementation(() => {
+    vi.mocked(dayjs).mockImplementation((): Dayjs => {
       const result = times[Math.min(callCount, times.length - 1)];
       callCount++;
-      return result;
+      return result!;
     });
 
     const { result } = renderHook(() => useLiveTime({ precision: "second" }));
@@ -149,10 +149,10 @@ describe("useLiveTime", () => {
       { format: vi.fn(() => "14:30:01") } as unknown as Dayjs,
     ];
 
-    vi.mocked(dayjs).mockImplementation(() => {
+    vi.mocked(dayjs).mockImplementation((): Dayjs => {
       const result = times[Math.min(callCount, times.length - 1)];
       callCount++;
-      return result;
+      return result!;
     });
 
     const { result, rerender } = renderHook(() => useLiveTime({ precision: "second" }));

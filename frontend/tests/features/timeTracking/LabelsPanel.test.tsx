@@ -80,9 +80,9 @@ describe("LabelsPanel", () => {
       await user.click(within(dialog).getByRole("button", { name: /Save Label/i }));
 
       expect(onUpdateLabels).toHaveBeenCalledTimes(1);
-      const newLabels = onUpdateLabels.mock.calls[0][0];
+      const newLabels = onUpdateLabels.mock.calls[0]![0];
       expect(newLabels).toHaveLength(3);
-      expect(newLabels[2].name).toBe("Meeting");
+      expect(newLabels[2]!.name).toBe("Meeting");
     });
   });
 
@@ -104,9 +104,9 @@ describe("LabelsPanel", () => {
       await user.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
 
       expect(onUpdateLabels).toHaveBeenCalledTimes(1);
-      const updatedLabels = onUpdateLabels.mock.calls[0][0];
-      expect(updatedLabels[0].name).toBe("Operations");
-      expect(updatedLabels[0].id).toBe("lbl-1");
+      const updatedLabels = onUpdateLabels.mock.calls[0]![0];
+      expect(updatedLabels[0]!.name).toBe("Operations");
+      expect(updatedLabels[0]!.id).toBe("lbl-1");
     });
   });
 
@@ -193,9 +193,9 @@ describe("LabelsPanel", () => {
       await user.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
 
       expect(onUpdateLabels).toHaveBeenCalledTimes(1);
-      const remainingLabels = onUpdateLabels.mock.calls[0][0];
+      const remainingLabels = onUpdateLabels.mock.calls[0]![0];
       expect(remainingLabels).toHaveLength(1);
-      expect(remainingLabels[0].id).toBe("lbl-2");
+      expect(remainingLabels[0]!.id).toBe("lbl-2");
     });
 
     it("cancels deletion when cancel is clicked", async () => {

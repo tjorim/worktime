@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
 import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/syncClient";
+import type { SyncPushPayload } from "@/utils/syncClient";
 import {
   getSyncCursorKey,
   getSyncOutboxKey,
@@ -10,7 +11,7 @@ import {
 
 const mockFetch = vi.fn();
 
-const emptySyncPayload = () => ({
+const emptySyncPayload = (): SyncPushPayload => ({
   labels: [],
   tasks: [],
   templates: [],
@@ -138,13 +139,15 @@ describe("useOngoingSync", () => {
         expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
       });
 
-      const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
+      const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+        (call) => call[0] === "/api/sync/push",
+      );
       expect(pushCall).toBeDefined();
       // The post-push pull must use the cursor from *before* this push, not a
       // bare status refresh — otherwise a concurrent change from another
       // device landing in that window would be silently skipped forever.
-      const postPushPullCall = mockFetch.mock.calls.find(([url]: [string]) =>
-        url.startsWith("/api/sync/pull?since="),
+      const postPushPullCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+        (call) => call[0].startsWith("/api/sync/pull?since="),
       );
       expect(postPushPullCall?.[0]).toBe(
         `/api/sync/pull?since=${encodeURIComponent("2026-01-01T00:00:00.000Z")}`,
@@ -391,7 +394,9 @@ describe("useOngoingSync", () => {
         expect(result.current.quarantineCount).toBe(1);
       });
 
-      const pushCall = mockFetch.mock.calls.find(([url]) => url === "/api/sync/push");
+      const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+        (call) => call[0] === "/api/sync/push",
+      );
       expect(pushCall?.[1]?.headers).toMatchObject({
         "X-Sync-Cursor": "2025-01-01T00:00:00.000Z",
       });
@@ -727,7 +732,9 @@ describe("useOngoingSync", () => {
       expect(result.current.hasSyncError).toBe(false);
 
       // Verify the reconciliation pull was a full pull (no `since` param).
-      const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/pull");
+      const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+        (call) => call[0] === "/api/sync/pull",
+      );
       expect(pullCall).toBeDefined();
 
       // Verify onIncrementalPull received the server version of the conflicted record.
@@ -950,7 +957,7 @@ describe("useOngoingSync", () => {
       // conflictedPayload should contain only the conflicted label.
       expect(result.current.conflictedPayload).not.toBeNull();
       expect(result.current.conflictedPayload?.labels).toHaveLength(1);
-      expect(result.current.conflictedPayload?.labels[0].id).toBe("lbl-1");
+      expect(result.current.conflictedPayload?.labels[0]!.id).toBe("lbl-1");
       // Other entity arrays should be empty.
       expect(result.current.conflictedPayload?.tasks).toHaveLength(0);
     });
@@ -1054,23 +1061,23 @@ describe("useOngoingSync", () => {
       await waitFor(() => {
         // The re-push call comes after the 3 mock calls already consumed (initial pull,
         // conflict push, reconciliation pull).
-        const repushCalls = mockFetch.mock.calls.filter(
-          ([url]: [string]) => url === "/api/sync/push",
+        const repushCalls = (mockFetch.mock.calls as [string, RequestInit][]).filter(
+          (call) => call[0] === "/api/sync/push",
         );
         expect(repushCalls.length).toBeGreaterThan(1);
       });
 
       // Verify the re-push timestamp was bumped (later than the original conflict timestamp).
-      const repushCalls = mockFetch.mock.calls.filter(
-        ([url]: [string]) => url === "/api/sync/push",
+      const repushCalls = (mockFetch.mock.calls as [string, RequestInit][]).filter(
+        (call) => call[0] === "/api/sync/push",
       );
       // Last push call should have a fresh timestamp
       const repushBody = JSON.parse(
-        (repushCalls[repushCalls.length - 1][1] as RequestInit).body as string,
+        (repushCalls[repushCalls.length - 1]![1] as RequestInit).body! as string,
       ) as typeof changePayload;
-      expect(new Date(repushBody.labels[0].client_updated_at).getTime()).toBeGreaterThan(
-        new Date(changePayload.labels[0].client_updated_at).getTime(),
-      );
+      expect(
+        new Date(repushBody.labels[0]!.client_updated_at).getTime(),
+      ).toBeGreaterThan(new Date(changePayload.labels[0]!.client_updated_at).getTime());
     });
   });
 
@@ -1147,7 +1154,7 @@ describe("useOngoingSync", () => {
         expect(mockFetch).toHaveBeenCalled();
       });
 
-      const [, init] = mockFetch.mock.calls[0];
+      const [, init] = mockFetch.mock.calls[0]!;
       expect(init).toMatchObject({ suppressUnauthorizedRedirect: true });
     });
 
