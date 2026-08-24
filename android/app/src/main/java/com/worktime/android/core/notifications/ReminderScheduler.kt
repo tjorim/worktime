@@ -43,52 +43,51 @@ class ReminderScheduler(private val context: Context) {
                 return@forEach
             }
             when (type) {
-                TYPE_SHIFT -> {
-                    val date = store.getString("${type}_date", null)
-                    val hourStr = store.getString("${type}_hour", null)
-                    if (date != null && hourStr != null) {
-                        val hour = hourStr.toDoubleOrNull() ?: return@forEach cancel(type)
-                        val hours = hour.toInt()
-                        val minutes = ((hour - hours) * MINUTES_PER_HOUR).toInt()
-                        val start = java.time.LocalDate.parse(date)
-                            .atTime(hours, minutes)
-                            .atZone(ZoneId.systemDefault())
-                        val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
-                        val message = store.getString("${type}_message", null)
-                        if (at > System.currentTimeMillis() && message != null) {
-                            set(type, at, account, message)
-                        } else {
-                            cancel(type)
-                        }
-                    } else {
-                        val at = store.getLong("${type}_at", INVALID_ID.toLong())
-                        val message = store.getString("${type}_message", null)
-                        if (at > System.currentTimeMillis() && message != null) {
-                            set(type, at, account, message)
-                        } else {
-                            cancel(type)
-                        }
-                    }
-                }
-                TYPE_TIMER -> {
-                    val at = store.getLong("${type}_at", INVALID_ID.toLong())
-                    val message = store.getString("${type}_message", null)
-                    if (at > System.currentTimeMillis() && message != null) {
-                        set(type, at, account, message)
-                    } else {
-                        cancel(type)
-                    }
-                }
-                else -> {
-                    val at = store.getLong("${type}_at", INVALID_ID.toLong())
-                    val message = store.getString("${type}_message", null)
-                    if (at > System.currentTimeMillis() && message != null) {
-                        set(type, at, account, message)
-                    } else {
-                        cancel(type)
-                    }
-                }
+                TYPE_SHIFT -> restoreShift(account)
+                TYPE_TIMER -> tryRestoreFromStore(account, type)
+                else -> tryRestoreFromStore(account, type)
             }
+        }
+    }
+
+    private fun restoreShift(account: Int) {
+        val date = store.getString("${TYPE_SHIFT}_date", null)
+        val hourStr = store.getString("${TYPE_SHIFT}_hour", null)
+        if (date != null && hourStr != null) {
+            val hour = hourStr.toDoubleOrNull() ?: run {
+                cancel(TYPE_SHIFT)
+                return
+            }
+            val hours = hour.toInt()
+            val minutes = ((hour - hours) * MINUTES_PER_HOUR).toInt()
+            val start = java.time.LocalDate.parse(date)
+                .atTime(hours, minutes)
+                .atZone(ZoneId.systemDefault())
+            val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
+            val message = store.getString("${TYPE_SHIFT}_message", null)
+            if (at > System.currentTimeMillis() && message != null) {
+                set(TYPE_SHIFT, at, account, message)
+            } else {
+                cancel(TYPE_SHIFT)
+            }
+        } else {
+            val at = store.getLong("${TYPE_SHIFT}_at", INVALID_ID.toLong())
+            val message = store.getString("${TYPE_SHIFT}_message", null)
+            if (at > System.currentTimeMillis() && message != null) {
+                set(TYPE_SHIFT, at, account, message)
+            } else {
+                cancel(TYPE_SHIFT)
+            }
+        }
+    }
+
+    private fun tryRestoreFromStore(account: Int, type: String) {
+        val at = store.getLong("${type}_at", INVALID_ID.toLong())
+        val message = store.getString("${type}_message", null)
+        if (at > System.currentTimeMillis() && message != null) {
+            set(type, at, account, message)
+        } else {
+            cancel(type)
         }
     }
 
