@@ -49,7 +49,7 @@ class ReminderScheduler(private val context: Context) {
                     if (date != null && hourStr != null) {
                         val hour = hourStr.toDoubleOrNull() ?: return@forEach cancel(type)
                         val hours = hour.toInt()
-                        val minutes = ((hour - hours) * 60).toInt()
+                        val minutes = ((hour - hours) * MINUTES_PER_HOUR).toInt()
                         val start = java.time.LocalDate.parse(date)
                             .atTime(hours, minutes)
                             .atZone(ZoneId.systemDefault())
@@ -95,7 +95,7 @@ class ReminderScheduler(private val context: Context) {
     private fun scheduleShift(accountId: Int, shift: NextShiftItem) {
         val hour = shift.shift.startHour ?: return cancel(TYPE_SHIFT)
         val hours = hour.toInt()
-        val minutes = ((hour - hours) * 60).toInt()
+        val minutes = ((hour - hours) * MINUTES_PER_HOUR).toInt()
         val start = shift.date.let(java.time.LocalDate::parse)
             .atTime(hours, minutes)
             .atZone(ZoneId.systemDefault())
@@ -213,6 +213,7 @@ class ReminderScheduler(private val context: Context) {
         private const val REQUEST_CODE_SHIFT = 2001
         private const val REQUEST_CODE_TIMER = 2002
         private const val INVALID_ACCOUNT_SENTINEL = -2
+        private const val MINUTES_PER_HOUR = 60
     }
 }
 
