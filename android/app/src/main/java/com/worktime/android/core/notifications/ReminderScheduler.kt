@@ -37,13 +37,55 @@ class ReminderScheduler(private val context: Context) {
 
     fun restore() {
         listOf(TYPE_SHIFT, TYPE_TIMER).forEach { type ->
-            val at = store.getLong("${type}_at", -1)
             val account = store.getInt(KEY_ACCOUNT, -1)
-            val message = store.getString("${type}_message", null)
-            if (at > System.currentTimeMillis() && account >= 0 && message != null) {
-                set(type, at, account, message)
-            } else {
+            if (account < 0) {
                 cancel(type)
+                return@forEach
+            }
+            when (type) {
+                TYPE_SHIFT -> {
+                    val date = store.getString("${type}_date", null)
+                    val hourStr = store.getString("${type}_hour", null)
+                    if (date != null && hourStr != null) {
+                        val hour = hourStr.toDoubleOrNull() ?: return@forEach cancel(type)
+                        val hours = hour.toInt()
+                        val minutes = ((hour - hours) * 60).toInt()
+                        val start = java.time.LocalDate.parse(date).atTime(hours, minutes).atZone(ZoneId.systemDefault())
+                        val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
+                        val message = store.getString("${type}_message", null)
+                        if (at > System.currentTimeMillis() && message != null) {
+                            set(type, at, account, message)
+                        } else {
+                            cancel(type)
+                        }
+                    } else {
+                        val at = store.getLong("${type}_at", -1)
+                        val message = store.getString("${type}_message", null)
+                        if (at > System.currentTimeMillis() && message != null) {
+                            set(type, at, account, message)
+                        } else {
+                            cancel(type)
+                        }
+                    }
+                }
+                TYPE_TIMER -> {
+                    val at = store.getLong("${type}_at", -1)
+                    val message = store.getString("${type}_message", null)
+                    if (at > System.currentTimeMillis() && message != null) {
+                        set(type, at, account, message)
+                    } else {
+                        cancel(type)
+                    }
+                }
+                else -> {
+                    val at = store.getLong("${type}_at", -1)
+                    val message = store.getString("${type}_message", null)
+                    if (at > System.currentTimeMillis() && message != null) {
+                        set(type, at, account, message)
+                    } else {
+                        cancel(type)
+                    }
+                }
             }
         }
     }
@@ -57,9 +99,11 @@ class ReminderScheduler(private val context: Context) {
         if (start.toInstant().toEpochMilli() <= System.currentTimeMillis()) return cancel(TYPE_SHIFT)
         persistAndSet(
             TYPE_SHIFT,
-            maxOf(at, System.currentTimeMillis() + MIN_SCHEDULE_DELAY_MILLIS),
+            at,
             accountId,
-            "${shift.shift.displayCode} starts at ${start.toLocalTime()}"
+            "${shift.shift.displayCode} starts at ${start.toLocalTime()}",
+            shift.date,
+            hour
         )
     }
 
@@ -70,15 +114,45 @@ class ReminderScheduler(private val context: Context) {
             }.getOrNull() ?: return cancel(TYPE_TIMER)
         persistAndSet(
             TYPE_TIMER,
-            maxOf(at, System.currentTimeMillis() + MIN_SCHEDULE_DELAY_MILLIS),
+            at,
             accountId,
-            "Timer running for ${task.text} appears stale"
+            "Timer running for ${task.text} appears stale",
+            taskId = task.id
         )
     }
 
-    private fun persistAndSet(type: String, at: Long, account: Int, message: String) {
-        if (store.getLong("${type}_at", -1) == at && store.getString("${type}_message", null) == message) return
-        store.edit().putLong("${type}_at", at).putString("${type}_message", message).apply()
+    private fun persistAndSet(
+        type: String,
+        at: Long,
+        account: Int,
+        message: String,
+        shiftDate: String? = null,
+        shiftStartHour: Double? = null,
+        taskId: String? = null
+    ) {
+        val identityChanged = when (type) {
+            TYPE_SHIFT -> {
+                val storedDate = store.getString("${type}_date", null)
+                val storedHour = store.getString("${type}_hour", null)
+                shiftDate != storedDate || shiftStartHour?.toString() != storedHour
+            }
+            TYPE_TIMER -> {
+                val storedTaskId = store.getString("${type}_task_id", null)
+                taskId != storedTaskId
+            }
+            else -> false
+        }
+        val storedAt = store.getLong("${type}_at", -1)
+        val storedMessage = store.getString("${type}_message", null)
+        if (!identityChanged && storedAt == at && storedMessage == message) return
+        store.edit().apply {
+            putLong("${type}_at", at)
+            putString("${type}_message", message)
+            if (shiftDate != null) putString("${type}_date", shiftDate)
+            if (shiftStartHour != null) putString("${type}_hour", shiftStartHour.toString())
+            if (taskId != null) putString("${type}_task_id", taskId)
+            apply()
+        }
         set(type, at, account, message)
     }
 
@@ -96,13 +170,23 @@ class ReminderScheduler(private val context: Context) {
 
     private fun cancel(type: String) {
         alarms?.cancel(pendingIntent(type, 0, ""))
-        store.edit().remove("${type}_at").remove("${type}_message").apply()
+        store.edit().apply {
+            remove("${type}_at")
+            remove("${type}_message")
+            if (type == TYPE_SHIFT) {
+                remove("${type}_date")
+                remove("${type}_hour")
+            } else if (type == TYPE_TIMER) {
+                remove("${type}_task_id")
+            }
+            apply()
+        }
     }
 
     private fun pendingIntent(type: String, account: Int, message: String) =
         PendingIntent.getBroadcast(
             context,
-            if (type == TYPE_SHIFT) 2001 else 2002,
+            if (type == TYPE_SHIFT) REQUEST_CODE_SHIFT else REQUEST_CODE_TIMER,
             Intent(context, ReminderReceiver::class.java).setAction(type)
                 .putExtra(EXTRA_ACCOUNT, account).putExtra(EXTRA_MESSAGE, message),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -118,6 +202,9 @@ class ReminderScheduler(private val context: Context) {
         const val SHIFT_LEAD_MINUTES = 30L
         const val STALE_HOURS = 8L
         private const val MIN_SCHEDULE_DELAY_MILLIS = 1_000L
+        private const val REQUEST_CODE_SHIFT = 2001
+        private const val REQUEST_CODE_TIMER = 2002
+        private const val INVALID_ACCOUNT_SENTINEL = -2
     }
 }
 
@@ -125,7 +212,7 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val store = context.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE)
         if (intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, -1) !=
-            store.getInt(ReminderScheduler.KEY_ACCOUNT, -2)
+            store.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
         ) {
             return
         }

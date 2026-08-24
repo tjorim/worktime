@@ -14,7 +14,7 @@ reviewer can repeat the remaining TalkBack and physical-device observations.
 
 | Severity | Evidence / reproduction | Finding | Disposition |
 |---|---|---|---|
-| Critical | Kill the process after loading Today; no receiver or alarm existed and notification calls were inside `WorktimeApp`'s `LaunchedEffect`. | Shift and stale timer reminders could not fire closed-app. | Fixed by the persisted `ReminderScheduler`, alarm receiver, restore receiver, and account validation. |
+| Critical | Kill the process after loading Today; no receiver or alarm existed and notification calls were inside `WorktimeApp`'s `LaunchedEffect`. | Shift and stale timer reminders could not fire closed-app. | Fixed by the persisted `ReminderScheduler`, alarm receiver, restore receiver, and account validation. Shift reminders are recomputed from stored shift date and start time after timezone changes to ensure correct local alarm times. |
 | High | Change account after an alarm was calculated. The previous in-memory dedupe key had no account identity. | A future implementation could leak a prior account's reminder. | Fixed: reconciliation cancels on identity change, logout clears state, receiver validates account. |
 | High | Deny exact-alarm capability on Android 12+. | Exact scheduling had no degradation path. | Fixed: exact-while-idle when available, otherwise inexact while-idle. Notification denial remains a safe no-op. |
 | Medium | Rotate, background, and restore each destination. | Navigation route is saveable through Navigation Compose, but transient form edits are not consistently state-restored after process death. | Follow-up: introduce `SavedStateHandle` for editable time-off and task forms. |
