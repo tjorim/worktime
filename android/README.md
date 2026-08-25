@@ -73,16 +73,40 @@ cd android
 
 ## Local reminders
 
-Shift and stale-running-timer reminders are local-only: Worktime stores only the
-next alarm's timestamp, message, and numeric account id in app-private storage.
-It does not use FCM or transmit notification data to another service.
+Planned-task and stale-running-timer reminders are local-only: Worktime stores only the
+next alarm's timestamp, message, and numeric account id in app-private storage. FCM
+(see below) never carries the reminder's content -- only a signal to go reconcile --
+so what actually shows the notification is unchanged by whether the reconcile that
+scheduled it was triggered by opening the app or by a push-wake.
 
-The next shift alarm is requested 30 minutes before its configured start; a
-running timer is considered stale after eight hours. Android 12 and newer may
-require the user to allow exact alarms. When exact alarms are unavailable,
-Worktime schedules an inexact idle-safe alarm, so delivery can be delayed by
-Doze. Notification permission denial suppresses presentation without crashing.
-Alarms are reconciled after dashboard refreshes and preference changes, restored
-after reboot, clock, or timezone changes, and canceled on logout. Every delivered
-alarm checks its stored account id, preventing an alarm created for a previous
-account from being shown after an account switch.
+The planned-task alarm is requested ~10 minutes before its start; a running timer is
+considered stale after eight hours. Android 12 and newer may require the user to allow
+exact alarms. When exact alarms are unavailable, Worktime schedules an inexact
+idle-safe alarm, so delivery can be delayed by Doze. Notification permission denial
+suppresses presentation without crashing. Alarms are reconciled after dashboard
+refreshes and preference changes, restored after reboot, clock, or timezone changes,
+and canceled on logout. Every delivered alarm checks its stored account id, preventing
+an alarm created for a previous account from being shown after an account switch.
+
+## Push-wake (FCM)
+
+A planned task created or rescheduled while the app is closed has no way to get a
+locally-scheduled reminder armed for it until the app is next opened (see #1205). FCM
+closes that gap as a pure wake signal -- "something changed, go reconcile now" -- never
+as a delivery channel for the reminder's actual content; see `AGENTS.md`'s "Live
+Updates" section for how this mirrors the webapp's SSE notify-then-pull pattern.
+
+Entirely optional and off by default, both here and on the backend:
+
+- **Backend**: no-ops (token-registration endpoints 503, no wake-pings sent) unless
+  `FCM_SERVICE_ACCOUNT_JSON` is set -- see `backend/README.md`.
+- **Android**: the `com.google.gms.google-services` Gradle plugin only applies when
+  `android/app/google-services.json` exists (never commit a real one -- it's
+  `.gitignore`d). Without it, `firebase-messaging` still compiles and links fine, but
+  `FirebaseApp` never auto-initializes, so `WorktimeFirebaseMessagingService` simply
+  never receives anything and token registration silently no-ops.
+
+To enable it for a build: create a Firebase project, register the app's application
+ID, download its `google-services.json` into `android/app/`, and configure the
+backend's `FCM_SERVICE_ACCOUNT_JSON` with a service-account key from the same project
+(Firebase console → Project settings → Service accounts → Generate new private key).

@@ -3,3 +3,7 @@ local.properties
 **/build/
 *.iml
 captures/
+
+# Per-deployment Firebase project config (#1205) -- see android/README.md. Never commit a real
+# one; its absence is what keeps the google-services Gradle plugin from applying at all.
+app/google-services.json

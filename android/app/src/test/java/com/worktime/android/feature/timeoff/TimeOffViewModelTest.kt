@@ -234,6 +234,12 @@ class TimeOffViewModelTest {
 
         override suspend fun deleteAccount(): MutationResult<Unit> = throw UnsupportedOperationException()
 
+        override suspend fun registerFcmToken(token: String): MutationResult<Unit> =
+            throw UnsupportedOperationException()
+
+        override suspend fun unregisterFcmToken(token: String): MutationResult<Unit> =
+            throw UnsupportedOperationException()
+
         override suspend fun buildLogoutIntent(): android.content.Intent? = null
 
         override fun completeLogout() {

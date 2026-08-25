@@ -116,6 +116,18 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 - **Stay request/poll-based** for user-triggered actions, infrequent state changes, or anything that needs the full response payload inline (not a separate fetch). Adding SSE complexity for those cases is not worth it.
 - The transport abstraction also decouples the wire protocol: replacing SSE with WebSockets later only requires a new adapter — no changes to `useSyncSignal` or its callers.
 
+### Android background wake (FCM)
+
+Android has no equivalent of an always-open SSE stream, so it uses the same notify-then-pull shape over
+FCM instead: the backend (`app/services/fcm_wake_service.py`, `app/services/fcm_service.py`) sends a
+silent data-only FCM message — no reminder content, just a wake signal — to a user's registered device
+tokens (`FcmDeviceToken`, registered via `/api/push/fcm-token`) whenever a planned time-tracking task is
+created, rescheduled, or synced. The app's `FirebaseMessagingService` reacts by re-running the same
+refresh-and-reconcile flow the foreground case already uses (`ReminderScheduler.reconcile()`), so there's
+one reminder-scheduling code path regardless of whether the app was open or woken. No-ops entirely when
+`FCM_SERVICE_ACCOUNT_JSON` is unset, matching how `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` gate Web Push.
+See #1205.
+
 ## Git branches
 
 A branch you're handed to work from may already be stacked on another unmerged

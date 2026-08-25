@@ -5,6 +5,7 @@ import com.worktime.android.core.auth.SessionController
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.data.api.WorktimeApi
 import com.worktime.android.data.model.DashboardResponse
+import com.worktime.android.data.model.FcmTokenRequest
 import com.worktime.android.data.model.LabelMutationRequest
 import com.worktime.android.data.model.LabelPatchRequest
 import com.worktime.android.data.model.LabelRecord
@@ -166,6 +167,12 @@ interface DashboardRepository {
     ): MutationResult<WorkLocationPreferences>
 
     suspend fun deleteAccount(): MutationResult<Unit>
+
+    /** Registers this device's FCM token for background push-wake (#1205). Best-effort. */
+    suspend fun registerFcmToken(token: String): MutationResult<Unit>
+
+    /** Unregisters this device's FCM token. Best-effort. */
+    suspend fun unregisterFcmToken(token: String): MutationResult<Unit>
 
     /**
      * Builds the provider end-session intent for an interactive sign-out, without
@@ -485,6 +492,14 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         api.deleteAccount(authorization = "Bearer $token")
         sessionController.logout()
         currentUserId = null
+    }
+
+    override suspend fun registerFcmToken(token: String): MutationResult<Unit> = withAuthorizedToken<Unit> {
+        api.registerFcmToken(authorization = "Bearer $it", payload = FcmTokenRequest(token))
+    }
+
+    override suspend fun unregisterFcmToken(token: String): MutationResult<Unit> = withAuthorizedToken {
+        api.unregisterFcmToken(authorization = "Bearer $it", token = token)
     }
 
     override suspend fun buildLogoutIntent(): Intent? = sessionController.buildLogoutIntent()

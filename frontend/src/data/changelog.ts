@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "2026.8.8",
+    version: "2026.8.9",
     date: "2026-08-25",
     status: "current",
+    added: [
+      "Android now learns about a newly-created or rescheduled planned task even while closed, via a silent push signal that just prods it to re-check — the reminder itself still fires locally, the same way it already did",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
+    version: "2026.8.8",
+    date: "2026-08-25",
+    status: "released",
     added: [
       "Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. \"2pm: Team meeting\") now nudges you about 10 minutes before it starts, on the web app and Android",
     ],

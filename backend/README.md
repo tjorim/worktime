@@ -62,6 +62,7 @@ Important variables:
 - `METRICS_HMAC_SECRET` — required for `/api/metrics` to respond (404s otherwise)
 - `INTEGRATION_KEY_HASH_SECRET` — HMAC secret for hashing stored integration-client keys
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — Web Push planned-task-reminder notifications (feature is a no-op when unset)
+- `FCM_SERVICE_ACCOUNT_JSON` — Firebase service-account credential for waking the Android app in the background (feature is a no-op when unset)
 
 See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/config/settings.py` for the full list.
 

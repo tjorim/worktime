@@ -40,6 +40,7 @@ import com.worktime.android.core.auth.BiometricAuthenticator
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.notifications.ReminderScheduler
 import com.worktime.android.core.notifications.WorktimeNotifications
+import com.worktime.android.core.notifications.registerFcmTokenIfNeeded
 import com.worktime.android.core.storage.BiometricLockPreferences
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
@@ -124,6 +125,9 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
     }
     LaunchedEffect(sessionState) {
         if (sessionState is SessionState.LoggedOut) reminderScheduler.cancelAll()
+    }
+    LaunchedEffect(sessionState) {
+        if (sessionState is SessionState.Authenticated) registerFcmTokenIfNeeded()
     }
     val coroutineScope = rememberCoroutineScope()
     var loginError by rememberSaveable { mutableStateOf<String?>(null) }

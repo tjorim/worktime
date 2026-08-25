@@ -393,6 +393,12 @@ async def create_task(
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
+    if task.stop_time is not None and task.start_time > datetime.now(UTC):
+        # Deferred import: app.services.fcm_wake_service -> fcm_device_token_service
+        # imports NotFoundError from this module, so a top-level import here would cycle.
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, user_id)
     return task
 
 
@@ -499,6 +505,14 @@ async def update_task(
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
+    if (
+        task.stop_time is not None
+        and task.start_time > datetime.now(UTC)
+        and ("start_time" in data or "stop_time" in data)
+    ):
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, user_id)
     return task
 
 

@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.settings import settings
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
-from app.schemas import PushSubscriptionCreate, PushSubscriptionRead
+from app.schemas import FcmTokenCreate, FcmTokenRead, PushSubscriptionCreate, PushSubscriptionRead
 from app.services.db_service import NotFoundError
+from app.services.fcm_device_token_service import delete_token, upsert_token
 from app.services.push_subscription_service import delete_subscription, upsert_subscription
 
 router = APIRouter(prefix="/push", tags=["Push Notifications"])
@@ -54,6 +55,35 @@ async def unsubscribe_endpoint(
 ) -> Response:
     try:
         await delete_subscription(session, principal.user_id, endpoint)
+    except NotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/fcm-token", response_model=FcmTokenRead, status_code=status.HTTP_201_CREATED)
+async def register_fcm_token_endpoint(
+    payload: FcmTokenCreate,
+    principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
+    session: AsyncSession = Depends(get_session),
+) -> FcmTokenRead:
+    if not settings.fcm_notifications_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="FCM push-wake is not configured on this server",
+        )
+    device_token = await upsert_token(session, principal.user_id, payload)
+    return FcmTokenRead.model_validate(device_token, from_attributes=True)
+
+
+@router.delete("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
+async def unregister_fcm_token_endpoint(
+    token: str = Query(..., min_length=1, max_length=4096),
+    principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
+    session: AsyncSession = Depends(get_session),
+) -> Response:
+    try:
+        await delete_token(session, principal.user_id, token)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

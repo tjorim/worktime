@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.worktime.android.core.notifications.fetchPlannedTask
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.SyncStatusResponse
@@ -17,7 +18,6 @@ import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -103,7 +103,7 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                         else -> null
                     }
                 }
-            val plannedTaskDeferred = async { fetchPlannedTask() }
+            val plannedTaskDeferred = async { fetchPlannedTask(repository) }
             val weeklyLocationsDeferred =
                 async {
                     when (val result = repository.loadWeeklyWorkLocations()) {
@@ -149,20 +149,6 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                     labels = labelsDeferred.await(),
                     templates = templatesDeferred.await()
                 )
-        }
-    }
-
-    private suspend fun fetchPlannedTask(): TaskRecord? {
-        // The date range is compared against task.start_time (a UTC instant) using the
-        // device's local calendar date -- padded a day on each side so a device at an
-        // extreme UTC offset (as far as UTC-12 to UTC+14) can't have a soon-starting local
-        // task fall just outside the window because its UTC calendar date differs from the
-        // device's local one. Extra results outside the near-term window are harmless: they
-        // get filtered out by nextPlannedTask()'s isAfter(now) check below.
-        val today = LocalDate.now()
-        return when (val result = repository.listTasks(today.minusDays(1), today.plusDays(2))) {
-            is MutationResult.Success -> nextPlannedTask(result.value)
-            else -> null
         }
     }
 
@@ -321,20 +307,4 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
             }
         }
     }
-}
-
-/**
- * Picks the soonest-starting "planned" task -- stop_time already set (not a running
- * timer), start_time still ahead of now -- to drive the local reminder alarm. Mirrors
- * the frontend's `isPlanned` check in DailyTaskList.tsx.
- */
-private fun nextPlannedTask(tasks: List<TaskRecord>): TaskRecord? {
-    val now = OffsetDateTime.now()
-    return tasks
-        .asSequence()
-        .filter { it.stopTime != null }
-        .mapNotNull { task -> runCatching { OffsetDateTime.parse(task.startTime) }.getOrNull()?.let { task to it } }
-        .filter { (_, startTime) -> startTime.isAfter(now) }
-        .minByOrNull { (_, startTime) -> startTime }
-        ?.first
 }

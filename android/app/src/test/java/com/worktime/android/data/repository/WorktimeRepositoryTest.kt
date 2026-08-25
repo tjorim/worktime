@@ -5,6 +5,8 @@ import com.worktime.android.core.auth.SessionState
 import com.worktime.android.data.api.WorktimeApi
 import com.worktime.android.data.model.CurrentStatus
 import com.worktime.android.data.model.DashboardResponse
+import com.worktime.android.data.model.FcmTokenRequest
+import com.worktime.android.data.model.FcmTokenResponse
 import com.worktime.android.data.model.FeatureFlags
 import com.worktime.android.data.model.Identity
 import com.worktime.android.data.model.LabelListResponse
@@ -201,6 +203,50 @@ class WorktimeRepositoryTest {
 
         assertEquals(MutationResult.Error("Request failed (500)"), result)
         assertEquals(SessionState.Authenticated(hasRefreshToken = true), sessionController.sessionState.value)
+    }
+
+    @Test
+    fun registerFcmTokenReturnsLoggedOutWhenNoTokenExists() = runTest {
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = FakeSessionController(token = null))
+
+        val result = repository.registerFcmToken("device-token-1")
+
+        assertEquals(MutationResult.LoggedOut, result)
+    }
+
+    @Test
+    fun registerFcmTokenSendsTheTokenWithoutRequiringADashboardLoadFirst() = runTest {
+        val api = FakeApi()
+        val repository = WorktimeRepository(api = api, sessionController = FakeSessionController(token = "token-123"))
+
+        val result = repository.registerFcmToken("device-token-1")
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals("device-token-1", api.lastRegisteredFcmToken)
+    }
+
+    @Test
+    fun registerFcmTokenReturnsErrorWhenUnconfiguredOnTheServer() = runTest {
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(fcmTokenThrowable = httpException(503)),
+                sessionController = FakeSessionController(token = "token-123")
+            )
+
+        val result = repository.registerFcmToken("device-token-1")
+
+        assertEquals(MutationResult.Error("Request failed (503)"), result)
+    }
+
+    @Test
+    fun unregisterFcmTokenSendsTheToken() = runTest {
+        val api = FakeApi()
+        val repository = WorktimeRepository(api = api, sessionController = FakeSessionController(token = "token-123"))
+
+        val result = repository.unregisterFcmToken("device-token-1")
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals("device-token-1", api.lastUnregisteredFcmToken)
     }
 
     @Test
@@ -649,11 +695,16 @@ class WorktimeRepositoryTest {
         private val timeOffListResponse: TimeOffEntryListResponse =
             TimeOffEntryListResponse(items = emptyList(), total = 0),
         private val deleteAccountThrowable: Throwable? = null,
-        private val preferencesResponse: UserPreferencesRead? = null
+        private val preferencesResponse: UserPreferencesRead? = null,
+        private val fcmTokenThrowable: Throwable? = null
     ) : WorktimeApi {
         var lastTimeOffPatchPayload: TimeOffEntryPatchRequest? = null
             private set
         var lastPreferencesWritePayload: UserPreferencesWrite? = null
+            private set
+        var lastRegisteredFcmToken: String? = null
+            private set
+        var lastUnregisteredFcmToken: String? = null
             private set
 
         override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
@@ -846,6 +897,17 @@ class WorktimeRepositoryTest {
 
         override suspend fun deleteAccount(authorization: String) {
             deleteAccountThrowable?.let { throw it }
+        }
+
+        override suspend fun registerFcmToken(authorization: String, payload: FcmTokenRequest): FcmTokenResponse {
+            fcmTokenThrowable?.let { throw it }
+            lastRegisteredFcmToken = payload.token
+            return FcmTokenResponse(id = "fcm-token-id")
+        }
+
+        override suspend fun unregisterFcmToken(authorization: String, token: String) {
+            fcmTokenThrowable?.let { throw it }
+            lastUnregisteredFcmToken = token
         }
     }
 
