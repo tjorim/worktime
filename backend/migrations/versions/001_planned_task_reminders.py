@@ -37,7 +37,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.add_column("push_subscriptions", sa.Column("lead_time_minutes", sa.Integer(), nullable=False, server_default="15"))
+    op.add_column(
+        "push_subscriptions", sa.Column("lead_time_minutes", sa.Integer(), nullable=False, server_default="15")
+    )
     op.add_column("push_subscriptions", sa.Column("quiet_hours_start", sa.Integer(), nullable=True))
     op.add_column("push_subscriptions", sa.Column("quiet_hours_end", sa.Integer(), nullable=True))
     op.add_column("push_subscriptions", sa.Column("last_reminder_key", sa.String(), nullable=True))
