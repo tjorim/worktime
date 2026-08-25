@@ -291,6 +291,57 @@ class TestFcmWakeTriggers:
         )
         wake_mock.assert_called_once_with(db_session, user.id)
 
+    async def test_clearing_stop_time_on_an_upcoming_planned_task_triggers_a_wake_ping(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Turning a planned task back into a running one removes reminder eligibility -- a
+        device that already armed a local alarm for it needs the wake to cancel that alarm,
+        same as an outright deletion.
+        """
+        user = await create_user(db_session, UserCreate(username="fcm-trigger-clear-stop", display_name="Clear"))
+        task = await create_task(
+            db_session,
+            user.id,
+            TaskCreate(
+                text="Team meeting",
+                start_time=datetime.now(UTC) + timedelta(minutes=30),
+                stop_time=datetime.now(UTC) + timedelta(minutes=90),
+            ),
+        )
+
+        wake_mock = AsyncMock()
+        monkeypatch.setattr("app.services.fcm_wake_service.send_fcm_wake_ping", wake_mock)
+
+        await update_task(db_session, user.id, task.id, TaskUpdate(stop_time=None))
+        wake_mock.assert_called_once_with(db_session, user.id)
+
+    async def test_moving_an_upcoming_task_into_the_past_triggers_a_wake_ping(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        user = await create_user(db_session, UserCreate(username="fcm-trigger-move-past", display_name="MovePast"))
+        task = await create_task(
+            db_session,
+            user.id,
+            TaskCreate(
+                text="Team meeting",
+                start_time=datetime.now(UTC) + timedelta(minutes=30),
+                stop_time=datetime.now(UTC) + timedelta(minutes=90),
+            ),
+        )
+
+        wake_mock = AsyncMock()
+        monkeypatch.setattr("app.services.fcm_wake_service.send_fcm_wake_ping", wake_mock)
+
+        await update_task(
+            db_session,
+            user.id,
+            task.id,
+            TaskUpdate(
+                start_time=datetime.now(UTC) - timedelta(hours=2), stop_time=datetime.now(UTC) - timedelta(hours=1)
+            ),
+        )
+        wake_mock.assert_called_once_with(db_session, user.id)
+
     async def test_editing_an_unrelated_field_does_not_trigger_a_wake_ping(
         self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:

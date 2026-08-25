@@ -6,6 +6,8 @@ import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 /**
  * Fetches the current account, running task, and soonest-starting planned task, then re-arms
@@ -36,11 +38,17 @@ suspend fun reconcilePlannedTaskReminder(
             is DashboardLoadResult.Success -> result.dashboard.identity.id
             DashboardLoadResult.LoggedOut, is DashboardLoadResult.Error -> return false
         }
-    val runningTaskResult = repository.getRunningTask()
-    if (runningTaskResult !is MutationResult.Success) return false
 
-    val tasksResult = listNearTermTasks(repository)
-    if (tasksResult !is MutationResult.Success) return false
+    // Run concurrently, not sequentially: a background wake (unlike the foreground path) has a
+    // short execution window before the OS may reclaim the process, so halving the number of
+    // network round trips on the critical path matters here.
+    val (runningTaskResult, tasksResult) =
+        coroutineScope {
+            val runningTaskDeferred = async { repository.getRunningTask() }
+            val tasksDeferred = async { listNearTermTasks(repository) }
+            runningTaskDeferred.await() to tasksDeferred.await()
+        }
+    if (runningTaskResult !is MutationResult.Success || tasksResult !is MutationResult.Success) return false
 
     reminderScheduler.reconcile(
         accountId,

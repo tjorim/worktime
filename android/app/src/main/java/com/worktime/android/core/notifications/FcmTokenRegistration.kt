@@ -2,26 +2,42 @@ package com.worktime.android.core.notifications
 
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
+import com.worktime.android.app.WorktimeAppContainer
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * Triggers FCM registration for this device (#1205), if it isn't already registered.
+ * Fetches this device's current FCM registration token and registers it with the backend
+ * (#1205).
  *
- * This SDK delivers the actual token exclusively through
- * [WorktimeFirebaseMessagingService.onNewToken] -- there is no synchronous "give me the current
- * token" call anymore (`FirebaseMessaging.getToken()` throws `IllegalStateException` unless the
- * app opts back into the legacy model) -- so this call's only job is to make sure registration
- * has been kicked off; `onNewToken` is what actually sends the token to the backend.
- * [FirebaseMessaging.register] is safe to call repeatedly: a device already registered is a no-op.
+ * Uses the classic `getToken()` API (deprecation suppressed deliberately): this SDK's newer
+ * `register()` + `onRegistered(installationId)` flow requires opting in via the
+ * `firebase_messaging_installation_id_enabled` manifest flag -- unset here -- and without it
+ * `register()` unconditionally throws `IllegalStateException`. It would also be the wrong fix
+ * even with the flag set: that flow yields a Firebase Installation ID, a different identifier
+ * than the FCM registration token the backend's `FcmDeviceToken` table and
+ * `messaging.send(token=...)` call actually expect. `getToken()` remains fully functional
+ * without the flag and returns exactly the token the backend wants.
  *
  * Best-effort and silent when Firebase isn't configured for this build (no
  * google-services.json -- see android/README.md) or the device has no Play Services:
- * [FirebaseMessaging.getInstance] throws in that case, which is treated the same as "nothing to
- * register" rather than surfaced as an error.
+ * [FirebaseMessaging.getInstance] (or the token fetch itself) throws in that case, which is
+ * treated the same as "nothing to register" rather than surfaced as an error.
  */
-fun registerFcmTokenIfNeeded() {
-    runCatching {
-        FirebaseMessaging.getInstance().register()
-    }.onFailure { Log.d(TAG, "FCM unavailable on this build/device, skipping registration: $it") }
+suspend fun registerFcmTokenIfNeeded(container: WorktimeAppContainer) {
+    val token =
+        runCatching { fetchFcmToken() }
+            .onFailure { Log.d(TAG, "FCM unavailable on this build/device, skipping token registration: $it") }
+            .getOrNull() ?: return
+    container.dashboardRepository.registerFcmToken(token)
+}
+
+@Suppress("DEPRECATION")
+private suspend fun fetchFcmToken(): String = suspendCancellableCoroutine { continuation ->
+    FirebaseMessaging.getInstance().token
+        .addOnSuccessListener { token -> continuation.resume(token) }
+        .addOnFailureListener { error -> continuation.resumeWithException(error) }
 }
 
 private const val TAG = "FcmTokenRegistration"

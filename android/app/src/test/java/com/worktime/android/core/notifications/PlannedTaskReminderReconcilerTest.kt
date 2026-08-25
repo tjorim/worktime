@@ -97,6 +97,9 @@ class PlannedTaskReminderReconcilerTest {
         // already-correctly-scheduled reminder with no way to self-correct until the app reopens.
         coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard(accountId = 7))
         coEvery { repository.getRunningTask() } returns MutationResult.Error("Unable to reach the Worktime backend")
+        // The running-task and planned-task fetches run concurrently, so this is still invoked
+        // even though its result must not end up reaching reconcile() below.
+        coEvery { repository.listTasks(any(), any()) } returns MutationResult.Success(emptyList())
 
         val result =
             reconcilePlannedTaskReminder(
@@ -107,7 +110,6 @@ class PlannedTaskReminderReconcilerTest {
             )
 
         assertFalse(result)
-        coVerify(exactly = 0) { repository.listTasks(any(), any()) }
         verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
     }
 

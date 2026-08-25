@@ -127,7 +127,7 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
         if (sessionState is SessionState.LoggedOut) reminderScheduler.cancelAll()
     }
     LaunchedEffect(sessionState) {
-        if (sessionState is SessionState.Authenticated) registerFcmTokenIfNeeded()
+        if (sessionState is SessionState.Authenticated) registerFcmTokenIfNeeded(container)
     }
     val coroutineScope = rememberCoroutineScope()
     var loginError by rememberSaveable { mutableStateOf<String?>(null) }
