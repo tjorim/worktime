@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
-import com.worktime.android.data.model.NextShiftItem
-import com.worktime.android.data.model.ShiftSummary
 import com.worktime.android.data.model.TaskRecord
 import io.mockk.every
 import io.mockk.mockk
@@ -15,7 +13,6 @@ import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
-import java.time.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -50,20 +47,17 @@ class ReminderSchedulerTest {
         unmockkAll()
     }
 
-    private fun createShift(startHour: Double? = 9.0, daysFromNow: Long = 1): NextShiftItem {
-        val date = LocalDate.now().plusDays(daysFromNow)
-        return NextShiftItem(
-            date = date.toString(),
-            shiftCode = "MORNING",
-            teamNumber = 1,
-            shift = ShiftSummary(
-                code = "MORNING",
-                displayCode = "MORNING",
-                name = "Morning Shift",
-                startHour = startHour,
-                endHour = 17.0,
-                isWorking = true
-            )
+    private fun createPlannedTask(taskId: String = "planned-1", hoursFromNow: Int = 1): TaskRecord {
+        val startTime = java.time.OffsetDateTime.now().plusHours(hoursFromNow.toLong())
+        val stopTime = startTime.plusHours(1)
+        return TaskRecord(
+            id = taskId,
+            userId = 1,
+            text = "Team meeting",
+            startTime = startTime.toString(),
+            stopTime = stopTime.toString(),
+            includesBreak = false,
+            createdAt = startTime.toString()
         )
     }
 
@@ -83,9 +77,9 @@ class ReminderSchedulerTest {
     // ==================== Scheduling Tests ====================
 
     @Test
-    fun `reconcile schedules shift reminder when enabled and shift exists`() {
+    fun `reconcile schedules planned-task reminder when enabled and task exists`() {
         val accountId = 1
-        val shift = createShift()
+        val task = createPlannedTask()
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
@@ -96,10 +90,10 @@ class ReminderSchedulerTest {
         every { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) } returns Unit
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, shift, null, shiftsEnabled = true, timersEnabled = false)
+        scheduler.reconcile(accountId, task, null, plannedTasksEnabled = true, timersEnabled = false)
 
-        verify(exactly = 1) { mockEditor.putLong("${ReminderScheduler.TYPE_SHIFT}_at", any()) }
-        verify(exactly = 1) { mockEditor.putString("${ReminderScheduler.TYPE_SHIFT}_message", any()) }
+        verify(exactly = 1) { mockEditor.putLong("${ReminderScheduler.TYPE_PLANNED_TASK}_at", any()) }
+        verify(exactly = 1) { mockEditor.putString("${ReminderScheduler.TYPE_PLANNED_TASK}_message", any()) }
         verify(exactly = 1) {
             mockAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, any(), any())
         }
@@ -119,7 +113,7 @@ class ReminderSchedulerTest {
         every { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) } returns Unit
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, null, task, shiftsEnabled = false, timersEnabled = true)
+        scheduler.reconcile(accountId, null, task, plannedTasksEnabled = false, timersEnabled = true)
 
         verify(exactly = 1) { mockEditor.putLong("${ReminderScheduler.TYPE_TIMER}_at", any()) }
         verify(exactly = 1) { mockEditor.putString("${ReminderScheduler.TYPE_TIMER}_message", any()) }
@@ -129,7 +123,7 @@ class ReminderSchedulerTest {
     // ==================== Cancellation Tests ====================
 
     @Test
-    fun `reconcile cancels shift reminder when disabled`() {
+    fun `reconcile cancels planned-task reminder when disabled`() {
         val accountId = 1
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
@@ -139,11 +133,11 @@ class ReminderSchedulerTest {
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, null, null, shiftsEnabled = false, timersEnabled = false)
+        scheduler.reconcile(accountId, null, null, plannedTasksEnabled = false, timersEnabled = false)
 
-        // Disabling both cancels the shift AND timer reminder independently.
+        // Disabling both cancels the planned-task AND timer reminder independently.
         verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
-        verify(exactly = 1) { mockEditor.remove("${ReminderScheduler.TYPE_SHIFT}_at") }
+        verify(exactly = 1) { mockEditor.remove("${ReminderScheduler.TYPE_PLANNED_TASK}_at") }
     }
 
     @Test
@@ -169,16 +163,16 @@ class ReminderSchedulerTest {
         every { mockEditor.clear() } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(newAccountId, null, null, shiftsEnabled = false, timersEnabled = false)
+        scheduler.reconcile(newAccountId, null, null, plannedTasksEnabled = false, timersEnabled = false)
 
         verify(exactly = 1) { mockEditor.clear() }
-        // cancelAll() cancels shift+timer (2), then the disabled shift/timer branches below
-        // it independently cancel each again (2 more) since shift/task are both null.
+        // cancelAll() cancels planned-task+timer (2), then the disabled branches below
+        // it independently cancel each again (2 more) since task/running task are both null.
         verify(exactly = 4) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
-    fun `reconcile with null shift and null task cancels both reminders`() {
+    fun `reconcile with null planned task and null running task cancels both reminders`() {
         val accountId = 1
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
@@ -188,7 +182,7 @@ class ReminderSchedulerTest {
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, null, null, shiftsEnabled = true, timersEnabled = true)
+        scheduler.reconcile(accountId, null, null, plannedTasksEnabled = true, timersEnabled = true)
 
         verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
@@ -196,25 +190,25 @@ class ReminderSchedulerTest {
     // ==================== Rescheduling Tests ====================
 
     @Test
-    fun `reconcile reschedules when shift changes`() {
+    fun `reconcile reschedules when the planned task changes`() {
         val accountId = 1
-        val oldShift = createShift(startHour = 9.0)
-        val newShift = createShift(startHour = 10.0)
+        val oldTask = createPlannedTask(taskId = "planned-old")
+        val newTask = createPlannedTask(taskId = "planned-new")
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
         every { mockSharedPrefs.getLong(any(), any()) } returnsMany listOf(1000L, 2000L)
-        every { mockSharedPrefs.getString(any(), any()) } returnsMany listOf("old", "new")
+        every { mockSharedPrefs.getString(any(), any()) } returnsMany listOf("planned-old", "planned-new")
         every { mockEditor.putLong(any(), any()) } returns mockEditor
         every { mockEditor.putString(any(), any()) } returns mockEditor
         every { mockAlarmManager.canScheduleExactAlarms() } returns true
         every { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) } returns Unit
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        // First reconcile with old shift
-        scheduler.reconcile(accountId, oldShift, null, shiftsEnabled = true, timersEnabled = false)
-        // Then reconcile with new shift
-        scheduler.reconcile(accountId, newShift, null, shiftsEnabled = true, timersEnabled = false)
+        // First reconcile with the old task
+        scheduler.reconcile(accountId, oldTask, null, plannedTasksEnabled = true, timersEnabled = false)
+        // Then reconcile with the new task
+        scheduler.reconcile(accountId, newTask, null, plannedTasksEnabled = true, timersEnabled = false)
 
         verify(exactly = 2) { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) }
     }
@@ -224,28 +218,24 @@ class ReminderSchedulerTest {
     @Test
     fun `persistAndSet skips when nothing changed`() {
         val accountId = 1
-        val shift = createShift()
-        // Mirror ReminderScheduler.scheduleShift's own computation exactly, so the stored
-        // values under test genuinely match what the real code would (re)compute and the
-        // dedup-skip guard is actually exercised rather than always falling through.
-        val start = LocalDate.parse(shift.date)
-            .atTime(9, 0)
-            .atZone(java.time.ZoneId.systemDefault())
-        val at = start.minusMinutes(ReminderScheduler.SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
-        val message = "${shift.shift.displayCode} starts at ${start.toLocalTime()}"
+        val task = createPlannedTask()
+        // Mirror ReminderScheduler.schedulePlannedTask's own computation exactly, so the
+        // stored values under test genuinely match what the real code would (re)compute and
+        // the dedup-skip guard is actually exercised rather than always falling through.
+        val startTime = java.time.OffsetDateTime.parse(task.startTime)
+        val at = startTime.minusMinutes(ReminderScheduler.PLANNED_TASK_LEAD_MINUTES).toInstant().toEpochMilli()
+        val message = "${task.text} starts at ${startTime.toLocalTime()}"
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
         every {
-            mockSharedPrefs.getLong("${ReminderScheduler.TYPE_SHIFT}_at", ReminderScheduler.INVALID_ID.toLong())
-        } returns
-            at
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_message", null) } returns message
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_date", null) } returns shift.date
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_hour", null) } returns "9.0"
+            mockSharedPrefs.getLong("${ReminderScheduler.TYPE_PLANNED_TASK}_at", ReminderScheduler.INVALID_ID.toLong())
+        } returns at
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_message", null) } returns message
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_task_id", null) } returns task.id
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, shift, null, shiftsEnabled = true, timersEnabled = false)
+        scheduler.reconcile(accountId, task, null, plannedTasksEnabled = true, timersEnabled = false)
 
         verify(exactly = 0) { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) }
         verify(exactly = 0) { mockEditor.putLong(any(), any()) }
@@ -254,9 +244,9 @@ class ReminderSchedulerTest {
     // ==================== Edge Cases Tests ====================
 
     @Test
-    fun `scheduleShift does nothing when shift startHour is null`() {
+    fun `schedulePlannedTask does nothing when startTime is unparseable`() {
         val accountId = 1
-        val shift = createShift(startHour = null)
+        val task = createPlannedTask().copy(startTime = "not-a-date")
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
@@ -264,17 +254,17 @@ class ReminderSchedulerTest {
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, shift, null, shiftsEnabled = true, timersEnabled = false)
+        scheduler.reconcile(accountId, task, null, plannedTasksEnabled = true, timersEnabled = false)
 
-        // scheduleShift() cancels the shift reminder (null startHour), and the disabled timer
-        // branch (task is null) cancels the timer reminder independently.
+        // schedulePlannedTask() cancels the reminder (unparseable start time), and the disabled
+        // timer branch (task is null) cancels the timer reminder independently.
         verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
-    fun `scheduleShift does nothing when shift is in the past`() {
+    fun `schedulePlannedTask does nothing when the task already started`() {
         val accountId = 1
-        val shift = createShift(daysFromNow = -1)
+        val task = createPlannedTask(hoursFromNow = -1)
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
@@ -282,10 +272,10 @@ class ReminderSchedulerTest {
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
-        scheduler.reconcile(accountId, shift, null, shiftsEnabled = true, timersEnabled = false)
+        scheduler.reconcile(accountId, task, null, plannedTasksEnabled = true, timersEnabled = false)
 
-        // scheduleShift() cancels the shift reminder (past shift), and the disabled timer
-        // branch (task is null) cancels the timer reminder independently.
+        // schedulePlannedTask() cancels the reminder (task already started), and the disabled
+        // timer branch (task is null) cancels the timer reminder independently.
         verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
@@ -307,7 +297,7 @@ class ReminderSchedulerTest {
         // short-circuit ReminderScheduler.set()'s exact-alarm check to true regardless of
         // canScheduleExactAlarms(); force it to a real S+ value for this branch to be reachable.
         scheduler.sdkInt = Build.VERSION_CODES.S
-        scheduler.reconcile(accountId, null, task, shiftsEnabled = false, timersEnabled = true)
+        scheduler.reconcile(accountId, null, task, plannedTasksEnabled = false, timersEnabled = true)
 
         verify(exactly = 1) {
             mockAlarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, any(), any())
@@ -318,16 +308,14 @@ class ReminderSchedulerTest {
     // ==================== Restore Tests ====================
 
     @Test
-    fun `restore re-schedules shift reminder from stored data`() {
+    fun `restore re-schedules planned-task reminder from stored data`() {
         val accountId = 1
-        val storedDate = LocalDate.now().plusDays(1).toString()
-        val storedHour = "9.5"
-        val storedMessage = "Shift MORNING starts at 09:30"
+        val storedStart = java.time.OffsetDateTime.now().plusHours(1).toString()
+        val storedMessage = "Team meeting starts at 10:30"
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns accountId
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_date", null) } returns storedDate
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_hour", null) } returns storedHour
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_message", null) } returns storedMessage
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_start", null) } returns storedStart
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_message", null) } returns storedMessage
         every { mockAlarmManager.canScheduleExactAlarms() } returns true
         every { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) } returns Unit
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
@@ -340,22 +328,20 @@ class ReminderSchedulerTest {
     }
 
     @Test
-    fun `restore does not schedule expired shift reminder`() {
+    fun `restore does not schedule an expired planned-task reminder`() {
         val accountId = 1
-        val storedDate = LocalDate.now().minusDays(1).toString()
-        val storedHour = "9.0"
+        val storedStart = java.time.OffsetDateTime.now().minusDays(1).toString()
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns accountId
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_date", null) } returns storedDate
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_hour", null) } returns storedHour
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_message", null) } returns null
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_start", null) } returns storedStart
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_message", null) } returns null
         every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.restore()
 
-        // The expired shift is cancelled, and the (unstubbed, defaulted-to-stale) timer
+        // The expired reminder is cancelled, and the (unstubbed, defaulted-to-stale) timer
         // reminder is independently cancelled by the same restore() pass.
         verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
         verify(exactly = 0) { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) }
@@ -382,7 +368,7 @@ class ReminderSchedulerTest {
         val intentAccountId = 2
         val message = "Test message"
         val intent = Intent().apply {
-            action = ReminderScheduler.TYPE_SHIFT
+            action = ReminderScheduler.TYPE_PLANNED_TASK
             putExtra(ReminderScheduler.EXTRA_ACCOUNT, intentAccountId)
             putExtra(ReminderScheduler.EXTRA_MESSAGE, message)
         }
@@ -397,17 +383,17 @@ class ReminderSchedulerTest {
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 0) { WorktimeNotifications(mockContext).showShiftReminder(any()) }
+        verify(exactly = 0) { WorktimeNotifications(mockContext).showPlannedTaskReminder(any()) }
     }
 
     @Test
-    fun `ReminderReceiver shows shift notification for matching account`() {
+    fun `ReminderReceiver shows planned-task notification for matching account`() {
         val accountId = 1
         val message = "Test message"
         // A real Intent's getters return stub defaults (not the values put into it) under this
         // module's non-Robolectric unit-test setup, so the intent itself must be mocked too.
         val intent = mockk<Intent>()
-        every { intent.action } returns ReminderScheduler.TYPE_SHIFT
+        every { intent.action } returns ReminderScheduler.TYPE_PLANNED_TASK
         every { intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, ReminderScheduler.INVALID_ID) } returns accountId
         every { intent.getStringExtra(ReminderScheduler.EXTRA_MESSAGE) } returns message
 
@@ -417,12 +403,12 @@ class ReminderSchedulerTest {
             mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
         } returns
             accountId
-        every { anyConstructed<WorktimeNotifications>().showShiftReminder(message) } returns Unit
+        every { anyConstructed<WorktimeNotifications>().showPlannedTaskReminder(message) } returns Unit
 
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 1) { anyConstructed<WorktimeNotifications>().showShiftReminder(message) }
+        verify(exactly = 1) { anyConstructed<WorktimeNotifications>().showPlannedTaskReminder(message) }
     }
 
     @Test
@@ -452,7 +438,7 @@ class ReminderSchedulerTest {
     fun `ReminderReceiver does not show notification when message is null`() {
         val accountId = 1
         val intent = Intent().apply {
-            action = ReminderScheduler.TYPE_SHIFT
+            action = ReminderScheduler.TYPE_PLANNED_TASK
             putExtra(ReminderScheduler.EXTRA_ACCOUNT, accountId)
         }
 
@@ -466,7 +452,7 @@ class ReminderSchedulerTest {
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 0) { WorktimeNotifications(mockContext).showShiftReminder(any()) }
+        verify(exactly = 0) { WorktimeNotifications(mockContext).showPlannedTaskReminder(any()) }
     }
 
     @Test
@@ -474,7 +460,7 @@ class ReminderSchedulerTest {
         val intentAccountId = 1
         val message = "Test message"
         val intent = Intent().apply {
-            action = ReminderScheduler.TYPE_SHIFT
+            action = ReminderScheduler.TYPE_PLANNED_TASK
             putExtra(ReminderScheduler.EXTRA_ACCOUNT, intentAccountId)
             putExtra(ReminderScheduler.EXTRA_MESSAGE, message)
         }
@@ -488,7 +474,7 @@ class ReminderSchedulerTest {
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 0) { WorktimeNotifications(mockContext).showShiftReminder(any()) }
+        verify(exactly = 0) { WorktimeNotifications(mockContext).showPlannedTaskReminder(any()) }
     }
 
     // ==================== ReminderRestoreReceiver Tests ====================

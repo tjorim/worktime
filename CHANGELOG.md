@@ -17,6 +17,16 @@ below predate that switch.
 - Mobile carousel for team browsing
 - Advanced accessibility features (high-contrast mode, font scaling)
 
+## [2026.8.8] - 2026-08-25
+
+### Added
+
+- Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. "2pm: Team meeting") now nudges you about 10 minutes before it starts, on webapp and Android
+
+### Changed
+
+- Removed the shift-start reminder (lead time, quiet hours, and its own push subscription plumbing) — most people are already at work by the time it fires. The Notifications setting now controls the new planned-task reminder instead
+
 ## [2026.8.7] - 2026-08-25
 
 ### Added
@@ -722,7 +732,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.7...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.8...HEAD
+[2026.8.8]: https://github.com/tjorim/worktime/compare/v2026.8.7...v2026.8.8
 [2026.8.7]: https://github.com/tjorim/worktime/compare/v2026.8.6...v2026.8.7
 [2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6
 [2026.8.5]: https://github.com/tjorim/worktime/compare/v2026.8.4...v2026.8.5

@@ -6,12 +6,6 @@ import { readErrorDetail } from "@/utils/apiClient";
 import { isPushSupported, urlBase64ToUint8Array } from "@/utils/pushNotifications";
 import { logger } from "@/utils/logger";
 
-export interface PushReminderSettings {
-  leadTimeMinutes: number;
-  quietHoursStart: number | null;
-  quietHoursEnd: number | null;
-}
-
 export interface UsePushSubscriptionReturn {
   /** The browser supports both the service worker and Push APIs. */
   isSupported: boolean;
@@ -24,14 +18,13 @@ export interface UsePushSubscriptionReturn {
    */
   hasActiveSubscription: boolean;
   /**
-   * Registers (or updates, by re-calling with new settings) a push
-   * subscription with the backend so shift reminders arrive even when the
-   * app is closed. Best-effort: returns false on any failure (unsupported
-   * browser, push not configured server-side, network error) rather than
-   * throwing, since the foreground reminder (useShiftNotifications) already
-   * covers the open-tab case regardless.
+   * Registers a push subscription with the backend so reminders (e.g. an
+   * upcoming planned task) arrive even when the app is closed. Best-effort:
+   * returns false on any failure (unsupported browser, push not configured
+   * server-side, network error) rather than throwing, since the foreground
+   * reminder already covers the open-tab case regardless.
    */
-  subscribeToPush: (settings: PushReminderSettings) => Promise<boolean>;
+  subscribeToPush: () => Promise<boolean>;
   /** Unsubscribes both locally and server-side. Safe to call with no active subscription. */
   unsubscribeFromPush: () => Promise<void>;
   /** The current subscription, if any, without creating one. */
@@ -39,7 +32,7 @@ export interface UsePushSubscriptionReturn {
 }
 
 /**
- * Manages the browser's Web Push subscription for shift-reminder notifications.
+ * Manages the browser's Web Push subscription for reminder notifications.
  *
  * Must be used inside a component that also has SettingsProvider, AuthProvider and
  * ToastProvider ancestors (via useApiClient). Push is a strict enhancement on top of
@@ -49,12 +42,7 @@ export interface UsePushSubscriptionReturn {
 export function usePushSubscription(): UsePushSubscriptionReturn {
   const apiFetch = useApiClient();
   const { userId } = useAuth();
-  const {
-    notifications,
-    notificationLeadTimeMinutes,
-    notificationQuietHoursStart,
-    notificationQuietHoursEnd,
-  } = useSettings().settings;
+  const { notifications } = useSettings().settings;
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
   const getActiveSubscription = useCallback(async (): Promise<PushSubscription | null> => {
@@ -69,7 +57,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
   }, []);
 
   const subscribeToPush = useCallback(
-    async (settings: PushReminderSettings): Promise<boolean> => {
+    async (): Promise<boolean> => {
       if (!isPushSupported()) return false;
 
       try {
@@ -97,9 +85,6 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
             endpoint: subscriptionJson.endpoint,
             keys: subscriptionJson.keys,
             timezone,
-            lead_time_minutes: settings.leadTimeMinutes,
-            quiet_hours_start: settings.quietHoursStart,
-            quiet_hours_end: settings.quietHoursEnd,
           }),
         });
         if (!response.ok) {
@@ -156,7 +141,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
   // account is signed in - on a shared device, a subscription registered by one
   // account would otherwise silently keep belonging to that account's backend row
   // after a different account signs in, suppressing the new account's foreground
-  // fallback and risking that account's shift details being pushed to a device
+  // fallback and risking that account's task details being pushed to a device
   // someone else is now using.
   //
   // Re-upserting (rather than guessing from local state whether ownership already
@@ -180,11 +165,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
         setHasActiveSubscription(true);
         return;
       }
-      const registered = await subscribeToPush({
-        leadTimeMinutes: notificationLeadTimeMinutes,
-        quietHoursStart: notificationQuietHoursStart,
-        quietHoursEnd: notificationQuietHoursEnd,
-      });
+      const registered = await subscribeToPush();
       if (!cancelled) setHasActiveSubscription(registered);
     });
     return () => {
@@ -193,7 +174,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     // Only re-run when these specific values change; getActiveSubscription and
     // subscribeToPush are stable across renders in practice here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, notifications, notificationLeadTimeMinutes, notificationQuietHoursStart, notificationQuietHoursEnd]);
+  }, [userId, notifications]);
 
   return {
     isSupported: isPushSupported(),

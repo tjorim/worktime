@@ -17,6 +17,7 @@ import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -40,6 +41,8 @@ sealed interface DashboardUiState {
 
 data class MobileActionsUiState(
     val runningTask: TaskRecord? = null,
+    /** The soonest-starting planned task (stop_time already set, start_time still ahead), if any. */
+    val plannedTask: TaskRecord? = null,
     val weeklyWorkLocations: List<WorkLocationRecord> = emptyList(),
     val labels: List<LabelRecord> = emptyList(),
     val templates: List<TemplateRecord> = emptyList(),
@@ -100,6 +103,13 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                         else -> null
                     }
                 }
+            val plannedTaskDeferred =
+                async {
+                    when (val result = repository.listTasks(LocalDate.now(), LocalDate.now().plusDays(1))) {
+                        is MutationResult.Success -> nextPlannedTask(result.value)
+                        else -> null
+                    }
+                }
             val weeklyLocationsDeferred =
                 async {
                     when (val result = repository.loadWeeklyWorkLocations()) {
@@ -138,6 +148,7 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
             _actionsState.value =
                 _actionsState.value.copy(
                     runningTask = runningTaskDeferred.await(),
+                    plannedTask = plannedTaskDeferred.await(),
                     weeklyWorkLocations = weeklyLocationsDeferred.await(),
                     syncStatus = syncStatusDeferred.await(),
                     workLocationPreferences = workLocationPreferencesDeferred.await(),
@@ -302,4 +313,20 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
             }
         }
     }
+}
+
+/**
+ * Picks the soonest-starting "planned" task -- stop_time already set (not a running
+ * timer), start_time still ahead of now -- to drive the local reminder alarm. Mirrors
+ * the frontend's `isPlanned` check in DailyTaskList.tsx.
+ */
+private fun nextPlannedTask(tasks: List<TaskRecord>): TaskRecord? {
+    val now = OffsetDateTime.now()
+    return tasks
+        .asSequence()
+        .filter { it.stopTime != null }
+        .mapNotNull { task -> runCatching { OffsetDateTime.parse(task.startTime) }.getOrNull()?.let { task to it } }
+        .filter { (_, startTime) -> startTime.isAfter(now) }
+        .minByOrNull { (_, startTime) -> startTime }
+        ?.first
 }

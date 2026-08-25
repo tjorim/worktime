@@ -1552,16 +1552,13 @@ describe("syncClient", () => {
       expect(result?.data).not.toHaveProperty("lastUsed");
     });
 
-    it("excludes device-local settings fields (theme, notification lead time/quiet hours) from the payload", () => {
+    it("excludes device-local settings fields (theme, notifications) from the payload", () => {
       const userState = {
         hasCompletedOnboarding: true,
         settings: {
           timeFormat: "24h",
           theme: "dark",
           notifications: "on",
-          notificationLeadTimeMinutes: 60,
-          notificationQuietHoursStart: 22,
-          notificationQuietHoursEnd: 7,
           enableTimeOff: true,
         },
       };
@@ -1626,9 +1623,6 @@ describe("syncClient", () => {
             timeFormat: "24h",
             theme: "dark",
             notifications: "on",
-            notificationLeadTimeMinutes: 60,
-            notificationQuietHoursStart: 22,
-            notificationQuietHoursEnd: 7,
             enableTimeOff: false,
           },
         }),
@@ -1640,9 +1634,6 @@ describe("syncClient", () => {
           timeFormat: "12h",
           theme: "light",
           notifications: "off",
-          notificationLeadTimeMinutes: 15,
-          notificationQuietHoursStart: null,
-          notificationQuietHoursEnd: null,
           enableTimeOff: true,
         },
       });
@@ -1655,9 +1646,6 @@ describe("syncClient", () => {
         // Preserved from this device's local state.
         theme: "dark",
         notifications: "on",
-        notificationLeadTimeMinutes: 60,
-        notificationQuietHoursStart: 22,
-        notificationQuietHoursEnd: 7,
       });
     });
   });

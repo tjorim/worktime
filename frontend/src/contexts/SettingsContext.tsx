@@ -13,7 +13,6 @@ import { logger } from "@/utils/logger";
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
-export type NotificationLeadTimeMinutes = 15 | 60 | 120;
 export type TabKey =
   | "calendar"
   | "unified-calendar"
@@ -41,11 +40,8 @@ export interface LastUsed {
 export interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
+  /** Whether reminders for upcoming planned time-tracking entries are enabled. */
   notifications: NotificationSetting;
-  notificationLeadTimeMinutes: NotificationLeadTimeMinutes;
-  /** Both null (the default) disables quiet hours. Wraps past midnight when start > end. */
-  notificationQuietHoursStart: number | null;
-  notificationQuietHoursEnd: number | null;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
   enableGantt: boolean;
@@ -60,9 +56,6 @@ interface SettingsContextType {
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
-  updateNotificationLeadTime: (minutes: NotificationLeadTimeMinutes) => void;
-  /** Pass null to disable quiet hours entirely; both bounds are always set together. */
-  updateNotificationQuietHours: (range: { start: number; end: number } | null) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateGanttEnabled: (enabled: boolean) => void;
@@ -112,9 +105,6 @@ export const defaultSettings: UserSettings = {
   timeFormat: "24h",
   theme: "auto",
   notifications: "off",
-  notificationLeadTimeMinutes: 15,
-  notificationQuietHoursStart: null,
-  notificationQuietHoursEnd: null,
   enableTimeOff: false,
   enableTimeTracking: false,
   enableGantt: false,
@@ -221,11 +211,6 @@ const enumWithDefault =
   (value) =>
     typeof value === "string" && validValues.has(value as T) ? (value as T) : fallback;
 
-const numericEnumWithDefault =
-  <T extends number>(validValues: ReadonlySet<T>, fallback: T): Validator<T> =>
-  (value) =>
-    typeof value === "number" && validValues.has(value as T) ? (value as T) : fallback;
-
 const countryWithDefault =
   (fallback: CountryCode | null): Validator<CountryCode | null> =>
   (value) =>
@@ -249,17 +234,6 @@ const nullableFiniteNumberWithDefault =
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
   };
 
-const nullableHourWithDefault =
-  (fallback: number | null): Validator<number | null> =>
-  (value) => {
-    if (value === null) {
-      return null;
-    }
-    return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 23
-      ? value
-      : fallback;
-  };
-
 const normalizeUserState = (state: unknown): WorktimeUserState => {
   if (!isObjectRecord(state)) {
     return defaultUserState;
@@ -277,12 +251,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       new Set<NotificationSetting>(["on", "off"]),
       defaultSettings.notifications,
     ),
-    notificationLeadTimeMinutes: numericEnumWithDefault(
-      new Set<NotificationLeadTimeMinutes>([15, 60, 120]),
-      defaultSettings.notificationLeadTimeMinutes,
-    ),
-    notificationQuietHoursStart: nullableHourWithDefault(defaultSettings.notificationQuietHoursStart),
-    notificationQuietHoursEnd: nullableHourWithDefault(defaultSettings.notificationQuietHoursEnd),
     enableTimeOff: booleanWithDefault(defaultSettings.enableTimeOff),
     enableTimeTracking: booleanWithDefault(defaultSettings.enableTimeTracking),
     enableGantt: booleanWithDefault(defaultSettings.enableGantt),
@@ -445,27 +413,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       };
     };
 
-    const updateNotificationQuietHours = (range: { start: number; end: number } | null) => {
-      setDeviceLocalState((prev) => {
-        const base = isObjectRecord(prev) ? prev : defaultUserState;
-        const prevSettings = isObjectRecord(base.settings) ? base.settings : defaultSettings;
-        return {
-          ...base,
-          settings: {
-            ...prevSettings,
-            notificationQuietHoursStart: range?.start ?? null,
-            notificationQuietHoursEnd: range?.end ?? null,
-          },
-        };
-      });
-    };
-
     return {
       updateTimeFormat: updateSetting("timeFormat"),
       updateTheme: updateSetting("theme"),
       updateNotifications: updateSetting("notifications"),
-      updateNotificationLeadTime: updateSetting("notificationLeadTimeMinutes"),
-      updateNotificationQuietHours,
       updateTimeOffEnabled: updateSetting("enableTimeOff"),
       updateTimeTrackingEnabled: updateSetting("enableTimeTracking"),
       updateGanttEnabled: updateSetting("enableGantt"),
@@ -508,8 +459,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     updateTimeFormat,
     updateTheme,
     updateNotifications,
-    updateNotificationLeadTime,
-    updateNotificationQuietHours,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -655,8 +604,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
-      updateNotificationLeadTime,
-      updateNotificationQuietHours,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateGanttEnabled,
@@ -691,8 +638,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
-      updateNotificationLeadTime,
-      updateNotificationQuietHours,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateGanttEnabled,

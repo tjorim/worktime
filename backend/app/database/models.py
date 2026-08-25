@@ -115,6 +115,11 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
     )
     stop_time: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     includes_break: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    # Set once the planned-task-starting-soon reminder (see
+    # app.services.planned_task_reminder_scheduler) has been sent for this task, so the
+    # periodic scan doesn't re-send while the task is still upcoming. Reset to None
+    # whenever start_time changes (a reschedule needs a fresh reminder window).
+    reminder_sent_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
@@ -133,6 +138,14 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
         ),
         Index("ix_time_tracking_tasks_user_id_updated_at", "user_id", "updated_at"),
         Index("ix_time_tracking_tasks_user_id_start_time", "user_id", "start_time"),
+        # Backs the periodic reminder scan (a global scan across all users' upcoming
+        # planned tasks, not scoped to one user_id like the composite index above).
+        Index(
+            "ix_time_tracking_tasks_pending_reminder",
+            "start_time",
+            postgresql_where=sql_text("reminder_sent_at IS NULL AND stop_time IS NOT NULL AND deleted_at IS NULL"),
+            sqlite_where=sql_text("reminder_sent_at IS NULL AND stop_time IS NOT NULL AND deleted_at IS NULL"),
+        ),
     )
 
 
@@ -323,13 +336,10 @@ class AccessToken(Base):
 
 
 class PushSubscription(Base):
-    """A browser's Web Push subscription, used to send shift-reminder notifications
-    that fire even when the app is closed (see app.services.shift_reminder_scheduler).
+    """A browser's Web Push subscription, used to deliver notifications that fire
+    even when the app is closed (see app.services.planned_task_reminder_scheduler).
 
     One row per browser/device — a user with multiple devices has multiple rows.
-    lead_time_minutes and quiet_hours are per-subscription rather than a single
-    per-user preference so each device can be tuned independently; they're set
-    at subscribe time and updated via a re-subscribe (upsert by endpoint).
     """
 
     __tablename__ = "push_subscriptions"
@@ -340,24 +350,11 @@ class PushSubscription(Base):
     p256dh_key: Mapped[str] = mapped_column(String)
     auth_key: Mapped[str] = mapped_column(String)
     # IANA timezone name (e.g. "Europe/Brussels"), captured client-side at
-    # subscribe time — roster shift times are local wall-clock times, so the
-    # reminder scheduler needs this to compute the right UTC instant to fire at.
+    # subscribe time. Not currently used to compute reminder timing (planned-task
+    # reminders fire relative to start_time, which is already an absolute instant),
+    # but kept for parity with how the frontend gathers subscription info and in
+    # case a future reminder kind needs local wall-clock context again.
     timezone: Mapped[str] = mapped_column(String, default="UTC", server_default="UTC")
-    lead_time_minutes: Mapped[int] = mapped_column(Integer, default=15, server_default="15")
-    # 0-23 local hour, both null (the default) disables quiet hours. When
-    # quiet_hours_start > quiet_hours_end the window wraps past midnight.
-    quiet_hours_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    quiet_hours_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # Dedup key for the shift a reminder was last sent for (f"{date}-{shift_code}"),
-    # so the periodic loop doesn't re-send while the same shift is still upcoming.
-    last_reminder_key: Mapped[str | None] = mapped_column(String, nullable=True)
-    # When last_reminder_key was set, identifying that specific claim attempt --
-    # not just which shift it's for. A settings upsert can reset last_reminder_key
-    # to None and a different worker can then reclaim the *same* key string for a
-    # legitimate newer attempt; comparing on this timestamp (rather than the key
-    # itself) lets a stale failed-send cleanup recognize it's no longer the current
-    # claim and back off, instead of clobbering it. See shift_reminder_scheduler.py.
-    last_reminder_claimed_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )

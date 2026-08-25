@@ -116,7 +116,7 @@ class TestLifespanInitialization:
         """Shutdown lets each cancelled background task finish its cleanup."""
         from app import main
         from app.config import oidc_config
-        from app.services import shift_reminder_scheduler
+        from app.services import planned_task_reminder_scheduler
 
         fake_settings = Mock()
         fake_settings.log_configuration = Mock()
@@ -142,8 +142,8 @@ class TestLifespanInitialization:
         monkeypatch.setattr(main.sync_event_manager, "stop_pg_listener", AsyncMock())
         monkeypatch.setattr(oidc_config, "start_periodic_jwks_refresh", lambda: asyncio.create_task(background("jwks")))
         monkeypatch.setattr(
-            shift_reminder_scheduler,
-            "start_periodic_shift_reminders",
+            planned_task_reminder_scheduler,
+            "start_periodic_planned_task_reminders",
             lambda: asyncio.create_task(background("reminders")),
         )
 

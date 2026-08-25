@@ -7,19 +7,11 @@
  *
  * - `theme` is a display preference people often want to differ by device
  *   (e.g. always-dark on a laptop, "auto" on a phone).
- * - The notification fields drive per-device push subscriptions — the
- *   backend's PushSubscription table has one row per browser/device, each
- *   carrying its own lead time and quiet hours. Syncing these here would let
- *   a change on one device silently overwrite another device's chosen
- *   values the next time preferences reconcile.
+ * - `notifications` drives a per-device Web Push subscription — the backend's
+ *   PushSubscription table has one row per browser/device. Syncing this here
+ *   would let a change on one device silently unsubscribe another.
  *
  * Kept as plain strings (not `keyof UserSettings`) so this file has no
  * dependency on SettingsContext, avoiding a cycle with syncClient.ts.
  */
-export const DEVICE_LOCAL_SETTING_KEYS = [
-  "theme",
-  "notifications",
-  "notificationLeadTimeMinutes",
-  "notificationQuietHoursStart",
-  "notificationQuietHoursEnd",
-] as const;
+export const DEVICE_LOCAL_SETTING_KEYS = ["theme", "notifications"] as const;

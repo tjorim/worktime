@@ -14,9 +14,21 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "2026.8.7",
+    version: "2026.8.8",
     date: "2026-08-25",
     status: "current",
+    added: [
+      "Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. \"2pm: Team meeting\") now nudges you about 10 minutes before it starts, on webapp and Android",
+    ],
+    changed: [
+      "Removed the shift-start reminder (lead time, quiet hours, and its own push subscription plumbing) — most people are already at work by the time it fires. The Notifications setting now controls the new planned-task reminder instead",
+    ],
+    fixed: [],
+  },
+  {
+    version: "2026.8.7",
+    date: "2026-08-25",
+    status: "released",
     added: [
       "The iCal feed now tags shift and time-off events with a color hint (RFC 7986 COLOR), so calendar apps that support per-event colors (e.g. Apple Calendar, Thunderbird) can show them distinctly",
       "Time Tracking now shows a heads-up when the selected day is marked as full-day time off, and setting a work location on such a day shows a similar note — both purely informational, logging time or a location still works exactly the same",

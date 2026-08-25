@@ -1,20 +1,18 @@
-"""Tests for Web Push shift-reminder notifications: the /api/push router, the
-subscription service layer, and the periodic reminder scheduler's DB-backed
-behaviour (dedup, lead time, quiet hours).
+"""Tests for Web Push notifications: the /api/push router, the subscription
+service layer, and the periodic planned-task reminder scheduler's DB-backed
+behaviour (dedup, lead-time window).
 
 Router/service/scheduler-integration tests here need a real Postgres test
 database (see tests/conftest.py's db_client/db_session fixtures) and are not
-runnable in this sandbox, which has no Postgres available -- only
-test_shift_reminder_scheduler.py's pure-function tests were actually
-executed locally. These follow the same conventions as
-test_access_tokens.py/test_read_models.py exactly, so they should run
-unchanged in CI.
+runnable in this sandbox, which has no Postgres available. These follow the
+same conventions as test_access_tokens.py/test_read_models.py exactly, so
+they should run unchanged in CI.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,35 +21,16 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.database.models import PushSubscription
-from app.schemas import PushSubscriptionCreate, PushSubscriptionKeys, UserCreate
-from app.services.db_service import create_user
+from app.schemas import PushSubscriptionCreate, PushSubscriptionKeys, TaskCreate, UserCreate
+from app.services.db_service import create_task, create_user
 from app.services.push_service import PushSendResult
 from app.services.push_subscription_service import (
     delete_subscription,
     delete_subscription_by_id,
     list_all_subscriptions,
+    list_subscriptions_for_user,
     upsert_subscription,
 )
-from tests.conftest import utc_timestamp_offset as _ts
-
-
-def _seed_work_context(
-    db_client: TestClient,
-    headers: dict[str, str],
-    *,
-    schedule_type: str,
-    team_number: int,
-) -> None:
-    response = db_client.put(
-        "/api/preferences",
-        json={
-            "data": {"scheduleType": schedule_type, "myTeam": team_number, "settings": {}},
-            "client_updated_at": _ts(),
-        },
-        headers=headers,
-    )
-    assert response.status_code == 200, response.text
 
 
 def _subscribe_payload(endpoint: str = "https://fcm.googleapis.com/fcm/send/ep1", **overrides: object) -> dict:
@@ -59,7 +38,6 @@ def _subscribe_payload(endpoint: str = "https://fcm.googleapis.com/fcm/send/ep1"
         "endpoint": endpoint,
         "keys": {"p256dh": "test-p256dh", "auth": "test-auth"},
         "timezone": "UTC",
-        "lead_time_minutes": 15,
     }
     payload.update(overrides)
     return payload
@@ -152,28 +130,24 @@ class TestPushRouter:
 
         created = db_client.post(
             "/api/push/subscribe",
-            json=_subscribe_payload(quiet_hours_start=22, quiet_hours_end=6),
+            json=_subscribe_payload(),
             headers=headers,
         )
         assert created.status_code == 201, created.text
         body = created.json()
         assert body["endpoint"] == "https://fcm.googleapis.com/fcm/send/ep1"
-        assert body["quiet_hours_start"] == 22
-        assert body["quiet_hours_end"] == 6
         assert "p256dh_key" not in body
         assert "auth_key" not in body
 
         # Re-subscribing the same endpoint upserts rather than duplicating.
         updated = db_client.post(
             "/api/push/subscribe",
-            json=_subscribe_payload(lead_time_minutes=60),
+            json=_subscribe_payload(timezone="Europe/Brussels"),
             headers=headers,
         )
         assert updated.status_code == 201
         assert updated.json()["id"] == body["id"]
-        assert updated.json()["lead_time_minutes"] == 60
-        # Quiet hours weren't included in the second payload, so the upsert clears them.
-        assert updated.json()["quiet_hours_start"] is None
+        assert updated.json()["timezone"] == "Europe/Brussels"
 
         deleted = db_client.delete(
             "/api/push/subscribe", params={"endpoint": "https://fcm.googleapis.com/fcm/send/ep1"}, headers=headers
@@ -184,26 +158,6 @@ class TestPushRouter:
             "/api/push/subscribe", params={"endpoint": "https://fcm.googleapis.com/fcm/send/ep1"}, headers=headers
         )
         assert deleted_again.status_code == 404
-
-    def test_quiet_hours_must_be_set_together(
-        self,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        monkeypatch.setattr(settings, "VAPID_PUBLIC_KEY", "test-public")
-        monkeypatch.setattr(settings, "VAPID_PRIVATE_KEY", "test-private")
-        admin_headers = auth_headers(1, is_admin=True)
-        user_id = create_user_factory(db_client, admin_headers, "push-quiet-hours-validation")
-        headers = auth_headers(user_id)
-
-        response = db_client.post(
-            "/api/push/subscribe",
-            json=_subscribe_payload(quiet_hours_start=22),
-            headers=headers,
-        )
-        assert response.status_code == 422
 
     def test_cannot_unsubscribe_another_users_endpoint(
         self,
@@ -270,191 +224,116 @@ class TestPushSubscriptionService:
         await delete_subscription_by_id(db_session, "not-a-real-id")
 
 
-class TestShiftReminderScheduler:
-    """DB-backed behaviour of _check_and_send_reminders: dedup, lead time, quiet hours."""
+class TestPlannedTaskReminderScheduler:
+    """DB-backed behaviour of the planned-task reminder scan: window, dedup, cleanup."""
 
-    async def _make_subscription(
-        self,
-        db_session: AsyncSession,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        *,
-        username: str,
-        schedule_type: str,
-        team_number: int,
-        lead_time_minutes: int = 15,
-        quiet_hours_start: int | None = None,
-        quiet_hours_end: int | None = None,
-    ) -> PushSubscription:
-        admin_headers = auth_headers(1, is_admin=True)
-        user_id = create_user_factory(db_client, admin_headers, username)
-        headers = auth_headers(user_id)
-        _seed_work_context(db_client, headers, schedule_type=schedule_type, team_number=team_number)
-
-        payload = PushSubscriptionCreate(
-            endpoint=f"https://fcm.googleapis.com/fcm/send/{username}",
-            keys=PushSubscriptionKeys(p256dh="a", auth="b"),
-            timezone="UTC",
-            lead_time_minutes=lead_time_minutes,
-            quiet_hours_start=quiet_hours_start,
-            quiet_hours_end=quiet_hours_end,
-        )
-        return await upsert_subscription(db_session, user_id, payload)
-
-    async def test_sends_and_dedupes_within_the_reminder_window(
-        self,
-        db_session: AsyncSession,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        from app.services import shift_reminder_scheduler as scheduler
-
-        # Team 1 on 9-5 works every weekday 09:00-17:00 in UTC (matching the
-        # subscription's stored timezone) -- anchor "now" a few minutes before
-        # a Monday's shift starts so it's within the 15-minute lead time.
-        # 2025-07-21 is a Monday (see test_shift_reminder_scheduler.py).
-        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
-
-        subscription = await self._make_subscription(
+    async def _make_planned_task(
+        self, db_session: AsyncSession, user_id: int, *, start_time: datetime, text: str = "Team meeting"
+    ):
+        return await create_task(
             db_session,
-            db_client,
-            auth_headers,
-            create_user_factory,
-            username="reminder-user",
-            schedule_type="9-5",
-            team_number=1,
+            user_id,
+            TaskCreate(text=text, start_time=start_time, stop_time=start_time + timedelta(hours=1)),
         )
+
+    async def test_finds_and_sends_for_a_task_starting_within_the_lead_window(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(
+            db_session, UserCreate(username="planned-reminder-user", display_name="Planned Reminder")
+        )
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/planned-reminder-user",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+            ),
+        )
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
 
         send_mock = MagicMock(return_value=PushSendResult.SENT)
         monkeypatch.setattr(scheduler, "send_push", send_mock)
 
-        await scheduler._maybe_send_reminder(db_session, subscription, now_utc=fixed_now)
-        await db_session.commit()
+        due = await scheduler._find_due_tasks(db_session, fixed_now)
+        assert [t.id for t in due] == [task.id]
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
         send_mock.assert_called_once()
-        assert subscription.last_reminder_key == "2025-07-21-D"
+        await db_session.refresh(task)
+        assert task.reminder_sent_at == fixed_now
 
-        # A second check for the same shift should not send again.
+        # A second scan shouldn't find it again, and re-sending is a no-op.
+        assert await scheduler._find_due_tasks(db_session, fixed_now) == []
         send_mock.reset_mock()
-        await scheduler._maybe_send_reminder(db_session, subscription, now_utc=fixed_now)
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
         send_mock.assert_not_called()
 
-    async def test_skips_outside_the_lead_time_window(
-        self,
-        db_session: AsyncSession,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        from app.services import shift_reminder_scheduler as scheduler
-
-        # Two hours before the Monday shift -- outside the default 15-minute window.
-        fixed_now = datetime(2025, 7, 21, 7, 0, tzinfo=UTC)
-
-        subscription = await self._make_subscription(
-            db_session,
-            db_client,
-            auth_headers,
-            create_user_factory,
-            username="reminder-early-user",
-            schedule_type="9-5",
-            team_number=1,
-        )
-
-        send_mock = MagicMock(return_value=PushSendResult.SENT)
-        monkeypatch.setattr(scheduler, "send_push", send_mock)
-
-        await scheduler._maybe_send_reminder(db_session, subscription, now_utc=fixed_now)
-        send_mock.assert_not_called()
-        assert subscription.last_reminder_key is None
-
-    async def test_respects_quiet_hours(
-        self,
-        db_session: AsyncSession,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        from app.services import shift_reminder_scheduler as scheduler
-
+    async def test_skips_a_task_starting_outside_the_lead_window(self, db_session: AsyncSession) -> None:
+        user = await create_user(db_session, UserCreate(username="reminder-far-out", display_name="Far Out"))
         fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(hours=2))
 
-        subscription = await self._make_subscription(
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        assert await scheduler._find_due_tasks(db_session, fixed_now) == []
+
+    async def test_skips_a_running_task_with_no_stop_time(self, db_session: AsyncSession) -> None:
+        user = await create_user(db_session, UserCreate(username="reminder-running-task", display_name="Running"))
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        await create_task(
             db_session,
-            db_client,
-            auth_headers,
-            create_user_factory,
-            username="reminder-quiet-user",
-            schedule_type="9-5",
-            team_number=1,
-            quiet_hours_start=6,
-            quiet_hours_end=9,
+            user.id,
+            TaskCreate(text="Working", start_time=fixed_now + timedelta(minutes=5)),
         )
 
-        send_mock = MagicMock(return_value=PushSendResult.SENT)
-        monkeypatch.setattr(scheduler, "send_push", send_mock)
+        from app.services import planned_task_reminder_scheduler as scheduler
 
-        await scheduler._maybe_send_reminder(db_session, subscription, now_utc=fixed_now)
-        send_mock.assert_not_called()
-        # Still marked handled so it doesn't fire late once quiet hours end.
-        assert subscription.last_reminder_key == "2025-07-21-D"
+        assert await scheduler._find_due_tasks(db_session, fixed_now) == []
 
     async def test_deletes_subscription_when_push_service_reports_gone(
-        self,
-        db_session: AsyncSession,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        monkeypatch: pytest.MonkeyPatch,
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from app.services import shift_reminder_scheduler as scheduler
+        from app.services import planned_task_reminder_scheduler as scheduler
 
-        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
-
-        subscription = await self._make_subscription(
+        user = await create_user(db_session, UserCreate(username="reminder-gone-user", display_name="Gone"))
+        subscription = await upsert_subscription(
             db_session,
-            db_client,
-            auth_headers,
-            create_user_factory,
-            username="reminder-gone-user",
-            schedule_type="9-5",
-            team_number=1,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-gone-user",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+            ),
         )
-        subscription_id = subscription.id
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
 
         send_mock = MagicMock(return_value=PushSendResult.SUBSCRIPTION_GONE)
         monkeypatch.setattr(scheduler, "send_push", send_mock)
 
-        await scheduler._maybe_send_reminder(db_session, subscription, now_utc=fixed_now)
-        await db_session.commit()
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
 
+        assert await list_subscriptions_for_user(db_session, user.id) == []
         remaining = await list_all_subscriptions(db_session)
-        assert all(sub.id != subscription_id for sub in remaining)
+        assert all(sub.id != subscription.id for sub in remaining)
 
-    async def test_no_reminder_without_a_configured_schedule(
-        self,
-        db_session: AsyncSession,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-        monkeypatch: pytest.MonkeyPatch,
+    async def test_no_reminder_without_a_subscription(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from app.services import shift_reminder_scheduler as scheduler
+        """Nothing to deliver to, but the task is still claimed so it isn't rescanned forever."""
+        from app.services import planned_task_reminder_scheduler as scheduler
 
-        admin_headers = auth_headers(1, is_admin=True)
-        user_id = create_user_factory(db_client, admin_headers, "reminder-no-schedule")
-        payload = PushSubscriptionCreate(
-            endpoint="https://fcm.googleapis.com/fcm/send/no-schedule",
-            keys=PushSubscriptionKeys(p256dh="a", auth="b"),
-        )
-        subscription = await upsert_subscription(db_session, user_id, payload)
+        user = await create_user(db_session, UserCreate(username="reminder-no-sub", display_name="No Sub"))
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
 
         send_mock = MagicMock(return_value=PushSendResult.SENT)
         monkeypatch.setattr(scheduler, "send_push", send_mock)
 
-        await scheduler._maybe_send_reminder(db_session, subscription)
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
         send_mock.assert_not_called()
+        await db_session.refresh(task)
+        assert task.reminder_sent_at == fixed_now

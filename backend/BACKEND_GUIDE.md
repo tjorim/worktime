@@ -163,7 +163,7 @@ Under `/api/sync`:
 
 ### Push notification routes
 
-- `/api/push/*` — Web Push subscription management for shift-reminder notifications (no-ops unless
+- `/api/push/*` — Web Push subscription management for planned-task-reminder notifications (no-ops unless
   `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` are set)
 
 ### MCP server

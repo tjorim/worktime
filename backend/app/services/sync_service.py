@@ -555,6 +555,9 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
             task.gantt_task_id = item.gantt_task_id
         if "start_time" in provided_fields and item.start_time is not None:
             task.start_time = item.start_time
+            # A reschedule needs a fresh reminder window -- otherwise a task pushed
+            # back out into the future would stay silently marked as already reminded.
+            task.reminder_sent_at = None
         if "stop_time" in provided_fields:
             task.stop_time = item.stop_time
         if "includes_break" in provided_fields and item.includes_break is not None:

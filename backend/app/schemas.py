@@ -314,17 +314,11 @@ def _is_allowed_push_endpoint_host(hostname: str) -> bool:
 
 
 class PushSubscriptionCreate(BaseModel):
-    """Payload for registering (or updating, by re-posting) a browser's push
-    subscription. lead_time_minutes and quiet_hours travel with the
-    subscription itself — see PushSubscription's docstring in database/models.py.
-    """
+    """Payload for registering (or updating, by re-posting) a browser's push subscription."""
 
     endpoint: str = Field(min_length=1, max_length=2048)
     keys: PushSubscriptionKeys
     timezone: str = "UTC"
-    lead_time_minutes: int = Field(default=15, ge=1, le=720)
-    quiet_hours_start: int | None = Field(default=None, ge=0, le=23)
-    quiet_hours_end: int | None = Field(default=None, ge=0, le=23)
 
     @field_validator("endpoint")
     @classmethod
@@ -345,14 +339,6 @@ class PushSubscriptionCreate(BaseModel):
             raise ValueError(f"Unknown timezone: {value!r}") from exc
         return value
 
-    @model_validator(mode="after")
-    def validate_quiet_hours_pair(self) -> PushSubscriptionCreate:
-        has_start = self.quiet_hours_start is not None
-        has_end = self.quiet_hours_end is not None
-        if has_start != has_end:
-            raise ValueError("quiet_hours_start and quiet_hours_end must be set together")
-        return self
-
 
 class PushSubscriptionRead(BaseModel):
     """A registered push subscription, without its auth secret."""
@@ -360,9 +346,6 @@ class PushSubscriptionRead(BaseModel):
     id: str
     endpoint: str
     timezone: str
-    lead_time_minutes: int
-    quiet_hours_start: int | None
-    quiet_hours_end: int | None
     created_at: dt_datetime
     updated_at: dt_datetime
 

@@ -101,14 +101,14 @@ async def lifespan(app: FastAPI):
         jwks_refresh_task = start_periodic_jwks_refresh()
         logger.info("✓ Periodic OIDC JWKS refresh started in background")
 
-    # Shift-reminder Web Push: opt-in via VAPID keys, so most deployments
+    # Planned-task-reminder Web Push: opt-in via VAPID keys, so most deployments
     # (and every test run) never start this loop at all.
-    shift_reminder_task = None
+    planned_task_reminder_task = None
     if settings.DATABASE_ENABLED and settings.push_notifications_enabled:
-        from .services.shift_reminder_scheduler import start_periodic_shift_reminders
+        from .services.planned_task_reminder_scheduler import start_periodic_planned_task_reminders
 
-        shift_reminder_task = start_periodic_shift_reminders()
-        logger.info("✓ Periodic shift-reminder push notifications started in background")
+        planned_task_reminder_task = start_periodic_planned_task_reminders()
+        logger.info("✓ Periodic planned-task-reminder push notifications started in background")
 
     logger.info("=" * 60)
     logger.info("Startup complete - Server ready to accept connections")
@@ -122,10 +122,10 @@ async def lifespan(app: FastAPI):
         jwks_refresh_task.cancel()
         with suppress(asyncio.CancelledError):
             await jwks_refresh_task
-    if shift_reminder_task is not None:
-        shift_reminder_task.cancel()
+    if planned_task_reminder_task is not None:
+        planned_task_reminder_task.cancel()
         with suppress(asyncio.CancelledError):
-            await shift_reminder_task
+            await planned_task_reminder_task
     if settings.DATABASE_ENABLED:
         await sync_event_manager.stop_pg_listener()
 

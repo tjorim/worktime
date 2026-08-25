@@ -108,9 +108,9 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
         val dashboard = (uiState as? DashboardUiState.Success)?.dashboard ?: return@LaunchedEffect
         reminderScheduler.reconcile(
             dashboard.identity.id,
-            dashboard.nextShifts.items.firstOrNull(),
+            actionsState.plannedTask,
             actionsState.runningTask,
-            notificationPreferences.shiftsEnabled,
+            notificationPreferences.plannedTasksEnabled,
             notificationPreferences.timeTrackingEnabled
         )
 
@@ -265,9 +265,9 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     onDismissTimeOffForm = timeOffViewModel::closeForm,
                     onSubmitTimeOff = timeOffViewModel::submit,
                     onDeleteTimeOff = timeOffViewModel::delete,
-                    onShiftNotificationsChanged = {
+                    onPlannedTaskNotificationsChanged = {
                         coroutineScope.launch {
-                            container.notificationPreferencesStore.setShiftsEnabled(it)
+                            container.notificationPreferencesStore.setPlannedTasksEnabled(it)
                         }
                     },
                     onTimeTrackingNotificationsChanged = {
@@ -323,7 +323,7 @@ private fun WorktimeAuthenticatedScaffold(
     onDismissTimeOffForm: () -> Unit,
     onSubmitTimeOff: (com.worktime.android.data.repository.TimeOffDraft) -> Unit,
     onDeleteTimeOff: (String) -> Unit,
-    onShiftNotificationsChanged: (Boolean) -> Unit,
+    onPlannedTaskNotificationsChanged: (Boolean) -> Unit,
     onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
     onSyncNotificationsChanged: (Boolean) -> Unit,
     biometricLockPreferences: BiometricLockPreferences,
@@ -424,7 +424,7 @@ private fun WorktimeAuthenticatedScaffold(
                         apiBaseUrlOverride = apiBaseUrlOverride,
                         onApiBaseUrlOverrideSave = onApiBaseUrlOverrideSave,
                         onApiBaseUrlOverrideClear = onApiBaseUrlOverrideClear,
-                        onShiftNotificationsChanged = onShiftNotificationsChanged,
+                        onPlannedTaskNotificationsChanged = onPlannedTaskNotificationsChanged,
                         onTimeTrackingNotificationsChanged = onTimeTrackingNotificationsChanged,
                         onSyncNotificationsChanged = onSyncNotificationsChanged,
                         biometricLockPreferences = biometricLockPreferences,

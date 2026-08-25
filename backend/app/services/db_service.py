@@ -482,6 +482,10 @@ async def update_task(
 
     for field, value in data.items():
         setattr(task, field, value)
+    if "start_time" in data:
+        # A reschedule needs a fresh reminder window -- otherwise a task pushed
+        # back out into the future would stay silently marked as already reminded.
+        task.reminder_sent_at = None
     # Bump the LWW timestamp so a later sync push carrying stale data cannot
     # silently overwrite this edit (conflict detection compares client_updated_at).
     task.client_updated_at = datetime.now(UTC)

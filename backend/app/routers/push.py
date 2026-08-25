@@ -1,5 +1,5 @@
-"""REST API endpoints for Web Push subscriptions (shift-reminder notifications
-that fire even when the app is closed).
+"""REST API endpoints for Web Push subscriptions (notifications, e.g. a planned
+task starting soon, that fire even when the app is closed).
 """
 
 from __future__ import annotations
