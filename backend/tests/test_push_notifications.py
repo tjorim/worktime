@@ -225,9 +225,7 @@ class TestPushSubscriptionService:
         # Should not raise even though nothing exists at this id.
         await delete_subscription_by_id(db_session, "not-a-real-id")
 
-    async def test_upsert_survives_concurrent_registration_of_a_brand_new_endpoint(
-        self, test_db: AsyncEngine
-    ) -> None:
+    async def test_upsert_survives_concurrent_registration_of_a_brand_new_endpoint(self, test_db: AsyncEngine) -> None:
         """Two requests racing to register the same brand-new endpoint must not
         raise IntegrityError -- regression test for #1224."""
         factory = async_sessionmaker(test_db, expire_on_commit=False)
