@@ -674,8 +674,8 @@ describe("useTimeTrackingStorage", () => {
       });
 
       expect(result.current.labels).toHaveLength(2);
-      expect(result.current.labels[0].name).toBe("Support");
-      expect(result.current.labels[1].name).toBe("Dev");
+      expect(result.current.labels[0]!.name).toBe("Support");
+      expect(result.current.labels[1]!.name).toBe("Dev");
     });
 
     it("sanitizes duplicate label names on update", () => {
@@ -690,7 +690,7 @@ describe("useTimeTrackingStorage", () => {
 
       // sanitizeLabels deduplicates case-insensitively, keeping the first
       expect(result.current.labels).toHaveLength(1);
-      expect(result.current.labels[0].name).toBe("Support");
+      expect(result.current.labels[0]!.name).toBe("Support");
     });
 
     it("resets labels when updateLabels is called with an empty list", () => {
@@ -721,7 +721,7 @@ describe("useTimeTrackingStorage", () => {
       });
 
       expect(result.current.templates).toHaveLength(1);
-      expect(result.current.templates[0].id).toBe(templateId);
+      expect(result.current.templates[0]!.id).toBe(templateId);
     });
 
     it("replaces existing templates", async () => {

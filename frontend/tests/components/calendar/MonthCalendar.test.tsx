@@ -144,7 +144,7 @@ describe("MonthCalendar", () => {
       await user.click(screen.getByRole("button", { name: "Previous month" }));
 
       expect(mockOnMonthChange).toHaveBeenCalledTimes(1);
-      const calledMonth = mockOnMonthChange.mock.calls[0][0];
+      const calledMonth = mockOnMonthChange.mock.calls[0]![0];
       expect(calledMonth.format("YYYY-MM")).toBe("2024-12");
     });
 
@@ -155,7 +155,7 @@ describe("MonthCalendar", () => {
       await user.click(screen.getByRole("button", { name: "Next month" }));
 
       expect(mockOnMonthChange).toHaveBeenCalledTimes(1);
-      const calledMonth = mockOnMonthChange.mock.calls[0][0];
+      const calledMonth = mockOnMonthChange.mock.calls[0]![0];
       expect(calledMonth.format("YYYY-MM")).toBe("2025-02");
     });
 
@@ -166,7 +166,7 @@ describe("MonthCalendar", () => {
       await user.click(screen.getByRole("button", { name: "Jump to current month" }));
 
       expect(mockOnMonthChange).toHaveBeenCalledTimes(1);
-      const calledMonth = mockOnMonthChange.mock.calls[0][0];
+      const calledMonth = mockOnMonthChange.mock.calls[0]![0];
       expect(calledMonth.format("YYYY-MM")).toBe(dayjs().format("YYYY-MM"));
     });
   });
@@ -227,7 +227,7 @@ describe("MonthCalendar", () => {
       render(<MonthCalendar {...defaultProps} entries={[entry]} />);
 
       const eventButton = screen.getAllByRole("button", { name: /View Test vacation/i })[0];
-      await user.click(eventButton);
+      await user.click(eventButton!);
 
       expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
       expect(mockOnViewEvent).toHaveBeenCalledWith(entry.id);

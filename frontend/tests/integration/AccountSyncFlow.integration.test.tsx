@@ -371,8 +371,8 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
 
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
-    const pushCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]: [string]) =>
-      url.includes("/api/sync/push"),
+    const pushCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
+      (call) => call[0].includes("/api/sync/push"),
     );
     expect(pushCalls.length).toBeGreaterThan(0);
   });
@@ -408,13 +408,13 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
       expect(screen.getByTestId("sync-phase")).toHaveTextContent("done");
     });
 
-    const pushCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url === "/api/sync/push",
+    const pushCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
+      (call) => call[0] === "/api/sync/push",
     );
     expect(pushCalls.length).toBeGreaterThan(0);
     const body = JSON.parse((pushCalls[0] as [string, RequestInit])[1].body as string);
     expect(body.tasks).toHaveLength(1);
-    expect(body.tasks[0].id).toBe("local-task-1");
+    expect(body.tasks[0]!.id).toBe("local-task-1");
   });
 });
 
@@ -444,8 +444,8 @@ describe("§2 Branch B / §4 — second-device restore", () => {
       emptyPullResponse.server_timestamp,
     );
 
-    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]: [string]) =>
-      url.includes("/api/sync/pull"),
+    const pullCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
+      (call) => call[0].includes("/api/sync/pull"),
     );
     expect(pullCalls.length).toBeGreaterThan(0);
   });
@@ -482,8 +482,8 @@ describe("§2 Branch B / §4 — second-device restore", () => {
 
     // The pull call was made. This scenario only verifies the fetch path because
     // emptyPullResponse contains no entity data to write into local state.
-    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]: [string]) =>
-      url.includes("/api/sync/pull"),
+    const pullCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
+      (call) => call[0].includes("/api/sync/pull"),
     );
     expect(pullCalls.length).toBeGreaterThan(0);
   });
@@ -592,7 +592,7 @@ describe("§2 Branch C / §5 — conflict handling", () => {
           ? { ok: true, json: async () => populatedStatus }
           : { ok: true, json: async () => emptyStatus };
       }
-      return (mockFetch as ReturnType<typeof vi.fn>)(url, init);
+      return mockFetch(url, init);
     }) as unknown as FetchFn;
 
     renderSync(true, TEST_USER_ID, smartFetch);
@@ -617,8 +617,8 @@ describe("§2 Branch C / §5 — conflict handling", () => {
 
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
-    const pushCalls = (smartFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/api/sync/push"),
+    const pushCalls = ((smartFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
+      (call) => call[0].includes("/api/sync/push"),
     );
     expect(pushCalls.length).toBeGreaterThan(0);
   });

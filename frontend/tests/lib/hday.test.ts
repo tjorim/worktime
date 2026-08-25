@@ -220,7 +220,7 @@ describe("getEventColor", () => {
       );
       const [red, green, blue] = channels.map((channel) =>
         channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-      );
+      ) as [number, number, number];
 
       return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
     };
@@ -491,9 +491,9 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].start).toBe("2025/01/10");
-    expect(sorted[1].start).toBe("2025/02/20");
-    expect(sorted[2].start).toBe("2025/03/15");
+    expect(sorted[0]!.start).toBe("2025/01/10");
+    expect(sorted[1]!.start).toBe("2025/02/20");
+    expect(sorted[2]!.start).toBe("2025/03/15");
   });
 
   it("places range events before weekly events", () => {
@@ -510,8 +510,8 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].type).toBe("range");
-    expect(sorted[1].type).toBe("weekly");
+    expect(sorted[0]!.type).toBe("range");
+    expect(sorted[1]!.type).toBe("weekly");
   });
 
   it("sorts weekly events by weekday (ISO: Monday=1 to Sunday=7)", () => {
@@ -523,9 +523,9 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].weekday).toBe(1); // Monday
-    expect(sorted[1].weekday).toBe(3); // Wednesday
-    expect(sorted[2].weekday).toBe(5); // Friday
+    expect(sorted[0]!.weekday).toBe(1); // Monday
+    expect(sorted[1]!.weekday).toBe(3); // Wednesday
+    expect(sorted[2]!.weekday).toBe(5); // Friday
   });
 
   it("places weekly events before unknown events", () => {
@@ -536,8 +536,8 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].type).toBe("weekly");
-    expect(sorted[1].type).toBe("unknown");
+    expect(sorted[0]!.type).toBe("weekly");
+    expect(sorted[1]!.type).toBe("unknown");
   });
 
   it("places range events before unknown events", () => {
@@ -554,8 +554,8 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].type).toBe("range");
-    expect(sorted[1].type).toBe("unknown");
+    expect(sorted[0]!.type).toBe("range");
+    expect(sorted[1]!.type).toBe("unknown");
   });
 
   it("sorts mixed event types correctly", () => {
@@ -582,16 +582,16 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].type).toBe("range");
-    expect(sorted[0].start).toBe("2025/01/01");
-    expect(sorted[1].type).toBe("range");
-    expect(sorted[1].start).toBe("2025/06/01");
-    expect(sorted[2].type).toBe("weekly");
-    expect(sorted[2].weekday).toBe(1);
-    expect(sorted[3].type).toBe("weekly");
-    expect(sorted[3].weekday).toBe(2);
-    expect(sorted[4].type).toBe("unknown");
-    expect(sorted[5].type).toBe("unknown");
+    expect(sorted[0]!.type).toBe("range");
+    expect(sorted[0]!.start).toBe("2025/01/01");
+    expect(sorted[1]!.type).toBe("range");
+    expect(sorted[1]!.start).toBe("2025/06/01");
+    expect(sorted[2]!.type).toBe("weekly");
+    expect(sorted[2]!.weekday).toBe(1);
+    expect(sorted[3]!.type).toBe("weekly");
+    expect(sorted[3]!.weekday).toBe(2);
+    expect(sorted[4]!.type).toBe("unknown");
+    expect(sorted[5]!.type).toBe("unknown");
   });
 
   it("does not mutate the original array", () => {
@@ -617,10 +617,10 @@ describe("sortEvents", () => {
 
     // Original array should be unchanged
     expect(events).toEqual(original);
-    expect(events[0].start).toBe("2025/03/15");
+    expect(events[0]!.start).toBe("2025/03/15");
 
     // Sorted array should be different
-    expect(sorted[0].start).toBe("2025/01/10");
+    expect(sorted[0]!.start).toBe("2025/01/10");
   });
 
   it("handles empty array", () => {
@@ -671,9 +671,9 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].title).toBe("January");
-    expect(sorted[1].title).toBe("March");
-    expect(sorted[2].title).toBe("No start");
+    expect(sorted[0]!.title).toBe("January");
+    expect(sorted[1]!.title).toBe("March");
+    expect(sorted[2]!.title).toBe("No start");
   });
 
   it("handles multiple events with missing start dates", () => {
@@ -703,10 +703,10 @@ describe("sortEvents", () => {
 
     const sorted = sortEvents(events);
 
-    expect(sorted[0].title).toBe("January");
+    expect(sorted[0]!.title).toBe("January");
     // Events without start dates maintain their relative order (stable sort)
-    expect(sorted[1].title).toBe("No start A");
-    expect(sorted[2].title).toBe("No start B");
+    expect(sorted[1]!.title).toBe("No start A");
+    expect(sorted[2]!.title).toBe("No start B");
   });
 });
 

@@ -130,7 +130,7 @@ describe("ChangelogModal", () => {
       expect(accordionItems.length).toBe(changelogData.length);
 
       // Test that first version has expanded content by default
-      const firstVersionHeader = screen.getByText(`Version ${changelogData[0].version}`);
+      const firstVersionHeader = screen.getByText(`Version ${changelogData[0]!.version}`);
       const accordionItem = firstVersionHeader.closest(".accordion-item");
       expect(accordionItem).toBeInTheDocument();
 

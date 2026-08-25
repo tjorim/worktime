@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { ganttTasksCollection, replaceCollectionContents } from "@/db/collections";
+import type { GanttTask } from "@/types/gantt";
 
 let uniqueCounter = 0;
 
@@ -236,7 +237,11 @@ describe("useGanttTasks", () => {
     });
 
     act(() => {
-      replaceCollectionContents(ganttTasksCollection, [], (task) => task.id);
+      replaceCollectionContents(
+        ganttTasksCollection,
+        [] as GanttTask[],
+        (task) => task.id,
+      );
     });
 
     await waitFor(() => {

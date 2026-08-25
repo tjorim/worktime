@@ -28,6 +28,7 @@ describe("PebblePairPage", () => {
       triggerLogin: vi.fn(),
       triggerSignup: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn(),
     });
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
     apiFetch.mockReset();

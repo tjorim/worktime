@@ -54,7 +54,7 @@ vi.mock("react-select", () => ({
           } else {
             const val = e.target.value;
             onChange(
-              val ? { value: val, label: e.target.options[e.target.selectedIndex].text } : null,
+              val ? { value: val, label: e.target.options[e.target.selectedIndex]!.text } : null,
             );
           }
         }}
@@ -170,13 +170,6 @@ const waitForStep = async (stepNumber: number, totalSteps: number = 9, timeout =
     },
     { timeout },
   );
-};
-
-const _enableTimeOffToggle = async (user: ReturnType<typeof userEvent.setup>) => {
-  const toggle = screen.getByLabelText(/Enable time off/i) as HTMLInputElement;
-  if (!toggle.checked) {
-    await user.click(toggle);
-  }
 };
 
 const navigateToTeamSelection = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -540,7 +533,7 @@ describe("WelcomeWizard", () => {
 
       // Simulate reset from the routed settings page
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(await screen.findByRole("button", { name: "Data & backup", exact: true }));
+      await user.click(await screen.findByRole("button", { name: "Data & backup" }));
       await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
@@ -580,7 +573,7 @@ describe("WelcomeWizard", () => {
 
       // Should be able to open settings and reset again
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(await screen.findByRole("button", { name: "Data & backup", exact: true }));
+      await user.click(await screen.findByRole("button", { name: "Data & backup" }));
       await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 

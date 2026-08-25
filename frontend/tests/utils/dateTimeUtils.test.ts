@@ -191,7 +191,7 @@ describe("Date Time Utils", () => {
       }
 
       // All days should have the same YYWW prefix
-      const weekPrefix = weekDays[0].slice(0, 4);
+      const weekPrefix = weekDays[0]!.slice(0, 4);
       weekDays.forEach((code) => {
         expect(code.slice(0, 4)).toBe(weekPrefix);
       });

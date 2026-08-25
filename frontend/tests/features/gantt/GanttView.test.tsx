@@ -13,7 +13,6 @@ vi.mock(
       change_view_mode() {}
     },
   }),
-  { virtual: true },
 );
 
 vi.mock("@/contexts/EventStoreContext", () => ({
@@ -101,13 +100,16 @@ type MockUserState = {
   lastUsed: typeof defaultLastUsed;
 };
 
+type MockUserStateOverrides = {
+  hasCompletedOnboarding?: boolean;
+  myTeam?: number | null;
+  scheduleType?: string | null;
+  settings?: Partial<typeof defaultSettings>;
+  lastUsed?: Partial<typeof defaultLastUsed>;
+};
+
 function createMockUserState(
-  overrides: Partial<MockUserState> & {
-    settings?: Partial<typeof defaultSettings> & {
-      vacationAllowance?: Partial<typeof defaultSettings.vacationAllowance>;
-    };
-    lastUsed?: Partial<typeof defaultLastUsed>;
-  } = {},
+  overrides: MockUserStateOverrides = {},
 ): MockUserState {
   const baseState: MockUserState = {
     hasCompletedOnboarding: true,
@@ -129,10 +131,6 @@ function createMockUserState(
     settings: {
       ...baseState.settings,
       ...overrides.settings,
-      vacationAllowance: {
-        ...baseState.settings.vacationAllowance,
-        ...overrides.settings?.vacationAllowance,
-      },
     },
     lastUsed: {
       ...baseState.lastUsed,

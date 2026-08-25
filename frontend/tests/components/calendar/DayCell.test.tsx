@@ -5,6 +5,7 @@ import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Shift } from "@/utils/shiftCalculations";
+import type { IsoAlpha2 } from "@/types/countries";
 import { TestProviders } from "@tests/utils/testProviders";
 
 const OFF_SHIFT: Shift = {
@@ -380,7 +381,7 @@ describe("DayCell", () => {
           {...defaultProps}
           isWeekend={true}
           shiftBadge={OFF_SHIFT}
-          workLocation={{ location: "home", countryCode: "NL" }}
+          workLocation={{ location: "home", countryCode: "NL" as IsoAlpha2 }}
         />,
         { wrapper: TestProviders },
       );
@@ -394,7 +395,7 @@ describe("DayCell", () => {
 
     it("shows work location indicator when no shift badge is provided", () => {
       render(
-        <DayCell {...defaultProps} workLocation={{ location: "office", countryCode: "BE" }} />,
+        <DayCell {...defaultProps} workLocation={{ location: "office", countryCode: "BE" as IsoAlpha2 }} />,
       );
 
       const indicator = screen.getByTitle("Working from office");
@@ -411,7 +412,7 @@ describe("DayCell", () => {
           isWeekend={true}
           schoolHoliday={{ name: "Winter Break", localName: "Wintervakantie" }}
           shiftBadge={OFF_SHIFT}
-          workLocation={{ location: "home", countryCode: "NL" }}
+          workLocation={{ location: "home", countryCode: "NL" as IsoAlpha2 }}
         />,
         { wrapper: TestProviders },
       );

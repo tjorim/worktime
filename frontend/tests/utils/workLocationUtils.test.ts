@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
 import { toCountryCode } from "@/types/workLocation";
-import type { WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
+import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
 
 const cc = (value: string) => toCountryCode(value)!;
 const HOME: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
@@ -42,8 +42,8 @@ describe("aggregateLocationCounts", () => {
     expect(result.map((r) => r.countryCode)).toEqual(["BE", "DE", "NL"]);
     // Within the same country, days are descending
     for (let i = 1; i < result.length; i++) {
-      if (result[i - 1].countryCode === result[i].countryCode) {
-        expect(result[i - 1].days).toBeGreaterThanOrEqual(result[i].days);
+      if (result[i - 1]!.countryCode === result[i]!.countryCode) {
+        expect(result[i - 1]!.days).toBeGreaterThanOrEqual(result[i]!.days);
       }
     }
   });

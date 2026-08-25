@@ -17,7 +17,6 @@ describe("apiFetch", () => {
       "/upload",
       { method: "POST", body },
       {
-        apiUrl: "http://localhost:8000",
         onUnauthorized: vi.fn(),
         onForbidden: vi.fn(),
       },
@@ -38,7 +37,6 @@ describe("apiFetch", () => {
       "/data",
       { method: "POST", body: JSON.stringify({ ok: true }) },
       {
-        apiUrl: "http://localhost:8000",
         onUnauthorized: vi.fn(),
         onForbidden: vi.fn(),
       },
@@ -62,7 +60,6 @@ describe("apiFetch", () => {
         "/data",
         {},
         {
-          apiUrl: "http://localhost:8000",
           onUnauthorized,
           onForbidden: vi.fn(),
         },
@@ -83,7 +80,6 @@ describe("apiFetch", () => {
         "/data",
         {},
         {
-          apiUrl: "http://localhost:8000",
           onUnauthorized: vi.fn(),
           onForbidden,
         },
@@ -105,7 +101,6 @@ describe("apiFetch", () => {
         },
       },
       {
-        apiUrl: "http://localhost:8000",
         onUnauthorized: vi.fn(),
         onForbidden: vi.fn(),
       },

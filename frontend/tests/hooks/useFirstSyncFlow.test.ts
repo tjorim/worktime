@@ -119,9 +119,8 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const prefsPushCall = mockFetch.mock.calls.find(
-      ([url, init]: [string, RequestInit | undefined]) =>
-        url === "/api/preferences" && init?.method === "PUT",
+    const prefsPushCall = (mockFetch.mock.calls as [string, RequestInit | undefined][]).find(
+      (call) => call[0] === "/api/preferences" && call[1]?.method === "PUT",
     );
     expect(prefsPushCall).toBeDefined();
   });
@@ -162,7 +161,7 @@ describe("useFirstSyncFlow", () => {
     });
 
     // Push endpoint should have been called
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
+    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/push");
     expect(pushCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).not.toBeNull();
   });
@@ -182,13 +181,13 @@ describe("useFirstSyncFlow", () => {
     });
 
     // Push endpoint should have been called with time-off entries
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
+    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/push");
     expect(pushCall).toBeDefined();
     const body = JSON.parse((pushCall as [string, RequestInit])[1].body as string);
     expect(body.time_off_entries).toHaveLength(1);
-    expect(body.time_off_entries[0].id).toBeTypeOf("string");
-    expect(body.time_off_entries[0].entry_kind).toBe("date");
-    expect(body.time_off_entries[0].date).toBe("2026-07-14");
+    expect(body.time_off_entries[0]!.id).toBeTypeOf("string");
+    expect(body.time_off_entries[0]!.entry_kind).toBe("date");
+    expect(body.time_off_entries[0]!.date).toBe("2026-07-14");
   });
 
   it("Branch B: pulls server data when local is empty", async () => {
@@ -203,7 +202,7 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/pull");
+    const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/pull");
     expect(pullCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe(
       emptyPullResponse.server_timestamp,
@@ -245,7 +244,7 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
+    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/push");
     expect(pushCall).toBeDefined();
   });
 
@@ -271,7 +270,7 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/pull");
+    const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/pull");
     expect(pullCall).toBeDefined();
   });
 
@@ -319,9 +318,8 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const prefsPushCall = mockFetch.mock.calls.find(
-      ([url, init]: [string, RequestInit | undefined]) =>
-        url === "/api/preferences" && init?.method === "PUT",
+    const prefsPushCall = (mockFetch.mock.calls as [string, RequestInit | undefined][]).find(
+      (call) => call[0] === "/api/preferences" && call[1]?.method === "PUT",
     );
     expect(prefsPushCall).toBeDefined();
   });

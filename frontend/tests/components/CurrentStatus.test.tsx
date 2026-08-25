@@ -18,9 +18,17 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
       settings: {
         timeFormat: "24h",
         theme: "auto",
-        vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,
+        enableGantt: false,
+        enableCrossBorderTracking: false,
+        enableUnifiedCalendar: false,
+        homeCountry: null,
+        officeCountry: null,
+        notificationLeadTimeMinutes: 15,
+        notificationQuietHoursStart: null,
+        notificationQuietHoursEnd: null,
+        notifications: "off",
       },
       lastUsed: {
         activeTab: "calendar",
@@ -32,6 +40,23 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
       },
       scheduleType: "5-shift",
       myTeam: null,
+      hasCompletedOnboarding: false,
+      setMyTeam: vi.fn(),
+      setScheduleType: vi.fn(),
+      setHasCompletedOnboarding: vi.fn(),
+      updateTimeFormat: vi.fn(),
+      updateTheme: vi.fn(),
+      updateNotifications: vi.fn(),
+      updateNotificationLeadTime: vi.fn(),
+      updateNotificationQuietHours: vi.fn(),
+      updateTimeOffEnabled: vi.fn(),
+      updateTimeTrackingEnabled: vi.fn(),
+      updateGanttEnabled: vi.fn(),
+      updateCrossBorderTrackingEnabled: vi.fn(),
+      updateUnifiedCalendarEnabled: vi.fn(),
+      updateHomeCountry: vi.fn(),
+      updateOfficeCountry: vi.fn(),
+      resetSettings: vi.fn(),
     })),
   };
 });
@@ -86,8 +111,8 @@ vi.mock("@/utils/dateTimeUtils", async (importOriginal) => {
     add: vi.fn(),
     subtract: vi.fn(),
   };
-  mockDayjsObj.add.mockReturnValue(mockDayjsObj);
-  mockDayjsObj.subtract.mockReturnValue(mockDayjsObj);
+  mockDayjsObj.add!.mockReturnValue(mockDayjsObj);
+  mockDayjsObj.subtract!.mockReturnValue(mockDayjsObj);
   return {
     ...(actual && typeof actual === "object" ? actual : {}),
     dayjs: vi.fn(() => mockDayjsObj),
@@ -335,9 +360,17 @@ describe("CurrentStatus Component", () => {
       settings: {
         timeFormat: "24h" as const,
         theme: "auto" as const,
-        vacationAllowance: { yearlyAmounts: {}, unit: "days" as const, hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,
+        enableGantt: false,
+        enableCrossBorderTracking: false,
+        enableUnifiedCalendar: false,
+        homeCountry: null,
+        officeCountry: null,
+        notificationLeadTimeMinutes: 15,
+        notificationQuietHoursStart: null,
+        notificationQuietHoursEnd: null,
+        notifications: "off" as const,
       },
       lastUsed: {
         activeTab: "calendar" as const,
@@ -349,12 +382,29 @@ describe("CurrentStatus Component", () => {
       },
       scheduleType: "5-shift" as const,
       myTeam: null,
+      hasCompletedOnboarding: false,
+      setMyTeam: vi.fn(),
+      setScheduleType: vi.fn(),
+      setHasCompletedOnboarding: vi.fn(),
+      updateTimeFormat: vi.fn(),
+      updateTheme: vi.fn(),
+      updateNotifications: vi.fn(),
+      updateNotificationLeadTime: vi.fn(),
+      updateNotificationQuietHours: vi.fn(),
+      updateTimeOffEnabled: vi.fn(),
+      updateTimeTrackingEnabled: vi.fn(),
+      updateGanttEnabled: vi.fn(),
+      updateCrossBorderTrackingEnabled: vi.fn(),
+      updateUnifiedCalendarEnabled: vi.fn(),
+      updateHomeCountry: vi.fn(),
+      updateOfficeCountry: vi.fn(),
+      resetSettings: vi.fn(),
     };
 
     afterEach(() => {
       // Restore the file-wide default ("5-shift") so later tests aren't affected.
       vi.mocked(useSettings).mockReturnValue(
-        defaultSettingsValue as ReturnType<typeof useSettings>,
+        defaultSettingsValue as unknown as ReturnType<typeof useSettings>,
       );
     });
 
@@ -362,7 +412,7 @@ describe("CurrentStatus Component", () => {
       vi.mocked(useSettings).mockReturnValue({
         ...defaultSettingsValue,
         scheduleType: "9-5",
-      } as ReturnType<typeof useSettings>);
+      } as unknown as ReturnType<typeof useSettings>);
 
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 

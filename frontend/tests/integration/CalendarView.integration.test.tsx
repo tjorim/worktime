@@ -347,7 +347,7 @@ describe("CalendarView Integration Tests", () => {
       const vacationBadge = vacationBadges[0];
 
       // Right-click the event using fireEvent
-      fireEvent.contextMenu(vacationBadge);
+      fireEvent.contextMenu(vacationBadge!);
 
       // Verify context menu appears with edit option
       expect(screen.getByText("Edit event")).toBeInTheDocument();
@@ -376,7 +376,7 @@ describe("CalendarView Integration Tests", () => {
       const vacationBadge = vacationBadges[0];
 
       // Right-click the event using fireEvent
-      fireEvent.contextMenu(vacationBadge);
+      fireEvent.contextMenu(vacationBadge!);
 
       // Verify delete option appears
       expect(screen.getByText("Delete event")).toBeInTheDocument();
@@ -593,7 +593,7 @@ describe("CalendarView Integration Tests", () => {
       if (!targetCell) {
         throw new Error(`Target day cell for date "${day}" was not found in the month calendar.`);
       }
-      fireEvent.contextMenu(targetCell);
+      fireEvent.contextMenu(targetCell!);
       fireEvent.click(screen.getByText("Add new event"));
     };
 
@@ -653,7 +653,7 @@ describe("CalendarView Integration Tests", () => {
       // Click on an event to view it (get first occurrence) using fireEvent
       const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
       const vacationBadge = vacationBadges[0];
-      fireEvent.click(vacationBadge);
+      fireEvent.click(vacationBadge!);
 
       // Verify view modal opens
       const modal = screen.getByRole("dialog");
@@ -681,7 +681,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
-      fireEvent.click(vacationBadge);
+      fireEvent.click(vacationBadge!);
 
       const modal = screen.getByRole("dialog");
       const editButton = within(modal)
@@ -708,7 +708,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
-      fireEvent.click(vacationBadge);
+      fireEvent.click(vacationBadge!);
 
       const modal = screen.getByRole("dialog");
       const editButton = within(modal)
@@ -741,7 +741,7 @@ describe("CalendarView Integration Tests", () => {
      */
     const openDeleteConfirmationForVacation = () => {
       const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
-      fireEvent.contextMenu(vacationBadge);
+      fireEvent.contextMenu(vacationBadge!);
       fireEvent.click(screen.getByText("Delete event"));
     };
 

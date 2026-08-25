@@ -101,7 +101,7 @@ describe("EventStoreContext", () => {
       expect(result.current.entries).toHaveLength(1);
       expect(result.current.entries[0]?.entryKind).toBe("weekly");
       if (result.current.entries[0]?.entryKind === "weekly") {
-        expect(result.current.entries[0].weekday).toBe(1);
+        expect(result.current.entries[0]!.weekday).toBe(1);
       }
     });
   });

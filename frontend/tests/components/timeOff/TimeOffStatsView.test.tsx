@@ -24,7 +24,6 @@ describe("TimeOffStatsView", () => {
     buildTimeOffEntryForRange({
       start,
       end,
-      note: null,
       entryType,
       entryFlag,
     });

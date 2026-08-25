@@ -57,6 +57,7 @@ const createMockSyncContext = (overrides = {}) => ({
   isSyncing: false,
   lastSyncedAt: "2026-04-20T00:00:00Z",
   outboxCount: 0,
+  quarantineCount: 0,
   hasSyncError: false,
   conflictCount: 0,
   conflictedPayload: null,

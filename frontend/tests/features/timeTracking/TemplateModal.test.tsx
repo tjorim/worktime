@@ -36,8 +36,8 @@ describe("TemplateModal", () => {
       <TemplateModal
         {...baseProps}
         labels={[
-          { name: "Development", color: "#198754" },
-          { name: "Support", color: "#c82333" },
+          { name: "Development", color: "#198754", id: "1" },
+          { name: "Support", color: "#c82333", id: "2" },
         ]}
       />,
     );

@@ -149,7 +149,7 @@ describe("usePushSubscription", () => {
       expect.objectContaining({ userVisibleOnly: true }),
     );
     expect(apiFetch).toHaveBeenCalledTimes(2);
-    const [subscribeUrl, subscribeInit] = apiFetch.mock.calls[1];
+    const [subscribeUrl, subscribeInit] = apiFetch.mock.calls[1]!;
     expect(subscribeUrl).toBe("/api/push/subscribe");
     const body = JSON.parse((subscribeInit as RequestInit).body as string);
     expect(body).toMatchObject({
@@ -248,7 +248,7 @@ describe("usePushSubscription", () => {
 
     expect(mockSubscription.unsubscribe).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
-    const [url, init] = apiFetch.mock.calls[0];
+    const [url, init] = apiFetch.mock.calls[0]!;
     expect(url).toBe(
       `/api/push/subscribe?endpoint=${encodeURIComponent("https://push.example.com/ep1")}`,
     );
@@ -283,7 +283,7 @@ describe("usePushSubscription", () => {
       const { result } = renderHook(() => usePushSubscription());
 
       await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
-      const [, subscribeInit] = apiFetch.mock.calls[1];
+      const [, subscribeInit] = apiFetch.mock.calls[1]!;
       const body = JSON.parse((subscribeInit as RequestInit).body as string);
       expect(body).toMatchObject({ lead_time_minutes: 60 });
       await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));

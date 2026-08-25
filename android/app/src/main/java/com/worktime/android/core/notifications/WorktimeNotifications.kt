@@ -32,7 +32,7 @@ class WorktimeNotifications(private val context: Context) {
 
     fun showShiftReminder(message: String) {
         show(
-            id = 1001,
+            id = NOTIFICATION_ID_SHIFT_REMINDER,
             channelId = CHANNEL_SHIFTS,
             title = "Shift reminder",
             message = message,
@@ -42,7 +42,7 @@ class WorktimeNotifications(private val context: Context) {
 
     fun showStaleTimer(message: String) {
         show(
-            id = 1002,
+            id = NOTIFICATION_ID_TIMER_REMINDER,
             channelId = CHANNEL_TIME_TRACKING,
             title = "Running timer reminder",
             message = message,
@@ -52,7 +52,7 @@ class WorktimeNotifications(private val context: Context) {
 
     fun showSyncStatus(message: String) {
         show(
-            id = 1003,
+            id = NOTIFICATION_ID_SYNC_STATUS,
             channelId = CHANNEL_SYNC_CONFLICTS,
             title = "Sync status",
             message = message,
@@ -94,5 +94,8 @@ class WorktimeNotifications(private val context: Context) {
 
     companion object {
         const val EXTRA_DESTINATION = "destination"
+        private const val NOTIFICATION_ID_SHIFT_REMINDER = 1001
+        private const val NOTIFICATION_ID_TIMER_REMINDER = 1002
+        private const val NOTIFICATION_ID_SYNC_STATUS = 1003
     }
 }

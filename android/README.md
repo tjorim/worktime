@@ -70,3 +70,19 @@ Example:
 cd android
 ./gradlew testDebugUnitTest -PANDROID_DEBUG_API_BASE_URL=http://10.0.2.2:8000/
 ```
+
+## Local reminders
+
+Shift and stale-running-timer reminders are local-only: Worktime stores only the
+next alarm's timestamp, message, and numeric account id in app-private storage.
+It does not use FCM or transmit notification data to another service.
+
+The next shift alarm is requested 30 minutes before its configured start; a
+running timer is considered stale after eight hours. Android 12 and newer may
+require the user to allow exact alarms. When exact alarms are unavailable,
+Worktime schedules an inexact idle-safe alarm, so delivery can be delayed by
+Doze. Notification permission denial suppresses presentation without crashing.
+Alarms are reconciled after dashboard refreshes and preference changes, restored
+after reboot, clock, or timezone changes, and canceled on logout. Every delivered
+alarm checks its stored account id, preventing an alarm created for a previous
+account from being shown after an account switch.

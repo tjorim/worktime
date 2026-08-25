@@ -71,7 +71,7 @@ describe("WelcomeWizard Configuration System", () => {
 
       const visibleSteps = getVisibleSteps(context);
       expect(visibleSteps).toHaveLength(1);
-      expect(visibleSteps[0].id).toBe("team-selection");
+      expect(visibleSteps[0]!.id).toBe("team-selection");
     });
 
     it("should show schedule-selection in change-schedule mode", () => {
@@ -83,7 +83,7 @@ describe("WelcomeWizard Configuration System", () => {
 
       const visibleSteps = getVisibleSteps(context);
       expect(visibleSteps).toHaveLength(1);
-      expect(visibleSteps[0].id).toBe("schedule-selection");
+      expect(visibleSteps[0]!.id).toBe("schedule-selection");
     });
 
     it("should show schedule + team in change-schedule mode with team selection needed", () => {

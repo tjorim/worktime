@@ -45,7 +45,7 @@ export default function MockReactSelect({
     const selected = event.target.value
       ? {
           value: event.target.value,
-          label: event.target.options[event.target.selectedIndex].text,
+          label: event.target.options[event.target.selectedIndex]?.text ?? "",
         }
       : null;
     onChange(selected);

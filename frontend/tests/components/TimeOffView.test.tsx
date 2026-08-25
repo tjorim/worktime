@@ -119,7 +119,7 @@ describe("TimeOffView", () => {
       const intervalCallbacks: TimerHandler[] = [];
       vi.spyOn(window, "setInterval").mockImplementation((handler) => {
         intervalCallbacks.push(handler);
-        return intervalCallbacks.length;
+        return intervalCallbacks.length as unknown as NodeJS.Timeout;
       });
       server.use(http.get("http://localhost:8080/health", healthCheck));
       const user = userEvent.setup();
