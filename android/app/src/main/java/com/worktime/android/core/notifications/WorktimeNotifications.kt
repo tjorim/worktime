@@ -13,7 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.worktime.android.MainActivity
 
-const val CHANNEL_SHIFTS = "shifts"
+const val CHANNEL_PLANNED_TASKS = "planned_tasks"
 const val CHANNEL_TIME_TRACKING = "time_tracking"
 const val CHANNEL_SYNC_CONFLICTS = "sync_conflicts"
 
@@ -23,18 +23,18 @@ class WorktimeNotifications(private val context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val channels =
             listOf(
-                NotificationChannel(CHANNEL_SHIFTS, "Shifts", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_PLANNED_TASKS, "Planned tasks", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_TIME_TRACKING, "Time tracking", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts", NotificationManager.IMPORTANCE_DEFAULT)
             )
         manager.createNotificationChannels(channels)
     }
 
-    fun showShiftReminder(message: String) {
+    fun showPlannedTaskReminder(message: String) {
         show(
-            id = NOTIFICATION_ID_SHIFT_REMINDER,
-            channelId = CHANNEL_SHIFTS,
-            title = "Shift reminder",
+            id = NOTIFICATION_ID_PLANNED_TASK_REMINDER,
+            channelId = CHANNEL_PLANNED_TASKS,
+            title = "Starting soon",
             message = message,
             destination = "today"
         )
@@ -94,7 +94,7 @@ class WorktimeNotifications(private val context: Context) {
 
     companion object {
         const val EXTRA_DESTINATION = "destination"
-        private const val NOTIFICATION_ID_SHIFT_REMINDER = 1001
+        private const val NOTIFICATION_ID_PLANNED_TASK_REMINDER = 1001
         private const val NOTIFICATION_ID_TIMER_REMINDER = 1002
         private const val NOTIFICATION_ID_SYNC_STATUS = 1003
     }

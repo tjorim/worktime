@@ -15,9 +15,7 @@ async def upsert_subscription(session: AsyncSession, user_id: int, payload: Push
 
     A browser reuses the same endpoint across calls to PushManager.subscribe()
     for the same registration, so upserting by endpoint (rather than always
-    inserting) keeps re-subscribing idempotent and lets a settings change
-    (lead time, quiet hours) travel through the same call the frontend already
-    makes when the user edits those fields.
+    inserting) keeps re-subscribing idempotent.
     """
     result = await session.execute(select(PushSubscription).where(PushSubscription.endpoint == payload.endpoint))
     subscription = result.scalar_one_or_none()
@@ -35,14 +33,6 @@ async def upsert_subscription(session: AsyncSession, user_id: int, payload: Push
     subscription.p256dh_key = payload.keys.p256dh
     subscription.auth_key = payload.keys.auth
     subscription.timezone = payload.timezone
-    subscription.lead_time_minutes = payload.lead_time_minutes
-    subscription.quiet_hours_start = payload.quiet_hours_start
-    subscription.quiet_hours_end = payload.quiet_hours_end
-    # A settings change invalidates the old dedup key's relevance (e.g. a
-    # shorter lead time might mean the reminder window for the same shift
-    # hasn't opened yet from this subscription's point of view).
-    subscription.last_reminder_key = None
-    subscription.last_reminder_claimed_at = None
 
     await session.flush()
     await session.refresh(subscription)

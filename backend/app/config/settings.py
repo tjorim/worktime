@@ -122,7 +122,7 @@ class Settings(BaseSettings):
     # only admission control on that route.
     SSE_MAX_QUEUES_PER_USER: int = 8
 
-    # Web Push (shift-reminder notifications that fire even when the app is closed).
+    # Web Push (planned-task-reminder notifications that fire even when the app is closed).
     # Both keys empty (the default) disables the feature entirely: the subscribe
     # endpoint and the periodic reminder loop both no-op. Generate a pair with:
     # uv run python -c "from py_vapid import Vapid02; v = Vapid02(); v.generate_keys(); print(v.public_key, v.private_key)"

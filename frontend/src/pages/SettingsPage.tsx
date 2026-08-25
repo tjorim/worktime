@@ -4,7 +4,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
-import { useSettings, type NotificationLeadTimeMinutes } from "@/contexts/SettingsContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { usePwaInstall } from "@/contexts/PwaInstallContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -227,8 +227,6 @@ export function SettingsContent({
     updateTimeFormat,
     updateTheme,
     updateNotifications,
-    updateNotificationLeadTime,
-    updateNotificationQuietHours,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -401,33 +399,7 @@ export function SettingsContent({
     // of whether this succeeds (unsupported browser, push not configured
     // server-side, not signed in, etc).
     if (isAuthenticated) {
-      void subscribeToPush({
-        leadTimeMinutes: settings.notificationLeadTimeMinutes,
-        quietHoursStart: settings.notificationQuietHoursStart,
-        quietHoursEnd: settings.notificationQuietHoursEnd,
-      });
-    }
-  };
-
-  const handleNotificationLeadTimeChange = (minutes: NotificationLeadTimeMinutes) => {
-    updateNotificationLeadTime(minutes);
-    if (settings.notifications === "on" && isAuthenticated) {
-      void subscribeToPush({
-        leadTimeMinutes: minutes,
-        quietHoursStart: settings.notificationQuietHoursStart,
-        quietHoursEnd: settings.notificationQuietHoursEnd,
-      });
-    }
-  };
-
-  const handleNotificationQuietHoursChange = (range: { start: number; end: number } | null) => {
-    updateNotificationQuietHours(range);
-    if (settings.notifications === "on" && isAuthenticated) {
-      void subscribeToPush({
-        leadTimeMinutes: settings.notificationLeadTimeMinutes,
-        quietHoursStart: range?.start ?? null,
-        quietHoursEnd: range?.end ?? null,
-      });
+      void subscribeToPush();
     }
   };
 
@@ -553,15 +525,10 @@ export function SettingsContent({
         theme={settings.theme}
         locale={getLocale() === "nl" ? "nl" : "en"}
         notificationsEnabled={settings.notifications === "on"}
-        notificationLeadTimeMinutes={settings.notificationLeadTimeMinutes}
-        notificationQuietHoursStart={settings.notificationQuietHoursStart}
-        notificationQuietHoursEnd={settings.notificationQuietHoursEnd}
         onTimeFormatChange={updateTimeFormat}
         onThemeChange={updateTheme}
         onLocaleChange={setLocale}
         onNotificationsChange={(enabled) => void handleNotificationsChange(enabled)}
-        onNotificationLeadTimeChange={handleNotificationLeadTimeChange}
-        onNotificationQuietHoursChange={handleNotificationQuietHoursChange}
       />
     ),
     features: () => (

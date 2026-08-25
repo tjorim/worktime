@@ -7,10 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
-import com.worktime.android.data.model.NextShiftItem
 import com.worktime.android.data.model.TaskRecord
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
@@ -26,49 +23,50 @@ class ReminderScheduler(private val context: Context) {
 
     fun reconcile(
         accountId: Int,
-        shift: NextShiftItem?,
+        plannedTask: TaskRecord?,
         runningTask: TaskRecord?,
-        shiftsEnabled: Boolean,
+        plannedTasksEnabled: Boolean,
         timersEnabled: Boolean
     ) {
         if (store.getInt(KEY_ACCOUNT, INVALID_ID) != accountId) {
             cancelAll()
             store.edit().putInt(KEY_ACCOUNT, accountId).apply()
         }
-        if (shiftsEnabled && shift != null) scheduleShift(accountId, shift) else cancel(TYPE_SHIFT)
+        if (plannedTasksEnabled && plannedTask != null) {
+            schedulePlannedTask(accountId, plannedTask)
+        } else {
+            cancel(TYPE_PLANNED_TASK)
+        }
         if (timersEnabled && runningTask != null) scheduleTimer(accountId, runningTask) else cancel(TYPE_TIMER)
     }
 
     fun cancelAll() {
-        cancel(TYPE_SHIFT)
+        cancel(TYPE_PLANNED_TASK)
         cancel(TYPE_TIMER)
         store.edit().clear().apply()
     }
 
     fun restore() {
-        listOf(TYPE_SHIFT, TYPE_TIMER).forEach { type ->
+        listOf(TYPE_PLANNED_TASK, TYPE_TIMER).forEach { type ->
             val account = store.getInt(KEY_ACCOUNT, INVALID_ID)
             if (account < MIN_VALID_ID) {
                 cancel(type)
                 return@forEach
             }
-            if (type == TYPE_SHIFT) restoreShift(account) else tryRestoreFromStore(account, type)
+            if (type == TYPE_PLANNED_TASK) restorePlannedTask(account) else tryRestoreFromStore(account, type)
         }
     }
 
-    private fun restoreShift(account: Int) {
-        val date = store.getString(key(TYPE_SHIFT, SUFFIX_DATE), null)
-        val hour = store.getString(key(TYPE_SHIFT, SUFFIX_HOUR), null)?.toDoubleOrNull()
-        if (date == null || hour == null) return cancel(TYPE_SHIFT)
-        val start = LocalDate.parse(date)
-            .atTime(fractionalHourToLocalTime(hour))
-            .atZone(ZoneId.systemDefault())
-        val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
-        val message = store.getString(key(TYPE_SHIFT, SUFFIX_MESSAGE), null)
+    private fun restorePlannedTask(account: Int) {
+        val startTimeRaw = store.getString(key(TYPE_PLANNED_TASK, SUFFIX_START), null)
+        val startTime = startTimeRaw?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
+        val message = store.getString(key(TYPE_PLANNED_TASK, SUFFIX_MESSAGE), null)
+        if (startTime == null) return cancel(TYPE_PLANNED_TASK)
+        val at = startTime.minusMinutes(PLANNED_TASK_LEAD_MINUTES).toInstant().toEpochMilli()
         if (at > System.currentTimeMillis() && message != null) {
-            set(TYPE_SHIFT, at, account, message)
+            set(TYPE_PLANNED_TASK, at, account, message)
         } else {
-            cancel(TYPE_SHIFT)
+            cancel(TYPE_PLANNED_TASK)
         }
     }
 
@@ -82,20 +80,22 @@ class ReminderScheduler(private val context: Context) {
         }
     }
 
-    private fun scheduleShift(accountId: Int, shift: NextShiftItem) {
-        val hour = shift.shift.startHour ?: return cancel(TYPE_SHIFT)
-        val start = LocalDate.parse(shift.date)
-            .atTime(fractionalHourToLocalTime(hour))
-            .atZone(ZoneId.systemDefault())
-        val at = start.minusMinutes(SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
-        if (start.toInstant().toEpochMilli() <= System.currentTimeMillis()) return cancel(TYPE_SHIFT)
+    private fun schedulePlannedTask(accountId: Int, task: TaskRecord) {
+        val startTime = runCatching { OffsetDateTime.parse(task.startTime) }.getOrNull()
+            ?: return cancel(TYPE_PLANNED_TASK)
+        if (startTime.toInstant().toEpochMilli() <= System.currentTimeMillis()) return cancel(TYPE_PLANNED_TASK)
+        val at = startTime.minusMinutes(PLANNED_TASK_LEAD_MINUTES).toInstant().toEpochMilli()
+        // startTime is UTC-normalized by the backend; toLocalTime() on it would report the
+        // instant's UTC wall-clock time, not this device's -- convert to the device's zone
+        // (same instant, different offset) before extracting the displayed time-of-day.
+        val displayTime = startTime.atZoneSameInstant(ZoneId.systemDefault()).toLocalTime()
         persistAndSet(
-            TYPE_SHIFT,
+            TYPE_PLANNED_TASK,
             at,
             accountId,
-            "${shift.shift.displayCode} starts at ${start.toLocalTime()}",
-            shift.date,
-            hour
+            "${task.text} starts at $displayTime",
+            taskId = task.id,
+            startTimeRaw = task.startTime
         )
     }
 
@@ -109,9 +109,7 @@ class ReminderScheduler(private val context: Context) {
             at,
             accountId,
             "Timer running for ${task.text} appears stale",
-            null,
-            null,
-            task.id
+            taskId = task.id
         )
     }
 
@@ -120,31 +118,19 @@ class ReminderScheduler(private val context: Context) {
         at: Long,
         account: Int,
         message: String,
-        shiftDate: String? = null,
-        shiftStartHour: Double? = null,
-        taskId: String? = null
+        taskId: String? = null,
+        startTimeRaw: String? = null
     ) {
-        val identityChanged = when (type) {
-            TYPE_SHIFT -> {
-                val storedDate = store.getString(key(type, SUFFIX_DATE), null)
-                val storedHour = store.getString(key(type, SUFFIX_HOUR), null)
-                shiftDate != storedDate || shiftStartHour?.toString() != storedHour
-            }
-            TYPE_TIMER -> {
-                val storedTaskId = store.getString(key(type, SUFFIX_TASK_ID), null)
-                taskId != storedTaskId
-            }
-            else -> false
-        }
+        val storedTaskId = store.getString(key(type, SUFFIX_TASK_ID), null)
+        val identityChanged = taskId != storedTaskId
         val storedAt = store.getLong(key(type, SUFFIX_AT), INVALID_ID.toLong())
         val storedMessage = store.getString(key(type, SUFFIX_MESSAGE), null)
         if (!identityChanged && storedAt == at && storedMessage == message) return
         store.edit().apply {
             putLong(key(type, SUFFIX_AT), at)
             putString(key(type, SUFFIX_MESSAGE), message)
-            if (shiftDate != null) putString(key(type, SUFFIX_DATE), shiftDate)
-            if (shiftStartHour != null) putString(key(type, SUFFIX_HOUR), shiftStartHour.toString())
             if (taskId != null) putString(key(type, SUFFIX_TASK_ID), taskId)
+            if (startTimeRaw != null) putString(key(type, SUFFIX_START), startTimeRaw)
             apply()
         }
         set(type, at, account, message)
@@ -171,12 +157,8 @@ class ReminderScheduler(private val context: Context) {
         store.edit().apply {
             remove(key(type, SUFFIX_AT))
             remove(key(type, SUFFIX_MESSAGE))
-            if (type == TYPE_SHIFT) {
-                remove(key(type, SUFFIX_DATE))
-                remove(key(type, SUFFIX_HOUR))
-            } else if (type == TYPE_TIMER) {
-                remove(key(type, SUFFIX_TASK_ID))
-            }
+            remove(key(type, SUFFIX_TASK_ID))
+            if (type == TYPE_PLANNED_TASK) remove(key(type, SUFFIX_START))
             apply()
         }
     }
@@ -191,7 +173,7 @@ class ReminderScheduler(private val context: Context) {
         intent.putExtra(EXTRA_MESSAGE, message)
         return PendingIntent.getBroadcast(
             context,
-            if (type == TYPE_SHIFT) REQUEST_CODE_SHIFT else REQUEST_CODE_TIMER,
+            if (type == TYPE_PLANNED_TASK) REQUEST_CODE_PLANNED_TASK else REQUEST_CODE_TIMER,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -202,12 +184,12 @@ class ReminderScheduler(private val context: Context) {
         internal const val KEY_ACCOUNT = "account"
         internal const val EXTRA_ACCOUNT = "account"
         internal const val EXTRA_MESSAGE = "message"
-        internal const val TYPE_SHIFT = "com.worktime.reminder.SHIFT"
+        internal const val TYPE_PLANNED_TASK = "com.worktime.reminder.PLANNED_TASK"
         internal const val TYPE_TIMER = "com.worktime.reminder.TIMER"
-        const val SHIFT_LEAD_MINUTES = 30L
+        const val PLANNED_TASK_LEAD_MINUTES = 10L
         const val STALE_HOURS = 8L
         private const val MIN_SCHEDULE_DELAY_MILLIS = 1_000L
-        private const val REQUEST_CODE_SHIFT = 2001
+        private const val REQUEST_CODE_PLANNED_TASK = 2001
         private const val REQUEST_CODE_TIMER = 2002
         internal const val INVALID_ACCOUNT_SENTINEL = -2
         internal const val INVALID_ID = -1
@@ -215,20 +197,10 @@ class ReminderScheduler(private val context: Context) {
     }
 }
 
-private const val MINUTES_PER_HOUR = 60
 private const val SUFFIX_AT = "at"
 private const val SUFFIX_MESSAGE = "message"
-private const val SUFFIX_DATE = "date"
-private const val SUFFIX_HOUR = "hour"
+private const val SUFFIX_START = "start"
 private const val SUFFIX_TASK_ID = "task_id"
-
-// Shared by scheduling and restore so the two can never compute a different alarm time for the
-// same stored shift.
-private fun fractionalHourToLocalTime(hour: Double): LocalTime {
-    val hours = hour.toInt()
-    val minutes = ((hour - hours) * MINUTES_PER_HOUR).toInt()
-    return LocalTime.of(hours, minutes)
-}
 
 // Single source of truth for the per-type key format, so a typo can't silently desync a write
 // path from a read/cancel path.
@@ -251,7 +223,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val message = intent.getStringExtra(ReminderScheduler.EXTRA_MESSAGE) ?: return
         val notifications = WorktimeNotifications(context)
         when (intent.action) {
-            ReminderScheduler.TYPE_SHIFT -> notifications.showShiftReminder(message)
+            ReminderScheduler.TYPE_PLANNED_TASK -> notifications.showPlannedTaskReminder(message)
             ReminderScheduler.TYPE_TIMER -> notifications.showStaleTimer(message)
         }
     }

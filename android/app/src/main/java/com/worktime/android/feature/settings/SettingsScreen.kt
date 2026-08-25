@@ -50,7 +50,7 @@ fun SettingsScreen(
     apiBaseUrlOverride: String?,
     onApiBaseUrlOverrideSave: (String) -> Unit,
     onApiBaseUrlOverrideClear: () -> Unit,
-    onShiftNotificationsChanged: (Boolean) -> Unit,
+    onPlannedTaskNotificationsChanged: (Boolean) -> Unit,
     onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
     onSyncNotificationsChanged: (Boolean) -> Unit,
     biometricLockPreferences: BiometricLockPreferences,
@@ -139,10 +139,10 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
-                        Text("Shifts channel", modifier = Modifier.weight(1f))
+                        Text("Planned tasks channel", modifier = Modifier.weight(1f))
                         Switch(
-                            checked = notificationPreferences.shiftsEnabled,
-                            onCheckedChange = onShiftNotificationsChanged
+                            checked = notificationPreferences.plannedTasksEnabled,
+                            onCheckedChange = onPlannedTaskNotificationsChanged
                         )
                     }
                     androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {

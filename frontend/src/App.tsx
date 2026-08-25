@@ -19,8 +19,9 @@ import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
-import { useShiftNotifications } from "@/hooks/useShiftNotifications";
+import { usePlannedTaskNotifications } from "@/hooks/usePlannedTaskNotifications";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getScheduleChangeTeamAction, getScheduleConfig } from "@/utils/scheduleUtils";
@@ -97,14 +98,11 @@ function AppContent() {
   }, [syncPhase, showInfo, showSuccess, showError]);
 
   const { hasActiveSubscription: hasActivePushSubscription } = usePushSubscription();
+  const { tasks } = useTimeTrackingStorage();
 
-  useShiftNotifications({
+  usePlannedTaskNotifications({
     enabled: settings.notifications === "on",
-    myTeam,
-    scheduleType,
-    leadTimeMinutes: settings.notificationLeadTimeMinutes,
-    quietHoursStart: settings.notificationQuietHoursStart,
-    quietHoursEnd: settings.notificationQuietHoursEnd,
+    tasks,
     hasActivePushSubscription,
   });
 

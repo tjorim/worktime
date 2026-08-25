@@ -41,8 +41,6 @@ function mockSettings(overrides: Partial<UserSettings> = {}): void {
     updateTimeFormat: vi.fn(),
     updateTheme: vi.fn(),
     updateNotifications: vi.fn(),
-    updateNotificationLeadTime: vi.fn(),
-    updateNotificationQuietHours: vi.fn(),
     updateTimeOffEnabled: vi.fn(),
     updateTimeTrackingEnabled: vi.fn(),
     updateGanttEnabled: vi.fn(),
@@ -120,11 +118,7 @@ describe("usePushSubscription", () => {
     const { result } = renderHook(() => usePushSubscription());
     expect(result.current.isSupported).toBe(false);
 
-    const outcome = await result.current.subscribeToPush({
-      leadTimeMinutes: 15,
-      quietHoursStart: null,
-      quietHoursEnd: null,
-    });
+    const outcome = await result.current.subscribeToPush();
     expect(outcome).toBe(false);
     expect(apiFetch).not.toHaveBeenCalled();
   });
@@ -138,11 +132,7 @@ describe("usePushSubscription", () => {
 
     const { result } = renderHook(() => usePushSubscription());
 
-    const outcome = await result.current.subscribeToPush({
-      leadTimeMinutes: 60,
-      quietHoursStart: 22,
-      quietHoursEnd: 6,
-    });
+    const outcome = await result.current.subscribeToPush();
 
     expect(outcome).toBe(true);
     expect(subscribe).toHaveBeenCalledWith(
@@ -152,12 +142,12 @@ describe("usePushSubscription", () => {
     const [subscribeUrl, subscribeInit] = apiFetch.mock.calls[1]!;
     expect(subscribeUrl).toBe("/api/push/subscribe");
     const body = JSON.parse((subscribeInit as RequestInit).body as string);
-    expect(body).toMatchObject({
+    // Full-object equality (not toMatchObject) so this fails if a removed legacy field
+    // (lead_time_minutes, quiet_hours_start/end) ever silently returns to the payload.
+    expect(body).toEqual({
       endpoint: "https://push.example.com/ep1",
       keys: { p256dh: "test-p256dh", auth: "test-auth" },
-      lead_time_minutes: 60,
-      quiet_hours_start: 22,
-      quiet_hours_end: 6,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     });
     await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));
   });
@@ -171,11 +161,7 @@ describe("usePushSubscription", () => {
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
-    const outcome = await result.current.subscribeToPush({
-      leadTimeMinutes: 15,
-      quietHoursStart: null,
-      quietHoursEnd: null,
-    });
+    const outcome = await result.current.subscribeToPush();
 
     expect(outcome).toBe(true);
     expect(subscribe).not.toHaveBeenCalled();
@@ -186,11 +172,7 @@ describe("usePushSubscription", () => {
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
-    const outcome = await result.current.subscribeToPush({
-      leadTimeMinutes: 15,
-      quietHoursStart: null,
-      quietHoursEnd: null,
-    });
+    const outcome = await result.current.subscribeToPush();
 
     expect(outcome).toBe(false);
     expect(subscribe).not.toHaveBeenCalled();
@@ -204,11 +186,7 @@ describe("usePushSubscription", () => {
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
-    const outcome = await result.current.subscribeToPush({
-      leadTimeMinutes: 15,
-      quietHoursStart: null,
-      quietHoursEnd: null,
-    });
+    const outcome = await result.current.subscribeToPush();
 
     expect(outcome).toBe(false);
     // Without this, a browser-side subscription with no backend record would make
@@ -225,11 +203,7 @@ describe("usePushSubscription", () => {
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
-    const outcome = await result.current.subscribeToPush({
-      leadTimeMinutes: 60,
-      quietHoursStart: null,
-      quietHoursEnd: null,
-    });
+    const outcome = await result.current.subscribeToPush();
 
     expect(outcome).toBe(false);
     expect(subscribe).not.toHaveBeenCalled();
@@ -273,7 +247,7 @@ describe("usePushSubscription", () => {
     // inactive) rather than silently treated as belonging to whoever's signed in now.
     it("re-registers an existing subscription for the signed-in account on mount", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on", notificationLeadTimeMinutes: 60 });
+      mockSettings({ notifications: "on" });
       const apiFetch = vi
         .fn()
         .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
@@ -285,7 +259,7 @@ describe("usePushSubscription", () => {
       await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
       const [, subscribeInit] = apiFetch.mock.calls[1]!;
       const body = JSON.parse((subscribeInit as RequestInit).body as string);
-      expect(body).toMatchObject({ lead_time_minutes: 60 });
+      expect(body).toMatchObject({ endpoint: "https://push.example.com/ep1" });
       await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));
       // This is what actually reassigns ownership server-side when the subscription
       // belonged to a *different* account: PushSubscriptionCreate.upsert_subscription
