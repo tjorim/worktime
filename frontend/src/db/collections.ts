@@ -146,6 +146,19 @@ export function getSyncCollectionUserId(): string | null {
   return _currentUserId;
 }
 
+// Whether AuthContext's own OIDC session check is still in flight (true only
+// while an *existing* session is loading on page load, not for a settled
+// signed-out/local-only state). Gates the pending-outbox queuing below: on a
+// shared device, queuing every unauthenticated write - not just ones made
+// during this narrow resolving window - would let a later, unrelated sign-in
+// silently claim and upload someone else's local-only data. AuthProvider
+// registers this via setSyncCollectionAuthResolving.
+let _isAuthResolving = false;
+
+export function setSyncCollectionAuthResolving(isResolving: boolean): void {
+  _isAuthResolving = isResolving;
+}
+
 // A successful push here (see pushAndQueue) applies locally via the mutation's
 // own optimistic write, but does nothing to refresh `lastSyncedAt`/outbox
 // state in OngoingSyncContext — those only move on an actual pull. Left
@@ -312,16 +325,20 @@ export function areSyncCollectionsReady(): boolean {
  * update regardless of push outcome (Option A offline strategy).
  */
 async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
-  // No authenticated sync user yet. This covers genuine local-only usage
-  // (never signs in - nothing to queue for), but also a user who *is*
-  // signed in but whose auth hasn't resolved into a known userId here yet
-  // (e.g. a write made in the brief window while an existing OIDC session
-  // is still loading). That second case needs the same retry safety net as
-  // a network failure, just filed under a userId we don't have yet -
-  // appendToPendingSyncOutbox holds it until drainPendingSyncOutbox moves it
-  // into the real outbox once setSyncCollectionAuth learns who this is.
+  // No authenticated sync user yet. Only queue to the pending outbox while
+  // an *existing* session is actively resolving (_isAuthResolving) - the
+  // write is very likely this same about-to-be-authenticated user's own.
+  // Genuine local-only usage and a settled signed-out state both leave
+  // _isAuthResolving false, so those writes stay purely local as before:
+  // queuing them too would let a later, unrelated sign-in on a shared
+  // device silently claim and upload someone else's local-only data.
+  // appendToPendingSyncOutbox holds a resolving-window write until
+  // drainPendingSyncOutbox moves it into the real outbox once
+  // setSyncCollectionAuth learns who this is.
   if (!_currentUserId) {
-    appendToPendingSyncOutbox(payload);
+    if (_isAuthResolving) {
+      appendToPendingSyncOutbox(payload);
+    }
     return;
   }
 

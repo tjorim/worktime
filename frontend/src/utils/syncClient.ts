@@ -1252,10 +1252,14 @@ export function drainPendingSyncOutbox(userId: string): void {
     const raw = localStorage.getItem(SYNC_PENDING_OUTBOX_KEY);
     if (!raw) return;
     const pending: SyncPushPayload[] = JSON.parse(raw) as SyncPushPayload[];
-    localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
-    for (const change of pending) {
-      appendToSyncOutbox(userId, change);
+    if (pending.length > 0) {
+      // One write for the whole batch, merged with whatever the real outbox
+      // already holds: either it all lands, or writeSyncOutbox throws (e.g.
+      // quota) and the catch below leaves the pending queue intact rather
+      // than clearing it out from under a write that never landed.
+      writeSyncOutbox(userId, [...readSyncOutbox(userId), ...pending]);
     }
+    localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
   } catch (err) {
     logger.error("Failed to drain the pending (pre-auth) sync outbox:", err);
   }

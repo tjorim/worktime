@@ -4,6 +4,7 @@ import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
 import { logger } from "@/utils/logger";
+import { setSyncCollectionAuthResolving } from "@/db/collections";
 
 export interface AuthContextType {
   /** Whether the user has an active OIDC session. */
@@ -73,6 +74,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const { showError, addToast } = useToast();
   const lastDisplayedOidcErrorRef = useRef<unknown>(null);
+
+  // Let db/collections.ts tell a write made right now apart from a write
+  // made once we're settled as signed-out/local-only — see
+  // setSyncCollectionAuthResolving's own comment for why that distinction
+  // matters (a shared-device cross-account data leak, not just staleness).
+  useEffect(() => {
+    setSyncCollectionAuthResolving(isValidating);
+  }, [isValidating]);
 
   useEffect(() => {
     if (!oidcAuth.error) {

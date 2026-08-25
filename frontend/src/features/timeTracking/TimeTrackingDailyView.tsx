@@ -99,8 +99,8 @@ export function TimeTrackingDailyView({
   const { settings } = useSettings();
   const { entries: timeOffEntries } = useEventStore();
   const isDayOff = useMemo(
-    () => hasFullDayTimeOffEvent(dayjs(date), timeOffEntries),
-    [date, timeOffEntries],
+    () => settings.enableTimeOff && hasFullDayTimeOffEvent(dayjs(date), timeOffEntries),
+    [date, settings.enableTimeOff, timeOffEntries],
   );
   const { tasks: ganttTasks } = useGanttTasks();
   const showGanttPicker = settings.enableGantt && ganttTasks.length > 0;

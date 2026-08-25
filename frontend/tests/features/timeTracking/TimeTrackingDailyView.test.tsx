@@ -506,7 +506,15 @@ describe("TimeTrackingDailyView", () => {
   });
 
   describe("Day off notice", () => {
+    const enableTimeOff = () => {
+      window.localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { ...defaultSettings, enableTimeOff: true } }),
+      );
+    };
+
     it("shows an info banner, without disabling task entry, on a full-day time-off entry", () => {
+      enableTimeOff();
       timeOffCollection.insert(
         buildTimeOffEntryForRange({
           start: mockProps.selectedDate,
@@ -524,6 +532,7 @@ describe("TimeTrackingDailyView", () => {
     });
 
     it("says nothing on a half-day time-off entry", () => {
+      enableTimeOff();
       timeOffCollection.insert(
         buildTimeOffEntryForRange({
           start: mockProps.selectedDate,
@@ -540,6 +549,26 @@ describe("TimeTrackingDailyView", () => {
     });
 
     it("says nothing on a day without any time-off entry", () => {
+      enableTimeOff();
+      renderView();
+
+      expect(
+        screen.queryByText("You have the day off — logging time is still fine."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("says nothing on a full-day time-off entry when time-off tracking is disabled", () => {
+      // enableTimeOff defaults to false - the entry existing (e.g. synced from
+      // another device, or left over from before the feature was disabled)
+      // must not surface a notice for a feature the user has turned off.
+      timeOffCollection.insert(
+        buildTimeOffEntryForRange({
+          start: mockProps.selectedDate,
+          entryType: "vacation",
+          entryFlag: "full_day",
+        }),
+      );
+
       renderView();
 
       expect(

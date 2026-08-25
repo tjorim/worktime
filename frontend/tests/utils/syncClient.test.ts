@@ -1760,6 +1760,23 @@ describe("syncClient", () => {
       expect(getSyncOutboxSize("user-1")).toBe(0);
     });
 
+    it("keeps the pending queue intact when the outbox write fails", () => {
+      appendToPendingSyncOutbox({ ...emptyPayload(), tasks: [{ id: "t1" }] } as never);
+      const setItemSpy = vi.spyOn(localStorage, "setItem").mockImplementation((key) => {
+        if (key === getSyncOutboxKey("user-1")) {
+          throw new Error("QuotaExceededError");
+        }
+      });
+
+      drainPendingSyncOutbox("user-1");
+
+      setItemSpy.mockRestore();
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+      const raw = localStorage.getItem(SYNC_PENDING_OUTBOX_KEY);
+      expect(raw).not.toBeNull();
+      expect(JSON.parse(raw!)).toHaveLength(1);
+    });
+
     it("caps growth for a device that never signs in, keeping the most recent entries", () => {
       for (let i = 0; i < 205; i++) {
         appendToPendingSyncOutbox({ ...emptyPayload(), tasks: [{ id: `t${i}` }] } as never);

@@ -408,6 +408,13 @@ export function DayCell({
           onDayContextMenu(date, e.clientX, e.clientY, e.currentTarget as HTMLElement);
         }
       }}
+      onClick={() => {
+        // A long press on blank cell area (not the event chip or "+" button,
+        // both of which stop propagation) has no click behavior of its own,
+        // but still needs to consume the flag here - otherwise it stays set
+        // and silently swallows the *next* unrelated click on this cell.
+        justLongPressedRef.current = false;
+      }}
       onKeyDown={handleCellKeyDown}
       onTouchStart={(e) => {
         if (onDayContextMenu && e.touches[0]) {

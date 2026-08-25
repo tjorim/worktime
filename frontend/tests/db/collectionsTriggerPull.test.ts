@@ -13,6 +13,7 @@ import { waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setSyncCollectionAuth,
+  setSyncCollectionAuthResolving,
   setSyncCollectionTriggerPull,
   tasksCollection,
 } from "@/db/collections";
@@ -75,13 +76,15 @@ describe("db/collections pushAndQueue triggerPull wiring", () => {
 describe("db/collections pending (pre-auth) outbox", () => {
   afterEach(() => {
     setSyncCollectionAuth(null);
+    setSyncCollectionAuthResolving(false);
     localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
     vi.unstubAllGlobals();
   });
 
-  it("queues a write made before auth resolves instead of silently dropping it", async () => {
+  it("queues a write made while an existing session is resolving instead of silently dropping it", async () => {
     // No setSyncCollectionAuth call yet in this test — same as a write made
     // while an existing OIDC session is still loading on page load.
+    setSyncCollectionAuthResolving(true);
     insertLocalTask("task-pre-auth-1");
 
     await waitFor(() => {
@@ -91,6 +94,7 @@ describe("db/collections pending (pre-auth) outbox", () => {
   });
 
   it("moves the pending write into the real outbox as soon as auth resolves", async () => {
+    setSyncCollectionAuthResolving(true);
     insertLocalTask("task-pre-auth-2");
     await waitFor(() => {
       expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).not.toBeNull();
@@ -100,5 +104,19 @@ describe("db/collections pending (pre-auth) outbox", () => {
 
     expect(getSyncOutboxSize(TEST_USER_ID)).toBe(1);
     expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).toBeNull();
+  });
+
+  it("does not queue a write made while settled as signed-out/local-only, to avoid a shared-device cross-account leak", async () => {
+    // isAuthResolving is false here (its default) - not mid-resolution, just
+    // genuinely no user. If a *different* person then signs in on this same
+    // device, this write must not be sitting in a pending queue for their
+    // sign-in to silently claim and upload as their own.
+    insertLocalTask("task-local-only-1");
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).toBeNull();
+
+    setSyncCollectionAuth(TEST_USER_ID, "test-token");
+    expect(getSyncOutboxSize(TEST_USER_ID)).toBe(0);
   });
 });

@@ -342,6 +342,34 @@ describe("DayCell", () => {
         expect(mockOnEventContextMenu).not.toHaveBeenCalled();
         expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
       });
+
+      it("does not swallow the next click after a long press on blank cell area", async () => {
+        const mockOnDayContextMenu = vi.fn();
+        const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
+        render(
+          <DayCell
+            {...defaultProps}
+            events={events}
+            onDayContextMenu={mockOnDayContextMenu}
+          />,
+        );
+        const gridcell = screen.getByRole("gridcell");
+
+        // Long-press blank cell area (not the event chip, which stops
+        // propagation) - opens the day context menu.
+        fireEvent.touchStart(gridcell, { touches: [{ clientX: 5, clientY: 5 }] });
+        await act(() => vi.advanceTimersByTimeAsync(500));
+        expect(mockOnDayContextMenu).toHaveBeenCalledTimes(1);
+        fireEvent.touchEnd(gridcell);
+        // The gridcell itself has no click-driven action, but must still
+        // consume the flag so it doesn't leak into the next click below.
+        fireEvent.click(gridcell);
+
+        const eventButton = screen.getByRole("button", { name: "View Test Event" });
+        fireEvent.click(eventButton);
+
+        expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
