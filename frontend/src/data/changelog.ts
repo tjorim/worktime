@@ -28,6 +28,7 @@ export const changelogData: ChangelogVersion[] = [
       "The sync status badge's spinning icon no longer freezes mid-animation while syncing a nonempty outbox — the common case, since a sync is usually triggered by having queued changes in the first place",
       "Adding, editing, or deleting an entry now refreshes the sync status badge (and its \"last synced\" time) right away, instead of leaving it showing a stale time until something else happened to trigger a pull",
       "Fixed a data-loss bug: an entry added in the brief window before your session finished reloading could silently disappear once sync caught up, since nothing recorded that it still needed to reach the server. It's now queued the same way an entry made while offline already was",
+      "The calendar's shift badge no longer shows the day's regular working shift in full color on a day you actually have off (time off or a public holiday) — it now falls back to the same muted style as a scheduled day off, matching the iCal feed",
     ],
   },
   {
