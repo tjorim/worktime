@@ -480,11 +480,16 @@ async def update_task(
         if running is not None and running.id != task_id:
             raise ConflictError("only one running task is allowed per user")
 
+    # Computed before the setattr loop below overwrites task.start_time with the new value.
+    start_time_changed = "start_time" in data and as_utc(candidate_start_time) != as_utc(task.start_time)
+
     for field, value in data.items():
         setattr(task, field, value)
-    if "start_time" in data:
-        # A reschedule needs a fresh reminder window -- otherwise a task pushed
-        # back out into the future would stay silently marked as already reminded.
+    if start_time_changed:
+        # A genuine reschedule needs a fresh reminder window -- otherwise a task pushed
+        # back out into the future would stay silently marked as already reminded. Only
+        # reset on an actual change: a client resending the same start_time alongside an
+        # unrelated edit must not requeue an already-sent reminder into a duplicate.
         task.reminder_sent_at = None
     # Bump the LWW timestamp so a later sync push carrying stale data cannot
     # silently overwrite this edit (conflict detection compares client_updated_at).

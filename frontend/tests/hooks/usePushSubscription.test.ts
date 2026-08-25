@@ -142,9 +142,12 @@ describe("usePushSubscription", () => {
     const [subscribeUrl, subscribeInit] = apiFetch.mock.calls[1]!;
     expect(subscribeUrl).toBe("/api/push/subscribe");
     const body = JSON.parse((subscribeInit as RequestInit).body as string);
-    expect(body).toMatchObject({
+    // Full-object equality (not toMatchObject) so this fails if a removed legacy field
+    // (lead_time_minutes, quiet_hours_start/end) ever silently returns to the payload.
+    expect(body).toEqual({
       endpoint: "https://push.example.com/ep1",
       keys: { p256dh: "test-p256dh", auth: "test-auth" },
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     });
     await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));
   });

@@ -18,7 +18,7 @@ export const changelogData: ChangelogVersion[] = [
     date: "2026-08-25",
     status: "current",
     added: [
-      "Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. \"2pm: Team meeting\") now nudges you about 10 minutes before it starts, on webapp and Android",
+      "Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. \"2pm: Team meeting\") now nudges you about 10 minutes before it starts, on the web app and Android",
     ],
     changed: [
       "Removed the shift-start reminder (lead time, quiet hours, and its own push subscription plumbing) — most people are already at work by the time it fires. The Notifications setting now controls the new planned-task reminder instead",

@@ -409,3 +409,90 @@ class TestPlannedTaskReminderScheduler:
         await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
         await db_session.refresh(task)
         assert task.reminder_sent_at == fixed_now
+
+    async def test_formats_the_reminder_time_in_the_subscriptions_timezone(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-tz-user", display_name="TZ"))
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-tz-user",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+                timezone="Europe/Brussels",
+            ),
+        )
+        # 08:55 UTC == 10:55 in Europe/Brussels (UTC+2 in July).
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+
+        send_mock = MagicMock(return_value=PushSendResult.SENT)
+        monkeypatch.setattr(scheduler, "send_push", send_mock)
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+
+        _, payload = send_mock.call_args.args
+        assert "10:55" in payload["body"]
+
+    async def test_claim_rechecks_eligibility_and_skips_a_task_rescheduled_out_of_window(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Simulates the race between _find_due_tasks' scan and _send_reminder's claim:
+        if the task's start_time moves outside the window in between (e.g. a concurrent
+        request), the claim's full-predicate recheck must not fire the reminder.
+        """
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-race-reschedule", display_name="Race"))
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-race-reschedule",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+            ),
+        )
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+
+        task.start_time = fixed_now + timedelta(hours=3)
+        db_session.add(task)
+        await db_session.commit()
+
+        send_mock = MagicMock(return_value=PushSendResult.SENT)
+        monkeypatch.setattr(scheduler, "send_push", send_mock)
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        send_mock.assert_not_called()
+        await db_session.refresh(task)
+        assert task.reminder_sent_at is None
+
+    async def test_claim_rechecks_eligibility_and_skips_a_task_deleted_before_claiming(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-race-delete", display_name="Race"))
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-race-delete",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+            ),
+        )
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+
+        task.deleted_at = fixed_now
+        db_session.add(task)
+        await db_session.commit()
+
+        send_mock = MagicMock(return_value=PushSendResult.SENT)
+        monkeypatch.setattr(scheduler, "send_push", send_mock)
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        send_mock.assert_not_called()

@@ -29,7 +29,12 @@ class NotificationPreferencesStore(context: Context) {
                 if (error is IOException) emit(emptyPreferences()) else throw error
             }.map { prefs ->
                 NotificationPreferences(
-                    plannedTasksEnabled = prefs[KEY_PLANNED_TASKS_ENABLED] ?: true,
+                    // Fall back to the pre-migration "shifts_enabled" key so a user who had
+                    // explicitly opted out of the old shift reminder doesn't get silently
+                    // re-enrolled into the new planned-task one just because its key changed.
+                    // Once the user touches this setting, setPlannedTasksEnabled writes the
+                    // new key and this fallback stops mattering for them.
+                    plannedTasksEnabled = prefs[KEY_PLANNED_TASKS_ENABLED] ?: prefs[KEY_SHIFTS_ENABLED_LEGACY] ?: true,
                     timeTrackingEnabled = prefs[KEY_TIME_TRACKING_ENABLED] ?: true,
                     syncConflictsEnabled = prefs[KEY_SYNC_CONFLICTS_ENABLED] ?: true
                 )
@@ -50,6 +55,9 @@ class NotificationPreferencesStore(context: Context) {
     private companion object {
         const val PREFERENCES_FILE = "notification_preferences.pb"
         val KEY_PLANNED_TASKS_ENABLED = booleanPreferencesKey("planned_tasks_enabled")
+
+        // Pre-migration key this preference replaced -- read-only fallback, never written.
+        val KEY_SHIFTS_ENABLED_LEGACY = booleanPreferencesKey("shifts_enabled")
         val KEY_TIME_TRACKING_ENABLED = booleanPreferencesKey("time_tracking_enabled")
         val KEY_SYNC_CONFLICTS_ENABLED = booleanPreferencesKey("sync_conflicts_enabled")
     }

@@ -554,10 +554,14 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         if "gantt_task_id" in provided_fields:
             task.gantt_task_id = item.gantt_task_id
         if "start_time" in provided_fields and item.start_time is not None:
+            if as_utc(item.start_time) != as_utc(task.start_time):
+                # A genuine reschedule needs a fresh reminder window -- otherwise a task
+                # pushed back out into the future would stay silently marked as already
+                # reminded. Only reset on an actual change: a client that resends the same
+                # start_time alongside an unrelated edit (e.g. text) must not requeue an
+                # already-sent reminder and cause a duplicate notification.
+                task.reminder_sent_at = None
             task.start_time = item.start_time
-            # A reschedule needs a fresh reminder window -- otherwise a task pushed
-            # back out into the future would stay silently marked as already reminded.
-            task.reminder_sent_at = None
         if "stop_time" in provided_fields:
             task.stop_time = item.stop_time
         if "includes_break" in provided_fields and item.includes_break is not None:

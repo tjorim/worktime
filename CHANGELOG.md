@@ -21,7 +21,7 @@ below predate that switch.
 
 ### Added
 
-- Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. "2pm: Team meeting") now nudges you about 10 minutes before it starts, on webapp and Android
+- Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. "2pm: Team meeting") now nudges you about 10 minutes before it starts, on the web app and Android
 
 ### Changed
 

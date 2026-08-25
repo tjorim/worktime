@@ -100,6 +100,52 @@ class ReminderSchedulerTest {
     }
 
     @Test
+    fun `reconcile formats the reminder message in the device's local time zone`() {
+        val accountId = 1
+        // 10:30 UTC -- must display as device-local time, not this literal UTC value.
+        val startTime = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+            .plusDays(1)
+            .withHour(10)
+            .withMinute(30)
+            .withSecond(0)
+            .withNano(0)
+        val task = TaskRecord(
+            id = "planned-tz",
+            userId = 1,
+            text = "Team meeting",
+            startTime = startTime.toString(),
+            stopTime = startTime.plusHours(1).toString(),
+            includesBreak = false,
+            createdAt = startTime.toString()
+        )
+        val previousDefault = java.util.TimeZone.getDefault()
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Brussels"))
+
+        try {
+            every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
+            every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
+            every { mockSharedPrefs.getString(any(), any()) } returns null
+            every { mockEditor.putLong(any(), any()) } returns mockEditor
+            every { mockEditor.putString(any(), any()) } returns mockEditor
+            every { mockAlarmManager.canScheduleExactAlarms() } returns true
+            every { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) } returns Unit
+            every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
+
+            scheduler.reconcile(accountId, task, null, plannedTasksEnabled = true, timersEnabled = false)
+
+            // Europe/Brussels is UTC+1 (winter) or UTC+2 (summer); 10:30 UTC is never 10:30 local.
+            verify(exactly = 1) {
+                mockEditor.putString(
+                    "${ReminderScheduler.TYPE_PLANNED_TASK}_message",
+                    match { !it.endsWith("10:30") }
+                )
+            }
+        } finally {
+            java.util.TimeZone.setDefault(previousDefault)
+        }
+    }
+
+    @Test
     fun `reconcile schedules timer reminder when enabled and task exists`() {
         val accountId = 1
         val task = createTask()
@@ -224,7 +270,8 @@ class ReminderSchedulerTest {
         // the dedup-skip guard is actually exercised rather than always falling through.
         val startTime = java.time.OffsetDateTime.parse(task.startTime)
         val at = startTime.minusMinutes(ReminderScheduler.PLANNED_TASK_LEAD_MINUTES).toInstant().toEpochMilli()
-        val message = "${task.text} starts at ${startTime.toLocalTime()}"
+        val displayTime = startTime.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalTime()
+        val message = "${task.text} starts at $displayTime"
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor

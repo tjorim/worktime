@@ -16,8 +16,9 @@ import logging
 from datetime import UTC, timedelta
 from datetime import datetime as dt_datetime
 from typing import TYPE_CHECKING, Any, cast
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select, update
+from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
@@ -34,22 +35,37 @@ REMINDER_CHECK_INTERVAL_SECONDS = 60
 REMINDER_LEAD_MINUTES = 10
 
 
+def _due_task_conditions(now_utc: dt_datetime) -> tuple[ColumnElement[bool], ...]:
+    """The full eligibility predicate for "planned task whose reminder window is
+    open right now" -- shared by the initial scan and the atomic claim below, so
+    a task that's deleted, rescheduled, or started between the two can't still
+    slip through the claim (which by itself only rechecks reminder_sent_at).
+    """
+    cutoff = now_utc + timedelta(minutes=REMINDER_LEAD_MINUTES)
+    return (
+        TimeTrackingTask.reminder_sent_at.is_(None),
+        TimeTrackingTask.stop_time.is_not(None),
+        TimeTrackingTask.deleted_at.is_(None),
+        TimeTrackingTask.start_time > now_utc,
+        TimeTrackingTask.start_time <= cutoff,
+    )
+
+
 async def _find_due_tasks(session: AsyncSession, now_utc: dt_datetime) -> list[TimeTrackingTask]:
     """Planned tasks (stop_time set, not yet started) whose reminder window has
     just opened -- i.e. start_time falls within the next REMINDER_LEAD_MINUTES
     minutes -- and haven't been reminded about yet.
     """
-    cutoff = now_utc + timedelta(minutes=REMINDER_LEAD_MINUTES)
-    result = await session.execute(
-        select(TimeTrackingTask).where(
-            TimeTrackingTask.reminder_sent_at.is_(None),
-            TimeTrackingTask.stop_time.is_not(None),
-            TimeTrackingTask.deleted_at.is_(None),
-            TimeTrackingTask.start_time > now_utc,
-            TimeTrackingTask.start_time <= cutoff,
-        )
-    )
+    result = await session.execute(select(TimeTrackingTask).where(*_due_task_conditions(now_utc)))
     return list(result.scalars().all())
+
+
+def _localized_start_time(task: TimeTrackingTask, tz_name: str) -> dt_datetime:
+    try:
+        tz = ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        tz = UTC
+    return task.start_time.astimezone(tz)
 
 
 async def _send_reminder(session: AsyncSession, task: TimeTrackingTask, *, now_utc: dt_datetime) -> None:
@@ -57,30 +73,36 @@ async def _send_reminder(session: AsyncSession, task: TimeTrackingTask, *, now_u
     # process/replica runs this loop, each reads the same unset reminder_sent_at and
     # would otherwise all decide to send. Only the process whose UPDATE actually
     # changes the row (rowcount 1) proceeds -- the rest see rowcount 0 and back off,
-    # so the push is delivered at most once per task.
+    # so the push is delivered at most once per task. Rechecking the full eligibility
+    # predicate here (not just reminder_sent_at) closes the gap where the task was
+    # deleted, rescheduled, or started in between _find_due_tasks' scan and this claim.
     claim = cast(
         "CursorResult[Any]",
         await session.execute(
             update(TimeTrackingTask)
             .where(TimeTrackingTask.id == task.id)
-            .where(TimeTrackingTask.reminder_sent_at.is_(None))
+            .where(*_due_task_conditions(now_utc))
             .values(reminder_sent_at=now_utc)
         ),
     )
     await session.commit()
     if claim.rowcount == 0:
-        return  # another process already claimed this task's reminder
+        return  # another process already claimed it, or it's no longer eligible
 
     subscriptions = await list_subscriptions_for_user(session, task.user_id)
     any_sent = False
     any_failed = False
     for subscription in subscriptions:
+        # Each subscription carries the timezone its browser captured at subscribe
+        # time, so a task's absolute start_time (stored UTC) is displayed at the
+        # wall-clock time that subscription's user actually expects.
+        local_start = _localized_start_time(task, subscription.timezone)
         result = await asyncio.to_thread(
             send_push,
             subscription,
             {
                 "title": "Starting soon",
-                "body": f"{task.text} starts at {task.start_time.strftime('%H:%M')}",
+                "body": f"{task.text} starts at {local_start.strftime('%H:%M')}",
                 "url": "/",
             },
         )

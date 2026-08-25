@@ -264,6 +264,58 @@ async def test_update_task_rejects_negative_duration_with_partial_data(db_sessio
         )
 
 
+async def test_update_task_resets_reminder_on_an_actual_reschedule(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="reschedule-reset", display_name="Reschedule"))
+    task = await create_task(
+        db_session,
+        user.id,
+        TaskCreate(
+            text="Task",
+            start_time=datetime(2026, 2, 26, 9, 0),
+            stop_time=datetime(2026, 2, 26, 10, 0),
+            includes_break=False,
+        ),
+    )
+    task.reminder_sent_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
+    db_session.add(task)
+    await db_session.commit()
+
+    updated = await update_task(
+        db_session,
+        user.id,
+        task.id,
+        TaskUpdate.model_construct(start_time=datetime(2026, 2, 26, 9, 30)),
+    )
+
+    assert updated.reminder_sent_at is None
+
+
+async def test_update_task_does_not_reset_reminder_when_start_time_is_unchanged(db_session: AsyncSession) -> None:
+    """A client resending the same start_time alongside an unrelated edit (e.g. text)
+    must not requeue an already-sent reminder into a duplicate notification.
+    """
+    user = await create_user(db_session, UserCreate(username="reschedule-noop", display_name="No Reschedule"))
+    start_time = datetime(2026, 2, 26, 9, 0)
+    task = await create_task(
+        db_session,
+        user.id,
+        TaskCreate(text="Task", start_time=start_time, stop_time=datetime(2026, 2, 26, 10, 0), includes_break=False),
+    )
+    sent_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
+    task.reminder_sent_at = sent_at
+    db_session.add(task)
+    await db_session.commit()
+
+    updated = await update_task(
+        db_session,
+        user.id,
+        task.id,
+        TaskUpdate.model_construct(text="Renamed", start_time=start_time),
+    )
+
+    assert updated.reminder_sent_at == sent_at
+
+
 async def test_update_user_rejects_null_for_non_nullable_fields(db_session: AsyncSession) -> None:
     user = await create_user(db_session, UserCreate(username="nullable-check", display_name="Nullable Check"))
 

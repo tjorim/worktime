@@ -15,7 +15,7 @@ from uuid import uuid4
 
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.database.models import TimeTrackingTask
 from app.schemas import TaskSyncItem, UserCreate
@@ -3490,6 +3490,76 @@ class TestSyncCorrectnessFixes:
         results = resp.json()["results"]
         assert results["templates"][0]["status"] == "conflict"
         assert results["gantt_tasks"][0]["status"] == "conflict"
+
+    async def test_push_task_update_resets_reminder_on_an_actual_reschedule(self, db_session: AsyncSession) -> None:
+        user = await create_user(db_session, UserCreate(username="sync-reschedule-reset", display_name="Reset"))
+        create_item = TaskSyncItem(
+            id=str(uuid4()),
+            action="create",
+            client_updated_at=datetime.now(UTC) - timedelta(minutes=30),
+            text="Task",
+            start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
+            stop_time=datetime(2026, 2, 1, 10, 0, tzinfo=UTC),
+        )
+        await _push_task(db_session, user.id, create_item)
+        await db_session.commit()
+
+        task = await db_session.get(TimeTrackingTask, create_item.id)
+        assert task is not None
+        task.reminder_sent_at = datetime(2026, 2, 1, 8, 50, tzinfo=UTC)
+        db_session.add(task)
+        await db_session.commit()
+
+        update_item = TaskSyncItem(
+            id=create_item.id,
+            action="update",
+            client_updated_at=datetime.now(UTC),
+            start_time=datetime(2026, 2, 1, 9, 30, tzinfo=UTC),
+        )
+        await _push_task(db_session, user.id, update_item)
+        await db_session.commit()
+
+        await db_session.refresh(task)
+        assert task.reminder_sent_at is None
+
+    async def test_push_task_update_does_not_reset_reminder_when_start_time_is_unchanged(
+        self, db_session: AsyncSession
+    ) -> None:
+        """A device resending the same start_time alongside an unrelated edit (e.g. text)
+        must not requeue an already-sent reminder into a duplicate notification.
+        """
+        user = await create_user(db_session, UserCreate(username="sync-reschedule-noop", display_name="No Reset"))
+        start_time = datetime(2026, 2, 1, 9, 0, tzinfo=UTC)
+        create_item = TaskSyncItem(
+            id=str(uuid4()),
+            action="create",
+            client_updated_at=datetime.now(UTC) - timedelta(minutes=30),
+            text="Task",
+            start_time=start_time,
+            stop_time=datetime(2026, 2, 1, 10, 0, tzinfo=UTC),
+        )
+        await _push_task(db_session, user.id, create_item)
+        await db_session.commit()
+
+        task = await db_session.get(TimeTrackingTask, create_item.id)
+        assert task is not None
+        sent_at = datetime(2026, 2, 1, 8, 50, tzinfo=UTC)
+        task.reminder_sent_at = sent_at
+        db_session.add(task)
+        await db_session.commit()
+
+        update_item = TaskSyncItem(
+            id=create_item.id,
+            action="update",
+            client_updated_at=datetime.now(UTC),
+            text="Renamed",
+            start_time=start_time,
+        )
+        await _push_task(db_session, user.id, update_item)
+        await db_session.commit()
+
+        await db_session.refresh(task)
+        assert task.reminder_sent_at == sent_at
 
     def test_rest_write_triggers_sync_broadcast(self, db_client: TestClient, auth_headers) -> None:
         """CRUD writes must emit a sync_changed hint (previously only /sync/push did)."""

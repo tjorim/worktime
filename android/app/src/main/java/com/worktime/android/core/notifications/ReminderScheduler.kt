@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.worktime.android.data.model.TaskRecord
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 /** Persists and schedules the one next reminder of each kind, independently of the UI process. */
 class ReminderScheduler(private val context: Context) {
@@ -84,11 +85,15 @@ class ReminderScheduler(private val context: Context) {
             ?: return cancel(TYPE_PLANNED_TASK)
         if (startTime.toInstant().toEpochMilli() <= System.currentTimeMillis()) return cancel(TYPE_PLANNED_TASK)
         val at = startTime.minusMinutes(PLANNED_TASK_LEAD_MINUTES).toInstant().toEpochMilli()
+        // startTime is UTC-normalized by the backend; toLocalTime() on it would report the
+        // instant's UTC wall-clock time, not this device's -- convert to the device's zone
+        // (same instant, different offset) before extracting the displayed time-of-day.
+        val displayTime = startTime.atZoneSameInstant(ZoneId.systemDefault()).toLocalTime()
         persistAndSet(
             TYPE_PLANNED_TASK,
             at,
             accountId,
-            "${task.text} starts at ${startTime.toLocalTime()}",
+            "${task.text} starts at $displayTime",
             taskId = task.id,
             startTimeRaw = task.startTime
         )
