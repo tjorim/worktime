@@ -1,6 +1,12 @@
 export const USER_STATE_STORAGE_KEY = "worktime_user_state";
 export const SYNC_CURSOR_KEY_PREFIX = "worktime_sync_cursor_";
 export const SYNC_OUTBOX_KEY_PREFIX = "worktime_sync_outbox_";
+/**
+ * Holds writes made before the current user is known (auth not yet
+ * resolved). Not per-user, since there is no userId to key it by yet - see
+ * appendToPendingSyncOutbox / drainPendingSyncOutbox in utils/syncClient.ts.
+ */
+export const SYNC_PENDING_OUTBOX_KEY = "worktime_sync_outbox_pending";
 export const SYNC_QUARANTINE_KEY_PREFIX = "worktime_sync_quarantine_";
 export const SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX = "worktime_collection_snapshot_";
 export const SYNC_COLLECTION_SNAPSHOT_OWNER_KEY = "worktime_collection_snapshot_owner";

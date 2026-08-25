@@ -27,6 +27,7 @@ export const changelogData: ChangelogVersion[] = [
       "Fixed a bug that could sign you out even after a successful silent session renewal: the retried request was reusing the old, already-expired token instead of the freshly renewed one",
       "The sync status badge's spinning icon no longer freezes mid-animation while syncing a nonempty outbox — the common case, since a sync is usually triggered by having queued changes in the first place",
       "Adding, editing, or deleting an entry now refreshes the sync status badge (and its \"last synced\" time) right away, instead of leaving it showing a stale time until something else happened to trigger a pull",
+      "Fixed a data-loss bug: an entry added in the brief window before your session finished reloading could silently disappear once sync caught up, since nothing recorded that it still needed to reach the server. It's now queued the same way an entry made while offline already was",
     ],
   },
   {

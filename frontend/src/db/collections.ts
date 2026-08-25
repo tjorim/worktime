@@ -52,6 +52,8 @@ import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
   appendToSyncOutbox,
+  appendToPendingSyncOutbox,
+  drainPendingSyncOutbox,
   type GanttTaskSyncRead,
   type LabelSyncRead,
   type SyncPullResponse,
@@ -85,6 +87,16 @@ export function setSyncCollectionAuth(userId: string | null, accessToken: string
   const userChanged = previousUserId !== userId;
   _currentUserId = userId;
   _currentAccessToken = accessToken;
+
+  // Move any writes made before this user was known into their real outbox,
+  // synchronously and before anything below can pull server state — a pull
+  // response with no record of those writes would otherwise silently
+  // overwrite the still-unsynced optimistic rows. Only relevant on the
+  // null -> known transition, since that is the only state pending writes
+  // can have accumulated under.
+  if (previousUserId === null && userId !== null) {
+    drainPendingSyncOutbox(userId);
+  }
 
   if (userChanged) {
     // The persisted cache is one per-device store. If it belongs to a
@@ -300,10 +312,16 @@ export function areSyncCollectionsReady(): boolean {
  * update regardless of push outcome (Option A offline strategy).
  */
 async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
-  // No authenticated sync user: keep the local optimistic write only.
-  // This is expected in local-only mode and in tests that exercise collection
-  // mutations without mounting OngoingSyncProvider.
+  // No authenticated sync user yet. This covers genuine local-only usage
+  // (never signs in - nothing to queue for), but also a user who *is*
+  // signed in but whose auth hasn't resolved into a known userId here yet
+  // (e.g. a write made in the brief window while an existing OIDC session
+  // is still loading). That second case needs the same retry safety net as
+  // a network failure, just filed under a userId we don't have yet -
+  // appendToPendingSyncOutbox holds it until drainPendingSyncOutbox moves it
+  // into the real outbox once setSyncCollectionAuth learns who this is.
   if (!_currentUserId) {
+    appendToPendingSyncOutbox(payload);
     return;
   }
 

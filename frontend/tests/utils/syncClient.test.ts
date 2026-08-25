@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyPreferencesPull,
+  appendToPendingSyncOutbox,
   appendToSyncOutbox,
   bumpClientTimestamps,
   buildKeepLocalReplacePayload,
@@ -9,6 +10,7 @@ import {
   clearSyncOutbox,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
+  drainPendingSyncOutbox,
   countPayloadDeletes,
   EmptyLocalReplaceError,
   extractConflictedItems,
@@ -29,6 +31,7 @@ import {
 import {
   getSyncCursorKey,
   getSyncOutboxKey,
+  SYNC_PENDING_OUTBOX_KEY,
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
@@ -1729,6 +1732,44 @@ describe("syncClient", () => {
     it("isolates outboxes between different users", () => {
       appendToSyncOutbox("user-A", emptyPayload());
       expect(getSyncOutboxSize("user-B")).toBe(0);
+    });
+  });
+
+  describe("appendToPendingSyncOutbox / drainPendingSyncOutbox", () => {
+    it("holds writes made before a user is known, under no user's key", () => {
+      appendToPendingSyncOutbox({ ...emptyPayload(), tasks: [{ id: "t1" }] } as never);
+
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+      const raw = localStorage.getItem(SYNC_PENDING_OUTBOX_KEY);
+      expect(raw).not.toBeNull();
+      expect(JSON.parse(raw!)).toHaveLength(1);
+    });
+
+    it("moves pending writes into the now-known user's real outbox and clears the pending queue", () => {
+      appendToPendingSyncOutbox({ ...emptyPayload(), tasks: [{ id: "t1" }] } as never);
+      appendToPendingSyncOutbox({ ...emptyPayload(), tasks: [{ id: "t2" }] } as never);
+
+      drainPendingSyncOutbox("user-1");
+
+      expect(getSyncOutboxSize("user-1")).toBe(2);
+      expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).toBeNull();
+    });
+
+    it("is a no-op when nothing is pending", () => {
+      drainPendingSyncOutbox("user-1");
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+    });
+
+    it("caps growth for a device that never signs in, keeping the most recent entries", () => {
+      for (let i = 0; i < 205; i++) {
+        appendToPendingSyncOutbox({ ...emptyPayload(), tasks: [{ id: `t${i}` }] } as never);
+      }
+
+      const raw = localStorage.getItem(SYNC_PENDING_OUTBOX_KEY);
+      const stored = JSON.parse(raw!) as { tasks: { id: string }[] }[];
+      expect(stored).toHaveLength(200);
+      expect(stored[0]!.tasks[0]!.id).toBe("t5");
+      expect(stored.at(-1)!.tasks[0]!.id).toBe("t204");
     });
   });
 
