@@ -103,13 +103,7 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                         else -> null
                     }
                 }
-            val plannedTaskDeferred =
-                async {
-                    when (val result = repository.listTasks(LocalDate.now(), LocalDate.now().plusDays(1))) {
-                        is MutationResult.Success -> nextPlannedTask(result.value)
-                        else -> null
-                    }
-                }
+            val plannedTaskDeferred = async { fetchPlannedTask() }
             val weeklyLocationsDeferred =
                 async {
                     when (val result = repository.loadWeeklyWorkLocations()) {
@@ -157,6 +151,12 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
                 )
         }
     }
+
+    private suspend fun fetchPlannedTask(): TaskRecord? =
+        when (val result = repository.listTasks(LocalDate.now(), LocalDate.now().plusDays(1))) {
+            is MutationResult.Success -> nextPlannedTask(result.value)
+            else -> null
+        }
 
     fun startTimeTracking(text: String, labelId: String? = null) {
         submitMutation { repository.startTimeTracking(text, labelId) }

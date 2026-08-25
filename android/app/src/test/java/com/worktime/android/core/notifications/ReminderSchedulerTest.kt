@@ -315,7 +315,8 @@ class ReminderSchedulerTest {
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns accountId
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_start", null) } returns storedStart
-        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_message", null) } returns storedMessage
+        every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_PLANNED_TASK}_message", null) } returns
+            storedMessage
         every { mockAlarmManager.canScheduleExactAlarms() } returns true
         every { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) } returns Unit
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
