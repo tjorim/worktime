@@ -100,7 +100,11 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
         initialValue = null
     )
 
-    LaunchedEffect(uiState, actionsState, notificationPreferences) {
+    val sessionState by container.sessionManager.sessionState.collectAsStateWithLifecycle()
+    LaunchedEffect(sessionState, uiState, actionsState, notificationPreferences) {
+        // Gate on sessionState (not just uiState) so a forced logout that hasn't yet propagated
+        // to uiState can't race the cancelAll() effect below and re-arm a just-cancelled reminder.
+        if (sessionState is SessionState.LoggedOut) return@LaunchedEffect
         val dashboard = (uiState as? DashboardUiState.Success)?.dashboard ?: return@LaunchedEffect
         reminderScheduler.reconcile(
             dashboard.identity.id,
@@ -118,7 +122,6 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
             }
         }
     }
-    val sessionState by container.sessionManager.sessionState.collectAsStateWithLifecycle()
     LaunchedEffect(sessionState) {
         if (sessionState is SessionState.LoggedOut) reminderScheduler.cancelAll()
     }

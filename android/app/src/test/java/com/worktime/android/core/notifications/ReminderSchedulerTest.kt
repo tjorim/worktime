@@ -5,16 +5,15 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import com.worktime.android.data.model.NextShiftItem
 import com.worktime.android.data.model.ShiftSummary
 import com.worktime.android.data.model.TaskRecord
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkObject
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
-import io.mockk.unmockkObject
-import io.mockk.unmockkStatic
 import io.mockk.verify
 import java.time.LocalDate
 import org.junit.After
@@ -34,6 +33,9 @@ class ReminderSchedulerTest {
     fun setUp() {
         mockkStatic(AlarmManager::class)
         mockkStatic(PendingIntent::class)
+        // Constructing a real WorktimeNotifications would build a real content Intent, which
+        // NPEs under this module's non-Robolectric unit-test stubs (see pendingIntent() above).
+        mockkConstructor(WorktimeNotifications::class)
 
         every { mockContext.getSystemService(AlarmManager::class.java) } returns mockAlarmManager
         every { mockContext.getSharedPreferences(any(), any()) } returns mockSharedPrefs
@@ -46,7 +48,6 @@ class ReminderSchedulerTest {
     @After
     fun tearDown() {
         unmockkAll()
-        unmockkStatic()
     }
 
     private fun createShift(startHour: Double? = 9.0, daysFromNow: Long = 1): NextShiftItem {
@@ -133,26 +134,27 @@ class ReminderSchedulerTest {
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockSharedPrefs.getString(any(), any()) } returns null
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.reconcile(accountId, null, null, shiftsEnabled = false, timersEnabled = false)
 
-        verify(exactly = 1) { mockAlarmManager.cancel(any()) }
+        // Disabling both cancels the shift AND timer reminder independently.
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
         verify(exactly = 1) { mockEditor.remove("${ReminderScheduler.TYPE_SHIFT}_at") }
     }
 
     @Test
     fun `cancelAll cancels both reminder types`() {
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.clear() } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.cancelAll()
 
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
         verify(exactly = 1) { mockEditor.clear() }
     }
 
@@ -161,16 +163,18 @@ class ReminderSchedulerTest {
         val oldAccountId = 1
         val newAccountId = 2
 
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, newAccountId) } returns oldAccountId
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns oldAccountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, newAccountId) } returns mockEditor
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.clear() } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.reconcile(newAccountId, null, null, shiftsEnabled = false, timersEnabled = false)
 
         verify(exactly = 1) { mockEditor.clear() }
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        // cancelAll() cancels shift+timer (2), then the disabled shift/timer branches below
+        // it independently cancel each again (2 more) since shift/task are both null.
+        verify(exactly = 4) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
@@ -179,14 +183,14 @@ class ReminderSchedulerTest {
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockSharedPrefs.getString(any(), any()) } returns null
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.reconcile(accountId, null, null, shiftsEnabled = true, timersEnabled = true)
 
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     // ==================== Rescheduling Tests ====================
@@ -221,12 +225,21 @@ class ReminderSchedulerTest {
     fun `persistAndSet skips when nothing changed`() {
         val accountId = 1
         val shift = createShift()
-        val at = System.currentTimeMillis() + 3600000
-        val message = "Shift MORNING starts at 09:00"
+        // Mirror ReminderScheduler.scheduleShift's own computation exactly, so the stored
+        // values under test genuinely match what the real code would (re)compute and the
+        // dedup-skip guard is actually exercised rather than always falling through.
+        val start = LocalDate.parse(shift.date)
+            .atTime(9, 0)
+            .atZone(java.time.ZoneId.systemDefault())
+        val at = start.minusMinutes(ReminderScheduler.SHIFT_LEAD_MINUTES).toInstant().toEpochMilli()
+        val message = "${shift.shift.displayCode} starts at ${start.toLocalTime()}"
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
-        every { mockSharedPrefs.getLong("${ReminderScheduler.TYPE_SHIFT}_at", ReminderScheduler.INVALID_ID.toLong()) } returns at
+        every {
+            mockSharedPrefs.getLong("${ReminderScheduler.TYPE_SHIFT}_at", ReminderScheduler.INVALID_ID.toLong())
+        } returns
+            at
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_message", null) } returns message
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_date", null) } returns shift.date
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_hour", null) } returns "9.0"
@@ -247,13 +260,15 @@ class ReminderSchedulerTest {
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.reconcile(accountId, shift, null, shiftsEnabled = true, timersEnabled = false)
 
-        verify(exactly = 1) { mockAlarmManager.cancel(any()) }
+        // scheduleShift() cancels the shift reminder (null startHour), and the disabled timer
+        // branch (task is null) cancels the timer reminder independently.
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
@@ -263,13 +278,15 @@ class ReminderSchedulerTest {
 
         every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
         every { mockEditor.putInt(ReminderScheduler.KEY_ACCOUNT, accountId) } returns mockEditor
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.reconcile(accountId, shift, null, shiftsEnabled = true, timersEnabled = false)
 
-        verify(exactly = 1) { mockAlarmManager.cancel(any()) }
+        // scheduleShift() cancels the shift reminder (past shift), and the disabled timer
+        // branch (task is null) cancels the timer reminder independently.
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
@@ -286,6 +303,10 @@ class ReminderSchedulerTest {
         every { mockAlarmManager.setAndAllowWhileIdle(any(), any(), any()) } returns Unit
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
+        // The stub android.jar's Build.VERSION.SDK_INT defaults to 0, which would otherwise
+        // short-circuit ReminderScheduler.set()'s exact-alarm check to true regardless of
+        // canScheduleExactAlarms(); force it to a real S+ value for this branch to be reachable.
+        scheduler.sdkInt = Build.VERSION_CODES.S
         scheduler.reconcile(accountId, null, task, shiftsEnabled = false, timersEnabled = true)
 
         verify(exactly = 1) {
@@ -328,26 +349,29 @@ class ReminderSchedulerTest {
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_date", null) } returns storedDate
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_hour", null) } returns storedHour
         every { mockSharedPrefs.getString("${ReminderScheduler.TYPE_SHIFT}_message", null) } returns null
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.restore()
 
-        verify(exactly = 1) { mockAlarmManager.cancel(any()) }
+        // The expired shift is cancelled, and the (unstubbed, defaulted-to-stale) timer
+        // reminder is independently cancelled by the same restore() pass.
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
         verify(exactly = 0) { mockAlarmManager.setExactAndAllowWhileIdle(any(), any(), any()) }
     }
 
     @Test
     fun `restore cancels when account is invalid`() {
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns ReminderScheduler.INVALID_ID
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns
+            ReminderScheduler.INVALID_ID
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         scheduler.restore()
 
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     // ==================== Account Isolation Tests (ReminderReceiver) ====================
@@ -363,8 +387,12 @@ class ReminderSchedulerTest {
             putExtra(ReminderScheduler.EXTRA_MESSAGE, message)
         }
 
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL) } returns currentAccountId
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every {
+            mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
+        } returns
+            currentAccountId
 
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
@@ -376,46 +404,48 @@ class ReminderSchedulerTest {
     fun `ReminderReceiver shows shift notification for matching account`() {
         val accountId = 1
         val message = "Test message"
-        val intent = Intent().apply {
-            action = ReminderScheduler.TYPE_SHIFT
-            putExtra(ReminderScheduler.EXTRA_ACCOUNT, accountId)
-            putExtra(ReminderScheduler.EXTRA_MESSAGE, message)
-        }
+        // A real Intent's getters return stub defaults (not the values put into it) under this
+        // module's non-Robolectric unit-test setup, so the intent itself must be mocked too.
+        val intent = mockk<Intent>()
+        every { intent.action } returns ReminderScheduler.TYPE_SHIFT
+        every { intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, ReminderScheduler.INVALID_ID) } returns accountId
+        every { intent.getStringExtra(ReminderScheduler.EXTRA_MESSAGE) } returns message
 
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL) } returns accountId
-
-        val mockNotifications = mockk<WorktimeNotifications>(relaxed = true)
-        every { WorktimeNotifications(mockContext) } returns mockNotifications
-        every { mockNotifications.showShiftReminder(message) } returns Unit
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every {
+            mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
+        } returns
+            accountId
+        every { anyConstructed<WorktimeNotifications>().showShiftReminder(message) } returns Unit
 
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 1) { mockNotifications.showShiftReminder(message) }
+        verify(exactly = 1) { anyConstructed<WorktimeNotifications>().showShiftReminder(message) }
     }
 
     @Test
     fun `ReminderReceiver shows timer notification for matching account`() {
         val accountId = 1
         val message = "Test timer message"
-        val intent = Intent().apply {
-            action = ReminderScheduler.TYPE_TIMER
-            putExtra(ReminderScheduler.EXTRA_ACCOUNT, accountId)
-            putExtra(ReminderScheduler.EXTRA_MESSAGE, message)
-        }
+        val intent = mockk<Intent>()
+        every { intent.action } returns ReminderScheduler.TYPE_TIMER
+        every { intent.getIntExtra(ReminderScheduler.EXTRA_ACCOUNT, ReminderScheduler.INVALID_ID) } returns accountId
+        every { intent.getStringExtra(ReminderScheduler.EXTRA_MESSAGE) } returns message
 
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL) } returns accountId
-
-        val mockNotifications = mockk<WorktimeNotifications>(relaxed = true)
-        every { WorktimeNotifications(mockContext) } returns mockNotifications
-        every { mockNotifications.showStaleTimer(message) } returns Unit
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every {
+            mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
+        } returns
+            accountId
+        every { anyConstructed<WorktimeNotifications>().showStaleTimer(message) } returns Unit
 
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 1) { mockNotifications.showStaleTimer(message) }
+        verify(exactly = 1) { anyConstructed<WorktimeNotifications>().showStaleTimer(message) }
     }
 
     @Test
@@ -426,8 +456,12 @@ class ReminderSchedulerTest {
             putExtra(ReminderScheduler.EXTRA_ACCOUNT, accountId)
         }
 
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL) } returns accountId
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every {
+            mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
+        } returns
+            accountId
 
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
@@ -445,8 +479,11 @@ class ReminderSchedulerTest {
             putExtra(ReminderScheduler.EXTRA_MESSAGE, message)
         }
 
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL) } returns ReminderScheduler.INVALID_ACCOUNT_SENTINEL
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every {
+            mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ACCOUNT_SENTINEL)
+        } returns ReminderScheduler.INVALID_ACCOUNT_SENTINEL
 
         val receiver = ReminderReceiver()
         receiver.onReceive(mockContext, intent)
@@ -458,63 +495,73 @@ class ReminderSchedulerTest {
 
     @Test
     fun `ReminderRestoreReceiver calls restore on boot completed`() {
-        val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
+        val intent = mockk<Intent>()
+        every { intent.action } returns Intent.ACTION_BOOT_COMPLETED
 
         every { mockContext.getSystemService(AlarmManager::class.java) } returns mockAlarmManager
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns ReminderScheduler.INVALID_ID
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns
+            ReminderScheduler.INVALID_ID
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         val receiver = ReminderRestoreReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
     fun `ReminderRestoreReceiver calls restore on time changed`() {
-        val intent = Intent(Intent.ACTION_TIME_CHANGED)
+        val intent = mockk<Intent>()
+        every { intent.action } returns Intent.ACTION_TIME_CHANGED
 
         every { mockContext.getSystemService(AlarmManager::class.java) } returns mockAlarmManager
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns ReminderScheduler.INVALID_ID
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns
+            ReminderScheduler.INVALID_ID
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         val receiver = ReminderRestoreReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
     fun `ReminderRestoreReceiver calls restore on timezone changed`() {
-        val intent = Intent(Intent.ACTION_TIMEZONE_CHANGED)
+        val intent = mockk<Intent>()
+        every { intent.action } returns Intent.ACTION_TIMEZONE_CHANGED
 
         every { mockContext.getSystemService(AlarmManager::class.java) } returns mockAlarmManager
-        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns mockSharedPrefs
-        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns ReminderScheduler.INVALID_ID
-        every { mockAlarmManager.cancel(any()) } returns Unit
+        every { mockContext.getSharedPreferences(ReminderScheduler.STORE, Context.MODE_PRIVATE) } returns
+            mockSharedPrefs
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, ReminderScheduler.INVALID_ID) } returns
+            ReminderScheduler.INVALID_ID
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
         every { mockEditor.remove(any()) } returns mockEditor
         every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
 
         val receiver = ReminderRestoreReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 2) { mockAlarmManager.cancel(any()) }
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
     @Test
     fun `ReminderRestoreReceiver ignores unrelated intents`() {
-        val intent = Intent(Intent.ACTION_CONFIGURATION_CHANGED)
-
-        // No mocks needed for restore since it shouldn't be called
+        val intent = mockk<Intent>()
+        every { intent.action } returns Intent.ACTION_CONFIGURATION_CHANGED
         val receiver = ReminderRestoreReceiver()
         receiver.onReceive(mockContext, intent)
 
-        verify(exactly = 0) { mockContext.getSharedPreferences(any(), any()) }
+        // setUp() already calls getSharedPreferences once, constructing `scheduler`; the
+        // assertion is that onReceive() doesn't trigger a second (restore-driven) call.
+        verify(exactly = 1) { mockContext.getSharedPreferences(any(), any()) }
     }
 }
