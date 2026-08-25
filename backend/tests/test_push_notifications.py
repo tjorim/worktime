@@ -337,3 +337,75 @@ class TestPlannedTaskReminderScheduler:
         send_mock.assert_not_called()
         await db_session.refresh(task)
         assert task.reminder_sent_at == fixed_now
+
+    async def test_releases_the_claim_when_every_send_fails_transiently(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A transient failure (provider outage, network blip) should be retried on a later
+        tick rather than permanently losing the task's one reminder window.
+        """
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-transient-fail", display_name="Retry"))
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-transient-fail",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+            ),
+        )
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+
+        send_mock = MagicMock(return_value=PushSendResult.FAILED)
+        monkeypatch.setattr(scheduler, "send_push", send_mock)
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        await db_session.refresh(task)
+        assert task.reminder_sent_at is None
+
+        # A later tick, still inside the window, retries and can now succeed.
+        send_mock.reset_mock()
+        send_mock.return_value = PushSendResult.SENT
+        assert await scheduler._find_due_tasks(db_session, fixed_now) == [task]
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        send_mock.assert_called_once()
+        await db_session.refresh(task)
+        assert task.reminder_sent_at == fixed_now
+
+    async def test_does_not_retry_when_at_least_one_subscription_succeeded(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Partial delivery is accepted as-is -- retrying would double-notify the device
+        that already received it.
+        """
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-partial-fail", display_name="Partial"))
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-partial-fail-1",
+                keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+            ),
+        )
+        await upsert_subscription(
+            db_session,
+            user.id,
+            PushSubscriptionCreate(
+                endpoint="https://fcm.googleapis.com/fcm/send/reminder-partial-fail-2",
+                keys=PushSubscriptionKeys(p256dh="c", auth="d"),
+            ),
+        )
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+
+        send_mock = MagicMock(side_effect=[PushSendResult.SENT, PushSendResult.FAILED])
+        monkeypatch.setattr(scheduler, "send_push", send_mock)
+
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        await db_session.refresh(task)
+        assert task.reminder_sent_at == fixed_now

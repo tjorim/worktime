@@ -98,6 +98,33 @@ describe("usePlannedTaskNotifications", () => {
     expect(notificationCtor).toHaveBeenCalledTimes(1);
   });
 
+  it("fires again when an already-notified task is rescheduled to a new time", () => {
+    vi.setSystemTime(new Date("2025-07-17T08:55:00"));
+
+    const { rerender } = renderHook((options) => usePlannedTaskNotifications(options), {
+      initialProps: buildOptions(),
+    });
+    expect(notificationCtor).toHaveBeenCalledTimes(1);
+
+    // Same task id, pushed out to a new start time -- reopens the reminder window.
+    rerender(
+      buildOptions({
+        tasks: [buildTask({ startTime: "2025-07-17T10:00:00", stopTime: "2025-07-17T11:00:00" })],
+      }),
+    );
+    // 08:55 -> 09:50 is exactly 10 minutes before the new 10:00 start time.
+    act(() => {
+      vi.advanceTimersByTime(55 * 60_000);
+    });
+    expect(notificationCtor).toHaveBeenCalledTimes(2);
+    expect(notificationCtor).toHaveBeenLastCalledWith(
+      m.planned_task_reminder_notification_title(),
+      expect.objectContaining({
+        body: m.planned_task_reminder_notification_body({ task: "Team meeting", time: "10:00" }),
+      }),
+    );
+  });
+
   it("does not fire when disabled", () => {
     vi.setSystemTime(new Date("2025-07-17T08:55:00"));
 

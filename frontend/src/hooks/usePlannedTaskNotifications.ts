@@ -36,7 +36,10 @@ export function usePlannedTaskNotifications({
   hasActivePushSubscription,
 }: PlannedTaskNotificationOptions): void {
   const now = useLiveTime({ precision: "minute" });
-  const notifiedIdRef = useRef<string | null>(null);
+  // Keyed by id + start_time (not just id) so rescheduling an already-notified task to a
+  // new time — which reopens its reminder window — fires a fresh reminder instead of being
+  // silently treated as already handled.
+  const notifiedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled || hasActivePushSubscription) return;
@@ -54,7 +57,8 @@ export function usePlannedTaskNotifications({
     }
     if (!next) return;
 
-    if (notifiedIdRef.current === next.task.id) return;
+    const key = `${next.task.id}-${next.startTime.valueOf()}`;
+    if (notifiedKeyRef.current === key) return;
 
     const reminderTime = next.startTime.subtract(LEAD_TIME_MINUTES, "minute");
     if (now.isBefore(reminderTime) || now.isAfter(next.startTime)) return;
@@ -66,6 +70,6 @@ export function usePlannedTaskNotifications({
       }),
       tag: "planned-task-reminder",
     });
-    notifiedIdRef.current = next.task.id;
+    notifiedKeyRef.current = key;
   }, [enabled, hasActivePushSubscription, tasks, now]);
 }

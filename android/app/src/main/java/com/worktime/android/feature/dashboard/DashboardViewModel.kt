@@ -152,11 +152,19 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         }
     }
 
-    private suspend fun fetchPlannedTask(): TaskRecord? =
-        when (val result = repository.listTasks(LocalDate.now(), LocalDate.now().plusDays(1))) {
+    private suspend fun fetchPlannedTask(): TaskRecord? {
+        // The date range is compared against task.start_time (a UTC instant) using the
+        // device's local calendar date -- padded a day on each side so a device at an
+        // extreme UTC offset (as far as UTC-12 to UTC+14) can't have a soon-starting local
+        // task fall just outside the window because its UTC calendar date differs from the
+        // device's local one. Extra results outside the near-term window are harmless: they
+        // get filtered out by nextPlannedTask()'s isAfter(now) check below.
+        val today = LocalDate.now()
+        return when (val result = repository.listTasks(today.minusDays(1), today.plusDays(2))) {
             is MutationResult.Success -> nextPlannedTask(result.value)
             else -> null
         }
+    }
 
     fun startTimeTracking(text: String, labelId: String? = null) {
         submitMutation { repository.startTimeTracking(text, labelId) }

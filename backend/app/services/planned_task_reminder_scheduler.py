@@ -72,6 +72,8 @@ async def _send_reminder(session: AsyncSession, task: TimeTrackingTask, *, now_u
         return  # another process already claimed this task's reminder
 
     subscriptions = await list_subscriptions_for_user(session, task.user_id)
+    any_sent = False
+    any_failed = False
     for subscription in subscriptions:
         result = await asyncio.to_thread(
             send_push,
@@ -82,8 +84,28 @@ async def _send_reminder(session: AsyncSession, task: TimeTrackingTask, *, now_u
                 "url": "/",
             },
         )
-        if result is PushSendResult.SUBSCRIPTION_GONE:
+        if result is PushSendResult.SENT:
+            any_sent = True
+        elif result is PushSendResult.SUBSCRIPTION_GONE:
             await delete_subscription_by_id(session, subscription.id)
+        elif result is PushSendResult.FAILED:
+            any_failed = True
+
+    if any_failed and not any_sent:
+        # Every subscription that could have delivered failed transiently (a push
+        # provider outage, a network blip) -- release the claim so a later tick,
+        # still inside the reminder window, retries it instead of silently losing
+        # the only chance to notify this task. Only release if the claim is still
+        # ours (reminder_sent_at still equals what we set it to): a concurrent
+        # reschedule of this task resets reminder_sent_at to None independently
+        # and may already have been reclaimed by a newer attempt by the time this
+        # runs, which this comparison protects against clobbering.
+        await session.execute(
+            update(TimeTrackingTask)
+            .where(TimeTrackingTask.id == task.id)
+            .where(TimeTrackingTask.reminder_sent_at == now_utc)
+            .values(reminder_sent_at=None)
+        )
     await session.commit()
 
 
