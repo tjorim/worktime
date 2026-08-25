@@ -1,6 +1,9 @@
 """Periodic background loop that sends Web Push notifications for time-tracking
 tasks logged ahead of time (a "planned" task -- see DailyTaskList.tsx's `isPlanned`)
-whose start_time is coming up soon.
+whose start_time is coming up soon. Also sends a safety-net FCM wake-ping to any
+registered Android device at the same time -- the primary wake-ping for Android
+fires much earlier, from app.services.fcm_wake_service at task create/update time
+(see #1205); this one just covers a device that wasn't registered yet then.
 
 Mirrors the app.config.oidc_config._periodic_jwks_refresh_loop pattern: an
 asyncio task, started at app startup and cancelled at shutdown, that sleeps
@@ -24,8 +27,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 if TYPE_CHECKING:
     from sqlalchemy.engine import CursorResult
 
+from app.config.settings import settings
 from app.database.engine import get_session_factory
 from app.database.models import TimeTrackingTask
+from app.services.fcm_device_token_service import delete_token_by_id, list_tokens_for_user
+from app.services.fcm_service import FcmSendResult, send_wake_signal
 from app.services.push_service import PushSendResult, send_push
 from app.services.push_subscription_service import delete_subscription_by_id, list_subscriptions_for_user
 
@@ -112,6 +118,18 @@ async def _send_reminder(session: AsyncSession, task: TimeTrackingTask, *, now_u
             await delete_subscription_by_id(session, subscription.id)
         elif result is PushSendResult.FAILED:
             any_failed = True
+
+    if settings.fcm_notifications_enabled:
+        # A safety-net wake ping, independent of the retry bookkeeping above: the
+        # primary wake-ping fires from app.services.fcm_wake_service at task
+        # create/update time (well ahead of this window), so a device that
+        # already reconciled from that has nothing new to learn here. This just
+        # covers the gap for a device that registered its token, or came back
+        # online, after that first ping already went out (or failed).
+        for device_token in await list_tokens_for_user(session, task.user_id):
+            fcm_result = await asyncio.to_thread(send_wake_signal, device_token.token)
+            if fcm_result is FcmSendResult.TOKEN_INVALID:
+                await delete_token_by_id(session, device_token.id)
 
     if any_failed and not any_sent:
         # Every subscription that could have delivered failed transiently (a push

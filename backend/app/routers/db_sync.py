@@ -96,6 +96,15 @@ async def push_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
     await notify_sync_changed(authenticated_user_id)
+    if any(record.status == "ok" for record in result.results.get("tasks", [])):
+        # Best-effort: a task in this batch was created/updated/rescheduled, which
+        # may have changed the soonest-starting planned task -- prod any registered
+        # Android device to reconcile now rather than waiting for it to next be
+        # opened. Not scoped further (e.g. to only start_time/stop_time changes) --
+        # over-triggering here just costs one harmless extra reconcile.
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, authenticated_user_id)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,

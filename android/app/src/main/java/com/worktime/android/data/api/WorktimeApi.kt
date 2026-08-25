@@ -3,6 +3,8 @@ package com.worktime.android.data.api
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.worktime.android.core.network.DynamicBaseUrlInterceptor
 import com.worktime.android.data.model.DashboardResponse
+import com.worktime.android.data.model.FcmTokenRequest
+import com.worktime.android.data.model.FcmTokenResponse
 import com.worktime.android.data.model.LabelListResponse
 import com.worktime.android.data.model.LabelMutationRequest
 import com.worktime.android.data.model.LabelPatchRequest
@@ -106,6 +108,17 @@ interface WorktimeApi {
 
     @DELETE("api/me")
     suspend fun deleteAccount(@Header("Authorization") authorization: String)
+
+    // Push-wake registration (#1205) -- resolved from the bearer token only, no user_id query
+    // param, same as api/me above.
+    @POST("api/push/fcm-token")
+    suspend fun registerFcmToken(
+        @Header("Authorization") authorization: String,
+        @Body payload: FcmTokenRequest
+    ): FcmTokenResponse
+
+    @DELETE("api/push/fcm-token")
+    suspend fun unregisterFcmToken(@Header("Authorization") authorization: String, @Query("token") token: String)
 
     // Time off is resolved from the bearer token only - no user_id query param.
     @POST("api/time-off")

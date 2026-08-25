@@ -133,6 +133,16 @@ class Settings(BaseSettings):
     # Must be an https:// URL or mailto: address per the Web Push protocol.
     VAPID_SUBJECT: str = "mailto:admin@example.com"
 
+    # FCM (Firebase Cloud Messaging), used only to wake the Android app so it can
+    # reconcile its planned-task reminder while closed -- FCM never carries
+    # reminder content itself (see app.services.fcm_service). Empty (the default)
+    # disables the feature entirely: the token-registration endpoints and the
+    # wake-ping sends both no-op, matching push_notifications_enabled's pattern
+    # above. Set to the full contents of a Firebase service-account JSON key
+    # (Firebase console -> Project settings -> Service accounts -> Generate new
+    # private key), not a file path.
+    FCM_SERVICE_ACCOUNT_JSON: str = ""
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
@@ -241,6 +251,15 @@ class Settings(BaseSettings):
         feature is entirely optional and no-ops everywhere when unset.
         """
         return bool(self.VAPID_PUBLIC_KEY.strip() and self.VAPID_PRIVATE_KEY.strip())
+
+    @property
+    def fcm_notifications_enabled(self) -> bool:
+        """True once a Firebase service-account credential is configured.
+
+        Gates the FCM token-registration endpoints and every wake-ping send --
+        the feature is entirely optional and no-ops everywhere when unset.
+        """
+        return bool(self.FCM_SERVICE_ACCOUNT_JSON.strip())
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.

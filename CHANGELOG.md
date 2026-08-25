@@ -17,6 +17,12 @@ below predate that switch.
 - Mobile carousel for team browsing
 - Advanced accessibility features (high-contrast mode, font scaling)
 
+## [2026.8.9] - 2026-08-25
+
+### Added
+
+- Android now learns about a newly-created or rescheduled planned task even while closed, via a silent push signal that just prods it to re-check — the reminder itself still fires locally, the same way it already did
+
 ## [2026.8.8] - 2026-08-25
 
 ### Added
@@ -732,7 +738,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.8...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.9...HEAD
+[2026.8.9]: https://github.com/tjorim/worktime/compare/v2026.8.8...v2026.8.9
 [2026.8.8]: https://github.com/tjorim/worktime/compare/v2026.8.7...v2026.8.8
 [2026.8.7]: https://github.com/tjorim/worktime/compare/v2026.8.6...v2026.8.7
 [2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6

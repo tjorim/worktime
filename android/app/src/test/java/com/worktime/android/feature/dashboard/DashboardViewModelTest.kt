@@ -522,6 +522,10 @@ class DashboardViewModelTest {
             MutationResult.Success(SyncStatusResponse(serverTimestamp = "2026-05-26T12:00:00Z"))
 
         override suspend fun deleteAccount(): MutationResult<Unit> = deleteAccountResult
+
+        override suspend fun registerFcmToken(token: String): MutationResult<Unit> = MutationResult.Success(Unit)
+
+        override suspend fun unregisterFcmToken(token: String): MutationResult<Unit> = MutationResult.Success(Unit)
     }
 }
 

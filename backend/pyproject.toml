@@ -28,6 +28,7 @@ dependencies = [
   "slowapi==0.1.10",
   "aiosqlite>=0.22.1",
   "pywebpush>=2.4.0",
+  "firebase-admin==7.5.0",
 ]
 
 [dependency-groups]

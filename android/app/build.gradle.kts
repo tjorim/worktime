@@ -11,6 +11,16 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+// FCM push-wake (#1205) is an optional deployment feature, same as the backend's VAPID-gated Web
+// Push: applying the google-services plugin unconditionally would break every build that doesn't
+// provide a real Firebase project's google-services.json (every dev/CI build today), since the
+// plugin fails the build outright when that file is missing. Applying it only when the file is
+// actually present keeps firebase-messaging usable (compiles fine either way) while degrading to
+// a no-op -- FirebaseApp simply never auto-initializes -- everywhere else. See android/README.md.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 fun quoted(value: String) = "\"$value\""
 
 val localProperties =
@@ -289,6 +299,8 @@ dependencies {
     implementation(libs.appauth)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     debugImplementation(libs.compose.ui.tooling)
 

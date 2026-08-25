@@ -164,7 +164,10 @@ Under `/api/sync`:
 ### Push notification routes
 
 - `/api/push/*` — Web Push subscription management for planned-task-reminder notifications (no-ops unless
-  `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` are set)
+  `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` are set), plus FCM device-token registration for Android
+  push-wake — see `AGENTS.md`'s "Live Updates" section. Without `FCM_SERVICE_ACCOUNT_JSON` set, the
+  register/unregister endpoints return 503 and no wake-pings are ever sent (the send side is a silent
+  no-op; the endpoints themselves are simply unavailable)
 
 ### MCP server
 
@@ -226,6 +229,7 @@ Important variables:
 - `METRICS_HMAC_SECRET`
 - `INTEGRATION_KEY_HASH_SECRET`
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`
+- `FCM_SERVICE_ACCOUNT_JSON`
 
 Behavior to note:
 

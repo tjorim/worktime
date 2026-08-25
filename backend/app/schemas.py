@@ -350,6 +350,22 @@ class PushSubscriptionRead(BaseModel):
     updated_at: dt_datetime
 
 
+class FcmTokenCreate(BaseModel):
+    """Payload for registering (or updating, by re-posting) an Android device's
+    FCM registration token.
+    """
+
+    token: str = Field(min_length=1, max_length=4096)
+
+
+class FcmTokenRead(BaseModel):
+    """A registered FCM device token, without the token value itself."""
+
+    id: str
+    created_at: dt_datetime
+    updated_at: dt_datetime
+
+
 IntegrationClientScope = Literal["worktime:mcp", "worktime:admin"]
 
 

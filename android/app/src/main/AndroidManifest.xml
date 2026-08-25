@@ -34,6 +34,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Android push-wake (#1205): a no-op unless google-services.json is present at build
+             time and a real Firebase project is configured; see android/README.md. -->
+        <service
+            android:name=".core.notifications.WorktimeFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             android:exported="true"

@@ -393,6 +393,12 @@ async def create_task(
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
+    if task.stop_time is not None and task.start_time > datetime.now(UTC):
+        # Deferred import: app.services.fcm_wake_service -> fcm_device_token_service
+        # imports NotFoundError from this module, so a top-level import here would cycle.
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, user_id)
     return task
 
 
@@ -460,6 +466,7 @@ async def update_task(
     actor: AuditActor | None = None,
 ) -> TimeTrackingTask:
     task = await get_task(session, user_id, task_id)
+    was_planned_and_upcoming = task.stop_time is not None and task.start_time > datetime.now(UTC)
 
     data = payload.model_dump(exclude_unset=True)
     if "label_id" in data:
@@ -499,11 +506,20 @@ async def update_task(
     await session.commit()
     await session.refresh(task)
     await notify_sync_changed(user_id)
+    is_planned_and_upcoming = task.stop_time is not None and task.start_time > datetime.now(UTC)
+    if ("start_time" in data or "stop_time" in data) and (was_planned_and_upcoming or is_planned_and_upcoming):
+        # Wake on either direction of the transition: becoming planned-and-upcoming (a device
+        # needs to arm a new alarm) or leaving it (a device needs to cancel a stale one it may
+        # already have armed -- e.g. clearing stop_time or moving start_time into the past).
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, user_id)
     return task
 
 
 async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None) -> None:
     task = await get_task(session, user_id, task_id)
+    was_planned_and_upcoming = task.stop_time is not None and task.start_time > datetime.now(UTC)
     now = datetime.now(UTC)
     task.deleted_at = now
     task.client_updated_at = now
@@ -511,6 +527,13 @@ async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, acto
     await _audit(session, actor, action="delete_task", resource_type="time_tracking_task", resource_id=task_id)
     await session.commit()
     await notify_sync_changed(user_id)
+    if was_planned_and_upcoming:
+        # Deleting a task Android may have already scheduled a local reminder alarm for needs the
+        # same wake-ping as creating/rescheduling one -- otherwise a device that's closed keeps a
+        # stale alarm armed for a task that no longer exists until it's next opened.
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, user_id)
 
 
 # Template operations
