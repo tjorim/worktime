@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.24.1",
-    "@inlang/plugin-m-function-matcher": "^2.2.11",
+    "@inlang/plugin-m-function-matcher": "^2.2.12",
     "@inlang/plugin-message-format": "^4.4.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
