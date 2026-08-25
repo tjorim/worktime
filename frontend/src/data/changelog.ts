@@ -24,6 +24,7 @@ export const changelogData: ChangelogVersion[] = [
     changed: [],
     fixed: [
       "A full-day time-off entry no longer leaves a duplicate shift event in the iCal feed alongside it",
+      "Fixed a bug that could sign you out even after a successful silent session renewal: the retried request was reusing the old, already-expired token instead of the freshly renewed one",
     ],
   },
   {

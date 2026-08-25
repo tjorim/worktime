@@ -21,8 +21,12 @@ export interface AuthenticatedRequestInit extends RequestInit {
  * - On 401 Unauthorized, tries one silent token renewal before giving up — a 401
  *   usually means the access token aged out while the Keycloak session is still
  *   valid, since `automaticSilentRenew`'s proactive timer isn't the only way a
- *   token goes stale. Only redirects to the login page (with a session-expired
- *   toast) if that renewal also fails.
+ *   token goes stale. The retry uses the token `renewSession()` just resolved
+ *   with directly, rather than reading it back via `getAccessToken()` — the
+ *   OIDC user state it comes from hasn't reached a re-render yet at this point,
+ *   so `getAccessToken()` would still return the pre-renewal token. Only
+ *   redirects to the login page (with a session-expired toast) if the renewal
+ *   also fails.
  * - Shows an error toast on 403 Forbidden, keeping the session intact.
  *
  * Must be used inside AuthProvider and ToastProvider.
@@ -40,8 +44,8 @@ export function useApiClient() {
     ): Promise<Response> => {
       const { suppressUnauthorizedRedirect = false, ...requestInit } = init;
 
-      const attempt = () => {
-        const token = getAccessToken();
+      const attempt = (tokenOverride?: string | null) => {
+        const token = tokenOverride !== undefined ? tokenOverride : getAccessToken();
         const headers = new Headers(requestInit.headers);
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);
@@ -73,9 +77,10 @@ export function useApiClient() {
           throw error;
         }
 
-        if (await renewSession()) {
+        const renewedToken = await renewSession();
+        if (renewedToken) {
           try {
-            return await attempt();
+            return await attempt(renewedToken);
           } catch (retryError: unknown) {
             if (!(retryError instanceof Error) || !retryError.message.startsWith("Unauthorized")) {
               throw retryError;

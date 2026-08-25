@@ -359,18 +359,18 @@ describe("AuthContext", () => {
   });
 
   describe("renewSession", () => {
-    it("resolves true when signinSilent returns a renewed user", async () => {
+    it("resolves with the fresh access token when signinSilent returns a renewed user", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
       const user = userEvent.setup();
       renderWithProviders(<RenewSessionProbe />);
 
       await user.click(screen.getByText("renewSession"));
 
-      expect(await screen.findByTestId("renew-result")).toHaveTextContent("true");
+      expect(await screen.findByTestId("renew-result")).toHaveTextContent("renewed-token");
       expect(mockSigninSilent).toHaveBeenCalledOnce();
     });
 
-    it("resolves false when the IdP session is gone", async () => {
+    it("resolves null when the IdP session is gone", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
       mockSigninSilent.mockResolvedValue(null);
       const user = userEvent.setup();
@@ -378,10 +378,10 @@ describe("AuthContext", () => {
 
       await user.click(screen.getByText("renewSession"));
 
-      expect(await screen.findByTestId("renew-result")).toHaveTextContent("false");
+      expect(await screen.findByTestId("renew-result")).toHaveTextContent("null");
     });
 
-    it("resolves false when signinSilent throws", async () => {
+    it("resolves null when signinSilent throws", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
       mockSigninSilent.mockRejectedValue(new Error("login_required"));
       const user = userEvent.setup();
@@ -389,7 +389,7 @@ describe("AuthContext", () => {
 
       await user.click(screen.getByText("renewSession"));
 
-      expect(await screen.findByTestId("renew-result")).toHaveTextContent("false");
+      expect(await screen.findByTestId("renew-result")).toHaveTextContent("null");
     });
   });
 

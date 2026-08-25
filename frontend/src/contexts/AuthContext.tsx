@@ -23,11 +23,16 @@ export interface AuthContextType {
   /** Sign out from the OIDC provider and clear the local session. */
   logout: () => void;
   /**
-   * Attempts a silent token renewal against the IdP session, resolving true when
-   * a fresh token was obtained. Lets callers recover from a single 401 instead of
-   * throwing the user out to the login screen.
+   * Attempts a silent token renewal against the IdP session, resolving with the
+   * fresh access token when one was obtained, or null otherwise. Lets callers
+   * recover from a single 401 instead of throwing the user out to the login
+   * screen. Returns the token itself — rather than a boolean — because
+   * getAccessToken() would still read the pre-renewal token immediately after:
+   * the OIDC user state this resolves into hasn't reached a re-render yet in
+   * the same synchronous continuation, so a caller re-reading it would retry
+   * with the stale token and force a spurious logout.
    */
-  renewSession: () => Promise<boolean>;
+  renewSession: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -165,15 +170,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }, [oidcAuth, showError]);
 
-  const renewSession = useCallback(async (): Promise<boolean> => {
+  const renewSession = useCallback(async (): Promise<string | null> => {
     try {
       // Resolves null when the IdP session is genuinely gone, which is a normal
       // outcome here rather than an error worth surfacing — the caller decides
       // what to do next.
-      return (await oidcAuth.signinSilent()) != null;
+      const renewedUser = await oidcAuth.signinSilent();
+      return renewedUser?.access_token ?? null;
     } catch (error: unknown) {
       logger.error("signinSilent failed:", error);
-      return false;
+      return null;
     }
   }, [oidcAuth]);
 
