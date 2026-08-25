@@ -181,6 +181,7 @@ describe("GanttView", () => {
 
   it("clicking a task opens edit modal with pre-filled data", async () => {
     const user = userEvent.setup();
+    ganttTasksCollection.startSyncImmediate();
     ganttTasksCollection.utils.writeUpsert([
       {
         id: "task-1",
@@ -203,6 +204,7 @@ describe("GanttView", () => {
 
   it("deletes a task from the list", async () => {
     const user = userEvent.setup();
+    ganttTasksCollection.startSyncImmediate();
     ganttTasksCollection.utils.writeUpsert([
       {
         id: "task-1",
@@ -226,6 +228,7 @@ describe("GanttView", () => {
 
   it("warns about a single linked time-tracking entry before deleting a task", async () => {
     const user = userEvent.setup();
+    ganttTasksCollection.startSyncImmediate();
     ganttTasksCollection.utils.writeUpsert([
       {
         id: "task-1",
