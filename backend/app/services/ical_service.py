@@ -15,6 +15,31 @@ from app.services.read_models_service import _resolve_shift, get_work_context_fo
 
 _WORKTIME_TIMEZONE = ZoneInfo("Europe/Brussels")
 
+# RFC 7986 COLOR property values, as CSS3 extended color keyword names (the
+# only form the spec allows - no hex codes). Chosen to match the hex palette
+# in frontend/src/lib/hday/presentation.ts (EVENT_COLORS) and
+# frontend/src/styles/_variables.scss (--wt-shift-*) as closely as CSS3's
+# named-color set allows. Support is inconsistent across clients (Apple
+# Calendar and Thunderbird honor per-VEVENT COLOR; Google Calendar and
+# Outlook ignore it), so this is a best-effort enhancement, not a guarantee.
+_TIME_OFF_COLORS: dict[str, str] = {
+    "vacation": "red",
+    "business": "orange",
+    "course": "goldenrod",
+    "in": "teal",
+    "weekend": "darkmagenta",
+    "birthday": "mediumblue",
+    "ill": "darkgreen",
+    "other": "darkcyan",
+}
+
+_SHIFT_COLORS: dict[str, str] = {
+    "M": "royalblue",
+    "L": "firebrick",
+    "D": "darkorange",
+    "N": "purple",
+}
+
 
 def _escape(value: str) -> str:
     normalized = value.replace("\r\n", "\n").replace("\r", "\n")
@@ -91,6 +116,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                 ends = _utc_at(day, shift.end_hour)
                 if ends <= starts:
                     ends += timedelta(days=1)
+                color = _SHIFT_COLORS.get(shift.code)
                 lines.extend(
                     [
                         "BEGIN:VEVENT",
@@ -99,6 +125,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                         f"DTSTART:{starts:%Y%m%dT%H%M%SZ}",
                         f"DTEND:{ends:%Y%m%dT%H%M%SZ}",
                         f"SUMMARY:{_escape(shift.name)} shift",
+                        *([f"COLOR:{color}"] if color else []),
                         "END:VEVENT",
                     ]
                 )
@@ -106,6 +133,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     for entry in entries:
         if entry.deleted_at is not None:
             continue
+        color = _TIME_OFF_COLORS.get(entry.entry_type)
         for day in _time_off_dates(entry, start, end):
             summary = entry.entry_type.replace("_", " ").title()
             lines.extend(
@@ -117,6 +145,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                     f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}",
                     f"SUMMARY:{_escape(summary)}",
                     *([f"DESCRIPTION:{_escape(entry.note)}"] if entry.note else []),
+                    *([f"COLOR:{color}"] if color else []),
                     "END:VEVENT",
                 ]
             )

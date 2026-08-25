@@ -48,6 +48,8 @@ async def test_feed_contains_stable_utc_shift_and_time_off_events(monkeypatch: p
     assert "DTSTART;VALUE=DATE:20260824" in feed
     assert "DTEND;VALUE=DATE:20260825" in feed
     assert "DESCRIPTION:Beach\\, then home" in feed
+    assert "COLOR:darkorange" in feed  # 9-5's "D" shift
+    assert "COLOR:red" in feed  # vacation
 
 
 @pytest.mark.asyncio

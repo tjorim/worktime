@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.8.7",
+    date: "2026-08-25",
+    status: "current",
+    added: [
+      "The iCal feed now tags shift and time-off events with a color hint (RFC 7986 COLOR), so calendar apps that support per-event colors (e.g. Apple Calendar, Thunderbird) can show them distinctly",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
     version: "2026.8.6",
     date: "2026-08-19",
-    status: "current",
+    status: "released",
     added: [
       "The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual \"Install App\" action in Settings > About (#273)",
     ],

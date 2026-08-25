@@ -17,6 +17,12 @@ below predate that switch.
 - Mobile carousel for team browsing
 - Advanced accessibility features (high-contrast mode, font scaling)
 
+## [2026.8.7] - 2026-08-25
+
+### Added
+
+- The iCal feed now tags shift and time-off events with a color hint (RFC 7986 COLOR), so calendar apps that support per-event colors (e.g. Apple Calendar, Thunderbird) can show them distinctly
+
 ## [2026.8.6] - 2026-08-19
 
 ### Added
@@ -705,7 +711,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.6...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.7...HEAD
+[2026.8.7]: https://github.com/tjorim/worktime/compare/v2026.8.6...v2026.8.7
 [2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6
 [2026.8.5]: https://github.com/tjorim/worktime/compare/v2026.8.4...v2026.8.5
 [2026.8.4]: https://github.com/tjorim/worktime/compare/v2026.8.3...v2026.8.4
