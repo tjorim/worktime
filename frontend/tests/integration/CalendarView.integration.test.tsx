@@ -125,6 +125,7 @@ const setupUserState = (
  * Seeds time-off entries into the collection for EventStoreProvider.
  */
 const setupTimeOffEvents = (events: TimeOffEntry[]) => {
+  timeOffCollection.startSyncImmediate();
   timeOffCollection.utils.writeUpsert(events);
 };
 
