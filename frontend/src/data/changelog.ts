@@ -25,6 +25,8 @@ export const changelogData: ChangelogVersion[] = [
     fixed: [
       "A full-day time-off entry no longer leaves a duplicate shift event in the iCal feed alongside it",
       "Fixed a bug that could sign you out even after a successful silent session renewal: the retried request was reusing the old, already-expired token instead of the freshly renewed one",
+      "The sync status badge's spinning icon no longer freezes mid-animation while syncing a nonempty outbox — the common case, since a sync is usually triggered by having queued changes in the first place",
+      "Adding, editing, or deleting an entry now refreshes the sync status badge (and its \"last synced\" time) right away, instead of leaving it showing a stale time until something else happened to trigger a pull",
     ],
   },
   {

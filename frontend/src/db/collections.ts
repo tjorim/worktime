@@ -134,6 +134,26 @@ export function getSyncCollectionUserId(): string | null {
   return _currentUserId;
 }
 
+// A successful push here (see pushAndQueue) applies locally via the mutation's
+// own optimistic write, but does nothing to refresh `lastSyncedAt`/outbox
+// state in OngoingSyncContext — those only move on an actual pull. Left
+// alone, the sync status badge would only catch up once *something else*
+// (the SSE `sync_changed` round-trip for this same push, a tab
+// visibility/online event, ...) happens to trigger one, which can leave it
+// showing a stale "last synced" time well after a change was saved.
+// `OngoingSyncProvider` registers its `triggerPull` here so a successful
+// direct push can request an immediate refresh instead of waiting on that.
+let _triggerPull: (() => void) | null = null;
+
+/**
+ * Register the sync provider's `triggerPull` so collection mutation handlers
+ * can request an immediate pull after a successful push. Call with `null` on
+ * unmount/deauth.
+ */
+export function setSyncCollectionTriggerPull(fn: (() => void) | null): void {
+  _triggerPull = fn;
+}
+
 // ---------------------------------------------------------------------------
 // Internal fetch helper
 // ---------------------------------------------------------------------------
@@ -296,6 +316,9 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     if (!response.ok) {
       throw new Error(`sync push failed: ${response.status}`);
     }
+    // Refresh lastSyncedAt/outbox/error state right away rather than leaving
+    // the sync status badge stale until an unrelated trigger happens to pull.
+    _triggerPull?.();
   } catch {
     // Push failed — enqueue to outbox for retry on next sync cycle.
     appendToSyncOutbox(_currentUserId, payload);

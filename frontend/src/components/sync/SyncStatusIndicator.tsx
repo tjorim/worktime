@@ -127,9 +127,13 @@ export function SyncStatusIndicator() {
 
   if (!isVisible) return null;
 
-  // Spin only when actively syncing with no error, conflict, or pending items.
-  const shouldSpin =
-    isOnline && isSyncing && !hasSyncError && conflictCount === 0 && outboxCount === 0;
+  // Spin whenever the "Syncing" icon above is showing — i.e. the same
+  // isSyncing branch, taking priority over a nonzero outboxCount exactly as
+  // the icon selection does. A flush is typically triggered *by* having
+  // queued outbox items, so requiring outboxCount === 0 here (as this used
+  // to) left the icon frozen mid-animation for the whole, common case of
+  // syncing away a nonempty outbox.
+  const shouldSpin = isOnline && isSyncing && !hasSyncError && conflictCount === 0;
 
   const indicator = (
     <span
