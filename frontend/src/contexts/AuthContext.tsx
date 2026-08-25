@@ -5,6 +5,7 @@ import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
 import { logger } from "@/utils/logger";
 import { setSyncCollectionAuthResolving } from "@/db/collections";
+import { discardPendingSyncOutbox } from "@/utils/syncClient";
 
 export interface AuthContextType {
   /** Whether the user has an active OIDC session. */
@@ -79,9 +80,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // made once we're settled as signed-out/local-only — see
   // setSyncCollectionAuthResolving's own comment for why that distinction
   // matters (a shared-device cross-account data leak, not just staleness).
+  //
+  // That gate alone still leaves one gap: an existing session that starts
+  // resolving and then fails (or finds nothing) also ends with isValidating
+  // false, but never produces a userId for setSyncCollectionAuth to drain
+  // the pending queue into. Left alone, whatever was queued during that
+  // window would sit there for a *different* user's next sign-in on this
+  // device to silently claim. Catch that specific transition — isValidating
+  // true -> false without isAuthenticated ever becoming true — and discard
+  // the pending queue instead.
+  const wasValidatingRef = useRef(false);
   useEffect(() => {
     setSyncCollectionAuthResolving(isValidating);
-  }, [isValidating]);
+    if (wasValidatingRef.current && !isValidating && !isAuthenticated) {
+      discardPendingSyncOutbox();
+    }
+    wasValidatingRef.current = isValidating;
+  }, [isValidating, isAuthenticated]);
 
   useEffect(() => {
     if (!oidcAuth.error) {

@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { appendToPendingSyncOutbox } from "@/utils/syncClient";
+import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
 
 // Mock react-oidc-context
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
@@ -390,6 +392,69 @@ describe("AuthContext", () => {
       await user.click(screen.getByText("renewSession"));
 
       expect(await screen.findByTestId("renew-result")).toHaveTextContent("null");
+    });
+  });
+
+  describe("pending sync outbox cleanup on existing-session resolution", () => {
+    afterEach(() => {
+      localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
+    });
+
+    it("discards a queued pre-auth write once resolution finishes without a user", async () => {
+      appendToPendingSyncOutbox({ tasks: [{ id: "t1" }] } as never);
+      expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).not.toBeNull();
+
+      mockOidcAuth = { ...mockOidcAuth, isLoading: true, isAuthenticated: false, user: null };
+      const { rerender } = renderWithProviders(<AuthStatusDisplay />);
+
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: false, user: null };
+      rerender(
+        <ToastProvider>
+          <AuthProvider>
+            <AuthStatusDisplay />
+          </AuthProvider>
+        </ToastProvider>,
+      );
+
+      await waitFor(() => {
+        expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).toBeNull();
+      });
+    });
+
+    it("keeps a queued pre-auth write when resolution succeeds with a user", async () => {
+      appendToPendingSyncOutbox({ tasks: [{ id: "t1" }] } as never);
+
+      mockOidcAuth = { ...mockOidcAuth, isLoading: true, isAuthenticated: false, user: null };
+      const { rerender } = renderWithProviders(<AuthStatusDisplay />);
+
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: true,
+        user: { access_token: "tok-abc", profile: { sub: "sub-1" } },
+      };
+      rerender(
+        <ToastProvider>
+          <AuthProvider>
+            <AuthStatusDisplay />
+          </AuthProvider>
+        </ToastProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
+      });
+      expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).not.toBeNull();
+    });
+
+    it("does not discard on initial mount when resolution was never in progress", async () => {
+      appendToPendingSyncOutbox({ tasks: [{ id: "t1" }] } as never);
+
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: false, user: null };
+      renderWithProviders(<AuthStatusDisplay />);
+
+      await screen.findByTestId("is-authenticated");
+      expect(localStorage.getItem(SYNC_PENDING_OUTBOX_KEY)).not.toBeNull();
     });
   });
 

@@ -1265,6 +1265,18 @@ export function drainPendingSyncOutbox(userId: string): void {
   }
 }
 
+/**
+ * Drop every pending pre-auth write without moving it anywhere. Call when an
+ * existing OIDC session's resolution finishes without producing an
+ * authenticated user (no session was found, or silent renewal failed) -
+ * those writes can't be attributed to anyone, so leaving them queued would
+ * let a different, later sign-in on the same device silently drain and
+ * upload them as its own via drainPendingSyncOutbox.
+ */
+export function discardPendingSyncOutbox(): void {
+  localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
+}
+
 // ---------------------------------------------------------------------------
 // Quarantine (permanently rejected changes)
 // ---------------------------------------------------------------------------
