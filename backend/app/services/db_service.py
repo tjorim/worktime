@@ -518,6 +518,7 @@ async def update_task(
 
 async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None) -> None:
     task = await get_task(session, user_id, task_id)
+    was_planned_and_upcoming = task.stop_time is not None and task.start_time > datetime.now(UTC)
     now = datetime.now(UTC)
     task.deleted_at = now
     task.client_updated_at = now
@@ -525,6 +526,13 @@ async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, acto
     await _audit(session, actor, action="delete_task", resource_type="time_tracking_task", resource_id=task_id)
     await session.commit()
     await notify_sync_changed(user_id)
+    if was_planned_and_upcoming:
+        # Deleting a task Android may have already scheduled a local reminder alarm for needs the
+        # same wake-ping as creating/rescheduling one -- otherwise a device that's closed keeps a
+        # stale alarm armed for a task that no longer exists until it's next opened.
+        from app.services.fcm_wake_service import send_fcm_wake_ping
+
+        await send_fcm_wake_ping(session, user_id)
 
 
 # Template operations

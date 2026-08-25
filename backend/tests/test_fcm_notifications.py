@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
 from app.schemas import FcmTokenCreate, TaskCreate, TaskUpdate, UserCreate
-from app.services.db_service import create_task, create_user, update_task
+from app.services.db_service import create_task, create_user, delete_task, update_task
 from app.services.fcm_device_token_service import (
     delete_token,
     delete_token_by_id,
@@ -309,6 +309,65 @@ class TestFcmWakeTriggers:
         monkeypatch.setattr("app.services.fcm_wake_service.send_fcm_wake_ping", wake_mock)
 
         await update_task(db_session, user.id, task.id, TaskUpdate(text="Renamed meeting"))
+        wake_mock.assert_not_called()
+
+    async def test_deleting_an_upcoming_planned_task_triggers_a_wake_ping(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A device that already scheduled a local alarm for this task needs a wake-ping to
+        cancel it -- otherwise it stays armed for a task that no longer exists.
+        """
+        user = await create_user(db_session, UserCreate(username="fcm-trigger-delete", display_name="Delete"))
+        task = await create_task(
+            db_session,
+            user.id,
+            TaskCreate(
+                text="Team meeting",
+                start_time=datetime.now(UTC) + timedelta(minutes=30),
+                stop_time=datetime.now(UTC) + timedelta(minutes=90),
+            ),
+        )
+
+        wake_mock = AsyncMock()
+        monkeypatch.setattr("app.services.fcm_wake_service.send_fcm_wake_ping", wake_mock)
+
+        await delete_task(db_session, user.id, task.id)
+        wake_mock.assert_called_once_with(db_session, user.id)
+
+    async def test_deleting_a_running_task_does_not_trigger_a_wake_ping(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        user = await create_user(db_session, UserCreate(username="fcm-trigger-delete-running", display_name="Del"))
+        task = await create_task(
+            db_session,
+            user.id,
+            TaskCreate(text="Working now", start_time=datetime.now(UTC)),
+        )
+
+        wake_mock = AsyncMock()
+        monkeypatch.setattr("app.services.fcm_wake_service.send_fcm_wake_ping", wake_mock)
+
+        await delete_task(db_session, user.id, task.id)
+        wake_mock.assert_not_called()
+
+    async def test_deleting_a_past_planned_task_does_not_trigger_a_wake_ping(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        user = await create_user(db_session, UserCreate(username="fcm-trigger-delete-past", display_name="Past"))
+        task = await create_task(
+            db_session,
+            user.id,
+            TaskCreate(
+                text="Already started",
+                start_time=datetime.now(UTC) - timedelta(hours=2),
+                stop_time=datetime.now(UTC) - timedelta(hours=1),
+            ),
+        )
+
+        wake_mock = AsyncMock()
+        monkeypatch.setattr("app.services.fcm_wake_service.send_fcm_wake_ping", wake_mock)
+
+        await delete_task(db_session, user.id, task.id)
         wake_mock.assert_not_called()
 
     def test_sync_push_creating_a_task_triggers_a_wake_ping(

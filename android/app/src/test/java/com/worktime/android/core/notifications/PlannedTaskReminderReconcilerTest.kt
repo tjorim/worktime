@@ -91,6 +91,46 @@ class PlannedTaskReminderReconcilerTest {
     }
 
     @Test
+    fun `bails out without touching the scheduler when the running-task fetch fails`() = runTest {
+        // A transient failure here must never reach reconcile(): it cancels any alarm it isn't
+        // given a task for, so folding "fetch failed" into "no task" would silently cancel an
+        // already-correctly-scheduled reminder with no way to self-correct until the app reopens.
+        coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard(accountId = 7))
+        coEvery { repository.getRunningTask() } returns MutationResult.Error("Unable to reach the Worktime backend")
+
+        val result =
+            reconcilePlannedTaskReminder(
+                repository = repository,
+                reminderScheduler = reminderScheduler,
+                plannedTasksEnabled = true,
+                timersEnabled = true
+            )
+
+        assertFalse(result)
+        coVerify(exactly = 0) { repository.listTasks(any(), any()) }
+        verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `bails out without touching the scheduler when the planned-task fetch fails`() = runTest {
+        coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard(accountId = 7))
+        coEvery { repository.getRunningTask() } returns MutationResult.Success(null)
+        coEvery { repository.listTasks(any(), any()) } returns
+            MutationResult.Error("Unable to reach the Worktime backend")
+
+        val result =
+            reconcilePlannedTaskReminder(
+                repository = repository,
+                reminderScheduler = reminderScheduler,
+                plannedTasksEnabled = true,
+                timersEnabled = true
+            )
+
+        assertFalse(result)
+        verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `reconciles with no running or planned task when neither exists`() = runTest {
         coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard(accountId = 7))
         coEvery { repository.getRunningTask() } returns MutationResult.Success(null)

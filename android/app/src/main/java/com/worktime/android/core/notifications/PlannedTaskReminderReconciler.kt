@@ -18,7 +18,12 @@ import java.time.OffsetDateTime
  * means both cases schedule the reminder identically. See #1205.
  *
  * Returns false without touching [reminderScheduler] when there's no session to fetch with
- * (logged out) or the fetch failed -- the caller has nothing new to reconcile with in that case.
+ * (logged out) or either fetch failed. This must never call [ReminderScheduler.reconcile] on a
+ * partial/failed read: reconcile() cancels any existing alarm for a kind it wasn't given a task
+ * for, so folding a transient failure into "no task" would silently cancel an already-correctly-
+ * scheduled reminder. The foreground path tolerates that (a failed refresh there is quickly
+ * followed by another), but a background wake is a one-shot event with nothing to self-correct
+ * it -- an alarm cancelled here stays cancelled until the app is next opened.
  */
 suspend fun reconcilePlannedTaskReminder(
     repository: DashboardRepository,
@@ -31,14 +36,31 @@ suspend fun reconcilePlannedTaskReminder(
             is DashboardLoadResult.Success -> result.dashboard.identity.id
             DashboardLoadResult.LoggedOut, is DashboardLoadResult.Error -> return false
         }
-    val runningTask =
-        when (val result = repository.getRunningTask()) {
-            is MutationResult.Success -> result.value
-            else -> null
-        }
-    val plannedTask = fetchPlannedTask(repository)
-    reminderScheduler.reconcile(accountId, plannedTask, runningTask, plannedTasksEnabled, timersEnabled)
+    val runningTaskResult = repository.getRunningTask()
+    if (runningTaskResult !is MutationResult.Success) return false
+
+    val tasksResult = listNearTermTasks(repository)
+    if (tasksResult !is MutationResult.Success) return false
+
+    reminderScheduler.reconcile(
+        accountId,
+        nextPlannedTask(tasksResult.value),
+        runningTaskResult.value,
+        plannedTasksEnabled,
+        timersEnabled
+    )
     return true
+}
+
+/**
+ * Tolerant version of the same lookup for UI display purposes (see
+ * [com.worktime.android.feature.dashboard.DashboardViewModel]): a failed fetch just shows no
+ * planned task rather than propagating an error, since it self-corrects on the next refresh.
+ * [reconcilePlannedTaskReminder] does not use this -- see its own doc for why.
+ */
+suspend fun fetchPlannedTask(repository: DashboardRepository): TaskRecord? {
+    val result = listNearTermTasks(repository)
+    return (result as? MutationResult.Success)?.value?.let(::nextPlannedTask)
 }
 
 /**
@@ -48,12 +70,9 @@ suspend fun reconcilePlannedTaskReminder(
  * its UTC calendar date differs from the device's local one. Extra results outside the near-term
  * window are harmless: they get filtered out by [nextPlannedTask]'s isAfter(now) check.
  */
-suspend fun fetchPlannedTask(repository: DashboardRepository): TaskRecord? {
+private suspend fun listNearTermTasks(repository: DashboardRepository): MutationResult<List<TaskRecord>> {
     val today = LocalDate.now()
-    return when (val result = repository.listTasks(today.minusDays(1), today.plusDays(2))) {
-        is MutationResult.Success -> nextPlannedTask(result.value)
-        else -> null
-    }
+    return repository.listTasks(today.minusDays(1), today.plusDays(2))
 }
 
 /**
