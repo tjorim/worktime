@@ -21,7 +21,12 @@ import { usePaydates } from "@/hooks/usePaydates";
 import { useLongWeekend } from "@/hooks/useLongWeekend";
 import { calculateShift, getShift } from "@/utils/shiftCalculations";
 import { SCHEDULE_OPTIONS, SHIFT_CODES } from "@/data/rosters";
-import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "@/utils/workingDayUtils";
+import {
+  isWorkingDay,
+  hasTimeOffEvent,
+  hasFullDayTimeOffEvent,
+  isPublicHolidayForShift,
+} from "@/utils/workingDayUtils";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import {
   buildEventFormState,
@@ -351,10 +356,12 @@ export function CalendarView({
         const success = setLocationForDate(date, location);
         if (!success) {
           toast.showError(m.calendar_configure_country());
+        } else if (hasFullDayTimeOffEvent(date, calendarEntries)) {
+          toast.showInfo(m.calendar_location_day_off_notice());
         }
       }
     },
-    [clearLocationForDate, setLocationForDate, toast],
+    [clearLocationForDate, setLocationForDate, calendarEntries, toast],
   );
 
   const handleSetOtherLocation = useCallback((date: Dayjs) => {
@@ -369,9 +376,12 @@ export function CalendarView({
         toast.showError(m.calendar_could_not_save_location());
         return;
       }
+      if (hasFullDayTimeOffEvent(otherLocationDate, calendarEntries)) {
+        toast.showInfo(m.calendar_location_day_off_notice());
+      }
       setShowOtherLocationModal(false);
     },
-    [setLocationForDate, otherLocationDate, toast],
+    [setLocationForDate, otherLocationDate, calendarEntries, toast],
   );
 
   const handleHideEventModal = () => {

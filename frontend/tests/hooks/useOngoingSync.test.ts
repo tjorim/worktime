@@ -1212,6 +1212,67 @@ describe("useOngoingSync", () => {
     });
   });
 
+  describe("triggerPull while a flush is already running", () => {
+    it("queues and runs a triggerPull call that arrives mid-flush instead of dropping it", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      // Held open deliberately so a second triggerPull() (e.g. a direct
+      // collection push's own post-push refresh) can be fired while this
+      // first cycle's pull is still in flight, simulating the race with an
+      // SSE-triggered (or any other) flush that is already running.
+      let resolveHeldPull!: (value: unknown) => void;
+      const heldPull = new Promise((resolve) => {
+        resolveHeldPull = resolve;
+      });
+
+      const queuedPullResponse = {
+        ...incrementalPullResponse,
+        server_timestamp: "2026-03-01T00:00:00.000Z",
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial mount pull
+        .mockResolvedValueOnce(failedResponse) // initial mount preferences fetch
+        .mockImplementationOnce(() => heldPull) // first triggerPull's pull — held open
+        .mockResolvedValueOnce(failedResponse) // first triggerPull's preferences fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => queuedPullResponse }) // queued triggerPull's pull
+        .mockResolvedValueOnce(failedResponse); // queued triggerPull's preferences fetch
+
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
+      });
+
+      act(() => {
+        result.current.triggerPull();
+      });
+
+      // Wait until the first triggerPull's (held-open) pull request has
+      // actually fired, so the second call below lands while isFlushingRef
+      // is genuinely still true.
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+      });
+
+      // Without the fix, flushAndPull's isFlushingRef guard drops this
+      // silently and it is never run.
+      act(() => {
+        result.current.triggerPull();
+      });
+
+      // Let the first flush's pull resolve. The queued triggerPull should
+      // now run on its own — no further action from the test.
+      await act(async () => {
+        resolveHeldPull({ ok: true, json: async () => incrementalPullResponse });
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-03-01T00:00:00.000Z");
+      });
+    });
+  });
+
   describe("exponential back-off", () => {
     it("sets retryAfter after a failed outbox flush", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");

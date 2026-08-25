@@ -14,9 +14,28 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.8.7",
+    date: "2026-08-25",
+    status: "current",
+    added: [
+      "The iCal feed now tags shift and time-off events with a color hint (RFC 7986 COLOR), so calendar apps that support per-event colors (e.g. Apple Calendar, Thunderbird) can show them distinctly",
+      "Time Tracking now shows a heads-up when the selected day is marked as full-day time off, and setting a work location on such a day shows a similar note — both purely informational, logging time or a location still works exactly the same",
+    ],
+    changed: [],
+    fixed: [
+      "A full-day time-off entry no longer leaves a duplicate shift event in the iCal feed alongside it",
+      "Fixed a bug that could sign you out even after a successful silent session renewal: the retried request was reusing the old, already-expired token instead of the freshly renewed one",
+      "The sync status badge's spinning icon no longer freezes mid-animation while syncing a nonempty outbox — the common case, since a sync is usually triggered by having queued changes in the first place",
+      "Adding, editing, or deleting an entry now refreshes the sync status badge (and its \"last synced\" time) right away, instead of leaving it showing a stale time until something else happened to trigger a pull",
+      "Fixed a data-loss bug: an entry added in the brief window before your session finished reloading could silently disappear once sync caught up, since nothing recorded that it still needed to reach the server. It's now queued the same way an entry made while offline already was",
+      "The calendar's shift badge no longer shows the day's regular working shift in full color on a day you actually have off (time off or a public holiday) — it now falls back to the same muted style as a scheduled day off, matching the iCal feed",
+      "Fixed a long-press on a calendar event (opening its context menu) on touch devices also opening the View Event dialog on top of it, from the tap that mobile browsers still send after the touch sequence ends",
+    ],
+  },
+  {
     version: "2026.8.6",
     date: "2026-08-19",
-    status: "current",
+    status: "released",
     added: [
       "The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual \"Install App\" action in Settings > About (#273)",
     ],

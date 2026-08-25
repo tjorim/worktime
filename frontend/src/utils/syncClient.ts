@@ -20,6 +20,7 @@ import {
   getSyncCursorKey,
   getSyncOutboxKey,
   getSyncQuarantineKey,
+  SYNC_PENDING_OUTBOX_KEY,
 } from "@/constants/storageKeys";
 import {
   ganttTasksCollection,
@@ -1198,6 +1199,82 @@ export function appendToSyncOutbox(userId: string, change: SyncPushPayload): boo
  */
 export function clearSyncOutbox(userId: string): void {
   localStorage.removeItem(getSyncOutboxKey(userId));
+}
+
+// ---------------------------------------------------------------------------
+// Pending outbox (writes made before the current user is known)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cap on retained pending entries, matching MAX_QUARANTINED_CHANGES's role:
+ * this is meant to bridge a short startup window before auth resolves, not
+ * to accumulate forever. A user who never signs in on this device would
+ * otherwise grow it without bound, since nothing ever drains it for them.
+ */
+const MAX_PENDING_SYNC_OUTBOX = 200;
+
+/**
+ * Append a change made while no user is authenticated yet - not a network
+ * failure, but auth simply hasn't resolved (e.g. a write made in the brief
+ * window while an existing OIDC session is still loading on page load).
+ *
+ * Without this, such a write is silently kept as a local-only optimistic
+ * row with nothing recording that it still needs to reach the server - so
+ * once auth resolves and the collections' next server pull runs, that pull
+ * has no record of it and quietly discards it. drainPendingSyncOutbox moves
+ * these into the real per-user outbox as soon as a user is known, giving
+ * them the same retry safety net as an ordinary network failure.
+ */
+export function appendToPendingSyncOutbox(change: SyncPushPayload): boolean {
+  try {
+    const raw = localStorage.getItem(SYNC_PENDING_OUTBOX_KEY);
+    const pending: SyncPushPayload[] = raw ? (JSON.parse(raw) as SyncPushPayload[]) : [];
+    pending.push(change);
+    localStorage.setItem(
+      SYNC_PENDING_OUTBOX_KEY,
+      JSON.stringify(pending.slice(-MAX_PENDING_SYNC_OUTBOX)),
+    );
+    return true;
+  } catch (err) {
+    logger.error("Failed to append to the pending (pre-auth) sync outbox:", err);
+    return false;
+  }
+}
+
+/**
+ * Move every pending pre-auth write into the now-known user's real outbox,
+ * clearing the pending queue. Call as soon as a user becomes known (before
+ * anything else touches sync state) so these writes are queued for the
+ * normal outbox flush before any pull can run.
+ */
+export function drainPendingSyncOutbox(userId: string): void {
+  try {
+    const raw = localStorage.getItem(SYNC_PENDING_OUTBOX_KEY);
+    if (!raw) return;
+    const pending: SyncPushPayload[] = JSON.parse(raw) as SyncPushPayload[];
+    if (pending.length > 0) {
+      // One write for the whole batch, merged with whatever the real outbox
+      // already holds: either it all lands, or writeSyncOutbox throws (e.g.
+      // quota) and the catch below leaves the pending queue intact rather
+      // than clearing it out from under a write that never landed.
+      writeSyncOutbox(userId, [...readSyncOutbox(userId), ...pending]);
+    }
+    localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
+  } catch (err) {
+    logger.error("Failed to drain the pending (pre-auth) sync outbox:", err);
+  }
+}
+
+/**
+ * Drop every pending pre-auth write without moving it anywhere. Call when an
+ * existing OIDC session's resolution finishes without producing an
+ * authenticated user (no session was found, or silent renewal failed) -
+ * those writes can't be attributed to anyone, so leaving them queued would
+ * let a different, later sign-in on the same device silently drain and
+ * upload them as its own via drainPendingSyncOutbox.
+ */
+export function discardPendingSyncOutbox(): void {
+  localStorage.removeItem(SYNC_PENDING_OUTBOX_KEY);
 }
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,31 @@ from app.services.read_models_service import _resolve_shift, get_work_context_fo
 
 _WORKTIME_TIMEZONE = ZoneInfo("Europe/Brussels")
 
+# RFC 7986 COLOR property values, as CSS3 extended color keyword names (the
+# only form the spec allows - no hex codes). Chosen to match the hex palette
+# in frontend/src/lib/hday/presentation.ts (EVENT_COLORS) and
+# frontend/src/styles/_variables.scss (--wt-shift-*) as closely as CSS3's
+# named-color set allows. Support is inconsistent across clients (Apple
+# Calendar and Thunderbird honor per-VEVENT COLOR; Google Calendar and
+# Outlook ignore it), so this is a best-effort enhancement, not a guarantee.
+_TIME_OFF_COLORS: dict[str, str] = {
+    "vacation": "red",
+    "business": "orange",
+    "course": "goldenrod",
+    "in": "teal",
+    "weekend": "darkmagenta",
+    "birthday": "mediumblue",
+    "ill": "darkgreen",
+    "other": "darkcyan",
+}
+
+_SHIFT_COLORS: dict[str, str] = {
+    "M": "royalblue",
+    "L": "firebrick",
+    "D": "darkorange",
+    "N": "purple",
+}
+
 
 def _escape(value: str) -> str:
     normalized = value.replace("\r\n", "\n").replace("\r", "\n")
@@ -72,6 +97,16 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     start, end = _add_months(today, -3), _add_months(today, 12)
     context = await get_work_context_for_user(session, user_id)
     entries = await list_time_off_entries(session, user_id=user_id)
+    # A full-day time-off entry replaces the shift event that day rather than
+    # coexisting with it. Matched by the shift's start date (the "day" used to
+    # resolve it below), so e.g. a night shift starting 23:00 on the 25th is
+    # suppressed by a time-off entry dated the 25th, not the 26th.
+    full_day_off_dates = {
+        day
+        for entry in entries
+        if entry.deleted_at is None and entry.entry_flag == "full_day"
+        for day in _time_off_dates(entry, start, end)
+    }
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -86,11 +121,17 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         day = start
         while day < end:
             shift = _resolve_shift(context.schedule_type, context.effective_team_number, day)
-            if shift.is_working and shift.start_hour is not None and shift.end_hour is not None:
+            if (
+                shift.is_working
+                and shift.start_hour is not None
+                and shift.end_hour is not None
+                and day not in full_day_off_dates
+            ):
                 starts = _utc_at(day, shift.start_hour)
                 ends = _utc_at(day, shift.end_hour)
                 if ends <= starts:
                     ends += timedelta(days=1)
+                color = _SHIFT_COLORS.get(shift.code)
                 lines.extend(
                     [
                         "BEGIN:VEVENT",
@@ -99,6 +140,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                         f"DTSTART:{starts:%Y%m%dT%H%M%SZ}",
                         f"DTEND:{ends:%Y%m%dT%H%M%SZ}",
                         f"SUMMARY:{_escape(shift.name)} shift",
+                        *([f"COLOR:{color}"] if color else []),
                         "END:VEVENT",
                     ]
                 )
@@ -106,6 +148,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     for entry in entries:
         if entry.deleted_at is not None:
             continue
+        color = _TIME_OFF_COLORS.get(entry.entry_type)
         for day in _time_off_dates(entry, start, end):
             summary = entry.entry_type.replace("_", " ").title()
             lines.extend(
@@ -117,6 +160,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                     f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}",
                     f"SUMMARY:{_escape(summary)}",
                     *([f"DESCRIPTION:{_escape(entry.note)}"] if entry.note else []),
+                    *([f"COLOR:{color}"] if color else []),
                     "END:VEVENT",
                 ]
             )

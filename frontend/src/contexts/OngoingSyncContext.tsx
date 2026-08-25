@@ -33,6 +33,7 @@ import {
 } from "@/hooks/useSyncSignal";
 import {
   setSyncCollectionAuth,
+  setSyncCollectionTriggerPull,
   applyIncrementalPullToCollections,
   applyPullToCollections,
 } from "@/db/collections";
@@ -151,6 +152,15 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     isAuthenticated ? fetchFn : null,
     onIncrementalPull,
   );
+
+  // Let collection mutation handlers (see db/collections.ts pushAndQueue)
+  // request an immediate pull after a successful direct push, so the sync
+  // status badge reflects it right away instead of waiting on the SSE
+  // round-trip or a passive visibility/online trigger.
+  useEffect(() => {
+    setSyncCollectionTriggerPull(triggerPull);
+    return () => setSyncCollectionTriggerPull(null);
+  }, [triggerPull]);
 
   // Build the SSE transport. The transport is null when the user is not
   // authenticated, or has no access token yet, so that no connection is

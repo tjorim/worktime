@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
@@ -287,6 +287,89 @@ describe("DayCell", () => {
 
       // Clicking stops propagation (tested by interaction working correctly)
       expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
+    });
+
+    describe("long press vs. tap", () => {
+      const mockOnEventContextMenu = vi.fn();
+
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it("does not also open the view modal for a long press that opened the context menu", async () => {
+        const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
+        render(
+          <DayCell
+            {...defaultProps}
+            events={events}
+            onEventContextMenu={mockOnEventContextMenu}
+          />,
+        );
+        const eventButton = screen.getByRole("button", { name: "View Test Event" });
+
+        fireEvent.touchStart(eventButton, { touches: [{ clientX: 10, clientY: 10 }] });
+        await act(() => vi.advanceTimersByTimeAsync(500));
+        expect(mockOnEventContextMenu).toHaveBeenCalledTimes(1);
+
+        // Mobile browsers still fire touchend then a synthetic click after an
+        // un-prevented touch sequence, even though the long press already
+        // fired its own handler.
+        fireEvent.touchEnd(eventButton);
+        fireEvent.click(eventButton);
+
+        expect(mockOnViewEvent).not.toHaveBeenCalled();
+      });
+
+      it("still opens the view modal for a quick tap that releases before the long-press threshold", async () => {
+        const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
+        render(
+          <DayCell
+            {...defaultProps}
+            events={events}
+            onEventContextMenu={mockOnEventContextMenu}
+          />,
+        );
+        const eventButton = screen.getByRole("button", { name: "View Test Event" });
+
+        fireEvent.touchStart(eventButton, { touches: [{ clientX: 10, clientY: 10 }] });
+        fireEvent.touchEnd(eventButton);
+        fireEvent.click(eventButton);
+
+        expect(mockOnEventContextMenu).not.toHaveBeenCalled();
+        expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not swallow the next click after a long press on blank cell area", async () => {
+        const mockOnDayContextMenu = vi.fn();
+        const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
+        render(
+          <DayCell
+            {...defaultProps}
+            events={events}
+            onDayContextMenu={mockOnDayContextMenu}
+          />,
+        );
+        const gridcell = screen.getByRole("gridcell");
+
+        // Long-press blank cell area (not the event chip, which stops
+        // propagation) - opens the day context menu.
+        fireEvent.touchStart(gridcell, { touches: [{ clientX: 5, clientY: 5 }] });
+        await act(() => vi.advanceTimersByTimeAsync(500));
+        expect(mockOnDayContextMenu).toHaveBeenCalledTimes(1);
+        fireEvent.touchEnd(gridcell);
+        // The gridcell itself has no click-driven action, but must still
+        // consume the flag so it doesn't leak into the next click below.
+        fireEvent.click(gridcell);
+
+        const eventButton = screen.getByRole("button", { name: "View Test Event" });
+        fireEvent.click(eventButton);
+
+        expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

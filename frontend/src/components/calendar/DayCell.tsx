@@ -227,6 +227,12 @@ export function DayCell({
   // Long-press state for touch support
   const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  // Touch devices don't call preventDefault on the touch sequence, so a
+  // synthetic click still follows touchend even after a long press has
+  // already fired its handler (opening a context menu) - without this,
+  // that trailing click also runs the tap handler (e.g. onViewEvent),
+  // opening the view modal on top of the context menu it just opened.
+  const justLongPressedRef = useRef(false);
 
   const clearLongPress = useCallback(() => {
     if (touchTimerRef.current) {
@@ -252,8 +258,10 @@ export function DayCell({
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(
     (touch: React.Touch, handler: (x: number, y: number) => void) => {
+      justLongPressedRef.current = false;
       touchStartPos.current = { x: touch.clientX, y: touch.clientY };
       touchTimerRef.current = setTimeout(() => {
+        justLongPressedRef.current = true;
         handler(touch.clientX, touch.clientY);
         touchTimerRef.current = null;
       }, LONG_PRESS_DURATION);
@@ -325,6 +333,10 @@ export function DayCell({
           className="month-calendar-event"
           onClick={(eventClick) => {
             eventClick.stopPropagation();
+            if (justLongPressedRef.current) {
+              justLongPressedRef.current = false;
+              return;
+            }
             onViewEvent(id);
           }}
           onContextMenu={(e) => {
@@ -396,6 +408,13 @@ export function DayCell({
           onDayContextMenu(date, e.clientX, e.clientY, e.currentTarget as HTMLElement);
         }
       }}
+      onClick={() => {
+        // A long press on blank cell area (not the event chip or "+" button,
+        // both of which stop propagation) has no click behavior of its own,
+        // but still needs to consume the flag here - otherwise it stays set
+        // and silently swallows the *next* unrelated click on this cell.
+        justLongPressedRef.current = false;
+      }}
       onKeyDown={handleCellKeyDown}
       onTouchStart={(e) => {
         if (onDayContextMenu && e.touches[0]) {
@@ -441,6 +460,10 @@ export function DayCell({
             aria-label={m.daycell_add_event_on({ date: longDateFormatter.format(date.toDate()) })}
             onClick={(e) => {
               e.stopPropagation();
+              if (justLongPressedRef.current) {
+                justLongPressedRef.current = false;
+                return;
+              }
               const rect = e.currentTarget.getBoundingClientRect();
               onDayContextMenu(
                 date,

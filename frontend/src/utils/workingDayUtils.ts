@@ -99,6 +99,21 @@ export function isPublicHolidayForShift(
 }
 
 /**
+ * Checks if a date has a full-day time-off entry (`entryFlag === "full_day"`),
+ * as opposed to a half-day one where the user is still working part of the day.
+ *
+ * @param date - The date to check
+ * @param entries - Array of time-off entries
+ * @returns True if the date has a full-day time-off event, false otherwise
+ */
+export function hasFullDayTimeOffEvent(date: Dayjs, entries: TimeOffEntry[]): boolean {
+  return hasTimeOffEvent(
+    date,
+    entries.filter((entry) => entry.entryFlag === "full_day"),
+  );
+}
+
+/**
  * Determines if a date is a working day for a user.
  *
  * A day is NOT a working day if:

@@ -80,3 +80,44 @@ describe("SyncStatusIndicator offline state", () => {
     expect(screen.getByLabelText("Sync status: Synced")).toBeInTheDocument();
   });
 });
+
+describe("SyncStatusIndicator spin state", () => {
+  beforeEach(() => {
+    mocks.auth.isAuthenticated = true;
+    Object.assign(mocks.sync, {
+      isSyncing: false,
+      lastSyncedAt: null,
+      outboxCount: 0,
+      hasSyncError: false,
+      conflictCount: 0,
+      retryAfter: null,
+    });
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("keeps spinning while syncing even with items still queued in the outbox", () => {
+    // A flush is typically triggered *by* having queued outbox items, so this
+    // is the common case, not an edge case.
+    mocks.sync.isSyncing = true;
+    mocks.sync.outboxCount = 2;
+
+    render(<SyncStatusIndicator />);
+
+    const indicator = screen.getByLabelText("Sync status: Syncing…");
+    expect(indicator.querySelector("i")).toHaveClass("sync-spin");
+  });
+
+  it("does not spin the static pending icon once syncing has stopped", () => {
+    mocks.sync.isSyncing = false;
+    mocks.sync.outboxCount = 2;
+
+    render(<SyncStatusIndicator />);
+
+    const indicator = screen.getByLabelText("Sync status: 2 pending");
+    expect(indicator.querySelector("i")).not.toHaveClass("sync-spin");
+  });
+});

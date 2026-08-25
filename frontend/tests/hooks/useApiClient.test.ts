@@ -31,7 +31,7 @@ describe("useApiClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.getAccessToken.mockReturnValue("token-123");
-    auth.renewSession.mockResolvedValue(false);
+    auth.renewSession.mockResolvedValue(null);
     vi.mocked(apiFetch).mockResolvedValue(new Response(null, { status: 200 }));
   });
 
@@ -79,7 +79,7 @@ describe("useApiClient", () => {
   });
 
   it("retries once after a successful silent renewal instead of ending the session", async () => {
-    auth.renewSession.mockResolvedValue(true);
+    auth.renewSession.mockResolvedValue("renewed-token");
     let calls = 0;
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       calls += 1;
@@ -100,8 +100,33 @@ describe("useApiClient", () => {
     expect(auth.triggerLogin).not.toHaveBeenCalled();
   });
 
+  it("retries with the freshly renewed token, not the (still stale) getAccessToken() value", async () => {
+    // Regression test: getAccessToken() reads OIDC user state that hasn't
+    // re-rendered yet immediately after renewSession() resolves, so the retry
+    // must use the token renewSession() returned directly.
+    auth.getAccessToken.mockReturnValue("stale-token");
+    auth.renewSession.mockResolvedValue("fresh-token");
+    let calls = 0;
+    vi.mocked(apiFetch).mockImplementation(async (_url, init, options) => {
+      calls += 1;
+      if (calls === 1) {
+        options.onUnauthorized();
+        throw new Error("Unauthorized");
+      }
+      const headers = new Headers(init?.headers);
+      expect(headers.get("Authorization")).toBe("Bearer fresh-token");
+      return new Response(null, { status: 200 });
+    });
+    const { result } = renderHook(() => useApiClient());
+
+    const response = await result.current("/api/data");
+
+    expect(response.status).toBe(200);
+    expect(calls).toBe(2);
+  });
+
   it("ends the session when the retried request is unauthorized again after renewal", async () => {
-    auth.renewSession.mockResolvedValue(true);
+    auth.renewSession.mockResolvedValue("renewed-token");
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onUnauthorized();
       throw new Error("Unauthorized");

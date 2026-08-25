@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
 import { TimeTrackingView } from "@/features/timeTracking/TimeTrackingView";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { TestProviders } from "@tests/utils/testProviders";
 
 const TEST_LABELS = [
   { id: "Development", name: "Development", color: "#198754" },
@@ -32,11 +31,9 @@ vi.mock("@/hooks/useTimeTrackingStorage", () => ({
 
 function renderWithSettings() {
   return render(
-    <SettingsProvider>
-      <ToastProvider>
-        <TimeTrackingView />
-      </ToastProvider>
-    </SettingsProvider>,
+    <TestProviders>
+      <TimeTrackingView />
+    </TestProviders>,
   );
 }
 

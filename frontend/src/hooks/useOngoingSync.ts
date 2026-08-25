@@ -230,6 +230,15 @@ export function useOngoingSync(
 
   // Guard: prevent concurrent flushes.
   const isFlushingRef = useRef(false);
+  // Set when triggerPull() (SSE, or a direct collection push's own
+  // post-push refresh) fires while a flush is already running and so gets
+  // dropped by the isFlushingRef guard above. Without this, that pull
+  // request is lost outright - lastSyncedAt/outbox state stays stale until
+  // something unrelated happens to trigger the next pull, which is the same
+  // staleness bug pushAndQueue's triggerPull call exists to fix. Consumed by
+  // flushAndPull's `finally` block to run one more cycle right after the
+  // in-flight one finishes.
+  const pendingTriggerPullRef = useRef(false);
   // Serialize concurrent enqueueChange calls so that two rapid mutations do
   // not race to push simultaneously and produce a split-brain cursor state.
   const enqueueQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -384,6 +393,12 @@ export function useOngoingSync(
           setIsSyncing(false);
         }
         isFlushingRef.current = false;
+        if (pendingTriggerPullRef.current) {
+          pendingTriggerPullRef.current = false;
+          flushAndPull(true, true).catch((err: unknown) => {
+            logger.error("useOngoingSync: queued triggerPull failed:", err);
+          });
+        }
       }
     },
     [isActive, userId, fetchFn, conflictCount, scheduleBackOff, clearBackOff],
@@ -477,6 +492,14 @@ export function useOngoingSync(
    * logic.  Delegates to `flushAndPull`.
    */
   const triggerPull: TriggerPullFn = useCallback(() => {
+    if (isFlushingRef.current) {
+      // A flush is already running (periodic timer, visibility change, or
+      // another external trigger) — flushAndPull's own guard would otherwise
+      // silently drop this request. Queue it instead so it still runs right
+      // after the in-flight cycle finishes.
+      pendingTriggerPullRef.current = true;
+      return;
+    }
     // Explicit external trigger (e.g. SSE signal) — bypass back-off so that
     // real server-push notifications are never silently dropped.
     flushAndPull(true, true).catch((err: unknown) => {

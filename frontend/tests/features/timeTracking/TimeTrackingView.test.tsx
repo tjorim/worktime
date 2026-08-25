@@ -2,9 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingView } from "@/features/timeTracking/TimeTrackingView";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { TestProviders } from "@tests/utils/testProviders";
 
 const TEST_LABELS = [
   { id: "Development", name: "Development", color: "#198754" },
@@ -42,11 +41,9 @@ describe("TimeTrackingView", () => {
 
   const renderWithSettings = () =>
     render(
-      <SettingsProvider>
-        <ToastProvider>
-          <TimeTrackingView />
-        </ToastProvider>
-      </SettingsProvider>,
+      <TestProviders>
+        <TimeTrackingView />
+      </TestProviders>,
     );
 
   describe("View Toggle", () => {
@@ -98,14 +95,12 @@ describe("TimeTrackingView", () => {
       onClearPendingTaskEdit = vi.fn(),
     ) =>
       render(
-        <SettingsProvider>
-          <ToastProvider>
-            <TimeTrackingView
-              pendingTaskEditId={pendingTaskEditId}
-              onClearPendingTaskEdit={onClearPendingTaskEdit}
-            />
-          </ToastProvider>
-        </SettingsProvider>,
+        <TestProviders>
+          <TimeTrackingView
+            pendingTaskEditId={pendingTaskEditId}
+            onClearPendingTaskEdit={onClearPendingTaskEdit}
+          />
+        </TestProviders>,
       );
 
     it("switches to daily view, jumps to the entry's date, and opens its edit modal", () => {

@@ -3,12 +3,13 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { SettingsProvider, defaultSettings } from "@/contexts/SettingsContext";
+import { defaultSettings } from "@/contexts/SettingsContext";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { ganttTasksCollection } from "@/db/collections";
+import { ganttTasksCollection, timeOffCollection } from "@/db/collections";
+import { buildTimeOffEntryForRange } from "@/lib/timeOff/codecs";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { TestProviders } from "@tests/utils/testProviders";
 
 const TEST_LABELS = [
   { id: "Development", name: "Development", color: "#198754" },
@@ -69,11 +70,9 @@ describe("TimeTrackingDailyView", () => {
 
   const renderView = (overrides: Partial<typeof mockProps> = {}) => {
     return render(
-      <SettingsProvider>
-        <ToastProvider>
-          <TimeTrackingDailyView {...mockProps} {...overrides} />
-        </ToastProvider>
-      </SettingsProvider>,
+      <TestProviders>
+        <TimeTrackingDailyView {...mockProps} {...overrides} />
+      </TestProviders>,
     );
   };
 
@@ -503,6 +502,78 @@ describe("TimeTrackingDailyView", () => {
           ),
       ).toBe(true);
       expect(within(dialog).getByRole("button", { name: /Save Changes/i })).toBeDisabled();
+    });
+  });
+
+  describe("Day off notice", () => {
+    const enableTimeOff = () => {
+      window.localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { ...defaultSettings, enableTimeOff: true } }),
+      );
+    };
+
+    it("shows an info banner, without disabling task entry, on a full-day time-off entry", () => {
+      enableTimeOff();
+      timeOffCollection.insert(
+        buildTimeOffEntryForRange({
+          start: mockProps.selectedDate,
+          entryType: "vacation",
+          entryFlag: "full_day",
+        }),
+      );
+
+      renderView();
+
+      expect(
+        screen.getByText("You have the day off — logging time is still fine."),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Task$/i)).toBeEnabled();
+    });
+
+    it("says nothing on a half-day time-off entry", () => {
+      enableTimeOff();
+      timeOffCollection.insert(
+        buildTimeOffEntryForRange({
+          start: mockProps.selectedDate,
+          entryType: "vacation",
+          entryFlag: "half_am",
+        }),
+      );
+
+      renderView();
+
+      expect(
+        screen.queryByText("You have the day off — logging time is still fine."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("says nothing on a day without any time-off entry", () => {
+      enableTimeOff();
+      renderView();
+
+      expect(
+        screen.queryByText("You have the day off — logging time is still fine."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("says nothing on a full-day time-off entry when time-off tracking is disabled", () => {
+      // enableTimeOff defaults to false - the entry existing (e.g. synced from
+      // another device, or left over from before the feature was disabled)
+      // must not surface a notice for a feature the user has turned off.
+      timeOffCollection.insert(
+        buildTimeOffEntryForRange({
+          start: mockProps.selectedDate,
+          entryType: "vacation",
+          entryFlag: "full_day",
+        }),
+      );
+
+      renderView();
+
+      expect(
+        screen.queryByText("You have the day off — logging time is still fine."),
+      ).not.toBeInTheDocument();
     });
   });
 

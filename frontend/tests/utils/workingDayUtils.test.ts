@@ -4,6 +4,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import {
   getNonWorkingReason,
+  hasFullDayTimeOffEvent,
   hasTimeOffEvent,
   isPublicHolidayForShift,
   isWorkingDay,
@@ -59,6 +60,26 @@ describe("workingDayUtils", () => {
 
     it("returns false for empty entries", () => {
       expect(hasTimeOffEvent(dayjs("2026-01-15"), [])).toBe(false);
+    });
+  });
+
+  describe("hasFullDayTimeOffEvent", () => {
+    it("matches full-day entries", () => {
+      const entries = [dateEntry("2026-01-15")];
+      expect(hasFullDayTimeOffEvent(dayjs("2026-01-15"), entries)).toBe(true);
+    });
+
+    it("ignores half-day entries", () => {
+      const entries = [
+        buildTimeOffEntryForRange({
+          start: "2026-01-15",
+          end: "2026-01-15",
+          entryType: "vacation",
+          entryFlag: "half_am",
+        }),
+      ];
+      expect(hasFullDayTimeOffEvent(dayjs("2026-01-15"), entries)).toBe(false);
+      expect(hasTimeOffEvent(dayjs("2026-01-15"), entries)).toBe(true);
     });
   });
 

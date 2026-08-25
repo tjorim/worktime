@@ -52,6 +52,8 @@ import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
   appendToSyncOutbox,
+  appendToPendingSyncOutbox,
+  drainPendingSyncOutbox,
   type GanttTaskSyncRead,
   type LabelSyncRead,
   type SyncPullResponse,
@@ -85,6 +87,16 @@ export function setSyncCollectionAuth(userId: string | null, accessToken: string
   const userChanged = previousUserId !== userId;
   _currentUserId = userId;
   _currentAccessToken = accessToken;
+
+  // Move any writes made before this user was known into their real outbox,
+  // synchronously and before anything below can pull server state — a pull
+  // response with no record of those writes would otherwise silently
+  // overwrite the still-unsynced optimistic rows. Only relevant on the
+  // null -> known transition, since that is the only state pending writes
+  // can have accumulated under.
+  if (previousUserId === null && userId !== null) {
+    drainPendingSyncOutbox(userId);
+  }
 
   if (userChanged) {
     // The persisted cache is one per-device store. If it belongs to a
@@ -132,6 +144,39 @@ export function hasSyncCollectionAuth(): boolean {
 /** The current signed-in sync user's id, or null when not signed in. */
 export function getSyncCollectionUserId(): string | null {
   return _currentUserId;
+}
+
+// Whether AuthContext's own OIDC session check is still in flight (true only
+// while an *existing* session is loading on page load, not for a settled
+// signed-out/local-only state). Gates the pending-outbox queuing below: on a
+// shared device, queuing every unauthenticated write - not just ones made
+// during this narrow resolving window - would let a later, unrelated sign-in
+// silently claim and upload someone else's local-only data. AuthProvider
+// registers this via setSyncCollectionAuthResolving.
+let _isAuthResolving = false;
+
+export function setSyncCollectionAuthResolving(isResolving: boolean): void {
+  _isAuthResolving = isResolving;
+}
+
+// A successful push here (see pushAndQueue) applies locally via the mutation's
+// own optimistic write, but does nothing to refresh `lastSyncedAt`/outbox
+// state in OngoingSyncContext — those only move on an actual pull. Left
+// alone, the sync status badge would only catch up once *something else*
+// (the SSE `sync_changed` round-trip for this same push, a tab
+// visibility/online event, ...) happens to trigger one, which can leave it
+// showing a stale "last synced" time well after a change was saved.
+// `OngoingSyncProvider` registers its `triggerPull` here so a successful
+// direct push can request an immediate refresh instead of waiting on that.
+let _triggerPull: (() => void) | null = null;
+
+/**
+ * Register the sync provider's `triggerPull` so collection mutation handlers
+ * can request an immediate pull after a successful push. Call with `null` on
+ * unmount/deauth.
+ */
+export function setSyncCollectionTriggerPull(fn: (() => void) | null): void {
+  _triggerPull = fn;
 }
 
 // ---------------------------------------------------------------------------
@@ -280,10 +325,20 @@ export function areSyncCollectionsReady(): boolean {
  * update regardless of push outcome (Option A offline strategy).
  */
 async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
-  // No authenticated sync user: keep the local optimistic write only.
-  // This is expected in local-only mode and in tests that exercise collection
-  // mutations without mounting OngoingSyncProvider.
+  // No authenticated sync user yet. Only queue to the pending outbox while
+  // an *existing* session is actively resolving (_isAuthResolving) - the
+  // write is very likely this same about-to-be-authenticated user's own.
+  // Genuine local-only usage and a settled signed-out state both leave
+  // _isAuthResolving false, so those writes stay purely local as before:
+  // queuing them too would let a later, unrelated sign-in on a shared
+  // device silently claim and upload someone else's local-only data.
+  // appendToPendingSyncOutbox holds a resolving-window write until
+  // drainPendingSyncOutbox moves it into the real outbox once
+  // setSyncCollectionAuth learns who this is.
   if (!_currentUserId) {
+    if (_isAuthResolving) {
+      appendToPendingSyncOutbox(payload);
+    }
     return;
   }
 
@@ -296,6 +351,9 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     if (!response.ok) {
       throw new Error(`sync push failed: ${response.status}`);
     }
+    // Refresh lastSyncedAt/outbox/error state right away rather than leaving
+    // the sync status badge stale until an unrelated trigger happens to pull.
+    _triggerPull?.();
   } catch {
     // Push failed — enqueue to outbox for retry on next sync cycle.
     appendToSyncOutbox(_currentUserId, payload);

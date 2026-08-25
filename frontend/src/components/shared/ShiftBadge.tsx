@@ -72,6 +72,13 @@ export function ShiftBadge({
 
   const sizeClass = getSizeClass(size);
   const content = getBadgeContent(shift, showEmoji, showCode, showName);
+  // shift.className reflects the roster's shift code (e.g. "shift-day"),
+  // independent of shift.isWorking — callers like CalendarView override
+  // isWorking to false for a day with time off or a public holiday without
+  // changing the underlying code. Left alone that shows a vividly-colored
+  // working-shift badge on a day the person isn't actually working; fall
+  // back to the muted "off" style instead so the badge matches reality.
+  const badgeClassName = shift.isWorking ? shift.className : "shift-off";
 
   const badge = (
     <Badge
@@ -80,7 +87,7 @@ export function ShiftBadge({
         "shift-code",
         sizeClass,
         showTooltip && "cursor-help",
-        shift.className,
+        badgeClassName,
         className,
       )}
       pill={pill}

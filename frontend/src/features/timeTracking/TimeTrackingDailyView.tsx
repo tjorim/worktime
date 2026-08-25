@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Card from "react-bootstrap/Card";
+import { useEventStore } from "@/contexts/EventStoreContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dayjs, formatTimeByPreference } from "@/utils/dateTimeUtils";
+import { hasFullDayTimeOffEvent } from "@/utils/workingDayUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import * as m from "@/paraglide/messages.js";
@@ -95,6 +97,11 @@ export function TimeTrackingDailyView({
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [error, setError] = useState("");
   const { settings } = useSettings();
+  const { entries: timeOffEntries } = useEventStore();
+  const isDayOff = useMemo(
+    () => settings.enableTimeOff && hasFullDayTimeOffEvent(dayjs(date), timeOffEntries),
+    [date, settings.enableTimeOff, timeOffEntries],
+  );
   const { tasks: ganttTasks } = useGanttTasks();
   const showGanttPicker = settings.enableGantt && ganttTasks.length > 0;
   const toast = useToast();
@@ -456,6 +463,12 @@ export function TimeTrackingDailyView({
         />
       </Card.Header>
       <Card.Body>
+        {isDayOff && (
+          <Alert variant="info" className="d-flex align-items-center gap-2">
+            <i className="bi bi-calendar-x" aria-hidden="true"></i>
+            {m.tt_day_off_notice()}
+          </Alert>
+        )}
         {error && (
           <Alert variant="danger" aria-live="polite">
             {error}
