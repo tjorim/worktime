@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import FcmDeviceToken
@@ -15,22 +18,33 @@ async def upsert_token(session: AsyncSession, user_id: int, payload: FcmTokenCre
 
     FCM issues a stable token per app install that only changes on reinstall/data
     clear (surfaced via onNewToken()), so upserting by token keeps re-registering
-    on every app start idempotent.
+    on every app start idempotent. Uses a database-native INSERT ... ON CONFLICT
+    DO UPDATE (rather than SELECT-then-insert) so two concurrent registrations of
+    the same brand-new token can't both pass a "no existing row" check and race
+    each other into an IntegrityError (#1224). Reassigning ownership on conflict
+    also covers the same device token re-registering under a different account
+    (e.g. shared device, different sign-in) -- matching how re-subscribing push
+    is a silent upsert.
     """
-    result = await session.execute(select(FcmDeviceToken).where(FcmDeviceToken.token == payload.token))
-    device_token = result.scalar_one_or_none()
+    now = datetime.now(UTC)
+    statement = pg_insert(FcmDeviceToken).values(
+        user_id=user_id,
+        token=payload.token,
+        updated_at=now,
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=["token"],
+        set_={
+            "user_id": statement.excluded.user_id,
+            "updated_at": statement.excluded.updated_at,
+        },
+    ).returning(FcmDeviceToken)
 
-    if device_token is None:
-        device_token = FcmDeviceToken(user_id=user_id, token=payload.token)
-        session.add(device_token)
-    elif device_token.user_id != user_id:
-        # The same device token re-registered under a different account (e.g.
-        # shared device, different sign-in) -- reassign it to the new owner
-        # rather than erroring, matching how re-subscribing push is a silent upsert.
-        device_token.user_id = user_id
-
-    await session.flush()
-    await session.refresh(device_token)
+    # populate_existing: without it, a conflicting row's new values wouldn't
+    # overwrite an already-identity-mapped instance for the same token (e.g.
+    # a prior upsert_token call earlier in this session).
+    result = await session.execute(statement, execution_options={"populate_existing": True})
+    device_token = result.scalar_one()
     await session.commit()
     return device_token
 

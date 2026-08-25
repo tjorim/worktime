@@ -11,6 +11,7 @@ they should run unchanged in CI.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
@@ -18,9 +19,10 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
+from app.database.models import PushSubscription
 from app.schemas import PushSubscriptionCreate, PushSubscriptionKeys, TaskCreate, UserCreate
 from app.services.db_service import create_task, create_user
 from app.services.push_service import PushSendResult
@@ -222,6 +224,34 @@ class TestPushSubscriptionService:
     async def test_delete_subscription_by_id_is_a_noop_when_already_gone(self, db_session: AsyncSession) -> None:
         # Should not raise even though nothing exists at this id.
         await delete_subscription_by_id(db_session, "not-a-real-id")
+
+    async def test_upsert_survives_concurrent_registration_of_a_brand_new_endpoint(
+        self, test_db: AsyncEngine
+    ) -> None:
+        """Two requests racing to register the same brand-new endpoint must not
+        raise IntegrityError -- regression test for #1224."""
+        factory = async_sessionmaker(test_db, expire_on_commit=False)
+        async with factory() as session:
+            user = await create_user(session, UserCreate(username="push-race-owner", display_name="Race Owner"))
+            user_id = user.id
+
+        payload = PushSubscriptionCreate(
+            endpoint="https://fcm.googleapis.com/fcm/send/racing",
+            keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+        )
+
+        async def _register() -> PushSubscription:
+            async with factory() as session:
+                return await upsert_subscription(session, user_id, payload)
+
+        first, second = await asyncio.gather(_register(), _register())
+        assert first.id == second.id
+        assert first.user_id == user_id
+        assert second.user_id == user_id
+
+        async with factory() as session:
+            subscriptions = await list_subscriptions_for_user(session, user_id)
+        assert len(subscriptions) == 1
 
 
 class TestPlannedTaskReminderScheduler:
