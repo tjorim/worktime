@@ -862,6 +862,7 @@ describe("TimeTrackingDailyView", () => {
 
     it("shows the Gantt task picker when enabled and Gantt tasks exist", () => {
       enableGantt();
+      ganttTasksCollection.startSyncImmediate();
       ganttTasksCollection.utils.writeUpsert([
         {
           id: "gantt-1",
