@@ -31,6 +31,7 @@ async def test_feed_contains_stable_utc_shift_and_time_off_events(monkeypatch: p
                     end_date=None,
                     weekday=None,
                     entry_type="vacation",
+                    entry_flag="half_am",
                     note="Beach, then home",
                     deleted_at=None,
                 )
@@ -72,6 +73,7 @@ async def test_weekly_time_off_is_bounded_and_expanded(monkeypatch: pytest.Monke
                     end_date=None,
                     weekday=1,
                     entry_type="course",
+                    entry_flag="full_day",
                     note=None,
                     deleted_at=None,
                 )
@@ -105,6 +107,7 @@ async def test_range_time_off_includes_its_end_date(monkeypatch: pytest.MonkeyPa
                     end_date=date(2026, 8, 26),
                     weekday=None,
                     entry_type="vacation",
+                    entry_flag="full_day",
                     note=None,
                     deleted_at=None,
                 )
@@ -118,3 +121,44 @@ async def test_range_time_off_includes_its_end_date(monkeypatch: pytest.MonkeyPa
     assert "UID:time-off-range-2026-08-25@worktime" in feed
     assert "UID:time-off-range-2026-08-26@worktime" in feed
     assert "UID:time-off-range-2026-08-27@worktime" not in feed
+
+
+@pytest.mark.asyncio
+async def test_full_day_time_off_suppresses_its_shift_event(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 5-shift/team 1 resolves to a Night shift (23:00 -> 07:00) on 2026-08-25.
+    # A full-day time-off entry dated the 25th should suppress that shift event
+    # even though most of its hours land on the 26th - it's keyed by the day
+    # the shift *starts*, matching how a user picks the date when requesting
+    # "the night shift starting tonight" off.
+    monkeypatch.setattr(
+        ical_service,
+        "get_work_context_for_user",
+        AsyncMock(return_value=SimpleNamespace(schedule_type="5-shift", effective_team_number=1)),
+    )
+    monkeypatch.setattr(
+        ical_service,
+        "list_time_off_entries",
+        AsyncMock(
+            return_value=[
+                SimpleNamespace(
+                    entry_id="night-off",
+                    entry_kind="date",
+                    date=date(2026, 8, 25),
+                    start_date=None,
+                    end_date=None,
+                    weekday=None,
+                    entry_type="vacation",
+                    entry_flag="full_day",
+                    note=None,
+                    deleted_at=None,
+                )
+            ]
+        ),
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-5-shift-1-2026-08-25@worktime" not in feed
+    assert "UID:time-off-night-off-2026-08-25@worktime" in feed
+    # A neighboring working day for the same team is unaffected.
+    assert "UID:shift-5-shift-1-2026-08-20@worktime" in feed

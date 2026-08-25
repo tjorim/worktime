@@ -97,6 +97,16 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     start, end = _add_months(today, -3), _add_months(today, 12)
     context = await get_work_context_for_user(session, user_id)
     entries = await list_time_off_entries(session, user_id=user_id)
+    # A full-day time-off entry replaces the shift event that day rather than
+    # coexisting with it. Matched by the shift's start date (the "day" used to
+    # resolve it below), so e.g. a night shift starting 23:00 on the 25th is
+    # suppressed by a time-off entry dated the 25th, not the 26th.
+    full_day_off_dates = {
+        day
+        for entry in entries
+        if entry.deleted_at is None and entry.entry_flag == "full_day"
+        for day in _time_off_dates(entry, start, end)
+    }
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -111,7 +121,12 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         day = start
         while day < end:
             shift = _resolve_shift(context.schedule_type, context.effective_team_number, day)
-            if shift.is_working and shift.start_hour is not None and shift.end_hour is not None:
+            if (
+                shift.is_working
+                and shift.start_hour is not None
+                and shift.end_hour is not None
+                and day not in full_day_off_dates
+            ):
                 starts = _utc_at(day, shift.start_hour)
                 ends = _utc_at(day, shift.end_hour)
                 if ends <= starts:

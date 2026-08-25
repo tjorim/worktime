@@ -23,6 +23,10 @@ below predate that switch.
 
 - The iCal feed now tags shift and time-off events with a color hint (RFC 7986 COLOR), so calendar apps that support per-event colors (e.g. Apple Calendar, Thunderbird) can show them distinctly
 
+### Fixed
+
+- A full-day time-off entry no longer leaves a duplicate shift event in the iCal feed alongside it
+
 ## [2026.8.6] - 2026-08-19
 
 ### Added
