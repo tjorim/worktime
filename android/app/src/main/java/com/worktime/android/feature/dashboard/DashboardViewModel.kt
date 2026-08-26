@@ -36,7 +36,13 @@ sealed interface DashboardUiState {
 
     data class Error(val message: String) : DashboardUiState
 
-    data class Success(val dashboard: DashboardResponse) : DashboardUiState
+    /**
+     * [staleAsOf] is null for a freshly-fetched dashboard, and set to the ISO-8601 instant it was
+     * cached at when this is a cached snapshot shown while offline or before a fresh fetch has
+     * completed (#1230) — [com.worktime.android.ui.components.ReadModelScreen] renders it as a
+     * banner instead of a hard error or an indefinite loading spinner.
+     */
+    data class Success(val dashboard: DashboardResponse, val staleAsOf: String? = null) : DashboardUiState
 }
 
 data class MobileActionsUiState(
@@ -81,16 +87,33 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         refreshJob?.cancel()
         refreshJob =
             viewModelScope.launch {
-                _uiState.value = DashboardUiState.Loading
-                _uiState.value =
-                    when (val result = repository.loadDashboard()) {
-                        is DashboardLoadResult.Success -> {
-                            refreshActions()
-                            DashboardUiState.Success(result.dashboard)
+                // Cold start (or recovering from LoggedOut/Error): show the last cached dashboard
+                // immediately, marked stale, rather than blocking on the network round trip below.
+                // Skipped once a Success is already showing so an in-place refresh doesn't flicker
+                // back to a possibly-older cached snapshot.
+                if (_uiState.value !is DashboardUiState.Success) {
+                    val cached = repository.loadCachedDashboard()
+                    _uiState.value =
+                        if (cached != null) {
+                            DashboardUiState.Success(cached.dashboard, staleAsOf = cached.cachedAt)
+                        } else {
+                            DashboardUiState.Loading
                         }
-                        DashboardLoadResult.LoggedOut -> DashboardUiState.LoggedOut
-                        is DashboardLoadResult.Error -> DashboardUiState.Error(result.message)
+                }
+                when (val result = repository.loadDashboard()) {
+                    is DashboardLoadResult.Success -> {
+                        refreshActions()
+                        _uiState.value = DashboardUiState.Success(result.dashboard)
                     }
+                    DashboardLoadResult.LoggedOut -> _uiState.value = DashboardUiState.LoggedOut
+                    is DashboardLoadResult.Error -> {
+                        // A cached (possibly stale) dashboard is still more useful than a hard
+                        // error, so only surface the error when there is nothing to show instead.
+                        if (_uiState.value !is DashboardUiState.Success) {
+                            _uiState.value = DashboardUiState.Error(result.message)
+                        }
+                    }
+                }
             }
     }
 

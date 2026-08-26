@@ -99,6 +99,101 @@ class WorktimeRepositoryTest {
     }
 
     @Test
+    fun loadDashboardCachesSuccessfulResponse() = runTest {
+        val dashboard = sampleDashboard()
+        val cache = FakeDashboardCache()
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(response = dashboard),
+                sessionController = FakeSessionController(token = "token-123"),
+                cache = cache
+            )
+
+        repository.loadDashboard()
+
+        assertEquals(dashboard, cache.savedDashboard)
+        assertTrue(!cache.savedCachedAt.isNullOrBlank())
+    }
+
+    @Test
+    fun loadDashboardClearsCacheOnUnauthorized() = runTest {
+        val cache = FakeDashboardCache()
+        cache.save(sampleDashboard(), "2026-05-26T12:00:00Z")
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(dashboardThrowable = httpException(401)),
+                sessionController = FakeSessionController(token = "expired-token"),
+                cache = cache
+            )
+
+        repository.loadDashboard()
+
+        assertEquals(1, cache.clearCallCount)
+        assertEquals(null, cache.load())
+    }
+
+    @Test
+    fun loadCachedDashboardDelegatesToTheCache() = runTest {
+        val dashboard = sampleDashboard()
+        val cache = FakeDashboardCache()
+        cache.save(dashboard, "2026-05-26T12:00:00Z")
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = "token-123"),
+                cache = cache
+            )
+
+        val result = repository.loadCachedDashboard()
+
+        assertEquals(CachedDashboard(dashboard, "2026-05-26T12:00:00Z"), result)
+    }
+
+    @Test
+    fun loadCachedDashboardReturnsNullWithoutACache() = runTest {
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = "token-123")
+            )
+
+        assertEquals(null, repository.loadCachedDashboard())
+    }
+
+    @Test
+    fun completeLogoutClearsCache() = runTest {
+        val cache = FakeDashboardCache()
+        cache.save(sampleDashboard(), "2026-05-26T12:00:00Z")
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = "token-123"),
+                cache = cache
+            )
+
+        repository.completeLogout()
+
+        assertEquals(1, cache.clearCallCount)
+    }
+
+    @Test
+    fun deleteAccountClearsCacheOnSuccess() = runTest {
+        val cache = FakeDashboardCache()
+        cache.save(sampleDashboard(), "2026-05-26T12:00:00Z")
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(),
+                sessionController = FakeSessionController(token = "token-123"),
+                cache = cache
+            )
+
+        val result = repository.deleteAccount()
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals(1, cache.clearCallCount)
+    }
+
+    @Test
     fun startTrackingReturnsValidationErrorForBadRequest() = runTest {
         val repository =
             WorktimeRepository(
@@ -908,6 +1003,29 @@ class WorktimeRepositoryTest {
         override suspend fun unregisterFcmToken(authorization: String, token: String) {
             fcmTokenThrowable?.let { throw it }
             lastUnregisteredFcmToken = token
+        }
+    }
+
+    private class FakeDashboardCache : DashboardCache {
+        var savedDashboard: DashboardResponse? = null
+            private set
+        var savedCachedAt: String? = null
+            private set
+        var clearCallCount = 0
+            private set
+
+        override suspend fun load(): CachedDashboard? =
+            savedDashboard?.let { CachedDashboard(it, requireNotNull(savedCachedAt)) }
+
+        override suspend fun save(dashboard: DashboardResponse, cachedAt: String) {
+            savedDashboard = dashboard
+            savedCachedAt = cachedAt
+        }
+
+        override fun clear() {
+            clearCallCount++
+            savedDashboard = null
+            savedCachedAt = null
         }
     }
 

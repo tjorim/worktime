@@ -8,6 +8,7 @@ import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.network.CertificatePinnerProvider
 import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.BiometricLockPreferencesStore
+import com.worktime.android.core.storage.DashboardCacheStore
 import com.worktime.android.core.storage.NotificationPreferencesStore
 import com.worktime.android.data.api.WorktimeApi
 import com.worktime.android.data.repository.WorktimeRepository
@@ -21,6 +22,7 @@ class WorktimeAppContainer(
 ) {
     val notificationPreferencesStore = NotificationPreferencesStore(context)
     val biometricLockPreferencesStore = BiometricLockPreferencesStore(context)
+    private val dashboardCacheStore = DashboardCacheStore(context)
     private val api =
         WorktimeApi.create(
             baseUrl = appConfig.apiBaseUrl,
@@ -28,5 +30,6 @@ class WorktimeAppContainer(
             certificatePinner = CertificatePinnerProvider.fromConfig(appConfig),
             baseUrlOverrideProvider = apiBaseUrlOverrideStore::currentOverrideBlocking
         )
-    val dashboardRepository = WorktimeRepository(api = api, sessionController = sessionManager)
+    val dashboardRepository =
+        WorktimeRepository(api = api, sessionController = sessionManager, cache = dashboardCacheStore)
 }
