@@ -19,6 +19,8 @@ import com.worktime.android.data.model.TimeOffSummary
 import com.worktime.android.data.model.WorkContext
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
@@ -68,8 +70,8 @@ class TodayScreenTest {
         composeTestRule.onNodeWithText("Task").performScrollTo().performTextInput("Write report")
         composeTestRule.onNodeWithText("Start timer").performScrollTo().performClick()
 
-        assert(startedText == "Write report") { "expected 'Write report', was $startedText" }
-        assert(startedLabelId == null) { "expected no label, was $startedLabelId" }
+        assertEquals("Write report", startedText)
+        assertNull(startedLabelId)
     }
 
     @Test
@@ -90,7 +92,7 @@ class TodayScreenTest {
 
         composeTestRule.onNodeWithText("Stop timer").performScrollTo().performClick()
 
-        assert(stoppedId == "task-1") { "expected 'task-1', was $stoppedId" }
+        assertEquals("task-1", stoppedId)
     }
 
     @Test
@@ -108,8 +110,8 @@ class TodayScreenTest {
         composeTestRule.onNodeWithText("Task").performScrollTo().performTextReplacement("Standup (edited)")
         composeTestRule.onNodeWithText("Update task").performScrollTo().performClick()
 
-        assert(updatedId == "task-1") { "expected 'task-1', was $updatedId" }
-        assert(updatedText == "Standup (edited)") { "expected 'Standup (edited)', was $updatedText" }
+        assertEquals("task-1", updatedId)
+        assertEquals("Standup (edited)", updatedText)
     }
 
     private fun sampleRunningTask() = TaskRecord(
