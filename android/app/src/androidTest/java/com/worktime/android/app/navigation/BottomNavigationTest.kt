@@ -87,7 +87,7 @@ class BottomNavigationTest {
         renderScaffold()
 
         WorktimeDestination.entries.forEach { destination ->
-            composeTestRule.onNodeWithContentDescription(destination.label).assertIsDisplayed()
+            composeTestRule.onNodeWithContentDescription(destination.label, useUnmergedTree = true).assertIsDisplayed()
         }
     }
 
@@ -97,7 +97,9 @@ class BottomNavigationTest {
 
         composeTestRule.onNodeWithText("Today screen").assertIsDisplayed()
 
-        composeTestRule.onNodeWithContentDescription(WorktimeDestination.TimeOff.label).performClick()
+        composeTestRule
+            .onNodeWithContentDescription(WorktimeDestination.TimeOff.label, useUnmergedTree = true)
+            .performClick()
 
         composeTestRule.onNodeWithText("Time Off screen").assertIsDisplayed()
     }
@@ -108,10 +110,14 @@ class BottomNavigationTest {
 
         composeTestRule.onNodeWithText("Note").performTextInput("draft note")
 
-        composeTestRule.onNodeWithContentDescription(WorktimeDestination.NextShifts.label).performClick()
+        composeTestRule
+            .onNodeWithContentDescription(WorktimeDestination.NextShifts.label, useUnmergedTree = true)
+            .performClick()
         composeTestRule.onNodeWithText("Next screen").assertIsDisplayed()
 
-        composeTestRule.onNodeWithContentDescription(WorktimeDestination.Today.label).performClick()
+        composeTestRule
+            .onNodeWithContentDescription(WorktimeDestination.Today.label, useUnmergedTree = true)
+            .performClick()
 
         composeTestRule.onNodeWithText("draft note").assertIsDisplayed()
     }

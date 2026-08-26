@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import com.worktime.android.data.model.CurrentStatus
@@ -50,7 +51,9 @@ class TodayScreenTest {
     fun startTimerButton_isDisabledUntilTaskTextIsEntered() {
         renderToday()
 
-        composeTestRule.onNodeWithText("Start timer").assertIsDisplayed().assertIsNotEnabled()
+        // TodayScreen is a LazyColumn, so the "Time tracking" card can sit below the fold on a
+        // small AVD screen -- scroll it into view before asserting on it.
+        composeTestRule.onNodeWithText("Start timer").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
     }
 
     @Test
@@ -62,8 +65,8 @@ class TodayScreenTest {
             startedLabelId = labelId
         })
 
-        composeTestRule.onNodeWithText("Task").performTextInput("Write report")
-        composeTestRule.onNodeWithText("Start timer").performClick()
+        composeTestRule.onNodeWithText("Task").performScrollTo().performTextInput("Write report")
+        composeTestRule.onNodeWithText("Start timer").performScrollTo().performClick()
 
         assert(startedText == "Write report") { "expected 'Write report', was $startedText" }
         assert(startedLabelId == null) { "expected no label, was $startedLabelId" }
@@ -73,8 +76,8 @@ class TodayScreenTest {
     fun runningTask_showsUpdateAndStopButtonsInsteadOfStart() {
         renderToday(actionsState = MobileActionsUiState(runningTask = sampleRunningTask()))
 
-        composeTestRule.onNodeWithText("Update task").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Stop timer").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Update task").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Stop timer").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -85,7 +88,7 @@ class TodayScreenTest {
             onStopTracking = { stoppedId = it }
         )
 
-        composeTestRule.onNodeWithText("Stop timer").performClick()
+        composeTestRule.onNodeWithText("Stop timer").performScrollTo().performClick()
 
         assert(stoppedId == "task-1") { "expected 'task-1', was $stoppedId" }
     }
@@ -102,8 +105,8 @@ class TodayScreenTest {
             }
         )
 
-        composeTestRule.onNodeWithText("Task").performTextReplacement("Standup (edited)")
-        composeTestRule.onNodeWithText("Update task").performClick()
+        composeTestRule.onNodeWithText("Task").performScrollTo().performTextReplacement("Standup (edited)")
+        composeTestRule.onNodeWithText("Update task").performScrollTo().performClick()
 
         assert(updatedId == "task-1") { "expected 'task-1', was $updatedId" }
         assert(updatedText == "Standup (edited)") { "expected 'Standup (edited)', was $updatedText" }
