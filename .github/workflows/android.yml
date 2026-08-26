@@ -108,6 +108,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
+          working-directory: android
           script: echo "Generated AVD snapshot for caching."
 
       - name: Run Compose UI / instrumented tests
@@ -119,6 +120,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
+          working-directory: android
           script: ./gradlew connectedDebugAndroidTest
 
       - name: Upload instrumented test report
