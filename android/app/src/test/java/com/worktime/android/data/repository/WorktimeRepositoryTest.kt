@@ -793,11 +793,7 @@ internal class FakeApi(
         workLocationThrowable?.let { throw it }
     }
 
-    override suspend fun createLabel(
-        authorization: String,
-        userId: Int,
-        payload: LabelMutationRequest
-    ): LabelRecord {
+    override suspend fun createLabel(authorization: String, userId: Int, payload: LabelMutationRequest): LabelRecord {
         labelThrowable?.let { throw it }
         return sampleLabel(name = payload.name, color = payload.color)
     }
