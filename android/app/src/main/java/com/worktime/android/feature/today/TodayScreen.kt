@@ -306,8 +306,11 @@ private fun WorkLocationQuickChips(
     onOther: () -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = false, onClick = onHome, enabled = !isSubmitting, label = { Text("Home") })
-        FilterChip(selected = false, onClick = onOffice, enabled = !isSubmitting, label = { Text("Office") })
+        // Home/Office are momentary actions (set today's work location), not persistent
+        // toggles -- AssistChip has no checkable semantics, unlike FilterChip, so TalkBack
+        // won't announce them as an unselected checkable item.
+        AssistChip(onClick = onHome, enabled = !isSubmitting, label = { Text("Home") })
+        AssistChip(onClick = onOffice, enabled = !isSubmitting, label = { Text("Office") })
         FilterChip(selected = showOtherFields, onClick = onOther, enabled = !isSubmitting, label = { Text("Other") })
     }
 }
