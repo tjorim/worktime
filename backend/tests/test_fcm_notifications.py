@@ -12,6 +12,7 @@ unchanged in CI.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -19,9 +20,10 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
+from app.database.models import FcmDeviceToken
 from app.schemas import FcmTokenCreate, TaskCreate, TaskUpdate, UserCreate
 from app.services.db_service import create_task, create_user, delete_task, update_task
 from app.services.fcm_device_token_service import (
@@ -139,6 +141,29 @@ class TestFcmDeviceTokenService:
     async def test_delete_token_by_id_is_a_noop_when_already_gone(self, db_session: AsyncSession) -> None:
         # Should not raise even though nothing exists at this id.
         await delete_token_by_id(db_session, "not-a-real-id")
+
+    async def test_upsert_survives_concurrent_registration_of_a_brand_new_token(self, test_db: AsyncEngine) -> None:
+        """Two requests racing to register the same brand-new token must not raise
+        IntegrityError -- regression test for #1224."""
+        factory = async_sessionmaker(test_db, expire_on_commit=False)
+        async with factory() as session:
+            user = await create_user(session, UserCreate(username="fcm-race-owner", display_name="Race Owner"))
+            user_id = user.id
+
+        payload = FcmTokenCreate(token="racing-token")
+
+        async def _register() -> FcmDeviceToken:
+            async with factory() as session:
+                return await upsert_token(session, user_id, payload)
+
+        first, second = await asyncio.gather(_register(), _register())
+        assert first.id == second.id
+        assert first.user_id == user_id
+        assert second.user_id == user_id
+
+        async with factory() as session:
+            tokens = await list_tokens_for_user(session, user_id)
+        assert len(tokens) == 1
 
 
 class TestFcmWakeService:

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import PushSubscription
@@ -15,27 +18,39 @@ async def upsert_subscription(session: AsyncSession, user_id: int, payload: Push
 
     A browser reuses the same endpoint across calls to PushManager.subscribe()
     for the same registration, so upserting by endpoint (rather than always
-    inserting) keeps re-subscribing idempotent.
+    inserting) keeps re-subscribing idempotent. Uses a database-native
+    INSERT ... ON CONFLICT DO UPDATE (rather than SELECT-then-insert) so two
+    concurrent registrations of the same brand-new endpoint can't both pass a
+    "no existing row" check and race each other into an IntegrityError (#1224).
+    Reassigning ownership on conflict also covers the same browser endpoint
+    re-subscribing under a different account (e.g. shared device, different
+    sign-in) — matching how re-subscribing is otherwise a silent upsert.
     """
-    result = await session.execute(select(PushSubscription).where(PushSubscription.endpoint == payload.endpoint))
-    subscription = result.scalar_one_or_none()
+    now = datetime.now(UTC)
+    statement = pg_insert(PushSubscription).values(
+        user_id=user_id,
+        endpoint=payload.endpoint,
+        p256dh_key=payload.keys.p256dh,
+        auth_key=payload.keys.auth,
+        timezone=payload.timezone,
+        updated_at=now,
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=["endpoint"],
+        set_={
+            "user_id": statement.excluded.user_id,
+            "p256dh_key": statement.excluded.p256dh_key,
+            "auth_key": statement.excluded.auth_key,
+            "timezone": statement.excluded.timezone,
+            "updated_at": statement.excluded.updated_at,
+        },
+    ).returning(PushSubscription)
 
-    if subscription is None:
-        subscription = PushSubscription(user_id=user_id, endpoint=payload.endpoint)
-        session.add(subscription)
-    elif subscription.user_id != user_id:
-        # The same browser endpoint re-subscribed under a different account
-        # (e.g. shared device, different sign-in) — reassign it to the new
-        # owner rather than erroring, matching how re-subscribing is otherwise
-        # a silent upsert.
-        subscription.user_id = user_id
-
-    subscription.p256dh_key = payload.keys.p256dh
-    subscription.auth_key = payload.keys.auth
-    subscription.timezone = payload.timezone
-
-    await session.flush()
-    await session.refresh(subscription)
+    # populate_existing: without it, a conflicting row's new values wouldn't
+    # overwrite an already-identity-mapped instance for the same endpoint
+    # (e.g. a prior upsert_subscription call earlier in this session).
+    result = await session.execute(statement, execution_options={"populate_existing": True})
+    subscription = result.scalar_one()
     await session.commit()
     return subscription
 
