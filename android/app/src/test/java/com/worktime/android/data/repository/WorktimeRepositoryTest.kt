@@ -35,6 +35,7 @@ import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
 import io.mockk.mockk
+import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -113,6 +114,22 @@ class WorktimeRepositoryTest {
 
         assertEquals(dashboard, cache.savedDashboard)
         assertTrue(!cache.savedCachedAt.isNullOrBlank())
+    }
+
+    @Test
+    fun loadDashboardSucceedsEvenWhenCachePersistenceFails() = runTest {
+        val dashboard = sampleDashboard()
+        val cache = FakeDashboardCache(saveThrowable = IOException("disk full"))
+        val repository =
+            WorktimeRepository(
+                api = FakeApi(response = dashboard),
+                sessionController = FakeSessionController(token = "token-123"),
+                cache = cache
+            )
+
+        val result = repository.loadDashboard()
+
+        assertEquals(DashboardLoadResult.Success(dashboard), result)
     }
 
     @Test
@@ -1006,7 +1023,7 @@ class WorktimeRepositoryTest {
         }
     }
 
-    private class FakeDashboardCache : DashboardCache {
+    private class FakeDashboardCache(private val saveThrowable: Throwable? = null) : DashboardCache {
         var savedDashboard: DashboardResponse? = null
             private set
         var savedCachedAt: String? = null
@@ -1018,11 +1035,12 @@ class WorktimeRepositoryTest {
             savedDashboard?.let { CachedDashboard(it, requireNotNull(savedCachedAt)) }
 
         override suspend fun save(dashboard: DashboardResponse, cachedAt: String) {
+            saveThrowable?.let { throw it }
             savedDashboard = dashboard
             savedCachedAt = cachedAt
         }
 
-        override fun clear() {
+        override suspend fun clear() {
             clearCallCount++
             savedDashboard = null
             savedCachedAt = null

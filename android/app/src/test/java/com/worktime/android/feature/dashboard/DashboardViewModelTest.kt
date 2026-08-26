@@ -446,7 +446,7 @@ class DashboardViewModelTest {
 
         override suspend fun buildLogoutIntent(): Intent? = logoutIntentResult
 
-        override fun completeLogout() {
+        override suspend fun completeLogout() {
             completeLogoutCallCount++
             sessionState.value = SessionState.LoggedOut
         }

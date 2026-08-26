@@ -271,7 +271,7 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         viewModelScope.launch { completeLogout() }
     }
 
-    private fun completeLogout() {
+    private suspend fun completeLogout() {
         repository.completeLogout()
         _uiState.value = DashboardUiState.LoggedOut
     }

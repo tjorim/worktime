@@ -242,7 +242,7 @@ class TimeOffViewModelTest {
 
         override suspend fun buildLogoutIntent(): android.content.Intent? = null
 
-        override fun completeLogout() {
+        override suspend fun completeLogout() {
             sessionState.value = SessionState.LoggedOut
         }
     }

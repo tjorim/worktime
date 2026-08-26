@@ -51,16 +51,16 @@ data class CachedDashboard(val dashboard: DashboardResponse, val cachedAt: Strin
 
 /**
  * Durable on-disk read cache for the dashboard read model (#1230), so a cold launch with no
- * connectivity can render the user's last-known data instead of a bare error. [clear] is
- * fire-and-forget (not suspend) so it can be called from [DashboardRepository.completeLogout],
- * which itself isn't suspend.
+ * connectivity can render the user's last-known data instead of a bare error. [clear] is suspend
+ * (awaited by every caller) so a subsequent sign-in on a shared device can never observe the
+ * previous account's cached dashboard through an unfinished, fire-and-forget deletion.
  */
 interface DashboardCache {
     suspend fun load(): CachedDashboard?
 
     suspend fun save(dashboard: DashboardResponse, cachedAt: String)
 
-    fun clear()
+    suspend fun clear()
 }
 
 sealed interface MutationResult<out T> {
@@ -205,7 +205,7 @@ interface DashboardRepository {
     suspend fun buildLogoutIntent(): Intent?
 
     /** Clears local session state. Pairs with [buildLogoutIntent] once its flow returns. */
-    fun completeLogout()
+    suspend fun completeLogout()
 }
 
 @Suppress("TooManyFunctions") // implements the single-facade DashboardRepository
@@ -234,7 +234,9 @@ class WorktimeRepository(
         return try {
             val dashboard = api.getDashboard(authorization = "Bearer $token", timezone = timezone)
             currentUserId = dashboard.identity.id
-            cache?.save(dashboard, OffsetDateTime.now(ZoneOffset.UTC).toString())
+            // Best-effort: a cache-persistence failure must never turn an already-successful
+            // fetch into a reported error, so it's isolated from this function's own try/catch.
+            cacheDashboard(dashboard)
             DashboardLoadResult.Success(dashboard)
         } catch (error: HttpException) {
             if (error.code() == HTTP_UNAUTHORIZED) {
@@ -249,6 +251,14 @@ class WorktimeRepository(
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
+        }
+    }
+
+    private suspend fun cacheDashboard(dashboard: DashboardResponse) {
+        try {
+            cache?.save(dashboard, OffsetDateTime.now(ZoneOffset.UTC).toString())
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
         }
     }
 
@@ -536,7 +546,7 @@ class WorktimeRepository(
 
     override suspend fun buildLogoutIntent(): Intent? = sessionController.buildLogoutIntent()
 
-    override fun completeLogout() {
+    override suspend fun completeLogout() {
         sessionController.completeLogout()
         currentUserId = null
         cache?.clear()

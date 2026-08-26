@@ -10,12 +10,8 @@ import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.repository.CachedDashboard
 import com.worktime.android.data.repository.DashboardCache
 import java.io.IOException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /**
@@ -23,7 +19,6 @@ import kotlinx.serialization.json.Json
  * launch with no connectivity can render the user's last-known dashboard instead of a bare error.
  */
 class DashboardCacheStore(context: Context) : DashboardCache {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
     private val dataStore =
         PreferenceDataStoreFactory.create(
@@ -51,8 +46,8 @@ class DashboardCacheStore(context: Context) : DashboardCache {
         }
     }
 
-    override fun clear() {
-        scope.launch { dataStore.edit { it.clear() } }
+    override suspend fun clear() {
+        dataStore.edit { it.clear() }
     }
 
     private companion object {
