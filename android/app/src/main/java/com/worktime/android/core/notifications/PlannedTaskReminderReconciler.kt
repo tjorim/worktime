@@ -14,29 +14,31 @@ import kotlinx.coroutines.coroutineScope
  * [reminderScheduler]'s local alarm via [ReminderScheduler.reconcile].
  *
  * Shared by [com.worktime.android.feature.dashboard.DashboardViewModel]'s foreground refresh
- * (indirectly, via [fetchPlannedTask]) and [WorktimeFirebaseMessagingService]'s background wake
- * (directly, since a Service has no ViewModel/Compose state to read already-fetched data from) --
+ * (indirectly, via [fetchPlannedTask]) and [PlannedTaskReminderReconcileWorker]'s background wake
+ * (directly, since a Worker has no ViewModel/Compose state to read already-fetched data from) --
  * a background wake has nothing cached to reuse, so it always fetches fresh. One shared code path
- * means both cases schedule the reminder identically. See #1205.
+ * means both cases schedule the reminder identically. See #1205, #1225.
  *
- * Returns false without touching [reminderScheduler] when there's no session to fetch with
- * (logged out) or either fetch failed. This must never call [ReminderScheduler.reconcile] on a
- * partial/failed read: reconcile() cancels any existing alarm for a kind it wasn't given a task
- * for, so folding a transient failure into "no task" would silently cancel an already-correctly-
- * scheduled reminder. The foreground path tolerates that (a failed refresh there is quickly
- * followed by another), but a background wake is a one-shot event with nothing to self-correct
- * it -- an alarm cancelled here stays cancelled until the app is next opened.
+ * Returns without touching [reminderScheduler] when there's no session to fetch with (logged out)
+ * or either fetch failed -- see [ReconcileOutcome]. This must never call
+ * [ReminderScheduler.reconcile] on a partial/failed read: reconcile() cancels any existing alarm
+ * for a kind it wasn't given a task for, so folding a transient failure into "no task" would
+ * silently cancel an already-correctly-scheduled reminder. The foreground path tolerates that (a
+ * failed refresh there is quickly followed by another), but a background wake is a one-shot event
+ * with nothing to self-correct it -- an alarm cancelled here stays cancelled until the app is next
+ * opened (or, for [FetchFailed], the worker's retry succeeds).
  */
 suspend fun reconcilePlannedTaskReminder(
     repository: DashboardRepository,
     reminderScheduler: ReminderScheduler,
     plannedTasksEnabled: Boolean,
     timersEnabled: Boolean
-): Boolean {
+): ReconcileOutcome {
     val accountId =
         when (val result = repository.loadDashboard()) {
             is DashboardLoadResult.Success -> result.dashboard.identity.id
-            DashboardLoadResult.LoggedOut, is DashboardLoadResult.Error -> return false
+            DashboardLoadResult.LoggedOut -> return ReconcileOutcome.LoggedOut
+            is DashboardLoadResult.Error -> return ReconcileOutcome.FetchFailed
         }
 
     // Run concurrently, not sequentially: a background wake (unlike the foreground path) has a
@@ -48,7 +50,9 @@ suspend fun reconcilePlannedTaskReminder(
             val tasksDeferred = async { listNearTermTasks(repository) }
             runningTaskDeferred.await() to tasksDeferred.await()
         }
-    if (runningTaskResult !is MutationResult.Success || tasksResult !is MutationResult.Success) return false
+    if (runningTaskResult !is MutationResult.Success || tasksResult !is MutationResult.Success) {
+        return ReconcileOutcome.FetchFailed
+    }
 
     reminderScheduler.reconcile(
         accountId,
@@ -57,7 +61,7 @@ suspend fun reconcilePlannedTaskReminder(
         plannedTasksEnabled,
         timersEnabled
     )
-    return true
+    return ReconcileOutcome.Reconciled
 }
 
 /**

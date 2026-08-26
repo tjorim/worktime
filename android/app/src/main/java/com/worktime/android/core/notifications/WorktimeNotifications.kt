@@ -17,6 +17,11 @@ const val CHANNEL_PLANNED_TASKS = "planned_tasks"
 const val CHANNEL_TIME_TRACKING = "time_tracking"
 const val CHANNEL_SYNC_CONFLICTS = "sync_conflicts"
 
+// IMPORTANCE_MIN (not one of the user-facing channels above): this exists only to satisfy the
+// foreground-service notification WorkManager requires for expedited work below Android S -- see
+// PlannedTaskReminderReconcileWorker (#1225) -- not to alert the user to anything.
+const val CHANNEL_BACKGROUND_SYNC = "background_sync"
+
 class WorktimeNotifications(private val context: Context) {
     fun createChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -25,7 +30,8 @@ class WorktimeNotifications(private val context: Context) {
             listOf(
                 NotificationChannel(CHANNEL_PLANNED_TASKS, "Planned tasks", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_TIME_TRACKING, "Time tracking", NotificationManager.IMPORTANCE_DEFAULT),
-                NotificationChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts", NotificationManager.IMPORTANCE_DEFAULT)
+                NotificationChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_BACKGROUND_SYNC, "Background sync", NotificationManager.IMPORTANCE_MIN)
             )
         manager.createNotificationChannels(channels)
     }

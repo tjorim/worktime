@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Below Android S, WorkManager promotes expedited work (PlannedTaskReminderReconcileWorker,
+         #1225) to a foreground service; FOREGROUND_SERVICE_DATA_SYNC is required to declare that
+         service's type from API 34 onward. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".app.WorktimeAndroidApplication"
@@ -43,6 +48,13 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- WorkManager promotes expedited work below Android S to a foreground service via this
+             library-owned service; declaring its type here is required from API 34 onward (#1225). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
