@@ -679,270 +679,266 @@ class WorktimeRepositoryTest {
         assertEquals(MutationResult.LoggedOut, result)
         assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
     }
+}
 
-    private class FakeApi(
-        private val response: DashboardResponse = sampleDashboard(),
-        private val dashboardThrowable: Throwable? = null,
-        private val taskThrowable: Throwable? = null,
-        private val taskListResponse: TaskListResponse = TaskListResponse(items = emptyList(), total = 0),
-        private val workLocationThrowable: Throwable? = null,
-        private val workLocationNotFound: Boolean = false,
-        private val labelThrowable: Throwable? = null,
-        private val labelListResponse: LabelListResponse = LabelListResponse(items = emptyList(), total = 0),
-        private val templateThrowable: Throwable? = null,
-        private val templateListResponse: TemplateListResponse = TemplateListResponse(items = emptyList(), total = 0),
-        private val timeOffThrowable: Throwable? = null,
-        private val timeOffListResponse: TimeOffEntryListResponse =
-            TimeOffEntryListResponse(items = emptyList(), total = 0),
-        private val deleteAccountThrowable: Throwable? = null,
-        private val preferencesResponse: UserPreferencesRead? = null,
-        private val fcmTokenThrowable: Throwable? = null
-    ) : WorktimeApi {
-        var lastTimeOffPatchPayload: TimeOffEntryPatchRequest? = null
-            private set
-        var lastPreferencesWritePayload: UserPreferencesWrite? = null
-            private set
-        var lastRegisteredFcmToken: String? = null
-            private set
-        var lastUnregisteredFcmToken: String? = null
-            private set
+internal class FakeApi(
+    private val response: DashboardResponse = sampleDashboard(),
+    private val dashboardThrowable: Throwable? = null,
+    private val taskThrowable: Throwable? = null,
+    private val taskListResponse: TaskListResponse = TaskListResponse(items = emptyList(), total = 0),
+    private val workLocationThrowable: Throwable? = null,
+    private val workLocationNotFound: Boolean = false,
+    private val labelThrowable: Throwable? = null,
+    private val labelListResponse: LabelListResponse = LabelListResponse(items = emptyList(), total = 0),
+    private val templateThrowable: Throwable? = null,
+    private val templateListResponse: TemplateListResponse = TemplateListResponse(items = emptyList(), total = 0),
+    private val timeOffThrowable: Throwable? = null,
+    private val timeOffListResponse: TimeOffEntryListResponse =
+        TimeOffEntryListResponse(items = emptyList(), total = 0),
+    private val deleteAccountThrowable: Throwable? = null,
+    private val preferencesResponse: UserPreferencesRead? = null,
+    private val fcmTokenThrowable: Throwable? = null
+) : WorktimeApi {
+    var lastTimeOffPatchPayload: TimeOffEntryPatchRequest? = null
+        private set
+    var lastPreferencesWritePayload: UserPreferencesWrite? = null
+        private set
+    var lastRegisteredFcmToken: String? = null
+        private set
+    var lastUnregisteredFcmToken: String? = null
+        private set
 
-        override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
-            dashboardThrowable?.let { throw it }
-            return response
-        }
-
-        override suspend fun createTask(authorization: String, userId: Int, payload: TaskMutationRequest): TaskRecord {
-            taskThrowable?.let { throw it }
-            return sampleTask(userId = userId, text = payload.text ?: "Task")
-        }
-
-        override suspend fun updateTask(
-            authorization: String,
-            taskId: String,
-            userId: Int,
-            payload: TaskMutationRequest
-        ): TaskRecord {
-            taskThrowable?.let { throw it }
-            return sampleTask(userId = userId, id = taskId, text = payload.text ?: "Task")
-        }
-
-        override suspend fun getRunningTask(authorization: String, userId: Int): Response<TaskRecord> =
-            Response.success(sampleTask(userId = userId))
-
-        override suspend fun listTasks(
-            authorization: String,
-            userId: Int,
-            startDate: String?,
-            endDate: String?
-        ): TaskListResponse {
-            taskThrowable?.let { throw it }
-            return taskListResponse
-        }
-
-        override suspend fun deleteTask(authorization: String, taskId: String, userId: Int) {
-            taskThrowable?.let { throw it }
-        }
-
-        override suspend fun upsertWorkLocation(
-            authorization: String,
-            userId: Int,
-            payload: WorkLocationMutationRequest
-        ): WorkLocationRecord = WorkLocationRecord(
-            id = 1,
-            userId = userId,
-            date = payload.date,
-            countryCode = payload.countryCode.uppercase(),
-            label = payload.label,
-            createdAt = "2026-05-26T12:00:00Z"
-        )
-
-        override suspend fun listWorkLocations(
-            authorization: String,
-            userId: Int,
-            startDate: String?,
-            endDate: String?
-        ): WorkLocationListResponse = WorkLocationListResponse(
-            items = emptyList(),
-            total = 0
-        )
-
-        override suspend fun getWorkLocation(
-            authorization: String,
-            valueDate: String,
-            userId: Int
-        ): Response<WorkLocationRecord> {
-            workLocationThrowable?.let { throw it }
-            if (workLocationNotFound) {
-                return Response.error(404, "".toResponseBody("text/plain".toMediaType()))
-            }
-            return Response.success(
-                WorkLocationRecord(
-                    id = 1,
-                    userId = userId,
-                    date = valueDate,
-                    countryCode = "BE",
-                    label = null,
-                    createdAt = "2026-05-26T12:00:00Z"
-                )
-            )
-        }
-
-        override suspend fun deleteWorkLocation(authorization: String, valueDate: String, userId: Int) {
-            workLocationThrowable?.let { throw it }
-        }
-
-        override suspend fun createLabel(
-            authorization: String,
-            userId: Int,
-            payload: LabelMutationRequest
-        ): LabelRecord {
-            labelThrowable?.let { throw it }
-            return sampleLabel(name = payload.name, color = payload.color)
-        }
-
-        override suspend fun listLabels(authorization: String, userId: Int): LabelListResponse {
-            labelThrowable?.let { throw it }
-            return labelListResponse
-        }
-
-        override suspend fun updateLabel(
-            authorization: String,
-            labelId: String,
-            userId: Int,
-            payload: LabelPatchRequest
-        ): LabelRecord {
-            labelThrowable?.let { throw it }
-            return sampleLabel(id = labelId, name = payload.name ?: "Label")
-        }
-
-        override suspend fun deleteLabel(authorization: String, labelId: String, userId: Int) {
-            labelThrowable?.let { throw it }
-        }
-
-        override suspend fun createTemplate(
-            authorization: String,
-            userId: Int,
-            payload: TemplateMutationRequest
-        ): TemplateRecord {
-            templateThrowable?.let { throw it }
-            return sampleTemplate(text = payload.text)
-        }
-
-        override suspend fun listTemplates(authorization: String, userId: Int): TemplateListResponse {
-            templateThrowable?.let { throw it }
-            return templateListResponse
-        }
-
-        override suspend fun updateTemplate(
-            authorization: String,
-            templateId: String,
-            userId: Int,
-            payload: TemplatePatchRequest
-        ): TemplateRecord {
-            templateThrowable?.let { throw it }
-            return sampleTemplate(id = templateId, text = payload.text ?: "Template")
-        }
-
-        override suspend fun deleteTemplate(authorization: String, templateId: String, userId: Int) {
-            templateThrowable?.let { throw it }
-        }
-
-        override suspend fun upsertTimeOffEntry(
-            authorization: String,
-            payload: TimeOffEntryMutationRequest
-        ): Response<TimeOffEntryRecord> {
-            timeOffThrowable?.let { throw it }
-            return Response.success(sampleTimeOffEntry(entryKind = payload.entryKind, entryType = payload.entryType))
-        }
-
-        override suspend fun listTimeOffEntries(
-            authorization: String,
-            startDate: String?,
-            endDate: String?
-        ): TimeOffEntryListResponse {
-            timeOffThrowable?.let { throw it }
-            return timeOffListResponse
-        }
-
-        override suspend fun getTimeOffEntry(authorization: String, entryId: String): TimeOffEntryRecord {
-            timeOffThrowable?.let { throw it }
-            return sampleTimeOffEntry(entryId = entryId)
-        }
-
-        override suspend fun updateTimeOffEntry(
-            authorization: String,
-            entryId: String,
-            payload: TimeOffEntryPatchRequest
-        ): TimeOffEntryRecord {
-            timeOffThrowable?.let { throw it }
-            lastTimeOffPatchPayload = payload
-            return sampleTimeOffEntry(entryId = entryId, entryType = payload.entryType ?: "vacation")
-        }
-
-        override suspend fun deleteTimeOffEntry(authorization: String, entryId: String) {
-            timeOffThrowable?.let { throw it }
-        }
-
-        override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
-            serverTimestamp = "2026-05-26T12:00:00Z"
-        )
-
-        override suspend fun getPreferences(authorization: String): UserPreferencesRead? = preferencesResponse
-
-        override suspend fun putPreferences(authorization: String, payload: UserPreferencesWrite): UserPreferencesRead {
-            lastPreferencesWritePayload = payload
-            return UserPreferencesRead(data = payload.data)
-        }
-
-        override suspend fun deleteAccount(authorization: String) {
-            deleteAccountThrowable?.let { throw it }
-        }
-
-        override suspend fun registerFcmToken(authorization: String, payload: FcmTokenRequest): FcmTokenResponse {
-            fcmTokenThrowable?.let { throw it }
-            lastRegisteredFcmToken = payload.token
-            return FcmTokenResponse(id = "fcm-token-id")
-        }
-
-        override suspend fun unregisterFcmToken(authorization: String, token: String) {
-            fcmTokenThrowable?.let { throw it }
-            lastUnregisteredFcmToken = token
-        }
+    override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
+        dashboardThrowable?.let { throw it }
+        return response
     }
 
-    private class FakeSessionController(token: String?, private val logoutIntent: android.content.Intent? = null) :
-        SessionController {
-        private var currentToken: String? = token
-        var completeLogoutCallCount = 0
-            private set
-        override val sessionState =
-            MutableStateFlow<SessionState>(
-                if (token == null) SessionState.LoggedOut else SessionState.Authenticated(hasRefreshToken = true)
+    override suspend fun createTask(authorization: String, userId: Int, payload: TaskMutationRequest): TaskRecord {
+        taskThrowable?.let { throw it }
+        return sampleTask(userId = userId, text = payload.text ?: "Task")
+    }
+
+    override suspend fun updateTask(
+        authorization: String,
+        taskId: String,
+        userId: Int,
+        payload: TaskMutationRequest
+    ): TaskRecord {
+        taskThrowable?.let { throw it }
+        return sampleTask(userId = userId, id = taskId, text = payload.text ?: "Task")
+    }
+
+    override suspend fun getRunningTask(authorization: String, userId: Int): Response<TaskRecord> =
+        Response.success(sampleTask(userId = userId))
+
+    override suspend fun listTasks(
+        authorization: String,
+        userId: Int,
+        startDate: String?,
+        endDate: String?
+    ): TaskListResponse {
+        taskThrowable?.let { throw it }
+        return taskListResponse
+    }
+
+    override suspend fun deleteTask(authorization: String, taskId: String, userId: Int) {
+        taskThrowable?.let { throw it }
+    }
+
+    override suspend fun upsertWorkLocation(
+        authorization: String,
+        userId: Int,
+        payload: WorkLocationMutationRequest
+    ): WorkLocationRecord = WorkLocationRecord(
+        id = 1,
+        userId = userId,
+        date = payload.date,
+        countryCode = payload.countryCode.uppercase(),
+        label = payload.label,
+        createdAt = "2026-05-26T12:00:00Z"
+    )
+
+    override suspend fun listWorkLocations(
+        authorization: String,
+        userId: Int,
+        startDate: String?,
+        endDate: String?
+    ): WorkLocationListResponse = WorkLocationListResponse(
+        items = emptyList(),
+        total = 0
+    )
+
+    override suspend fun getWorkLocation(
+        authorization: String,
+        valueDate: String,
+        userId: Int
+    ): Response<WorkLocationRecord> {
+        workLocationThrowable?.let { throw it }
+        if (workLocationNotFound) {
+            return Response.error(404, "".toResponseBody("text/plain".toMediaType()))
+        }
+        return Response.success(
+            WorkLocationRecord(
+                id = 1,
+                userId = userId,
+                date = valueDate,
+                countryCode = "BE",
+                label = null,
+                createdAt = "2026-05-26T12:00:00Z"
             )
+        )
+    }
 
-        override suspend fun createAuthorizationIntent() = throw UnsupportedOperationException()
+    override suspend fun deleteWorkLocation(authorization: String, valueDate: String, userId: Int) {
+        workLocationThrowable?.let { throw it }
+    }
 
-        override suspend fun handleAuthorizationResponse(intent: android.content.Intent?) = Result.success(Unit)
+    override suspend fun createLabel(authorization: String, userId: Int, payload: LabelMutationRequest): LabelRecord {
+        labelThrowable?.let { throw it }
+        return sampleLabel(name = payload.name, color = payload.color)
+    }
 
-        override suspend fun getFreshAccessToken(): String? = currentToken
+    override suspend fun listLabels(authorization: String, userId: Int): LabelListResponse {
+        labelThrowable?.let { throw it }
+        return labelListResponse
+    }
 
-        override suspend fun logout() {
-            currentToken = null
-            sessionState.value = SessionState.LoggedOut
-        }
+    override suspend fun updateLabel(
+        authorization: String,
+        labelId: String,
+        userId: Int,
+        payload: LabelPatchRequest
+    ): LabelRecord {
+        labelThrowable?.let { throw it }
+        return sampleLabel(id = labelId, name = payload.name ?: "Label")
+    }
 
-        override suspend fun buildLogoutIntent(): android.content.Intent? = logoutIntent
+    override suspend fun deleteLabel(authorization: String, labelId: String, userId: Int) {
+        labelThrowable?.let { throw it }
+    }
 
-        override fun completeLogout() {
-            completeLogoutCallCount++
-            currentToken = null
-            sessionState.value = SessionState.LoggedOut
-        }
+    override suspend fun createTemplate(
+        authorization: String,
+        userId: Int,
+        payload: TemplateMutationRequest
+    ): TemplateRecord {
+        templateThrowable?.let { throw it }
+        return sampleTemplate(text = payload.text)
+    }
+
+    override suspend fun listTemplates(authorization: String, userId: Int): TemplateListResponse {
+        templateThrowable?.let { throw it }
+        return templateListResponse
+    }
+
+    override suspend fun updateTemplate(
+        authorization: String,
+        templateId: String,
+        userId: Int,
+        payload: TemplatePatchRequest
+    ): TemplateRecord {
+        templateThrowable?.let { throw it }
+        return sampleTemplate(id = templateId, text = payload.text ?: "Template")
+    }
+
+    override suspend fun deleteTemplate(authorization: String, templateId: String, userId: Int) {
+        templateThrowable?.let { throw it }
+    }
+
+    override suspend fun upsertTimeOffEntry(
+        authorization: String,
+        payload: TimeOffEntryMutationRequest
+    ): Response<TimeOffEntryRecord> {
+        timeOffThrowable?.let { throw it }
+        return Response.success(sampleTimeOffEntry(entryKind = payload.entryKind, entryType = payload.entryType))
+    }
+
+    override suspend fun listTimeOffEntries(
+        authorization: String,
+        startDate: String?,
+        endDate: String?
+    ): TimeOffEntryListResponse {
+        timeOffThrowable?.let { throw it }
+        return timeOffListResponse
+    }
+
+    override suspend fun getTimeOffEntry(authorization: String, entryId: String): TimeOffEntryRecord {
+        timeOffThrowable?.let { throw it }
+        return sampleTimeOffEntry(entryId = entryId)
+    }
+
+    override suspend fun updateTimeOffEntry(
+        authorization: String,
+        entryId: String,
+        payload: TimeOffEntryPatchRequest
+    ): TimeOffEntryRecord {
+        timeOffThrowable?.let { throw it }
+        lastTimeOffPatchPayload = payload
+        return sampleTimeOffEntry(entryId = entryId, entryType = payload.entryType ?: "vacation")
+    }
+
+    override suspend fun deleteTimeOffEntry(authorization: String, entryId: String) {
+        timeOffThrowable?.let { throw it }
+    }
+
+    override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
+        serverTimestamp = "2026-05-26T12:00:00Z"
+    )
+
+    override suspend fun getPreferences(authorization: String): UserPreferencesRead? = preferencesResponse
+
+    override suspend fun putPreferences(authorization: String, payload: UserPreferencesWrite): UserPreferencesRead {
+        lastPreferencesWritePayload = payload
+        return UserPreferencesRead(data = payload.data)
+    }
+
+    override suspend fun deleteAccount(authorization: String) {
+        deleteAccountThrowable?.let { throw it }
+    }
+
+    override suspend fun registerFcmToken(authorization: String, payload: FcmTokenRequest): FcmTokenResponse {
+        fcmTokenThrowable?.let { throw it }
+        lastRegisteredFcmToken = payload.token
+        return FcmTokenResponse(id = "fcm-token-id")
+    }
+
+    override suspend fun unregisterFcmToken(authorization: String, token: String) {
+        fcmTokenThrowable?.let { throw it }
+        lastUnregisteredFcmToken = token
     }
 }
 
-private fun sampleDashboard(): DashboardResponse = DashboardResponse(
+internal class FakeSessionController(token: String?, private val logoutIntent: android.content.Intent? = null) :
+    SessionController {
+    private var currentToken: String? = token
+    var completeLogoutCallCount = 0
+        private set
+    override val sessionState =
+        MutableStateFlow<SessionState>(
+            if (token == null) SessionState.LoggedOut else SessionState.Authenticated(hasRefreshToken = true)
+        )
+
+    override suspend fun createAuthorizationIntent() = throw UnsupportedOperationException()
+
+    override suspend fun handleAuthorizationResponse(intent: android.content.Intent?) = Result.success(Unit)
+
+    override suspend fun getFreshAccessToken(): String? = currentToken
+
+    override suspend fun logout() {
+        currentToken = null
+        sessionState.value = SessionState.LoggedOut
+    }
+
+    override suspend fun buildLogoutIntent(): android.content.Intent? = logoutIntent
+
+    override fun completeLogout() {
+        completeLogoutCallCount++
+        currentToken = null
+        sessionState.value = SessionState.LoggedOut
+    }
+}
+
+internal fun sampleDashboard(): DashboardResponse = DashboardResponse(
     asOf = "2026-05-26T12:00:00Z",
     identity = Identity(id = 1, username = "demo", displayName = "Demo User", isAdmin = false),
     workContext =
@@ -1015,7 +1011,7 @@ private fun sampleTimeOffEntry(
     updatedAt = "2026-05-26T12:00:00Z"
 )
 
-private fun httpException(code: Int): HttpException {
+internal fun httpException(code: Int): HttpException {
     val response = Response.error<String>(code, "".toResponseBody("text/plain".toMediaType()))
     return HttpException(response)
 }

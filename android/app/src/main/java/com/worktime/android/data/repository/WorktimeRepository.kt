@@ -46,6 +46,23 @@ sealed interface DashboardLoadResult {
     data class Error(val message: String) : DashboardLoadResult
 }
 
+/** A dashboard snapshot persisted by [DashboardCache], with the ISO-8601 instant it was cached at. */
+data class CachedDashboard(val dashboard: DashboardResponse, val cachedAt: String)
+
+/**
+ * Durable on-disk read cache for the dashboard read model (#1230), so a cold launch with no
+ * connectivity can render the user's last-known data instead of a bare error. [clear] is suspend
+ * (awaited by every caller) so a subsequent sign-in on a shared device can never observe the
+ * previous account's cached dashboard through an unfinished, fire-and-forget deletion.
+ */
+interface DashboardCache {
+    suspend fun load(): CachedDashboard?
+
+    suspend fun save(dashboard: DashboardResponse, cachedAt: String)
+
+    suspend fun clear()
+}
+
 sealed interface MutationResult<out T> {
     data class Success<T>(val value: T) : MutationResult<T>
 
@@ -92,6 +109,13 @@ interface DashboardRepository {
     val sessionState: StateFlow<SessionState>
 
     suspend fun loadDashboard(): DashboardLoadResult
+
+    /**
+     * The last dashboard snapshot successfully persisted to [DashboardCache], if any — used to
+     * render something meaningful while a fresh [loadDashboard] call is in flight, or instead of
+     * a hard error when it fails. Defaults to no cache for repositories that don't back one.
+     */
+    suspend fun loadCachedDashboard(): CachedDashboard? = null
 
     suspend fun startTimeTracking(text: String, labelId: String? = null): MutationResult<TaskRecord>
 
@@ -181,12 +205,15 @@ interface DashboardRepository {
     suspend fun buildLogoutIntent(): Intent?
 
     /** Clears local session state. Pairs with [buildLogoutIntent] once its flow returns. */
-    fun completeLogout()
+    suspend fun completeLogout()
 }
 
 @Suppress("TooManyFunctions") // implements the single-facade DashboardRepository
-class WorktimeRepository(private val api: WorktimeApi, private val sessionController: SessionController) :
-    DashboardRepository {
+class WorktimeRepository(
+    private val api: WorktimeApi,
+    private val sessionController: SessionController,
+    private val cache: DashboardCache? = null
+) : DashboardRepository {
     override val sessionState: StateFlow<SessionState> = sessionController.sessionState
     private var currentUserId: Int? = null
 
@@ -207,10 +234,14 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         return try {
             val dashboard = api.getDashboard(authorization = "Bearer $token", timezone = timezone)
             currentUserId = dashboard.identity.id
+            // Best-effort: a cache-persistence failure must never turn an already-successful
+            // fetch into a reported error, so it's isolated from this function's own try/catch.
+            cacheDashboard(dashboard)
             DashboardLoadResult.Success(dashboard)
         } catch (error: HttpException) {
             if (error.code() == HTTP_UNAUTHORIZED) {
                 sessionController.logout()
+                cache?.clear()
                 DashboardLoadResult.LoggedOut
             } else {
                 DashboardLoadResult.Error("Unable to load Worktime data (${error.code()})")
@@ -222,6 +253,16 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
             DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
         }
     }
+
+    private suspend fun cacheDashboard(dashboard: DashboardResponse) {
+        try {
+            cache?.save(dashboard, OffsetDateTime.now(ZoneOffset.UTC).toString())
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+        }
+    }
+
+    override suspend fun loadCachedDashboard(): CachedDashboard? = cache?.load()
 
     override suspend fun startTimeTracking(text: String, labelId: String?): MutationResult<TaskRecord> {
         val now = OffsetDateTime.now(ZoneOffset.UTC).toString()
@@ -492,6 +533,7 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
         api.deleteAccount(authorization = "Bearer $token")
         sessionController.logout()
         currentUserId = null
+        cache?.clear()
     }
 
     override suspend fun registerFcmToken(token: String): MutationResult<Unit> = withAuthorizedToken<Unit> {
@@ -504,9 +546,10 @@ class WorktimeRepository(private val api: WorktimeApi, private val sessionContro
 
     override suspend fun buildLogoutIntent(): Intent? = sessionController.buildLogoutIntent()
 
-    override fun completeLogout() {
+    override suspend fun completeLogout() {
         sessionController.completeLogout()
         currentUserId = null
+        cache?.clear()
     }
 
     private fun mapHttpError(error: HttpException, conflictMessage: String? = null): MutationResult<Nothing> =

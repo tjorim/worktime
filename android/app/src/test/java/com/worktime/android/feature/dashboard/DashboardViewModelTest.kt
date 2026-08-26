@@ -17,6 +17,7 @@ import com.worktime.android.data.model.TimeOffEntryRecord
 import com.worktime.android.data.model.TimeOffSummary
 import com.worktime.android.data.model.WorkContext
 import com.worktime.android.data.model.WorkLocationRecord
+import com.worktime.android.data.repository.CachedDashboard
 import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
@@ -112,6 +113,49 @@ class DashboardViewModelTest {
         gate.complete(Unit)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+    }
+
+    @Test
+    fun showsCachedDashboardAsStaleWhileFetchingFreshDataOnColdStart() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val cached = CachedDashboard(sampleDashboard(), cachedAt = "2026-05-26T10:00:00Z")
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                gate = gate,
+                cachedDashboardResult = cached
+            )
+
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is DashboardUiState.Success)
+        assertEquals("2026-05-26T10:00:00Z", (state as DashboardUiState.Success).staleAsOf)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        val finalState = viewModel.uiState.value
+        assertTrue(finalState is DashboardUiState.Success)
+        assertEquals(null, (finalState as DashboardUiState.Success).staleAsOf)
+    }
+
+    @Test
+    fun keepsShowingCachedDashboardWhenTheRefreshFails() = runTest(dispatcher) {
+        val cached = CachedDashboard(sampleDashboard(), cachedAt = "2026-05-26T10:00:00Z")
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Error("Unable to reach the Worktime backend"),
+                cachedDashboardResult = cached
+            )
+
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is DashboardUiState.Success)
+        assertEquals("2026-05-26T10:00:00Z", (state as DashboardUiState.Success).staleAsOf)
     }
 
     @Test
@@ -357,6 +401,7 @@ class DashboardViewModelTest {
     private class FakeDashboardRepository(
         private val result: DashboardLoadResult,
         private val gate: CompletableDeferred<Unit>? = null,
+        private val cachedDashboardResult: CachedDashboard? = null,
         private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
         private val listLabelsResult: MutationResult<List<LabelRecord>> = MutationResult.Success(emptyList()),
         private val listTemplatesResult: MutationResult<List<TemplateRecord>> = MutationResult.Success(emptyList()),
@@ -397,9 +442,11 @@ class DashboardViewModelTest {
             return result
         }
 
+        override suspend fun loadCachedDashboard(): CachedDashboard? = cachedDashboardResult
+
         override suspend fun buildLogoutIntent(): Intent? = logoutIntentResult
 
-        override fun completeLogout() {
+        override suspend fun completeLogout() {
             completeLogoutCallCount++
             sessionState.value = SessionState.LoggedOut
         }
