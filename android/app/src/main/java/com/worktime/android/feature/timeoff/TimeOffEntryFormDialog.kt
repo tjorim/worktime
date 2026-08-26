@@ -22,6 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -117,6 +120,37 @@ private class TimeOffFormFieldsState(existingEntry: TimeOffEntryRecord?) {
             }
             EntryKindOption.WEEKLY -> TimeOffDraft.Weekly(weekday, entryType, entryFlag, note.ifBlank { null })
         }
+
+    companion object {
+        /** Persists the form fields (not [existingEntry] itself) across recreation. */
+        val Saver: Saver<TimeOffFormFieldsState, *> =
+            listSaver(
+                save = { state ->
+                    listOf(
+                        state.entryKind.name,
+                        state.singleDate?.toString(),
+                        state.rangeStart?.toString(),
+                        state.rangeEnd?.toString(),
+                        state.weekday,
+                        state.entryType,
+                        state.entryFlag,
+                        state.note
+                    )
+                },
+                restore = { saved ->
+                    TimeOffFormFieldsState(existingEntry = null).apply {
+                        entryKind = EntryKindOption.valueOf(saved[0] as String)
+                        singleDate = (saved[1] as String?)?.let(LocalDate::parse)
+                        rangeStart = (saved[2] as String?)?.let(LocalDate::parse)
+                        rangeEnd = (saved[3] as String?)?.let(LocalDate::parse)
+                        weekday = saved[4] as Int
+                        entryType = saved[5] as String
+                        entryFlag = saved[6] as String
+                        note = saved[7] as String
+                    }
+                }
+            )
+    }
 }
 
 @Composable
@@ -127,7 +161,10 @@ fun TimeOffEntryFormDialog(
     onDismiss: () -> Unit,
     onSubmit: (TimeOffDraft) -> Unit
 ) {
-    val formState = remember(existingEntry?.entryId) { TimeOffFormFieldsState(existingEntry) }
+    val formState =
+        rememberSaveable(existingEntry?.entryId, saver = TimeOffFormFieldsState.Saver) {
+            TimeOffFormFieldsState(existingEntry)
+        }
     val draft = formState.draft
 
     AlertDialog(

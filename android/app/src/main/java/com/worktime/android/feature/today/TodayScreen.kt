@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +41,7 @@ import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
 import com.worktime.android.ui.components.DatePickerField
+import com.worktime.android.ui.components.LocalDateSaver
 import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
@@ -91,13 +93,15 @@ fun TodayScreen(
     onCreateLabel: (String, String) -> Unit
 ) {
     ReadModelScreen(title = "Today", uiState = uiState, onRetry = onRetry) { dashboard ->
-        var taskText by remember(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.text ?: "") }
-        var taskLabelId by remember(actionsState.runningTask) {
-            mutableStateOf(actionsState.runningTask?.labelId ?: "")
-        }
-        var workLocationDate by remember { mutableStateOf(LocalDate.now()) }
-        var countryCode by remember { mutableStateOf("") }
-        var workLocationLabel by remember { mutableStateOf("") }
+        var taskText by
+            rememberSaveable(actionsState.runningTask) { mutableStateOf(actionsState.runningTask?.text ?: "") }
+        var taskLabelId by
+            rememberSaveable(actionsState.runningTask) {
+                mutableStateOf(actionsState.runningTask?.labelId ?: "")
+            }
+        var workLocationDate by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(LocalDate.now()) }
+        var countryCode by rememberSaveable { mutableStateOf("") }
+        var workLocationLabel by rememberSaveable { mutableStateOf("") }
         val defaultCountryCode =
             remember {
                 Locale.getDefault().country.takeIf { it.length == 2 } ?: DEFAULT_COUNTRY_CODE
@@ -245,7 +249,7 @@ private fun WorkLocationCard(
     onEditWorkLocation: (WorkLocationRecord) -> Unit,
     onDeleteWorkLocation: (WorkLocationRecord) -> Unit
 ) {
-    var showOtherFields by remember { mutableStateOf(false) }
+    var showOtherFields by rememberSaveable { mutableStateOf(false) }
 
     SummaryCard(title = "Work location") {
         content {
@@ -401,7 +405,7 @@ private fun LabelPickerField(
     onCreateLabel: (String, String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var showCreateDialog by remember { mutableStateOf(false) }
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     val selectedLabel = labels.firstOrNull { it.id == selectedLabelId }
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
@@ -456,8 +460,8 @@ private fun LabelPickerField(
 
 @Composable
 private fun NewLabelDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf(PRESET_LABEL_COLORS.first()) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var selectedColor by rememberSaveable { mutableStateOf(PRESET_LABEL_COLORS.first()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

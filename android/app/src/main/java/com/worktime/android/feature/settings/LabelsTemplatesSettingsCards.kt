@@ -24,7 +24,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -66,8 +65,9 @@ fun LabelManagementCard(
     onUpdateLabel: (String, String, String) -> Unit,
     onDeleteLabel: (String) -> Unit
 ) {
-    var dialogTarget by remember { mutableStateOf<LabelRecord?>(null) }
+    var dialogTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+    val dialogTarget = labels.firstOrNull { it.id == dialogTargetId }
 
     SummaryCard(title = "Labels") {
         content {
@@ -79,7 +79,7 @@ fun LabelManagementCard(
                         LabelRow(
                             label = label,
                             isSubmitting = isSubmitting,
-                            onEdit = { dialogTarget = label },
+                            onEdit = { dialogTargetId = label.id },
                             onDelete = { onDeleteLabel(label.id) }
                         )
                     }
@@ -104,10 +104,10 @@ fun LabelManagementCard(
     dialogTarget?.let { label ->
         LabelDialog(
             label = label,
-            onDismiss = { dialogTarget = null },
+            onDismiss = { dialogTargetId = null },
             onSave = { name, color ->
                 onUpdateLabel(label.id, name, color)
-                dialogTarget = null
+                dialogTargetId = null
             }
         )
     }
@@ -122,8 +122,9 @@ fun TemplateManagementCard(
     onUpdateTemplate: (String, String, String?, LocalTime, LocalTime) -> Unit,
     onDeleteTemplate: (String) -> Unit
 ) {
-    var dialogTarget by remember { mutableStateOf<TemplateRecord?>(null) }
+    var dialogTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+    val dialogTarget = templates.firstOrNull { it.id == dialogTargetId }
 
     SummaryCard(title = "Templates") {
         content {
@@ -136,7 +137,7 @@ fun TemplateManagementCard(
                             template = template,
                             labelName = labels.firstOrNull { it.id == template.labelId }?.name,
                             isSubmitting = isSubmitting,
-                            onEdit = { dialogTarget = template },
+                            onEdit = { dialogTargetId = template.id },
                             onDelete = { onDeleteTemplate(template.id) }
                         )
                     }
@@ -163,10 +164,10 @@ fun TemplateManagementCard(
         TemplateDialog(
             labels = labels,
             template = template,
-            onDismiss = { dialogTarget = null },
+            onDismiss = { dialogTargetId = null },
             onSave = { text, labelId, startTime, stopTime ->
                 onUpdateTemplate(template.id, text, labelId, startTime, stopTime)
-                dialogTarget = null
+                dialogTargetId = null
             }
         )
     }
@@ -222,8 +223,8 @@ private fun TemplateRow(
 
 @Composable
 private fun LabelDialog(label: LabelRecord?, onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
-    var name by remember(label) { mutableStateOf(label?.name ?: "") }
-    var selectedColor by remember(label) { mutableStateOf(label?.color ?: PRESET_LABEL_COLORS.first()) }
+    var name by rememberSaveable(label) { mutableStateOf(label?.name ?: "") }
+    var selectedColor by rememberSaveable(label) { mutableStateOf(label?.color ?: PRESET_LABEL_COLORS.first()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -260,10 +261,10 @@ private fun TemplateDialog(
     onDismiss: () -> Unit,
     onSave: (String, String?, LocalTime, LocalTime) -> Unit
 ) {
-    var text by remember(template) { mutableStateOf(template?.text ?: "") }
-    var labelId by remember(template) { mutableStateOf(template?.labelId ?: "") }
-    var startTimeText by remember(template) { mutableStateOf(template?.startTime?.take(5) ?: "09:00") }
-    var stopTimeText by remember(template) { mutableStateOf(template?.stopTime?.take(5) ?: "17:00") }
+    var text by rememberSaveable(template) { mutableStateOf(template?.text ?: "") }
+    var labelId by rememberSaveable(template) { mutableStateOf(template?.labelId ?: "") }
+    var startTimeText by rememberSaveable(template) { mutableStateOf(template?.startTime?.take(5) ?: "09:00") }
+    var stopTimeText by rememberSaveable(template) { mutableStateOf(template?.stopTime?.take(5) ?: "17:00") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
     AlertDialog(

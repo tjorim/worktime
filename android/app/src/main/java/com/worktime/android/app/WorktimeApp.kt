@@ -60,7 +60,12 @@ import com.worktime.android.ui.theme.WorktimeTheme
 import kotlinx.coroutines.launch
 
 @Composable
-fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = WorktimeDestination.Today.route) {
+fun WorktimeApp(
+    container: WorktimeAppContainer,
+    initialDestination: String = WorktimeDestination.Today.route,
+    pendingDestination: String? = null,
+    onPendingDestinationConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val notifications = remember { WorktimeNotifications(context) }
     val reminderScheduler = remember { ReminderScheduler(context.applicationContext) }
@@ -239,6 +244,8 @@ fun WorktimeApp(container: WorktimeAppContainer, initialDestination: String = Wo
                     appConfig = container.appConfig,
                     oidcConfig = container.oidcConfig,
                     initialDestination = initialDestination,
+                    pendingDestination = pendingDestination,
+                    onPendingDestinationConsumed = onPendingDestinationConsumed,
                     notificationPreferences = notificationPreferences,
                     apiBaseUrlOverride = apiBaseUrlOverride,
                     onApiBaseUrlOverrideSave = { url ->
@@ -307,6 +314,8 @@ private fun WorktimeAuthenticatedScaffold(
     appConfig: com.worktime.android.core.config.AppConfig,
     oidcConfig: com.worktime.android.core.auth.OidcConfig,
     initialDestination: String,
+    pendingDestination: String?,
+    onPendingDestinationConsumed: () -> Unit,
     notificationPreferences: NotificationPreferences,
     apiBaseUrlOverride: String?,
     onApiBaseUrlOverrideSave: (String) -> Unit,
@@ -346,6 +355,23 @@ private fun WorktimeAuthenticatedScaffold(
             ?: WorktimeDestination.Today.route
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: WorktimeDestination.Today.route
+
+    // A notification tap while the app is already running (MainActivity.onNewIntent) requests a
+    // destination without recreating the Activity, so unsaved form/dialog state elsewhere in the
+    // tree survives (#1229). Navigate to it here, once, then let the Activity clear the request.
+    LaunchedEffect(pendingDestination, navController) {
+        val destination = pendingDestination ?: return@LaunchedEffect
+        if (destinations.any { it.route == destination }) {
+            navController.navigate(destination) {
+                launchSingleTop = true
+                restoreState = true
+                popUpTo(navController.graph.startDestinationId) {
+                    saveState = true
+                }
+            }
+        }
+        onPendingDestinationConsumed()
+    }
 
     Scaffold(
         bottomBar = {
