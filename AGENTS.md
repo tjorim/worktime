@@ -145,13 +145,6 @@ unfamiliar branch's existing commits:
   before changing anything. Don't "fix" a conflict by repointing the base to
   whatever branch happens to be conflict-free — that hides the mismatch
   instead of resolving it.
-- A session's designated branch can already have commits and an open PR from
-  earlier, unrelated work (a different issue) when that PR hasn't merged yet.
-  This is expected, not a mistake to undo: keep developing on the same branch
-  — don't reset it to `main` or start a new branch — and let the new commits
-  land in the existing PR rather than opening a second one for the same
-  branch. Update the PR title/description if it now covers more than its
-  original scope.
 
 ## Conventions
 
