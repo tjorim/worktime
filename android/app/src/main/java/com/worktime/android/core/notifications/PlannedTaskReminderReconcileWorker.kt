@@ -23,7 +23,7 @@ class PlannedTaskReminderReconcileWorker(appContext: Context, params: WorkerPara
     CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as? WorktimeAndroidApplication)?.container ?: return Result.failure()
-        val succeeded =
+        val outcome =
             runCatching {
                 val preferences = container.notificationPreferencesStore.preferences.first()
                 reconcilePlannedTaskReminder(
@@ -32,8 +32,14 @@ class PlannedTaskReminderReconcileWorker(appContext: Context, params: WorkerPara
                     plannedTasksEnabled = preferences.plannedTasksEnabled,
                     timersEnabled = preferences.timeTrackingEnabled
                 )
-            }.onFailure { Log.w(TAG, "Wake-ping reconcile failed (non-fatal)", it) }.getOrDefault(false)
-        return if (succeeded) Result.success() else Result.failure()
+            }.onFailure { Log.w(TAG, "Wake-ping reconcile failed (non-fatal)", it) }.getOrNull()
+        // FetchFailed retries (a transient network/backend error may well succeed next time);
+        // LoggedOut and an unexpected exception (null here) are terminal -- no retry fixes those.
+        return when (outcome) {
+            ReconcileOutcome.Reconciled -> Result.success()
+            ReconcileOutcome.FetchFailed -> Result.retry()
+            ReconcileOutcome.LoggedOut, null -> Result.failure()
+        }
     }
 
     // Below Android S, WorkManager runs expedited work as a foreground service, which crashes at

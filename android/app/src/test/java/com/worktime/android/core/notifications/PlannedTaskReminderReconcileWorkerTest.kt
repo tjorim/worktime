@@ -76,6 +76,20 @@ class PlannedTaskReminderReconcileWorkerTest {
     }
 
     @Test
+    fun `doWork retries when the dashboard fetch fails transiently`() = runTest {
+        val repository = mockk<WorktimeRepository>()
+        coEvery { repository.loadDashboard() } returns
+            DashboardLoadResult.Error("Unable to reach the Worktime backend")
+        val worker =
+            buildWorker(repository, NotificationPreferences(plannedTasksEnabled = true, timeTrackingEnabled = true))
+
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.retry(), result)
+        coVerify(exactly = 0) { repository.getRunningTask() }
+    }
+
+    @Test
     fun `doWork succeeds when the reconcile fetch succeeds`() = runTest {
         val repository = mockk<WorktimeRepository>()
         coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard())

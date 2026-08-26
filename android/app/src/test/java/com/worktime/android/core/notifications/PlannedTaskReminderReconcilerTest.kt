@@ -17,8 +17,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PlannedTaskReminderReconcilerTest {
@@ -45,7 +44,7 @@ class PlannedTaskReminderReconcilerTest {
                 timersEnabled = false
             )
 
-        assertTrue(result)
+        assertEquals(ReconcileOutcome.Reconciled, result)
         verify {
             reminderScheduler.reconcile(
                 accountId = 42,
@@ -69,7 +68,7 @@ class PlannedTaskReminderReconcilerTest {
                 timersEnabled = true
             )
 
-        assertFalse(result)
+        assertEquals(ReconcileOutcome.LoggedOut, result)
         coVerify(exactly = 0) { repository.getRunningTask() }
         verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
     }
@@ -86,7 +85,7 @@ class PlannedTaskReminderReconcilerTest {
                 timersEnabled = true
             )
 
-        assertFalse(result)
+        assertEquals(ReconcileOutcome.FetchFailed, result)
         verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
     }
 
@@ -109,7 +108,7 @@ class PlannedTaskReminderReconcilerTest {
                 timersEnabled = true
             )
 
-        assertFalse(result)
+        assertEquals(ReconcileOutcome.FetchFailed, result)
         verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
     }
 
@@ -128,7 +127,7 @@ class PlannedTaskReminderReconcilerTest {
                 timersEnabled = true
             )
 
-        assertFalse(result)
+        assertEquals(ReconcileOutcome.FetchFailed, result)
         verify(exactly = 0) { reminderScheduler.reconcile(any(), any(), any(), any(), any()) }
     }
 
@@ -146,7 +145,7 @@ class PlannedTaskReminderReconcilerTest {
                 timersEnabled = true
             )
 
-        assertTrue(result)
+        assertEquals(ReconcileOutcome.Reconciled, result)
         verify {
             reminderScheduler.reconcile(
                 accountId = 7,
