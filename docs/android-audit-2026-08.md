@@ -33,7 +33,7 @@ verified without a device.
 | Critical | Kill the process after loading Today; no receiver or alarm existed and notification calls were inside `WorktimeApp`'s `LaunchedEffect`. | Shift and stale timer reminders could not fire closed-app. | **Fixed** (#1191): persisted `ReminderScheduler` (`core/notifications/ReminderScheduler.kt`), `ReminderReceiver`/`ReminderRestoreReceiver`, and account validation. Shift reminders are recomputed from stored shift date and start time after timezone changes. |
 | High | Change account after an alarm was calculated. The previous in-memory dedupe key had no account identity. | A future implementation could leak a prior account's reminder. | **Fixed**: `ReminderScheduler.reconcile()` cancels on identity change (`ReminderScheduler.kt:31-34`), logout clears state, `ReminderReceiver.onReceive` validates the stored account id before showing anything (`ReminderScheduler.kt:215-230`). |
 | High | Deny exact-alarm capability on Android 12+. | Exact scheduling had no degradation path. | **Fixed**: `set()` uses `setExactAndAllowWhileIdle` when available, otherwise `setAndAllowWhileIdle` (`ReminderScheduler.kt:139-153`). Notification-permission denial is a safe no-op (`WorktimeNotifications.kt:92-96`). |
-| High | Rotate the device while a time-off entry, label, or template dialog is open, or tap a reminder notification while one is open. | Rotation and `MainActivity.onNewIntent`'s unconditional `recreate()` (`MainActivity.kt:24-28`) both destroy and recreate the Activity; no `android:configChanges` is declared in `AndroidManifest.xml`. Several editable dialogs hold their field state in plain `remember`/class-backed `mutableStateOf` instead of `rememberSaveable`, so this silently discards whatever the user was typing — in some cases (`LabelManagementCard`'s `dialogTarget`, `LabelsTemplatesSettingsCards.kt:69`) it closes the edit dialog outright while a sibling flag on the same screen (`showCreateDialog`, line 70) survives, an inconsistency that makes the bug easy to miss in a quick read. | Follow-up: #1229. Also affects `TodayScreen.kt`'s inline task/work-location fields (lines 94-100) and all of `TimeOffEntryFormDialog.kt`'s `TimeOffFormFieldsState` (lines 81-119). |
+| High | Rotate the device while a time-off entry, label, or template dialog is open, or tap a reminder notification while one is open. | Rotation and `MainActivity.onNewIntent`'s unconditional `recreate()` both destroyed and recreated the Activity; no `android:configChanges` was declared in `AndroidManifest.xml`. Several editable dialogs held their field state in plain `remember`/class-backed `mutableStateOf` instead of `rememberSaveable`, so this silently discarded whatever the user was typing — in some cases (`LabelManagementCard`'s `dialogTarget`) it closed the edit dialog outright while a sibling flag on the same screen (`showCreateDialog`) survived, an inconsistency that made the bug easy to miss in a quick read. | **Fixed** (#1229, #1238): `MainActivity.onNewIntent` no longer calls `recreate()` — it hands the requested destination to `WorktimeApp` as Compose state, which navigates via the existing `NavController`. The affected fields in `TodayScreen.kt`, `LabelsTemplatesSettingsCards.kt`, and `TimeOffEntryFormDialog.kt` (`TimeOffFormFieldsState`, via a `listSaver`) are now `rememberSaveable`. |
 | Medium | Inspect `WorkLocationChipsRow` and the label color pickers. | The work-location chip's delete control is a raw `Text("✕")` in a bare `.clickable{}`, nested inside the chip's own `onClick`, with no `contentDescription` and a sub-48dp target (`TodayScreen.kt:363-372`). Label color swatches in `NewLabelDialog` (`TodayScreen.kt:471-486`) and `ColorPicker` (`LabelsTemplatesSettingsCards.kt:356-370`) convey selection only via a 2dp border, with no semantics and a 32dp target. | Follow-up: #1232. |
 | Medium | Disable connectivity and cold-launch. | `WorktimeRepository` has no caching layer (`data/repository/WorktimeRepository.kt`); a failed fetch is `DashboardLoadResult.Error`, and `ReadModelScreen` has no distinct offline/stale-data rendering, only Loading/LoggedOut/Error/Success. | Follow-up: #1230 (durable last-known-dashboard cache with an explicit Offline/Stale banner). |
 | Medium | Enable large font and TalkBack; inspect dense Today and Settings controls. | Material controls provide baseline semantics, but screen headings, grouped card semantics, focus order, and 200% text layout are not device-tested. | Follow-up: #1237 (execute the device/TalkBack capture pass) and #1231 (test harness to anchor it in CI going forward). |
@@ -64,7 +64,7 @@ release operations.
 |---|---|---|---|
 | Today/current status and timer actions | Full | Native cards and actions | Required parity; keep native card/action layout. |
 | Upcoming shifts and team status | Full | Read-only destinations, uncolored | Required parity, **including shift-type color coding** (see #1233) — currently a real gap, not a native-pattern deferral. |
-| Time off | Summary and editing | Summary and form | Required parity; use native date pickers/dialogs (fix state loss on rotate, #1229). |
+| Time off | Summary and editing | Summary and form | Required parity; use native date pickers/dialogs (state loss on rotate fixed, #1229). |
 | Labels/templates and work location | Full | Settings/actions | Required parity where mobile workflows benefit. |
 | Gantt, transfer, calendar power views | Full | Absent | Deliberately web-only until a mobile use case is approved. |
 | Account/API settings | Full | Focused native settings | Native pattern; do not reproduce desktop sections. |
@@ -138,8 +138,8 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
 
 1. **P0 – reliable reminders (#1191, closed):** persisted alarms, lifecycle triggers,
    permission degradation, dedupe, account isolation, and tests. Done.
-2. **P1 – state restoration (#1229):** stop discarding unsaved dialog/form input on rotation
-   and on the notification-tap `recreate()` path.
+2. **P1 – state restoration (#1229, closed):** stop discarding unsaved dialog/form input on
+   rotation and on the notification-tap `recreate()` path. Done.
 3. **P1 – offline truth (#1230):** durable read cache, stale age, connectivity transitions,
    and reconciliation tests.
 4. **P1 – accessibility/device harness (#1231, #1232, #1237):** fix the two concrete
@@ -160,7 +160,8 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
 
 ## Follow-up issues filed from this audit
 
-- #1229 — rotation/notification-tap discards unsaved dialog and form input (High)
+- #1229 — rotation/notification-tap discards unsaved dialog and form input (High, **closed**
+  by #1238)
 - #1230 — no durable offline read cache or explicit offline/stale UI state (Medium)
 - #1231 — no Compose UI, instrumented, or accessibility test coverage in CI (Medium)
 - #1232 — color-only and unlabeled tap targets fail accessibility (Medium); also carries the
