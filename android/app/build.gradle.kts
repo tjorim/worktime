@@ -301,6 +301,7 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.androidx.work.runtime.ktx)
 
     debugImplementation(libs.compose.ui.tooling)
 
@@ -312,6 +313,7 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.mockk)
     testImplementation(libs.json)
+    testImplementation(libs.androidx.work.testing)
 }
 
 detekt {

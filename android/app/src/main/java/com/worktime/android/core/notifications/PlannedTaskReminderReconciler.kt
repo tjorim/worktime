@@ -14,10 +14,10 @@ import kotlinx.coroutines.coroutineScope
  * [reminderScheduler]'s local alarm via [ReminderScheduler.reconcile].
  *
  * Shared by [com.worktime.android.feature.dashboard.DashboardViewModel]'s foreground refresh
- * (indirectly, via [fetchPlannedTask]) and [WorktimeFirebaseMessagingService]'s background wake
- * (directly, since a Service has no ViewModel/Compose state to read already-fetched data from) --
+ * (indirectly, via [fetchPlannedTask]) and [PlannedTaskReminderReconcileWorker]'s background wake
+ * (directly, since a Worker has no ViewModel/Compose state to read already-fetched data from) --
  * a background wake has nothing cached to reuse, so it always fetches fresh. One shared code path
- * means both cases schedule the reminder identically. See #1205.
+ * means both cases schedule the reminder identically. See #1205, #1225.
  *
  * Returns false without touching [reminderScheduler] when there's no session to fetch with
  * (logged out) or either fetch failed. This must never call [ReminderScheduler.reconcile] on a
