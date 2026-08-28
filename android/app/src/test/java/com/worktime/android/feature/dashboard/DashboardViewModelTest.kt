@@ -3,6 +3,7 @@ package com.worktime.android.feature.dashboard
 import android.content.Intent
 import app.cash.turbine.test
 import com.worktime.android.core.auth.SessionState
+import com.worktime.android.core.network.ConnectivityObserver
 import com.worktime.android.data.model.CurrentStatus
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.FeatureFlags
@@ -28,6 +29,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -307,6 +310,61 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun refreshActionsCoalescesOverlappingCallsToTheLatestResult() = runTest(dispatcher) {
+        val staleCallGate = CompletableDeferred<Unit>()
+        var listLabelsCallCount = 0
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                listLabelsProvider = {
+                    listLabelsCallCount++
+                    if (listLabelsCallCount == 1) {
+                        // The first (stale) call never resolves before it's cancelled below --
+                        // if it were still applied afterwards, this test would see "Stale" win.
+                        staleCallGate.await()
+                        MutationResult.Success(listOf(sampleLabel().copy(name = "Stale")))
+                    } else {
+                        MutationResult.Success(listOf(sampleLabel().copy(name = "Fresh")))
+                    }
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle() // init's refresh() starts refreshActions(), which blocks on staleCallGate
+
+        viewModel.refreshActions() // overlapping call: cancels the first, in-flight one
+        advanceUntilIdle()
+
+        assertEquals("Fresh", viewModel.actionsState.value.labels.single().name)
+
+        staleCallGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals("Fresh", viewModel.actionsState.value.labels.single().name)
+    }
+
+    @Test
+    fun reconcilesWhenConnectivityReturnsAfterBeingOffline() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val connectivityObserver = FakeConnectivityObserver()
+        val viewModel = DashboardViewModel(repository, connectivityObserver)
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+
+        connectivityObserver.emit(true) // the observer's initial status report, not a reconnect
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+
+        connectivityObserver.emit(false)
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+
+        connectivityObserver.emit(true) // regained connectivity
+        advanceUntilIdle()
+        assertEquals(2, repository.loadDashboardCallCount)
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+    }
+
+    @Test
     fun createLabelSurfacesConflictMessage() = runTest(dispatcher) {
         val repository =
             FakeDashboardRepository(
@@ -404,6 +462,7 @@ class DashboardViewModelTest {
         private val cachedDashboardResult: CachedDashboard? = null,
         private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
         private val listLabelsResult: MutationResult<List<LabelRecord>> = MutationResult.Success(emptyList()),
+        private val listLabelsProvider: (suspend () -> MutationResult<List<LabelRecord>>)? = null,
         private val listTemplatesResult: MutationResult<List<TemplateRecord>> = MutationResult.Success(emptyList()),
         private val workLocationPreferencesResult: MutationResult<WorkLocationPreferences> =
             MutationResult.Success(WorkLocationPreferences()),
@@ -436,8 +495,11 @@ class DashboardViewModelTest {
             private set
         var deletedTemplateId: String? = null
             private set
+        var loadDashboardCallCount = 0
+            private set
 
         override suspend fun loadDashboard(): DashboardLoadResult {
+            loadDashboardCallCount++
             gate?.await()
             return result
         }
@@ -507,7 +569,8 @@ class DashboardViewModelTest {
 
         override suspend fun createLabel(name: String, color: String): MutationResult<LabelRecord> = createLabelResult
 
-        override suspend fun listLabels(): MutationResult<List<LabelRecord>> = listLabelsResult
+        override suspend fun listLabels(): MutationResult<List<LabelRecord>> =
+            listLabelsProvider?.invoke() ?: listLabelsResult
 
         override suspend fun updateLabel(labelId: String, name: String?, color: String?): MutationResult<LabelRecord> {
             updatedLabelId = labelId
@@ -573,6 +636,15 @@ class DashboardViewModelTest {
         override suspend fun registerFcmToken(token: String): MutationResult<Unit> = MutationResult.Success(Unit)
 
         override suspend fun unregisterFcmToken(token: String): MutationResult<Unit> = MutationResult.Success(Unit)
+    }
+
+    private class FakeConnectivityObserver : ConnectivityObserver {
+        private val flow = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 8)
+        override val isOnline: Flow<Boolean> = flow
+
+        fun emit(online: Boolean) {
+            flow.tryEmit(online)
+        }
     }
 }
 
