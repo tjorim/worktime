@@ -89,7 +89,7 @@ fun WorktimeApp(
 
     val dashboardViewModel: DashboardViewModel =
         viewModel(
-            factory = DashboardViewModel.factory(container.dashboardRepository)
+            factory = DashboardViewModel.factory(container.dashboardRepository, container.connectivityObserver)
         )
     val uiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
     val actionsState by dashboardViewModel.actionsState.collectAsStateWithLifecycle()

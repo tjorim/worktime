@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.worktime.android.core.network.ConnectivityObserver
 import com.worktime.android.core.notifications.fetchPlannedTask
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.LabelRecord
@@ -21,12 +22,14 @@ import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 sealed interface DashboardUiState {
@@ -61,7 +64,10 @@ data class MobileActionsUiState(
 )
 
 @Suppress("TooManyFunctions") // one view model facade for all mobile dashboard actions
-class DashboardViewModel(private val repository: DashboardRepository) : ViewModel() {
+class DashboardViewModel(
+    private val repository: DashboardRepository,
+    connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled
+) : ViewModel() {
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private val _actionsState = MutableStateFlow(MobileActionsUiState())
@@ -70,7 +76,13 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     /** Emits the provider end-session intent for the UI to launch via an activity result launcher. */
     val logoutIntent: SharedFlow<Intent> = _logoutIntent.asSharedFlow()
+
+    // Both jobs use a cancel-and-replace (latest-wins) pattern so overlapping triggers -- pull to
+    // refresh, post-mutation submitMutation(), app-open, and now the connectivity reconcile below
+    // -- coalesce into one in-flight request per kind instead of racing independent network calls
+    // that write _uiState/_actionsState in whatever order their responses happen to land (#1235).
     private var refreshJob: Job? = null
+    private var actionsJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -81,6 +93,13 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
             }
         }
         refresh()
+        viewModelScope.launch {
+            connectivityObserver.isOnline
+                // The first emission is the observer reporting current status, not a reconnect --
+                // refresh() above already covers cold start. Only react to genuine transitions.
+                .drop(1)
+                .collect { online -> if (online) refresh() }
+        }
     }
 
     fun refresh() {
@@ -118,61 +137,67 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
     }
 
     fun refreshActions() {
-        viewModelScope.launch {
-            val runningTaskDeferred =
-                async {
-                    when (val result = repository.getRunningTask()) {
-                        is MutationResult.Success -> result.value
-                        else -> null
-                    }
+        actionsJob?.cancel()
+        actionsJob =
+            viewModelScope.launch {
+                refreshActionsNow()
+            }
+    }
+
+    private suspend fun refreshActionsNow() = coroutineScope {
+        val runningTaskAsync =
+            async {
+                when (val result = repository.getRunningTask()) {
+                    is MutationResult.Success -> result.value
+                    else -> null
                 }
-            val plannedTaskDeferred = async { fetchPlannedTask(repository) }
-            val weeklyLocationsDeferred =
-                async {
-                    when (val result = repository.loadWeeklyWorkLocations()) {
-                        is MutationResult.Success -> result.value
-                        else -> emptyList()
-                    }
+            }
+        val plannedTaskAsync = async { fetchPlannedTask(repository) }
+        val weeklyLocationsAsync =
+            async {
+                when (val result = repository.loadWeeklyWorkLocations()) {
+                    is MutationResult.Success -> result.value
+                    else -> emptyList()
                 }
-            val syncStatusDeferred =
-                async {
-                    when (val result = repository.loadSyncStatus()) {
-                        is MutationResult.Success -> result.value
-                        else -> null
-                    }
+            }
+        val syncStatusAsync =
+            async {
+                when (val result = repository.loadSyncStatus()) {
+                    is MutationResult.Success -> result.value
+                    else -> null
                 }
-            val workLocationPreferencesDeferred =
-                async {
-                    when (val result = repository.loadWorkLocationPreferences()) {
-                        is MutationResult.Success -> result.value
-                        else -> WorkLocationPreferences()
-                    }
+            }
+        val workLocationPreferencesAsync =
+            async {
+                when (val result = repository.loadWorkLocationPreferences()) {
+                    is MutationResult.Success -> result.value
+                    else -> WorkLocationPreferences()
                 }
-            val labelsDeferred =
-                async {
-                    when (val result = repository.listLabels()) {
-                        is MutationResult.Success -> result.value
-                        else -> emptyList()
-                    }
+            }
+        val labelsAsync =
+            async {
+                when (val result = repository.listLabels()) {
+                    is MutationResult.Success -> result.value
+                    else -> emptyList()
                 }
-            val templatesDeferred =
-                async {
-                    when (val result = repository.listTemplates()) {
-                        is MutationResult.Success -> result.value
-                        else -> emptyList()
-                    }
+            }
+        val templatesAsync =
+            async {
+                when (val result = repository.listTemplates()) {
+                    is MutationResult.Success -> result.value
+                    else -> emptyList()
                 }
-            _actionsState.value =
-                _actionsState.value.copy(
-                    runningTask = runningTaskDeferred.await(),
-                    plannedTask = plannedTaskDeferred.await(),
-                    weeklyWorkLocations = weeklyLocationsDeferred.await(),
-                    syncStatus = syncStatusDeferred.await(),
-                    workLocationPreferences = workLocationPreferencesDeferred.await(),
-                    labels = labelsDeferred.await(),
-                    templates = templatesDeferred.await()
-                )
-        }
+            }
+        _actionsState.value =
+            _actionsState.value.copy(
+                runningTask = runningTaskAsync.await(),
+                plannedTask = plannedTaskAsync.await(),
+                weeklyWorkLocations = weeklyLocationsAsync.await(),
+                syncStatus = syncStatusAsync.await(),
+                workLocationPreferences = workLocationPreferencesAsync.await(),
+                labels = labelsAsync.await(),
+                templates = templatesAsync.await()
+            )
     }
 
     fun startTimeTracking(text: String, labelId: String? = null) {
@@ -324,9 +349,12 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
     }
 
     companion object {
-        fun factory(repository: DashboardRepository): ViewModelProvider.Factory = viewModelFactory {
+        fun factory(
+            repository: DashboardRepository,
+            connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled
+        ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                DashboardViewModel(repository = repository)
+                DashboardViewModel(repository = repository, connectivityObserver = connectivityObserver)
             }
         }
     }
