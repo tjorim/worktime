@@ -43,7 +43,7 @@ private val PRESET_LABEL_COLORS =
         NamedColor("#009688", "Teal"),
         NamedColor("#2196F3", "Blue"),
         NamedColor("#9C27B0", "Purple"),
-        NamedColor("#607D8B", "Grey")
+        NamedColor("#607D8B", "Gray")
     )
 
 @Composable
