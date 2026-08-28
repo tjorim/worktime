@@ -6,7 +6,6 @@ import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
 import com.worktime.android.ui.components.formatDate
-import com.worktime.android.ui.components.formatShift
 
 @Composable
 fun NextShiftsScreen(uiState: DashboardUiState, onRetry: () -> Unit) {
@@ -22,7 +21,7 @@ fun NextShiftsScreen(uiState: DashboardUiState, onRetry: () -> Unit) {
                 dashboard.nextShifts.items.forEach { nextShift ->
                     item {
                         SummaryCard(title = "${formatDate(nextShift.date)} • Team ${nextShift.teamNumber}") {
-                            text("Shift", formatShift(nextShift.shift))
+                            shiftRow("Shift", nextShift.shift)
                             text("Shift code", nextShift.shiftCode)
                         }
                     }

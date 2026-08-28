@@ -19,8 +19,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.worktime.android.feature.dashboard.DashboardUiState
+import com.worktime.android.ui.theme.WorktimeSpacing
 
 @Composable
 fun ReadModelScreen(
@@ -63,14 +63,14 @@ private fun StaleDataBanner(cachedAt: String, onRetry: () -> Unit) {
         modifier =
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = WorktimeSpacing.standard, vertical = WorktimeSpacing.inline),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
     ) {
         Row(
             modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = WorktimeSpacing.standard, vertical = WorktimeSpacing.inline),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -90,8 +90,8 @@ private fun StaleDataBanner(cachedAt: String, onRetry: () -> Unit) {
 fun ScreenList(title: String, body: LazyListScope.() -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(WorktimeSpacing.standard),
+        verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.compactCard)
     ) {
         item {
             Text(
@@ -120,18 +120,18 @@ fun EmptyPane(
         modifier =
         Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(WorktimeSpacing.section),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(text = title, style = MaterialTheme.typography.headlineSmall)
-        Card(modifier = Modifier.padding(top = 16.dp)) {
+        Card(modifier = Modifier.padding(top = WorktimeSpacing.standard)) {
             Column(
                 modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(WorktimeSpacing.standard),
+                verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.compactCard)
             ) {
                 Text(text = headline, style = MaterialTheme.typography.titleMedium)
                 Text(text = body, style = MaterialTheme.typography.bodyMedium)

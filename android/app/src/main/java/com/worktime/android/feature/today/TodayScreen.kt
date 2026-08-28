@@ -46,7 +46,6 @@ import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
 import com.worktime.android.ui.components.formatDate
 import com.worktime.android.ui.components.formatInstant
-import com.worktime.android.ui.components.formatShift
 import java.time.LocalDate
 import java.util.Locale
 
@@ -107,7 +106,7 @@ fun TodayScreen(
             item {
                 SummaryCard(title = "Current shift") {
                     val current = dashboard.currentStatus.currentShift
-                    text("Status", current?.shift?.let(::formatShift) ?: "No work context yet")
+                    shiftRow("Status", current?.shift, emptyLabel = "No work context yet")
                     text("Shift code", current?.shiftCode ?: "—")
                     text(
                         "Working now",
