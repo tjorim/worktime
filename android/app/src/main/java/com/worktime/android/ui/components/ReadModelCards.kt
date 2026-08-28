@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import com.worktime.android.data.model.ShiftSummary
 import com.worktime.android.ui.theme.WorktimeSpacing
 import com.worktime.android.ui.theme.WorktimeTheme
@@ -56,9 +57,15 @@ class ColumnScopeShim(private val scope: androidx.compose.foundation.layout.Colu
         ) {
             Text(text = label, style = MaterialTheme.typography.bodyMedium)
             if (shift != null) {
-                ShiftBadge(shift = shift)
+                ShiftBadge(shift = shift, modifier = Modifier.weight(1f, fill = false))
             } else {
-                Text(text = emptyLabel, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = emptyLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
             }
         }
     }
@@ -90,6 +97,8 @@ fun ShiftBadge(shift: ShiftSummary, modifier: Modifier = Modifier) {
         Text(
             text = formatShift(shift),
             style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = WorktimeSpacing.compactCard, vertical = WorktimeSpacing.tight)
         )
     }
