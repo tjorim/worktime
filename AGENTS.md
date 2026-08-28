@@ -145,6 +145,14 @@ unfamiliar branch's existing commits:
   before changing anything. Don't "fix" a conflict by repointing the base to
   whatever branch happens to be conflict-free — that hides the mismatch
   instead of resolving it.
+- A session's designated branch can already have commits and an open PR from
+  earlier, unrelated work (a different issue) when that PR hasn't merged yet.
+  This is expected, not a mistake to undo — but don't just pile new, unrelated
+  commits onto that same branch/PR. Instead stack: branch a new one off its
+  current tip, commit the new work there, and open a second PR based on it
+  (per "When opening a PR, set base to the branch's actual fork point"
+  above). That keeps the two issues' history and review separate while still
+  letting the new PR build on the unmerged one.
 
 ## Conventions
 

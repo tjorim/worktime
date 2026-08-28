@@ -1,18 +1,14 @@
 package com.worktime.android.feature.today
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -22,6 +18,8 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,17 +29,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.TemplateRecord
 import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
+import com.worktime.android.ui.components.ColorSwatchPicker
 import com.worktime.android.ui.components.DatePickerField
 import com.worktime.android.ui.components.LocalDateSaver
+import com.worktime.android.ui.components.NamedColor
 import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
@@ -51,34 +50,21 @@ import com.worktime.android.ui.components.formatShift
 import java.time.LocalDate
 import java.util.Locale
 
-private const val PRESET_COLOR_RED = "#F44336"
-private const val PRESET_COLOR_ORANGE = "#FF9800"
-private const val PRESET_COLOR_YELLOW = "#FBC02D"
-private const val PRESET_COLOR_GREEN = "#4CAF50"
-private const val PRESET_COLOR_TEAL = "#009688"
-private const val PRESET_COLOR_BLUE = "#2196F3"
-private const val PRESET_COLOR_PURPLE = "#9C27B0"
-private const val PRESET_COLOR_GREY = "#607D8B"
-
 private val PRESET_LABEL_COLORS =
     listOf(
-        PRESET_COLOR_RED,
-        PRESET_COLOR_ORANGE,
-        PRESET_COLOR_YELLOW,
-        PRESET_COLOR_GREEN,
-        PRESET_COLOR_TEAL,
-        PRESET_COLOR_BLUE,
-        PRESET_COLOR_PURPLE,
-        PRESET_COLOR_GREY
+        NamedColor("#F44336", "Red"),
+        NamedColor("#FF9800", "Orange"),
+        NamedColor("#FBC02D", "Yellow"),
+        NamedColor("#4CAF50", "Green"),
+        NamedColor("#009688", "Teal"),
+        NamedColor("#2196F3", "Blue"),
+        NamedColor("#9C27B0", "Purple"),
+        NamedColor("#607D8B", "Gray")
     )
 
-private const val OPAQUE_ALPHA_MASK = 0xFF000000L
 private const val DEFAULT_COUNTRY_CODE = "BE"
 private const val HOME_LOCATION_LABEL = "Home"
 private const val OFFICE_LOCATION_LABEL = "Office"
-
-private fun parseHexColor(hex: String): Color =
-    runCatching { Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK) }.getOrDefault(Color.Gray)
 
 @Composable
 fun TodayScreen(
@@ -367,16 +353,14 @@ private fun WorkLocationChipsRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         locations.forEach { location ->
-            AssistChip(
-                onClick = { onEdit(location) },
-                label = { Text(location.chipLabel()) },
-                trailingIcon = {
-                    Text(
-                        text = "✕",
-                        modifier = Modifier.clickable(enabled = !isSubmitting) { onDelete(location) }
-                    )
+            // The delete affordance is a sibling IconButton, not the chip's trailingIcon slot, so
+            // its touch target doesn't nest inside the chip's own onClick (edit) touch target.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AssistChip(onClick = { onEdit(location) }, label = { Text(location.chipLabel()) })
+                IconButton(onClick = { onDelete(location) }, enabled = !isSubmitting) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "Remove ${location.chipLabel()}")
                 }
-            )
+            }
         }
     }
 }
@@ -461,7 +445,7 @@ private fun LabelPickerField(
 @Composable
 private fun NewLabelDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    var selectedColor by rememberSaveable { mutableStateOf(PRESET_LABEL_COLORS.first()) }
+    var selectedColor by rememberSaveable { mutableStateOf(PRESET_LABEL_COLORS.first().hex) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -475,22 +459,11 @@ private fun NewLabelDialog(onDismiss: () -> Unit, onCreate: (String, String) -> 
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PRESET_LABEL_COLORS.forEach { color ->
-                        Box(
-                            modifier =
-                            Modifier
-                                .size(32.dp)
-                                .background(color = parseHexColor(color), shape = CircleShape)
-                                .border(
-                                    width = if (color == selectedColor) 2.dp else 0.dp,
-                                    color = Color.Black,
-                                    shape = CircleShape
-                                ).clip(CircleShape)
-                                .clickable { selectedColor = color }
-                        )
-                    }
-                }
+                ColorSwatchPicker(
+                    colors = PRESET_LABEL_COLORS,
+                    selectedHex = selectedColor,
+                    onSelect = { selectedColor = it }
+                )
             }
         },
         confirmButton = {
