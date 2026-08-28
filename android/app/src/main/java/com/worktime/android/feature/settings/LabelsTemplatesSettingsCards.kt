@@ -1,8 +1,6 @@
 package com.worktime.android.feature.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,34 +25,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.TemplateRecord
+import com.worktime.android.ui.components.ColorSwatchPicker
+import com.worktime.android.ui.components.NamedColor
 import com.worktime.android.ui.components.SummaryCard
+import com.worktime.android.ui.components.parseHexColor
 import java.time.LocalTime
-
-private const val PRESET_COLOR_RED = "#F44336"
-private const val PRESET_COLOR_ORANGE = "#FF9800"
-private const val PRESET_COLOR_YELLOW = "#FBC02D"
-private const val PRESET_COLOR_GREEN = "#4CAF50"
-private const val PRESET_COLOR_TEAL = "#009688"
-private const val PRESET_COLOR_BLUE = "#2196F3"
-private const val PRESET_COLOR_PURPLE = "#9C27B0"
-private const val PRESET_COLOR_GREY = "#607D8B"
-private const val OPAQUE_ALPHA_MASK = 0xFF000000L
 
 private val PRESET_LABEL_COLORS =
     listOf(
-        PRESET_COLOR_RED,
-        PRESET_COLOR_ORANGE,
-        PRESET_COLOR_YELLOW,
-        PRESET_COLOR_GREEN,
-        PRESET_COLOR_TEAL,
-        PRESET_COLOR_BLUE,
-        PRESET_COLOR_PURPLE,
-        PRESET_COLOR_GREY
+        NamedColor("#F44336", "Red"),
+        NamedColor("#FF9800", "Orange"),
+        NamedColor("#FBC02D", "Yellow"),
+        NamedColor("#4CAF50", "Green"),
+        NamedColor("#009688", "Teal"),
+        NamedColor("#2196F3", "Blue"),
+        NamedColor("#9C27B0", "Purple"),
+        NamedColor("#607D8B", "Gray")
     )
 
 @Composable
@@ -224,7 +213,8 @@ private fun TemplateRow(
 @Composable
 private fun LabelDialog(label: LabelRecord?, onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
     var name by rememberSaveable(label) { mutableStateOf(label?.name ?: "") }
-    var selectedColor by rememberSaveable(label) { mutableStateOf(label?.color ?: PRESET_LABEL_COLORS.first()) }
+    var selectedColor by
+        rememberSaveable(label) { mutableStateOf(label?.color ?: PRESET_LABEL_COLORS.first().hex) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -238,7 +228,11 @@ private fun LabelDialog(label: LabelRecord?, onDismiss: () -> Unit, onSave: (Str
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                ColorPicker(selectedColor = selectedColor, onSelect = { selectedColor = it })
+                ColorSwatchPicker(
+                    colors = PRESET_LABEL_COLORS,
+                    selectedHex = selectedColor,
+                    onSelect = { selectedColor = it }
+                )
             }
         },
         confirmButton = {
@@ -353,26 +347,6 @@ private fun TemplateDialogFields(
 }
 
 @Composable
-private fun ColorPicker(selectedColor: String, onSelect: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PRESET_LABEL_COLORS.forEach { color ->
-            Box(
-                modifier =
-                Modifier
-                    .size(32.dp)
-                    .background(color = parseHexColor(color), shape = CircleShape)
-                    .border(
-                        width = if (color == selectedColor) 2.dp else 0.dp,
-                        color = Color.Black,
-                        shape = CircleShape
-                    ).clip(CircleShape)
-                    .clickable { onSelect(color) }
-            )
-        }
-    }
-}
-
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun LabelDropdown(labels: List<LabelRecord>, selectedLabelId: String, onLabelSelected: (String) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -410,8 +384,5 @@ private fun LabelDropdown(labels: List<LabelRecord>, selectedLabelId: String, on
         }
     }
 }
-
-private fun parseHexColor(hex: String): Color =
-    runCatching { Color(hex.removePrefix("#").toLong(radix = 16) or OPAQUE_ALPHA_MASK) }.getOrDefault(Color.Gray)
 
 private fun parseLocalTime(value: String): LocalTime? = runCatching { LocalTime.parse(value.trim()) }.getOrNull()
