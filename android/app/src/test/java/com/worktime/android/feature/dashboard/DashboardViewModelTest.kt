@@ -319,7 +319,7 @@ class DashboardViewModelTest {
                 listLabelsProvider = {
                     listLabelsCallCount++
                     if (listLabelsCallCount == 1) {
-                        // The first (stale) call never resolves before it's cancelled below --
+                        // The first (stale) call never resolves before it's canceled below --
                         // if it were still applied afterwards, this test would see "Stale" win.
                         staleCallGate.await()
                         MutationResult.Success(listOf(sampleLabel().copy(name = "Stale")))
