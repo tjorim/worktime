@@ -1,19 +1,12 @@
 package com.worktime.android.app
+
 import android.content.ContextWrapper
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,39 +16,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.worktime.android.app.navigation.WorktimeDestination
 import com.worktime.android.core.auth.AuthErrorMessages
 import com.worktime.android.core.auth.BiometricAuthenticator
 import com.worktime.android.core.auth.SessionState
-import com.worktime.android.core.notifications.ReminderScheduler
-import com.worktime.android.core.notifications.WorktimeNotifications
-import com.worktime.android.core.notifications.registerFcmTokenIfNeeded
-import com.worktime.android.core.storage.BiometricLockPreferences
-import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.DashboardViewModel
 import com.worktime.android.feature.login.LoginScreen
-import com.worktime.android.feature.nextshifts.NextShiftsScreen
 import com.worktime.android.feature.session.BiometricGateScreen
 import com.worktime.android.feature.session.BiometricGateViewModel
-import com.worktime.android.feature.settings.SettingsScreen
-import com.worktime.android.feature.teamstatus.TeamStatusScreen
-import com.worktime.android.feature.timeoff.TimeOffFormState
-import com.worktime.android.feature.timeoff.TimeOffSummaryScreen
-import com.worktime.android.feature.timeoff.TimeOffUiState
 import com.worktime.android.feature.timeoff.TimeOffViewModel
-import com.worktime.android.feature.today.TodayScreen
 import com.worktime.android.ui.theme.WorktimeTheme
 import kotlinx.coroutines.launch
 
@@ -66,27 +39,6 @@ fun WorktimeApp(
     pendingDestination: String? = null,
     onPendingDestinationConsumed: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val notifications = remember { WorktimeNotifications(context) }
-    val reminderScheduler = remember { ReminderScheduler(context.applicationContext) }
-    val sentSyncNotificationKeys = remember { mutableSetOf<String>() }
-
-    val notificationPermissionLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { /* permission result handled silently; system manages notification access */ }
-
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.POST_NOTIFICATIONS
-            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
     val dashboardViewModel: DashboardViewModel =
         viewModel(
             factory =
@@ -96,95 +48,55 @@ fun WorktimeApp(
                 container.syncSignalTransport
             )
         )
-    val uiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
-    val actionsState by dashboardViewModel.actionsState.collectAsStateWithLifecycle()
     val timeOffViewModel: TimeOffViewModel =
-        viewModel(
-            factory = TimeOffViewModel.factory(container.dashboardRepository)
-        )
-    val timeOffUiState by timeOffViewModel.uiState.collectAsStateWithLifecycle()
-    val timeOffFormState by timeOffViewModel.formState.collectAsStateWithLifecycle()
-    val notificationPreferences by container.notificationPreferencesStore.preferences.collectAsStateWithLifecycle(
-        initialValue = NotificationPreferences()
-    )
-    val apiBaseUrlOverride by container.apiBaseUrlOverrideStore.override.collectAsStateWithLifecycle(
-        initialValue = null
-    )
-
+        viewModel(factory = TimeOffViewModel.factory(container.dashboardRepository))
+    val biometricGateViewModel: BiometricGateViewModel =
+        viewModel(factory = BiometricGateViewModel.factory(container.biometricLockPreferencesStore))
     val sessionState by container.sessionManager.sessionState.collectAsStateWithLifecycle()
-    LaunchedEffect(sessionState, uiState, actionsState, notificationPreferences) {
-        // Gate on sessionState (not just uiState) so a forced logout that hasn't yet propagated
-        // to uiState can't race the cancelAll() effect below and re-arm a just-cancelled reminder.
-        if (sessionState is SessionState.LoggedOut) return@LaunchedEffect
-        val dashboard = (uiState as? DashboardUiState.Success)?.dashboard ?: return@LaunchedEffect
-        reminderScheduler.reconcile(
-            dashboard.identity.id,
-            actionsState.plannedTask,
-            actionsState.runningTask,
-            notificationPreferences.plannedTasksEnabled,
-            notificationPreferences.timeTrackingEnabled
-        )
+    val dashboardState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
+    val isLocked by biometricGateViewModel.locked.collectAsStateWithLifecycle()
 
-        if (notificationPreferences.syncConflictsEnabled) {
-            actionsState.syncStatus?.let { status ->
-                if (sentSyncNotificationKeys.add(status.serverTimestamp)) {
-                    notifications.showSyncStatus("Sync checked at ${status.serverTimestamp}")
-                }
+    WorktimeAppEffects(container, dashboardViewModel, biometricGateViewModel, sessionState)
+    ObserveLogoutRequests(dashboardViewModel)
+
+    WorktimeTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            when {
+                isLocked && sessionState is SessionState.Authenticated ->
+                    BiometricGate(biometricGateViewModel)
+                sessionState is SessionState.LoggedOut || dashboardState is DashboardUiState.LoggedOut ->
+                    LoginDestination(container, dashboardViewModel, timeOffViewModel, sessionState)
+                else ->
+                    WorktimeAuthenticatedScaffold(
+                        container = container,
+                        dashboardViewModel = dashboardViewModel,
+                        timeOffViewModel = timeOffViewModel,
+                        biometricGateViewModel = biometricGateViewModel,
+                        initialDestination = initialDestination,
+                        pendingDestination = pendingDestination,
+                        onPendingDestinationConsumed = onPendingDestinationConsumed
+                    )
             }
         }
     }
-    LaunchedEffect(sessionState) {
-        if (sessionState is SessionState.LoggedOut) reminderScheduler.cancelAll()
-    }
-    LaunchedEffect(sessionState) {
-        if (sessionState is SessionState.Authenticated) registerFcmTokenIfNeeded(container)
-    }
-    val coroutineScope = rememberCoroutineScope()
+}
+
+@Composable
+private fun LoginDestination(
+    container: WorktimeAppContainer,
+    dashboardViewModel: DashboardViewModel,
+    timeOffViewModel: TimeOffViewModel,
+    sessionState: SessionState
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var loginError by rememberSaveable { mutableStateOf<String?>(null) }
     var loginInFlight by rememberSaveable { mutableStateOf(false) }
-
-    val biometricGateViewModel: BiometricGateViewModel =
-        viewModel(factory = BiometricGateViewModel.factory(container.biometricLockPreferencesStore))
-    val biometricLockPreferences by biometricGateViewModel.preferences.collectAsStateWithLifecycle()
-    val isLocked by biometricGateViewModel.locked.collectAsStateWithLifecycle()
-    var isBiometricPrompting by rememberSaveable { mutableStateOf(false) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, biometricGateViewModel) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_STOP -> biometricGateViewModel.onAppBackgrounded(System.currentTimeMillis())
-                    Lifecycle.Event.ON_START -> biometricGateViewModel.onAppResumed(System.currentTimeMillis())
-                    else -> Unit
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    // Live-updates (#1201): connect the SSE stream only while the UI is actually on screen --
-    // mirrors the frontend's useSyncSignal lifecycle (subscribed while active), no background
-    // service or wake lock involved.
-    DisposableEffect(lifecycleOwner, dashboardViewModel) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_START -> dashboardViewModel.onAppForegrounded()
-                    Lifecycle.Event.ON_STOP -> dashboardViewModel.onAppBackgrounded()
-                    else -> Unit
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     val loginLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            coroutineScope.launch {
+            scope.launch {
                 loginInFlight = false
-                container.sessionManager
-                    .handleAuthorizationResponse(result.data)
+                container.sessionManager.handleAuthorizationResponse(result.data)
                     .onSuccess {
                         loginError = null
                         dashboardViewModel.refresh()
@@ -196,306 +108,63 @@ fun WorktimeApp(
                     }
             }
         }
-
-    // Fires whatever the end-session activity's outcome is (completed or cancelled): the
-    // point is only to stop reporting "signed out" before the browser step has run, not to
-    // gate sign-out on the provider's result.
-    val logoutLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            dashboardViewModel.onLogoutFlowFinished()
-        }
-
-    LaunchedEffect(dashboardViewModel) {
-        dashboardViewModel.logoutIntent.collect { intent -> logoutLauncher.launch(intent) }
-    }
-
-    WorktimeTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            if (isLocked && sessionState is SessionState.Authenticated) {
-                val activity =
-                    remember(context) {
-                        var current = context
-                        while (current is ContextWrapper && current !is FragmentActivity) {
-                            current = current.baseContext
-                        }
-                        current as FragmentActivity
+    LoginScreen(
+        sessionState = sessionState,
+        appConfig = container.appConfig,
+        isBusy = loginInFlight,
+        errorMessage = loginError,
+        onLogin = {
+            scope.launch {
+                loginInFlight = true
+                loginError = null
+                runCatching { container.sessionManager.createAuthorizationIntent() }
+                    .onSuccess(loginLauncher::launch)
+                    .onFailure {
+                        loginInFlight = false
+                        loginError = AuthErrorMessages.startSignInError(context)
                     }
-                val authenticator = remember(activity) { BiometricAuthenticator(activity) }
-                val availability = remember(authenticator) { authenticator.checkAvailability() }
-                BiometricGateScreen(
-                    availability = availability,
-                    isPrompting = isBiometricPrompting,
-                    onUnlock = {
-                        isBiometricPrompting = true
-                        authenticator.authenticate(
-                            onSuccess = {
-                                isBiometricPrompting = false
-                                biometricGateViewModel.onAuthenticationSucceeded()
-                            },
-                            onError = { isBiometricPrompting = false }
-                        )
-                    },
-                    onContinueWithoutLock = biometricGateViewModel::onAuthenticationSucceeded
-                )
-            } else if (sessionState is SessionState.LoggedOut || uiState is DashboardUiState.LoggedOut) {
-                LoginScreen(
-                    sessionState = sessionState,
-                    appConfig = container.appConfig,
-                    isBusy = loginInFlight,
-                    errorMessage = loginError,
-                    onLogin = {
-                        coroutineScope.launch {
-                            loginInFlight = true
-                            loginError = null
-                            runCatching { container.sessionManager.createAuthorizationIntent() }
-                                .onSuccess(loginLauncher::launch)
-                                .onFailure {
-                                    loginInFlight = false
-                                    loginError = AuthErrorMessages.startSignInError(context)
-                                }
-                        }
-                    }
-                )
-            } else {
-                WorktimeAuthenticatedScaffold(
-                    uiState = uiState,
-                    actionsState = actionsState,
-                    timeOffUiState = timeOffUiState,
-                    timeOffFormState = timeOffFormState,
-                    appConfig = container.appConfig,
-                    oidcConfig = container.oidcConfig,
-                    initialDestination = initialDestination,
-                    pendingDestination = pendingDestination,
-                    onPendingDestinationConsumed = onPendingDestinationConsumed,
-                    notificationPreferences = notificationPreferences,
-                    apiBaseUrlOverride = apiBaseUrlOverride,
-                    onApiBaseUrlOverrideSave = { url ->
-                        coroutineScope.launch {
-                            container.apiBaseUrlOverrideStore.setOverride(url)
-                            dashboardViewModel.refresh()
-                        }
-                    },
-                    onApiBaseUrlOverrideClear = {
-                        coroutineScope.launch {
-                            container.apiBaseUrlOverrideStore.clearOverride()
-                            dashboardViewModel.refresh()
-                        }
-                    },
-                    onRetry = dashboardViewModel::refresh,
-                    onLogout = dashboardViewModel::logout,
-                    onDeleteAccount = dashboardViewModel::deleteAccount,
-                    onStartTracking = dashboardViewModel::startTimeTracking,
-                    onStopTracking = dashboardViewModel::stopTimeTracking,
-                    onUpdateTask = dashboardViewModel::updateTask,
-                    onSetWorkLocation = dashboardViewModel::setWorkLocation,
-                    onDeleteWorkLocation = dashboardViewModel::deleteWorkLocation,
-                    onUpdateWorkLocationPreferences = dashboardViewModel::updateWorkLocationPreferences,
-                    onCreateLabel = dashboardViewModel::createLabel,
-                    onRetryTimeOff = timeOffViewModel::refresh,
-                    onAddTimeOff = timeOffViewModel::openCreateForm,
-                    onEditTimeOff = timeOffViewModel::openEditForm,
-                    onDismissTimeOffForm = timeOffViewModel::closeForm,
-                    onSubmitTimeOff = timeOffViewModel::submit,
-                    onDeleteTimeOff = timeOffViewModel::delete,
-                    onPlannedTaskNotificationsChanged = {
-                        coroutineScope.launch {
-                            container.notificationPreferencesStore.setPlannedTasksEnabled(it)
-                        }
-                    },
-                    onTimeTrackingNotificationsChanged = {
-                        coroutineScope.launch {
-                            container.notificationPreferencesStore.setTimeTrackingEnabled(it)
-                        }
-                    },
-                    onSyncNotificationsChanged = {
-                        coroutineScope.launch {
-                            container.notificationPreferencesStore.setSyncConflictsEnabled(it)
-                        }
-                    },
-                    biometricLockPreferences = biometricLockPreferences,
-                    onBiometricLockEnabledChanged = biometricGateViewModel::setLockEnabled,
-                    onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes,
-                    onUpdateLabel = dashboardViewModel::updateLabel,
-                    onDeleteLabel = dashboardViewModel::deleteLabel,
-                    onCreateTemplate = dashboardViewModel::createTemplate,
-                    onUpdateTemplate = dashboardViewModel::updateTemplate,
-                    onDeleteTemplate = dashboardViewModel::deleteTemplate
-                )
             }
         }
+    )
+}
+
+@Composable
+private fun ObserveLogoutRequests(viewModel: DashboardViewModel) {
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            viewModel.onLogoutFlowFinished()
+        }
+    LaunchedEffect(viewModel) {
+        viewModel.logoutIntent.collect(launcher::launch)
     }
 }
 
 @Composable
-private fun WorktimeAuthenticatedScaffold(
-    uiState: DashboardUiState,
-    actionsState: com.worktime.android.feature.dashboard.MobileActionsUiState,
-    timeOffUiState: TimeOffUiState,
-    timeOffFormState: TimeOffFormState,
-    appConfig: com.worktime.android.core.config.AppConfig,
-    oidcConfig: com.worktime.android.core.auth.OidcConfig,
-    initialDestination: String,
-    pendingDestination: String?,
-    onPendingDestinationConsumed: () -> Unit,
-    notificationPreferences: NotificationPreferences,
-    apiBaseUrlOverride: String?,
-    onApiBaseUrlOverrideSave: (String) -> Unit,
-    onApiBaseUrlOverrideClear: () -> Unit,
-    onRetry: () -> Unit,
-    onLogout: () -> Unit,
-    onDeleteAccount: () -> Unit,
-    onStartTracking: (String, String?) -> Unit,
-    onStopTracking: (String) -> Unit,
-    onUpdateTask: (String, String?, String?) -> Unit,
-    onSetWorkLocation: (java.time.LocalDate, String, String?) -> Unit,
-    onDeleteWorkLocation: (java.time.LocalDate) -> Unit,
-    onUpdateWorkLocationPreferences: (String?, String?) -> Unit,
-    onCreateLabel: (String, String) -> Unit,
-    onRetryTimeOff: () -> Unit,
-    onAddTimeOff: () -> Unit,
-    onEditTimeOff: (String) -> Unit,
-    onDismissTimeOffForm: () -> Unit,
-    onSubmitTimeOff: (com.worktime.android.data.repository.TimeOffDraft) -> Unit,
-    onDeleteTimeOff: (String) -> Unit,
-    onPlannedTaskNotificationsChanged: (Boolean) -> Unit,
-    onTimeTrackingNotificationsChanged: (Boolean) -> Unit,
-    onSyncNotificationsChanged: (Boolean) -> Unit,
-    biometricLockPreferences: BiometricLockPreferences,
-    onBiometricLockEnabledChanged: (Boolean) -> Unit,
-    onBiometricIdleTimeoutChanged: (Int) -> Unit,
-    onUpdateLabel: (String, String, String) -> Unit,
-    onDeleteLabel: (String) -> Unit,
-    onCreateTemplate: (String, String?, java.time.LocalTime, java.time.LocalTime) -> Unit,
-    onUpdateTemplate: (String, String, String?, java.time.LocalTime, java.time.LocalTime) -> Unit,
-    onDeleteTemplate: (String) -> Unit
-) {
-    val navController = rememberNavController()
-    val destinations = remember { WorktimeDestination.entries.toList() }
-    val startDestination =
-        destinations.firstOrNull { it.route == initialDestination }?.route
-            ?: WorktimeDestination.Today.route
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: WorktimeDestination.Today.route
+private fun BiometricGate(viewModel: BiometricGateViewModel) {
+    val context = LocalContext.current
+    var isPrompting by rememberSaveable { mutableStateOf(false) }
+    val activity =
+        remember(context) {
+            var current = context
+            while (current is ContextWrapper && current !is FragmentActivity) current = current.baseContext
+            current as FragmentActivity
+        }
+    val authenticator = remember(activity) { BiometricAuthenticator(activity) }
+    val availability = remember(authenticator) { authenticator.checkAvailability() }
 
-    // A notification tap while the app is already running (MainActivity.onNewIntent) requests a
-    // destination without recreating the Activity, so unsaved form/dialog state elsewhere in the
-    // tree survives (#1229). Navigate to it here, once, then let the Activity clear the request.
-    LaunchedEffect(pendingDestination, navController) {
-        val destination = pendingDestination ?: return@LaunchedEffect
-        if (destinations.any { it.route == destination }) {
-            navController.navigate(destination) {
-                launchSingleTop = true
-                restoreState = true
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-            }
-        }
-        onPendingDestinationConsumed()
-    }
-
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                destinations.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentRoute == destination.route,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                launchSingleTop = true
-                                restoreState = true
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = destination.label
-                            )
-                        },
-                        label = { Text(destination.label) }
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            composable(WorktimeDestination.Today.route) {
-                androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
-                    TodayScreen(
-                        uiState = uiState,
-                        actionsState = actionsState,
-                        onRetry = onRetry,
-                        onStartTracking = onStartTracking,
-                        onStopTracking = onStopTracking,
-                        onUpdateTask = onUpdateTask,
-                        onSetWorkLocation = onSetWorkLocation,
-                        onDeleteWorkLocation = onDeleteWorkLocation,
-                        onCreateLabel = onCreateLabel
-                    )
-                }
-            }
-            composable(WorktimeDestination.NextShifts.route) {
-                androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
-                    NextShiftsScreen(uiState = uiState, onRetry = onRetry)
-                }
-            }
-            composable(WorktimeDestination.TeamStatus.route) {
-                androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
-                    TeamStatusScreen(uiState = uiState, onRetry = onRetry)
-                }
-            }
-            composable(WorktimeDestination.TimeOff.route) {
-                androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
-                    TimeOffSummaryScreen(
-                        uiState = timeOffUiState,
-                        formState = timeOffFormState,
-                        onRetry = onRetryTimeOff,
-                        onAdd = onAddTimeOff,
-                        onEdit = onEditTimeOff,
-                        onDismissForm = onDismissTimeOffForm,
-                        onSubmit = onSubmitTimeOff,
-                        onDelete = onDeleteTimeOff
-                    )
-                }
-            }
-            composable(WorktimeDestination.Settings.route) {
-                androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
-                    SettingsScreen(
-                        uiState = uiState,
-                        appConfig = appConfig,
-                        oidcConfig = oidcConfig,
-                        notificationPreferences = notificationPreferences,
-                        apiBaseUrlOverride = apiBaseUrlOverride,
-                        onApiBaseUrlOverrideSave = onApiBaseUrlOverrideSave,
-                        onApiBaseUrlOverrideClear = onApiBaseUrlOverrideClear,
-                        onPlannedTaskNotificationsChanged = onPlannedTaskNotificationsChanged,
-                        onTimeTrackingNotificationsChanged = onTimeTrackingNotificationsChanged,
-                        onSyncNotificationsChanged = onSyncNotificationsChanged,
-                        biometricLockPreferences = biometricLockPreferences,
-                        onBiometricLockEnabledChanged = onBiometricLockEnabledChanged,
-                        onBiometricIdleTimeoutChanged = onBiometricIdleTimeoutChanged,
-                        onLogout = onLogout,
-                        isDeletingAccount = actionsState.isDeletingAccount,
-                        deleteAccountError = actionsState.deleteAccountError,
-                        onDeleteAccount = onDeleteAccount,
-                        actionsState = actionsState,
-                        onUpdateWorkLocationPreferences = onUpdateWorkLocationPreferences,
-                        onCreateLabel = onCreateLabel,
-                        onUpdateLabel = onUpdateLabel,
-                        onDeleteLabel = onDeleteLabel,
-                        onCreateTemplate = onCreateTemplate,
-                        onUpdateTemplate = onUpdateTemplate,
-                        onDeleteTemplate = onDeleteTemplate
-                    )
-                }
-            }
-        }
-    }
+    BiometricGateScreen(
+        availability = availability,
+        isPrompting = isPrompting,
+        onUnlock = {
+            isPrompting = true
+            authenticator.authenticate(
+                onSuccess = {
+                    isPrompting = false
+                    viewModel.onAuthenticationSucceeded()
+                },
+                onError = { isPrompting = false }
+            )
+        },
+        onContinueWithoutLock = viewModel::onAuthenticationSucceeded
+    )
 }
