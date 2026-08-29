@@ -444,6 +444,26 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun syncSignalForceRefreshSentinelBypassesTheCursorComparison() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+        assertEquals("2026-05-26T12:00:00Z", viewModel.actionsState.value.syncStatus?.serverTimestamp)
+
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+
+        // Would be skipped as "not newer" if compared like a real timestamp against the cursor
+        // above -- the sentinel must bypass that comparison entirely (#1201 reconnect catch-up).
+        transport.emit(SyncSignalTransport.FORCE_REFRESH_SIGNAL)
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadDashboardCallCount)
+    }
+
+    @Test
     fun syncSignalIgnoresAnUnparseableTimestamp() = runTest(dispatcher) {
         val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
         val transport = FakeSyncSignalTransport()

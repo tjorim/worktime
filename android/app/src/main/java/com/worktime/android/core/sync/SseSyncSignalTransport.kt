@@ -2,7 +2,6 @@ package com.worktime.android.core.sync
 
 import android.util.Log
 import java.io.IOException
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
@@ -43,10 +42,14 @@ private fun isFatalAuthStatus(code: Int): Boolean = code == HTTP_UNAUTHORIZED ||
  * `createFetchSseTransport` -- and reconnects with exponential backoff on drop.
  *
  * Mirrors `frontend/src/hooks/useSyncSignal.ts`'s `createFetchSseTransport`: a 401/403 is
- * treated as fatal (stops retrying with that token; [tokenProvider] supplies a fresh one on the
- * next [subscribe] call), and every *re*connect (not the first connection) forces a catch-up
- * signal with a synthetic "now" timestamp, since the server's per-connection event queue does
- * not survive a dropped connection.
+ * treated as fatal for that token -- retrying immediately would just hammer the endpoint with a
+ * token the server already rejected, so this stops the connect loop and instead calls
+ * [onFatalAuthFailure] to force the app's session out of its authenticated state (matching how
+ * every other 401 from this backend is handled -- see `WorktimeRepository`), which reconnects
+ * this transport with a fresh token once the user signs back in. Every *re*connect (not the
+ * first connection) also forces a catch-up refresh via [SyncSignalTransport.FORCE_REFRESH_SIGNAL],
+ * since the server's per-connection event queue does not survive a dropped connection and there
+ * is no real timestamp available to vouch for what, if anything, was missed.
  *
  * @param url Full URL of the SSE endpoint (e.g. `https://api.example/api/sync/events`).
  * @param client OkHttpClient to issue the streaming request on -- must not have a finite read
@@ -55,6 +58,9 @@ private fun isFatalAuthStatus(code: Int): Boolean = code == HTTP_UNAUTHORIZED ||
  *   result stops the transport instead of connecting anonymously.
  * @param scope Coroutine scope the connect/read loop runs on; cancelled via the returned
  *   cleanup function rather than by the caller cancelling this scope directly.
+ * @param onFatalAuthFailure Called when the endpoint itself rejects an ostensibly-fresh token
+ *   with 401/403, so the caller can end the session rather than leave this transport silently
+ *   dead for the rest of it. Defaults to a no-op for tests that don't care.
  * @param initialRetryMs Delay before the first reconnect attempt; doubles on each subsequent
  *   failure up to [maxRetryMs]. Overridable for tests; production call sites use the defaults.
  */
@@ -63,6 +69,7 @@ class SseSyncSignalTransport(
     private val client: OkHttpClient,
     private val tokenProvider: suspend () -> String?,
     private val scope: CoroutineScope,
+    private val onFatalAuthFailure: suspend () -> Unit = {},
     private val initialRetryMs: Long = INITIAL_RETRY_MS,
     private val maxRetryMs: Long = MAX_RETRY_MS
 ) : SyncSignalTransport {
@@ -89,19 +96,19 @@ class SseSyncSignalTransport(
                         currentCall.set(call)
                         call.execute().use { response ->
                             if (isFatalAuthStatus(response.code)) {
-                                Log.w(TAG, "SSE authentication failed (${response.code}) -- giving up until reconnect")
+                                Log.w(TAG, "SSE authentication failed (${response.code}) -- ending the session")
+                                onFatalAuthFailure()
                                 return@launch
                             }
-                            val body = response.body
-                            if (!response.isSuccessful || body == null) {
+                            if (!response.isSuccessful) {
                                 throw IOException("SSE connection failed: ${response.code}")
                             }
                             retryMs = INITIAL_RETRY_MS
                             if (hasConnectedOnce) {
-                                onSignal(Instant.now().toString())
+                                onSignal(SyncSignalTransport.FORCE_REFRESH_SIGNAL)
                             }
                             hasConnectedOnce = true
-                            readEvents(body.source(), onSignal)
+                            readEvents(response.body.source(), onSignal)
                         }
                     } catch (e: CancellationException) {
                         throw e

@@ -66,6 +66,11 @@ class WorktimeAppContainer(
             url = "${normalizedApiBaseUrl}api/sync/events",
             client = sseClient,
             tokenProvider = sessionManager::getFreshAccessToken,
-            scope = syncScope
+            scope = syncScope,
+            // The endpoint itself rejecting an ostensibly-fresh token (rather than tokenProvider
+            // returning null) means the local session doesn't yet know it's dead -- end it the
+            // same way every other 401 from this backend is handled, instead of leaving this
+            // transport silently stopped for the rest of the (still "authenticated") session.
+            onFatalAuthFailure = sessionManager::logout
         )
 }

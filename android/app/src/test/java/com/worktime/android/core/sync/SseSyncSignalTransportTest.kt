@@ -41,6 +41,7 @@ class SseSyncSignalTransportTest {
 
     private fun transport(
         tokenProvider: suspend () -> String? = { "test-token" },
+        onFatalAuthFailure: suspend () -> Unit = {},
         initialRetryMs: Long = 20,
         maxRetryMs: Long = 100
     ) = SseSyncSignalTransport(
@@ -48,6 +49,7 @@ class SseSyncSignalTransportTest {
         client = client,
         tokenProvider = tokenProvider,
         scope = scope,
+        onFatalAuthFailure = onFatalAuthFailure,
         initialRetryMs = initialRetryMs,
         maxRetryMs = maxRetryMs
     )
@@ -112,10 +114,7 @@ class SseSyncSignalTransportTest {
 
         val unsubscribe = transport().subscribe(signals::add)
         try {
-            val catchUpSignal = signals.poll(AWAIT_SECONDS, TimeUnit.SECONDS)
-            assertTrue("expected a synthetic catch-up timestamp, got $catchUpSignal", catchUpSignal != null)
-            java.time.Instant.parse(catchUpSignal) // must be a real, parseable instant
-
+            assertEquals(SyncSignalTransport.FORCE_REFRESH_SIGNAL, signals.poll(AWAIT_SECONDS, TimeUnit.SECONDS))
             assertEquals("2026-08-29T11:00:00Z", signals.poll(AWAIT_SECONDS, TimeUnit.SECONDS))
             assertEquals(2, server.requestCount)
         } finally {
@@ -124,16 +123,20 @@ class SseSyncSignalTransportTest {
     }
 
     @Test
-    fun stopsRetryingOnFatalAuthStatus() {
+    fun stopsRetryingOnFatalAuthStatusAndCallsOnFatalAuthFailure() {
         server.enqueue(MockResponse.Builder().code(401).build())
         val signals = LinkedBlockingQueue<String>()
+        val fatalAuthFailureCalls = LinkedBlockingQueue<Unit>()
 
-        val unsubscribe = transport().subscribe(signals::add)
+        val unsubscribe =
+            transport(onFatalAuthFailure = { fatalAuthFailureCalls.add(Unit) }).subscribe(signals::add)
         try {
+            assertTrue(fatalAuthFailureCalls.poll(AWAIT_SECONDS, TimeUnit.SECONDS) != null)
             assertNull(signals.poll(300, TimeUnit.MILLISECONDS))
             // Give the (non-existent) retry loop a chance to fire if it incorrectly kept going.
             Thread.sleep(200)
             assertEquals(1, server.requestCount)
+            assertEquals(0, fatalAuthFailureCalls.size) // called exactly once, not repeatedly
         } finally {
             unsubscribe()
         }

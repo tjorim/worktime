@@ -151,12 +151,19 @@ class DashboardViewModel(
      * Handles a `sync_changed` signal (#1201): mirrors `useSyncSignal`'s dedup -- skips the pull
      * when the last-known sync cursor ([MobileActionsUiState.syncStatus]) is already at or ahead
      * of the signal, since notify-then-pull signals only carry a freshness hint.
+     *
+     * [SyncSignalTransport.FORCE_REFRESH_SIGNAL] bypasses this comparison entirely and always
+     * refreshes -- a reconnect catch-up has no real timestamp to compare (there's nothing to
+     * vouch for what, if anything, was missed), and comparing the device's local clock against a
+     * cursor recorded from the server's clock would let clock skew silently drop the catch-up.
      */
     private fun onSyncSignal(serverTimestamp: String) {
         viewModelScope.launch {
-            val signalInstant = parseInstantOrNull(serverTimestamp) ?: return@launch
-            val cursorInstant = _actionsState.value.syncStatus?.serverTimestamp?.let(::parseInstantOrNull)
-            if (cursorInstant != null && !cursorInstant.isBefore(signalInstant)) return@launch
+            if (serverTimestamp != SyncSignalTransport.FORCE_REFRESH_SIGNAL) {
+                val signalInstant = parseInstantOrNull(serverTimestamp) ?: return@launch
+                val cursorInstant = _actionsState.value.syncStatus?.serverTimestamp?.let(::parseInstantOrNull)
+                if (cursorInstant != null && !cursorInstant.isBefore(signalInstant)) return@launch
+            }
             refresh()
         }
     }
