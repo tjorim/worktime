@@ -6,8 +6,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.network.ConnectivityObserver
 import com.worktime.android.core.notifications.fetchPlannedTask
+import com.worktime.android.core.sync.SyncSignalTransport
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.SyncStatusResponse
@@ -19,9 +21,12 @@ import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +34,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -66,13 +74,20 @@ data class MobileActionsUiState(
 @Suppress("TooManyFunctions") // one view model facade for all mobile dashboard actions
 class DashboardViewModel(
     private val repository: DashboardRepository,
-    connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled
+    connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled,
+    private val syncSignalTransport: SyncSignalTransport? = null
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private val _actionsState = MutableStateFlow(MobileActionsUiState())
     val actionsState: StateFlow<MobileActionsUiState> = _actionsState.asStateFlow()
     private val _logoutIntent = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
+
+    // Live-updates (#1201): only held while the UI is on screen *and* the user is signed in --
+    // no background service, no wake locks. Starts false so a freshly-created view model doesn't
+    // open a connection before the composable that owns its lifecycle has actually reported
+    // ON_START via onAppForegrounded().
+    private val isAppForegrounded = MutableStateFlow(false)
 
     /** Emits the provider end-session intent for the UI to launch via an activity result launcher. */
     val logoutIntent: SharedFlow<Intent> = _logoutIntent.asSharedFlow()
@@ -87,7 +102,7 @@ class DashboardViewModel(
     init {
         viewModelScope.launch {
             repository.sessionState.collect { sessionState ->
-                if (sessionState is com.worktime.android.core.auth.SessionState.LoggedOut) {
+                if (sessionState is SessionState.LoggedOut) {
                     _uiState.value = DashboardUiState.LoggedOut
                 }
             }
@@ -99,6 +114,57 @@ class DashboardViewModel(
                 // refresh() above already covers cold start. Only react to genuine transitions.
                 .drop(1)
                 .collect { online -> if (online) refresh() }
+        }
+        if (syncSignalTransport != null) {
+            viewModelScope.launch {
+                isAppForegrounded
+                    .combine(repository.sessionState) { foregrounded, sessionState ->
+                        foregrounded && sessionState is SessionState.Authenticated
+                    }.distinctUntilChanged()
+                    // collectLatest: whenever "should be connected" flips (foreground/background,
+                    // sign-in/out), the previous block's `finally` unsubscribes before a new one
+                    // (re)subscribes -- never two overlapping SSE connections for one view model.
+                    .collectLatest { active ->
+                        if (!active) return@collectLatest
+                        val unsubscribe = syncSignalTransport.subscribe(::onSyncSignal)
+                        try {
+                            awaitCancellation()
+                        } finally {
+                            unsubscribe()
+                        }
+                    }
+            }
+        }
+    }
+
+    /** The UI reporting `ON_START`: (re)connects the live-updates stream if signed in. */
+    fun onAppForegrounded() {
+        isAppForegrounded.value = true
+    }
+
+    /** The UI reporting `ON_STOP`: drops the live-updates connection -- no background wake. */
+    fun onAppBackgrounded() {
+        isAppForegrounded.value = false
+    }
+
+    /**
+     * Handles a `sync_changed` signal (#1201): mirrors `useSyncSignal`'s dedup -- skips the pull
+     * when the last-known sync cursor ([MobileActionsUiState.syncStatus]) is already at or ahead
+     * of the signal, since notify-then-pull signals only carry a freshness hint.
+     *
+     * [SyncSignalTransport.FORCE_REFRESH_SIGNAL] bypasses this comparison entirely and always
+     * refreshes -- a reconnect catch-up has no real timestamp to compare (there's nothing to
+     * vouch for what, if anything, was missed), and comparing the device's local clock against a
+     * cursor recorded from the server's clock would let clock skew silently drop the catch-up.
+     */
+    private fun onSyncSignal(serverTimestamp: String) {
+        viewModelScope.launch {
+            if (serverTimestamp != SyncSignalTransport.FORCE_REFRESH_SIGNAL) {
+                val signalInstant = parseInstantOrNull(serverTimestamp) ?: return@launch
+                val cursorInstant = _actionsState.value.syncStatus?.serverTimestamp?.let(::parseInstantOrNull)
+                if (cursorInstant != null && !cursorInstant.isBefore(signalInstant)) return@launch
+            }
+            refresh()
         }
     }
 
@@ -351,11 +417,23 @@ class DashboardViewModel(
     companion object {
         fun factory(
             repository: DashboardRepository,
-            connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled
+            connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled,
+            syncSignalTransport: SyncSignalTransport? = null
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                DashboardViewModel(repository = repository, connectivityObserver = connectivityObserver)
+                DashboardViewModel(
+                    repository = repository,
+                    connectivityObserver = connectivityObserver,
+                    syncSignalTransport = syncSignalTransport
+                )
             }
         }
     }
+}
+
+/** Parses an ISO-8601 offset date-time (accepts both a numeric offset and a `Z` suffix), or null. */
+private fun parseInstantOrNull(value: String): java.time.Instant? = try {
+    OffsetDateTime.parse(value).toInstant()
+} catch (_: DateTimeParseException) {
+    null
 }

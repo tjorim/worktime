@@ -89,7 +89,12 @@ fun WorktimeApp(
 
     val dashboardViewModel: DashboardViewModel =
         viewModel(
-            factory = DashboardViewModel.factory(container.dashboardRepository, container.connectivityObserver)
+            factory =
+            DashboardViewModel.factory(
+                container.dashboardRepository,
+                container.connectivityObserver,
+                container.syncSignalTransport
+            )
         )
     val uiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
     val actionsState by dashboardViewModel.actionsState.collectAsStateWithLifecycle()
@@ -151,6 +156,22 @@ fun WorktimeApp(
                 when (event) {
                     Lifecycle.Event.ON_STOP -> biometricGateViewModel.onAppBackgrounded(System.currentTimeMillis())
                     Lifecycle.Event.ON_START -> biometricGateViewModel.onAppResumed(System.currentTimeMillis())
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Live-updates (#1201): connect the SSE stream only while the UI is actually on screen --
+    // mirrors the frontend's useSyncSignal lifecycle (subscribed while active), no background
+    // service or wake lock involved.
+    DisposableEffect(lifecycleOwner, dashboardViewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> dashboardViewModel.onAppForegrounded()
+                    Lifecycle.Event.ON_STOP -> dashboardViewModel.onAppBackgrounded()
                     else -> Unit
                 }
             }
