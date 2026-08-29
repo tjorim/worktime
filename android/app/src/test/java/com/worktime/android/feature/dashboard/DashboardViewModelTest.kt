@@ -4,6 +4,7 @@ import android.content.Intent
 import app.cash.turbine.test
 import com.worktime.android.core.auth.SessionState
 import com.worktime.android.core.network.ConnectivityObserver
+import com.worktime.android.core.sync.SyncSignalTransport
 import com.worktime.android.data.model.CurrentStatus
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.FeatureFlags
@@ -365,6 +366,101 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun subscribesToSyncSignalTransportOnlyWhileForegroundedAndAuthenticated() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        advanceUntilIdle()
+        assertEquals(0, transport.subscribeCallCount)
+
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+        assertEquals(1, transport.subscribeCallCount)
+        assertEquals(0, transport.unsubscribeCallCount)
+
+        viewModel.onAppBackgrounded()
+        advanceUntilIdle()
+        assertEquals(1, transport.subscribeCallCount)
+        assertEquals(1, transport.unsubscribeCallCount)
+
+        // Re-foregrounding opens a fresh subscription rather than reusing the torn-down one.
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+        assertEquals(2, transport.subscribeCallCount)
+    }
+
+    @Test
+    fun syncSignalUnsubscribesWhenSessionBecomesLoggedOut() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        advanceUntilIdle()
+
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+        assertEquals(1, transport.subscribeCallCount)
+
+        repository.sessionState.value = SessionState.LoggedOut
+        advanceUntilIdle()
+        assertEquals(1, transport.unsubscribeCallCount)
+    }
+
+    @Test
+    fun syncSignalTriggersRefreshWhenNewerThanTheStoredCursor() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+        assertEquals("2026-05-26T12:00:00Z", viewModel.actionsState.value.syncStatus?.serverTimestamp)
+
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+
+        transport.emit("2026-05-26T13:00:00Z")
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadDashboardCallCount)
+    }
+
+    @Test
+    fun syncSignalSkipsRefreshWhenNotNewerThanTheStoredCursor() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+
+        transport.emit("2026-05-26T12:00:00Z") // equal to the stored cursor
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+
+        transport.emit("2026-05-26T11:00:00Z") // older than the stored cursor
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+    }
+
+    @Test
+    fun syncSignalIgnoresAnUnparseableTimestamp() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        advanceUntilIdle()
+        assertEquals(1, repository.loadDashboardCallCount)
+
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+
+        transport.emit("not-a-timestamp")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.loadDashboardCallCount)
+    }
+
+    @Test
     fun createLabelSurfacesConflictMessage() = runTest(dispatcher) {
         val repository =
             FakeDashboardRepository(
@@ -644,6 +740,27 @@ class DashboardViewModelTest {
 
         fun emit(online: Boolean) {
             flow.tryEmit(online)
+        }
+    }
+
+    private class FakeSyncSignalTransport : SyncSignalTransport {
+        var subscribeCallCount = 0
+            private set
+        var unsubscribeCallCount = 0
+            private set
+        private var currentOnSignal: ((String) -> Unit)? = null
+
+        override fun subscribe(onSignal: (String) -> Unit): () -> Unit {
+            subscribeCallCount++
+            currentOnSignal = onSignal
+            return {
+                unsubscribeCallCount++
+                currentOnSignal = null
+            }
+        }
+
+        fun emit(serverTimestamp: String) {
+            currentOnSignal?.invoke(serverTimestamp)
         }
     }
 }
