@@ -157,9 +157,11 @@ exactly one `POST clock-in` line.
 
 ```sh
 python3 pebble/scripts/mock-server.py 8899
-python3 pebble/scripts/mock-server.py 8899 --latency 3     # time to press SELECT repeatedly
-python3 pebble/scripts/mock-server.py 8899 --fail-with 503 # check the state stays retryable
-python3 pebble/scripts/mock-server.py 8899 --clocked-in    # start mid-task, to clock out first
+python3 pebble/scripts/mock-server.py 8899 --latency 3       # time to press SELECT repeatedly
+python3 pebble/scripts/mock-server.py 8899 --fail-with 503   # check the state stays retryable
+python3 pebble/scripts/mock-server.py 8899 --clocked-in      # start mid-task, to clock out first
+python3 pebble/scripts/mock-server.py 8899 --planned-in 5    # planned task 5 minutes out, to
+                                                               # see the starting-soon reminder
 ```
 
 Requests are served on threads, so genuinely overlapping mutations would appear

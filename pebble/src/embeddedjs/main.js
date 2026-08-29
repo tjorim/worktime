@@ -3,6 +3,7 @@
 import {} from "piu/MC";
 import Button from "pebble/button";
 import Message from "pebble/message";
+import Vibes from "pebble/vibes";
 
 const DEFAULT_API_BASE_URL = "https://worktime.tjor.im";
 // Last successful dashboard, kept so the watch still shows shift and task
@@ -14,6 +15,9 @@ const SNAPSHOT_VERSION = 1;
 // timer that ran overnight is worse than no timer at all).
 const SNAPSHOT_MAX_AGE_SECONDS = 12 * 60 * 60;
 const CLOCK_HINT = "SELECT: clock in/out";
+// Mirrors the backend's REMINDER_LEAD_MINUTES (planned_task_reminder_scheduler.py),
+// so the watch buzzes around the same time as the webapp/Android push.
+const REMINDER_LEAD_SECONDS = 10 * 60;
 
 const pad = (value) => (value < 10 ? `0${value}` : String(value));
 // Alloy's font lookup only matches the Pebble system font table exactly:
@@ -51,12 +55,32 @@ function runningTaskOf(dashboard) {
   return { text: task.text || "Working", start_time: task.start_time };
 }
 
+function plannedTaskOf(dashboard) {
+  const task = dashboard?.planned_task;
+  if (!task) return null;
+  return { text: task.text || "Working", start_time: task.start_time };
+}
+
+// The reminder text once `plannedTask.start_time` is within REMINDER_LEAD_SECONDS of
+// `nowSeconds`, null before or after that window (including once the task has started).
+// Deriving this fresh from the dashboard/snapshot data already on hand each tick -- rather
+// than a scheduled wakeup -- is what keeps this within the "no new push/wake mechanism"
+// scope: it only fires while the watch app happens to be open.
+function reminderNoticeFor(plannedTask, nowSeconds) {
+  if (!plannedTask) return null;
+  const startSeconds = Math.floor(new Date(plannedTask.start_time).getTime() / 1000);
+  const remaining = startSeconds - nowSeconds;
+  if (remaining <= 0 || remaining > REMINDER_LEAD_SECONDS) return null;
+  return `Starting soon: ${plannedTask.text} ${formatClock(startSeconds)}`;
+}
+
 function snapshotOf(dashboard) {
   return {
     version: SNAPSHOT_VERSION,
     fetchedAt: Math.floor(Date.now() / 1000),
     shift: shiftLine(dashboard),
     task: runningTaskOf(dashboard),
+    plannedTask: plannedTaskOf(dashboard),
   };
 }
 
@@ -150,6 +174,13 @@ const WorktimeApplication = Application.template(($) => ({
     onCreate(application, data) {
       this.data = data;
       this.runningTask = null;
+      this.plannedTask = null;
+      // The reminder text currently shown (see reminderNoticeFor), or null. Tracked
+      // separately from baseHint so a reminder can overlay whatever the hint line
+      // would otherwise say, and so re-deriving it each tick vibrates at most once
+      // per distinct notice instead of on every tick spent inside the lead window.
+      this.reminderNotice = null;
+      this.baseHint = CLOCK_HINT;
       this.lastTick = -1;
     }
 
@@ -163,7 +194,12 @@ const WorktimeApplication = Application.template(($) => ({
     }
 
     setHint(hint) {
-      this.data.HINT.string = hint;
+      this.baseHint = hint;
+      this.renderHint();
+    }
+
+    renderHint() {
+      this.data.HINT.string = this.reminderNotice || this.baseHint;
     }
 
     showTask(task) {
@@ -182,14 +218,18 @@ const WorktimeApplication = Application.template(($) => ({
     // watch is showing cached values (offline, server error, …).
     showSnapshot(snapshot, staleReason) {
       this.data.SHIFT.string = snapshot.shift || "Shift unavailable";
+      this.plannedTask = snapshot.plannedTask || null;
       this.showTask(snapshot.task);
       this.setHint(
         staleReason ? `${staleReason} · ${formatClock(snapshot.fetchedAt)}` : CLOCK_HINT,
       );
+      this.updateReminder(Math.floor(Date.now() / 1000));
     }
 
     showError(message) {
       this.runningTask = null;
+      this.plannedTask = null;
+      this.reminderNotice = null;
       this.data.SHIFT.string = "Shift unavailable";
       this.data.STATUS.string = message;
       this.data.TIMER.string = "";
@@ -198,12 +238,26 @@ const WorktimeApplication = Application.template(($) => ({
     }
 
     onTimeChanged() {
-      if (!this.runningTask) return;
       const now = Math.floor(Date.now() / 1000);
+      this.updateReminder(now);
+      if (!this.runningTask) return;
       if (now === this.lastTick) return;
       this.lastTick = now;
       const startedAt = Math.floor(new Date(this.runningTask.start_time).getTime() / 1000);
       this.data.TIMER.string = formatElapsed(Math.max(0, now - startedAt));
+    }
+
+    // Buzzes the watch once when the planned task's reminder text first appears (or
+    // changes), then re-renders the hint line to show or clear it. Comparing against
+    // the previously-shown notice text -- not just "has a planned task" -- is what
+    // keeps this a single pulse for the whole lead window instead of buzzing on every
+    // tick, while still re-arming for a different or rescheduled task.
+    updateReminder(nowSeconds) {
+      const notice = reminderNoticeFor(this.plannedTask, nowSeconds);
+      if (notice === this.reminderNotice) return;
+      this.reminderNotice = notice;
+      if (notice) Vibes.doublePulse();
+      this.renderHint();
     }
   },
 }));

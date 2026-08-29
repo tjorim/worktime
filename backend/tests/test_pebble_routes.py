@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -55,6 +56,47 @@ def test_pebble_scope_matrix_and_clock_actions(
         headers=write_headers,
     )
     assert duplicate_clock_out.status_code == 409
+
+
+def test_pebble_dashboard_reports_soonest_planned_task(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "pebble-planned-user")
+    owner_headers = auth_headers(user_id)
+    read_headers = auth_headers(user_id, via_pat=True)
+
+    empty_dashboard = db_client.get("/api/pebble/dashboard", headers=read_headers)
+    assert empty_dashboard.status_code == 200, empty_dashboard.text
+    assert empty_dashboard.json()["planned_task"] is None
+
+    now = datetime.now(UTC)
+
+    def _create_task(text: str, start_time: datetime, stop_time: datetime | None) -> str:
+        payload = {
+            "text": text,
+            "start_time": start_time.isoformat(),
+            "stop_time": stop_time.isoformat() if stop_time else None,
+        }
+        response = db_client.post("/api/time-tracking/tasks", json=payload, headers=owner_headers)
+        assert response.status_code == 201, response.text
+        return response.json()["id"]
+
+    # A past task and a currently-running task are not "planned" -- neither
+    # should be reported as the soonest upcoming one.
+    _create_task("Past", now - timedelta(hours=2), now - timedelta(hours=1))
+    _create_task("Running", now - timedelta(minutes=10), None)
+    later_id = _create_task("Later", now + timedelta(hours=2), now + timedelta(hours=3))
+    soonest_id = _create_task("Soonest", now + timedelta(minutes=30), now + timedelta(hours=1))
+
+    dashboard = db_client.get("/api/pebble/dashboard", headers=read_headers)
+    assert dashboard.status_code == 200, dashboard.text
+    body = dashboard.json()
+    assert body["planned_task"]["id"] == soonest_id
+    assert body["planned_task"]["id"] != later_id
+    assert body["running_task"]["text"] == "Running"
 
 
 def test_pebble_clock_actions_write_delegated_audit_entries(
