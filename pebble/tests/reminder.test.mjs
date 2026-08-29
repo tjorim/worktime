@@ -12,8 +12,19 @@ function ok(body) {
   return () => ({ status: 200, body });
 }
 
-function plannedTask(minutesFromNow, text = "Team sync") {
-  return { text, start_time: new Date(Date.now() + minutesFromNow * 60_000).toISOString() };
+function plannedTask(minutesFromNow, text = "Team sync", id = "task_1") {
+  return {
+    id,
+    text,
+    start_time: new Date(Date.now() + minutesFromNow * 60_000).toISOString(),
+  };
+}
+
+// Anchored to the start of the current minute so two offsets within [0, 59] always land
+// in the same displayed HH:MM, regardless of how close `Date.now()` is to a minute boundary.
+function withinSameDisplayedMinute(minutesFromNow, secondsPastTheMinute) {
+  const startOfMinute = Math.floor(Date.now() / 60_000) * 60;
+  return new Date((startOfMinute + minutesFromNow * 60 + secondsPastTheMinute) * 1000).toISOString();
 }
 
 test("a planned task inside the lead window buzzes once and shows a hint", async () => {
@@ -87,4 +98,33 @@ test("a rescheduled planned task re-arms the reminder", async () => {
 
   assert.deepEqual(harness.pulses, ["double", "double"]);
   assert.match(harness.labels.HINT.string, /^Starting soon: Team sync \(moved\) \d\d:\d\d$/);
+});
+
+test("a reschedule within the same displayed minute still re-arms the buzz", async () => {
+  // Same task id and text, moved by 40 seconds -- the rendered "HH:MM" notice is
+  // identical before and after, so the dedup must key off the exact start_time
+  // (and task id), not the text a viewer would actually see.
+  const harness = createHarness({ storage: TOKEN });
+  harness.setResponder(
+    ok(
+      dashboardBody({
+        plannedTask: { id: "task_1", text: "Team sync", start_time: withinSameDisplayedMinute(5, 5) },
+      }),
+    ),
+  );
+  await harness.display();
+  assert.deepEqual(harness.pulses, ["double"]);
+  const firstHint = harness.labels.HINT.string;
+
+  harness.setResponder(
+    ok(
+      dashboardBody({
+        plannedTask: { id: "task_1", text: "Team sync", start_time: withinSameDisplayedMinute(5, 45) },
+      }),
+    ),
+  );
+  await harness.press("up");
+
+  assert.deepEqual(harness.pulses, ["double", "double"]);
+  assert.equal(harness.labels.HINT.string, firstHint);
 });

@@ -58,20 +58,31 @@ function runningTaskOf(dashboard) {
 function plannedTaskOf(dashboard) {
   const task = dashboard?.planned_task;
   if (!task) return null;
-  return { text: task.text || "Working", start_time: task.start_time };
+  return { id: task.id, text: task.text || "Working", start_time: task.start_time };
 }
 
-// The reminder text once `plannedTask.start_time` is within REMINDER_LEAD_SECONDS of
-// `nowSeconds`, null before or after that window (including once the task has started).
-// Deriving this fresh from the dashboard/snapshot data already on hand each tick -- rather
-// than a scheduled wakeup -- is what keeps this within the "no new push/wake mechanism"
-// scope: it only fires while the watch app happens to be open.
-function reminderNoticeFor(plannedTask, nowSeconds) {
-  if (!plannedTask) return null;
+// True once `plannedTask.start_time` is within REMINDER_LEAD_SECONDS of `nowSeconds`,
+// false before or after that window (including once the task has started).
+function reminderDueFor(plannedTask, nowSeconds) {
+  if (!plannedTask) return false;
   const startSeconds = Math.floor(new Date(plannedTask.start_time).getTime() / 1000);
   const remaining = startSeconds - nowSeconds;
-  if (remaining <= 0 || remaining > REMINDER_LEAD_SECONDS) return null;
+  return remaining > 0 && remaining <= REMINDER_LEAD_SECONDS;
+}
+
+function reminderNoticeFor(plannedTask) {
+  const startSeconds = Math.floor(new Date(plannedTask.start_time).getTime() / 1000);
   return `Starting soon: ${plannedTask.text} ${formatClock(startSeconds)}`;
+}
+
+// Identifies *which* scheduled instant a reminder was already buzzed for -- id alone isn't
+// enough, since editing a task's start_time keeps its id (mirrors the same id+start_time
+// fix applied to the frontend's foreground dedup in #1204). Using the exact start_time
+// (not the HH:MM the hint renders) means a reschedule within the same displayed minute
+// still re-arms the buzz instead of being silently swallowed by an unchanged notice string.
+function reminderKeyFor(plannedTask) {
+  if (!plannedTask) return null;
+  return `${plannedTask.id}:${plannedTask.start_time}`;
 }
 
 function snapshotOf(dashboard) {
@@ -177,9 +188,13 @@ const WorktimeApplication = Application.template(($) => ({
       this.plannedTask = null;
       // The reminder text currently shown (see reminderNoticeFor), or null. Tracked
       // separately from baseHint so a reminder can overlay whatever the hint line
-      // would otherwise say, and so re-deriving it each tick vibrates at most once
-      // per distinct notice instead of on every tick spent inside the lead window.
+      // would otherwise say.
       this.reminderNotice = null;
+      // The reminderKeyFor() of the task+start_time already buzzed for, or null. Kept
+      // separate from reminderNotice (see reminderKeyFor) so re-deriving both each tick
+      // vibrates at most once per distinct scheduled instant, not once per distinct
+      // *displayed* notice.
+      this.remindedKey = null;
       this.baseHint = CLOCK_HINT;
       this.lastTick = -1;
     }
@@ -230,6 +245,7 @@ const WorktimeApplication = Application.template(($) => ({
       this.runningTask = null;
       this.plannedTask = null;
       this.reminderNotice = null;
+      this.remindedKey = null;
       this.data.SHIFT.string = "Shift unavailable";
       this.data.STATUS.string = message;
       this.data.TIMER.string = "";
@@ -247,16 +263,21 @@ const WorktimeApplication = Application.template(($) => ({
       this.data.TIMER.string = formatElapsed(Math.max(0, now - startedAt));
     }
 
-    // Buzzes the watch once when the planned task's reminder text first appears (or
-    // changes), then re-renders the hint line to show or clear it. Comparing against
-    // the previously-shown notice text -- not just "has a planned task" -- is what
-    // keeps this a single pulse for the whole lead window instead of buzzing on every
-    // tick, while still re-arming for a different or rescheduled task.
+    // Buzzes the watch once per distinct scheduled instant (reminderKeyFor) when the
+    // planned task enters the lead window, then re-renders the hint line to show or
+    // clear the notice text. The key and the displayed notice are compared separately
+    // -- see reminderKeyFor -- so a reschedule that happens to keep the same displayed
+    // HH:MM still re-arms the buzz.
     updateReminder(nowSeconds) {
-      const notice = reminderNoticeFor(this.plannedTask, nowSeconds);
+      const due = reminderDueFor(this.plannedTask, nowSeconds);
+      const key = due ? reminderKeyFor(this.plannedTask) : null;
+      if (key !== this.remindedKey) {
+        this.remindedKey = key;
+        if (key) Vibes.doublePulse();
+      }
+      const notice = due ? reminderNoticeFor(this.plannedTask) : null;
       if (notice === this.reminderNotice) return;
       this.reminderNotice = notice;
-      if (notice) Vibes.doublePulse();
       this.renderHint();
     }
   },
