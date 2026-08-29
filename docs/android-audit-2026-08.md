@@ -38,8 +38,8 @@ verified without a device.
 | Medium | Disable connectivity and cold-launch. | `WorktimeRepository` had no caching layer (`data/repository/WorktimeRepository.kt`); a failed fetch was `DashboardLoadResult.Error`, and `ReadModelScreen` had no distinct offline/stale-data rendering, only Loading/LoggedOut/Error/Success. | **Fixed** (#1230, #1240): `DashboardCache`/`DashboardCacheStore` persist the last successful dashboard plus a timestamp; `DashboardViewModel.refresh()` shows it immediately on cold start (marked stale via `DashboardUiState.Success.staleAsOf`) and keeps showing it if a subsequent fetch fails, and `ReadModelScreen` renders an Offline/Stale banner with a retry action instead of a hard error. |
 | Medium | Enable large font and TalkBack; inspect dense Today and Settings controls. | Material controls provide baseline semantics, but screen headings, grouped card semantics, focus order, and 200% text layout are not device-tested. | Follow-up: #1237 (execute the device/TalkBack capture pass) and #1231 (test harness to anchor it in CI going forward). |
 | Minor | Inspect `WorkLocationQuickChips`. | Its Home/Office `FilterChip`s always pass `selected = false` for what are momentary actions, not toggles (`TodayScreen.kt:301-313`) — `FilterChip`'s checkable semantics don't match "runs an action," which can announce an incorrect checkable state to TalkBack. Only "Other" has genuine selection state. | **Fixed** in this PR: Home/Office now use `AssistChip` (no checkable semantics); "Other" keeps `FilterChip` since it genuinely toggles. Noted on #1232 for the record. |
-| Medium | Inspect `WorktimeRepository` and dashboard refresh. | A refresh fans out multiple requests (`DashboardViewModel.refreshActions`, `data/repository/WorktimeRepository.kt`) and there is no connectivity-triggered reconciliation policy beyond the existing FCM wake-and-reconcile path for reminders. | Follow-up: #1235 (single connectivity-aware refresh coordinator); coordinate with #1201 (SSE live-update while foregrounded). The read-cache half of this finding is fixed by #1230/#1240; #1235 is only the refresh-coordination policy on top of it. |
-| Low | Read `ui/theme/Theme.kt`/`Color.kt` and `frontend/src/styles/_variables.scss` side by side. | Android defines exactly two hard-coded colors over Material 3's stock light/dark schemes — no typography, shape, or spacing scale exists at all, stronger than "no named tokens." Its primary (`#0057B8`/`#6CA8FF`) doesn't match the web app's `#0d6efd`, and none of Today/Next shifts/Team status color-code shifts the way the web app's contrast-audited `--wt-shift-*` tokens do. | Follow-up: #1233 (design tokens + brand/shift-color parity). |
+| Medium | Inspect `WorktimeRepository` and dashboard refresh. | A refresh fans out multiple requests (`DashboardViewModel.refreshActions`, `data/repository/WorktimeRepository.kt`) and there is no connectivity-triggered reconciliation policy beyond the existing FCM wake-and-reconcile path for reminders. | **Fixed** (#1235): `refresh()`/`refreshActions()` each now cancel-and-replace their own in-flight job (`DashboardViewModel.refreshJob`/`actionsJob`) so overlapping triggers coalesce to the latest request instead of racing to write `_uiState`/`_actionsState` in whatever order responses land; `AndroidConnectivityObserver` (`core/network/`) wraps `ConnectivityManager.registerNetworkCallback` and triggers a reconcile once validated connectivity returns after being lost. Coordinate with #1201 (SSE live-update while foregrounded) so both land on one policy eventually. Network/battery measurement before/after is unverified — no device/emulator in this review's environment; folded into the device manifest at #1237. |
+| Low | Read `ui/theme/Theme.kt`/`Color.kt` and `frontend/src/styles/_variables.scss` side by side. | Android defined exactly two hard-coded colors over Material 3's stock light/dark schemes — no typography, shape, or spacing scale existed at all, stronger than "no named tokens." Its primary (`#0057B8`/`#6CA8FF`) didn't match the web app's `#0d6efd`, and none of Today/Next shifts/Team status color-coded shifts the way the web app's contrast-audited `--wt-shift-*` tokens do. | **Fixed** (#1233): `WorktimePrimary`/`WorktimePrimaryDark` now align with `#0d6efd` (and web's own dark-mode accent for contrast), plus named `ShiftColors`/`WorktimeSpacing`/`Shapes` tokens mirrored from `_variables.scss`. A new `ShiftBadge` applies shift-type color coding to the Today/Next shifts/Team status rows that render `formatShift()`. |
 | Low | Inspect `WorktimeApp.kt` (454 lines) and `WorktimeAuthenticatedScaffold`'s ~30 parameters. | Session state, reminder reconciliation, FCM registration, biometric-lock lifecycle observation, login/logout, and navigation are all owned by one top-level composable and threaded down through every destination as individual lambdas. Not a correctness bug, but it widens each destination's effective recomposition scope and makes an isolated Compose UI test for one screen harder to write. | Follow-up: #1236. Natural to address alongside the component extraction proposed below (#1233), but doesn't require waiting on it. |
 | Low | Inspect test tree and `.github/workflows/android.yml`. | Solid JVM unit coverage exists for auth, networking, notifications/reminders, and the data/ViewModel layer (`android/app/src/test/**`), but there is no `androidTest` source set at all — zero Compose UI, navigation, receiver, screenshot, or accessibility test coverage, and CI runs only `ktlintCheck detekt testDebugUnitTest lintDebug assembleDebug`. | Follow-up: #1231. |
 
@@ -63,14 +63,14 @@ release operations.
 | Experience | Responsive web | Android | Decision |
 |---|---|---|---|
 | Today/current status and timer actions | Full | Native cards and actions | Required parity; keep native card/action layout. |
-| Upcoming shifts and team status | Full | Read-only destinations, uncolored | Required parity, **including shift-type color coding** (see #1233) — currently a real gap, not a native-pattern deferral. |
+| Upcoming shifts and team status | Full | Read-only destinations, now shift-color coded | Required parity, **including shift-type color coding** (fixed by #1233). |
 | Time off | Summary and editing | Summary and form | Required parity; use native date pickers/dialogs (state loss on rotate fixed, #1229). |
 | Labels/templates and work location | Full | Settings/actions | Required parity where mobile workflows benefit. |
 | Gantt, transfer, calendar power views | Full | Absent | Deliberately web-only until a mobile use case is approved. |
 | Account/API settings | Full | Focused native settings | Native pattern; do not reproduce desktop sections. |
 | Loading/empty/error | Per view | Generic read-model treatment plus an explicit offline/stale variant | Required parity achieved for the dashboard read model (#1230, #1240). |
 | Authentication and biometric lock | OIDC/PWA | AppAuth plus native biometric gate | Better expressed natively. |
-| Theme | Light/dark/system, documented surface-elevation and shift-color tokens | System-derived light/dark, two ad hoc colors | Required parity on brand color and shift color-coding (#1233); Android dynamic-color behavior otherwise remains native. |
+| Theme | Light/dark/system, documented surface-elevation and shift-color tokens | System-derived light/dark, named brand/shift-color/spacing/shape tokens | Required parity on brand color and shift color-coding achieved (#1233); Android dynamic-color behavior otherwise remains native. |
 
 **Intended scope:** Android is a focused companion for glanceable status and frequent mobile
 actions. Product parity means consistent facts, permissions, and outcomes — not duplicating
@@ -140,19 +140,20 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
    permission degradation, dedupe, account isolation, and tests. Done.
 2. **P1 – state restoration (#1229, closed):** stop discarding unsaved dialog/form input on
    rotation and on the notification-tap `recreate()` path. Done.
-3. **P1 – offline truth (#1230, closed by #1240):** durable read cache and stale age. Done;
-   connectivity-transition and reconciliation-policy work continues under #1235.
+3. **P1 – offline truth (#1230, closed by #1240):** durable read cache and stale age. Done.
 4. **P1 – accessibility/device harness (#1231, #1232, #1237):** fix the two concrete
    color-only/unlabeled controls now; stand up a Compose UI/instrumented test harness in CI;
    then execute the font-scale and TalkBack device capture manifest the harness makes it
    possible to keep passing.
-5. **P2 – design tokens/shift-color parity (#1233):** introduce the system above, align brand
-   color, add shift-type color coding, and migrate Today, then list destinations, in
-   separately reviewable visual changes.
-6. **P2 – refresh efficiency (#1235):** single connectivity-aware refresh coordinator and
-   constrained WorkManager reconciliation with network/battery measurements; coordinate with
-   #1201 (SSE live-update while foregrounded) so both land on one refresh-triggering policy
-   instead of two.
+5. **P2 – design tokens/shift-color parity (#1233, closed):** named color/spacing/shape tokens,
+   brand color alignment, and shift-type color coding on Today/Next shifts/Team status. Done;
+   the component-extraction side of the proposal below (`StatusHero`, `ScheduleCard`, etc.)
+   remains optional future work, not required by #1233 itself.
+6. **P2 – refresh efficiency (#1235, closed):** single connectivity-aware refresh coordinator.
+   Done; network/battery measurement remains unverified pending device access, folded into
+   #1237's device-capture manifest rather than left open under #1235. Coordinate with #1201
+   (SSE live-update while foregrounded) so both eventually land on one refresh-triggering
+   policy.
 7. **P2 – state-ownership refactor (#1236):** decompose `WorktimeApp.kt`'s god-composable, ideally
    alongside the component extraction in #1233.
 8. **Decision gate:** validate demand before adding Gantt, transfer, or admin surfaces; absent
@@ -167,8 +168,8 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
 - #1231 — no Compose UI, instrumented, or accessibility test coverage in CI (Medium)
 - #1232 — color-only and unlabeled tap targets fail accessibility (Medium); also carries the
   minor `FilterChip` semantic-misuse note for whoever picks it up
-- #1233 — design tokens and brand/shift-color parity gaps (Low)
-- #1235 — no single connectivity-aware refresh coordinator (Medium)
+- #1233 — design tokens and brand/shift-color parity gaps (Low, **closed**)
+- #1235 — no single connectivity-aware refresh coordinator (Medium, **closed**)
 - #1236 — `WorktimeApp.kt` god-composable state ownership (Low)
 - #1237 — execute the device screenshot/TalkBack capture manifest (tracking, no severity)
 

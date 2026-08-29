@@ -5,7 +5,6 @@ import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.ui.components.ReadModelScreen
 import com.worktime.android.ui.components.ScreenList
 import com.worktime.android.ui.components.SummaryCard
-import com.worktime.android.ui.components.formatShift
 
 @Composable
 fun TeamStatusScreen(uiState: DashboardUiState, onRetry: () -> Unit) {
@@ -21,7 +20,7 @@ fun TeamStatusScreen(uiState: DashboardUiState, onRetry: () -> Unit) {
                 dashboard.teamStatus.items.forEach { teamItem ->
                     item {
                         SummaryCard(title = "Team ${teamItem.teamNumber}") {
-                            text("Shift", formatShift(teamItem.shift))
+                            shiftRow("Shift", teamItem.shift)
                             text("Current", if (teamItem.isCurrentlyWorking) "Working now" else "Not active")
                             text("Shift code", teamItem.shiftCode)
                         }
