@@ -140,8 +140,7 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
    permission degradation, dedupe, account isolation, and tests. Done.
 2. **P1 – state restoration (#1229, closed):** stop discarding unsaved dialog/form input on
    rotation and on the notification-tap `recreate()` path. Done.
-3. **P1 – offline truth (#1230, closed by #1240):** durable read cache and stale age. Done;
-   connectivity-transition and reconciliation-policy work continues under #1235.
+3. **P1 – offline truth (#1230, closed by #1240):** durable read cache and stale age. Done.
 4. **P1 – accessibility/device harness (#1231, #1232, #1237):** fix the two concrete
    color-only/unlabeled controls now; stand up a Compose UI/instrumented test harness in CI;
    then execute the font-scale and TalkBack device capture manifest the harness makes it
@@ -150,10 +149,11 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
    brand color alignment, and shift-type color coding on Today/Next shifts/Team status. Done;
    the component-extraction side of the proposal below (`StatusHero`, `ScheduleCard`, etc.)
    remains optional future work, not required by #1233 itself.
-6. **P2 – refresh efficiency (#1235):** single connectivity-aware refresh coordinator and
-   constrained WorkManager reconciliation with network/battery measurements; coordinate with
-   #1201 (SSE live-update while foregrounded) so both land on one refresh-triggering policy
-   instead of two.
+6. **P2 – refresh efficiency (#1235, closed):** single connectivity-aware refresh coordinator.
+   Done; network/battery measurement remains unverified pending device access, folded into
+   #1237's device-capture manifest rather than left open under #1235. Coordinate with #1201
+   (SSE live-update while foregrounded) so both eventually land on one refresh-triggering
+   policy.
 7. **P2 – state-ownership refactor (#1236):** decompose `WorktimeApp.kt`'s god-composable, ideally
    alongside the component extraction in #1233.
 8. **Decision gate:** validate demand before adding Gantt, transfer, or admin surfaces; absent
@@ -169,7 +169,7 @@ tracked issue, #1237, so it has an owner instead of only a written protocol.
 - #1232 — color-only and unlabeled tap targets fail accessibility (Medium); also carries the
   minor `FilterChip` semantic-misuse note for whoever picks it up
 - #1233 — design tokens and brand/shift-color parity gaps (Low, **closed**)
-- #1235 — no single connectivity-aware refresh coordinator (Medium)
+- #1235 — no single connectivity-aware refresh coordinator (Medium, **closed**)
 - #1236 — `WorktimeApp.kt` god-composable state ownership (Low)
 - #1237 — execute the device screenshot/TalkBack capture manifest (tracking, no severity)
 

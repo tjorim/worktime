@@ -18,13 +18,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * without actually reaching the backend, which would otherwise trigger a reconcile that just fails
  * again.
  *
- * The registered [NetworkRequest] isn't tied to one network, so a device with more than one network
- * satisfying it (e.g. Wi-Fi and cellular both up during a handoff) can deliver a callback for a
- * network that isn't the one the OS is actually routing through. Each callback therefore recomputes
- * device-wide status from [ConnectivityManager.getActiveNetwork] instead of trusting the specific
- * [Network]/[NetworkCapabilities] the callback was invoked with -- otherwise losing the non-default
- * network (or its capabilities settling after being deprioritized) could report "offline" while the
- * device is still online through the other one.
+ * The registered [NetworkRequest] isn't tied to one network, so a device can have more than one
+ * network satisfying it (e.g. Wi-Fi and cellular both up during a handoff). Rather than re-querying
+ * [ConnectivityManager] state from inside the callback -- which Android's own docs warn can race
+ * with the callback delivery and return stale data -- each callback's own [NetworkCapabilities] are
+ * tracked per [Network] in [validatedNetworks], and status is "online" whenever that set is
+ * non-empty. That way losing one network doesn't report "offline" while another validated network
+ * is still up, without ever reading back through [ConnectivityManager] inside a callback.
  */
 class AndroidConnectivityObserver(context: Context) : ConnectivityObserver {
     private val connectivityManager =
@@ -32,18 +32,22 @@ class AndroidConnectivityObserver(context: Context) : ConnectivityObserver {
 
     override val isOnline: Flow<Boolean> =
         callbackFlow {
+            val validatedNetworks = mutableSetOf<Network>()
+
             val callback =
                 object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: Network) {
-                        trySend(currentlyOnline())
-                    }
-
                     override fun onLost(network: Network) {
-                        trySend(currentlyOnline())
+                        validatedNetworks.remove(network)
+                        trySend(validatedNetworks.isNotEmpty())
                     }
 
                     override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
-                        trySend(currentlyOnline())
+                        if (networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                            validatedNetworks.add(network)
+                        } else {
+                            validatedNetworks.remove(network)
+                        }
+                        trySend(validatedNetworks.isNotEmpty())
                     }
                 }
             val request =
