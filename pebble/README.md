@@ -28,9 +28,22 @@ time to disconnect the watch.
 
 The watch uses this narrow API surface:
 
-- `GET /api/pebble/dashboard` (`pebble:read`) — current task and shift glance.
+- `GET /api/pebble/dashboard` (`pebble:read`) — current task, soonest planned task, and shift glance.
 - `POST /api/pebble/actions/clock-in` (`pebble:write`) — start a "Working" task.
 - `POST /api/pebble/actions/clock-out` (`pebble:write`) — stop the current task.
+
+## Planned-task reminder
+
+A "planned" task — logged ahead of time, `stop_time` set, `start_time` still ahead — is the
+same concept the webapp and Android badge as "Planned" (see `isPlanned` in `DailyTaskList.tsx`)
+and remind about via push (#1204) and a local alarm (#1205). The watch has no equivalent
+background wakeup, so it follows the "derived from data already on hand" model instead: the
+dashboard response's `planned_task` is the soonest such task, and once its `start_time` is
+within ten minutes (mirroring the backend's own `REMINDER_LEAD_MINUTES`), the watch buzzes once
+(`Vibes.doublePulse()`) and replaces the bottom line with `Starting soon: <text> HH:MM` until
+the task starts. This is re-evaluated every second the app is open (the same tick that drives
+the running-task elapsed timer) and is display-only — it only fires while the watchapp happens
+to be in the foreground, not as a scheduled wakeup.
 
 ## Building and installing
 
@@ -70,12 +83,15 @@ your deployment's URL before building.
 ## Offline behavior
 
 The watch caches the **last successful dashboard read** (`lastDashboard` in the watch's
-`localStorage`: the shift line, the running task's label and start time, and the time of
-the read). While the phone link is down — or a request fails — the app keeps showing that
-glance, with the bottom line replaced by the reason and the time it was read, for example
-`Phone offline · 08:12`. The elapsed timer keeps counting from the cached start time, so it
-is an estimate rather than a confirmed value. Snapshots older than 12 hours —
-or stamped in the future after the watch clock moves back — are discarded.
+`localStorage`: the shift line, the running task's label and start time, the soonest planned
+task, and the time of the read). While the phone link is down — or a request fails — the app
+keeps showing that glance, with the bottom line replaced by the reason and the time it was
+read, for example `Phone offline · 08:12`. The elapsed timer keeps counting from the cached
+start time, so it is an estimate rather than a confirmed value. Snapshots older than 12 hours —
+or stamped in the future after the watch clock moves back — are discarded. The planned-task
+reminder still evaluates against the cached snapshot while offline — see "Planned-task
+reminder" above — but the offline reason line takes the bottom line back once the reminder
+window has passed.
 
 A new credential or server URL clears the snapshot because it may select a
 different account or deployment. A read still in flight for the previous
@@ -138,6 +154,9 @@ Hardware only:
       retryable (`--fail-with 503`).
 - [ ] Airplane mode shows the cached glance with its timestamp, and SELECT is a no-op until
       the phone reconnects.
+- [ ] A planned task starting within ten minutes buzzes once and shows `Starting soon: … HH:MM`;
+      it does not buzz again on later refreshes of the same task, and the line clears once the
+      task's start time passes (`scripts/mock-server.py --planned-in <minutes>`).
 
 ## Known limitations
 
@@ -146,3 +165,6 @@ Hardware only:
 - Clock actions use server time and the fixed task label "Working". Configure
   labels or edit task details later in the web or Android app.
 - No offline queue: see "Offline behavior" above.
+- The planned-task reminder only fires while the watchapp is open and ticking — unlike the
+  webapp/Android push (#1204) and Android's local alarm (#1205), there is no background wakeup,
+  so a planned task starting while the watchapp isn't running gets no reminder on the watch.

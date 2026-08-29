@@ -79,6 +79,9 @@ if (!watchSource.includes("localStorage.setItem(SNAPSHOT_KEY") || !watchSource.i
 if (!watchSource.includes("runExclusive(toggleClock)")) {
   throw new Error("Clock actions must go through the exclusive-action guard");
 }
+if (!watchSource.includes('from "pebble/vibes"') || !watchSource.includes("Vibes.doublePulse()")) {
+  throw new Error("Watch code must vibrate for the planned-task-starting-soon reminder");
+}
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
 }

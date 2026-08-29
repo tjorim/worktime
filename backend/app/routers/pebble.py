@@ -23,6 +23,7 @@ from app.services.db_service import (
     NotFoundError,
     ValidationError,
     create_task,
+    get_next_planned_task,
     get_running_task,
     update_task,
 )
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/pebble", tags=["Pebble"])
 
 class PebbleDashboardRead(BaseModel):
     running_task: TaskRead | None
+    planned_task: TaskRead | None
     current_status: CurrentStatusReadModel
     next_shifts: NextShiftsReadModel
 
@@ -57,8 +59,10 @@ async def get_pebble_dashboard(
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     running_task = await get_running_task(session, principal.user_id)
+    planned_task = await get_next_planned_task(session, principal.user_id)
     return PebbleDashboardRead(
         running_task=_task_read(running_task) if running_task is not None else None,
+        planned_task=_task_read(planned_task) if planned_task is not None else None,
         current_status=dashboard.current_status,
         next_shifts=dashboard.next_shifts,
     )

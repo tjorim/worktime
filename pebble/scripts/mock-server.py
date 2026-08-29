@@ -60,7 +60,7 @@ EVENING = {
     "is_working": True,
 }
 
-STATE = {"running_task": None, "next_task_id": 1}
+STATE = {"running_task": None, "planned_task": None, "next_task_id": 1}
 
 
 def now():
@@ -112,6 +112,7 @@ def dashboard(with_shift=True):
     )
     return {
         "running_task": STATE["running_task"],
+        "planned_task": STATE["planned_task"],
         "current_status": {
             "as_of": now(),
             "current_shift": current_shift,
@@ -234,6 +235,13 @@ def main():
     )
     parser.add_argument("--clocked-in", action="store_true", help="start with a running task")
     parser.add_argument("--no-shift", action="store_true", help="report no configured shift")
+    parser.add_argument(
+        "--planned-in",
+        type=float,
+        metavar="MINUTES",
+        help="report a planned task starting this many minutes from now, to exercise the "
+        "watch's starting-soon reminder",
+    )
     args = parser.parse_args()
 
     Handler.token = args.token
@@ -247,6 +255,16 @@ def main():
         started = (datetime.now(UTC) - timedelta(minutes=42)).isoformat()
         STATE["running_task"] = task_read("Working", started)
         STATE["next_task_id"] = 2
+
+    if args.planned_in is not None:
+        start = datetime.now(UTC) + timedelta(minutes=args.planned_in)
+        STATE["planned_task"] = task_read(
+            "Team sync",
+            start.isoformat(),
+            stop_time=(start + timedelta(hours=1)).isoformat(),
+            task_id=f"task_{STATE['next_task_id']}",
+        )
+        STATE["next_task_id"] += 1
 
     print(f"mock Worktime Pebble API on http://{args.host}:{args.port} (log: {args.log})")
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()

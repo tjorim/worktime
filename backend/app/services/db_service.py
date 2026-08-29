@@ -457,6 +457,26 @@ async def get_running_task(session: AsyncSession, user_id: int) -> TimeTrackingT
     return result.scalars().first()
 
 
+async def get_next_planned_task(session: AsyncSession, user_id: int) -> TimeTrackingTask | None:
+    """Return the soonest-starting "planned" task -- stop_time already set (not a running
+    timer), start_time still ahead of now. Mirrors the frontend's `isPlanned` check in
+    DailyTaskList.tsx and Android's `nextPlannedTask` (PlannedTaskReminderReconciler.kt).
+    """
+    now = datetime.now(UTC)
+    result = await session.execute(
+        select(TimeTrackingTask)
+        .where(
+            TimeTrackingTask.user_id == user_id,
+            TimeTrackingTask.stop_time.is_not(None),
+            TimeTrackingTask.deleted_at.is_(None),
+            TimeTrackingTask.start_time > now,
+        )
+        .order_by(TimeTrackingTask.start_time.asc())
+        .limit(1)
+    )
+    return result.scalars().first()
+
+
 async def update_task(
     session: AsyncSession,
     user_id: int,

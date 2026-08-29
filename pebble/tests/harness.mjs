@@ -23,6 +23,7 @@ export function createHarness({ connected = true, storage = {} } = {}) {
   const inFlight = new Set();
   const listeners = new Map();
   const hooks = {};
+  const pulses = [];
   let respond = () => ({ status: 200, body: {} });
 
   class Behavior {}
@@ -93,6 +94,13 @@ export function createHarness({ connected = true, storage = {} } = {}) {
         hooks.message = this;
       }
     },
+    Vibes: {
+      shortPulse: () => pulses.push("short"),
+      longPulse: () => pulses.push("long"),
+      doublePulse: () => pulses.push("double"),
+      pattern: (durations) => pulses.push(["pattern", durations]),
+      cancel: () => pulses.push("cancel"),
+    },
   });
 
   runInContext(stripImports(readFileSync(MAIN_PATH, "utf8")), context, {
@@ -124,6 +132,14 @@ export function createHarness({ connected = true, storage = {} } = {}) {
     },
     get stored() {
       return Object.fromEntries(store);
+    },
+    get pulses() {
+      return pulses.slice();
+    },
+    // Fires the same per-second hook Piu drives the elapsed timer and the
+    // planned-task reminder from, without waiting for a real second to pass.
+    tick() {
+      hooks.application.behavior.onTimeChanged();
     },
     setConnected(value) {
       context.watch.connected.pebblekit = value;
@@ -166,19 +182,26 @@ export const DASHBOARD_PATH = "/api/pebble/dashboard";
 export const CLOCK_IN_PATH = "/api/pebble/actions/clock-in";
 export const CLOCK_OUT_PATH = "/api/pebble/actions/clock-out";
 
-export function dashboardBody({ task = null, shift = null } = {}) {
+export function dashboardBody({ task = null, plannedTask = null, shift = null } = {}) {
   return {
     running_task: task,
+    planned_task: plannedTask,
     current_status: shift ? { current_shift: { shift } } : { current_shift: null },
     next_shifts: { items: [] },
   };
 }
 
-export function snapshot({ task = null, shift = "Today: Morning", ageSeconds = 0 } = {}) {
+export function snapshot({
+  task = null,
+  plannedTask = null,
+  shift = "Today: Morning",
+  ageSeconds = 0,
+} = {}) {
   return JSON.stringify({
     version: 1,
     fetchedAt: Math.floor(Date.now() / 1000) - ageSeconds,
     shift,
     task,
+    plannedTask,
   });
 }
