@@ -156,7 +156,7 @@ unfamiliar branch's existing commits:
 
 ## Conventions
 
-- Use American English in code, comments, and UI text
+- Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
 - Prefer targeted tests first, then broader checks before handoff
 - Do not commit automatically unless explicitly asked
 - Always include screenshots in PR comments when making UI changes (all visible states)
