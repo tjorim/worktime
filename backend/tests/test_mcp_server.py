@@ -7,7 +7,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, AuthContext, MultiAuth, run_auth_checks
+from fastmcp.server.transforms.search import BM25SearchTransform
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
@@ -130,6 +132,24 @@ async def test_search_tools_finds_time_summary() -> None:
     assert result.structured_content is not None
     names = [item["name"] for item in result.structured_content["result"]]
     assert "get_time_tracking_summary" in names
+
+
+async def test_search_tools_supports_unicode_tokens() -> None:
+    server = FastMCP(
+        "unicode-search-test",
+        transforms=[BM25SearchTransform(search_tool_name="search_tools")],
+    )
+
+    @server.tool
+    def time_off_overview() -> str:
+        """Return the congé overview."""
+        return ""
+
+    result = await server.call_tool("search_tools", {"query": "congé"})
+
+    assert result.structured_content is not None
+    names = [item["name"] for item in result.structured_content["result"]]
+    assert "time_off_overview" in names
 
 
 def test_search_serializer_preserves_schema_and_capabilities() -> None:
