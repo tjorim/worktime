@@ -58,7 +58,9 @@ export interface SyncSignalTransport {
    * @param onSignal - Called with each signal's ISO-8601 `server_timestamp`.
    * @returns A cleanup function that disconnects the transport.
    */
-  subscribe(onSignal: (serverTimestamp: string) => void): () => void;
+  subscribe(
+    onSignal: (serverTimestamp: string, options?: { forcePull?: boolean }) => void,
+  ): () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,7 +188,10 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
 
           retryMs = INITIAL_RETRY_MS;
           if (shouldCatchUpOnConnect) {
-            onSignal(new Date().toISOString());
+            // Recovery must bypass timestamp deduplication. The cursor comes
+            // from the server, so comparing it with the browser clock could
+            // suppress this required pull when the clocks differ.
+            onSignal(new Date().toISOString(), { forcePull: true });
             shouldCatchUpOnConnect = false;
           }
 
@@ -260,7 +265,12 @@ export function useSyncSignal(
   useEffect(() => {
     if (!isActive || !userId || !transport) return;
 
-    const unsubscribe = transport.subscribe((serverTimestamp) => {
+    const unsubscribe = transport.subscribe((serverTimestamp, options) => {
+      if (options?.forcePull) {
+        triggerPullRef.current();
+        return;
+      }
+
       const serverTimestampMs = Date.parse(serverTimestamp);
       if (Number.isNaN(serverTimestampMs)) {
         logger.warn(

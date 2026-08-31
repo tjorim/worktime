@@ -10,7 +10,9 @@ import { getSyncCursorKey } from "@/constants/storageKeys";
  * emit a signal.
  */
 function createMockTransport() {
-  let capturedOnSignal: ((serverTimestamp: string) => void) | null = null;
+  let capturedOnSignal: (
+    (serverTimestamp: string, options?: { forcePull?: boolean }) => void
+  ) | null = null;
   const unsubscribeMock = vi.fn(() => {
     capturedOnSignal = null;
   });
@@ -27,9 +29,14 @@ function createMockTransport() {
     capturedOnSignal(serverTimestamp);
   };
 
+  const emitForced = (serverTimestamp: string) => {
+    if (!capturedOnSignal) throw new Error("transport not yet subscribed");
+    capturedOnSignal(serverTimestamp, { forcePull: true });
+  };
+
   const isSubscribed = () => capturedOnSignal !== null;
 
-  return { transport, emit, unsubscribeMock, isSubscribed };
+  return { transport, emit, emitForced, unsubscribeMock, isSubscribed };
 }
 
 describe("useSyncSignal", () => {
@@ -213,6 +220,20 @@ describe("useSyncSignal", () => {
   });
 
   describe("reconnect behavior", () => {
+    it("forces a recovery pull even when the client clock trails the server cursor", () => {
+      const triggerPull = vi.fn();
+      const { transport, emitForced } = createMockTransport();
+
+      storeSyncCursor("user-1", "2026-09-01T00:00:00.000Z");
+      renderHook(() => useSyncSignal(true, "user-1", triggerPull, transport));
+
+      act(() => {
+        emitForced("2026-08-31T23:59:00.000Z");
+      });
+
+      expect(triggerPull).toHaveBeenCalledOnce();
+    });
+
     it("re-subscribes to the new transport when the transport instance changes", () => {
       const triggerPull = vi.fn();
       const mock1 = createMockTransport();
@@ -628,6 +649,7 @@ describe("createFetchSseTransport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(onSignal).toHaveBeenCalledTimes(1);
     expect(Number.isNaN(Date.parse(onSignal.mock.calls[0]![0] as string))).toBe(false);
+    expect(onSignal).toHaveBeenCalledWith(expect.any(String), { forcePull: true });
   });
 
   it("retries a non-auth failure with an increasing back-off interval", async () => {
@@ -701,6 +723,7 @@ describe("createFetchSseTransport", () => {
 
     expect(onSignal).toHaveBeenCalledTimes(1);
     expect(Number.isNaN(Date.parse(onSignal.mock.calls[0]![0] as string))).toBe(false);
+    expect(onSignal).toHaveBeenCalledWith(expect.any(String), { forcePull: true });
   });
 
   it("aborts the in-flight fetch when the cleanup function is called", async () => {
