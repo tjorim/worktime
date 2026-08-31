@@ -564,6 +564,72 @@ describe("createFetchSseTransport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1); // no retry scheduled
   });
 
+  it("honours Retry-After when the server's SSE connection cap returns 429", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, { status: 429, headers: { "Retry-After": "30" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("supports an HTTP-date Retry-After value and adds jitter between tabs", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T12:00:00.000Z"));
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 429,
+        headers: { "Retry-After": "Mon, 31 Aug 2026 12:00:30 GMT" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+
+    // 30s minimum + 10% jitter (half of the 20% jitter window).
+    await vi.advanceTimersByTimeAsync(32_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("forces a catch-up pull when the first successful connection follows a 429", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const stream = sseController();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, { status: 429, headers: { "Retry-After": "30" } }),
+      )
+      .mockResolvedValueOnce(sseResponse(stream.stream));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    const onSignal = vi.fn();
+    createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onSignal).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onSignal).toHaveBeenCalledTimes(1);
+    expect(Number.isNaN(Date.parse(onSignal.mock.calls[0]![0] as string))).toBe(false);
+  });
+
   it("retries a non-auth failure with an increasing back-off interval", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));

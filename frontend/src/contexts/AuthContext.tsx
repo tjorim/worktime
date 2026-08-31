@@ -73,8 +73,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     (oidcAuth.user?.profile.preferred_username as string | undefined) ??
     null;
 
-  const { showError, addToast } = useToast();
+  const { showError, addToast, removeToast } = useToast();
   const lastDisplayedOidcErrorRef = useRef<unknown>(null);
+  const sessionWarningToastIdRef = useRef<string | null>(null);
 
   // Let db/collections.ts tell a write made right now apart from a write
   // made once we're settled as signed-out/local-only — see
@@ -146,7 +147,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // and both are actionable, so the toast carries the sign-in affordance
     // rather than only telling the user to find it themselves.
     const warnSessionEnded = (message: string) => {
-      addToast({
+      if (sessionWarningToastIdRef.current !== null) {
+        removeToast(sessionWarningToastIdRef.current);
+      }
+      sessionWarningToastIdRef.current = addToast({
         message,
         variant: "warning",
         icon: "bi-exclamation-triangle-fill",
@@ -155,6 +159,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         delay: 10000,
         action: { label: m.account_sign_in_btn(), onClick: triggerLogin },
       });
+    };
+
+    // A transient renewal failure can be followed by a successful automatic
+    // retry. Once a fresh user/token is loaded, the sign-in warning is stale.
+    const handleUserLoaded = () => {
+      if (sessionWarningToastIdRef.current !== null) {
+        removeToast(sessionWarningToastIdRef.current);
+        sessionWarningToastIdRef.current = null;
+      }
     };
 
     const handleAccessTokenExpired = () => {
@@ -170,13 +183,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     oidcAuth.events.addAccessTokenExpiring(handleAccessTokenExpiring);
     oidcAuth.events.addAccessTokenExpired(handleAccessTokenExpired);
     oidcAuth.events.addSilentRenewError(handleSilentRenewError);
+    oidcAuth.events.addUserLoaded(handleUserLoaded);
 
     return () => {
       oidcAuth.events?.removeAccessTokenExpiring(handleAccessTokenExpiring);
       oidcAuth.events?.removeAccessTokenExpired(handleAccessTokenExpired);
       oidcAuth.events?.removeSilentRenewError(handleSilentRenewError);
+      oidcAuth.events?.removeUserLoaded(handleUserLoaded);
     };
-  }, [oidcAuth.events, addToast, triggerLogin]);
+  }, [oidcAuth.events, addToast, removeToast, triggerLogin]);
 
   const triggerSignup = useCallback(() => {
     // Most OIDC providers handle sign-up via the same redirect flow.
@@ -234,4 +249,3 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
-

@@ -68,10 +68,24 @@ export interface SyncSignalTransport {
 const EVENT_STREAM_CONTENT_TYPE = "text/event-stream";
 const INITIAL_RETRY_MS = 1_000;
 const MAX_RETRY_MS = 30_000;
+const RETRY_AFTER_JITTER_RATIO = 0.2;
 
 /** Whether the response status means "your token is bad" — not worth retrying blindly. */
 function isFatalAuthStatus(status: number): boolean {
   return status === 401 || status === 403;
+}
+
+/** Parse either form allowed by Retry-After: delay-seconds or an HTTP date. */
+function parseRetryAfterMs(value: string | null): number {
+  if (value === null) return 0;
+
+  const delaySeconds = Number(value);
+  if (value.trim() !== "" && Number.isFinite(delaySeconds) && delaySeconds >= 0) {
+    return delaySeconds * 1_000;
+  }
+
+  const retryAt = Date.parse(value);
+  return Number.isNaN(retryAt) ? 0 : Math.max(0, retryAt - Date.now());
 }
 
 /**
@@ -108,16 +122,16 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
       let retryMs = INITIAL_RETRY_MS;
       // The server's per-connection event queue (maxsize=1) only exists while
       // a connection is open — any sync_changed notification fired during a
-      // drop is lost, not queued. On every *re*connect (not the first
-      // connection, which already gets its own initial pull on mount), force
-      // a catch-up pull with a synthetic "now" timestamp so it always beats
-      // the dedup check in useSyncSignal, regardless of whether anything was
-      // actually missed.
-      let hasConnectedOnce = false;
+      // drop is lost, not queued. After every failed attempt or dropped
+      // connection, force a catch-up pull once the next connection succeeds.
+      // This includes a failure before the first successful connection: the
+      // initial pull may already have completed while the stream was down.
+      let shouldCatchUpOnConnect = false;
 
-      function scheduleReconnect() {
+      function scheduleReconnect(retryAfterMs = 0) {
         if (stopped) return;
-        const interval = retryMs;
+        shouldCatchUpOnConnect = true;
+        const interval = Math.max(retryMs, retryAfterMs);
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
         retryTimer = setTimeout(() => {
           retryTimer = null;
@@ -153,15 +167,28 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
             );
             return; // No scheduleReconnect(): a bad token won't fix itself on retry.
           }
+          if (response.status === 429) {
+            const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+            // Retry-After is a minimum. Add a small positive jitter so tabs
+            // rejected at the same time do not all reconnect in lockstep.
+            const jitteredRetryAfterMs = retryAfterMs
+              + Math.random() * retryAfterMs * RETRY_AFTER_JITTER_RATIO;
+            logger.debug(
+              "useSyncSignal: SSE connection limit reached — retrying later:",
+              jitteredRetryAfterMs,
+            );
+            scheduleReconnect(jitteredRetryAfterMs);
+            return;
+          }
           if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)) {
             throw new Error(`SSE connection failed: ${response.status}`);
           }
 
           retryMs = INITIAL_RETRY_MS;
-          if (hasConnectedOnce) {
+          if (shouldCatchUpOnConnect) {
             onSignal(new Date().toISOString());
+            shouldCatchUpOnConnect = false;
           }
-          hasConnectedOnce = true;
 
           const reader = response.body
             .pipeThrough(new TextDecoderStream())
