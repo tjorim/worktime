@@ -15,8 +15,8 @@ importers:
         specifier: ^3.7.3
         version: 3.7.3
       '@schedule-x/event-modal':
-        specifier: ^4.6.1
-        version: 4.6.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)
+        specifier: ^4.7.0
+        version: 4.7.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)
       '@schedule-x/react':
         specifier: ^4.1.0
         version: 4.1.0(@schedule-x/calendar@4.6.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.4))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -1738,8 +1738,8 @@ packages:
   '@schedule-x/drag-and-drop@3.7.3':
     resolution: {integrity: sha512-nHwZKzdIKWNTdT5BEXy4vLlHOmOH3C3M744QUIU0EOXPAFZQR1bBTviGs2NhmvaLiGstnVx2/TZtdhocy60hgg==}
 
-  '@schedule-x/event-modal@4.6.1':
-    resolution: {integrity: sha512-YWRAjNwi/W0+GPwb6gVif0gQpuxBQ08M8mqwGqBwf9HRwXUZyE36CD9GMF7xtkFvxVEolmq3mG23Dk3IUWR/9Q==}
+  '@schedule-x/event-modal@4.7.0':
+    resolution: {integrity: sha512-mfr5sKUi8KQfrG94wlXNRDpyWRX8jYfc5+LBVi3gbzSLKLjxVigOWc1v/TBf8U/J8wRqDbVt1ucLpxgWec/r8w==}
     peerDependencies:
       '@preact/signals': ^2.0.2
       preact: ^10.19.2
@@ -5365,7 +5365,7 @@ snapshots:
 
   '@schedule-x/drag-and-drop@3.7.3': {}
 
-  '@schedule-x/event-modal@4.6.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)':
+  '@schedule-x/event-modal@4.7.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)':
     dependencies:
       '@preact/signals': 2.9.1(preact@10.29.2)
       preact: 10.29.2
