@@ -19,6 +19,8 @@ const mockAddAccessTokenExpired = vi.fn();
 const mockRemoveAccessTokenExpired = vi.fn();
 const mockAddSilentRenewError = vi.fn();
 const mockRemoveSilentRenewError = vi.fn();
+const mockAddUserLoaded = vi.fn();
+const mockRemoveUserLoaded = vi.fn();
 let mockOidcAuth: Record<string, unknown> = {
   isAuthenticated: false,
   isLoading: true,
@@ -34,6 +36,8 @@ let mockOidcAuth: Record<string, unknown> = {
     removeAccessTokenExpired: mockRemoveAccessTokenExpired,
     addSilentRenewError: mockAddSilentRenewError,
     removeSilentRenewError: mockRemoveSilentRenewError,
+    addUserLoaded: mockAddUserLoaded,
+    removeUserLoaded: mockRemoveUserLoaded,
   },
 };
 
@@ -109,6 +113,8 @@ describe("AuthContext", () => {
         removeAccessTokenExpired: mockRemoveAccessTokenExpired,
         addSilentRenewError: mockAddSilentRenewError,
         removeSilentRenewError: mockRemoveSilentRenewError,
+        addUserLoaded: mockAddUserLoaded,
+        removeUserLoaded: mockRemoveUserLoaded,
       },
     };
     mockSigninSilent.mockReset().mockResolvedValue({ access_token: "renewed-token" });
@@ -301,6 +307,26 @@ describe("AuthContext", () => {
       ).toBeInTheDocument();
     });
 
+    it("dismisses a session warning when a later silent renewal succeeds", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
+
+      renderWithProviders(<AuthStatusDisplay />);
+
+      const renewErrorHandler = mockAddSilentRenewError.mock.calls.at(-1)?.[0];
+      const userLoadedHandler = mockAddUserLoaded.mock.calls.at(-1)?.[0];
+      renewErrorHandler(new Error("temporarily_unavailable"));
+      expect(
+        await screen.findByText("Your session could not be refreshed. Please sign in again to keep syncing changes."),
+      ).toBeInTheDocument();
+
+      userLoadedHandler({ access_token: "fresh-token" });
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Your session could not be refreshed. Please sign in again to keep syncing changes."),
+        ).not.toBeInTheDocument();
+      });
+    });
+
     it("unsubscribes from OIDC session lifecycle events on unmount", () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
 
@@ -308,12 +334,14 @@ describe("AuthContext", () => {
       const expiringHandler = mockAddAccessTokenExpiring.mock.calls.at(-1)?.[0];
       const expiredHandler = mockAddAccessTokenExpired.mock.calls.at(-1)?.[0];
       const renewErrorHandler = mockAddSilentRenewError.mock.calls.at(-1)?.[0];
+      const userLoadedHandler = mockAddUserLoaded.mock.calls.at(-1)?.[0];
 
       unmount();
 
       expect(mockRemoveAccessTokenExpiring).toHaveBeenCalledWith(expiringHandler);
       expect(mockRemoveAccessTokenExpired).toHaveBeenCalledWith(expiredHandler);
       expect(mockRemoveSilentRenewError).toHaveBeenCalledWith(renewErrorHandler);
+      expect(mockRemoveUserLoaded).toHaveBeenCalledWith(userLoadedHandler);
     });
   });
 

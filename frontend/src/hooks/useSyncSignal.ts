@@ -58,7 +58,9 @@ export interface SyncSignalTransport {
    * @param onSignal - Called with each signal's ISO-8601 `server_timestamp`.
    * @returns A cleanup function that disconnects the transport.
    */
-  subscribe(onSignal: (serverTimestamp: string) => void): () => void;
+  subscribe(
+    onSignal: (serverTimestamp: string, options?: { forcePull?: boolean }) => void,
+  ): () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,10 +70,24 @@ export interface SyncSignalTransport {
 const EVENT_STREAM_CONTENT_TYPE = "text/event-stream";
 const INITIAL_RETRY_MS = 1_000;
 const MAX_RETRY_MS = 30_000;
+const RETRY_AFTER_JITTER_RATIO = 0.2;
 
 /** Whether the response status means "your token is bad" — not worth retrying blindly. */
 function isFatalAuthStatus(status: number): boolean {
   return status === 401 || status === 403;
+}
+
+/** Parse either form allowed by Retry-After: delay-seconds or an HTTP date. */
+function parseRetryAfterMs(value: string | null): number {
+  if (value === null) return 0;
+
+  const delaySeconds = Number(value);
+  if (value.trim() !== "" && Number.isFinite(delaySeconds) && delaySeconds >= 0) {
+    return delaySeconds * 1_000;
+  }
+
+  const retryAt = Date.parse(value);
+  return Number.isNaN(retryAt) ? 0 : Math.max(0, retryAt - Date.now());
 }
 
 /**
@@ -108,16 +124,18 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
       let retryMs = INITIAL_RETRY_MS;
       // The server's per-connection event queue (maxsize=1) only exists while
       // a connection is open — any sync_changed notification fired during a
-      // drop is lost, not queued. On every *re*connect (not the first
-      // connection, which already gets its own initial pull on mount), force
-      // a catch-up pull with a synthetic "now" timestamp so it always beats
-      // the dedup check in useSyncSignal, regardless of whether anything was
-      // actually missed.
-      let hasConnectedOnce = false;
+      // drop is lost, not queued. After every failed attempt or dropped
+      // connection, force a catch-up pull once the next connection succeeds.
+      // This includes a failure before the first successful connection: the
+      // initial pull may already have completed while the stream was down.
+      let shouldCatchUpOnConnect = false;
 
-      function scheduleReconnect() {
+      function scheduleReconnect(retryAfterMs = 0) {
         if (stopped) return;
-        const interval = retryMs;
+        shouldCatchUpOnConnect = true;
+        const minimumInterval = Math.max(retryMs, retryAfterMs);
+        const interval = minimumInterval
+          + Math.random() * minimumInterval * RETRY_AFTER_JITTER_RATIO;
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
         retryTimer = setTimeout(() => {
           retryTimer = null;
@@ -153,15 +171,27 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
             );
             return; // No scheduleReconnect(): a bad token won't fix itself on retry.
           }
+          if (response.status === 429) {
+            const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+            logger.debug(
+              "useSyncSignal: SSE connection limit reached — retrying later:",
+              retryAfterMs,
+            );
+            scheduleReconnect(retryAfterMs);
+            return;
+          }
           if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)) {
             throw new Error(`SSE connection failed: ${response.status}`);
           }
 
           retryMs = INITIAL_RETRY_MS;
-          if (hasConnectedOnce) {
-            onSignal(new Date().toISOString());
+          if (shouldCatchUpOnConnect) {
+            // Recovery must bypass timestamp deduplication. The cursor comes
+            // from the server, so comparing it with the browser clock could
+            // suppress this required pull when the clocks differ.
+            onSignal(new Date().toISOString(), { forcePull: true });
+            shouldCatchUpOnConnect = false;
           }
-          hasConnectedOnce = true;
 
           const reader = response.body
             .pipeThrough(new TextDecoderStream())
@@ -233,7 +263,12 @@ export function useSyncSignal(
   useEffect(() => {
     if (!isActive || !userId || !transport) return;
 
-    const unsubscribe = transport.subscribe((serverTimestamp) => {
+    const unsubscribe = transport.subscribe((serverTimestamp, options) => {
+      if (options?.forcePull) {
+        triggerPullRef.current();
+        return;
+      }
+
       const serverTimestampMs = Date.parse(serverTimestamp);
       if (Number.isNaN(serverTimestampMs)) {
         logger.warn(
