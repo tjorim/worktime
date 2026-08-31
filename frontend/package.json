@@ -45,7 +45,7 @@
     "check-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts"
   },
   "dependencies": {
-    "@schedule-x/calendar": "^4.6.1",
+    "@schedule-x/calendar": "^4.7.0",
     "@schedule-x/drag-and-drop": "^3.7.3",
     "@schedule-x/event-modal": "^4.7.0",
     "@schedule-x/react": "^4.1.0",
