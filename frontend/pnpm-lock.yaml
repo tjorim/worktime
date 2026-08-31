@@ -21,8 +21,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@schedule-x/calendar@4.7.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.4))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@schedule-x/theme-default':
-        specifier: ^4.6.1
-        version: 4.6.1
+        specifier: ^4.7.0
+        version: 4.7.0
       '@tanstack/query-db-collection':
         specifier: ^1.2.11
         version: 1.2.11(@tanstack/query-core@5.102.3)(typescript@7.0.2)
@@ -1751,8 +1751,8 @@ packages:
       react: ^16.7.0 || ^17 || ^18 || ^19
       react-dom: ^16.7.0 || ^17 || ^18 || ^19
 
-  '@schedule-x/theme-default@4.6.1':
-    resolution: {integrity: sha512-kjdMDRc3y+45NpNqHDhd0flfepyCbBKooYiDPI1eRC+1medBYJLQPBtR8mcnVL63MzN6NqwEuWY+YJPdIj+gUA==}
+  '@schedule-x/theme-default@4.7.0':
+    resolution: {integrity: sha512-NdpcAdVM72piHVDlA9Yz1BW6XzuXO6ja3W8EM+2S7d541PoS44FMp2ZQm2CWTWvr+B87eainh0xh3DsZAgM2sw==}
 
   '@sinclair/typebox@0.31.30':
     resolution: {integrity: sha512-MGsM7bVmHg3sUKCphlu3SGQ+T+5JTbygZWYArfKQCW5anJeACHeqLhcnf+R7XlCWZ+QR3C8JTBx3kCKJTN69ow==}
@@ -5376,7 +5376,7 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@schedule-x/theme-default@4.6.1': {}
+  '@schedule-x/theme-default@4.7.0': {}
 
   '@sinclair/typebox@0.31.30': {}
 
