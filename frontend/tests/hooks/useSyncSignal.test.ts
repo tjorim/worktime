@@ -585,7 +585,7 @@ describe("createFetchSseTransport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1); // no retry scheduled
   });
 
-  it("honours Retry-After when the server's SSE connection cap returns 429", async () => {
+  it("honors Retry-After when the server's SSE connection cap returns 429", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const fetchMock = vi.fn().mockResolvedValue(
@@ -654,6 +654,7 @@ describe("createFetchSseTransport", () => {
 
   it("retries a non-auth failure with an increasing back-off interval", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "debug").mockImplementation(() => {});
@@ -672,8 +673,26 @@ describe("createFetchSseTransport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4); // 4s -> 4th attempt
   });
 
+  it("adds jitter when Retry-After is unavailable", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    createFetchSseTransport("/api/sync/events", "token").subscribe(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+
+    // 1s exponential minimum + 10% jitter (half of the 20% jitter window).
+    await vi.advanceTimersByTimeAsync(1_099);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("resets the back-off interval after a successful reconnect", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const controller = sseController();
     const fetchMock = vi
       .fn()
@@ -704,6 +723,7 @@ describe("createFetchSseTransport", () => {
 
   it("forces a catch-up pull (via onSignal) on a *re*connect, but not on the first connection", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const first = sseController();
     const second = sseController();
     const fetchMock = vi

@@ -133,7 +133,9 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
       function scheduleReconnect(retryAfterMs = 0) {
         if (stopped) return;
         shouldCatchUpOnConnect = true;
-        const interval = Math.max(retryMs, retryAfterMs);
+        const minimumInterval = Math.max(retryMs, retryAfterMs);
+        const interval = minimumInterval
+          + Math.random() * minimumInterval * RETRY_AFTER_JITTER_RATIO;
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
         retryTimer = setTimeout(() => {
           retryTimer = null;
@@ -171,15 +173,11 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
           }
           if (response.status === 429) {
             const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-            // Retry-After is a minimum. Add a small positive jitter so tabs
-            // rejected at the same time do not all reconnect in lockstep.
-            const jitteredRetryAfterMs = retryAfterMs
-              + Math.random() * retryAfterMs * RETRY_AFTER_JITTER_RATIO;
             logger.debug(
               "useSyncSignal: SSE connection limit reached — retrying later:",
-              jitteredRetryAfterMs,
+              retryAfterMs,
             );
-            scheduleReconnect(jitteredRetryAfterMs);
+            scheduleReconnect(retryAfterMs);
             return;
           }
           if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)) {
