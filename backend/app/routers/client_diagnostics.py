@@ -47,7 +47,7 @@ class ClientSyncDiagnostic(BaseModel):
 
     event: Literal["sync_failure", "sync_conflict"]
     attempt_id: UUID
-    app_version: str = Field(min_length=1, max_length=32)
+    app_version: str = Field(pattern=r"^\d{4}\.\d{1,2}\.\d+$")
     phase: SyncDiagnosticPhase
     code: str = Field(pattern=r"^[a-z0-9_]{1,64}$")
     error_name: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]{1,120}$")

@@ -54,6 +54,14 @@ def test_diagnostic_rejects_unbounded_or_record_shaped_fields():
         ClientSyncDiagnostic.model_validate(payload)
 
 
+def test_diagnostic_rejects_app_version_that_could_forge_log_lines():
+    payload = _payload()
+    payload["app_version"] = "2026.8.9\nWARNING forged log line"
+
+    with pytest.raises(ValidationError, match="app_version"):
+        ClientSyncDiagnostic.model_validate(payload)
+
+
 def test_production_app_registers_client_diagnostics_route():
     from app.main import app
 

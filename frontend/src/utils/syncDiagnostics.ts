@@ -37,6 +37,8 @@ export function createSyncAttemptDiagnostics(): SyncAttemptDiagnostics {
   return { attemptId: crypto.randomUUID(), requestIds: new Set<string>() };
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Wrap authenticated fetch so API request IDs can be correlated with a client failure. */
 export function trackSyncRequests(
   fetch: FetchFn,
@@ -45,7 +47,12 @@ export function trackSyncRequests(
   return async (url, init) => {
     const response = await fetch(url, init);
     const requestId = response.headers?.get("X-Request-ID");
-    if (requestId) diagnostics.requestIds.add(requestId);
+    // The backend echoes back a caller-supplied X-Request-ID verbatim if one was
+    // sent (e.g. by an intervening proxy), so this is not guaranteed to be a UUID.
+    // The diagnostics endpoint's schema requires UUIDs and rejects the whole
+    // payload if any entry doesn't match, so a single non-UUID id would silently
+    // kill an otherwise-valid report.
+    if (requestId && UUID_PATTERN.test(requestId)) diagnostics.requestIds.add(requestId);
     return response;
   };
 }
