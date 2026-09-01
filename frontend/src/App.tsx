@@ -17,6 +17,7 @@ import { useLastUsed } from "@/contexts/LastUsedContext";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
 import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
+import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useShiftCalculation } from "@/hooks/useShiftCalculation";
 import { usePlannedTaskNotifications } from "@/hooks/usePlannedTaskNotifications";
@@ -365,6 +366,20 @@ function AppContent() {
  */
 
 function App() {
+  // Silent renewal runs this application inside a hidden iframe. Only the OIDC
+  // provider is needed there to process the callback; mounting AppContent would
+  // also start push reconciliation and an SSE stream using the parent tab's
+  // persisted (and potentially expired) user. Besides noisy 401 responses, that
+  // duplicate stream can consume the user's SSE connection allowance and make
+  // the real tab receive 429 responses.
+  if (window.location.pathname === "/auth/silent-callback") {
+    return (
+      <OidcAuthProvider {...oidcConfig}>
+        <SilentRenewCallbackPage />
+      </OidcAuthProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <OidcAuthProvider {...oidcConfig}>

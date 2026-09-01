@@ -102,6 +102,17 @@ vi.mock("@/hooks/useShiftCalculation", () => ({
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("mounts only the OIDC callback surface during silent renewal", () => {
+    window.history.replaceState(null, "", "/auth/silent-callback?code=test&state=test");
+
+    const { container } = render(<App />);
+
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("header")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("current-status")).not.toBeInTheDocument();
   });
 
   describe("Component Structure", () => {
