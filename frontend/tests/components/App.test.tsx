@@ -4,7 +4,28 @@ import App from "@/App";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 
+const { usePushSubscriptionSpy, useSyncSignalSpy } = vi.hoisted(() => ({
+  usePushSubscriptionSpy: vi.fn(() => ({
+    isSupported: true,
+    hasActiveSubscription: false,
+    subscribeToPush: vi.fn(),
+    unsubscribeFromPush: vi.fn(),
+    getActiveSubscription: vi.fn(),
+  })),
+  useSyncSignalSpy: vi.fn(),
+}));
+
 // OIDC mocks are provided globally by tests/setup.ts
+
+vi.mock("@/hooks/usePushSubscription", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/usePushSubscription")>()),
+  usePushSubscription: usePushSubscriptionSpy,
+}));
+
+vi.mock("@/hooks/useSyncSignal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/useSyncSignal")>()),
+  useSyncSignal: useSyncSignalSpy,
+}));
 
 // Mock our dayjs setup to avoid loading real dayjs configuration in tests
 vi.mock("@/utils/dateTimeUtils", () => {
@@ -102,6 +123,19 @@ vi.mock("@/hooks/useShiftCalculation", () => ({
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("mounts only the OIDC callback surface during silent renewal", () => {
+    window.history.replaceState(null, "", "/auth/silent-callback?code=test&state=test");
+
+    const { container } = render(<App />);
+
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("header")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("current-status")).not.toBeInTheDocument();
+    expect(usePushSubscriptionSpy).not.toHaveBeenCalled();
+    expect(useSyncSignalSpy).not.toHaveBeenCalled();
   });
 
   describe("Component Structure", () => {
