@@ -208,6 +208,7 @@ if settings.DATABASE_ENABLED:
     from .routers.access_tokens import router as access_tokens_router
     from .routers.account_router import router as account_router
     from .routers.audit import router as audit_router
+    from .routers.client_diagnostics import router as client_diagnostics_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_preferences import router as db_preferences_router
     from .routers.db_sync import router as db_sync_router
@@ -227,6 +228,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(integration_clients_router, prefix="/api")
     app.include_router(ical_router, prefix="/api")
     app.include_router(audit_router, prefix="/api")
+    app.include_router(client_diagnostics_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(db_users_router, prefix="/api")
     app.include_router(db_time_tracking_router, prefix="/api")

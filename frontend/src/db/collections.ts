@@ -435,7 +435,7 @@ export function replaceCollectionContents<
     utils: {
       writeBatch: (cb: () => void) => void;
       writeDelete: (keys: TKey[]) => void;
-      writeInsert: (items: TItem[]) => void;
+      writeUpsert: (items: TItem[]) => void;
     };
   },
 >(collection: TCollection, nextItems: TItem[], getKey: (item: TItem) => TKey): void {
@@ -456,10 +456,28 @@ export function replaceCollectionContents<
     return;
   }
 
-  runWriteBatch(collection, existingKeys.length > 0 || nextItems.length > 0, () => {
-    if (existingKeys.length > 0) collection.utils.writeDelete(existingKeys);
-    if (nextItems.length > 0) collection.utils.writeInsert(nextItems);
+  const nextKeys = new Set(nextItems.map(getKey));
+  const removedKeys = existingKeys.filter((key) => !nextKeys.has(key));
+
+  runWriteBatch(collection, removedKeys.length > 0 || nextItems.length > 0, () => {
+    // TanStack Query DB rejects multiple operations for the same key within a
+    // writeBatch. Deleting every existing row and then inserting the merged
+    // snapshot therefore fails whenever a local row is also present in the
+    // server response (the normal keep-both case). Delete only rows absent
+    // from the snapshot and upsert the snapshot itself.
+    if (removedKeys.length > 0) collection.utils.writeDelete(removedKeys);
+    if (nextItems.length > 0) collection.utils.writeUpsert(nextItems);
   });
+}
+
+export function mergeCollectionContents<
+  TItem,
+  TCollection extends {
+    startSyncImmediate: () => void;
+    utils: { writeBatch: (cb: () => void) => void; writeUpsert: (items: TItem[]) => void };
+  },
+>(collection: TCollection, items: TItem[]): void {
+  runWriteBatch(collection, items.length > 0, () => collection.utils.writeUpsert(items));
 }
 
 export function applyPullToCollections(data: SyncPullResponse): void {
@@ -503,6 +521,46 @@ export function applyPullToCollections(data: SyncPullResponse): void {
     ganttTasksCollection,
     (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
     (task) => task.id,
+  );
+}
+
+/**
+ * Merge a full server snapshot into the local collections without deleting
+ * anything that exists only on this device.
+ *
+ * This is intentionally narrower than applyPullToCollections: first-sync's
+ * "keep everything" choice promises a union, so absence from the snapshot is
+ * not evidence that a local row should be removed. Per-record push conflicts
+ * are preserved separately in the outbox for the existing conflict resolver.
+ */
+export function mergePullIntoCollections(data: SyncPullResponse): void {
+  mergeCollectionContents(
+    labelsCollection,
+    data.labels.filter((item) => item.deleted_at === null).map(syncLabelToLabel),
+  );
+  mergeCollectionContents(
+    tasksCollection,
+    data.tasks.filter((item) => item.deleted_at === null).map(syncTaskToStoredTask),
+  );
+  mergeCollectionContents(
+    templatesCollection,
+    data.templates.filter((item) => item.deleted_at === null).map(syncTemplateToTemplate),
+  );
+  mergeCollectionContents(
+    workLocationsCollection,
+    data.work_locations
+      .filter((item) => item.deleted_at === null)
+      .map(syncWorkLocationToEntry),
+  );
+  mergeCollectionContents(
+    timeOffCollection,
+    _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+  );
+  mergeCollectionContents(
+    ganttTasksCollection,
+    (data.gantt_tasks ?? [])
+      .filter((item) => item.deleted_at === null)
+      .map(syncGanttTaskToGanttTask),
   );
 }
 

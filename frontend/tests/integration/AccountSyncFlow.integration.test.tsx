@@ -37,7 +37,7 @@ import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey } from "@/constants/storageKeys";
+import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
 import { tasksCollection, setSyncCollectionAuth } from "@/db/collections";
 import { syncStore, populatedStatus, emptyPullResponse, resetSyncStore } from "@/mocks/data/syncStore";
 
@@ -572,6 +572,43 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
   });
 
+  it("preserves keep-both push conflicts for the ongoing conflict resolver", async () => {
+    const user = userEvent.setup();
+    seedLocalTask();
+
+    const mockFetch = buildFetchMock({
+      "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/push": {
+        ok: true,
+        json: async () => ({
+          results: {
+            tasks: [
+              {
+                id: "local-task-1",
+                status: "conflict",
+                server_updated_at: "2026-01-03T00:00:00.000Z",
+              },
+            ],
+          },
+        }),
+      },
+      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
+      "/api/client-diagnostics": { ok: true, status: 204 },
+    });
+
+    renderSync(true, TEST_USER_ID, mockFetch);
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("conflict"));
+    await user.click(screen.getByRole("button", { name: /Apply/i }));
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("done"));
+
+    const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey(TEST_USER_ID)) ?? "[]");
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0].tasks).toHaveLength(1);
+    expect(outbox[0].tasks[0].id).toBe("local-task-1");
+    expect(tasksCollection.has("local-task-1")).toBe(true);
+    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
+  });
+
   it("resolves conflict with 'keep local': pulls server state then pushes local as replace", async () => {
     const user = userEvent.setup();
     seedLocalTask();
@@ -621,6 +658,48 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       (call) => call[0].includes("/api/sync/push"),
     );
     expect(pushCalls.length).toBeGreaterThan(0);
+  });
+
+  it("reports a diagnostic when the 'keep local' replace push fails", async () => {
+    const user = userEvent.setup();
+    seedLocalTask();
+
+    let statusCalls = 0;
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/api/sync/status")) {
+        statusCalls++;
+        return statusCalls === 1
+          ? { ok: true, json: async () => populatedStatus }
+          : { ok: true, json: async () => emptyStatus };
+      }
+      if (url.includes("/api/sync/pull")) {
+        return { ok: true, json: async () => emptyPullResponse };
+      }
+      if (url.includes("/api/sync/push")) {
+        return { ok: false, status: 500, json: async () => ({}) };
+      }
+      if (url.includes("/api/client-diagnostics")) {
+        return { ok: true, status: 204, json: async () => ({}) };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    }) as unknown as FetchFn;
+
+    renderSync(true, TEST_USER_ID, mockFetch);
+
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("conflict"));
+
+    await user.click(screen.getByText(/Keep my local data/i));
+    await user.click(screen.getByRole("button", { name: /Apply/i }));
+
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("error"));
+
+    const diagnosticsCall = (
+      (mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).find((call) => call[0].includes("/api/client-diagnostics"));
+    expect(diagnosticsCall).toBeDefined();
+    const body = JSON.parse(diagnosticsCall?.[1]?.body as string);
+    expect(body.phase).toBe("push");
+    expect(body.code).toBe("keep_local_push_failed");
   });
 
   it("resolves conflict with 'use server': pulls server data and stores cursor", async () => {
