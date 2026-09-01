@@ -435,7 +435,7 @@ export function replaceCollectionContents<
     utils: {
       writeBatch: (cb: () => void) => void;
       writeDelete: (keys: TKey[]) => void;
-      writeInsert: (items: TItem[]) => void;
+      writeUpsert: (items: TItem[]) => void;
     };
   },
 >(collection: TCollection, nextItems: TItem[], getKey: (item: TItem) => TKey): void {
@@ -456,9 +456,17 @@ export function replaceCollectionContents<
     return;
   }
 
-  runWriteBatch(collection, existingKeys.length > 0 || nextItems.length > 0, () => {
-    if (existingKeys.length > 0) collection.utils.writeDelete(existingKeys);
-    if (nextItems.length > 0) collection.utils.writeInsert(nextItems);
+  const nextKeys = new Set(nextItems.map(getKey));
+  const removedKeys = existingKeys.filter((key) => !nextKeys.has(key));
+
+  runWriteBatch(collection, removedKeys.length > 0 || nextItems.length > 0, () => {
+    // TanStack Query DB rejects multiple operations for the same key within a
+    // writeBatch. Deleting every existing row and then inserting the merged
+    // snapshot therefore fails whenever a local row is also present in the
+    // server response (the normal keep-both case). Delete only rows absent
+    // from the snapshot and upsert the snapshot itself.
+    if (removedKeys.length > 0) collection.utils.writeDelete(removedKeys);
+    if (nextItems.length > 0) collection.utils.writeUpsert(nextItems);
   });
 }
 

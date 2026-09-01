@@ -467,7 +467,8 @@ export function useFirstSyncFlow(
         }
       };
 
-      execute().catch(() => {
+      execute().catch((err: unknown) => {
+        logger.error("useFirstSyncFlow: conflict resolution failed:", err);
         if (mountedRef.current) setPhase("error");
       });
     },
