@@ -39,6 +39,10 @@ export function createSyncAttemptDiagnostics(): SyncAttemptDiagnostics {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Matches the backend's request_ids max_length so a long-running attempt (retries,
+ * chunked pushes) can't grow the set past what the diagnostics schema accepts. */
+const MAX_TRACKED_REQUEST_IDS = 20;
+
 /** Wrap authenticated fetch so API request IDs can be correlated with a client failure. */
 export function trackSyncRequests(
   fetch: FetchFn,
@@ -52,7 +56,15 @@ export function trackSyncRequests(
     // The diagnostics endpoint's schema requires UUIDs and rejects the whole
     // payload if any entry doesn't match, so a single non-UUID id would silently
     // kill an otherwise-valid report.
-    if (requestId && UUID_PATTERN.test(requestId)) diagnostics.requestIds.add(requestId);
+    if (requestId && UUID_PATTERN.test(requestId) && !diagnostics.requestIds.has(requestId)) {
+      if (diagnostics.requestIds.size >= MAX_TRACKED_REQUEST_IDS) {
+        // Sets iterate in insertion order — drop the oldest to keep the ids most
+        // likely to be relevant to whatever ends up failing.
+        const oldest = diagnostics.requestIds.values().next().value;
+        if (oldest !== undefined) diagnostics.requestIds.delete(oldest);
+      }
+      diagnostics.requestIds.add(requestId);
+    }
     return response;
   };
 }

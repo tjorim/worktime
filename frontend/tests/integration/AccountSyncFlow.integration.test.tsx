@@ -660,6 +660,48 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     expect(pushCalls.length).toBeGreaterThan(0);
   });
 
+  it("reports a diagnostic when the 'keep local' replace push fails", async () => {
+    const user = userEvent.setup();
+    seedLocalTask();
+
+    let statusCalls = 0;
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/api/sync/status")) {
+        statusCalls++;
+        return statusCalls === 1
+          ? { ok: true, json: async () => populatedStatus }
+          : { ok: true, json: async () => emptyStatus };
+      }
+      if (url.includes("/api/sync/pull")) {
+        return { ok: true, json: async () => emptyPullResponse };
+      }
+      if (url.includes("/api/sync/push")) {
+        return { ok: false, status: 500, json: async () => ({}) };
+      }
+      if (url.includes("/api/client-diagnostics")) {
+        return { ok: true, status: 204, json: async () => ({}) };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    }) as unknown as FetchFn;
+
+    renderSync(true, TEST_USER_ID, mockFetch);
+
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("conflict"));
+
+    await user.click(screen.getByText(/Keep my local data/i));
+    await user.click(screen.getByRole("button", { name: /Apply/i }));
+
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("error"));
+
+    const diagnosticsCall = (
+      (mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).find((call) => call[0].includes("/api/client-diagnostics"));
+    expect(diagnosticsCall).toBeDefined();
+    const body = JSON.parse(diagnosticsCall?.[1]?.body as string);
+    expect(body.phase).toBe("push");
+    expect(body.code).toBe("keep_local_push_failed");
+  });
+
   it("resolves conflict with 'use server': pulls server data and stores cursor", async () => {
     const user = userEvent.setup();
     seedLocalTask();

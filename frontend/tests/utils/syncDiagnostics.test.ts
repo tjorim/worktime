@@ -12,6 +12,11 @@ function responseWithRequestId(requestId: string | null): Response {
   return new Response(null, { status: 200, headers });
 }
 
+function uuidFor(n: number): string {
+  const suffix = n.toString(16).padStart(12, "0");
+  return `00000000-0000-4000-8000-${suffix}`;
+}
+
 describe("trackSyncRequests", () => {
   it("only tracks well-formed UUID request ids", async () => {
     const diagnostics = createSyncAttemptDiagnostics();
@@ -39,6 +44,22 @@ describe("trackSyncRequests", () => {
     await fetch("/api/sync/status");
 
     expect(diagnostics.requestIds).toEqual(new Set([uuid]));
+  });
+
+  it("caps tracked request ids at the backend's 20-id limit, keeping the most recent", async () => {
+    const diagnostics = createSyncAttemptDiagnostics();
+
+    for (let i = 0; i < 25; i++) {
+      const tracked = trackSyncRequests(
+        vi.fn().mockResolvedValue(responseWithRequestId(uuidFor(i))) as FetchFn,
+        diagnostics,
+      );
+      await tracked("/api/sync/status");
+    }
+
+    expect(diagnostics.requestIds.size).toBe(20);
+    expect(diagnostics.requestIds.has(uuidFor(0))).toBe(false);
+    expect(diagnostics.requestIds.has(uuidFor(24))).toBe(true);
   });
 });
 

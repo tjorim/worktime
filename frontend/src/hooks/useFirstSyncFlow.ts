@@ -506,6 +506,11 @@ export function useFirstSyncFlow(
             const serverData = capturedServerDataRef.current ?? (await pullSyncData(fetch));
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!serverData) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: "pull",
+                code: "keep_local_snapshot_failed",
+              });
               setPhase("error");
               return;
             }
@@ -513,6 +518,11 @@ export function useFirstSyncFlow(
             const localPayload = await readLocalSyncPayload();
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!localPayload) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: "local_read",
+                code: "local_payload_unavailable",
+              });
               setPhase("error");
               return;
             }
@@ -532,6 +542,12 @@ export function useFirstSyncFlow(
             const result = await pushSyncPayload(fetch, replacePayload);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!result) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: "push",
+                code: "keep_local_push_failed",
+                entityCounts: countSyncPayloadEntities(replacePayload),
+              });
               setPhase("error");
               return;
             }
@@ -542,6 +558,11 @@ export function useFirstSyncFlow(
             );
             if (!prefsPushed) {
               if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: "preferences",
+                code: "preferences_push_failed",
+              });
               setPhase("error");
               return;
             }
@@ -561,6 +582,11 @@ export function useFirstSyncFlow(
             const pullResult = capturedServerDataRef.current ?? (await pullSyncData(fetch));
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!pullResult) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: "pull",
+                code: "use_server_snapshot_failed",
+              });
               setPhase("error");
               return;
             }
