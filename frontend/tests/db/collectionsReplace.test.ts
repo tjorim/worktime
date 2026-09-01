@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   mergeCollectionContents,

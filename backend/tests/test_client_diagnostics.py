@@ -6,6 +6,7 @@ import asyncio
 import logging
 
 import pytest
+from fastapi.routing import APIRoute
 from pydantic import ValidationError
 from starlette.requests import Request
 
@@ -60,5 +61,5 @@ def test_production_app_registers_client_diagnostics_route():
 
 
 def test_endpoint_requires_interactive_oidc_dependency():
-    route = next(route for route in router.routes if route.path == "/client-diagnostics")
+    route = next(route for route in router.routes if isinstance(route, APIRoute) and route.path == "/client-diagnostics")
     assert any(dependency.call is require_oidc_principal for dependency in route.dependant.dependencies)
