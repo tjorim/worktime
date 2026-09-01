@@ -1,6 +1,11 @@
+// @vitest-environment happy-dom
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { replaceCollectionContents, setSyncCollectionAuth } from "@/db/collections";
+import {
+  mergeCollectionContents,
+  replaceCollectionContents,
+  setSyncCollectionAuth,
+} from "@/db/collections";
 
 interface Row {
   id: string;
@@ -49,5 +54,26 @@ describe("replaceCollectionContents", () => {
     ]);
     expect(collection.delete).not.toHaveBeenCalled();
     expect(collection.insert).not.toHaveBeenCalled();
+  });
+
+  it("merges keep-both snapshots without deleting local-only rows", () => {
+    const upserted: Row[] = [];
+    const collection = {
+      startSyncImmediate: vi.fn(),
+      utils: {
+        writeBatch: (callback: () => void) => callback(),
+        writeUpsert: (items: Row[]) => upserted.push(...items),
+      },
+    };
+
+    mergeCollectionContents(collection, [
+      { id: "shared", value: "server" },
+      { id: "server-only", value: "add" },
+    ]);
+
+    expect(upserted).toEqual([
+      { id: "shared", value: "server" },
+      { id: "server-only", value: "add" },
+    ]);
   });
 });

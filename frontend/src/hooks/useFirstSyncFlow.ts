@@ -27,10 +27,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  appendToSyncOutbox,
   applyPreferencesPull,
   buildKeepLocalReplacePayload,
   buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  countPushConflicts,
+  extractConflictedItems,
   fetchPreferences,
   fetchSyncStatus,
   hasSyncCursor,
@@ -45,8 +48,20 @@ import {
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
-import { applyPullToCollections, preloadSyncCollections } from "@/db/collections";
+import {
+  applyPullToCollections,
+  mergePullIntoCollections,
+  preloadSyncCollections,
+} from "@/db/collections";
 import { logger } from "@/utils/logger";
+import {
+  countSyncPayloadEntities,
+  createSyncAttemptDiagnostics,
+  reportSyncDiagnostic,
+  trackSyncRequests,
+  type SyncAttemptDiagnostics,
+  type SyncDiagnosticPhase,
+} from "@/utils/syncDiagnostics";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -212,6 +227,8 @@ export function useFirstSyncFlow(
   const mountedRef = useRef(true);
   // Lock to prevent concurrent resolveConflict executions.
   const conflictResolutionForUserRef = useRef<string | null>(null);
+  const diagnosticsRef = useRef<SyncAttemptDiagnostics | null>(null);
+  const diagnosticPhaseRef = useRef<SyncDiagnosticPhase>("status");
 
   useEffect(() => {
     mountedRef.current = true;
@@ -230,10 +247,20 @@ export function useFirstSyncFlow(
       flowStartedForUser.current = uid;
       setPhase("checking");
 
-      const status = await fetchSyncStatus(fetch);
+      const diagnostics = createSyncAttemptDiagnostics();
+      diagnosticsRef.current = diagnostics;
+      const syncFetch = trackSyncRequests(fetch, diagnostics);
+
+      diagnosticPhaseRef.current = "status";
+      const status = await fetchSyncStatus(syncFetch);
       // Bail if the component unmounted or auth changed while we were awaiting.
       if (!mountedRef.current || flowStartedForUser.current !== uid) return;
       if (!status) {
+        reportSyncDiagnostic(fetch, diagnostics, {
+          event: "sync_failure",
+          phase: diagnosticPhaseRef.current,
+          code: "status_unavailable",
+        });
         setPhase("error");
         return;
       }
@@ -248,10 +275,16 @@ export function useFirstSyncFlow(
       const serverHasData = syncStatusHasEntityData(status);
       // Build the push payload once so both the localHasData check and Branch A
       // use the same filtered dataset (malformed rows are excluded by the builder).
+      diagnosticPhaseRef.current = "local_read";
       const localPayload = await readLocalSyncPayload();
       if (!mountedRef.current || flowStartedForUser.current !== uid) return;
       if (!localPayload) {
         // The local side is unknown, so every branch below would be a guess.
+        reportSyncDiagnostic(fetch, diagnostics, {
+          event: "sync_failure",
+          phase: diagnosticPhaseRef.current,
+          code: "local_payload_unavailable",
+        });
         setPhase("error");
         return;
       }
@@ -260,8 +293,10 @@ export function useFirstSyncFlow(
       // Branch D — no entities anywhere. Preferences may still exist on either
       // side, so reconcile them rather than leaving local settings unsynced.
       if (!localHasData && !serverHasData) {
-        await reconcilePreferences(fetch);
+        diagnosticPhaseRef.current = "preferences";
+        await reconcilePreferences(syncFetch);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+        diagnosticPhaseRef.current = "cursor";
         storeSyncCursor(uid, status.server_timestamp);
         setPhase("done");
         return;
@@ -270,9 +305,16 @@ export function useFirstSyncFlow(
       // Branch A — server empty, local has data → push entities + preferences
       if (localHasData && !serverHasData) {
         setPhase("pushing");
-        const result = await pushSyncPayload(fetch, localPayload);
+        diagnosticPhaseRef.current = "push";
+        const result = await pushSyncPayload(syncFetch, localPayload);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         if (!result) {
+          reportSyncDiagnostic(fetch, diagnostics, {
+            event: "sync_failure",
+            phase: diagnosticPhaseRef.current,
+            code: "push_failed",
+            entityCounts: countSyncPayloadEntities(localPayload),
+          });
           setPhase("error");
           return;
         }
@@ -280,13 +322,16 @@ export function useFirstSyncFlow(
         // than the entity branch: an account with no entities can still hold
         // newer settings from another device, and pushing this device's copy
         // unconditionally would overwrite them.
-        await reconcilePreferences(fetch);
+        diagnosticPhaseRef.current = "preferences";
+        await reconcilePreferences(syncFetch);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
         // timestamp (still a valid server timestamp) if the re-fetch fails.
-        const newStatus = await fetchSyncStatus(fetch);
+        diagnosticPhaseRef.current = "status";
+        const newStatus = await fetchSyncStatus(syncFetch);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+        diagnosticPhaseRef.current = "cursor";
         storeSyncCursor(uid, newStatus?.server_timestamp ?? status.server_timestamp);
         setPhase("done");
         return;
@@ -295,18 +340,27 @@ export function useFirstSyncFlow(
       // Branch B — server has data, local is empty → pull entities + preferences
       if (!localHasData && serverHasData) {
         setPhase("pulling");
-        const pullResult = await pullSyncData(fetch);
+        diagnosticPhaseRef.current = "pull";
+        const pullResult = await pullSyncData(syncFetch);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         if (!pullResult) {
+          reportSyncDiagnostic(fetch, diagnostics, {
+            event: "sync_failure",
+            phase: diagnosticPhaseRef.current,
+            code: "pull_failed",
+          });
           setPhase("error");
           return;
         }
+        diagnosticPhaseRef.current = "local_apply";
         applyPullToCollections(pullResult);
         // Reconcile preferences by timestamp rather than taking the server's
         // copy outright: this device having no entities says nothing about
         // whether its settings are older than the account's.
-        await reconcilePreferences(fetch);
+        diagnosticPhaseRef.current = "preferences";
+        await reconcilePreferences(syncFetch);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+        diagnosticPhaseRef.current = "cursor";
         storeSyncCursor(uid, pullResult.server_timestamp);
         setPhase("done");
         return;
@@ -322,9 +376,15 @@ export function useFirstSyncFlow(
       // apply it; keep-local needs it to know what to tombstone), so fetching
       // it up front costs no extra request — and it is the only way to tell
       // the user how much data each option would discard before they commit.
-      const serverData = await pullSyncData(fetch);
+      diagnosticPhaseRef.current = "pull";
+      const serverData = await pullSyncData(syncFetch);
       if (!mountedRef.current || flowStartedForUser.current !== uid) return;
       if (!serverData) {
+        reportSyncDiagnostic(fetch, diagnostics, {
+          event: "sync_failure",
+          phase: diagnosticPhaseRef.current,
+          code: "conflict_snapshot_failed",
+        });
         setPhase("error");
         return;
       }
@@ -345,7 +405,10 @@ export function useFirstSyncFlow(
       if (conflictResolutionForUserRef.current !== null) return;
 
       const uid = userId;
-      const fetch = fetchFn;
+      const diagnostics = diagnosticsRef.current ?? createSyncAttemptDiagnostics();
+      diagnosticsRef.current = diagnostics;
+      const fetch = trackSyncRequests(fetchFn, diagnostics);
+      let diagnosticPhase: SyncDiagnosticPhase = "local_read";
 
       const execute = async () => {
         // Lock the conflict resolution to this user.
@@ -362,27 +425,77 @@ export function useFirstSyncFlow(
             const localPayload = await readLocalSyncPayload();
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!localPayload) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: diagnosticPhase,
+                code: "local_payload_unavailable",
+              });
               setPhase("error");
               return;
             }
+            diagnosticPhase = "push";
             const pushed = await pushSyncPayload(fetch, localPayload);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!pushed) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: diagnosticPhase,
+                code: "push_failed",
+                entityCounts: countSyncPayloadEntities(localPayload),
+              });
               setPhase("error");
               return;
             }
+            const pushConflictCount = countPushConflicts(pushed);
+            if (pushConflictCount > 0) {
+              // Preserve rejected local versions before applying the server
+              // snapshot. Once the cursor is stored, ongoing sync flushes this
+              // outbox and presents the existing per-record conflict resolver.
+              const conflicted = extractConflictedItems(localPayload, pushed);
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_conflict",
+                phase: diagnosticPhase,
+                code: "records_rejected",
+                conflictCount: pushConflictCount,
+                entityCounts: countSyncPayloadEntities(conflicted),
+              });
+              if (!appendToSyncOutbox(uid, conflicted)) {
+                reportSyncDiagnostic(fetchFn, diagnostics, {
+                  event: "sync_failure",
+                  phase: "local_apply",
+                  code: "conflict_preservation_failed",
+                  conflictCount: pushConflictCount,
+                  entityCounts: countSyncPayloadEntities(conflicted),
+                });
+                setPhase("error");
+                return;
+              }
+            }
             setPhase("pulling");
+            diagnosticPhase = "pull";
             const merged = await pullSyncData(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             if (!merged) {
+              reportSyncDiagnostic(fetchFn, diagnostics, {
+                event: "sync_failure",
+                phase: diagnosticPhase,
+                code: "merged_pull_failed",
+                conflictCount: pushConflictCount,
+              });
               setPhase("error");
               return;
             }
-            applyPullToCollections(merged);
+            // "Keep everything" is a union: add/update live server rows, but
+            // never infer that a local-only row should be deleted merely
+            // because it is absent from this snapshot.
+            diagnosticPhase = "local_apply";
+            mergePullIntoCollections(merged);
             // Neither side was chosen over the other, so preferences fall back
             // to their own last-write-wins reconciliation.
+            diagnosticPhase = "preferences";
             await reconcilePreferences(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            diagnosticPhase = "cursor";
             storeSyncCursor(uid, merged.server_timestamp);
             setPhase("done");
           } else if (choice === "keep-local") {
@@ -468,7 +581,12 @@ export function useFirstSyncFlow(
       };
 
       execute().catch((err: unknown) => {
-        logger.error("useFirstSyncFlow: conflict resolution failed:", err);
+        reportSyncDiagnostic(fetchFn, diagnostics, {
+          event: "sync_failure",
+          phase: diagnosticPhase,
+          code: "conflict_resolution_exception",
+          error: err,
+        });
         if (mountedRef.current) setPhase("error");
       });
     },
@@ -502,7 +620,14 @@ export function useFirstSyncFlow(
   useEffect(() => {
     if (!isAuthenticated || !userId || !fetchFn) return;
 
-    runFlow(userId, fetchFn).catch(() => {
+    runFlow(userId, fetchFn).catch((err: unknown) => {
+      const diagnostics = diagnosticsRef.current ?? createSyncAttemptDiagnostics();
+      reportSyncDiagnostic(fetchFn, diagnostics, {
+        event: "sync_failure",
+        phase: diagnosticPhaseRef.current,
+        code: "first_sync_exception",
+        error: err,
+      });
       setPhase("error");
     });
   }, [isAuthenticated, userId, fetchFn, runFlow]);

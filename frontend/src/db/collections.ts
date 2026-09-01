@@ -470,6 +470,16 @@ export function replaceCollectionContents<
   });
 }
 
+export function mergeCollectionContents<
+  TItem,
+  TCollection extends {
+    startSyncImmediate: () => void;
+    utils: { writeBatch: (cb: () => void) => void; writeUpsert: (items: TItem[]) => void };
+  },
+>(collection: TCollection, items: TItem[]): void {
+  runWriteBatch(collection, items.length > 0, () => collection.utils.writeUpsert(items));
+}
+
 export function applyPullToCollections(data: SyncPullResponse): void {
   // Labels
   replaceCollectionContents(
@@ -511,6 +521,46 @@ export function applyPullToCollections(data: SyncPullResponse): void {
     ganttTasksCollection,
     (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
     (task) => task.id,
+  );
+}
+
+/**
+ * Merge a full server snapshot into the local collections without deleting
+ * anything that exists only on this device.
+ *
+ * This is intentionally narrower than applyPullToCollections: first-sync's
+ * "keep everything" choice promises a union, so absence from the snapshot is
+ * not evidence that a local row should be removed. Per-record push conflicts
+ * are preserved separately in the outbox for the existing conflict resolver.
+ */
+export function mergePullIntoCollections(data: SyncPullResponse): void {
+  mergeCollectionContents(
+    labelsCollection,
+    data.labels.filter((item) => item.deleted_at === null).map(syncLabelToLabel),
+  );
+  mergeCollectionContents(
+    tasksCollection,
+    data.tasks.filter((item) => item.deleted_at === null).map(syncTaskToStoredTask),
+  );
+  mergeCollectionContents(
+    templatesCollection,
+    data.templates.filter((item) => item.deleted_at === null).map(syncTemplateToTemplate),
+  );
+  mergeCollectionContents(
+    workLocationsCollection,
+    data.work_locations
+      .filter((item) => item.deleted_at === null)
+      .map(syncWorkLocationToEntry),
+  );
+  mergeCollectionContents(
+    timeOffCollection,
+    _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+  );
+  mergeCollectionContents(
+    ganttTasksCollection,
+    (data.gantt_tasks ?? [])
+      .filter((item) => item.deleted_at === null)
+      .map(syncGanttTaskToGanttTask),
   );
 }
 

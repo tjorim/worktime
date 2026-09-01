@@ -17,13 +17,19 @@ When both sides hold entities, the user picks one of three options
 | Keep my local data | Local records as creates + a delete for every server-only record | Yes — server side |
 | Use server data | Replace the local collections with the server's contents | Yes — local side |
 
-`keep-both` is the default because it is the only option that cannot lose data.
-Every entity is keyed by a client-generated id, so the union is unambiguous: a
-duplicate is visible and removable, a deleted record is not recoverable. Two
-edges worth knowing — work locations are keyed by `(user_id, date)`, so a
-same-date collision resolves by last-write-wins on that one row, and two devices
-holding a same-named label collide on `uq_active_label_user_name` and come back
-as a per-record conflict. Neither destroys a record.
+`keep-both` is the default because it is the only option that does not request
+any deletion. The post-push pull is applied locally as a merge: live server rows
+are upserted, while a row that exists only in the browser is retained because
+absence from a server snapshot does not prove that it is stale. Every entity is
+keyed by a client-generated id, so distinct records form an unambiguous union.
+
+Same-key last-write-wins collisions are different. The push can return HTTP
+`200` while marking individual rows as `conflict`. First sync preserves those
+rejected local payloads in the durable outbox, completes the non-deleting merge,
+and establishes the cursor. Ongoing sync then replays the preserved payload and
+opens `OngoingConflictDialog`, where the user chooses the server version or
+their own version. Work locations use `(user_id, date)` as their natural key;
+same-named labels can also conflict on `uq_active_label_user_name`.
 
 The dialog shows how many records each side holds, so the destructive options
 are not chosen blind. The counts come from the Branch C pull, which happens
@@ -91,6 +97,16 @@ Three properties keep this from becoming its own problem:
   refused on the first chunk.
 
 ## Supporting invariants
+
+**Sync failures are diagnosable without copying user data.** Every first-sync
+attempt has a random correlation id. Browser errors include the phase, bounded
+entity counts, frontend version, API request ids, and the original local
+exception in the developer console. Failures and per-record conflicts are also
+reported best-effort to the authenticated `/api/client-diagnostics` endpoint.
+Its strict schema accepts only aggregate counts, error class/code, version,
+phase, and UUID correlation ids; extra fields are rejected, so record contents,
+local-storage values, and credentials cannot be included. A telemetry failure
+never changes sync behavior.
 
 **A failed fetch must never look like empty data.** The collections' `queryFn`
 throws on a non-ok pull instead of returning `[]`, so TanStack Query keeps the

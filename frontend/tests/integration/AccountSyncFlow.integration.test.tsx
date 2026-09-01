@@ -37,7 +37,7 @@ import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey } from "@/constants/storageKeys";
+import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
 import { tasksCollection, setSyncCollectionAuth } from "@/db/collections";
 import { syncStore, populatedStatus, emptyPullResponse, resetSyncStore } from "@/mocks/data/syncStore";
 
@@ -569,6 +569,43 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       expect(body).not.toContain('"delete"');
       expect(body).not.toContain("allow_bulk_delete");
     }
+    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
+  });
+
+  it("preserves keep-both push conflicts for the ongoing conflict resolver", async () => {
+    const user = userEvent.setup();
+    seedLocalTask();
+
+    const mockFetch = buildFetchMock({
+      "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/push": {
+        ok: true,
+        json: async () => ({
+          results: {
+            tasks: [
+              {
+                id: "local-task-1",
+                status: "conflict",
+                server_updated_at: "2026-01-03T00:00:00.000Z",
+              },
+            ],
+          },
+        }),
+      },
+      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
+      "/api/client-diagnostics": { ok: true, status: 204 },
+    });
+
+    renderSync(true, TEST_USER_ID, mockFetch);
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("conflict"));
+    await user.click(screen.getByRole("button", { name: /Apply/i }));
+    await waitFor(() => expect(screen.getByTestId("sync-phase")).toHaveTextContent("done"));
+
+    const outbox = JSON.parse(localStorage.getItem(getSyncOutboxKey(TEST_USER_ID)) ?? "[]");
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0].tasks).toHaveLength(1);
+    expect(outbox[0].tasks[0].id).toBe("local-task-1");
+    expect(tasksCollection.has("local-task-1")).toBe(true);
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
   });
 
