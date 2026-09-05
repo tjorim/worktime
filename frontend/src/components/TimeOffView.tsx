@@ -12,6 +12,7 @@ import {
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "@/hooks/useTimeOffKeyboardShortcuts";
@@ -37,6 +38,7 @@ import {
 } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
+import { getHdayHelperErrorMessage, resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -78,7 +80,12 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
   const { lastUsed, updateLastTimeOffView } = useLastUsed();
+  const { settings } = useSettings();
   const toast = useToast();
+  const hdayUsername = settings.hdayUsername?.trim() || null;
+  const helperBaseUrl = resolveHdayHelperBaseUrl(hdayHelperOptions.hdayHelperUrl);
+  const canPullFromHelper = helperConnectionStatus === "connected" && !!helperBaseUrl && !!hdayUsername;
+  const [isPullingFromHelper, setIsPullingFromHelper] = useState(false);
 
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
@@ -433,6 +440,56 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     }
   };
 
+  const handlePullFromHelper = useCallback(async () => {
+    if (!helperBaseUrl || !hdayUsername) return;
+
+    setIsPullingFromHelper(true);
+    try {
+      const response = await fetch(`${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+
+      if (response.status === 404) {
+        toast.showWarning(
+          m.timeoff_pull_not_found({ username: hdayUsername }),
+          "bi-file-earmark-x",
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
+        throw new Error(m.timeoff_pull_failed({ error: errorMessage }));
+      }
+
+      const data: { raw: string } = await response.json();
+      const result = importHday(data.raw);
+      setRawEditorText(data.raw);
+      setSelectedIds(new Set());
+      setIsRawEditorDirty(false);
+      setRawEditorError(undefined);
+      setRawEditorSkippedLines(result.skippedLines);
+      if (result.skippedLines.length > 0) {
+        const skippedMsg =
+          result.skippedLines.length === 1
+            ? m.timeoff_hday_skipped_one()
+            : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
+        toast.showWarning(
+          `${m.timeoff_pulled({ username: hdayUsername })} ${skippedMsg}`,
+          "bi-exclamation-triangle",
+        );
+      } else {
+        toast.showSuccess(m.timeoff_pulled({ username: hdayUsername }), "bi-cloud-download");
+      }
+    } catch (error) {
+      logger.error("Failed to pull .hday content from helper:", error);
+      toast.showError(error instanceof Error ? error.message : m.timeoff_pull_failed_generic());
+    } finally {
+      setIsPullingFromHelper(false);
+    }
+  }, [helperBaseUrl, hdayUsername, importHday, toast]);
+
   const handleExport = useCallback(() => {
     if (entries.length === 0) {
       toast.showError(m.timeoff_no_events_export());
@@ -534,6 +591,8 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           onBulkDelete={() => setShowBulkDeleteConfirm(true)}
           onImport={handleImport}
           onExport={handleExport}
+          onPullFromHelper={canPullFromHelper ? handlePullFromHelper : undefined}
+          isPullingFromHelper={isPullingFromHelper}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
           entries={entries}

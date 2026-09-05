@@ -1,6 +1,7 @@
 import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
+import Spinner from "react-bootstrap/Spinner";
 import type { TimeOffViewMode } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
@@ -15,6 +16,8 @@ type TimeOffToolbarProps = {
   // Import/Export
   onImport: () => void;
   onExport: () => void;
+  onPullFromHelper?: () => void;
+  isPullingFromHelper: boolean;
 
   // Add event
   onAddEvent: () => void;
@@ -36,6 +39,8 @@ function TimeOffToolbarComponent({
   onBulkDelete,
   onImport,
   onExport,
+  onPullFromHelper,
+  isPullingFromHelper,
   onAddEvent,
   viewMode,
 }: TimeOffToolbarProps) {
@@ -67,6 +72,22 @@ function TimeOffToolbarComponent({
             <i className="bi bi-download me-1" aria-hidden="true"></i>
             {m.timeoff_import_btn()}
           </Button>
+          {onPullFromHelper && (
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={onPullFromHelper}
+              disabled={isPullingFromHelper}
+              aria-label={m.timeoff_pull_events_aria()}
+            >
+              {isPullingFromHelper ? (
+                <Spinner animation="border" size="sm" className="me-1" />
+              ) : (
+                <i className="bi bi-cloud-download me-1" aria-hidden="true"></i>
+              )}
+              {m.timeoff_pull_btn()}
+            </Button>
+          )}
           {eventCount > 0 && (
             <Button
               variant="outline-primary"

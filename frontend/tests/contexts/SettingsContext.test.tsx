@@ -140,6 +140,7 @@ describe("SettingsContext unified user state", () => {
         enableUnifiedCalendar: false,
         homeCountry: null,
         officeCountry: null,
+        hdayUsername: null,
       },
       lastUsed: {
         activeTab: "calendar",
@@ -507,6 +508,50 @@ describe("SettingsContext unified user state", () => {
       const parsed = JSON.parse(stored!);
       expect(parsed.settings.homeCountry).toBe("GB");
       expect(parsed.settings.officeCountry).toBe("NL");
+    });
+  });
+
+  describe(".hday username (account-synced, not device-local)", () => {
+    it("defaults hdayUsername to null", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.settings.hdayUsername).toBe(null);
+    });
+
+    it("updates and clears hdayUsername", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateHdayUsername("jsmith");
+      });
+      expect(result.current.settings.hdayUsername).toBe("jsmith");
+      await act(async () => {
+        result.current.updateHdayUsername(null);
+      });
+      expect(result.current.settings.hdayUsername).toBe(null);
+    });
+
+    it("falls back to null for a blank or non-string stored value", () => {
+      window.localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          hasCompletedOnboarding: false,
+          myTeam: null,
+          scheduleType: null,
+          settings: { timeFormat: "24h", theme: "auto", hdayUsername: "   " },
+          lastUsed: {},
+        }),
+      );
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.settings.hdayUsername).toBe(null);
+    });
+
+    it("persists hdayUsername to the shared localStorage state, bumping _updatedAt like other synced settings", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateHdayUsername("jsmith");
+      });
+      const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(stored.settings.hdayUsername).toBe("jsmith");
+      expect(stored._updatedAt).toBeTruthy();
     });
   });
 });

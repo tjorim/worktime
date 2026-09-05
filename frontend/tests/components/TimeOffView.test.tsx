@@ -511,6 +511,132 @@ describe("TimeOffView", () => {
     });
   });
 
+  describe("Pull from helper", () => {
+    function seedConnectedHelperWithUsername(username: string | null) {
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { hdayUsername: username } }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+    }
+
+    it("hides the Pull button when no helper is configured", () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: m.timeoff_pull_events_aria() }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides the Pull button when the helper is connected but no username is saved", async () => {
+      seedConnectedHelperWithUsername(null);
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      // Wait for the helper health probe to resolve before asserting absence.
+      expect(await screen.findByRole("button", { name: "Team" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: m.timeoff_pull_events_aria() }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("pulls the user's .hday file from the helper and imports it", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({
+            username: "jsmith",
+            raw: "2025/01/15 # Day off\n",
+            etag: "sha256:abc",
+            events: [],
+          }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const pullButton = await screen.findByRole("button", {
+        name: m.timeoff_pull_events_aria(),
+      });
+      await user.click(pullButton);
+
+      expect(
+        await screen.findByText(m.timeoff_pulled({ username: "jsmith" })),
+      ).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
+    });
+
+    it("shows a not-found message when the helper has no file for the username yet", async () => {
+      seedConnectedHelperWithUsername("newuser");
+      server.use(
+        http.get(
+          "http://localhost:8080/hday/newuser",
+          () => new HttpResponse(null, { status: 404 }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const pullButton = await screen.findByRole("button", {
+        name: m.timeoff_pull_events_aria(),
+      });
+      await user.click(pullButton);
+
+      expect(
+        await screen.findByText(m.timeoff_pull_not_found({ username: "newuser" })),
+      ).toBeInTheDocument();
+    });
+
+    it("surfaces the server's detail message when the pull request fails", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({ detail: "share unreachable" }, { status: 503 }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const pullButton = await screen.findByRole("button", {
+        name: m.timeoff_pull_events_aria(),
+      });
+      await user.click(pullButton);
+
+      expect(
+        await screen.findByText(m.timeoff_pull_failed({ error: "share unreachable" })),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("Accessibility", () => {
     it("should have proper ARIA labels on buttons", async () => {
       render(

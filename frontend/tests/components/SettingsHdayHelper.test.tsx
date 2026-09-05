@@ -7,12 +7,13 @@ import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
 import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";
+import { TestProviders } from "@tests/utils/testProviders";
 
 function renderHelper() {
   return render(
-    <HdayHelperProvider>
+    <TestProviders>
       <SettingsHdayHelper />
-    </HdayHelperProvider>,
+    </TestProviders>,
   );
 }
 
@@ -113,5 +114,41 @@ describe("SettingsHdayHelper", () => {
       resolvers.get("http://helper-b:8080/health")?.(Response.json({ status: "ok" }));
     });
     expect(await screen.findByText("connected")).toBeInTheDocument();
+  });
+
+  it("saves the .hday username as account-synced settings, independent of the device-local helper URL", async () => {
+    const user = userEvent.setup();
+    renderHelper();
+
+    const usernameInput = screen.getByLabelText(m.hday_username_label());
+    const saveButton = screen.getByRole("button", { name: m.hday_username_save() });
+    expect(saveButton).toBeDisabled();
+
+    await user.type(usernameInput, "jsmith");
+    expect(saveButton).toBeEnabled();
+
+    await user.click(saveButton);
+    expect(saveButton).toBeDisabled();
+
+    // Re-rendering with a fresh provider tree reloads settings from storage,
+    // proving the username was actually persisted (not just local component state).
+    renderHelper();
+    const usernameInputs = screen.getAllByLabelText(m.hday_username_label());
+    expect(usernameInputs[usernameInputs.length - 1]).toHaveValue("jsmith");
+  });
+
+  it("clears the saved username when saved as blank", async () => {
+    const user = userEvent.setup();
+    renderHelper();
+
+    await user.type(screen.getByLabelText(m.hday_username_label()), "jsmith");
+    await user.click(screen.getByRole("button", { name: m.hday_username_save() }));
+
+    await user.clear(screen.getByLabelText(m.hday_username_label()));
+    await user.click(screen.getByRole("button", { name: m.hday_username_save() }));
+
+    renderHelper();
+    const usernameInputs = screen.getAllByLabelText(m.hday_username_label());
+    expect(usernameInputs[usernameInputs.length - 1]).toHaveValue("");
   });
 });

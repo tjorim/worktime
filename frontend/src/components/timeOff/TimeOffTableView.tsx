@@ -25,6 +25,8 @@ type TimeOffTableViewProps = {
   onBulkDelete: () => void;
   onImport: () => void;
   onExport: () => void;
+  onPullFromHelper?: () => void;
+  isPullingFromHelper: boolean;
   onAddEvent: () => void;
   viewMode: TimeOffViewMode;
   entries: TimeOffEntry[];
@@ -49,6 +51,8 @@ export function TimeOffTableView({
   onBulkDelete,
   onImport,
   onExport,
+  onPullFromHelper,
+  isPullingFromHelper,
   onAddEvent,
   viewMode,
   entries,
@@ -84,6 +88,8 @@ export function TimeOffTableView({
           onBulkDelete={onBulkDelete}
           onImport={onImport}
           onExport={onExport}
+          onPullFromHelper={onPullFromHelper}
+          isPullingFromHelper={isPullingFromHelper}
           onAddEvent={onAddEvent}
           viewMode={viewMode}
         />
