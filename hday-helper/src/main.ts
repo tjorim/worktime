@@ -516,6 +516,14 @@ function writeEnvFile(values: Record<EnvKey, string>): void {
 }
 
 function validateSettingsForm(values: SettingsFormValues): string | null {
+  // writeEnvFile() interpolates each value directly into a "KEY=value" .env
+  // line; an embedded \r or \n would inject extra lines that a dotenv parser
+  // reads as additional (or duplicate, shadowing) keys.
+  for (const key of ENV_KEYS) {
+    if (/[\r\n\0]/.test(values[key])) {
+      return `${key} must not contain line breaks or null characters.`;
+    }
+  }
   if (!values.SHARE_DIR.trim()) return "SHARE_DIR must not be empty.";
   if (!values.HOST.trim()) return "HOST must not be empty.";
   const port = Number(values.PORT);
@@ -551,11 +559,26 @@ function isSameOriginRequest(req: Request): boolean {
 // launch keeps loading the same bad .env. An unchanged HOST/PORT is skipped
 // since it's already proven bindable — trying to rebind it here would always
 // collide with the currently running server.
+//
+// A HOST-only change can't be probed on the real PORT either: the current
+// server is still bound there, and if the new host's address range overlaps
+// the current one (e.g. current HOST=127.0.0.1, new HOST=0.0.0.0, which binds
+// every interface including 127.0.0.1), probing would collide with our own
+// still-running listener and report a false failure. Probing on port 0 (the
+// OS picks any free port) checks the new host is bindable at all without
+// that collision; a real PORT change, which never collides since the current
+// server holds a different port, is still probed exactly.
 async function checkAddressBindable(host: string, port: number): Promise<string | null> {
   if (host === HOST && port === PORT) return null;
   try {
-    const probe = Bun.serve({ hostname: host, port, fetch: () => new Response(null, { status: 204 }) });
-    await probe.stop();
+    if (host !== HOST) {
+      const hostProbe = Bun.serve({ hostname: host, port: 0, fetch: () => new Response(null, { status: 204 }) });
+      await hostProbe.stop();
+    }
+    if (port !== PORT) {
+      const portProbe = Bun.serve({ hostname: host, port, fetch: () => new Response(null, { status: 204 }) });
+      await portProbe.stop();
+    }
     return null;
   } catch (err) {
     return `Could not bind to ${host}:${port} (${err instanceof Error ? err.message : String(err)}). Settings were not saved.`;

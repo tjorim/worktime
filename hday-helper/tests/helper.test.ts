@@ -40,7 +40,7 @@ async function killOwnHelperProcessOnPort(port: number): Promise<void> {
     for (const pid of pids) {
       const ps = Bun.spawnSync(["ps", "-p", pid, "-o", "args="], { stdout: "pipe", stderr: "ignore" });
       const cmdline = new TextDecoder().decode(ps.stdout);
-      if (cmdline.includes("main.ts")) {
+      if (cmdline.includes(MAIN_TS)) {
         Bun.spawnSync(["kill", "-9", pid], { stdout: "ignore", stderr: "ignore" });
       }
     }
@@ -642,6 +642,25 @@ describe("GET/POST /settings", () => {
     expect(existsSync(envPath)).toBe(false);
   });
 
+  test("rejects a value containing a line break, without writing .env", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        // A literal newline here would let this value inject an extra line
+        // (and thus an extra or shadowing key) into the rewritten .env file.
+        SHARE_DIR: `${settingsShareDir}\nEVIL=1`,
+        HOST: "127.0.0.1",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.text();
+    expect(body).toContain("line breaks");
+    expect(existsSync(envPath)).toBe(false);
+  });
+
   test("413s an oversized body sent without a Content-Length header", async () => {
     const bigBody = `SHARE_DIR=${"x".repeat(100 * 1024)}`;
     const stream = new ReadableStream({
@@ -704,6 +723,24 @@ describe("GET/POST /settings", () => {
 
   // This test performs a real (non-rejected) save, so it must run after every
   // test above that asserts .env doesn't exist yet.
+  test("accepts a HOST-only change on the same PORT without a false bind collision", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        SHARE_DIR: settingsShareDir,
+        // Binds every interface, including the one the still-running
+        // instance already holds on this same port — naively probing the
+        // exact (host, port) pair here would collide with our own listener
+        // and wrongly report the combination as unbindable.
+        HOST: "0.0.0.0",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "",
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   test("allows a POST whose Origin matches the request's own Host", async () => {
     const res = await fetch(`${settingsBaseUrl}/settings`, {
       method: "POST",
