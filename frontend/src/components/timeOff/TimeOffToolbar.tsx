@@ -81,7 +81,7 @@ function TimeOffToolbarComponent({
               variant="outline-primary"
               size="sm"
               onClick={onPullFromHelper}
-              disabled={isPullingFromHelper}
+              disabled={isPullingFromHelper || isPushingToHelper}
               aria-label={m.timeoff_pull_events_aria()}
             >
               {isPullingFromHelper ? (
@@ -97,7 +97,7 @@ function TimeOffToolbarComponent({
               variant="outline-primary"
               size="sm"
               onClick={onPushToHelper}
-              disabled={isPushingToHelper}
+              disabled={isPushingToHelper || isPullingFromHelper}
               aria-label={m.timeoff_push_events_aria()}
             >
               {isPushingToHelper ? (

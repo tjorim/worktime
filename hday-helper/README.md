@@ -111,7 +111,7 @@ the main app's own notify-then-pull pattern: the event carries only the file's c
 its content, so a client that already knows that etag (e.g. because it just wrote it) can ignore
 the notification instead of re-fetching.
 
-```
+```text
 event: hday_changed
 data: {"type":"hday_changed","username":"jsmith","etag":"sha256:abc123..."}
 ```

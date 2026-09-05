@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
 import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -59,6 +60,18 @@ function HelperUrlSwitcher({ url }: { url: string }) {
   return (
     <button type="button" onClick={() => updateHdayHelperUrl(url)}>
       switch helper
+    </button>
+  );
+}
+
+// Test-only harness for driving updateHdayUsername() from outside TimeOffView,
+// sharing the same SettingsContext instance as the rendered TimeOffView —
+// simulates the user switching their configured .hday username mid-sync.
+function UsernameSwitcher({ username }: { username: string | null }) {
+  const { updateHdayUsername } = useSettings();
+  return (
+    <button type="button" onClick={() => updateHdayUsername(username)}>
+      switch username
     </button>
   );
 }
@@ -893,6 +906,67 @@ describe("TimeOffView", () => {
         raw: expect.stringContaining("2025/12/01"),
       });
     }, 15000);
+
+    it("does not race a push against an in-flight pull, and runs the queued push once the pull completes", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      let resolveGet!: (response: Response) => void;
+      const pullResponse = new Promise<Response>((resolve) => {
+        resolveGet = resolve;
+      });
+      server.use(http.get("http://localhost:8080/hday/jsmith", () => pullResponse));
+      let putCallCount = 0;
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", () => {
+          putCallCount += 1;
+          return HttpResponse.json({ etag: "sha256:queued" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const pullButton = await screen.findByRole("button", {
+        name: m.timeoff_pull_events_aria(),
+      });
+      await user.click(pullButton); // pull starts, pending on pullResponse
+
+      // Both toolbar buttons must be disabled while any sync operation is
+      // running, not just the one that started it — otherwise a click here
+      // would bypass the in-flight guard's own race window.
+      expect(pullButton).toBeDisabled();
+      expect(screen.getByRole("button", { name: m.timeoff_push_events_aria() })).toBeDisabled();
+
+      // A local edit while the pull is in flight schedules an auto-push; it
+      // must queue behind the pull rather than firing a concurrent PUT.
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-10-15");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      await new Promise((resolve) => setTimeout(resolve, 3500)); // past the debounce
+      expect(putCallCount).toBe(0); // still queued behind the in-flight pull
+
+      await act(async () => {
+        resolveGet(
+          HttpResponse.json({
+            username: "jsmith",
+            raw: "2025/01/01 # From share\n",
+            etag: "sha256:from-share",
+            events: [],
+          }),
+        );
+      });
+      await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
+
+      // The queued push isn't stuck forever — it runs once the pull's lock
+      // is released.
+      await waitFor(() => expect(putCallCount).toBe(1), { timeout: 5000 });
+    }, 15000);
   });
 
   describe("Auto-push on edit", () => {
@@ -1089,6 +1163,94 @@ describe("TimeOffView", () => {
       await waitFor(() => expect(receivedBodies.length).toBeGreaterThan(0), { timeout: 5000 });
       expect(receivedBodies[0]).toMatchObject({ raw: expect.stringContaining("2025/11/01") });
     }, 10000);
+  });
+
+  describe("Stale target guard", () => {
+    function seedConnectedHelperWithUsername(username: string | null) {
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { hdayUsername: username } }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+      mockHdayChangeEventsStream();
+    }
+
+    it("discards a pull response for a username the user has since switched away from", async () => {
+      seedConnectedHelperWithUsername("alice");
+      let resolveGet!: (response: Response) => void;
+      const pullResponse = new Promise<Response>((resolve) => {
+        resolveGet = resolve;
+      });
+      server.use(http.get("http://localhost:8080/hday/alice", () => pullResponse));
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <UsernameSwitcher username="bob" />
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
+      );
+      // Switch to a different username while alice's pull is still pending.
+      await user.click(screen.getByRole("button", { name: "switch username" }));
+
+      await act(async () => {
+        resolveGet(
+          HttpResponse.json({
+            username: "alice",
+            raw: "2025/03/03 # Alice's day off\n",
+            etag: "sha256:alice",
+            events: [],
+          }),
+        );
+      });
+
+      // Neither the success toast nor alice's imported entry should appear —
+      // the response belongs to a target the user has already left.
+      expect(
+        screen.queryByText(m.timeoff_pulled({ username: "alice" })),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("2025/03/03")).not.toBeInTheDocument();
+    });
+
+    it("discards a push response for a username the user has since switched away from", async () => {
+      seedConnectedHelperWithUsername("alice");
+      let resolvePut!: (response: Response) => void;
+      const putResponse = new Promise<Response>((resolve) => {
+        resolvePut = resolve;
+      });
+      server.use(http.put("http://localhost:8080/hday/alice", () => putResponse));
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <UsernameSwitcher username="bob" />
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
+      );
+      await user.click(screen.getByRole("button", { name: "switch username" }));
+
+      await act(async () => {
+        resolvePut(HttpResponse.json({ etag: "sha256:alice" }));
+      });
+
+      expect(
+        screen.queryByText(m.timeoff_pushed({ username: "alice" })),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("Remote change notifications", () => {
