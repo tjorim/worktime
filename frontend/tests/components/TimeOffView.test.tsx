@@ -41,6 +41,20 @@ function mockHdayChangeEventsStream() {
   );
 }
 
+/** Seeds a connected helper (health check ok) with the given .hday username and mocks its change stream. */
+function seedConnectedHelperWithUsername(username: string | null) {
+  localStorage.setItem(
+    DEVICE_PREFERENCES_STORAGE_KEY,
+    JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
+  );
+  localStorage.setItem(
+    USER_STATE_STORAGE_KEY,
+    JSON.stringify({ settings: { hdayUsername: username } }),
+  );
+  server.use(http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })));
+  mockHdayChangeEventsStream();
+}
+
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
@@ -565,21 +579,6 @@ describe("TimeOffView", () => {
   });
 
   describe("Pull from helper", () => {
-    function seedConnectedHelperWithUsername(username: string | null) {
-      localStorage.setItem(
-        DEVICE_PREFERENCES_STORAGE_KEY,
-        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
-      );
-      localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({ settings: { hdayUsername: username } }),
-      );
-      server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
-      );
-      mockHdayChangeEventsStream();
-    }
-
     it("hides the Pull button when no helper is configured", () => {
       render(
         <AllProviders>
@@ -692,21 +691,6 @@ describe("TimeOffView", () => {
   });
 
   describe("Push to helper", () => {
-    function seedConnectedHelperWithUsername(username: string | null) {
-      localStorage.setItem(
-        DEVICE_PREFERENCES_STORAGE_KEY,
-        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
-      );
-      localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({ settings: { hdayUsername: username } }),
-      );
-      server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
-      );
-      mockHdayChangeEventsStream();
-    }
-
     it("hides the Push button when no helper is configured", () => {
       render(
         <AllProviders>
@@ -970,21 +954,6 @@ describe("TimeOffView", () => {
   });
 
   describe("Auto-push on edit", () => {
-    function seedConnectedHelperWithUsername(username: string | null) {
-      localStorage.setItem(
-        DEVICE_PREFERENCES_STORAGE_KEY,
-        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
-      );
-      localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({ settings: { hdayUsername: username } }),
-      );
-      server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
-      );
-      mockHdayChangeEventsStream();
-    }
-
     it("silently pushes after a debounced pause following a local edit", async () => {
       seedConnectedHelperWithUsername("jsmith");
       const receivedBodies: unknown[] = [];
@@ -1166,21 +1135,6 @@ describe("TimeOffView", () => {
   });
 
   describe("Stale target guard", () => {
-    function seedConnectedHelperWithUsername(username: string | null) {
-      localStorage.setItem(
-        DEVICE_PREFERENCES_STORAGE_KEY,
-        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
-      );
-      localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({ settings: { hdayUsername: username } }),
-      );
-      server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
-      );
-      mockHdayChangeEventsStream();
-    }
-
     it("discards a pull response for a username the user has since switched away from", async () => {
       seedConnectedHelperWithUsername("alice");
       let resolveGet!: (response: Response) => void;
@@ -1254,21 +1208,6 @@ describe("TimeOffView", () => {
   });
 
   describe("Remote change notifications", () => {
-    function seedConnectedHelperWithUsername(username: string | null) {
-      localStorage.setItem(
-        DEVICE_PREFERENCES_STORAGE_KEY,
-        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
-      );
-      localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({ settings: { hdayUsername: username } }),
-      );
-      server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
-      );
-      mockHdayChangeEventsStream();
-    }
-
     it("shows a banner when the helper reports an etag we haven't synced", async () => {
       seedConnectedHelperWithUsername("jsmith");
 
@@ -1286,7 +1225,7 @@ describe("TimeOffView", () => {
       expect(await screen.findByText(m.timeoff_hday_changed_remotely())).toBeInTheDocument();
     });
 
-    it("does not show a banner for an echo of this device's own push", async () => {
+    it("does not show a banner for an echo of this device's own push, but does for a genuine remote change", async () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.put("http://localhost:8080/hday/jsmith", () =>
@@ -1310,7 +1249,23 @@ describe("TimeOffView", () => {
         hdayChangeEmitter.emit("jsmith", "sha256:mine");
       });
 
+      // The echo above travels through an async pipeline (fetch -> TextDecoderStream ->
+      // EventSourceParserStream), so checking absence immediately after act() could pass
+      // vacuously just because processing hasn't happened yet, not because it was suppressed.
+      // Give it a real chance to run before trusting the absence check below.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
       expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
+
+      // Further prove the stream is live end-to-end: a genuine remote change (distinguishable
+      // etag) delivered over the same connection should still surface the banner.
+      act(() => {
+        hdayChangeEmitter.emit("jsmith", "sha256:someone-elses-change");
+      });
+
+      expect(await screen.findByText(m.timeoff_hday_changed_remotely())).toBeInTheDocument();
     });
 
     it("pulling from the banner clears it and imports the file", async () => {

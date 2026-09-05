@@ -198,6 +198,35 @@ describe("createHdayHelperChangeTransport", () => {
     );
   });
 
+  it("cancels the response body when the response fails validation", async () => {
+    vi.useFakeTimers();
+    const cancelSpy = vi.fn().mockResolvedValue(undefined);
+    const stream = new ReadableStream<Uint8Array>({
+      start() {
+        // Never enqueues or closes: the body is left open until cancelled.
+      },
+      cancel: cancelSpy,
+    });
+    // Wrong content-type — fails the transport's response validation.
+    const badResponse = new Response(stream, {
+      status: 200,
+      headers: { "content-type": "text/plain" },
+    });
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(badResponse));
+
+    const unsubscribe = createHdayHelperChangeTransport(
+      "http://localhost:8080/hday/jsmith/events",
+    ).subscribe(vi.fn());
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
+
+    // Stop the reconnect loop before the test ends so it doesn't keep firing
+    // (with real fetch, once fake timers/mocks are torn down) in the background.
+    unsubscribe();
+  });
+
   it("reconnects with backoff when the connection fails, and stops retrying after unsubscribe", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
