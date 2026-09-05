@@ -7,6 +7,7 @@ required on the target machine.
 ## What it does
 
 - Exposes `/hday/:username` and `/team/:teamId` HTTP endpoints for `.hday` file and team-config access
+- Notifies clients over SSE (`/hday/:username/events`) when a user's `.hday` file changes on disk
 - Reads `.hday` files from the share root; reads team config (`.conf`, `.people`) from `{SHARE_DIR}/config/`
 - Reads from / writes to a configurable directory (local path or UNC/mapped-drive path)
 - No database, no OIDC, no authentication — pure file I/O over HTTP
@@ -101,6 +102,22 @@ Request body:
 
 Returns HTTP 200 `{ "etag": "sha256:..." }` on success, 409 if the etag doesn't match
 (conflict), 422 if neither `raw` nor `events` is provided, 503 if the share is unreachable.
+
+### `GET /hday/:username/events`
+
+Server-Sent Events stream that notifies a client when that user's `.hday` file changes on
+disk — written by this server (`PUT`) or edited directly on the share by other tooling. Mirrors
+the main app's own notify-then-pull pattern: the event carries only the file's current etag, not
+its content, so a client that already knows that etag (e.g. because it just wrote it) can ignore
+the notification instead of re-fetching.
+
+```
+event: hday_changed
+data: {"type":"hday_changed","username":"jsmith","etag":"sha256:abc123..."}
+```
+
+A `: keepalive` comment is sent every 15s. One directory watcher is shared across all connected
+clients, started on the first subscriber and stopped once the last one disconnects.
 
 ### `GET /team/:teamId`
 

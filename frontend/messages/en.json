@@ -367,6 +367,7 @@
   "timeoff_push_conflict": "The .hday file on the helper has changed since you last pulled it. Pull the latest version, then try pushing again.",
   "timeoff_push_failed": "Failed to push to helper: {error}",
   "timeoff_push_failed_generic": "Failed to push to helper",
+  "timeoff_hday_changed_remotely": "Your .hday file changed on the helper. Pull the latest version to see it here.",
   "timeoff_add_event_btn": "Add Event",
   "timeoff_delete_selected_btn": "Delete Selected",
   "timeoff_select_all_btn": "Select All",

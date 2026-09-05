@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { normalizeEventFlags } from "@/lib/hday/flags";
@@ -16,6 +17,10 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useEventForm } from "@/hooks/useEventForm";
+import {
+  createHdayHelperChangeTransport,
+  useHdayHelperChangeSignal,
+} from "@/hooks/useHdayHelperChangeSignal";
 import { useTimeOffKeyboardShortcuts } from "@/hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
@@ -75,6 +80,9 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
   return typeof value === "string" && TIMEOFF_VIEWS.includes(value as any);
 };
 
+/** How long to wait after the last local edit before auto-pushing to the .hday helper. */
+const AUTO_PUSH_DEBOUNCE_MS = 3000;
+
 export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffViewProps) {
   const { options: hdayHelperOptions, helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
@@ -102,6 +110,36 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     },
     [setDevicePreferences],
   );
+
+  // Notify-then-pull for the helper side: a change-stream signal only ever
+  // surfaces a "pull now?" prompt, never an automatic import — silently
+  // replacing in-progress local edits would defeat the point of Pull being
+  // explicit. An echo of this device's own push (the new etag matching what
+  // we just remembered) is filtered out rather than re-prompting the user.
+  const hdayChangeEventsUrl =
+    canUseHdayHelperSync && helperBaseUrl && hdayUsername
+      ? `${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}/events`
+      : null;
+  const hdayChangeTransport = useMemo(
+    () => (hdayChangeEventsUrl ? createHdayHelperChangeTransport(hdayChangeEventsUrl) : null),
+    [hdayChangeEventsUrl],
+  );
+  const [hdayChangedRemotely, setHdayChangedRemotely] = useState(false);
+  useHdayHelperChangeSignal(
+    hdayChangeTransport,
+    useCallback(
+      (etag: string | null) => {
+        if (etag === lastKnownHdayEtag) return;
+        setHdayChangedRemotely(true);
+      },
+      [lastKnownHdayEtag],
+    ),
+  );
+  // A stale prompt for a helper/username combination that's no longer active
+  // would be confusing; drop it whenever either changes.
+  useEffect(() => {
+    setHdayChangedRemotely(false);
+  }, [hdayChangeEventsUrl]);
 
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
@@ -197,6 +235,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Set right before a pull-triggered importHday() so the rawText-watching
+  // auto-push effect below skips the resulting change instead of pushing
+  // straight back what was just pulled.
+  const skipNextAutoPushRef = useRef(false);
 
   const isFormDirty = isEventFormDirty(
     buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
@@ -480,6 +522,9 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       }
 
       const data: { raw: string; etag: string | null } = await response.json();
+      // The entries this import produces already match the helper's file —
+      // pushing them straight back would be a pointless round trip.
+      skipNextAutoPushRef.current = true;
       const result = importHday(data.raw);
       setRawEditorText(data.raw);
       setSelectedIds(new Set());
@@ -487,6 +532,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       setRawEditorError(undefined);
       setRawEditorSkippedLines(result.skippedLines);
       rememberHdayEtag(hdayUsername, data.etag);
+      setHdayChangedRemotely(false);
       if (result.skippedLines.length > 0) {
         const skippedMsg =
           result.skippedLines.length === 1
@@ -507,7 +553,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     }
   }, [helperBaseUrl, hdayUsername, importHday, rememberHdayEtag, toast]);
 
-  const handlePushToHelper = useCallback(async () => {
+  const handlePushToHelper = useCallback(async (options?: { silent?: boolean }) => {
     if (!helperBaseUrl || !hdayUsername) return;
 
     setIsPushingToHelper(true);
@@ -521,6 +567,9 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       });
 
       if (response.status === 409) {
+        // Always surfaced, even for a silent auto-push: this is exactly the
+        // case the user needs to act on (pull first) before anything of
+        // theirs can sync again.
         toast.showWarning(m.timeoff_push_conflict(), "bi-file-earmark-lock");
         return;
       }
@@ -532,7 +581,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
 
       const data: { etag: string } = await response.json();
       rememberHdayEtag(hdayUsername, data.etag);
-      toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), "bi-cloud-upload");
+      setHdayChangedRemotely(false);
+      if (!options?.silent) {
+        toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), "bi-cloud-upload");
+      }
     } catch (error) {
       logger.error("Failed to push .hday content to helper:", error);
       toast.showError(error instanceof Error ? error.message : m.timeoff_push_failed_generic());
@@ -540,6 +592,30 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       setIsPushingToHelper(false);
     }
   }, [helperBaseUrl, hdayUsername, lastKnownHdayEtag, rawText, rememberHdayEtag, toast]);
+
+  // Auto-push: debounce a silent push whenever rawText changes for any
+  // local-origin reason (add/edit/delete, undo, raw-editor apply, file
+  // import — anything that funnels through the same EventStore, including
+  // entries arriving via the account's own cross-device sync). Skips the
+  // very first render (nothing has changed yet) and the change right after
+  // a pull (see skipNextAutoPushRef above).
+  const isInitialAutoPushRenderRef = useRef(true);
+  useEffect(() => {
+    if (isInitialAutoPushRenderRef.current) {
+      isInitialAutoPushRenderRef.current = false;
+      return;
+    }
+    if (skipNextAutoPushRef.current) {
+      skipNextAutoPushRef.current = false;
+      return;
+    }
+    if (!canUseHdayHelperSync) return;
+
+    const timer = setTimeout(() => {
+      void handlePushToHelper({ silent: true });
+    }, AUTO_PUSH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [rawText]); // oxlint-disable-line react-hooks/exhaustive-deps -- intentionally keyed on rawText only; handlePushToHelper already closes over the latest rawText/etag/canUseHdayHelperSync
 
   const handleExport = useCallback(() => {
     if (entries.length === 0) {
@@ -594,6 +670,27 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
 
   return (
     <div className="time-off-view py-3 d-flex flex-column gap-3">
+      {viewMode === "table" && hdayChangedRemotely && (
+        <Alert
+          variant="info"
+          className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
+          onClose={() => setHdayChangedRemotely(false)}
+          dismissible
+        >
+          <span>
+            <i className="bi bi-cloud-arrow-down me-2" aria-hidden="true"></i>
+            {m.timeoff_hday_changed_remotely()}
+          </span>
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={handlePullFromHelper}
+            disabled={isPullingFromHelper}
+          >
+            {m.timeoff_pull_btn()}
+          </Button>
+        </Alert>
+      )}
       <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
         <ButtonGroup className="view-toggle-group" aria-label={m.timeoff_toggle_view_aria()}>
           <Button

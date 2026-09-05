@@ -20,6 +20,7 @@
  * GET  /health              — health, own version, and share-directory status
  * GET  /hday/:username      — read a user's .hday file (always includes parsed events)
  * PUT  /hday/:username      — create or update a user's .hday file
+ * GET  /hday/:username/events — SSE stream: notifies when that user's file changes on disk
  * GET  /team/:teamId        — read team config + member list
  * GET  /team/:teamId/hday   — read aggregated team .hday files (always includes parsed events)
  */
@@ -34,7 +35,9 @@ import {
   readFileSync,
   statSync,
   unlinkSync,
+  watch,
   writeFileSync,
+  type FSWatcher,
 } from "fs";
 import { readFile } from "fs/promises";
 import { basename, join, resolve, sep } from "path";
@@ -273,6 +276,140 @@ function writeHdayFile(username: string, content: string, expectedEtag: string |
 }
 
 // ---------------------------------------------------------------------------
+// Change notifications — SSE stream for GET /hday/:username/events
+//
+// Mirrors the main app's own notify-then-pull SSE contract (`sync_changed`
+// over `GET /api/sync/events`): the event is only a freshness hint carrying
+// the file's current etag, not the file content itself. Clients that already
+// know that etag (e.g. because they just pushed it themselves) can ignore
+// the notification instead of re-fetching.
+//
+// A single `fs.watch` on SHARE_DIR is shared across every connected client —
+// not one watcher per connection — created lazily on the first subscriber
+// and closed once the last one disconnects.
+// ---------------------------------------------------------------------------
+
+const HDAY_SSE_KEEPALIVE_MS = 15_000;
+// A single write (temp file + rename, see writeHdayFile) fires more than one
+// raw fs.watch event for the same logical change; debounce them into one
+// broadcast instead of reading the file and notifying twice.
+const HDAY_SSE_DEBOUNCE_MS = 250;
+const SSE_ENCODER = new TextEncoder();
+
+interface HdaySseSubscriber {
+  controller: ReadableStreamDefaultController<Uint8Array>;
+  /** Last etag sent to this subscriber, so directory-watch noise that doesn't
+   * actually change the file's content doesn't trigger a redundant event. */
+  lastSentEtag: string | null;
+}
+
+const hdaySseSubscribers = new Map<string, Set<HdaySseSubscriber>>();
+const hdaySsePendingChecks = new Map<string, ReturnType<typeof setTimeout>>();
+let shareDirWatcher: FSWatcher | null = null;
+
+function formatSseEvent(event: string, data: unknown): Uint8Array {
+  return SSE_ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+function broadcastHdayChanged(username: string): void {
+  const subscribers = hdaySseSubscribers.get(username);
+  if (!subscribers || subscribers.size === 0) return;
+
+  let etag: string | null;
+  try {
+    etag = readHdayFile(username).etag;
+  } catch {
+    // Deleted, or the share briefly dropped — either way there's no current
+    // etag to report; a null etag still tells the client "something changed".
+    etag = null;
+  }
+
+  const payload = formatSseEvent("hday_changed", { type: "hday_changed", username, etag });
+  for (const subscriber of subscribers) {
+    if (subscriber.lastSentEtag === etag) continue;
+    subscriber.lastSentEtag = etag;
+    try {
+      subscriber.controller.enqueue(payload);
+    } catch {
+      // Client disconnected between the watch event and this broadcast;
+      // the stream's cancel() callback (below) removes it from the map.
+    }
+  }
+}
+
+function scheduleHdayChangeCheck(username: string): void {
+  const existing = hdaySsePendingChecks.get(username);
+  if (existing) clearTimeout(existing);
+  hdaySsePendingChecks.set(
+    username,
+    setTimeout(() => {
+      hdaySsePendingChecks.delete(username);
+      broadcastHdayChanged(username);
+    }, HDAY_SSE_DEBOUNCE_MS),
+  );
+}
+
+// writeHdayFile() writes to a temp file and rename()s it over the target
+// (see its comment for why). A rename between two names in the same watched
+// directory only surfaces as a single fs.watch event, and which of the two
+// names it reports is runtime/platform-dependent — observed as the temp
+// file's own name (not the target's) under Bun on Linux. Recognizing that
+// pattern too means the watcher still fires from this server's own writes,
+// not just from a direct external overwrite of "<username>.hday".
+const TEMP_HDAY_FILENAME_RE = /^(.+)\.hday\.[^.]+\.tmp$/;
+
+function usernameFromWatchedFilename(name: string): string | null {
+  if (name.endsWith(".hday")) return name.slice(0, -".hday".length);
+  const tmpMatch = name.match(TEMP_HDAY_FILENAME_RE);
+  return tmpMatch ? tmpMatch[1]! : null;
+}
+
+function ensureShareDirWatcherStarted(): void {
+  if (shareDirWatcher) return;
+  try {
+    shareDirWatcher = watch(SHARE_DIR, (_eventType, filename) => {
+      if (!filename) return; // not every platform/event supplies one
+      const username = usernameFromWatchedFilename(filename.toString());
+      if (username && hdaySseSubscribers.has(username)) {
+        scheduleHdayChangeCheck(username);
+      }
+    });
+  } catch (err) {
+    console.error("Failed to watch share directory for .hday changes:", err);
+  }
+}
+
+function stopShareDirWatcherIfIdle(): void {
+  if (hdaySseSubscribers.size === 0 && shareDirWatcher) {
+    shareDirWatcher.close();
+    shareDirWatcher = null;
+  }
+}
+
+/** Register a subscriber for one user's change notifications; returns an unsubscribe function. */
+function subscribeToHdayChanges(
+  username: string,
+  controller: ReadableStreamDefaultController<Uint8Array>,
+): () => void {
+  let subscribers = hdaySseSubscribers.get(username);
+  if (!subscribers) {
+    subscribers = new Set();
+    hdaySseSubscribers.set(username, subscribers);
+  }
+  const subscriber: HdaySseSubscriber = { controller, lastSentEtag: null };
+  subscribers.add(subscriber);
+  ensureShareDirWatcherStarted();
+
+  return () => {
+    subscribers!.delete(subscriber);
+    if (subscribers!.size === 0) {
+      hdaySseSubscribers.delete(username);
+    }
+    stopShareDirWatcherIfIdle();
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Serialization helpers
 // ---------------------------------------------------------------------------
 
@@ -492,6 +629,55 @@ async function handleRequest(req: Request): Promise<Response> {
       shareOk ? 200 : 503,
       corsHeaders,
     );
+  }
+
+  // GET /hday/:username/events — SSE change-notification stream
+  const hdayEventsMatch = pathname.match(/^\/hday\/([^/]+)\/events$/);
+  if (hdayEventsMatch) {
+    const username = decodeURIComponent(hdayEventsMatch[1] ?? "");
+
+    try {
+      getHdayPath(username);
+    } catch {
+      return jsonResponse({ detail: "Invalid username format" }, 400, corsHeaders);
+    }
+
+    if (req.method !== "GET") {
+      return jsonResponse({ detail: "Method not allowed" }, 405, corsHeaders);
+    }
+
+    let cleanup: (() => void) | null = null;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(SSE_ENCODER.encode(": connected\n\n"));
+        const unsubscribe = subscribeToHdayChanges(username, controller);
+        const keepaliveTimer = setInterval(() => {
+          try {
+            controller.enqueue(SSE_ENCODER.encode(": keepalive\n\n"));
+          } catch {
+            // Client already gone; cancel() (below) will run cleanup().
+          }
+        }, HDAY_SSE_KEEPALIVE_MS);
+        cleanup = () => {
+          clearInterval(keepaliveTimer);
+          unsubscribe();
+        };
+      },
+      cancel() {
+        cleanup?.();
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
   }
 
   // /hday/:username

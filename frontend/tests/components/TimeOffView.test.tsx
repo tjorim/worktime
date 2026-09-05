@@ -9,8 +9,36 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { http, HttpResponse } from "msw";
+import { hdayChangeEmitter } from "@/mocks/data/hdayChangeEmitter";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";
+
+/**
+ * Mocks the helper's `GET /hday/:username/events` change-notification stream
+ * so tests that connect a helper don't hit an unhandled-request error the
+ * moment TimeOffView subscribes. Silent until a test calls
+ * `hdayChangeEmitter.emit(username, etag)`.
+ */
+function mockHdayChangeEventsStream() {
+  server.use(
+    http.get("http://localhost:8080/hday/:username/events", ({ params }) => {
+      const username = String(params.username);
+      let ctrl: ReadableStreamDefaultController<Uint8Array> | undefined;
+      const stream = new ReadableStream<Uint8Array>({
+        start(c) {
+          ctrl = c;
+          hdayChangeEmitter._add(username, c);
+        },
+        cancel() {
+          if (ctrl) hdayChangeEmitter._remove(username, ctrl);
+        },
+      });
+      return new HttpResponse(stream, {
+        headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+      });
+    }),
+  );
+}
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
@@ -524,6 +552,7 @@ describe("TimeOffView", () => {
       server.use(
         http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
       );
+      mockHdayChangeEventsStream();
     }
 
     it("hides the Pull button when no helper is configured", () => {
@@ -650,6 +679,7 @@ describe("TimeOffView", () => {
       server.use(
         http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
       );
+      mockHdayChangeEventsStream();
     }
 
     it("hides the Push button when no helper is configured", () => {
@@ -795,6 +825,217 @@ describe("TimeOffView", () => {
       expect(
         await screen.findByText(m.timeoff_push_failed({ error: "share unreachable" })),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Auto-push on edit", () => {
+    function seedConnectedHelperWithUsername(username: string | null) {
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { hdayUsername: username } }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+      mockHdayChangeEventsStream();
+    }
+
+    it("silently pushes after a debounced pause following a local edit", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      const receivedBodies: unknown[] = [];
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          return HttpResponse.json({ etag: "sha256:auto" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      await screen.findByRole("button", { name: m.timeoff_push_events_aria() });
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-08-01");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Still debouncing immediately after the edit.
+      expect(receivedBodies).toHaveLength(0);
+
+      await waitFor(() => expect(receivedBodies).toHaveLength(1), { timeout: 5000 });
+      expect(receivedBodies[0]).toMatchObject({ raw: expect.stringContaining("2025/08/01") });
+      // Auto-push is silent on success — no toast, unlike a manual push.
+      expect(
+        screen.queryByText(m.timeoff_pushed({ username: "jsmith" })),
+      ).not.toBeInTheDocument();
+    }, 10000);
+
+    it("does not push right back what was just pulled", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({
+            username: "jsmith",
+            raw: "2025/09/01 # Day off\n",
+            etag: "sha256:from-share",
+            events: [],
+          }),
+        ),
+      );
+      let putCalls = 0;
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", () => {
+          putCalls += 1;
+          return HttpResponse.json({ etag: "sha256:should-not-happen" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
+      );
+      await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
+
+      // Give the (skipped) auto-push debounce window time to have fired if it were going to.
+      await new Promise((resolve) => setTimeout(resolve, 3500));
+      expect(putCalls).toBe(0);
+    }, 10000);
+  });
+
+  describe("Remote change notifications", () => {
+    function seedConnectedHelperWithUsername(username: string | null) {
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { hdayUsername: username } }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+      mockHdayChangeEventsStream();
+    }
+
+    it("shows a banner when the helper reports an etag we haven't synced", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      await screen.findByRole("button", { name: m.timeoff_pull_events_aria() });
+
+      act(() => {
+        hdayChangeEmitter.emit("jsmith", "sha256:new-on-share");
+      });
+
+      expect(await screen.findByText(m.timeoff_hday_changed_remotely())).toBeInTheDocument();
+    });
+
+    it("does not show a banner for an echo of this device's own push", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({ etag: "sha256:mine" }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
+      );
+      await screen.findByText(m.timeoff_pushed({ username: "jsmith" }));
+
+      act(() => {
+        hdayChangeEmitter.emit("jsmith", "sha256:mine");
+      });
+
+      expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
+    });
+
+    it("pulling from the banner clears it and imports the file", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({
+            username: "jsmith",
+            raw: "2025/07/04 # Day off\n",
+            etag: "sha256:new-on-share",
+            events: [],
+          }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      await screen.findByRole("button", { name: m.timeoff_pull_events_aria() });
+
+      act(() => {
+        hdayChangeEmitter.emit("jsmith", "sha256:new-on-share");
+      });
+      const banner = await screen.findByText(m.timeoff_hday_changed_remotely());
+
+      await user.click(
+        within(banner.closest(".alert") as HTMLElement).getByRole("button", {
+          name: m.timeoff_pull_btn(),
+        }),
+      );
+
+      expect(
+        await screen.findByText(m.timeoff_pulled({ username: "jsmith" })),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/07/04")).toBeInTheDocument();
+    });
+
+    it("dismissing the banner hides it without pulling", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      await screen.findByRole("button", { name: m.timeoff_pull_events_aria() });
+
+      act(() => {
+        hdayChangeEmitter.emit("jsmith", "sha256:new-on-share");
+      });
+      const banner = await screen.findByText(m.timeoff_hday_changed_remotely());
+
+      await userEvent.setup().click(
+        within(banner.closest(".alert") as HTMLElement).getByRole("button", { name: /close/i }),
+      );
+
+      expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
     });
   });
 

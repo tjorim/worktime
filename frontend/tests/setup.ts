@@ -11,6 +11,7 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import { server } from "@/mocks/server";
+import { hdayChangeEmitter } from "@/mocks/data/hdayChangeEmitter";
 import { sseEmitter } from "@/mocks/data/sseEmitter";
 import { resetMockScenario } from "@/mocks/scenarios/state";
 
@@ -120,6 +121,7 @@ afterEach(async () => {
   cleanup();
   server.resetHandlers();
   sseEmitter.reset();
+  hdayChangeEmitter.reset();
   await resetTestState();
 });
 
