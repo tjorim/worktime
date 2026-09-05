@@ -41,7 +41,7 @@ export interface UsePushSubscriptionReturn {
  */
 export function usePushSubscription(): UsePushSubscriptionReturn {
   const apiFetch = useApiClient();
-  const { userId } = useAuth();
+  const { userId, isAuthenticated } = useAuth();
   const { notifications } = useSettings().settings;
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
@@ -154,6 +154,17 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
   // Never creates a new subscription on its own; it only ever acts on one that already
   // exists (creating one remains an explicit user action via subscribeToPush).
   useEffect(() => {
+    // Re-upserting requires an OIDC principal server-side (subscribe/vapid-public-key
+    // both gate on require_oidc_principal), so skip entirely when signed out — including
+    // while the OIDC session is still being restored on mount, when isAuthenticated is
+    // momentarily false. Without this, a device with a leftover browser-level
+    // PushSubscription (e.g. from a previous sign-in never cleanly unsubscribed) would
+    // hit those endpoints unauthenticated on every load, 401, and trip the API client's
+    // session-expired/login-redirect handling for a user who isn't even signed in.
+    if (!isAuthenticated) {
+      setHasActiveSubscription(false);
+      return;
+    }
     let cancelled = false;
     void getActiveSubscription().then(async (subscription) => {
       if (cancelled) return;
@@ -174,7 +185,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     // Only re-run when these specific values change; getActiveSubscription and
     // subscribeToPush are stable across renders in practice here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, notifications]);
+  }, [userId, notifications, isAuthenticated]);
 
   return {
     isSupported: isPushSupported(),

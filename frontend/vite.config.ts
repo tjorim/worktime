@@ -62,7 +62,20 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         // MSW's mock worker is dev-only tooling; it has no place in the production precache.
         // push-sw.js is imported as code below, not precached content.
-        globIgnores: ["mockServiceWorker.js", "push-sw.js"],
+        // The manifest.icons entries below are already added to the precache (with their
+        // own `?__WB_REVISION__=` query) by vite-plugin-pwa's manifest-icon injection, so
+        // also matching them via globPatterns registers the same URL twice with two
+        // different revisioning schemes — workbox rejects that as a conflicting entry and
+        // the SW fails to install. Excluding them here leaves the manifest-icon injection
+        // as the only source, which still guarantees they're precached.
+        globIgnores: [
+          "mockServiceWorker.js",
+          "push-sw.js",
+          "assets/icons/icon-192.png",
+          "assets/icons/icon-512.png",
+          "assets/icons/icon-192-maskable.png",
+          "assets/icons/icon-512-maskable.png",
+        ],
         // Adds the push/notificationclick handlers (public/push-sw.js) to the generated
         // service worker via importScripts, rather than switching to injectManifest —
         // keeps the existing precaching/update-toast behavior completely untouched.

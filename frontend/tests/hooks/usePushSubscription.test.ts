@@ -292,6 +292,25 @@ describe("usePushSubscription", () => {
       expect(subscribe).not.toHaveBeenCalled();
     });
 
+    it("does not attempt to re-register when signed out, even with a leftover subscription", async () => {
+      // A leftover browser-level PushSubscription (e.g. from a previous sign-in that
+      // was never cleanly unsubscribed) must not trigger authenticated network calls
+      // while signed out - those endpoints require an OIDC principal and would 401,
+      // which previously tripped the API client's session-expired/login-redirect flow
+      // for a user who isn't even signed in.
+      getSubscription.mockResolvedValue(mockSubscription);
+      mockSettings({ notifications: "on" });
+      mockAuth(null);
+      const apiFetch = vi.fn();
+      vi.mocked(useApiClient).mockReturnValue(apiFetch);
+
+      const { result } = renderHook(() => usePushSubscription());
+
+      await waitFor(() => expect(result.current.hasActiveSubscription).toBe(false));
+      expect(apiFetch).not.toHaveBeenCalled();
+      expect(subscribe).not.toHaveBeenCalled();
+    });
+
     it("re-reconciles when the signed-in account changes", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
       mockSettings({ notifications: "on" });
