@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
-import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
+import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -50,6 +50,18 @@ const AllProviders = ({ children }: { children: React.ReactNode }) => (
     </HdayHelperProvider>
   </ToastProvider>
 );
+
+// Test-only harness for driving updateHdayHelperUrl() from outside TimeOffView,
+// sharing the same HdayHelperContext instance as the rendered TimeOffView —
+// simulates the helper becoming reachable after the component already mounted.
+function HelperUrlSwitcher({ url }: { url: string }) {
+  const { updateHdayHelperUrl } = useHdayHelper();
+  return (
+    <button type="button" onClick={() => updateHdayHelperUrl(url)}>
+      switch helper
+    </button>
+  );
+}
 
 describe("TimeOffView", () => {
   beforeEach(() => {
@@ -826,6 +838,61 @@ describe("TimeOffView", () => {
         await screen.findByText(m.timeoff_push_failed({ error: "share unreachable" })),
       ).toBeInTheDocument();
     });
+
+    it("queues an edit that arrives mid-push instead of racing, and sends it with the latest etag once free", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      let resolveFirstPut!: (response: Response) => void;
+      const firstPutResponse = new Promise<Response>((resolve) => {
+        resolveFirstPut = resolve;
+      });
+      const receivedBodies: unknown[] = [];
+      let callCount = 0;
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          callCount += 1;
+          return callCount === 1 ? firstPutResponse : HttpResponse.json({ etag: "sha256:second" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const pushButton = await screen.findByRole("button", {
+        name: m.timeoff_push_events_aria(),
+      });
+      await user.click(pushButton); // manual push starts, pending on firstPutResponse
+      await waitFor(() => expect(callCount).toBe(1));
+
+      // A local edit while that push is still in flight schedules an
+      // auto-push after the debounce — it must queue behind the in-flight
+      // one instead of racing it with a now-stale etag.
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-12-01");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Wait past the debounce while the first push is still deliberately
+      // unresolved: the queued push must not fire as a second concurrent
+      // request.
+      await new Promise((resolve) => setTimeout(resolve, 3500));
+      expect(callCount).toBe(1);
+
+      await act(async () => {
+        resolveFirstPut(HttpResponse.json({ etag: "sha256:first" }));
+      });
+
+      await waitFor(() => expect(callCount).toBe(2), { timeout: 5000 });
+      expect(receivedBodies[1]).toMatchObject({
+        etag: "sha256:first",
+        raw: expect.stringContaining("2025/12/01"),
+      });
+    }, 15000);
   });
 
   describe("Auto-push on edit", () => {
@@ -879,7 +946,13 @@ describe("TimeOffView", () => {
       ).not.toBeInTheDocument();
     }, 10000);
 
-    it("does not push right back what was just pulled", async () => {
+    it("the auto-push that follows a pull is an idempotent no-op, not a conflict", async () => {
+      // The auto-push effect fires after any entries change, pulls included —
+      // deliberately not suppressed (see TimeOffView.tsx) since suppressing
+      // it via a "skip once" flag previously stranded genuine edits whenever
+      // that flag went unconsumed. Sending the just-pulled content back with
+      // the just-pulled etag is safe: the helper sees matching content and
+      // etag, so it succeeds rather than conflicting.
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
@@ -891,11 +964,11 @@ describe("TimeOffView", () => {
           }),
         ),
       );
-      let putCalls = 0;
+      const receivedBodies: unknown[] = [];
       server.use(
-        http.put("http://localhost:8080/hday/jsmith", () => {
-          putCalls += 1;
-          return HttpResponse.json({ etag: "sha256:should-not-happen" });
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          return HttpResponse.json({ etag: "sha256:from-share" });
         }),
       );
 
@@ -911,9 +984,110 @@ describe("TimeOffView", () => {
       );
       await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
 
-      // Give the (skipped) auto-push debounce window time to have fired if it were going to.
-      await new Promise((resolve) => setTimeout(resolve, 3500));
-      expect(putCalls).toBe(0);
+      await waitFor(() => expect(receivedBodies).toHaveLength(1), { timeout: 5000 });
+      expect(receivedBodies[0]).toMatchObject({ etag: "sha256:from-share" });
+      // Silent: no push-success toast, and no conflict warning either.
+      expect(
+        screen.queryByText(m.timeoff_pushed({ username: "jsmith" })),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_push_conflict())).not.toBeInTheDocument();
+    }, 10000);
+
+    it("pushes a genuine edit that follows a pull, not just the pulled content", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({
+            username: "jsmith",
+            raw: "2025/09/01 # Day off\n",
+            etag: "sha256:from-share",
+            events: [],
+          }),
+        ),
+      );
+      const receivedBodies: unknown[] = [];
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          return HttpResponse.json({ etag: `sha256:v${receivedBodies.length}` });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
+      );
+      await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-10-10");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Both the post-pull no-op push and the push for the new edit land —
+      // the important thing is the edit is never stranded.
+      await waitFor(
+        () =>
+          expect(
+            receivedBodies.some(
+              (body) =>
+                typeof body === "object"
+                && body !== null
+                && "raw" in body
+                && typeof body.raw === "string"
+                && body.raw.includes("2025/10/10"),
+            ),
+          ).toBe(true),
+        { timeout: 5000 },
+      );
+    }, 10000);
+
+    it("auto-pushes an edit made before the helper was connected, once it connects", async () => {
+      // No helper URL configured yet — canUseHdayHelperSync starts false, so
+      // the edit below must not be silently stranded once it does connect.
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { hdayUsername: "jsmith" } }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+      mockHdayChangeEventsStream();
+      const receivedBodies: unknown[] = [];
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          return HttpResponse.json({ etag: "sha256:later" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <HelperUrlSwitcher url="http://localhost:8080" />
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-11-01");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      expect(receivedBodies).toHaveLength(0);
+
+      await user.click(screen.getByRole("button", { name: "switch helper" }));
+
+      await waitFor(() => expect(receivedBodies.length).toBeGreaterThan(0), { timeout: 5000 });
+      expect(receivedBodies[0]).toMatchObject({ raw: expect.stringContaining("2025/11/01") });
     }, 10000);
   });
 

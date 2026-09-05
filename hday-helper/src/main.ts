@@ -299,8 +299,12 @@ const SSE_ENCODER = new TextEncoder();
 interface HdaySseSubscriber {
   controller: ReadableStreamDefaultController<Uint8Array>;
   /** Last etag sent to this subscriber, so directory-watch noise that doesn't
-   * actually change the file's content doesn't trigger a redundant event. */
+   * actually change the file's content doesn't trigger a redundant event.
+   * `null` is a real, distinct value here (the file was deleted) — `hasSent`
+   * is what distinguishes "haven't notified yet" from "last notified: gone",
+   * so a fresh subscriber isn't mistaken for one that already saw a delete. */
   lastSentEtag: string | null;
+  hasSent: boolean;
 }
 
 const hdaySseSubscribers = new Map<string, Set<HdaySseSubscriber>>();
@@ -326,8 +330,9 @@ function broadcastHdayChanged(username: string): void {
 
   const payload = formatSseEvent("hday_changed", { type: "hday_changed", username, etag });
   for (const subscriber of subscribers) {
-    if (subscriber.lastSentEtag === etag) continue;
+    if (subscriber.hasSent && subscriber.lastSentEtag === etag) continue;
     subscriber.lastSentEtag = etag;
+    subscriber.hasSent = true;
     try {
       subscriber.controller.enqueue(payload);
     } catch {
@@ -396,7 +401,7 @@ function subscribeToHdayChanges(
     subscribers = new Set();
     hdaySseSubscribers.set(username, subscribers);
   }
-  const subscriber: HdaySseSubscriber = { controller, lastSentEtag: null };
+  const subscriber: HdaySseSubscriber = { controller, lastSentEtag: null, hasSent: false };
   subscribers.add(subscriber);
   ensureShareDirWatcherStarted();
 

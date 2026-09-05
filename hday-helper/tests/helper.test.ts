@@ -357,6 +357,31 @@ describe("GET /hday/:username/events", () => {
 
     expect(await leoNeverFires).toBe("timed-out");
   });
+
+  test("notifies a fresh subscriber of a deletion instead of suppressing its first (null-etag) event", async () => {
+    // A brand-new subscriber's "last sent etag" starts as null purely as a
+    // sentinel for "nothing sent yet" — it must not be mistaken for "already
+    // told them the file is gone" when the file's actual first-ever
+    // notification also happens to carry a null etag (i.e. a delete).
+    await fetch(`${baseUrl}/hday/nina`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: "2025/08/01 # Before delete\n" }),
+    });
+
+    const stream = await fetch(`${baseUrl}/hday/nina/events`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    await new Promise((r) => setTimeout(r, 100));
+
+    const eventPromise = readNextSseEvent(stream, "hday_changed");
+    rmSync(join(shareDir, "nina.hday"));
+
+    const event = (await eventPromise) as { type: string; username: string; etag: string | null };
+    expect(event.type).toBe("hday_changed");
+    expect(event.username).toBe("nina");
+    expect(event.etag).toBeNull();
+  });
 });
 
 describe("GET /team/:teamId", () => {
