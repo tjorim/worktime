@@ -23,11 +23,16 @@
  * GET  /hday/:username/events — SSE stream: notifies when that user's file changes on disk
  * GET  /team/:teamId        — read team config + member list
  * GET  /team/:teamId/hday   — read aggregated team .hday files (always includes parsed events)
+ * GET  /settings            — HTML form to view/edit SHARE_DIR/PORT/HOST/CORS_ORIGINS
+ * POST /settings            — rewrite .env with the submitted values and restart
+ * GET  /logs                — recent log lines (plain text, or an HTML viewer for a browser)
+ * GET  /logs/events         — SSE stream: new log lines as they're written
  */
 
 import { createHash } from "crypto";
 import {
   accessSync,
+  appendFileSync,
   constants,
   existsSync,
   mkdirSync,
@@ -65,6 +70,14 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .map((s) => s.trim())
   .filter(Boolean);
 const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024; // 10 MiB
+const MAX_SETTINGS_BODY_BYTES = 64 * 1024; // form submissions are tiny; this is generous
+const ENV_FILE_PATH = join(process.cwd(), ".env");
+const ENV_KEYS = ["SHARE_DIR", "PORT", "HOST", "CORS_ORIGINS"] as const;
+type EnvKey = (typeof ENV_KEYS)[number];
+// Set by tests only, so a valid POST /settings can be exercised over real HTTP
+// without the test process detaching a second, untracked OS process — see
+// hday-helper/tests/helper.test.ts's "GET/POST /settings" suite.
+const SKIP_RESTART_FOR_TESTS = process.env.HDAY_HELPER_SKIP_RESTART_FOR_TESTS === "1";
 
 // ---------------------------------------------------------------------------
 // Per-user write mutex — serializes concurrent writes to the same .hday file
@@ -415,6 +428,241 @@ function subscribeToHdayChanges(
 }
 
 // ---------------------------------------------------------------------------
+// Logging — fans each per-request log line out to the console (as before),
+// an in-memory ring buffer (backs GET /logs' initial view and survives
+// nothing — it's just cheap to serve from), and a size-capped rotating file
+// on disk (survives a restart or crash even with no console attached).
+// ---------------------------------------------------------------------------
+
+const LOG_RING_BUFFER_SIZE = 500;
+const LOG_FILE_PATH = join(process.cwd(), "hday-helper.log");
+const LOG_FILE_BACKUP_PATH = `${LOG_FILE_PATH}.1`;
+const LOG_FILE_MAX_BYTES = 5 * 1024 * 1024; // 5 MiB
+
+const logRingBuffer: string[] = [];
+const logSseSubscribers = new Set<ReadableStreamDefaultController<Uint8Array>>();
+
+function broadcastLogLine(line: string): void {
+  if (logSseSubscribers.size === 0) return;
+  const payload = formatSseEvent("log_line", { type: "log_line", line });
+  for (const controller of logSseSubscribers) {
+    try {
+      controller.enqueue(payload);
+    } catch {
+      // Client disconnected between the log call and this broadcast; its
+      // stream's cancel() callback removes it from the set.
+    }
+  }
+}
+
+function appendToLogFile(line: string): void {
+  try {
+    const stat = existsSync(LOG_FILE_PATH) ? statSync(LOG_FILE_PATH) : null;
+    if (stat && stat.size + line.length + 1 > LOG_FILE_MAX_BYTES) {
+      // Best-effort rotation: keep exactly one backup, overwriting any older one.
+      try {
+        renameSync(LOG_FILE_PATH, LOG_FILE_BACKUP_PATH);
+      } catch {
+        // If rotation fails we still want to keep logging below.
+      }
+    }
+    appendFileSync(LOG_FILE_PATH, line + "\n", "utf-8");
+  } catch (err) {
+    // Logging must never take down request handling (disk full, permissions, ...).
+    console.error("Failed to write hday-helper.log:", err);
+  }
+}
+
+function logLine(message: string, isError = false): void {
+  const line = `[${new Date().toISOString()}] ${message}`;
+  if (isError) console.error(line);
+  else console.log(line);
+  logRingBuffer.push(line);
+  if (logRingBuffer.length > LOG_RING_BUFFER_SIZE) logRingBuffer.shift();
+  appendToLogFile(line);
+  broadcastLogLine(line);
+}
+
+// ---------------------------------------------------------------------------
+// Settings — GET/POST /settings rewrites .env from scratch with just the four
+// known keys, then triggers a full self-restart so PORT/HOST changes take
+// effect (rather than distinguishing which settings are hot-reloadable).
+// ---------------------------------------------------------------------------
+
+interface SettingsFormValues {
+  SHARE_DIR: string;
+  HOST: string;
+  PORT: string;
+  CORS_ORIGINS: string;
+}
+
+function writeEnvFile(values: Record<EnvKey, string>): void {
+  const lines = ENV_KEYS.map((key) => `${key}=${values[key]}`);
+  writeFileSync(ENV_FILE_PATH, lines.join("\n") + "\n", "utf-8");
+}
+
+function validateSettingsForm(values: SettingsFormValues): string | null {
+  if (!values.SHARE_DIR.trim()) return "SHARE_DIR must not be empty.";
+  if (!values.HOST.trim()) return "HOST must not be empty.";
+  const port = Number(values.PORT);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return "PORT must be a whole number between 1 and 65535.";
+  }
+  return null;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const PAGE_STYLE = `
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+  nav { margin-bottom: 1.5rem; }
+  nav a { margin-right: 1rem; }
+  label { display: block; margin-bottom: 1rem; }
+  input { display: block; width: 100%; box-sizing: border-box; padding: 0.4rem; margin-top: 0.25rem; }
+  button { padding: 0.5rem 1rem; }
+  .error { color: #b00020; }
+  .warn { color: #8a6100; }
+`;
+
+function renderSettingsPage(values: SettingsFormValues, error: string | null): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>.hday Helper — Settings</title>
+<style>${PAGE_STYLE}</style>
+</head>
+<body>
+<nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
+<h1>.hday Helper Settings</h1>
+<p class="warn">Saving rewrites <code>.env</code> with just these four keys — any other lines or
+comments in your existing <code>.env</code> file will not be preserved. Saving restarts the helper
+immediately.</p>
+${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
+<form method="POST" action="/settings">
+  <label>SHARE_DIR
+    <input type="text" name="SHARE_DIR" value="${escapeHtml(values.SHARE_DIR)}" required>
+  </label>
+  <label>HOST
+    <input type="text" name="HOST" value="${escapeHtml(values.HOST)}" required>
+  </label>
+  <label>PORT
+    <input type="number" name="PORT" min="1" max="65535" value="${escapeHtml(values.PORT)}" required>
+  </label>
+  <label>CORS_ORIGINS
+    <input type="text" name="CORS_ORIGINS" value="${escapeHtml(values.CORS_ORIGINS)}">
+  </label>
+  <button type="submit">Save &amp; restart</button>
+</form>
+</body>
+</html>`;
+}
+
+function renderRestartingPage(newPort: number): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>.hday Helper — Restarting…</title>
+<style>${PAGE_STYLE}</style>
+</head>
+<body>
+<h1>Restarting…</h1>
+<p id="status">Settings saved. Waiting for the helper to come back up…</p>
+<script>
+(function () {
+  var newOrigin = "http://" + location.hostname + ":" + ${JSON.stringify(newPort)};
+  var deadline = Date.now() + 20000;
+  function poll() {
+    fetch(newOrigin + "/health", { mode: "no-cors", cache: "no-store" })
+      .then(function () { location.href = newOrigin + "/settings"; })
+      .catch(function () {
+        if (Date.now() > deadline) {
+          document.getElementById("status").textContent =
+            "Still not reachable at " + newOrigin + " — check the port isn't blocked and reload manually.";
+          return;
+        }
+        setTimeout(poll, 500);
+      });
+  }
+  setTimeout(poll, 1000);
+})();
+</script>
+</body>
+</html>`;
+}
+
+function renderLogsPage(initialLines: string[]): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>.hday Helper — Logs</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, monospace; margin: 0; padding: 1rem; background: #111; color: #ddd; }
+  nav { margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+  nav a { color: #8ab4f8; margin-right: 1rem; }
+  pre { white-space: pre-wrap; word-break: break-all; margin: 0; }
+</style>
+</head>
+<body>
+<nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
+<pre id="log">${escapeHtml(initialLines.join("\n"))}</pre>
+<script>
+(function () {
+  var pre = document.getElementById("log");
+  var es = new EventSource("/logs/events");
+  es.addEventListener("log_line", function (e) {
+    var data = JSON.parse(e.data);
+    pre.textContent += (pre.textContent ? "\\n" : "") + data.line;
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned once at bootstrap
+
+async function restartWithNewSettings(): Promise<void> {
+  logLine("Settings changed via /settings — restarting to apply new configuration");
+  try {
+    await httpServer?.stop();
+  } catch (err) {
+    logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
+
+  // Strip the keys we just rewrote in .env from the child's inherited env so
+  // it re-reads them from disk instead of keeping this process's now-stale
+  // values — Bun's built-in .env loading does not override already-set
+  // environment variables.
+  const childEnv = { ...process.env };
+  for (const key of ENV_KEYS) delete childEnv[key];
+
+  try {
+    const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
+      cwd: process.cwd(),
+      env: childEnv,
+      stdio: ["ignore", "ignore", "ignore"],
+      detached: true,
+    });
+    child.unref();
+  } catch (err) {
+    logLine(`Failed to spawn replacement process: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
+
+  process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // Serialization helpers
 // ---------------------------------------------------------------------------
 
@@ -634,6 +882,136 @@ async function handleRequest(req: Request): Promise<Response> {
       shareOk ? 200 : 503,
       corsHeaders,
     );
+  }
+
+  // GET/POST /settings
+  if (pathname === "/settings") {
+    if (req.method === "GET") {
+      const values: SettingsFormValues = {
+        SHARE_DIR,
+        HOST,
+        PORT: String(PORT),
+        CORS_ORIGINS: CORS_ORIGINS.join(","),
+      };
+      return new Response(renderSettingsPage(values, null), {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
+    if (req.method === "POST") {
+      // A url-encoded form body is plain text, so the same streaming byte cap
+      // used for PUT /hday/:username bodies applies here too — this also
+      // catches an oversized body sent without a (trustworthy) Content-Length.
+      const declaredLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+      if (!Number.isNaN(declaredLength) && declaredLength > MAX_SETTINGS_BODY_BYTES) {
+        return jsonResponse({ detail: "Payload too large" }, 413, {});
+      }
+
+      let bodyText: string;
+      try {
+        bodyText = await readBodyTextWithLimit(req, MAX_SETTINGS_BODY_BYTES);
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          return jsonResponse({ detail: "Payload too large" }, 413, {});
+        }
+        return jsonResponse({ detail: "Invalid form body" }, 400, {});
+      }
+
+      const form = new URLSearchParams(bodyText);
+      const values: SettingsFormValues = {
+        SHARE_DIR: form.get("SHARE_DIR") ?? "",
+        HOST: form.get("HOST") ?? "",
+        PORT: form.get("PORT") ?? "",
+        CORS_ORIGINS: form.get("CORS_ORIGINS") ?? "",
+      };
+
+      const error = validateSettingsForm(values);
+      if (error) {
+        return new Response(renderSettingsPage(values, error), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      const newPort = Number(values.PORT);
+      writeEnvFile({
+        SHARE_DIR: values.SHARE_DIR.trim(),
+        HOST: values.HOST.trim(),
+        PORT: String(newPort),
+        CORS_ORIGINS: values.CORS_ORIGINS.trim(),
+      });
+
+      logLine(`Settings saved via /settings; restarting on ${values.HOST.trim()}:${newPort}`);
+
+      if (!SKIP_RESTART_FOR_TESTS) {
+        setTimeout(() => {
+          void restartWithNewSettings();
+        }, 50);
+      }
+
+      return new Response(renderRestartingPage(newPort), {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
+    return jsonResponse({ detail: "Method not allowed" }, 405, {});
+  }
+
+  // GET /logs — plain text for scripts/curl, an HTML viewer for a browser
+  if (pathname === "/logs") {
+    if (req.method !== "GET") {
+      return jsonResponse({ detail: "Method not allowed" }, 405, {});
+    }
+    const acceptsHtml = (req.headers.get("Accept") ?? "").includes("text/html");
+    if (!acceptsHtml) {
+      const body = logRingBuffer.length > 0 ? logRingBuffer.join("\n") + "\n" : "";
+      return new Response(body, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
+    return new Response(renderLogsPage(logRingBuffer), {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+
+  // GET /logs/events — SSE stream of new log lines as they're written
+  if (pathname === "/logs/events") {
+    if (req.method !== "GET") {
+      return jsonResponse({ detail: "Method not allowed" }, 405, {});
+    }
+
+    let cleanup: (() => void) | null = null;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(SSE_ENCODER.encode(": connected\n\n"));
+        logSseSubscribers.add(controller);
+        const keepaliveTimer = setInterval(() => {
+          try {
+            controller.enqueue(SSE_ENCODER.encode(": keepalive\n\n"));
+          } catch {
+            // Client already gone; cancel() (below) runs cleanup().
+          }
+        }, HDAY_SSE_KEEPALIVE_MS);
+        cleanup = () => {
+          clearInterval(keepaliveTimer);
+          logSseSubscribers.delete(controller);
+        };
+      },
+      cancel() {
+        cleanup?.();
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
   }
 
   // GET /hday/:username/events — SSE change-notification stream
@@ -921,11 +1299,12 @@ async function loggedHandleRequest(req: Request): Promise<Response> {
   try {
     const response = await handleRequest(req);
     const ms = (performance.now() - start).toFixed(1);
-    console.log(`${req.method} ${pathname} -> ${response.status} (${ms}ms)`);
+    logLine(`${req.method} ${pathname} -> ${response.status} (${ms}ms)`);
     return response;
   } catch (err) {
     const ms = (performance.now() - start).toFixed(1);
-    console.error(`${req.method} ${pathname} -> unhandled error (${ms}ms):`, err);
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err);
+    logLine(`${req.method} ${pathname} -> unhandled error (${ms}ms): ${detail}`, true);
     // Every known error path in handleRequest already returns a CORS-headered
     // response — this only catches genuine bugs. Respond ourselves (with CORS
     // headers) rather than letting it fall through to Bun's default handling,
@@ -953,24 +1332,44 @@ if (!existsSync(SHARE_DIR)) {
   }
 }
 
-try {
-  Bun.serve({
-    hostname: HOST,
-    port: PORT,
-    fetch: loggedHandleRequest,
-  });
-} catch (err) {
-  if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
-    console.error(
-      `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
-        `Either stop whatever else is using it, or set PORT to a different value ` +
-        `(e.g. PORT=8081) in your .env file next to the executable.\n`,
-    );
-  } else {
-    console.error("\nCould not start the .hday helper:", err, "\n");
+// A self-restart (see restartWithNewSettings) spawns the replacement before
+// this process's own `server.stop()` is guaranteed to have fully released the
+// port on every platform — retry binding for a few seconds instead of
+// failing immediately on EADDRINUSE.
+const BIND_RETRY_ATTEMPTS = 20;
+const BIND_RETRY_DELAY_MS = 150;
+
+async function startServer(): Promise<ReturnType<typeof Bun.serve>> {
+  for (let attempt = 1; attempt <= BIND_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return Bun.serve({
+        hostname: HOST,
+        port: PORT,
+        fetch: loggedHandleRequest,
+      });
+    } catch (err) {
+      const isAddrInUse = err instanceof Error && "code" in err && err.code === "EADDRINUSE";
+      if (isAddrInUse && attempt < BIND_RETRY_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, BIND_RETRY_DELAY_MS));
+        continue;
+      }
+      if (isAddrInUse) {
+        console.error(
+          `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
+            `Either stop whatever else is using it, or set PORT to a different value ` +
+            `(e.g. PORT=8081) in your .env file next to the executable.\n`,
+        );
+      } else {
+        console.error("\nCould not start the .hday helper:", err, "\n");
+      }
+      process.exit(1);
+    }
   }
-  process.exit(1);
+  // Unreachable: the loop above always either returns or calls process.exit(1).
+  throw new Error("unreachable");
 }
+
+httpServer = await startServer();
 
 console.log("============================================================");
 console.log("Worktime .hday Helper");

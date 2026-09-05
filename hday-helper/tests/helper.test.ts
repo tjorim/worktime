@@ -9,7 +9,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -37,15 +37,17 @@ async function waitForServer(url: string, timeoutMs = 10000): Promise<void> {
 
 /**
  * Minimal SSE reader for tests: opens the stream and resolves with the parsed
- * `data` payload of the first event matching `eventName`, or rejects if none
- * arrives within `timeoutMs`. Deliberately hand-rolled rather than pulling in
- * a parsing library — the helper itself has no dependencies, and this repo's
- * tests are meant to exercise it exactly as a real HTTP client would.
+ * `data` payload of the first event matching `eventName` (and, if given,
+ * `matches`), or rejects if none arrives within `timeoutMs`. Deliberately
+ * hand-rolled rather than pulling in a parsing library — the helper itself
+ * has no dependencies, and this repo's tests are meant to exercise it exactly
+ * as a real HTTP client would.
  */
 async function readNextSseEvent(
   response: Response,
   eventName: string,
   timeoutMs = 3000,
+  matches: (data: unknown) => boolean = () => true,
 ): Promise<unknown> {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -67,7 +69,8 @@ async function readNextSseEvent(
         const eventLine = block.split("\n").find((line) => line.startsWith("event: "));
         const dataLine = block.split("\n").find((line) => line.startsWith("data: "));
         if (eventLine?.slice("event: ".length) === eventName && dataLine) {
-          return JSON.parse(dataLine.slice("data: ".length));
+          const data = JSON.parse(dataLine.slice("data: ".length));
+          if (matches(data)) return data;
         }
       }
     }
@@ -467,4 +470,265 @@ describe("unknown routes", () => {
     const body = await res.json();
     expect(body.detail).toBeDefined();
   });
+});
+
+describe("GET /logs", () => {
+  test("returns recent request lines as plain text by default", async () => {
+    // Exercise a request first so there's guaranteed to be something logged.
+    await fetch(`${baseUrl}/health`);
+
+    const res = await fetch(`${baseUrl}/logs`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/plain");
+    const body = await res.text();
+    expect(body).toContain("GET /health -> 200");
+  });
+
+  test("returns an HTML viewer when the client accepts text/html", async () => {
+    const res = await fetch(`${baseUrl}/logs`, { headers: { Accept: "text/html" } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const body = await res.text();
+    expect(body).toContain("<pre id=\"log\">");
+    expect(body).toContain("/logs/events");
+  });
+
+  test("405s on unsupported methods", async () => {
+    const res = await fetch(`${baseUrl}/logs`, { method: "POST" });
+    expect(res.status).toBe(405);
+  });
+});
+
+describe("GET /logs/events", () => {
+  test("streams a log_line event for a subsequent request", async () => {
+    const stream = await fetch(`${baseUrl}/logs/events`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    expect(stream.status).toBe(200);
+    expect(stream.headers.get("content-type")).toContain("text/event-stream");
+
+    // Connecting itself produces a "GET /logs/events -> 200" log line that
+    // broadcasts to this very subscriber, so filter for the /health line
+    // specifically rather than assuming it's the first log_line received.
+    const eventPromise = readNextSseEvent(
+      stream,
+      "log_line",
+      3000,
+      (data) => (data as { line: string }).line.includes("GET /health"),
+    );
+    await fetch(`${baseUrl}/health`);
+
+    const event = (await eventPromise) as { type: string; line: string };
+    expect(event.type).toBe("log_line");
+    expect(event.line).toContain("GET /health");
+  });
+
+  test("405s on a non-GET request", async () => {
+    const res = await fetch(`${baseUrl}/logs/events`, { method: "POST" });
+    expect(res.status).toBe(405);
+  });
+});
+
+describe("GET/POST /settings", () => {
+  // These tests use their own dedicated helper instance (rather than the
+  // shared `proc`/`baseUrl` above) because a valid POST /settings triggers a
+  // full self-restart of the process handling it — sharing the main
+  // instance would take down every other describe block in this file.
+  // HDAY_HELPER_SKIP_RESTART_FOR_TESTS=1 disables the actual restart (which
+  // detaches a second, untracked OS process) while leaving every other part
+  // of the request/response cycle — validation, the rewritten .env file, the
+  // response body — real and observable.
+  let settingsShareDir: string;
+  let settingsPort: number;
+  let settingsBaseUrl: string;
+  let settingsProc: ReturnType<typeof Bun.spawn>;
+  let envPath: string;
+
+  beforeAll(async () => {
+    settingsShareDir = mkdtempSync(join(tmpdir(), "hday-helper-settings-test-"));
+    settingsPort = 20000 + Math.floor(Math.random() * 20000);
+    settingsBaseUrl = `http://127.0.0.1:${settingsPort}`;
+    envPath = join(settingsShareDir, ".env");
+
+    settingsProc = Bun.spawn(["bun", MAIN_TS], {
+      env: {
+        ...process.env,
+        SHARE_DIR: settingsShareDir,
+        PORT: String(settingsPort),
+        HOST: "127.0.0.1",
+        CORS_ORIGINS: ALLOWED_ORIGIN,
+        HDAY_HELPER_SKIP_RESTART_FOR_TESTS: "1",
+      },
+      cwd: settingsShareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    await waitForServer(`${settingsBaseUrl}/health`);
+  }, 15000);
+
+  afterAll(() => {
+    settingsProc.kill();
+    rmSync(settingsShareDir, { recursive: true, force: true });
+  });
+
+  test("GET renders a form pre-filled with the current configuration", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const body = await res.text();
+    expect(body).toContain(`value="${settingsShareDir}"`);
+    expect(body).toContain(`value="${settingsPort}"`);
+    expect(body).toContain(`value="${ALLOWED_ORIGIN}"`);
+  });
+
+  test("405s on unsupported methods", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, { method: "DELETE" });
+    expect(res.status).toBe(405);
+  });
+
+  test("POST rejects an out-of-range PORT without writing .env", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        SHARE_DIR: settingsShareDir,
+        HOST: "127.0.0.1",
+        PORT: "999999",
+        CORS_ORIGINS: "",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.text();
+    expect(body).toContain("PORT must be");
+    expect(existsSync(envPath)).toBe(false);
+  });
+
+  test("POST rejects an empty SHARE_DIR", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ SHARE_DIR: "  ", HOST: "127.0.0.1", PORT: "8080", CORS_ORIGINS: "" }),
+    });
+    expect(res.status).toBe(400);
+    expect(existsSync(envPath)).toBe(false);
+  });
+
+  test("413s an oversized body sent without a Content-Length header", async () => {
+    const bigBody = `SHARE_DIR=${"x".repeat(100 * 1024)}`;
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(bigBody));
+        controller.close();
+      },
+    });
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      body: stream,
+      // @ts-expect-error duplex is required by undici/Bun for streaming bodies but missing from lib.dom types
+      duplex: "half",
+    });
+    expect(res.status).toBe(413);
+    expect(existsSync(envPath)).toBe(false);
+  });
+
+  test("POST with valid values rewrites .env, logs the change, and does not disrupt the running instance", async () => {
+    const newShareDir = join(settingsShareDir, "moved");
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        SHARE_DIR: newShareDir,
+        HOST: "127.0.0.1",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "http://new.example",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("Restarting");
+
+    const envContent = readFileSync(envPath, "utf-8");
+    expect(envContent).toContain(`SHARE_DIR=${newShareDir}`);
+    expect(envContent).toContain(`PORT=${settingsPort}`);
+    expect(envContent).toContain("HOST=127.0.0.1");
+    expect(envContent).toContain("CORS_ORIGINS=http://new.example");
+
+    // The real restart is skipped in this test process, so the original
+    // instance (still serving its original SHARE_DIR) must still be up.
+    const healthRes = await fetch(`${settingsBaseUrl}/health`);
+    expect(healthRes.status).toBe(200);
+
+    const logsRes = await fetch(`${settingsBaseUrl}/logs`);
+    const logsBody = await logsRes.text();
+    expect(logsBody).toContain("Settings saved via /settings");
+  });
+});
+
+describe("POST /settings full restart", () => {
+  // Unlike the suite above, this test does NOT set
+  // HDAY_HELPER_SKIP_RESTART_FOR_TESTS — it exercises the real self-restart
+  // (server.stop() + a detached respawn of the same script) end to end, on
+  // its own dedicated process/port so it can't disrupt any other test.
+  test("actually restarts and serves the new configuration afterward", async () => {
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const newShareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-new-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: newShareDir,
+          HOST: "127.0.0.1",
+          PORT: String(port),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(postRes.status).toBe(200);
+
+      // The original process now stops and exits; a detached replacement
+      // rebinds the same port and should report the new share_dir once up.
+      const deadline = Date.now() + 15000;
+      let lastBody: { share_dir?: string } = {};
+      while (Date.now() < deadline) {
+        try {
+          const res = await fetch(`${url}/health`);
+          if (res.ok) {
+            lastBody = await res.json();
+            if (lastBody.share_dir === newShareDir) break;
+          }
+        } catch {
+          // Old process may already be down and the new one not bound yet.
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      expect(lastBody.share_dir).toBe(newShareDir);
+    } finally {
+      // `proc` itself already exited as part of the restart (this only
+      // matters if the test failed before that happened); the detached
+      // replacement process is a different, untracked PID. Best-effort kill
+      // whatever now holds the test's throwaway port so it doesn't linger
+      // as a background process across local test runs.
+      try {
+        Bun.spawnSync(["fuser", "-k", `${port}/tcp`], { stdout: "ignore", stderr: "ignore" });
+      } catch {
+        // fuser not available on this platform — nothing more we can do here.
+      }
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+      rmSync(newShareDir, { recursive: true, force: true });
+    }
+  }, 20000);
 });
