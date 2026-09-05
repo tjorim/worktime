@@ -14,6 +14,7 @@ import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useEventForm } from "@/hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "@/hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
@@ -81,11 +82,26 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     useEventStore();
   const { lastUsed, updateLastTimeOffView } = useLastUsed();
   const { settings } = useSettings();
+  const { preferences: devicePreferences, setPreferences: setDevicePreferences } =
+    useDevicePreferences();
   const toast = useToast();
   const hdayUsername = settings.hdayUsername?.trim() || null;
   const helperBaseUrl = resolveHdayHelperBaseUrl(hdayHelperOptions.hdayHelperUrl);
-  const canPullFromHelper = helperConnectionStatus === "connected" && !!helperBaseUrl && !!hdayUsername;
+  const canUseHdayHelperSync = helperConnectionStatus === "connected" && !!helperBaseUrl && !!hdayUsername;
   const [isPullingFromHelper, setIsPullingFromHelper] = useState(false);
+  const [isPushingToHelper, setIsPushingToHelper] = useState(false);
+  // The etag is scoped to the username it was fetched for, so a username
+  // change doesn't let a push mistake an unrelated file's etag for this one.
+  const lastKnownHdayEtag =
+    hdayUsername && devicePreferences?.hdayEtag?.username === hdayUsername
+      ? devicePreferences.hdayEtag.etag
+      : null;
+  const rememberHdayEtag = useCallback(
+    (username: string, etag: string | null) => {
+      setDevicePreferences((current) => ({ ...current, hdayEtag: { username, etag } }));
+    },
+    [setDevicePreferences],
+  );
 
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
@@ -463,13 +479,14 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         throw new Error(m.timeoff_pull_failed({ error: errorMessage }));
       }
 
-      const data: { raw: string } = await response.json();
+      const data: { raw: string; etag: string | null } = await response.json();
       const result = importHday(data.raw);
       setRawEditorText(data.raw);
       setSelectedIds(new Set());
       setIsRawEditorDirty(false);
       setRawEditorError(undefined);
       setRawEditorSkippedLines(result.skippedLines);
+      rememberHdayEtag(hdayUsername, data.etag);
       if (result.skippedLines.length > 0) {
         const skippedMsg =
           result.skippedLines.length === 1
@@ -488,7 +505,41 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     } finally {
       setIsPullingFromHelper(false);
     }
-  }, [helperBaseUrl, hdayUsername, importHday, toast]);
+  }, [helperBaseUrl, hdayUsername, importHday, rememberHdayEtag, toast]);
+
+  const handlePushToHelper = useCallback(async () => {
+    if (!helperBaseUrl || !hdayUsername) return;
+
+    setIsPushingToHelper(true);
+    try {
+      const response = await fetch(`${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(
+          lastKnownHdayEtag ? { raw: rawText, etag: lastKnownHdayEtag } : { raw: rawText },
+        ),
+      });
+
+      if (response.status === 409) {
+        toast.showWarning(m.timeoff_push_conflict(), "bi-file-earmark-lock");
+        return;
+      }
+
+      if (!response.ok) {
+        const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
+        throw new Error(m.timeoff_push_failed({ error: errorMessage }));
+      }
+
+      const data: { etag: string } = await response.json();
+      rememberHdayEtag(hdayUsername, data.etag);
+      toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), "bi-cloud-upload");
+    } catch (error) {
+      logger.error("Failed to push .hday content to helper:", error);
+      toast.showError(error instanceof Error ? error.message : m.timeoff_push_failed_generic());
+    } finally {
+      setIsPushingToHelper(false);
+    }
+  }, [helperBaseUrl, hdayUsername, lastKnownHdayEtag, rawText, rememberHdayEtag, toast]);
 
   const handleExport = useCallback(() => {
     if (entries.length === 0) {
@@ -591,8 +642,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           onBulkDelete={() => setShowBulkDeleteConfirm(true)}
           onImport={handleImport}
           onExport={handleExport}
-          onPullFromHelper={canPullFromHelper ? handlePullFromHelper : undefined}
+          onPullFromHelper={canUseHdayHelperSync ? handlePullFromHelper : undefined}
           isPullingFromHelper={isPullingFromHelper}
+          onPushToHelper={canUseHdayHelperSync ? handlePushToHelper : undefined}
+          isPushingToHelper={isPushingToHelper}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
           entries={entries}

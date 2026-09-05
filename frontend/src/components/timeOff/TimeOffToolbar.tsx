@@ -18,6 +18,8 @@ type TimeOffToolbarProps = {
   onExport: () => void;
   onPullFromHelper?: () => void;
   isPullingFromHelper: boolean;
+  onPushToHelper?: () => void;
+  isPushingToHelper: boolean;
 
   // Add event
   onAddEvent: () => void;
@@ -41,6 +43,8 @@ function TimeOffToolbarComponent({
   onExport,
   onPullFromHelper,
   isPullingFromHelper,
+  onPushToHelper,
+  isPushingToHelper,
   onAddEvent,
   viewMode,
 }: TimeOffToolbarProps) {
@@ -86,6 +90,22 @@ function TimeOffToolbarComponent({
                 <i className="bi bi-cloud-download me-1" aria-hidden="true"></i>
               )}
               {m.timeoff_pull_btn()}
+            </Button>
+          )}
+          {onPushToHelper && (
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={onPushToHelper}
+              disabled={isPushingToHelper}
+              aria-label={m.timeoff_push_events_aria()}
+            >
+              {isPushingToHelper ? (
+                <Spinner animation="border" size="sm" className="me-1" />
+              ) : (
+                <i className="bi bi-cloud-upload me-1" aria-hidden="true"></i>
+              )}
+              {m.timeoff_push_btn()}
             </Button>
           )}
           {eventCount > 0 && (

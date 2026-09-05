@@ -637,6 +637,167 @@ describe("TimeOffView", () => {
     });
   });
 
+  describe("Push to helper", () => {
+    function seedConnectedHelperWithUsername(username: string | null) {
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
+      );
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ settings: { hdayUsername: username } }),
+      );
+      server.use(
+        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+      );
+    }
+
+    it("hides the Push button when no helper is configured", () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: m.timeoff_push_events_aria() }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides the Push button when the helper is connected but no username is saved", async () => {
+      seedConnectedHelperWithUsername(null);
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      expect(await screen.findByRole("button", { name: "Team" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: m.timeoff_push_events_aria() }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("pushes without an etag on the first push, then remembers the etag the helper returns", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      const receivedBodies: unknown[] = [];
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          return HttpResponse.json({ etag: "sha256:first" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const pushButton = await screen.findByRole("button", {
+        name: m.timeoff_push_events_aria(),
+      });
+      await user.click(pushButton);
+
+      expect(
+        await screen.findByText(m.timeoff_pushed({ username: "jsmith" })),
+      ).toBeInTheDocument();
+      expect(receivedBodies).toEqual([{ raw: "" }]);
+
+      // A second push now includes the etag the helper returned from the first one.
+      await user.click(pushButton);
+      await waitFor(() => expect(receivedBodies).toHaveLength(2));
+      expect(receivedBodies[1]).toEqual({ raw: "", etag: "sha256:first" });
+    });
+
+    it("sends the last-pulled etag on push", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({
+            username: "jsmith",
+            raw: "2025/01/15 # Day off\n",
+            etag: "sha256:pulled",
+            events: [],
+          }),
+        ),
+      );
+      const receivedBodies: unknown[] = [];
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
+          receivedBodies.push(await request.json());
+          return HttpResponse.json({ etag: "sha256:pushed" });
+        }),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
+      );
+      await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
+
+      await user.click(screen.getByRole("button", { name: m.timeoff_push_events_aria() }));
+
+      await waitFor(() => expect(receivedBodies).toHaveLength(1));
+      expect(receivedBodies[0]).toMatchObject({ etag: "sha256:pulled" });
+    });
+
+    it("shows a conflict message on a 409 without overwriting the helper's file", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.put(
+          "http://localhost:8080/hday/jsmith",
+          () => new HttpResponse(null, { status: 409 }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
+      );
+
+      expect(await screen.findByText(m.timeoff_push_conflict())).toBeInTheDocument();
+    });
+
+    it("surfaces the server's detail message when the push request fails", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({ detail: "share unreachable" }, { status: 503 }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
+      );
+
+      expect(
+        await screen.findByText(m.timeoff_push_failed({ error: "share unreachable" })),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("Accessibility", () => {
     it("should have proper ARIA labels on buttons", async () => {
       render(
