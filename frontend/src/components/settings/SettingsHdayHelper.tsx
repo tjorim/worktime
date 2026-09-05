@@ -5,6 +5,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import { useHdayHelper, type HdayHelperStatus } from "@/contexts/HdayHelperContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 
@@ -24,12 +25,15 @@ function statusBadge(status: HdayHelperStatus) {
 export function SettingsHdayHelper() {
   const { options, helperConnectionStatus, updateHdayHelperUrl, testHdayHelperConnection } =
     useHdayHelper();
+  const { settings, updateHdayUsername } = useSettings();
   const [urlDraft, setUrlDraft] = useState(options.hdayHelperUrl ?? "");
   const [isTesting, setIsTesting] = useState(false);
   const [testSucceeded, setTestSucceeded] = useState<boolean | null>(null);
   const [urlIsInvalid, setUrlIsInvalid] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState(settings.hdayUsername ?? "");
 
   useEffect(() => setUrlDraft(options.hdayHelperUrl ?? ""), [options.hdayHelperUrl]);
+  useEffect(() => setUsernameDraft(settings.hdayUsername ?? ""), [settings.hdayUsername]);
 
   const normalizedUrl = urlDraft.trim().replace(/\/+$/, "");
   const mixedContentRisk = normalizedUrl !== "" && isHdayHelperMixedContentBlocked(normalizedUrl);
@@ -52,6 +56,11 @@ export function SettingsHdayHelper() {
     if (validUrl === undefined) return;
     updateHdayHelperUrl(validUrl);
     setTestSucceeded(null);
+  };
+
+  const normalizedUsername = usernameDraft.trim();
+  const handleSaveUsername = () => {
+    updateHdayUsername(normalizedUsername || null);
   };
 
   const handleTest = async () => {
@@ -116,6 +125,28 @@ export function SettingsHdayHelper() {
           </Form.Control.Feedback>
         )}
         <Form.Text className="text-muted">{m.hday_helper_url_help()}</Form.Text>
+      </Form.Group>
+
+      <Form.Group controlId="hday-username" className="mb-2">
+        <Form.Label className="small fw-medium">{m.hday_username_label()}</Form.Label>
+        <div className="d-flex flex-column flex-sm-row gap-2">
+          <Form.Control
+            type="text"
+            placeholder={m.hday_username_placeholder()}
+            value={usernameDraft}
+            onChange={(event) => setUsernameDraft(event.target.value)}
+            size="sm"
+          />
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={handleSaveUsername}
+            disabled={normalizedUsername === (settings.hdayUsername ?? "")}
+          >
+            {m.hday_username_save()}
+          </Button>
+        </div>
+        <Form.Text className="text-muted">{m.hday_username_help()}</Form.Text>
       </Form.Group>
 
       {mixedContentRisk && (

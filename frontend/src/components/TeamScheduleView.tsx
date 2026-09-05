@@ -16,7 +16,7 @@ import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
-import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
+import { getHdayHelperErrorMessage, resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
 
 interface TeamMember {
   username: string;
@@ -39,28 +39,6 @@ interface TeamHdayResponse {
   name: string;
   sections: TeamSectionHdayData[];
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
-}
-
-async function getTeamFetchErrorMessage(response: Response): Promise<string> {
-  const contentType = response.headers.get("content-type");
-
-  if (contentType?.includes("application/json")) {
-    try {
-      const body: unknown = await response.json();
-
-      if (body && typeof body === "object" && "detail" in body) {
-        const { detail } = body as { detail: unknown };
-
-        if (typeof detail === "string" && detail.trim()) {
-          return detail;
-        }
-      }
-    } catch {
-      // Fall back to a generic user-facing message when parsing fails.
-    }
-  }
-
-  return m.team_unknown_error();
 }
 
 /**
@@ -178,7 +156,7 @@ export function TeamScheduleView() {
       );
 
       if (!response.ok) {
-        const errorMessage = await getTeamFetchErrorMessage(response);
+        const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
         throw new Error(m.team_fetch_failed({ error: errorMessage }));
       }
 

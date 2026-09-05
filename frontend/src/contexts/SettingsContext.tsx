@@ -49,6 +49,8 @@ export interface UserSettings {
   enableUnifiedCalendar: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
+  /** The user's username on the legacy `.hday` share, used by the hday-helper pull/push actions. */
+  hdayUsername: string | null;
 }
 
 interface SettingsContextType {
@@ -63,6 +65,7 @@ interface SettingsContextType {
   updateUnifiedCalendarEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
+  updateHdayUsername: (username: string | null) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -112,6 +115,7 @@ export const defaultSettings: UserSettings = {
   enableUnifiedCalendar: false,
   homeCountry: null,
   officeCountry: null,
+  hdayUsername: null,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -216,6 +220,15 @@ const countryWithDefault =
   (value) =>
     isValidCountryCode(value) ? value : fallback;
 
+const nullableTrimmedStringWithDefault =
+  (fallback: string | null): Validator<string | null> =>
+  (value) => {
+    if (value === null) return null;
+    if (typeof value !== "string") return fallback;
+    const trimmed = value.trim();
+    return trimmed === "" ? fallback : trimmed;
+  };
+
 const nullableScheduleOptionWithDefault =
   (validValues: ReadonlySet<string>, fallback: ScheduleOption | null): Validator<ScheduleOption | null> =>
   (value) => {
@@ -258,6 +271,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     enableUnifiedCalendar: booleanWithDefault(defaultSettings.enableUnifiedCalendar),
     homeCountry: countryWithDefault(defaultSettings.homeCountry),
     officeCountry: countryWithDefault(defaultSettings.officeCountry),
+    hdayUsername: nullableTrimmedStringWithDefault(defaultSettings.hdayUsername),
   } satisfies { [K in keyof UserSettings]: Validator<UserSettings[K]> };
 
   const normalizedSettings = Object.fromEntries(
@@ -424,6 +438,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateUnifiedCalendarEnabled: updateSetting("enableUnifiedCalendar"),
       updateHomeCountry: updateSetting("homeCountry"),
       updateOfficeCountry: updateSetting("officeCountry"),
+      updateHdayUsername: updateSetting("hdayUsername"),
     };
   }, [setUserState, setDeviceLocalState]);
 
@@ -466,6 +481,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     updateUnifiedCalendarEnabled,
     updateHomeCountry,
     updateOfficeCountry,
+    updateHdayUsername,
   } = settingUpdaters;
 
   const {
@@ -611,6 +627,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateUnifiedCalendarEnabled,
       updateHomeCountry,
       updateOfficeCountry,
+      updateHdayUsername,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -645,6 +662,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateUnifiedCalendarEnabled,
       updateHomeCountry,
       updateOfficeCountry,
+      updateHdayUsername,
       resetSettings,
       setMyTeam,
       setScheduleType,

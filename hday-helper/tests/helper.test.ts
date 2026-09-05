@@ -35,6 +35,48 @@ async function waitForServer(url: string, timeoutMs = 10000): Promise<void> {
   throw new Error(`Server at ${url} did not become ready within ${timeoutMs}ms`);
 }
 
+/**
+ * Minimal SSE reader for tests: opens the stream and resolves with the parsed
+ * `data` payload of the first event matching `eventName`, or rejects if none
+ * arrives within `timeoutMs`. Deliberately hand-rolled rather than pulling in
+ * a parsing library — the helper itself has no dependencies, and this repo's
+ * tests are meant to exercise it exactly as a real HTTP client would.
+ */
+async function readNextSseEvent(
+  response: Response,
+  eventName: string,
+  timeoutMs = 3000,
+): Promise<unknown> {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const deadline = Date.now() + timeoutMs;
+  try {
+    while (Date.now() < deadline) {
+      const { done, value } = await Promise.race([
+        reader.read(),
+        new Promise<{ done: true; value: undefined }>((resolve) =>
+          setTimeout(() => resolve({ done: true, value: undefined }), deadline - Date.now()),
+        ),
+      ]);
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      for (const block of buffer.split("\n\n")) {
+        const eventLine = block.split("\n").find((line) => line.startsWith("event: "));
+        const dataLine = block.split("\n").find((line) => line.startsWith("data: "));
+        if (eventLine?.slice("event: ".length) === eventName && dataLine) {
+          return JSON.parse(dataLine.slice("data: ".length));
+        }
+      }
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  throw new Error(`Timed out waiting for SSE event "${eventName}"`);
+}
+
 beforeAll(async () => {
   shareDir = mkdtempSync(join(tmpdir(), "hday-helper-test-"));
   mkdirSync(join(shareDir, "config"), { recursive: true });
@@ -250,6 +292,95 @@ describe("PUT /hday/:username", () => {
 
     const getRes = await fetch(`${baseUrl}/hday/ivan`);
     expect(getRes.status).toBe(404);
+  });
+});
+
+describe("GET /hday/:username/events", () => {
+  test("opens an event-stream response for a valid username", async () => {
+    const res = await fetch(`${baseUrl}/hday/judy/events`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    await res.body?.cancel();
+  });
+
+  test("400s on an invalid username", async () => {
+    const res = await fetch(`${baseUrl}/hday/${encodeURIComponent("../../etc/passwd")}/events`);
+    expect(res.status).toBe(400);
+  });
+
+  test("405s on a non-GET request", async () => {
+    const res = await fetch(`${baseUrl}/hday/judy/events`, { method: "PUT" });
+    expect(res.status).toBe(405);
+  });
+
+  test("notifies a connected subscriber with the new etag after a PUT", async () => {
+    const stream = await fetch(`${baseUrl}/hday/kevin/events`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    // Give the subscription (and the underlying directory watcher) a moment to
+    // register before the write below, so the watcher doesn't miss it.
+    await new Promise((r) => setTimeout(r, 100));
+
+    const eventPromise = readNextSseEvent(stream, "hday_changed");
+
+    const putRes = await fetch(`${baseUrl}/hday/kevin`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: "2025/05/01 # Notified\n" }),
+    });
+    const { etag: putEtag } = await putRes.json();
+
+    const event = (await eventPromise) as { type: string; username: string; etag: string };
+    expect(event.type).toBe("hday_changed");
+    expect(event.username).toBe("kevin");
+    expect(event.etag).toBe(putEtag);
+  });
+
+  test("does not notify a subscriber watching a different username", async () => {
+    const streamForLeo = await fetch(`${baseUrl}/hday/leo/events`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    await new Promise((r) => setTimeout(r, 100));
+
+    const leoNeverFires = readNextSseEvent(streamForLeo, "hday_changed", 1000).then(
+      () => "fired",
+      () => "timed-out",
+    );
+
+    await fetch(`${baseUrl}/hday/mia`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: "2025/06/01 # Someone else's file\n" }),
+    });
+
+    expect(await leoNeverFires).toBe("timed-out");
+  });
+
+  test("notifies a fresh subscriber of a deletion instead of suppressing its first (null-etag) event", async () => {
+    // A brand-new subscriber's "last sent etag" starts as null purely as a
+    // sentinel for "nothing sent yet" — it must not be mistaken for "already
+    // told them the file is gone" when the file's actual first-ever
+    // notification also happens to carry a null etag (i.e. a delete).
+    await fetch(`${baseUrl}/hday/nina`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: "2025/08/01 # Before delete\n" }),
+    });
+
+    const stream = await fetch(`${baseUrl}/hday/nina/events`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    await new Promise((r) => setTimeout(r, 100));
+
+    const eventPromise = readNextSseEvent(stream, "hday_changed");
+    rmSync(join(shareDir, "nina.hday"));
+
+    const event = (await eventPromise) as { type: string; username: string; etag: string | null };
+    expect(event.type).toBe("hday_changed");
+    expect(event.username).toBe("nina");
+    expect(event.etag).toBeNull();
   });
 });
 

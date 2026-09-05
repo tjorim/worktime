@@ -9,6 +9,13 @@ export interface DevicePreferences {
   flexStartOverride?: { date: string; time: string } | null;
   hdayHelper?: { url: string | null };
   lastHdayTeamId?: string;
+  /**
+   * The etag of the .hday file this device last saw from the helper (via a pull
+   * or push), keyed to the username it belongs to so a username change doesn't
+   * carry over a stale etag. Used by the "Push to helper" action to detect
+   * whether the share file changed since this device last synced it.
+   */
+  hdayEtag?: { username: string; etag: string | null };
   pwaInstall?: {
     visitCount: number;
     installed: boolean;

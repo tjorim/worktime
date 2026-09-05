@@ -13,6 +13,35 @@ export function resolveHdayHelperBaseUrl(hdayHelperUrl: string | null): string |
 }
 
 /**
+ * Extract a user-facing error message from a failed hday-helper response, falling
+ * back to a generic message when the body isn't the expected `{ detail }` JSON shape.
+ */
+export async function getHdayHelperErrorMessage(
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  const contentType = response.headers.get("content-type");
+
+  if (contentType?.includes("application/json")) {
+    try {
+      const body: unknown = await response.json();
+
+      if (body && typeof body === "object" && "detail" in body) {
+        const { detail } = body as { detail: unknown };
+
+        if (typeof detail === "string" && detail.trim()) {
+          return detail;
+        }
+      }
+    } catch {
+      // Fall back to a generic user-facing message when parsing fails.
+    }
+  }
+
+  return fallbackMessage;
+}
+
+/**
  * True when the page is served over HTTPS but the helper URL is plain HTTP —
  * browsers block that fetch as mixed content, and there's no way to route
  * around it client-side, so callers should surface it to the user instead.
