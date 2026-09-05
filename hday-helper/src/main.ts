@@ -463,7 +463,15 @@ function appendToLogFile(line: string): void {
       try {
         renameSync(LOG_FILE_PATH, LOG_FILE_BACKUP_PATH);
       } catch {
-        // If rotation fails we still want to keep logging below.
+        // Backup path unrenameable (e.g. held open on Windows) — truncate in
+        // place instead. Losing this batch of history is better than leaving
+        // the cap unenforced: every future write would otherwise re-attempt
+        // (and re-fail) the same rotation and grow the file without bound.
+        try {
+          writeFileSync(LOG_FILE_PATH, "", "utf-8");
+        } catch {
+          // Nothing more we can do; fall through and let the append below run.
+        }
       }
     }
     appendFileSync(LOG_FILE_PATH, line + "\n", "utf-8");
@@ -473,14 +481,20 @@ function appendToLogFile(line: string): void {
   }
 }
 
-function logLine(message: string, isError = false): void {
-  const line = `[${new Date().toISOString()}] ${message}`;
-  if (isError) console.error(line);
-  else console.log(line);
+// Pushes an already-formatted line to the ring buffer, log file, and any
+// connected /logs/events subscribers — the three sinks reachable over HTTP.
+function recordLogLine(line: string): void {
   logRingBuffer.push(line);
   if (logRingBuffer.length > LOG_RING_BUFFER_SIZE) logRingBuffer.shift();
   appendToLogFile(line);
   broadcastLogLine(line);
+}
+
+function logLine(message: string, isError = false): void {
+  const line = `[${new Date().toISOString()}] ${message}`;
+  if (isError) console.error(line);
+  else console.log(line);
+  recordLogLine(line);
 }
 
 // ---------------------------------------------------------------------------
@@ -509,6 +523,43 @@ function validateSettingsForm(values: SettingsFormValues): string | null {
     return "PORT must be a whole number between 1 and 65535.";
   }
   return null;
+}
+
+// CSRF defense for POST /settings: browsers attach an `Origin` header to
+// cross-origin POSTs (form submissions included) even though this endpoint
+// has no CORS preflight to gate them — without this check, any website the
+// user's browser visits could silently reconfigure and restart the helper.
+// A same-origin request either omits Origin (older browsers, curl, direct
+// tools) or sends one matching Host; only a present-and-mismatched Origin
+// means cross-origin, so that's the only case rejected.
+function isSameOriginRequest(req: Request): boolean {
+  const origin = req.headers.get("Origin");
+  if (origin === null) return true;
+  const host = req.headers.get("Host");
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+// Verifying a HOST/PORT change can actually bind *before* the current (known
+// good) server is stopped for it — otherwise an unbindable value would pass
+// validation, get written to .env, and strand the helper: the old server is
+// already gone, the detached replacement fails to start, and every future
+// launch keeps loading the same bad .env. An unchanged HOST/PORT is skipped
+// since it's already proven bindable — trying to rebind it here would always
+// collide with the currently running server.
+async function checkAddressBindable(host: string, port: number): Promise<string | null> {
+  if (host === HOST && port === PORT) return null;
+  try {
+    const probe = Bun.serve({ hostname: host, port, fetch: () => new Response(null, { status: 204 }) });
+    await probe.stop();
+    return null;
+  } catch (err) {
+    return `Could not bind to ${host}:${port} (${err instanceof Error ? err.message : String(err)}). Settings were not saved.`;
+  }
 }
 
 function escapeHtml(value: string): string {
@@ -900,6 +951,10 @@ async function handleRequest(req: Request): Promise<Response> {
     }
 
     if (req.method === "POST") {
+      if (!isSameOriginRequest(req)) {
+        return jsonResponse({ detail: "Cross-origin settings changes are not allowed" }, 403, {});
+      }
+
       // A url-encoded form body is plain text, so the same streaming byte cap
       // used for PUT /hday/:username bodies applies here too — this also
       // catches an oversized body sent without a (trustworthy) Content-Length.
@@ -935,14 +990,23 @@ async function handleRequest(req: Request): Promise<Response> {
       }
 
       const newPort = Number(values.PORT);
+      const newHost = values.HOST.trim();
+      const bindError = await checkAddressBindable(newHost, newPort);
+      if (bindError) {
+        return new Response(renderSettingsPage(values, bindError), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
       writeEnvFile({
         SHARE_DIR: values.SHARE_DIR.trim(),
-        HOST: values.HOST.trim(),
+        HOST: newHost,
         PORT: String(newPort),
         CORS_ORIGINS: values.CORS_ORIGINS.trim(),
       });
 
-      logLine(`Settings saved via /settings; restarting on ${values.HOST.trim()}:${newPort}`);
+      logLine(`Settings saved via /settings; restarting on ${newHost}:${newPort}`);
 
       if (!SKIP_RESTART_FOR_TESTS) {
         setTimeout(() => {
@@ -1303,8 +1367,14 @@ async function loggedHandleRequest(req: Request): Promise<Response> {
     return response;
   } catch (err) {
     const ms = (performance.now() - start).toFixed(1);
-    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err);
-    logLine(`${req.method} ${pathname} -> unhandled error (${ms}ms): ${detail}`, true);
+    const summary = `${req.method} ${pathname} -> unhandled error (${ms}ms)`;
+    // The full error (stack included, which can contain local filesystem
+    // paths) stays console-only. /logs and /logs/events are unauthenticated
+    // and network-reachable (including over the LAN with HOST=0.0.0.0), so
+    // the ring buffer/file/SSE fan-out only gets the bare message.
+    console.error(summary + ":", err);
+    const detail = err instanceof Error ? err.message : String(err);
+    recordLogLine(`[${new Date().toISOString()}] ${summary}: ${detail}`);
     // Every known error path in handleRequest already returns a CORS-headered
     // response — this only catches genuine bugs. Respond ourselves (with CORS
     // headers) rather than letting it fall through to Bun's default handling,

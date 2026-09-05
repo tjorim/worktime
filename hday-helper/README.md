@@ -178,11 +178,14 @@ Returns an HTML form pre-filled with the current `SHARE_DIR`/`HOST`/`PORT`/`CORS
 
 Submits the form (`application/x-www-form-urlencoded`, the four fields above) and rewrites `.env`
 next to the executable with **just those four keys** — any other lines, comments, or extra keys in
-an existing `.env` are not preserved. On success (HTTP 200), the helper immediately restarts itself
-to apply the change (needed for `PORT`/`HOST`, and simpler than special-casing which settings are
-hot-reloadable); the response page polls the new address and redirects back to `/settings` once it's
-back up. Returns HTTP 400 with the form re-rendered if a value is invalid (e.g. `PORT` out of range),
-413 if the body is too large.
+an existing `.env` are not preserved. Before anything is written, the new `HOST`/`PORT` are checked
+to actually be bindable (skipped when unchanged) so a typo can't strand the helper mid-restart; if
+saved, the helper immediately restarts itself to apply the change (needed for `PORT`/`HOST`, and
+simpler than special-casing which settings are hot-reloadable), and the response page polls the new
+address and redirects back to `/settings` once it's back up. Returns HTTP 400 with the form
+re-rendered if a value is invalid or unbindable, 403 if the request's `Origin` doesn't match its own
+`Host` (CSRF defense — a cross-site form submission can't reconfigure the helper), 413 if the body is
+too large.
 
 ### `GET /logs`
 

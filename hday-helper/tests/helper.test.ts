@@ -21,6 +21,34 @@ let port: number;
 let baseUrl: string;
 let proc: ReturnType<typeof Bun.spawn>;
 
+/**
+ * Best-effort cleanup for the one test (below) that lets a real self-restart
+ * detach an untracked replacement process: finds whatever PID currently owns
+ * `port` via `lsof`, checks its command line actually references this repo's
+ * `main.ts` (via `ps`), and only then kills it — so a coincidental, unrelated
+ * process occupying the same randomly-chosen port is never touched. Silently
+ * gives up if `lsof`/`ps` aren't available or nothing matches.
+ */
+async function killOwnHelperProcessOnPort(port: number): Promise<void> {
+  try {
+    const lsof = Bun.spawnSync(["lsof", "-ti", `tcp:${port}`], { stdout: "pipe", stderr: "ignore" });
+    const pids = new TextDecoder()
+      .decode(lsof.stdout)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const pid of pids) {
+      const ps = Bun.spawnSync(["ps", "-p", pid, "-o", "args="], { stdout: "pipe", stderr: "ignore" });
+      const cmdline = new TextDecoder().decode(ps.stdout);
+      if (cmdline.includes("main.ts")) {
+        Bun.spawnSync(["kill", "-9", pid], { stdout: "ignore", stderr: "ignore" });
+      }
+    }
+  } catch {
+    // lsof/ps not available on this platform — nothing more we can do here.
+  }
+}
+
 async function waitForServer(url: string, timeoutMs = 10000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -632,6 +660,67 @@ describe("GET/POST /settings", () => {
     expect(existsSync(envPath)).toBe(false);
   });
 
+  test("403s a cross-origin POST (CSRF defense) without writing .env", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        // A same-origin browser form POST never sets an Origin that mismatches
+        // the target's own Host — this simulates a cross-site form submission.
+        Origin: "http://attacker.example",
+      },
+      body: new URLSearchParams({
+        SHARE_DIR: "/tmp/attacker-controlled",
+        HOST: "0.0.0.0",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "*",
+      }),
+    });
+    expect(res.status).toBe(403);
+    expect(existsSync(envPath)).toBe(false);
+  });
+
+  test("rejects a HOST that can't be bound, without writing .env or disrupting the running instance", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        SHARE_DIR: settingsShareDir,
+        // TEST-NET-3 (RFC 5737): reserved for documentation, never assigned
+        // to a local interface, so binding to it reliably fails everywhere.
+        HOST: "203.0.113.1",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.text();
+    expect(body).toContain("Could not bind");
+    expect(existsSync(envPath)).toBe(false);
+
+    const healthRes = await fetch(`${settingsBaseUrl}/health`);
+    expect(healthRes.status).toBe(200);
+  });
+
+  // This test performs a real (non-rejected) save, so it must run after every
+  // test above that asserts .env doesn't exist yet.
+  test("allows a POST whose Origin matches the request's own Host", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Origin: settingsBaseUrl,
+      },
+      body: new URLSearchParams({
+        SHARE_DIR: settingsShareDir,
+        HOST: "127.0.0.1",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "",
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   test("POST with valid values rewrites .env, logs the change, and does not disrupt the running instance", async () => {
     const newShareDir = join(settingsShareDir, "moved");
     const res = await fetch(`${settingsBaseUrl}/settings`, {
@@ -718,14 +807,13 @@ describe("POST /settings full restart", () => {
     } finally {
       // `proc` itself already exited as part of the restart (this only
       // matters if the test failed before that happened); the detached
-      // replacement process is a different, untracked PID. Best-effort kill
-      // whatever now holds the test's throwaway port so it doesn't linger
-      // as a background process across local test runs.
-      try {
-        Bun.spawnSync(["fuser", "-k", `${port}/tcp`], { stdout: "ignore", stderr: "ignore" });
-      } catch {
-        // fuser not available on this platform — nothing more we can do here.
-      }
+      // replacement process is a different, untracked PID. Best-effort clean
+      // it up so it doesn't linger as a background process across local test
+      // runs — but verify *which* process holds the port and that it's ours
+      // (its command line references this test's main.ts) before killing it,
+      // rather than killing whatever unrelated process happens to occupy
+      // this randomly-chosen port.
+      await killOwnHelperProcessOnPort(port);
       proc.kill();
       rmSync(shareDir, { recursive: true, force: true });
       rmSync(newShareDir, { recursive: true, force: true });
