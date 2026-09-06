@@ -23,11 +23,16 @@
  * GET  /hday/:username/events — SSE stream: notifies when that user's file changes on disk
  * GET  /team/:teamId        — read team config + member list
  * GET  /team/:teamId/hday   — read aggregated team .hday files (always includes parsed events)
+ * GET  /settings            — HTML form to view/edit SHARE_DIR/PORT/HOST/CORS_ORIGINS
+ * POST /settings            — rewrite .env with the submitted values and restart
+ * GET  /logs                — recent log lines (plain text, or an HTML viewer for a browser)
+ * GET  /logs/events         — SSE stream: new log lines as they're written
  */
 
 import { createHash } from "crypto";
 import {
   accessSync,
+  appendFileSync,
   constants,
   existsSync,
   mkdirSync,
@@ -40,6 +45,7 @@ import {
   type FSWatcher,
 } from "fs";
 import { readFile } from "fs/promises";
+import { networkInterfaces } from "os";
 import { basename, join, resolve, sep } from "path";
 // These imports use relative paths to reuse the frontend .hday parser directly.
 // `bun build --compile` bundles all resolved modules into the output binary, so the
@@ -65,6 +71,14 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .map((s) => s.trim())
   .filter(Boolean);
 const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024; // 10 MiB
+const MAX_SETTINGS_BODY_BYTES = 64 * 1024; // form submissions are tiny; this is generous
+const ENV_FILE_PATH = join(process.cwd(), ".env");
+const ENV_KEYS = ["SHARE_DIR", "PORT", "HOST", "CORS_ORIGINS"] as const;
+type EnvKey = (typeof ENV_KEYS)[number];
+// Set by tests only, so a valid POST /settings can be exercised over real HTTP
+// without the test process detaching a second, untracked OS process — see
+// hday-helper/tests/helper.test.ts's "GET/POST /settings" suite.
+const SKIP_RESTART_FOR_TESTS = process.env.HDAY_HELPER_SKIP_RESTART_FOR_TESTS === "1";
 
 // ---------------------------------------------------------------------------
 // Per-user write mutex — serializes concurrent writes to the same .hday file
@@ -415,6 +429,452 @@ function subscribeToHdayChanges(
 }
 
 // ---------------------------------------------------------------------------
+// Logging — fans each per-request log line out to the console (as before),
+// an in-memory ring buffer (backs GET /logs' initial view and survives
+// nothing — it's just cheap to serve from), and a size-capped rotating file
+// on disk (survives a restart or crash even with no console attached).
+// ---------------------------------------------------------------------------
+
+const LOG_RING_BUFFER_SIZE = 500;
+// Unauthenticated and reachable over the LAN (HOST=0.0.0.0) — cap concurrent
+// /logs/events connections so opening many of them can't exhaust file
+// descriptors/memory (each holds an open controller and a keepalive timer).
+const MAX_LOG_SSE_SUBSCRIBERS = 50;
+const LOG_FILE_PATH = join(process.cwd(), "hday-helper.log");
+const LOG_FILE_BACKUP_PATH = `${LOG_FILE_PATH}.1`;
+const LOG_FILE_MAX_BYTES = 5 * 1024 * 1024; // 5 MiB
+
+const logRingBuffer: string[] = [];
+const logSseSubscribers = new Set<ReadableStreamDefaultController<Uint8Array>>();
+
+function broadcastLogLine(line: string): void {
+  if (logSseSubscribers.size === 0) return;
+  const payload = formatSseEvent("log_line", { type: "log_line", line });
+  for (const controller of logSseSubscribers) {
+    try {
+      controller.enqueue(payload);
+    } catch {
+      // Client disconnected between the log call and this broadcast; its
+      // stream's cancel() callback removes it from the set.
+    }
+  }
+}
+
+function appendToLogFile(line: string): void {
+  try {
+    const stat = existsSync(LOG_FILE_PATH) ? statSync(LOG_FILE_PATH) : null;
+    if (stat && stat.size + line.length + 1 > LOG_FILE_MAX_BYTES) {
+      // Best-effort rotation: keep exactly one backup, overwriting any older one.
+      try {
+        renameSync(LOG_FILE_PATH, LOG_FILE_BACKUP_PATH);
+      } catch {
+        // Backup path unrenameable (e.g. held open on Windows) — truncate in
+        // place instead. Losing this batch of history is better than leaving
+        // the cap unenforced: every future write would otherwise re-attempt
+        // (and re-fail) the same rotation and grow the file without bound.
+        try {
+          writeFileSync(LOG_FILE_PATH, "", "utf-8");
+        } catch {
+          // Nothing more we can do; fall through and let the append below run.
+        }
+      }
+    }
+    appendFileSync(LOG_FILE_PATH, line + "\n", "utf-8");
+  } catch (err) {
+    // Logging must never take down request handling (disk full, permissions, ...).
+    console.error("Failed to write hday-helper.log:", err);
+  }
+}
+
+// Pushes an already-formatted line to the ring buffer, log file, and any
+// connected /logs/events subscribers — the three sinks reachable over HTTP.
+function recordLogLine(line: string): void {
+  logRingBuffer.push(line);
+  if (logRingBuffer.length > LOG_RING_BUFFER_SIZE) logRingBuffer.shift();
+  appendToLogFile(line);
+  broadcastLogLine(line);
+}
+
+function logLine(message: string, isError = false): void {
+  const line = `[${new Date().toISOString()}] ${message}`;
+  if (isError) console.error(line);
+  else console.log(line);
+  recordLogLine(line);
+}
+
+// ---------------------------------------------------------------------------
+// Settings — GET/POST /settings rewrites .env from scratch with just the four
+// known keys, then triggers a full self-restart so PORT/HOST changes take
+// effect (rather than distinguishing which settings are hot-reloadable).
+// ---------------------------------------------------------------------------
+
+interface SettingsFormValues {
+  SHARE_DIR: string;
+  HOST: string;
+  PORT: string;
+  CORS_ORIGINS: string;
+}
+
+function writeEnvFile(values: Record<EnvKey, string>): void {
+  // Bun's .env loader expands unescaped $NAME references when it next reads
+  // this file — a SHARE_DIR like "/mnt/Q$/shared" would silently turn into
+  // something else after the very restart this save triggers. "\$" is Bun's
+  // own escape for a literal dollar sign.
+  //
+  // Deliberately not also escaping literal backslashes: Bun's .env parser
+  // has no general "\\" -> "\" unescape, it *only* special-cases a backslash
+  // directly before "$". Doubling every backslash here would leave a stray
+  // literal backslash in front of any plain one on reload — corrupting every
+  // ordinary Windows/UNC path (e.g. "\\server\C$\worktime", where "C$" is a
+  // literal Windows admin share name, is expected input). Prefixing exactly
+  // one "\" before each "$" round-trips correctly regardless of how many
+  // backslashes already precede it, since Bun's escape only ever consumes
+  // the single backslash immediately adjacent to the "$" — see the restart
+  // test covering a backslash-adjacent "$" in helper.test.ts.
+  const lines = ENV_KEYS.map((key) => `${key}=${values[key].replace(/\$/g, "\\$")}`);
+  writeFileSync(ENV_FILE_PATH, lines.join("\n") + "\n", "utf-8");
+}
+
+function validateSettingsForm(values: SettingsFormValues): string | null {
+  // writeEnvFile() interpolates each value directly into a "KEY=value" .env
+  // line; an embedded \r or \n would inject extra lines that a dotenv parser
+  // reads as additional (or duplicate, shadowing) keys.
+  for (const key of ENV_KEYS) {
+    if (/[\r\n\0]/.test(values[key])) {
+      return `${key} must not contain line breaks or null characters.`;
+    }
+  }
+  if (!values.SHARE_DIR.trim()) return "SHARE_DIR must not be empty.";
+  if (!values.HOST.trim()) return "HOST must not be empty.";
+  const port = Number(values.PORT);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return "PORT must be a whole number between 1 and 65535.";
+  }
+  return null;
+}
+
+// CSRF defense for POST /settings: browsers attach an `Origin` header to
+// cross-origin POSTs (form submissions included) even though this endpoint
+// has no CORS preflight to gate them — without this check, any website the
+// user's browser visits could silently reconfigure and restart the helper.
+// A same-origin request either omits Origin (older browsers, curl, direct
+// tools) or sends one matching Host; only a present-and-mismatched Origin
+// means cross-origin, so that's the only case rejected.
+function isSameOriginRequest(req: Request): boolean {
+  const origin = req.headers.get("Origin");
+  if (origin === null) return true;
+  const host = req.headers.get("Host");
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+// Verifying a HOST/PORT change can actually bind *before* the current (known
+// good) server is stopped for it — otherwise an unbindable value would pass
+// validation, get written to .env, and strand the helper: the old server is
+// already gone, the detached replacement fails to start, and every future
+// launch keeps loading the same bad .env. An unchanged HOST/PORT is skipped
+// since it's already proven bindable — trying to rebind it here would always
+// collide with the currently running server.
+//
+// Probing the exact (host, port) pair directly would falsely collide with
+// our own still-running listener only when HOST changes, PORT does not, and
+// one of the two addresses is the 0.0.0.0 wildcard (which covers every
+// interface, including whatever specific address the other one names) — that
+// combination is probed on an OS-picked port (port: 0) instead, which only
+// proves the new host is bindable *somewhere*, not on the exact target port.
+// Every other change (a different PORT is always a different port than the
+// one we hold; two distinct non-wildcard hosts never overlap) is probed on
+// the exact pair, which also catches an unrelated process already squatting
+// on it — something the weaker port-0 probe can't detect. That residual gap
+// (0.0.0.0 involved, same PORT) is tracked in #1295: closing it fully means
+// not stopping the current server until a replacement has confirmed binding,
+// a materially bigger change than a settings-validation fix.
+async function checkAddressBindable(host: string, port: number): Promise<string | null> {
+  if (host === HOST && port === PORT) return null;
+
+  const couldCollideWithOurListener =
+    host !== HOST && port === PORT && (host === "0.0.0.0" || HOST === "0.0.0.0");
+
+  try {
+    if (couldCollideWithOurListener) {
+      const hostProbe = Bun.serve({ hostname: host, port: 0, fetch: () => new Response(null, { status: 204 }) });
+      await hostProbe.stop();
+    } else {
+      const probe = Bun.serve({ hostname: host, port, fetch: () => new Response(null, { status: 204 }) });
+      await probe.stop();
+    }
+    return null;
+  } catch (err) {
+    return `Could not bind to ${host}:${port} (${err instanceof Error ? err.message : String(err)}). Settings were not saved.`;
+  }
+}
+
+// Verifying a candidate SHARE_DIR is usable *before* committing to a restart
+// — same rationale as checkAddressBindable for HOST/PORT: catch a bad value
+// here, with the current (working) instance still up to report it, rather
+// than only discovering it via a 503 from /health after restarting into it.
+// A directory with nothing in it yet is fine — that's how a fresh or newly
+// emptied share gets populated — so this only checks the path can actually
+// be created/read/written, not that it already contains any files.
+function checkShareDirUsable(dir: string): string | null {
+  try {
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    if (!statSync(dir).isDirectory()) {
+      return `SHARE_DIR "${dir}" is not a directory. Settings were not saved.`;
+    }
+    accessSync(dir, constants.R_OK | constants.W_OK);
+    return null;
+  } catch (err) {
+    return `SHARE_DIR "${dir}" is not accessible (${err instanceof Error ? err.message : String(err)}). Settings were not saved.`;
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const PAGE_STYLE = `
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+  nav { margin-bottom: 1.5rem; }
+  nav a { margin-right: 1rem; }
+  label { display: block; margin-bottom: 1rem; }
+  input { display: block; width: 100%; box-sizing: border-box; padding: 0.4rem; margin-top: 0.25rem; }
+  button { padding: 0.5rem 1rem; }
+  .error { color: #b00020; }
+  .warn { color: #8a6100; }
+  .helper-urls { background: #f0f4f8; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
+  .helper-urls ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+  .helper-urls li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+  .helper-urls code { background: #fff; border: 1px solid #ccc; border-radius: 3px; padding: 0.15rem 0.4rem; }
+  .helper-urls button { padding: 0.15rem 0.6rem; }
+`;
+
+// An IPv6 literal must be bracketed inside a URL ("http://[::1]:8080") —
+// its own colons would otherwise be indistinguishable from the URL's
+// port separator. IPv4 addresses and hostnames never contain a colon.
+function formatHostForUrl(host: string): string {
+  return host.includes(":") ? `[${host}]` : host;
+}
+
+// The value pasted into Worktime's Developer Options has to be something a
+// browser/fetch can actually dial — "0.0.0.0" itself isn't (it means "every
+// interface", not an address a client connects to). When bound that way,
+// offer loopback (for Worktime running on this same machine) plus every
+// non-internal IPv4 address (other machines on the LAN, the actual reason to
+// bind 0.0.0.0 in the first place) instead of the raw HOST value. Any other
+// HOST is already a concrete, dialable address, so it's used as-is.
+function candidateHelperUrls(host: string, port: number): string[] {
+  if (host !== "0.0.0.0") return [`http://${formatHostForUrl(host)}:${port}`];
+
+  const urls = [`http://127.0.0.1:${port}`];
+  for (const addrs of Object.values(networkInterfaces())) {
+    for (const addr of addrs ?? []) {
+      if (addr.family === "IPv4" && !addr.internal) {
+        urls.push(`http://${addr.address}:${port}`);
+      }
+    }
+  }
+  return urls;
+}
+
+function renderHelperUrls(): string {
+  const urls = candidateHelperUrls(HOST, PORT);
+  return `<div class="helper-urls">
+  <p>Paste one of these into Worktime → Settings → About → Developer Options as the <code>.hday</code> helper URL:</p>
+  <ul>
+    ${urls
+      .map(
+        (url) =>
+          `<li><code>${escapeHtml(url)}</code><button type="button" class="copy-btn" data-url="${escapeHtml(url)}">Copy</button></li>`,
+      )
+      .join("\n    ")}
+  </ul>
+</div>
+<script>
+(function () {
+  // navigator.clipboard requires a secure context (HTTPS, or the
+  // localhost/127.0.0.1 origin) — a LAN address loaded over plain HTTP,
+  // exactly the case these 0.0.0.0-derived URLs exist for, doesn't qualify.
+  // Fall back to the legacy execCommand("copy") technique there.
+  function copyText(text) {
+    if (window.isSecureContext && navigator.clipboard) {
+      return navigator.clipboard.writeText(text);
+    }
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      document.body.removeChild(ta);
+    }
+    return Promise.resolve();
+  }
+
+  document.querySelectorAll(".copy-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      copyText(btn.dataset.url).then(function () {
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(function () { btn.textContent = original; }, 1500);
+      });
+    });
+  });
+})();
+</script>`;
+}
+
+function renderSettingsPage(values: SettingsFormValues, error: string | null): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>.hday Helper — Settings</title>
+<style>${PAGE_STYLE}</style>
+</head>
+<body>
+<nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
+<h1>.hday Helper Settings</h1>
+${renderHelperUrls()}
+<p class="warn">Saving rewrites <code>.env</code> with just these four keys — any other lines or
+comments in your existing <code>.env</code> file will not be preserved. Saving restarts the helper
+immediately.</p>
+${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
+<form method="POST" action="/settings">
+  <label>SHARE_DIR
+    <input type="text" name="SHARE_DIR" value="${escapeHtml(values.SHARE_DIR)}" required>
+  </label>
+  <label>HOST
+    <input type="text" name="HOST" value="${escapeHtml(values.HOST)}" required>
+  </label>
+  <label>PORT
+    <input type="number" name="PORT" min="1" max="65535" value="${escapeHtml(values.PORT)}" required>
+  </label>
+  <label>CORS_ORIGINS
+    <input type="text" name="CORS_ORIGINS" value="${escapeHtml(values.CORS_ORIGINS)}">
+  </label>
+  <button type="submit">Save &amp; restart</button>
+</form>
+</body>
+</html>`;
+}
+
+function renderRestartingPage(newPort: number): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>.hday Helper — Restarting…</title>
+<style>${PAGE_STYLE}</style>
+</head>
+<body>
+<h1>Restarting…</h1>
+<p id="status">Settings saved. Waiting for the helper to come back up…</p>
+<script>
+(function () {
+  // location.hostname reports an IPv6 literal unbracketed (e.g. "::1"), which
+  // must be re-bracketed to build a valid URL — same fix as formatHostForUrl().
+  var hostname = location.hostname.indexOf(":") !== -1 ? "[" + location.hostname + "]" : location.hostname;
+  var newOrigin = "http://" + hostname + ":" + ${JSON.stringify(newPort)};
+  var deadline = Date.now() + 20000;
+  function poll() {
+    fetch(newOrigin + "/health", { mode: "no-cors", cache: "no-store" })
+      .then(function () { location.href = newOrigin + "/settings"; })
+      .catch(function () {
+        if (Date.now() > deadline) {
+          document.getElementById("status").textContent =
+            "Still not reachable at " + newOrigin + " — check the port isn't blocked and reload manually.";
+          return;
+        }
+        setTimeout(poll, 500);
+      });
+  }
+  setTimeout(poll, 1000);
+})();
+</script>
+</body>
+</html>`;
+}
+
+function renderLogsPage(initialLines: string[]): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>.hday Helper — Logs</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, monospace; margin: 0; padding: 1rem; background: #111; color: #ddd; }
+  nav { margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+  nav a { color: #8ab4f8; margin-right: 1rem; }
+  pre { white-space: pre-wrap; word-break: break-all; margin: 0; }
+</style>
+</head>
+<body>
+<nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
+<pre id="log">${escapeHtml(initialLines.join("\n"))}</pre>
+<script>
+(function () {
+  var pre = document.getElementById("log");
+  var es = new EventSource("/logs/events");
+  es.addEventListener("log_line", function (e) {
+    var data = JSON.parse(e.data);
+    pre.textContent += (pre.textContent ? "\\n" : "") + data.line;
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned once at bootstrap
+
+async function restartWithNewSettings(): Promise<void> {
+  logLine("Settings changed via /settings — restarting to apply new configuration");
+  try {
+    await httpServer?.stop();
+  } catch (err) {
+    logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
+
+  // Strip the keys we just rewrote in .env from the child's inherited env so
+  // it re-reads them from disk instead of keeping this process's now-stale
+  // values — Bun's built-in .env loading does not override already-set
+  // environment variables.
+  const childEnv = { ...process.env };
+  for (const key of ENV_KEYS) delete childEnv[key];
+
+  try {
+    const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
+      cwd: process.cwd(),
+      env: childEnv,
+      stdio: ["ignore", "ignore", "ignore"],
+      detached: true,
+    });
+    child.unref();
+  } catch (err) {
+    logLine(`Failed to spawn replacement process: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
+
+  process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // Serialization helpers
 // ---------------------------------------------------------------------------
 
@@ -634,6 +1094,161 @@ async function handleRequest(req: Request): Promise<Response> {
       shareOk ? 200 : 503,
       corsHeaders,
     );
+  }
+
+  // GET/POST /settings
+  if (pathname === "/settings") {
+    if (req.method === "GET") {
+      const values: SettingsFormValues = {
+        SHARE_DIR,
+        HOST,
+        PORT: String(PORT),
+        CORS_ORIGINS: CORS_ORIGINS.join(","),
+      };
+      return new Response(renderSettingsPage(values, null), {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
+    if (req.method === "POST") {
+      if (!isSameOriginRequest(req)) {
+        return jsonResponse({ detail: "Cross-origin settings changes are not allowed" }, 403, {});
+      }
+
+      // A url-encoded form body is plain text, so the same streaming byte cap
+      // used for PUT /hday/:username bodies applies here too — this also
+      // catches an oversized body sent without a (trustworthy) Content-Length.
+      const declaredLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+      if (!Number.isNaN(declaredLength) && declaredLength > MAX_SETTINGS_BODY_BYTES) {
+        return jsonResponse({ detail: "Payload too large" }, 413, {});
+      }
+
+      let bodyText: string;
+      try {
+        bodyText = await readBodyTextWithLimit(req, MAX_SETTINGS_BODY_BYTES);
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          return jsonResponse({ detail: "Payload too large" }, 413, {});
+        }
+        return jsonResponse({ detail: "Invalid form body" }, 400, {});
+      }
+
+      const form = new URLSearchParams(bodyText);
+      const values: SettingsFormValues = {
+        SHARE_DIR: form.get("SHARE_DIR") ?? "",
+        HOST: form.get("HOST") ?? "",
+        PORT: form.get("PORT") ?? "",
+        CORS_ORIGINS: form.get("CORS_ORIGINS") ?? "",
+      };
+
+      const error = validateSettingsForm(values);
+      if (error) {
+        return new Response(renderSettingsPage(values, error), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      const newShareDir = values.SHARE_DIR.trim();
+      const shareDirError = checkShareDirUsable(newShareDir);
+      if (shareDirError) {
+        return new Response(renderSettingsPage(values, shareDirError), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      const newPort = Number(values.PORT);
+      const newHost = values.HOST.trim();
+      const bindError = await checkAddressBindable(newHost, newPort);
+      if (bindError) {
+        return new Response(renderSettingsPage(values, bindError), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      writeEnvFile({
+        SHARE_DIR: newShareDir,
+        HOST: newHost,
+        PORT: String(newPort),
+        CORS_ORIGINS: values.CORS_ORIGINS.trim(),
+      });
+
+      logLine(`Settings saved via /settings; restarting on ${newHost}:${newPort}`);
+
+      if (!SKIP_RESTART_FOR_TESTS) {
+        setTimeout(() => {
+          void restartWithNewSettings();
+        }, 50);
+      }
+
+      return new Response(renderRestartingPage(newPort), {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
+    return jsonResponse({ detail: "Method not allowed" }, 405, {});
+  }
+
+  // GET /logs — plain text for scripts/curl, an HTML viewer for a browser
+  if (pathname === "/logs") {
+    if (req.method !== "GET") {
+      return jsonResponse({ detail: "Method not allowed" }, 405, {});
+    }
+    const acceptsHtml = (req.headers.get("Accept") ?? "").includes("text/html");
+    if (!acceptsHtml) {
+      const body = logRingBuffer.length > 0 ? logRingBuffer.join("\n") + "\n" : "";
+      return new Response(body, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
+    return new Response(renderLogsPage(logRingBuffer), {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+
+  // GET /logs/events — SSE stream of new log lines as they're written
+  if (pathname === "/logs/events") {
+    if (req.method !== "GET") {
+      return jsonResponse({ detail: "Method not allowed" }, 405, {});
+    }
+    if (logSseSubscribers.size >= MAX_LOG_SSE_SUBSCRIBERS) {
+      return jsonResponse({ detail: "Too many /logs/events subscribers" }, 503, {});
+    }
+
+    let cleanup: (() => void) | null = null;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(SSE_ENCODER.encode(": connected\n\n"));
+        logSseSubscribers.add(controller);
+        const keepaliveTimer = setInterval(() => {
+          try {
+            controller.enqueue(SSE_ENCODER.encode(": keepalive\n\n"));
+          } catch {
+            // Client already gone; cancel() (below) runs cleanup().
+          }
+        }, HDAY_SSE_KEEPALIVE_MS);
+        cleanup = () => {
+          clearInterval(keepaliveTimer);
+          logSseSubscribers.delete(controller);
+        };
+      },
+      cancel() {
+        cleanup?.();
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
   }
 
   // GET /hday/:username/events — SSE change-notification stream
@@ -921,11 +1536,18 @@ async function loggedHandleRequest(req: Request): Promise<Response> {
   try {
     const response = await handleRequest(req);
     const ms = (performance.now() - start).toFixed(1);
-    console.log(`${req.method} ${pathname} -> ${response.status} (${ms}ms)`);
+    logLine(`${req.method} ${pathname} -> ${response.status} (${ms}ms)`);
     return response;
   } catch (err) {
     const ms = (performance.now() - start).toFixed(1);
-    console.error(`${req.method} ${pathname} -> unhandled error (${ms}ms):`, err);
+    const summary = `${req.method} ${pathname} -> unhandled error (${ms}ms)`;
+    // The full error (stack included, which can contain local filesystem
+    // paths) stays console-only. /logs and /logs/events are unauthenticated
+    // and network-reachable (including over the LAN with HOST=0.0.0.0), so
+    // the ring buffer/file/SSE fan-out only gets the bare message.
+    console.error(summary + ":", err);
+    const detail = err instanceof Error ? err.message : String(err);
+    recordLogLine(`[${new Date().toISOString()}] ${summary}: ${detail}`);
     // Every known error path in handleRequest already returns a CORS-headered
     // response — this only catches genuine bugs. Respond ourselves (with CORS
     // headers) rather than letting it fall through to Bun's default handling,
@@ -953,24 +1575,44 @@ if (!existsSync(SHARE_DIR)) {
   }
 }
 
-try {
-  Bun.serve({
-    hostname: HOST,
-    port: PORT,
-    fetch: loggedHandleRequest,
-  });
-} catch (err) {
-  if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
-    console.error(
-      `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
-        `Either stop whatever else is using it, or set PORT to a different value ` +
-        `(e.g. PORT=8081) in your .env file next to the executable.\n`,
-    );
-  } else {
-    console.error("\nCould not start the .hday helper:", err, "\n");
+// A self-restart (see restartWithNewSettings) spawns the replacement before
+// this process's own `server.stop()` is guaranteed to have fully released the
+// port on every platform — retry binding for a few seconds instead of
+// failing immediately on EADDRINUSE.
+const BIND_RETRY_ATTEMPTS = 20;
+const BIND_RETRY_DELAY_MS = 150;
+
+async function startServer(): Promise<ReturnType<typeof Bun.serve>> {
+  for (let attempt = 1; attempt <= BIND_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return Bun.serve({
+        hostname: HOST,
+        port: PORT,
+        fetch: loggedHandleRequest,
+      });
+    } catch (err) {
+      const isAddrInUse = err instanceof Error && "code" in err && err.code === "EADDRINUSE";
+      if (isAddrInUse && attempt < BIND_RETRY_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, BIND_RETRY_DELAY_MS));
+        continue;
+      }
+      if (isAddrInUse) {
+        console.error(
+          `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
+            `Either stop whatever else is using it, or set PORT to a different value ` +
+            `(e.g. PORT=8081) in your .env file next to the executable.\n`,
+        );
+      } else {
+        console.error("\nCould not start the .hday helper:", err, "\n");
+      }
+      process.exit(1);
+    }
   }
-  process.exit(1);
+  // Unreachable: the loop above always either returns or calls process.exit(1).
+  throw new Error("unreachable");
 }
+
+httpServer = await startServer();
 
 console.log("============================================================");
 console.log("Worktime .hday Helper");
