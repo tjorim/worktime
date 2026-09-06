@@ -888,6 +888,28 @@ async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean
     logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
+  // Set by worktime-hday-helper.service (Environment=), not auto-detected:
+  // an earlier version of this code tried to infer systemd supervision from
+  // the INVOCATION_ID environment variable systemd sets on processes it
+  // starts directly, but that variable is inherited by every *descendant*
+  // process too — including, it turns out, CI test runs, since the GitHub
+  // Actions runner's own agent is itself systemd-managed. That made every
+  // spawned test instance (not just ones meaning to simulate systemd) skip
+  // its self-respawn. An explicit opt-in this repo's own unit file sets has
+  // no such inheritance hazard.
+  //
+  // Under a supervisor that already restarts exited processes, spawning our
+  // own detached replacement would race with it for the same port, and the
+  // detached one — unknown to the supervisor — would be left running as an
+  // orphan the next time someone runs `systemctl restart`. Exiting and
+  // letting the supervisor relaunch us avoids that; the fresh process picks
+  // up .env on its own via Bun's normal startup, so there's no
+  // stale-env-var problem to strip here either.
+  if (process.env.HDAY_HELPER_NO_SELF_RESPAWN === "1") {
+    logLine("HDAY_HELPER_NO_SELF_RESPAWN set — exiting for the service manager to restart it instead of self-spawning");
+    process.exit(0);
+  }
+
   const childEnv = { ...process.env };
   if (stripEnvKeys) {
     for (const key of ENV_KEYS) delete childEnv[key];

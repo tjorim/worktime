@@ -81,5 +81,5 @@ Production hosting for `worktime.tjor.im` is handled by the separate infra stack
 These workflows are intentionally separated from normal CI:
 
 - `Draft Release` — runs on `v*` tag pushes to prepare a draft GitHub release.
-- `Build .hday Helper EXE` remains scoped to `hday-helper/**`, `frontend/src/lib/hday/**`, and its workflow file.
+- `Build .hday Helper` (Windows EXE + Linux binary) remains scoped to `hday-helper/**`, `frontend/src/lib/hday/**`, and its workflow file.
 - `Android Release APK` is a manual (`workflow_dispatch`) artifact build, separate from Android CI. When signing secrets are unavailable, it skips artifact publishing gracefully instead of failing unrelated checks.

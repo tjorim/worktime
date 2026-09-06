@@ -17,6 +17,12 @@ below predate that switch.
 - Mobile carousel for team browsing
 - Advanced accessibility features (high-contrast mode, font scaling)
 
+## [2026.9.2] - 2026-09-06
+
+### Added
+
+- hday-helper now builds a Linux binary too, with a systemd unit file for running it as a background service (no tray icon on Linux — see the Windows entry below for that)
+
 ## [2026.9.1] - 2026-09-06
 
 ### Added
@@ -744,7 +750,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.1...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.2...HEAD
+[2026.9.2]: https://github.com/tjorim/worktime/compare/v2026.9.1...v2026.9.2
 [2026.9.1]: https://github.com/tjorim/worktime/compare/v2026.8.9...v2026.9.1
 [2026.8.9]: https://github.com/tjorim/worktime/compare/v2026.8.8...v2026.8.9
 [2026.8.8]: https://github.com/tjorim/worktime/compare/v2026.8.7...v2026.8.8
