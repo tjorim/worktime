@@ -1721,10 +1721,21 @@ const TRAY_STATUS_POLL_INTERVAL_MS = 5_000;
 if (trayHandle) {
   hideConsoleWindow();
 
+  // A self-scheduling setTimeout, not setInterval: the latter would fire the
+  // next check regardless of whether the previous one has resolved, and an
+  // unreachable network share's OS-level connect/DNS timeout can easily run
+  // longer than TRAY_STATUS_POLL_INTERVAL_MS. Piling up overlapping
+  // stat/access calls that way would consume libuv's (small, fixed-size)
+  // threadpool, delaying unrelated fs work elsewhere in the app — e.g. a
+  // real /hday/:username request's own file read. Scheduling the next check
+  // only after the current one settles guarantees at most one in flight.
   const pollShareStatusForTray = async () => {
-    const status: TrayStatus = (await isShareAccessibleAsync()) ? "ok" : "error";
-    trayHandle?.updateStatus(status);
+    try {
+      const status: TrayStatus = (await isShareAccessibleAsync()) ? "ok" : "error";
+      trayHandle?.updateStatus(status);
+    } finally {
+      setTimeout(() => void pollShareStatusForTray(), TRAY_STATUS_POLL_INTERVAL_MS);
+    }
   };
   void pollShareStatusForTray();
-  setInterval(() => void pollShareStatusForTray(), TRAY_STATUS_POLL_INTERVAL_MS);
 }
