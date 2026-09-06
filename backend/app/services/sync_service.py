@@ -228,10 +228,7 @@ async def _assert_not_bulk_delete(session: AsyncSession, user_id: int, changes: 
 
 def _get_provided_fields(item: BaseModel) -> set[str]:
     """Get the set of fields explicitly provided by the client."""
-    provided = item.model_fields_set
-    if not provided and hasattr(item, "__fields_set__"):
-        return item.__fields_set__
-    return provided
+    return item.model_fields_set
 
 
 async def _validate_task_label_reference(session: AsyncSession, user_id: int, label_id: str | None) -> None:
