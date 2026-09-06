@@ -1341,6 +1341,118 @@ describe("POST /settings full restart", () => {
       rmSync(shareDir, { recursive: true, force: true });
     }
   }, 20000);
+
+  test("#1295: rolls back and keeps serving when a squatter already holds the wildcard/same-port candidate address", async () => {
+    // checkAddressBindable() can't probe a wildcard/same-port HOST change on
+    // its exact target address without falsely colliding with this process's
+    // own listener (see its comment) — it only proves the new host is
+    // bindable *somewhere*, via a probe on an OS-picked port. A squatter on a
+    // *different*, non-wildcard loopback address set up in advance doesn't
+    // conflict with that probe, or with this process's own 127.0.0.1 bind
+    // below (neither is a wildcard) — so it sails through validation. Only
+    // the real restart attempt, binding the actual wildcard address (which
+    // *does* conflict with the squatter), can catch it. Before this fix, that
+    // meant: .env already rewritten, this process already stopped, and the
+    // replacement fails to bind — stranding the helper with no way back.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+    const envPath = join(shareDir, ".env");
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    const squatter = Bun.serve({
+      hostname: "127.0.0.2",
+      port,
+      fetch: () => new Response(null, { status: 204 }),
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: shareDir,
+          HOST: "0.0.0.0",
+          PORT: String(port),
+          CORS_ORIGINS: "",
+        }),
+      });
+
+      expect(postRes.status).toBe(400);
+      const body = await postRes.text();
+      expect(body).toContain("Could not start the helper");
+
+      // .env must still reflect the original, working HOST — never the
+      // failed candidate — and the original process must still be alive and
+      // serving on it, not stranded.
+      const envContent = readFileSync(envPath, "utf-8");
+      expect(envContent).toContain("HOST=127.0.0.1");
+
+      const healthRes = await fetch(`${url}/health`);
+      expect(healthRes.status).toBe(200);
+    } finally {
+      await squatter.stop(true);
+      await killOwnHelperProcessOnPort(port);
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 20000);
+
+  test("hands off to a different port without stopping until the replacement confirms it bound", async () => {
+    // A different PORT is never held by this process, so — unlike the
+    // wildcard/same-port case above — there's no reason to give up this
+    // process's own listener before a replacement proves it can bind the new
+    // one. This exercises that zero-downtime path (as opposed to every other
+    // test in this file, which changes only SHARE_DIR and so always takes
+    // the stop-then-respawn path, since HOST/PORT can't coexist with
+    // themselves).
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    let newPort = 20000 + Math.floor(Math.random() * 20000);
+    while (newPort === port) newPort = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+    const newUrl = `http://127.0.0.1:${newPort}`;
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: shareDir,
+          HOST: "127.0.0.1",
+          PORT: String(newPort),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(postRes.status).toBe(200);
+      const body = await postRes.text();
+      expect(body).toContain("Restarting");
+
+      await waitForServer(`${newUrl}/health`);
+      const healthRes = await fetch(`${newUrl}/health`);
+      expect((await healthRes.json()).share_dir).toBe(shareDir);
+    } finally {
+      await killOwnHelperProcessOnPort(newPort);
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 20000);
 });
 
 describe("GET /settings with HOST=0.0.0.0", () => {
