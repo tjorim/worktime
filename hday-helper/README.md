@@ -32,10 +32,10 @@ required on the target machine.
    worktime-hday-helper.exe
    ```
 5. Open **Worktime → Settings → About → Developer Options** and enter
-   `http://localhost:8080` as the `.hday` helper URL.
+   `http://127.0.0.1:8080` as the `.hday` helper URL.
 
-Once it's running, you can also open `http://localhost:8080/settings` in a browser to change
-configuration without editing `.env` by hand, or `http://localhost:8080/logs` to see what it's doing.
+Once it's running, you can also open `http://127.0.0.1:8080/settings` in a browser to change
+configuration without editing `.env` by hand, or `http://127.0.0.1:8080/logs` to see what it's doing.
 
 ## Configuration
 
