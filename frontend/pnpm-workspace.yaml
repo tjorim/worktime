@@ -4,3 +4,13 @@ allowBuilds:
   canvas: true
   esbuild: true
   msw: true
+
+# pnpm's minimumReleaseAge (a CLI flag Dependabot passes on every update run, see
+# https://github.com/dependabot/dependabot-core/issues/13165) doesn't fall back to an
+# older mature version for transitive deps it can't bump directly - it hard-fails the
+# whole update instead (https://github.com/pnpm/pnpm/issues/11068). browserslist and
+# caniuse-lite release multiple times a week, so they trip this constantly; exempt them
+# since they're low-risk, frequently-updated metadata packages.
+minimumReleaseAgeExclude:
+  - browserslist
+  - caniuse-lite
