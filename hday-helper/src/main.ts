@@ -48,7 +48,7 @@ import {
   writeFileSync,
   type FSWatcher,
 } from "fs";
-import { readFile } from "fs/promises";
+import { access as accessAsync, readFile, stat as statAsync } from "fs/promises";
 import { networkInterfaces } from "os";
 import { basename, join, resolve, sep } from "path";
 // These imports use relative paths to reuse the frontend .hday parser directly.
@@ -61,7 +61,7 @@ import type { HdayEvent } from "../../frontend/src/lib/hday/types";
 // time (verified to survive `bun build --compile` too), so the compiled EXE reports
 // the version of the source tree it was built from, not whatever's on the host disk.
 import VERSION_FILE from "../../VERSION" with { type: "text" };
-import { hideConsoleWindow, initTray, openUrlInBrowser, type TrayHandle } from "./tray";
+import { hideConsoleWindow, openUrlInBrowser, startTray, type TrayHandle, type TrayStatus } from "./tray";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -218,6 +218,26 @@ function checkShareAccessible(): void {
 function isShareAccessible(): boolean {
   try {
     checkShareAccessible();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Async twin of isShareAccessible(), used only by the tray's periodic status
+// poll (see bootstrap below). statSync/accessSync are fine inside a request
+// handler — they block only that one request, same as any other synchronous
+// work a handler does — but a *timer* calling them on an interval regardless
+// of traffic is different: on a slow or unreachable network share (this
+// function's whole reason to exist), the sync syscalls can block for the
+// OS's full network timeout, freezing every other request the single-threaded
+// server is trying to handle at the same time. fs/promises' stat/access run
+// on Node/Bun's libuv thread pool instead, so the event loop stays free.
+async function isShareAccessibleAsync(): Promise<boolean> {
+  try {
+    const stat = await statAsync(SHARE_DIR);
+    if (!stat.isDirectory()) return false;
+    await accessAsync(SHARE_DIR, constants.R_OK | constants.W_OK);
     return true;
   } catch {
     return false;
@@ -848,7 +868,7 @@ function renderLogsPage(initialLines: string[]): string {
 }
 
 let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned once at bootstrap
-let trayHandle: TrayHandle | null = null; // assigned once at bootstrap, Windows only — see tray.ts's initTray()
+let trayHandle: TrayHandle | null = null; // assigned once at bootstrap, Windows only — see tray.ts's startTray()
 
 // Shared tail end of both the settings-triggered restart and the tray's
 // manual "Restart" menu item: stop serving, spawn a replacement process, and
@@ -861,7 +881,7 @@ let trayHandle: TrayHandle | null = null; // assigned once at bootstrap, Windows
 // process.env unchanged — identical to how this process itself was launched.
 async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean): Promise<void> {
   logLine(logMessage);
-  trayHandle?.destroy();
+  await trayHandle?.destroy();
   try {
     await httpServer?.stop();
   } catch (err) {
@@ -894,7 +914,7 @@ async function restartWithNewSettings(): Promise<void> {
 
 async function quitFromTray(): Promise<void> {
   logLine("Quit requested from tray menu");
-  trayHandle?.destroy();
+  await trayHandle?.destroy();
   try {
     await httpServer?.stop();
   } catch (err) {
@@ -1656,11 +1676,13 @@ console.log(`Listening on http://${HOST}:${PORT}`);
 
 // Windows-only; a no-op everywhere else (and when HDAY_HELPER_NO_TRAY=1, for
 // anyone who wants the old plain-console behavior back) — see tray.ts.
+//
+// hideConsoleWindow() only runs once startTray() actually succeeds: if tray
+// setup fails partway (icon load, window/class creation, Shell_NotifyIconW),
+// the console must stay visible — otherwise a failed tray would leave the
+// helper with neither a console nor a tray icon to see what's going on.
 const trayHelperUrl = candidateHelperUrls(HOST, PORT)[0]!;
-hideConsoleWindow();
-trayHandle = initTray({
-  getStatus: () => (isShareAccessible() ? "ok" : "error"),
-  getTooltip: () => `Worktime .hday Helper — ${HOST}:${PORT}`,
+trayHandle = await startTray(`Worktime .hday Helper — ${HOST}:${PORT}`, {
   onOpenStatus: () => openUrlInBrowser(`${trayHelperUrl}/health`),
   onSettings: () => openUrlInBrowser(`${trayHelperUrl}/settings`),
   onLogs: () => openUrlInBrowser(`${trayHelperUrl}/logs`),
@@ -1671,3 +1693,16 @@ trayHandle = initTray({
     void quitFromTray();
   },
 });
+
+const TRAY_STATUS_POLL_INTERVAL_MS = 5_000;
+
+if (trayHandle) {
+  hideConsoleWindow();
+
+  const pollShareStatusForTray = async () => {
+    const status: TrayStatus = (await isShareAccessibleAsync()) ? "ok" : "error";
+    trayHandle?.updateStatus(status);
+  };
+  void pollShareStatusForTray();
+  setInterval(() => void pollShareStatusForTray(), TRAY_STATUS_POLL_INTERVAL_MS);
+}

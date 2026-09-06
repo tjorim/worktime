@@ -85,13 +85,24 @@ The tray icon variants are pre-rendered PNGs under `hday-helper/assets/` (tinted
 `frontend/public/assets/icons/icon-16.png` by `hday-helper/scripts/generate-tray-icons.ts`), not
 generated at runtime — re-run that script and commit the result if the source logo changes.
 
+The Win32 window/message-pump/menu logic runs in a separate Worker thread
+(`hday-helper/src/tray-worker-entry.ts`), not on the thread that serves HTTP requests — the tray
+context menu (`TrackPopupMenu`) blocks synchronously until the user picks an item or dismisses it,
+and running that on the HTTP server's own thread would freeze request handling for as long as the
+menu stayed open. That worker is pre-bundled to plain JS at build time
+(`hday-helper/src/tray-worker.generated.js`, via `hday-helper/scripts/bundle-tray-worker.ts`) since
+loading a `.ts` file directly into a `new Worker(...)` doesn't get transpiled inside a `bun build
+--compile` standalone executable — re-run that script and commit the result if
+`tray-worker-entry.ts` or anything under `hday-helper/src/win32/` changes.
+
 ### Manual QA checklist
 
-The tray/window half of this feature (`hday-helper/src/tray.ts`, `hday-helper/src/win32/`) has no
-CI coverage — there's no Windows GUI runner to verify a real `Shell_NotifyIconW`/`WndProc` round
-trip against, only what `bun test` can check without actually calling into `user32.dll`/
-`shell32.dll` (see `hday-helper/tests/tray.test.ts`, `win32-structs.test.ts`). Before shipping a
-change to either, manually verify on real Windows:
+The tray/window half of this feature (`hday-helper/src/tray.ts`, `hday-helper/src/tray-worker-entry.ts`,
+`hday-helper/src/win32/`) has no CI coverage — there's no Windows GUI runner to verify a real
+`Shell_NotifyIconW`/`WndProc` round trip against, only what `bun test` can check without actually
+calling into `user32.dll`/`shell32.dll` (see `hday-helper/tests/tray.test.ts`,
+`tray-worker-entry.test.ts`, `win32-structs.test.ts`). Before shipping a change to any of them,
+manually verify on real Windows:
 
 - [ ] The console window is hidden on launch and a tray icon appears
 - [ ] The tray icon is gray briefly on startup, then green (with a share directory that's reachable)
@@ -102,8 +113,14 @@ change to either, manually verify on real Windows:
       page in the default browser; Restart briefly drops and re-adds the tray icon; Quit exits
       the process and removes the tray icon (no ghost icon left behind)
 - [ ] Clicking away from an open context menu (instead of choosing an item) dismisses it normally
-- [ ] The HTTP server keeps responding promptly (e.g. `/health`) while the tray is running —
-      confirms the Win32 message pump isn't blocking Bun's event loop
+- [ ] With the network share deliberately made slow/unreachable, the HTTP server (e.g. `/health`)
+      keeps responding promptly — confirms the status poll's async fs check isn't blocking it
+- [ ] While the tray context menu is open (not just while the tray is idle), the HTTP server (e.g.
+      `/health`) still responds promptly — confirms the Win32 message pump and the blocking
+      `TrackPopupMenu` call are actually isolated to the tray worker thread, not the HTTP server's
+- [ ] Force a tray init failure (e.g. temporarily rename one of the `hday-helper/assets/
+      tray-icon-*.png` files before building) and confirm the console stays visible instead of
+      being hidden with nothing to show for it
 - [ ] `HDAY_HELPER_NO_TRAY=1` restores the old plain-console behavior (visible window, no tray icon)
 
 ## API
