@@ -334,6 +334,12 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         for day in _time_off_dates(entry, start, end):
             half_key = "am" if entry.entry_flag == "half_am" else "pm"
             halves = half_day_off_by_date.get(day)
+            # A second entry for the same day *and* half is a genuine
+            # duplicate that lost the slot (see half_day_off_by_date above) -
+            # drop it entirely rather than letting it fall through to an
+            # all-day event that would contradict the entry that won.
+            if entry.entry_flag in _HALF_DAY_FLAGS and halves is not None and halves.get(half_key) is not entry:
+                continue
             window = shift_windows.get(day)
             if (
                 entry.entry_flag in _HALF_DAY_FLAGS
@@ -391,7 +397,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         lines.extend(
             [
                 "BEGIN:VEVENT",
-                f"UID:day-info-{day.isoformat()}@worktime",
+                f"UID:day-info-{user_id}-{day.isoformat()}@worktime",
                 f"DTSTAMP:{stamp}",
                 f"DTSTART;VALUE=DATE:{day:%Y%m%d}",
                 f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}",

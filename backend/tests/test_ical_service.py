@@ -465,6 +465,54 @@ async def test_am_and_pm_half_day_entries_together_suppress_the_shift(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_duplicate_half_day_entry_for_the_same_half_is_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Two half_am entries on the same day is a genuine data duplicate, not a
+    # meaningful AM+PM pair - the later one wins the slot and gets the timed
+    # event; the earlier, superseded one is dropped entirely rather than
+    # falling through to a contradictory all-day event.
+    _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        time_off_entries=[
+            SimpleNamespace(
+                entry_id="am-first",
+                entry_kind="date",
+                date=date(2026, 8, 24),
+                start_date=None,
+                end_date=None,
+                weekday=None,
+                entry_type="vacation",
+                entry_flag="half_am",
+                note=None,
+                deleted_at=None,
+            ),
+            SimpleNamespace(
+                entry_id="am-second",
+                entry_kind="date",
+                date=date(2026, 8, 24),
+                start_date=None,
+                end_date=None,
+                weekday=None,
+                entry_type="ill",
+                entry_flag="half_am",
+                note=None,
+                deleted_at=None,
+            ),
+        ],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:time-off-am-first-2026-08-24@worktime" not in feed
+    assert "UID:time-off-am-second-2026-08-24@worktime" in feed
+    assert "SUMMARY:Sick leave (half day)" in feed
+    assert "SUMMARY:Holiday" not in feed
+    # The shift is still trimmed to one half only - not suppressed entirely.
+    assert "UID:shift-9-5-1-2026-08-24@worktime" in feed
+
+
+@pytest.mark.asyncio
 async def test_onsite_flag_keeps_full_shift_and_all_day_event(monkeypatch: pytest.MonkeyPatch) -> None:
     # Location/travel flags (onsite/no_fly/can_fly) aren't day-portion splits -
     # the shift is untouched and the entry stays a plain all-day info event.
@@ -512,11 +560,11 @@ async def test_work_location_events_classify_against_home_and_office_settings(
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
-    assert "UID:day-info-2026-08-24@worktime" in feed
+    assert "UID:day-info-42-2026-08-24@worktime" in feed
     assert "SUMMARY:Working from home" in feed
-    assert "UID:day-info-2026-08-25@worktime" in feed
+    assert "UID:day-info-42-2026-08-25@worktime" in feed
     assert "SUMMARY:Working from the office" in feed
-    assert "UID:day-info-2026-08-26@worktime" in feed
+    assert "UID:day-info-42-2026-08-26@worktime" in feed
     assert "SUMMARY:Berlin office" in feed
     assert "DESCRIPTION:Country: DE" in feed
 
@@ -550,7 +598,7 @@ async def test_work_location_is_folded_into_the_shift_title_not_a_separate_event
     assert "UID:shift-9-5-1-2026-08-24@worktime" in feed
     assert "SUMMARY:Day shift — Home" in feed
     # No separate all-day/day-info event for the same day.
-    assert "day-info-2026-08-24" not in feed
+    assert "day-info-42-2026-08-24" not in feed
     assert "work-location-2026-08-24" not in feed
 
 
@@ -574,7 +622,7 @@ async def test_work_location_and_tracked_time_share_one_fallback_event(monkeypat
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
-    events_that_day = feed.count("UID:day-info-2026-08-24@worktime")
+    events_that_day = feed.count("UID:day-info-42-2026-08-24@worktime")
     assert events_that_day == 1
     assert "SUMMARY:Client site" in feed
     assert "DESCRIPTION:Country: DE\\n11:00–12:00 Weekend fix" in feed
@@ -706,7 +754,7 @@ async def test_tracked_time_without_a_shift_gets_a_fallback_event(monkeypatch: p
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
-    assert "UID:day-info-2026-08-24@worktime" in feed
+    assert "UID:day-info-42-2026-08-24@worktime" in feed
     assert "SUMMARY:Time tracked" in feed
     assert "DESCRIPTION:11:00–12:00 Weekend fix" in feed
 
@@ -735,6 +783,6 @@ async def test_tracked_time_on_a_scheduled_off_day_gets_its_own_event(monkeypatc
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
     assert "UID:shift-9-5-1-2026-08-29@worktime" not in feed
-    assert "UID:day-info-2026-08-29@worktime" in feed
+    assert "UID:day-info-42-2026-08-29@worktime" in feed
     assert "SUMMARY:Time tracked" in feed
     assert "DESCRIPTION:16:00–18:30 Fix prod outage (Incident)" in feed
