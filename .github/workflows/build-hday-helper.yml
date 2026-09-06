@@ -1,4 +1,4 @@
-name: Build .hday Helper EXE
+name: Build .hday Helper
 
 on:
   # Manual trigger; build on demand (fast — typically < 2 min with Bun).
@@ -57,6 +57,10 @@ jobs:
           fi
 
       - name: Create release notes
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_COMMIT: ${{ github.sha }}
+          BUILD_REF: ${{ github.ref }}
         run: |
           cat > dist/README.txt << 'EOF'
           Worktime .hday Helper
@@ -82,11 +86,13 @@ jobs:
 
           See hday-helper/README.md in the repository for full documentation.
           EOF
-          echo "Build info:" >> dist/README.txt
-          echo "  Version: ${{ steps.version.outputs.version }}" >> dist/README.txt
-          echo "  Commit:  ${{ github.sha }}" >> dist/README.txt
-          echo "  Ref:     ${{ github.ref }}" >> dist/README.txt
-          echo "  Date:    $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> dist/README.txt
+          {
+            echo "Build info:"
+            printf '  Version: %s\n' "$BUILD_VERSION"
+            printf '  Commit:  %s\n' "$BUILD_COMMIT"
+            printf '  Ref:     %s\n' "$BUILD_REF"
+            printf '  Date:    %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> dist/README.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -95,5 +101,101 @@ jobs:
           path: |
             dist/worktime-hday-helper.exe
             dist/README.txt
+          retention-days: 30
+          if-no-files-found: error
+
+  build-linux-binary:
+    name: Build Linux binary (x86-64)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: "1"
+
+      - name: Extract version from VERSION file
+        id: version
+        run: |
+          VERSION="$(cat VERSION | tr -d '[:space:]')"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Linux binary
+        run: |
+          bun build hday-helper/src/main.ts \
+            --compile \
+            --target=bun-linux-x64 \
+            --outfile=dist/worktime-hday-helper
+
+      - name: Verify executable
+        run: |
+          if [ -f dist/worktime-hday-helper ]; then
+            SIZE=$(du -sh dist/worktime-hday-helper | cut -f1)
+            echo "✅ Executable created — size: $SIZE"
+          else
+            echo "❌ Executable not found"
+            exit 1
+          fi
+
+      - name: Create release notes
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_COMMIT: ${{ github.sha }}
+          BUILD_REF: ${{ github.ref }}
+        run: |
+          cat > dist/README.txt << 'EOF'
+          Worktime .hday Helper (Linux, x86-64)
+
+          A minimal HTTP server that reads and writes .hday files from a local or
+          network-share (e.g. NFS/CIFS mount) directory.  No separate Bun runtime
+          required.
+
+          This build is x86-64 only. For other architectures (e.g. ARM64/Raspberry
+          Pi), build from source with the matching --target — see "Building from
+          source" in hday-helper/README.md in the repository.
+
+          Quick start:
+            1. Place worktime-hday-helper somewhere, e.g. /opt/worktime-hday-helper/
+            2. chmod +x worktime-hday-helper
+            3. Create a .env file next to it (optional):
+                 SHARE_DIR=/mnt/worktime
+                 CORS_ORIGINS=https://worktime.example.com
+                 PORT=8080
+            4. Run ./worktime-hday-helper directly, or install it as a systemd
+               service — see worktime-hday-helper.service and the "Linux
+               (systemd)" section of hday-helper/README.md in the repository.
+            5. In Worktime → Settings → About → Developer Options,
+               set the .hday helper URL to http://localhost:8080
+
+          Configuration (env vars / .env):
+            SHARE_DIR      Directory with .hday files  (default: ./hday_files)
+            PORT           Listening port               (default: 8080)
+            HOST           Bind address                 (default: 127.0.0.1)
+            CORS_ORIGINS   Allowed origins, comma-sep   (default: http://localhost:5173)
+
+          See hday-helper/README.md in the repository for full documentation.
+          EOF
+          {
+            echo "Build info:"
+            printf '  Version: %s\n' "$BUILD_VERSION"
+            printf '  Commit:  %s\n' "$BUILD_COMMIT"
+            printf '  Ref:     %s\n' "$BUILD_REF"
+            printf '  Date:    %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> dist/README.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: worktime-hday-helper-linux-x64-${{ steps.version.outputs.version }}
+          path: |
+            dist/worktime-hday-helper
+            dist/README.txt
+            hday-helper/worktime-hday-helper.service
           retention-days: 30
           if-no-files-found: error

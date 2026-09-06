@@ -15,6 +15,10 @@
  * | HOST           | 127.0.0.1             | Bind address                        |
  * | CORS_ORIGINS   | http://localhost:5173 | Comma-separated allowed origins     |
  *
+ * On Windows, the console window is hidden by default and a status-colored
+ * system tray icon takes its place (see `tray.ts`) — set
+ * `HDAY_HELPER_NO_TRAY=1` to keep the plain console-app behavior instead.
+ *
  * ## API
  *
  * GET  /health              — health, own version, and share-directory status
@@ -44,7 +48,7 @@ import {
   writeFileSync,
   type FSWatcher,
 } from "fs";
-import { readFile } from "fs/promises";
+import { access as accessAsync, readFile, stat as statAsync } from "fs/promises";
 import { networkInterfaces } from "os";
 import { basename, join, resolve, sep } from "path";
 // These imports use relative paths to reuse the frontend .hday parser directly.
@@ -57,6 +61,7 @@ import type { HdayEvent } from "../../frontend/src/lib/hday/types";
 // time (verified to survive `bun build --compile` too), so the compiled EXE reports
 // the version of the source tree it was built from, not whatever's on the host disk.
 import VERSION_FILE from "../../VERSION" with { type: "text" };
+import { hideConsoleWindow, openUrlInBrowser, startTray, type TrayHandle, type TrayStatus } from "./tray";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -213,6 +218,26 @@ function checkShareAccessible(): void {
 function isShareAccessible(): boolean {
   try {
     checkShareAccessible();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Async twin of isShareAccessible(), used only by the tray's periodic status
+// poll (see bootstrap below). statSync/accessSync are fine inside a request
+// handler — they block only that one request, same as any other synchronous
+// work a handler does — but a *timer* calling them on an interval regardless
+// of traffic is different: on a slow or unreachable network share (this
+// function's whole reason to exist), the sync syscalls can block for the
+// OS's full network timeout, freezing every other request the single-threaded
+// server is trying to handle at the same time. fs/promises' stat/access run
+// on Node/Bun's libuv thread pool instead, so the event loop stays free.
+async function isShareAccessibleAsync(): Promise<boolean> {
+  try {
+    const stat = await statAsync(SHARE_DIR);
+    if (!stat.isDirectory()) return false;
+    await accessAsync(SHARE_DIR, constants.R_OK | constants.W_OK);
     return true;
   } catch {
     return false;
@@ -843,21 +868,52 @@ function renderLogsPage(initialLines: string[]): string {
 }
 
 let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned once at bootstrap
+let trayHandle: TrayHandle | null = null; // assigned once at bootstrap, Windows only — see tray.ts's startTray()
 
-async function restartWithNewSettings(): Promise<void> {
-  logLine("Settings changed via /settings — restarting to apply new configuration");
+// Shared tail end of both the settings-triggered restart and the tray's
+// manual "Restart" menu item: stop serving, spawn a replacement process, and
+// exit. `stripEnvKeys` is true only for the settings path — there, this
+// process's env still holds the *old* SHARE_DIR/HOST/PORT/CORS_ORIGINS
+// values (Bun's built-in .env loading does not override already-set
+// environment variables), so those must be stripped from the child's
+// inherited env for it to pick up what was just written to .env. A plain
+// tray-triggered restart has no such staleness to fix, so it inherits
+// process.env unchanged — identical to how this process itself was launched.
+async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean): Promise<void> {
+  logLine(logMessage);
+  await trayHandle?.destroy();
   try {
     await httpServer?.stop();
   } catch (err) {
     logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
-  // Strip the keys we just rewrote in .env from the child's inherited env so
-  // it re-reads them from disk instead of keeping this process's now-stale
-  // values — Bun's built-in .env loading does not override already-set
-  // environment variables.
+  // Set by worktime-hday-helper.service (Environment=), not auto-detected:
+  // an earlier version of this code tried to infer systemd supervision from
+  // the INVOCATION_ID environment variable systemd sets on processes it
+  // starts directly, but that variable is inherited by every *descendant*
+  // process too — including, it turns out, CI test runs, since the GitHub
+  // Actions runner's own agent is itself systemd-managed. That made every
+  // spawned test instance (not just ones meaning to simulate systemd) skip
+  // its self-respawn. An explicit opt-in this repo's own unit file sets has
+  // no such inheritance hazard.
+  //
+  // Under a supervisor that already restarts exited processes, spawning our
+  // own detached replacement would race with it for the same port, and the
+  // detached one — unknown to the supervisor — would be left running as an
+  // orphan the next time someone runs `systemctl restart`. Exiting and
+  // letting the supervisor relaunch us avoids that; the fresh process picks
+  // up .env on its own via Bun's normal startup, so there's no
+  // stale-env-var problem to strip here either.
+  if (process.env.HDAY_HELPER_NO_SELF_RESPAWN === "1") {
+    logLine("HDAY_HELPER_NO_SELF_RESPAWN set — exiting for the service manager to restart it instead of self-spawning");
+    process.exit(0);
+  }
+
   const childEnv = { ...process.env };
-  for (const key of ENV_KEYS) delete childEnv[key];
+  if (stripEnvKeys) {
+    for (const key of ENV_KEYS) delete childEnv[key];
+  }
 
   try {
     const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
@@ -871,6 +927,21 @@ async function restartWithNewSettings(): Promise<void> {
     logLine(`Failed to spawn replacement process: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
+  process.exit(0);
+}
+
+async function restartWithNewSettings(): Promise<void> {
+  await spawnReplacementAndExit("Settings changed via /settings — restarting to apply new configuration", true);
+}
+
+async function quitFromTray(): Promise<void> {
+  logLine("Quit requested from tray menu");
+  await trayHandle?.destroy();
+  try {
+    await httpServer?.stop();
+  } catch (err) {
+    logLine(`Failed to stop server cleanly before quitting: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
   process.exit(0);
 }
 
@@ -1624,3 +1695,47 @@ console.log(`Share dir: ${SHARE_DIR}`);
 console.log(`CORS:      ${CORS_ORIGINS.join(", ")}`);
 console.log("============================================================");
 console.log(`Listening on http://${HOST}:${PORT}`);
+
+// Windows-only; a no-op everywhere else (and when HDAY_HELPER_NO_TRAY=1, for
+// anyone who wants the old plain-console behavior back) — see tray.ts.
+//
+// hideConsoleWindow() only runs once startTray() actually succeeds: if tray
+// setup fails partway (icon load, window/class creation, Shell_NotifyIconW),
+// the console must stay visible — otherwise a failed tray would leave the
+// helper with neither a console nor a tray icon to see what's going on.
+const trayHelperUrl = candidateHelperUrls(HOST, PORT)[0]!;
+trayHandle = await startTray(`Worktime .hday Helper — ${HOST}:${PORT}`, {
+  onOpenStatus: () => openUrlInBrowser(`${trayHelperUrl}/health`),
+  onSettings: () => openUrlInBrowser(`${trayHelperUrl}/settings`),
+  onLogs: () => openUrlInBrowser(`${trayHelperUrl}/logs`),
+  onRestart: () => {
+    void spawnReplacementAndExit("Restart requested from tray menu", false);
+  },
+  onQuit: () => {
+    void quitFromTray();
+  },
+});
+
+const TRAY_STATUS_POLL_INTERVAL_MS = 5_000;
+
+if (trayHandle) {
+  hideConsoleWindow();
+
+  // A self-scheduling setTimeout, not setInterval: the latter would fire the
+  // next check regardless of whether the previous one has resolved, and an
+  // unreachable network share's OS-level connect/DNS timeout can easily run
+  // longer than TRAY_STATUS_POLL_INTERVAL_MS. Piling up overlapping
+  // stat/access calls that way would consume libuv's (small, fixed-size)
+  // threadpool, delaying unrelated fs work elsewhere in the app — e.g. a
+  // real /hday/:username request's own file read. Scheduling the next check
+  // only after the current one settles guarantees at most one in flight.
+  const pollShareStatusForTray = async () => {
+    try {
+      const status: TrayStatus = (await isShareAccessibleAsync()) ? "ok" : "error";
+      trayHandle?.updateStatus(status);
+    } finally {
+      setTimeout(() => void pollShareStatusForTray(), TRAY_STATUS_POLL_INTERVAL_MS);
+    }
+  };
+  void pollShareStatusForTray();
+}

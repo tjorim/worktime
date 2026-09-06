@@ -1,8 +1,8 @@
 # Worktime .hday Helper
 
 A minimal, self-contained HTTP server that reads and writes `.hday` files from a local or
-network-share directory. Compiled to a single Windows EXE with Bun — no runtime installation
-required on the target machine.
+network-share directory. Compiled to a single executable with Bun (Windows or Linux) — no
+runtime installation required on the target machine.
 
 ## What it does
 
@@ -16,6 +16,9 @@ required on the target machine.
 - Logs each request (method, path, status, timing) to the console, an in-memory ring buffer, and a
   rotating log file next to the executable — reachable from a browser at `/logs`, so diagnostics
   stay available even with no console window open
+- On Windows, runs from a system tray icon instead of an open console window — see
+  [Tray icon (Windows)](#tray-icon-windows) below
+- On Linux, runs as a `systemd` service instead — see [Linux (systemd)](#linux-systemd) below
 
 ## Quick start
 
@@ -59,6 +62,107 @@ Or with a mapped drive letter:
 ```env
 SHARE_DIR=Z:\worktime
 ```
+
+## Tray icon (Windows)
+
+On Windows, the console window is hidden by default and replaced with a system tray icon —
+tinted green when the share is reachable, gray while starting up, red when it isn't (the same
+states `/health` reports). Left- or right-clicking it opens a context menu:
+
+| Item                  | Action                                          |
+|-----------------------|--------------------------------------------------|
+| Open helper status    | Opens `/health` in the default browser            |
+| Settings              | Opens `/settings` in the default browser          |
+| View logs             | Opens `/logs` in the default browser              |
+| Restart               | Restarts the helper (same effect as saving `/settings` with no changes) |
+| Quit                  | Stops the server and exits                        |
+
+Set `HDAY_HELPER_NO_TRAY=1` (as an environment variable or in `.env`) to keep the old plain
+console-app behavior instead — no tray icon, console window left visible. This is also what
+happens automatically on every non-Windows platform, and if tray/window setup fails for any
+reason (logged, not fatal): the HTTP server keeps running either way.
+
+The tray icon variants are pre-rendered PNGs under `hday-helper/assets/` (tinted from
+`frontend/public/assets/icons/icon-16.png` by `hday-helper/scripts/generate-tray-icons.ts`), not
+generated at runtime — re-run that script and commit the result if the source logo changes.
+
+The Win32 window/message-pump/menu logic runs in a separate Worker thread
+(`hday-helper/src/tray-worker-entry.ts`), not on the thread that serves HTTP requests — the tray
+context menu (`TrackPopupMenu`) blocks synchronously until the user picks an item or dismisses it,
+and running that on the HTTP server's own thread would freeze request handling for as long as the
+menu stayed open. That worker is pre-bundled to plain JS at build time
+(`hday-helper/src/tray-worker.generated.js`, via `hday-helper/scripts/bundle-tray-worker.ts`) since
+loading a `.ts` file directly into a `new Worker(...)` doesn't get transpiled inside a `bun build
+--compile` standalone executable — re-run that script and commit the result if
+`tray-worker-entry.ts` or anything under `hday-helper/src/win32/` changes.
+
+### Manual QA checklist
+
+The tray/window half of this feature (`hday-helper/src/tray.ts`, `hday-helper/src/tray-worker-entry.ts`,
+`hday-helper/src/win32/`) has no CI coverage — there's no Windows GUI runner to verify a real
+`Shell_NotifyIconW`/`WndProc` round trip against, only what `bun test` can check without actually
+calling into `user32.dll`/`shell32.dll` (see `hday-helper/tests/tray.test.ts`,
+`tray-worker-entry.test.ts`, `win32-structs.test.ts`). Before shipping a change to any of them,
+manually verify on real Windows:
+
+- [ ] The console window is hidden on launch and a tray icon appears
+- [ ] The tray icon is gray briefly on startup, then green (with a share directory that's reachable)
+- [ ] Making the share unreachable (e.g. disconnecting the mapped drive) turns the icon red within
+      a few seconds; reconnecting it turns the icon back to green
+- [ ] Left-click and right-click both open the same context menu, positioned at the cursor
+- [ ] Each menu item does what it says: Open helper status / Settings / View logs open the right
+      page in the default browser; Restart briefly drops and re-adds the tray icon; Quit exits
+      the process and removes the tray icon (no ghost icon left behind)
+- [ ] Clicking away from an open context menu (instead of choosing an item) dismisses it normally
+- [ ] With the network share deliberately made slow/unreachable, the HTTP server (e.g. `/health`)
+      keeps responding promptly — confirms the status poll's async fs check isn't blocking it
+- [ ] While the tray context menu is open (not just while the tray is idle), the HTTP server (e.g.
+      `/health`) still responds promptly — confirms the Win32 message pump and the blocking
+      `TrackPopupMenu` call are actually isolated to the tray worker thread, not the HTTP server's
+- [ ] Force a tray init failure (e.g. temporarily rename one of the `hday-helper/assets/
+      tray-icon-*.png` files before building) and confirm the console stays visible instead of
+      being hidden with nothing to show for it
+- [ ] `HDAY_HELPER_NO_TRAY=1` restores the old plain-console behavior (visible window, no tray icon)
+
+## Linux (systemd)
+
+The helper is plain Bun/TypeScript with no OS-specific code outside `tray.ts` (Windows-only, see
+above), so it runs on Linux the same way it does on Windows — just without a tray icon, since
+desktop Linux has no `Shell_NotifyIcon` equivalent (a GNOME/KDE tray icon would go through a
+D-Bus `StatusNotifierItem` service instead, which isn't implemented here). The prebuilt Linux
+binary is x86-64 only; other architectures (e.g. ARM64/Raspberry Pi) need building from source
+with the matching `--target` (see [Building from source](#building-from-source)).
+
+Rather than a tray icon, run it as a `systemd` service, as a dedicated unprivileged user — the
+`/settings` endpoint is unauthenticated and lets any local caller repoint `SHARE_DIR` at an
+arbitrary directory, so the account running the helper should have no more filesystem reach than
+the share it's actually meant to serve, not root:
+
+1. Build (or download) the Linux binary — see [Building from source](#building-from-source)
+2. Create a dedicated system user and directory, and place the binary and a `.env` file there
+   (same `.env` format as Windows — see [Configuration](#configuration)), e.g. with `SHARE_DIR`
+   pointing at an NFS/CIFS mount instead of a UNC path:
+   ```bash
+   sudo useradd --system --home-dir /opt/worktime-hday-helper --shell /usr/sbin/nologin hday-helper
+   sudo mkdir -p /opt/worktime-hday-helper
+   # ... copy the binary and .env into /opt/worktime-hday-helper ...
+   sudo chown -R hday-helper:hday-helper /opt/worktime-hday-helper
+   ```
+3. Copy `hday-helper/worktime-hday-helper.service` to `/etc/systemd/system/`, adjusting its
+   `WorkingDirectory`/`ExecStart` if you used a different path. If `SHARE_DIR` is a network mount,
+   also uncomment and set `RequiresMountsFor` in the unit to that mount point — otherwise the
+   helper can start before the mount is up, creating `SHARE_DIR` as a plain local directory that
+   the mount then comes up *on top of*, hiding anything already written there. Then:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now worktime-hday-helper
+   ```
+
+A config change saved via `/settings` still works under systemd: the shipped unit file sets
+`HDAY_HELPER_NO_SELF_RESPAWN=1`, which tells the helper to just exit on a settings-triggered
+restart instead of spawning its own detached replacement the way it does when run directly —
+`Restart=always` brings it back up instead, avoiding two processes racing for the same port, and
+an orphaned one `systemctl restart` wouldn't know about.
 
 ## API
 
@@ -225,6 +329,8 @@ Requires [Bun](https://bun.sh/) ≥ 1.1.
 bun build hday-helper/src/main.ts --compile --outfile worktime-hday-helper
 # Windows cross-compile:
 bun build hday-helper/src/main.ts --compile --target=bun-windows-x64 --outfile worktime-hday-helper.exe
+# Linux cross-compile (explicit target, same result as the untargeted command above on a Linux host):
+bun build hday-helper/src/main.ts --compile --target=bun-linux-x64 --outfile worktime-hday-helper
 ```
 
 ## Testing

@@ -1014,6 +1014,69 @@ describe("POST /settings full restart", () => {
     }
   }, 20000);
 
+  test("with HDAY_HELPER_NO_SELF_RESPAWN=1 (as worktime-hday-helper.service sets), exits instead of self-spawning a replacement", async () => {
+    // See main.ts's spawnReplacementAndExit(): under a service manager, a
+    // self-spawned detached replacement would race with the manager's own
+    // restart policy for the same port, and end up unsupervised. This env
+    // var — set by worktime-hday-helper.service's Environment=, not
+    // auto-detected — should make the helper just exit and leave restarting
+    // to the service manager, which in this test is nobody, so the port
+    // must stay down afterward.
+    //
+    // This is a deliberate opt-in rather than detecting systemd via the
+    // INVOCATION_ID env var systemd sets on processes it starts: that var
+    // is inherited by every descendant process, including (as CI found the
+    // hard way) a `bun test` run itself when the CI runner's own agent is
+    // systemd-managed — which made every spawned test instance skip its
+    // self-respawn, not just ones meaning to simulate it.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const newShareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-new-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: {
+        ...process.env,
+        SHARE_DIR: shareDir,
+        PORT: String(port),
+        HOST: "127.0.0.1",
+        CORS_ORIGINS: "",
+        HDAY_HELPER_NO_SELF_RESPAWN: "1",
+      },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: newShareDir,
+          HOST: "127.0.0.1",
+          PORT: String(port),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(postRes.status).toBe(200);
+
+      // The original process should exit on its own (no detached child to
+      // clean up) — await it directly rather than polling for exit.
+      const exitCode = await proc.exited;
+      expect(exitCode).toBe(0);
+
+      // Nothing should have taken over the port; a health check must fail.
+      await expect(fetch(`${url}/health`)).rejects.toThrow();
+    } finally {
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+      rmSync(newShareDir, { recursive: true, force: true });
+    }
+  }, 20000);
+
   test("round-trips a SHARE_DIR with a backslash immediately before a dollar sign", async () => {
     // Windows admin shares are literally named "C$", "D$", etc. — a UNC path
     // like "\\server\C$\worktime" (backslash directly touching the $) is a
