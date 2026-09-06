@@ -500,3 +500,32 @@ async def test_tracked_time_without_a_shift_gets_a_fallback_event(monkeypatch: p
     assert "UID:day-info-2026-08-24@worktime" in feed
     assert "SUMMARY:Time tracked" in feed
     assert "DESCRIPTION:11:00–12:00 Weekend fix" in feed
+
+
+@pytest.mark.asyncio
+async def test_tracked_time_on_a_scheduled_off_day_gets_its_own_event(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 2026-08-29 is a Saturday, an "O" (off) day in 9-5's pattern - logging
+    # time against a high-priority issue on a day off shouldn't be silently
+    # dropped, and shouldn't be attached to a shift event that doesn't exist.
+    tz = UTC
+    _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        tasks=[
+            _task(
+                text="Fix prod outage",
+                start=datetime(2026, 8, 29, 14, 0, tzinfo=tz),
+                stop=datetime(2026, 8, 29, 16, 30, tzinfo=tz),
+                label_id="incident",
+            )
+        ],
+        labels=[SimpleNamespace(id="incident", name="Incident")],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-9-5-1-2026-08-29@worktime" not in feed
+    assert "UID:day-info-2026-08-29@worktime" in feed
+    assert "SUMMARY:Time tracked" in feed
+    assert "DESCRIPTION:16:00–18:30 Fix prod outage (Incident)" in feed
