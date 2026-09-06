@@ -677,27 +677,50 @@ describe("GET /logs/events", () => {
     // Unauthenticated and reachable over the LAN (HOST=0.0.0.0) — must match
     // MAX_LOG_SSE_SUBSCRIBERS in src/main.ts, kept in sync manually since
     // this suite deliberately has no test-only exports.
-    const MAX_LOG_SSE_SUBSCRIBERS = 50;
-    const controllers: AbortController[] = [];
+    //
+    // Runs against its own dedicated instance rather than the shared
+    // baseUrl/proc: counting up to the exact cap depends on no other
+    // subscriber being open on the same server, and the shared instance
+    // accumulates connections from every other test in this file (some of
+    // which close asynchronously — abort() closes a connection, but the
+    // server only decrements its subscriber count once that close is
+    // actually observed). A dedicated instance starts at zero, so the count
+    // this test drives is exactly the count the server sees.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-log-sse-cap-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
     try {
-      for (let i = 0; i < MAX_LOG_SSE_SUBSCRIBERS; i++) {
-        const controller = new AbortController();
-        const res = await fetch(`${baseUrl}/logs/events`, {
-          headers: { Accept: "text/event-stream" },
-          signal: controller.signal,
-        });
-        expect(res.status).toBe(200);
-        controllers.push(controller);
+      const capBaseUrl = `http://127.0.0.1:${port}`;
+      await waitForServer(`${capBaseUrl}/health`);
+
+      const MAX_LOG_SSE_SUBSCRIBERS = 50;
+      const controllers: AbortController[] = [];
+      try {
+        for (let i = 0; i < MAX_LOG_SSE_SUBSCRIBERS; i++) {
+          const controller = new AbortController();
+          const res = await fetch(`${capBaseUrl}/logs/events`, {
+            headers: { Accept: "text/event-stream" },
+            signal: controller.signal,
+          });
+          expect(res.status).toBe(200);
+          controllers.push(controller);
+        }
+        const overflow = await fetch(`${capBaseUrl}/logs/events`, { headers: { Accept: "text/event-stream" } });
+        expect(overflow.status).toBe(503);
+      } finally {
+        for (const controller of controllers) {
+          controller.abort();
+        }
       }
-      const overflow = await fetch(`${baseUrl}/logs/events`, { headers: { Accept: "text/event-stream" } });
-      expect(overflow.status).toBe(503);
     } finally {
-      // Abort rather than cancel the response body — cancelling only stops
-      // local reads and doesn't reliably close the connection, which would
-      // leave these subscribers counted against the cap for later tests.
-      for (const controller of controllers) {
-        controller.abort();
-      }
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
     }
   }, 15000);
 });
