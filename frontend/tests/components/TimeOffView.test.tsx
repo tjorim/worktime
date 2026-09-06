@@ -55,6 +55,17 @@ function seedConnectedHelperWithUsername(username: string | null) {
   mockHdayChangeEventsStream();
 }
 
+/**
+ * Waits for the "your .hday file changed remotely" banner. The signal
+ * reaches it through an un-act()-wrapped async pipeline (fetch ->
+ * TextDecoderStream -> EventSourceParserStream -> reader loop), which can
+ * occasionally take longer than findByText's default 1000ms timeout under
+ * CI load — hence the longer timeout here rather than at each call site.
+ */
+function findHdayChangedBanner() {
+  return screen.findByText(m.timeoff_hday_changed_remotely(), {}, { timeout: 5000 });
+}
+
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>
@@ -1222,7 +1233,7 @@ describe("TimeOffView", () => {
         hdayChangeEmitter.emit("jsmith", "sha256:new-on-share");
       });
 
-      expect(await screen.findByText(m.timeoff_hday_changed_remotely())).toBeInTheDocument();
+      expect(await findHdayChangedBanner()).toBeInTheDocument();
     });
 
     it("does not show a banner for an echo of this device's own push, but does for a genuine remote change", async () => {
@@ -1265,7 +1276,7 @@ describe("TimeOffView", () => {
         hdayChangeEmitter.emit("jsmith", "sha256:someone-elses-change");
       });
 
-      expect(await screen.findByText(m.timeoff_hday_changed_remotely())).toBeInTheDocument();
+      expect(await findHdayChangedBanner()).toBeInTheDocument();
     });
 
     it("pulling from the banner clears it and imports the file", async () => {
@@ -1292,7 +1303,7 @@ describe("TimeOffView", () => {
       act(() => {
         hdayChangeEmitter.emit("jsmith", "sha256:new-on-share");
       });
-      const banner = await screen.findByText(m.timeoff_hday_changed_remotely());
+      const banner = await findHdayChangedBanner();
 
       await user.click(
         within(banner.closest(".alert") as HTMLElement).getByRole("button", {
@@ -1320,7 +1331,7 @@ describe("TimeOffView", () => {
       act(() => {
         hdayChangeEmitter.emit("jsmith", "sha256:new-on-share");
       });
-      const banner = await screen.findByText(m.timeoff_hday_changed_remotely());
+      const banner = await findHdayChangedBanner();
 
       await userEvent.setup().click(
         within(banner.closest(".alert") as HTMLElement).getByRole("button", { name: /close/i }),
