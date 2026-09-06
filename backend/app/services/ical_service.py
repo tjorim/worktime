@@ -169,26 +169,36 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     # A half-day (half_am/half_pm) entry doesn't suppress the shift - it splits
     # it: the shift shrinks to the half still worked, and this entry's own
     # event covers the other half instead of spanning the whole day. Keyed by
-    # day (not entry) since only one half-day entry can meaningfully apply to
-    # a given shift; a later entry for the same day wins.
-    half_day_off_by_date: dict[date, tuple[TimeOffEntry, str]] = {
-        day: (entry, "am" if entry.entry_flag == "half_am" else "pm")
-        for entry in entries
-        if entry.entry_flag in _HALF_DAY_FLAGS
-        for day in _time_off_dates(entry, start, end)
-        if day not in full_day_off_dates
-    }
+    # (day, "am"/"pm") rather than just day, so an AM entry and a PM entry on
+    # the same date (e.g. a half-day holiday plus a half-day sick leave) are
+    # each tracked instead of one clobbering the other; a second entry for the
+    # same day *and* half is a genuine duplicate and the later one wins.
+    half_day_off_by_date: dict[date, dict[str, TimeOffEntry]] = {}
+    for entry in entries:
+        if entry.entry_flag not in _HALF_DAY_FLAGS:
+            continue
+        half = "am" if entry.entry_flag == "half_am" else "pm"
+        for day in _time_off_dates(entry, start, end):
+            if day in full_day_off_dates:
+                continue
+            half_day_off_by_date.setdefault(day, {})[half] = entry
+    # An AM entry and a PM entry together cover the whole day, same as a
+    # full-day entry would - no shift is worked, so no shift event is emitted.
+    fully_covered_by_halves = {day for day, halves in half_day_off_by_date.items() if len(halves) == 2}
 
+    now = datetime.now(UTC)
     tasks = await list_tasks(
         session,
         user_id=user_id,
-        start_date=datetime.combine(start, time.min, tzinfo=UTC),
-        end_date=datetime.combine(end, time.max, tzinfo=UTC),
+        start_date=datetime.combine(start, time.min, tzinfo=_WORKTIME_TIMEZONE),
+        end_date=datetime.combine(end - timedelta(days=1), time.max, tzinfo=_WORKTIME_TIMEZONE),
     )
     label_names = {label.id: label.name for label in await list_labels_for_user(session, user_id=user_id)}
     tasks_by_day: dict[date, list[str]] = {}
     for task in sorted(tasks, key=lambda t: t.start_time):
-        if task.stop_time is None:
+        # A planned (not-yet-started) task also has a stop_time set - only a
+        # task whose stop_time has already passed represents actual worked time.
+        if task.stop_time is None or task.stop_time > now:
             continue
         day = task.start_time.astimezone(_WORKTIME_TIMEZONE).date()
         tasks_by_day.setdefault(day, []).append(_format_task_line(task, label_names.get(task.label_id)))
@@ -198,7 +208,9 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     # end up as two separate all-day-ish entries cluttering the calendar.
     location_by_day = {
         location.date: location
-        for location in await list_work_locations(session, user_id=user_id, start_date=start, end_date=end)
+        for location in await list_work_locations(
+            session, user_id=user_id, start_date=start, end_date=end - timedelta(days=1)
+        )
     }
 
     lines = [
@@ -230,12 +242,13 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                     shift_end += timedelta(days=1)
                 shift_windows[day] = (shift_start, shift_end)
 
-                if day not in full_day_off_dates:
-                    half_off = half_day_off_by_date.get(day)
-                    if half_off is not None:
+                if day not in full_day_off_dates and day not in fully_covered_by_halves:
+                    halves = half_day_off_by_date.get(day)
+                    if halves:
+                        ((single_half, _entry),) = halves.items()
                         midpoint = shift_start + (shift_end - shift_start) / 2
                         event_start, event_end = (
-                            (midpoint, shift_end) if half_off[1] == "am" else (shift_start, midpoint)
+                            (midpoint, shift_end) if single_half == "am" else (shift_start, midpoint)
                         )
                         summary_suffix = " (half day)"
                     else:
@@ -272,12 +285,13 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         color = _TIME_OFF_COLORS.get(entry.entry_type)
         label = _entry_type_label(entry.entry_type)
         for day in _time_off_dates(entry, start, end):
-            half_off = half_day_off_by_date.get(day)
+            half_key = "am" if entry.entry_flag == "half_am" else "pm"
+            halves = half_day_off_by_date.get(day)
             window = shift_windows.get(day)
             if (
                 entry.entry_flag in _HALF_DAY_FLAGS
-                and half_off is not None
-                and half_off[0] is entry
+                and halves is not None
+                and halves.get(half_key) is entry
                 and window is not None
             ):
                 shift_start, shift_end = window

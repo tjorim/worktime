@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -17,21 +18,24 @@ def _patch_ical(
     labels: list[SimpleNamespace] | None = None,
     work_locations: list[SimpleNamespace] | None = None,
     settings: dict[str, object] | None = None,
-) -> None:
+) -> SimpleNamespace:
     monkeypatch.setattr(
         ical_service,
         "get_work_context_for_user",
         AsyncMock(return_value=SimpleNamespace(schedule_type=schedule_type, effective_team_number=team_number)),
     )
     monkeypatch.setattr(ical_service, "list_time_off_entries", AsyncMock(return_value=time_off_entries or []))
-    monkeypatch.setattr(ical_service, "list_tasks", AsyncMock(return_value=tasks or []))
+    list_tasks_mock = AsyncMock(return_value=tasks or [])
+    monkeypatch.setattr(ical_service, "list_tasks", list_tasks_mock)
     monkeypatch.setattr(ical_service, "list_labels_for_user", AsyncMock(return_value=labels or []))
-    monkeypatch.setattr(ical_service, "list_work_locations", AsyncMock(return_value=work_locations or []))
+    list_work_locations_mock = AsyncMock(return_value=work_locations or [])
+    monkeypatch.setattr(ical_service, "list_work_locations", list_work_locations_mock)
     monkeypatch.setattr(
         ical_service,
         "get_user_preferences",
         AsyncMock(return_value=SimpleNamespace(data={"settings": settings or {}})),
     )
+    return SimpleNamespace(list_tasks=list_tasks_mock, list_work_locations=list_work_locations_mock)
 
 
 def _task(
@@ -309,6 +313,56 @@ async def test_half_day_without_a_shift_falls_back_to_an_all_day_event(monkeypat
 
 
 @pytest.mark.asyncio
+async def test_am_and_pm_half_day_entries_together_suppress_the_shift(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Two separate entries - a half_am holiday and a half_pm sick day - cover
+    # the whole day between them, so no shift is worked and each entry gets
+    # its own timed half event instead of one clobbering the other's slot.
+    _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        time_off_entries=[
+            SimpleNamespace(
+                entry_id="am-half",
+                entry_kind="date",
+                date=date(2026, 8, 24),
+                start_date=None,
+                end_date=None,
+                weekday=None,
+                entry_type="vacation",
+                entry_flag="half_am",
+                note=None,
+                deleted_at=None,
+            ),
+            SimpleNamespace(
+                entry_id="pm-half",
+                entry_kind="date",
+                date=date(2026, 8, 24),
+                start_date=None,
+                end_date=None,
+                weekday=None,
+                entry_type="ill",
+                entry_flag="half_pm",
+                note=None,
+                deleted_at=None,
+            ),
+        ],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-9-5-1-2026-08-24@worktime" not in feed
+    assert "UID:time-off-am-half-2026-08-24@worktime" in feed
+    assert "UID:time-off-pm-half-2026-08-24@worktime" in feed
+    assert "SUMMARY:Holiday (half day)" in feed
+    assert "SUMMARY:Sick leave (half day)" in feed
+    assert "DTSTART:20260824T070000Z" in feed  # AM entry covers 09:00-13:00
+    assert "DTEND:20260824T110000Z" in feed
+    assert "DTSTART:20260824T110000Z" in feed  # PM entry covers 13:00-17:00
+    assert "DTEND:20260824T150000Z" in feed
+
+
+@pytest.mark.asyncio
 async def test_onsite_flag_keeps_full_shift_and_all_day_event(monkeypatch: pytest.MonkeyPatch) -> None:
     # Location/travel flags (onsite/no_fly/can_fly) aren't day-portion splits -
     # the shift is untouched and the entry stays a plain all-day info event.
@@ -479,6 +533,59 @@ async def test_running_task_is_excluded_from_the_description(monkeypatch: pytest
     shift_block = lines[lines.index("UID:shift-9-5-1-2026-08-24@worktime") :]
     shift_block = shift_block[: shift_block.index("END:VEVENT") + 1]
     assert not any(line.startswith("DESCRIPTION:") for line in shift_block)
+
+
+@pytest.mark.asyncio
+async def test_planned_future_task_is_excluded_from_tracked_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A "planned" task (see db_service.get_next_planned_task) has both
+    # start_time and stop_time set while both are still in the future - it
+    # hasn't actually happened yet, so it must not show up as completed work.
+    tz = UTC
+    _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        tasks=[
+            _task(
+                text="Planned deep work",
+                start=datetime(2030, 8, 26, 7, 0, tzinfo=tz),
+                stop=datetime(2030, 8, 26, 9, 0, tzinfo=tz),
+            )
+        ],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2030, 8, 22))
+
+    assert "UID:shift-9-5-1-2030-08-26@worktime" in feed
+    assert "Planned deep work" not in feed
+    lines = feed.split("\r\n")
+    shift_block = lines[lines.index("UID:shift-9-5-1-2030-08-26@worktime") :]
+    shift_block = shift_block[: shift_block.index("END:VEVENT") + 1]
+    assert not any(line.startswith("DESCRIPTION:") for line in shift_block)
+
+
+@pytest.mark.asyncio
+async def test_task_and_location_queries_use_brussels_local_window_boundaries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The feed's start/end are exclusive-at-end Brussels-local calendar dates
+    # (matching _time_off_dates and the shift loop) - the task and work
+    # location lookups must use the same boundaries, not UTC-midnight
+    # equivalents or an inclusive end date, or a boundary day's contents
+    # could be dropped or leak one day past the window.
+    mocks = _patch_ical(monkeypatch)
+
+    await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    tasks_call = mocks.list_tasks.call_args
+    assert tasks_call.kwargs["start_date"] == datetime(2026, 5, 22, 0, 0, tzinfo=ZoneInfo("Europe/Brussels"))
+    assert tasks_call.kwargs["end_date"] == datetime(
+        2027, 8, 21, 23, 59, 59, 999999, tzinfo=ZoneInfo("Europe/Brussels")
+    )
+
+    locations_call = mocks.list_work_locations.call_args
+    assert locations_call.kwargs["start_date"] == date(2026, 5, 22)
+    assert locations_call.kwargs["end_date"] == date(2027, 8, 21)
 
 
 @pytest.mark.asyncio
