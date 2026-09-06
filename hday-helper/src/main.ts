@@ -1012,10 +1012,21 @@ async function spawnReplacementAndExit(logMessage: string): Promise<void> {
     process.exit(0);
   }
 
+  // This process may itself be a settings-restart candidate that inherited
+  // HDAY_HELPER_RESTART_TOKEN/CALLBACK (see performSettingsRestart() below) —
+  // those must not propagate to a plain restart's replacement. Its
+  // coordinator is long closed by the time any future restart happens, so a
+  // child that inherited them would bind fine, retry reporting success
+  // against a dead callback, then shut itself back down as an unconfirmed
+  // handoff (see notifyRestartHandoff()) — leaving nothing running.
+  const childEnv = { ...process.env };
+  delete childEnv.HDAY_HELPER_RESTART_TOKEN;
+  delete childEnv.HDAY_HELPER_RESTART_CALLBACK;
+
   try {
     const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
       cwd: process.cwd(),
-      env: process.env,
+      env: childEnv,
       stdio: ["ignore", "ignore", "ignore"],
       detached: true,
     });
@@ -1192,7 +1203,22 @@ async function performSettingsRestart(
     if (httpServer === null) {
       // Already gave up the address trying to hand off — rebind it
       // ourselves so this process keeps serving instead of exiting stranded.
-      httpServer = await startServer();
+      try {
+        httpServer = await startServer();
+      } catch (rebindErr) {
+        // Both the candidate address and now the one this process used to
+        // hold are unbindable — there's no configuration left it can serve.
+        // Exit (once this response has actually been sent, same as every
+        // other deferred exit here) rather than linger alive with no
+        // listener at all, which would be worse than the stranding this
+        // handoff exists to prevent: at least a supervisor or a manual
+        // restart can recover from a process that's actually gone.
+        logLine(
+          `Could not rebind ${HOST}:${PORT} either (${rebindErr instanceof Error ? rebindErr.message : String(rebindErr)}) — exiting`,
+          true,
+        );
+        setTimeout(() => process.exit(1), 50);
+      }
     }
     return { ok: false, error: `Could not start the helper on ${newHost}:${newPort} (${reason}). Settings were not saved.` };
   };
