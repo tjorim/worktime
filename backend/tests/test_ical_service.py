@@ -356,11 +356,11 @@ async def test_work_location_events_classify_against_home_and_office_settings(
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
-    assert "UID:work-location-2026-08-24@worktime" in feed
+    assert "UID:day-info-2026-08-24@worktime" in feed
     assert "SUMMARY:Working from home" in feed
-    assert "UID:work-location-2026-08-25@worktime" in feed
+    assert "UID:day-info-2026-08-25@worktime" in feed
     assert "SUMMARY:Working from the office" in feed
-    assert "UID:work-location-2026-08-26@worktime" in feed
+    assert "UID:day-info-2026-08-26@worktime" in feed
     assert "SUMMARY:Berlin office" in feed
     assert "DESCRIPTION:Country: DE" in feed
 
@@ -375,6 +375,53 @@ async def test_work_location_without_a_label_falls_back_to_country_code(monkeypa
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
     assert "SUMMARY:Working from FR" in feed
+
+
+@pytest.mark.asyncio
+async def test_work_location_is_folded_into_the_shift_title_not_a_separate_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        settings={"homeCountry": "BE", "officeCountry": "NL"},
+        work_locations=[SimpleNamespace(date=date(2026, 8, 24), country_code="BE", label=None)],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-9-5-1-2026-08-24@worktime" in feed
+    assert "SUMMARY:Day shift — Home" in feed
+    # No separate all-day/day-info event for the same day.
+    assert "day-info-2026-08-24" not in feed
+    assert "work-location-2026-08-24" not in feed
+
+
+@pytest.mark.asyncio
+async def test_work_location_and_tracked_time_share_one_fallback_event(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No shift configured, so both pieces of info need somewhere to go - they
+    # should land on a single event for the day, not one each.
+    tz = UTC
+    _patch_ical(
+        monkeypatch,
+        settings={"homeCountry": "BE", "officeCountry": "NL"},
+        work_locations=[SimpleNamespace(date=date(2026, 8, 24), country_code="DE", label="Client site")],
+        tasks=[
+            _task(
+                text="Weekend fix",
+                start=datetime(2026, 8, 24, 9, 0, tzinfo=tz),
+                stop=datetime(2026, 8, 24, 10, 0, tzinfo=tz),
+            )
+        ],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    events_that_day = feed.count("UID:day-info-2026-08-24@worktime")
+    assert events_that_day == 1
+    assert "SUMMARY:Client site" in feed
+    assert "DESCRIPTION:Country: DE\\n11:00–12:00 Weekend fix" in feed
 
 
 @pytest.mark.asyncio
@@ -450,6 +497,6 @@ async def test_tracked_time_without_a_shift_gets_a_fallback_event(monkeypatch: p
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
-    assert "UID:tracked-time-2026-08-24@worktime" in feed
+    assert "UID:day-info-2026-08-24@worktime" in feed
     assert "SUMMARY:Time tracked" in feed
     assert "DESCRIPTION:11:00–12:00 Weekend fix" in feed

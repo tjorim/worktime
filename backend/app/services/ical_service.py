@@ -134,6 +134,14 @@ def _work_location_summary(classification: str, country_code: str, label: str | 
     return label or f"Working from {country_code}"
 
 
+def _work_location_short_label(classification: str, country_code: str, label: str | None) -> str:
+    if classification == "home":
+        return "Home"
+    if classification == "office":
+        return "Office"
+    return label or country_code
+
+
 def _format_task_line(task: TimeTrackingTask, label_name: str | None) -> str:
     assert task.stop_time is not None
     start_local = task.start_time.astimezone(_WORKTIME_TIMEZONE)
@@ -185,6 +193,14 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         day = task.start_time.astimezone(_WORKTIME_TIMEZONE).date()
         tasks_by_day.setdefault(day, []).append(_format_task_line(task, label_names.get(task.label_id)))
 
+    # Folded into the shift event's title/description below rather than given
+    # their own VEVENT, so a day with both a shift and a work location doesn't
+    # end up as two separate all-day-ish entries cluttering the calendar.
+    location_by_day = {
+        location.date: location
+        for location in await list_work_locations(session, user_id=user_id, start_date=start, end_date=end)
+    }
+
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -226,7 +242,16 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                         event_start, event_end = shift_start, shift_end
                         summary_suffix = ""
                     color = _SHIFT_COLORS.get(shift.code)
-                    description = "\n".join(tasks_by_day.get(day, []))
+                    description_lines = list(tasks_by_day.get(day, []))
+                    location_suffix = ""
+                    location = location_by_day.get(day)
+                    if location is not None:
+                        classification = _classify_work_location(location.country_code, settings)
+                        short_label = _work_location_short_label(classification, location.country_code, location.label)
+                        location_suffix = f" — {short_label}"
+                        if classification == "other":
+                            description_lines.insert(0, f"Country: {location.country_code}")
+                    description = "\n".join(description_lines)
                     days_with_shift_event.add(day)
                     lines.extend(
                         [
@@ -235,7 +260,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                             f"DTSTAMP:{stamp}",
                             f"DTSTART:{event_start:%Y%m%dT%H%M%SZ}",
                             f"DTEND:{event_end:%Y%m%dT%H%M%SZ}",
-                            f"SUMMARY:{_escape(shift.name)} shift{summary_suffix}",
+                            f"SUMMARY:{_escape(shift.name)} shift{summary_suffix}{location_suffix}",
                             *([f"DESCRIPTION:{_escape(description)}"] if description else []),
                             *([f"COLOR:{color}"] if color else []),
                             "END:VEVENT",
@@ -286,35 +311,31 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                     ]
                 )
 
-    for location in await list_work_locations(session, user_id=user_id, start_date=start, end_date=end):
-        classification = _classify_work_location(location.country_code, settings)
-        summary = _work_location_summary(classification, location.country_code, location.label)
+    # Days with work location and/or tracked time but no shift event (no
+    # schedule configured, or the shift was suppressed/never existed) still
+    # need somewhere to go - combined into one fallback event per day rather
+    # than one each, for the same one-event-per-day reason as the fold-in above.
+    fallback_days = (location_by_day.keys() | tasks_by_day.keys()) - days_with_shift_event
+    for day in sorted(fallback_days):
+        location = location_by_day.get(day)
+        description_lines = list(tasks_by_day.get(day, []))
+        if location is not None:
+            classification = _classify_work_location(location.country_code, settings)
+            summary = _work_location_summary(classification, location.country_code, location.label)
+            if classification == "other":
+                description_lines.insert(0, f"Country: {location.country_code}")
+        else:
+            summary = "Time tracked"
+        description = "\n".join(description_lines)
         lines.extend(
             [
                 "BEGIN:VEVENT",
-                f"UID:work-location-{location.date.isoformat()}@worktime",
-                f"DTSTAMP:{stamp}",
-                f"DTSTART;VALUE=DATE:{location.date:%Y%m%d}",
-                f"DTEND;VALUE=DATE:{location.date + timedelta(days=1):%Y%m%d}",
-                f"SUMMARY:{_escape(summary)}",
-                f"DESCRIPTION:{_escape(f'Country: {location.country_code}')}",
-                "END:VEVENT",
-            ]
-        )
-
-    for day, task_lines in tasks_by_day.items():
-        if day in days_with_shift_event:
-            continue
-        description = "\n".join(task_lines)
-        lines.extend(
-            [
-                "BEGIN:VEVENT",
-                f"UID:tracked-time-{day.isoformat()}@worktime",
+                f"UID:day-info-{day.isoformat()}@worktime",
                 f"DTSTAMP:{stamp}",
                 f"DTSTART;VALUE=DATE:{day:%Y%m%d}",
                 f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}",
-                "SUMMARY:Time tracked",
-                f"DESCRIPTION:{_escape(description)}",
+                f"SUMMARY:{_escape(summary)}",
+                *([f"DESCRIPTION:{_escape(description)}"] if description else []),
                 "END:VEVENT",
             ]
         )
