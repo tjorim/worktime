@@ -658,8 +658,16 @@ function isSameOriginRequest(req: Request): boolean {
 // including whatever specific one the other address names. Two listeners
 // that satisfy this can never coexist, no matter how the restart is
 // sequenced — the current one must come down before the other can bind.
+// Shared with candidateHelperHosts() below: "0.0.0.0" and its IPv6
+// equivalent "::" both mean "every interface," not a single concrete
+// address — so either one covers whatever specific interface the other
+// side of a comparison names.
+function isWildcardBindAddress(host: string): boolean {
+  return host === "0.0.0.0" || host === "::";
+}
+
 function couldCollideWithCurrentListener(host: string, port: number): boolean {
-  return host !== HOST && port === PORT && (host === "0.0.0.0" || HOST === "0.0.0.0");
+  return host !== HOST && port === PORT && (isWildcardBindAddress(host) || isWildcardBindAddress(HOST));
 }
 
 async function checkAddressBindable(host: string, port: number): Promise<string | null> {
@@ -752,9 +760,12 @@ function candidateHelperHosts(host: string, port: number): string[] {
   // through to the single-literal branch, which would otherwise produce only
   // the non-dialable "[::]:port" — offered as the sole copy-paste URL and the
   // sole allowed Host, locking out every real client bound this way.
-  if (host !== "0.0.0.0" && host !== "::") return [`${formatHostForUrl(host)}:${port}`];
+  if (!isWildcardBindAddress(host)) return [`${formatHostForUrl(host)}:${port}`];
 
-  const hosts = [`127.0.0.1:${port}`];
+  // IPv6 loopback only under HOST=:: — a dual-stack socket accepts [::1]
+  // clients there, but HOST=0.0.0.0 is an IPv4-only socket no such client
+  // could ever actually reach, so listing it would be actively misleading.
+  const hosts = host === "::" ? [`127.0.0.1:${port}`, `[::1]:${port}`] : [`127.0.0.1:${port}`];
   for (const addrs of Object.values(networkInterfaces())) {
     for (const addr of addrs ?? []) {
       if (addr.family === "IPv4" && !addr.internal) {
@@ -798,11 +809,19 @@ function withPortlessDefaultVariant(hostPort: string): string[] {
   return hostPort.endsWith(suffix) ? [hostPort, hostPort.slice(0, -suffix.length)] : [hostPort];
 }
 
+// Computed once at startup, not per request: HOST/PORT/ALLOWED_HOSTS are
+// fixed for the life of the process (a settings change takes effect via a
+// full restart, never in place), and candidateHelperHosts() calls the
+// synchronous networkInterfaces() syscall under a wildcard bind — worth
+// avoiding on every single request. A LAN interface added after startup
+// (e.g. a new network connected) isn't picked up until the next restart,
+// same as every other setting here.
+const ALLOWED_HOST_HEADERS = new Set(
+  [...candidateHelperHosts(HOST, PORT), ...ALLOWED_HOSTS].flatMap(withPortlessDefaultVariant).map((h) => h.toLowerCase()),
+);
+
 function isAllowedHostHeader(hostHeader: string | null): boolean {
-  if (!hostHeader) return false;
-  const normalized = hostHeader.toLowerCase();
-  const allowed = [...candidateHelperHosts(HOST, PORT), ...ALLOWED_HOSTS].flatMap(withPortlessDefaultVariant);
-  return allowed.some((h) => h.toLowerCase() === normalized);
+  return hostHeader !== null && ALLOWED_HOST_HEADERS.has(hostHeader.toLowerCase());
 }
 
 function renderHelperUrls(): string {

@@ -67,13 +67,16 @@ comparison entirely. A request with an unrecognized `Host` gets HTTP 403, before
 The allowed set is derived automatically from `HOST`/`PORT`:
 
 - A specific bind address (`HOST=127.0.0.1`, or a concrete LAN IP) allows exactly that address.
-- `HOST=0.0.0.0` (LAN access) or `HOST=::` (its IPv6 equivalent) expands to `127.0.0.1` plus every
-  non-internal IPv4 address this machine has — the same list offered as copy-paste URLs on
-  `/settings`. Neither `0.0.0.0` nor `::` is ever treated as an allow-all wildcard.
-- A request's `Host` header may omit HTTP's default port (`:80`) entirely — allowed only when
-  `PORT=80`, since that's the only case a client would ever actually do so.
+- `HOST=0.0.0.0` (LAN access) expands to `127.0.0.1` plus every non-internal IPv4 address this
+  machine has — the same list offered as copy-paste URLs on `/settings`. `HOST=::` (its IPv6
+  equivalent) expands the same way, plus `[::1]` for an IPv6 loopback client. Neither `0.0.0.0` nor
+  `::` is ever treated as an allow-all wildcard.
+- A request's `Host` header may omit HTTP's default port (`:80`) entirely whenever the allowed value
+  it would otherwise match already ends in `:80` — that covers `PORT=80` and any `ALLOWED_HOSTS`
+  entry naming port 80 (e.g. a reverse proxy listening on `:80`), regardless of what `PORT` itself
+  is set to.
 
-`ALLOWED_HOSTS` adds extra `host:port` values on top of that auto-derived set, for reaching the
+`ALLOWED_HOSTS` adds extra `host:port` values to that auto-derived set, for reaching the
 helper by a name the IP-based list can't express — an mDNS name, or a hostname a reverse proxy in
 front of the helper is configured to serve. Leave it empty unless you need one.
 

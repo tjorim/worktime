@@ -29,6 +29,22 @@ const ipv6LoopbackAvailable = (() => {
   }
 })();
 
+// Binding port 80 requires root (or an OS-specific unprivileged-port
+// exception) on Linux — probe for it once at collection time, the same way
+// as ipv6LoopbackAvailable above, so the default-port test below can skip
+// itself via test.skipIf rather than silently no-op from inside the test
+// body (bun:test has no API for that) if something else is already
+// listening there or the bind is simply not permitted.
+const port80BindAvailable = (() => {
+  try {
+    const probe = Bun.serve({ hostname: "127.0.0.1", port: 80, fetch: () => new Response(null, { status: 204 }) });
+    probe.stop();
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 let shareDir: string;
 let port: number;
 let baseUrl: string;
@@ -208,15 +224,10 @@ describe("Host header validation (DNS-rebinding defense, #1293)", () => {
     const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
     expect(res.status).toBe(200);
   });
-
-  test("Host comparison is case-insensitive", async () => {
-    const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}`.toUpperCase() } });
-    expect(res.status).toBe(200);
-  });
 });
 
 describe("Host header validation with HOST=0.0.0.0 and ALLOWED_HOSTS", () => {
-  test("allows loopback and every non-internal IPv4 address, rejects an unrelated hostname, and ALLOWED_HOSTS adds an extra one", async () => {
+  test("allows loopback and every non-internal IPv4 address, rejects an unrelated hostname, ALLOWED_HOSTS adds an extra one, and comparison is case-insensitive", async () => {
     const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-host-validation-test-"));
     const port = 20000 + Math.floor(Math.random() * 20000);
     const proc = Bun.spawn(["bun", MAIN_TS], {
@@ -255,6 +266,11 @@ describe("Host header validation with HOST=0.0.0.0 and ALLOWED_HOSTS", () => {
       const wildcard = await fetch(`${baseUrl}/health`, { headers: { Host: `0.0.0.0:${port}` } });
       expect(wildcard.status).toBe(403);
 
+      // Unlike HOST=:: (a dual-stack socket), HOST=0.0.0.0 is IPv4-only —
+      // no [::1] client could ever actually reach it, so it's not allowed.
+      const ipv6Loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `[::1]:${port}` } });
+      expect(ipv6Loopback.status).toBe(403);
+
       // An arbitrary hostname (the DNS-rebinding case) is rejected.
       const rebind = await fetch(`${baseUrl}/health`, { headers: { Host: `attacker.example:${port}` } });
       expect(rebind.status).toBe(403);
@@ -262,6 +278,13 @@ describe("Host header validation with HOST=0.0.0.0 and ALLOWED_HOSTS", () => {
       // ALLOWED_HOSTS explicitly extends the set beyond the auto-derived IPs.
       const allowlisted = await fetch(`${baseUrl}/health`, { headers: { Host: `myhelper.local:${port}` } });
       expect(allowlisted.status).toBe(200);
+
+      // Host comparison is case-insensitive. Using a numeric/IP Host here
+      // wouldn't actually exercise that — toUpperCase() is a no-op on
+      // digits and dots — so this specifically needs the lettered
+      // ALLOWED_HOSTS entry above.
+      const upper = await fetch(`${baseUrl}/health`, { headers: { Host: `MyHelper.Local:${port}` } });
+      expect(upper.status).toBe(200);
     } finally {
       proc.kill();
       rmSync(shareDir, { recursive: true, force: true });
@@ -289,6 +312,10 @@ describe("Host header validation with HOST=:: (IPv6 wildcard)", () => {
         const loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
         expect(loopback.status).toBe(200);
 
+        // A dual-stack socket also accepts an IPv6 loopback client directly.
+        const ipv6Loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `[::1]:${port}` } });
+        expect(ipv6Loopback.status).toBe(200);
+
         // The bare "[::]:port" literal is exactly what a dual-stack wildcard
         // bind is not itself dialable as — must not be the only thing allowed.
         const wildcardLiteral = await fetch(`${baseUrl}/health`, { headers: { Host: `[::]:${port}` } });
@@ -306,51 +333,51 @@ describe("Host header validation with HOST=:: (IPv6 wildcard)", () => {
 });
 
 describe("Host header validation with PORT=80 (default-port Host omission)", () => {
-  test("allows a Host header that omits the default HTTP port", async () => {
-    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-default-port-host-test-"));
-    const proc = Bun.spawn(["bun", MAIN_TS], {
-      env: {
-        ...process.env,
-        SHARE_DIR: shareDir,
-        PORT: "80",
-        HOST: "127.0.0.1",
-        CORS_ORIGINS: "",
-        ALLOWED_HOSTS: "myhelper.local:80",
-      },
-      cwd: shareDir,
-      stdout: "ignore",
-      stderr: "ignore",
-    });
-
-    try {
-      // Can't actually bind :80 without privileges in most CI/sandbox
-      // environments — port 80 requires root on Linux — so this only
-      // verifies startup was attempted; skip the HTTP assertions if it
-      // never came up (permission denied), rather than failing on an
-      // environment limitation unrelated to the Host-matching logic itself.
-      const started = await waitForServer("http://127.0.0.1:80/health", 3000).then(
-        () => true,
-        () => false,
-      );
-      if (!started) return;
-
-      const withPort = await fetch("http://127.0.0.1:80/health", { headers: { Host: "127.0.0.1:80" } });
-      expect(withPort.status).toBe(200);
-
-      // A browser is allowed to omit ":80" (HTTP's default port) entirely.
-      const withoutPort = await fetch("http://127.0.0.1:80/health", { headers: { Host: "127.0.0.1" } });
-      expect(withoutPort.status).toBe(200);
-
-      // Same leniency applies to an ALLOWED_HOSTS entry that names port 80.
-      const allowlistedWithoutPort = await fetch("http://127.0.0.1:80/health", {
-        headers: { Host: "myhelper.local" },
+  test.skipIf(!port80BindAvailable)(
+    "allows a Host header that omits the default HTTP port",
+    async () => {
+      const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-default-port-host-test-"));
+      const proc = Bun.spawn(["bun", MAIN_TS], {
+        env: {
+          ...process.env,
+          SHARE_DIR: shareDir,
+          PORT: "80",
+          HOST: "127.0.0.1",
+          CORS_ORIGINS: "",
+          ALLOWED_HOSTS: "myhelper.local:80",
+        },
+        cwd: shareDir,
+        stdout: "ignore",
+        stderr: "ignore",
       });
-      expect(allowlistedWithoutPort.status).toBe(200);
-    } finally {
-      proc.kill();
-      rmSync(shareDir, { recursive: true, force: true });
-    }
-  }, 15000);
+
+      try {
+        await waitForServer("http://127.0.0.1:80/health");
+
+        // Confirms /health is actually answering from *this* spawned
+        // instance and not some unrelated service already on port 80 —
+        // the port80BindAvailable probe only proves 80 was free a moment
+        // ago, not that it still is by the time this runs.
+        const withPort = await fetch("http://127.0.0.1:80/health", { headers: { Host: "127.0.0.1:80" } });
+        expect(withPort.status).toBe(200);
+        expect((await withPort.json()).share_dir).toBe(shareDir);
+
+        // A browser is allowed to omit ":80" (HTTP's default port) entirely.
+        const withoutPort = await fetch("http://127.0.0.1:80/health", { headers: { Host: "127.0.0.1" } });
+        expect(withoutPort.status).toBe(200);
+
+        // Same leniency applies to an ALLOWED_HOSTS entry that names port 80.
+        const allowlistedWithoutPort = await fetch("http://127.0.0.1:80/health", {
+          headers: { Host: "myhelper.local" },
+        });
+        expect(allowlistedWithoutPort.status).toBe(200);
+      } finally {
+        proc.kill();
+        rmSync(shareDir, { recursive: true, force: true });
+      }
+    },
+    15000,
+  );
 });
 
 describe("GET /hday/:username", () => {
