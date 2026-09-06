@@ -129,16 +129,30 @@ manually verify on real Windows:
 The helper is plain Bun/TypeScript with no OS-specific code outside `tray.ts` (Windows-only, see
 above), so it runs on Linux the same way it does on Windows — just without a tray icon, since
 desktop Linux has no `Shell_NotifyIcon` equivalent (a GNOME/KDE tray icon would go through a
-D-Bus `StatusNotifierItem` service instead, which isn't implemented here).
+D-Bus `StatusNotifierItem` service instead, which isn't implemented here). The prebuilt Linux
+binary is x86-64 only; other architectures (e.g. ARM64/Raspberry Pi) need building from source
+with the matching `--target` (see [Building from source](#building-from-source)).
 
-Rather than a tray icon, run it as a `systemd` service:
+Rather than a tray icon, run it as a `systemd` service, as a dedicated unprivileged user — the
+`/settings` endpoint is unauthenticated and lets any local caller repoint `SHARE_DIR` at an
+arbitrary directory, so the account running the helper should have no more filesystem reach than
+the share it's actually meant to serve, not root:
 
 1. Build (or download) the Linux binary — see [Building from source](#building-from-source)
-2. Place it somewhere, e.g. `/opt/worktime-hday-helper/worktime-hday-helper`, and `chmod +x` it
-3. Create a `.env` file next to it (same format as Windows — see [Configuration](#configuration)),
-   e.g. with `SHARE_DIR` pointing at an NFS/CIFS mount instead of a UNC path
-4. Copy `hday-helper/worktime-hday-helper.service` to `/etc/systemd/system/`, adjusting its
-   `WorkingDirectory`/`ExecStart` to match, then:
+2. Create a dedicated system user and directory, and place the binary and a `.env` file there
+   (same `.env` format as Windows — see [Configuration](#configuration)), e.g. with `SHARE_DIR`
+   pointing at an NFS/CIFS mount instead of a UNC path:
+   ```bash
+   sudo useradd --system --home-dir /opt/worktime-hday-helper --shell /usr/sbin/nologin hday-helper
+   sudo mkdir -p /opt/worktime-hday-helper
+   # ... copy the binary and .env into /opt/worktime-hday-helper ...
+   sudo chown -R hday-helper:hday-helper /opt/worktime-hday-helper
+   ```
+3. Copy `hday-helper/worktime-hday-helper.service` to `/etc/systemd/system/`, adjusting its
+   `WorkingDirectory`/`ExecStart` if you used a different path. If `SHARE_DIR` is a network mount,
+   also uncomment and set `RequiresMountsFor` in the unit to that mount point — otherwise the
+   helper can start before the mount is up, creating `SHARE_DIR` as a plain local directory that
+   the mount then comes up *on top of*, hiding anything already written there. Then:
    ```bash
    sudo systemctl daemon-reload
    sudo systemctl enable --now worktime-hday-helper

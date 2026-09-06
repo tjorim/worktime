@@ -99,7 +99,7 @@ jobs:
           if-no-files-found: error
 
   build-linux-binary:
-    name: Build Linux binary
+    name: Build Linux binary (x86-64)
     runs-on: ubuntu-latest
 
     permissions:
@@ -140,11 +140,15 @@ jobs:
       - name: Create release notes
         run: |
           cat > dist/README.txt << 'EOF'
-          Worktime .hday Helper (Linux)
+          Worktime .hday Helper (Linux, x86-64)
 
           A minimal HTTP server that reads and writes .hday files from a local or
           network-share (e.g. NFS/CIFS mount) directory.  No separate Bun runtime
           required.
+
+          This build is x86-64 only. For other architectures (e.g. ARM64/Raspberry
+          Pi), build from source with the matching --target — see "Building from
+          source" in hday-helper/README.md in the repository.
 
           Quick start:
             1. Place worktime-hday-helper somewhere, e.g. /opt/worktime-hday-helper/
@@ -176,7 +180,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: worktime-hday-helper-linux-${{ steps.version.outputs.version }}
+          name: worktime-hday-helper-linux-x64-${{ steps.version.outputs.version }}
           path: |
             dist/worktime-hday-helper
             dist/README.txt

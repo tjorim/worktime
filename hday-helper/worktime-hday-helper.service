@@ -1,24 +1,47 @@
 # systemd unit for running the .hday helper as a background service on
 # Linux — see the "Linux (systemd)" section in hday-helper/README.md.
 #
-# Adjust WorkingDirectory/ExecStart to wherever you place the compiled
-# binary, then:
+# Setup:
+#   sudo useradd --system --home-dir /opt/worktime-hday-helper --shell /usr/sbin/nologin hday-helper
+#   sudo mkdir -p /opt/worktime-hday-helper
+#   # ... place the binary and .env there ...
+#   sudo chown -R hday-helper:hday-helper /opt/worktime-hday-helper
 #   sudo cp worktime-hday-helper.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now worktime-hday-helper
 #
+# Adjust WorkingDirectory/ExecStart below if the binary lives somewhere else.
+#
 # Config (SHARE_DIR/PORT/HOST/CORS_ORIGINS) is still read from a .env file in
 # WorkingDirectory, exactly as on Windows — no separate Linux config path.
+#
+# If SHARE_DIR points at a network mount (NFS/CIFS), uncomment
+# RequiresMountsFor below and set it to that mount point: without it,
+# systemd has no reason to wait for the mount, and starting before it's up
+# would have the helper create SHARE_DIR as a plain local directory — which
+# the mount then comes up *on top of*, hiding whatever the helper already
+# wrote there. Combine with `_netdev` (and `noauto,x-systemd.automount` if
+# using autofs) on the mount's /etc/fstab entry.
 
 [Unit]
 Description=Worktime .hday Helper
 Documentation=https://github.com/tjorim/worktime/blob/main/hday-helper/README.md
 After=network.target
+#RequiresMountsFor=/mnt/worktime
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/worktime-hday-helper
 ExecStart=/opt/worktime-hday-helper/worktime-hday-helper
+# Runs as a dedicated, unprivileged account rather than this unit's default
+# (root, under /etc/systemd/system) — the /settings endpoint is
+# unauthenticated and lets any local caller repoint SHARE_DIR at an
+# arbitrary directory, so the account this runs as should have no more
+# reach than the share it's actually meant to serve. Create it per the
+# setup steps above; it must own WorkingDirectory and be able to
+# read/write SHARE_DIR (and traverse whatever network mount it lives on).
+User=hday-helper
+Group=hday-helper
 # Tells the app not to spawn its own detached replacement after a config
 # change saved via /settings — that would race this unit's own restart
 # below for the same port. See main.ts's spawnReplacementAndExit(): with
@@ -26,12 +49,6 @@ ExecStart=/opt/worktime-hday-helper/worktime-hday-helper
 Environment=HDAY_HELPER_NO_SELF_RESPAWN=1
 Restart=always
 RestartSec=2
-
-# Uncomment to run as a dedicated, unprivileged user/group instead of
-# whatever this unit's default is (typically root under
-# /etc/systemd/system, unless installed as a `systemctl --user` unit):
-#User=hday-helper
-#Group=hday-helper
 
 [Install]
 WantedBy=multi-user.target
