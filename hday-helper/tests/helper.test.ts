@@ -10,7 +10,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
+import { networkInterfaces, tmpdir } from "os";
 import { join } from "path";
 
 const MAIN_TS = join(import.meta.dir, "..", "src", "main.ts");
@@ -610,6 +610,13 @@ describe("GET/POST /settings", () => {
     expect(body).toContain(`value="${ALLOWED_ORIGIN}"`);
   });
 
+  test("GET shows a copy-paste-able helper URL for the current HOST/PORT", async () => {
+    const res = await fetch(`${settingsBaseUrl}/settings`);
+    const body = await res.text();
+    expect(body).toContain(`http://127.0.0.1:${settingsPort}`);
+    expect(body).toContain("copy-btn");
+  });
+
   test("405s on unsupported methods", async () => {
     const res = await fetch(`${settingsBaseUrl}/settings`, { method: "DELETE" });
     expect(res.status).toBe(405);
@@ -902,4 +909,46 @@ describe("POST /settings full restart", () => {
       rmSync(newShareDir, { recursive: true, force: true });
     }
   }, 20000);
+});
+
+describe("GET /settings with HOST=0.0.0.0", () => {
+  test("offers loopback and every non-internal IPv4 address instead of the literal 0.0.0.0", async () => {
+    // "0.0.0.0" isn't something a browser/fetch can dial — it means "every
+    // interface", not an address a client connects to — so pasting it into
+    // Worktime's helper-URL field would never work. The settings page must
+    // substitute real, dialable addresses instead.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-wildcard-host-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "0.0.0.0", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      const baseUrl = `http://127.0.0.1:${port}`;
+      await waitForServer(`${baseUrl}/health`);
+
+      const res = await fetch(`${baseUrl}/settings`);
+      const body = await res.text();
+
+      expect(body).toContain(`http://127.0.0.1:${port}`);
+      expect(body).not.toContain(`http://0.0.0.0:${port}`);
+
+      const lanAddresses = Object.values(networkInterfaces())
+        .flat()
+        .filter((addr): addr is NonNullable<typeof addr> => !!addr && addr.family === "IPv4" && !addr.internal);
+      for (const addr of lanAddresses) {
+        expect(body).toContain(`http://${addr.address}:${port}`);
+      }
+
+      // Exactly one "Copy" button per offered URL: loopback plus every LAN address.
+      const copyButtonCount = (body.match(/class="copy-btn"/g) ?? []).length;
+      expect(copyButtonCount).toBe(1 + lanAddresses.length);
+    } finally {
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 15000);
 });

@@ -45,6 +45,7 @@ import {
   type FSWatcher,
 } from "fs";
 import { readFile } from "fs/promises";
+import { networkInterfaces } from "os";
 import { basename, join, resolve, sep } from "path";
 // These imports use relative paths to reuse the frontend .hday parser directly.
 // `bun build --compile` bundles all resolved modules into the output binary, so the
@@ -625,7 +626,84 @@ const PAGE_STYLE = `
   button { padding: 0.5rem 1rem; }
   .error { color: #b00020; }
   .warn { color: #8a6100; }
+  .helper-urls { background: #f0f4f8; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
+  .helper-urls ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+  .helper-urls li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+  .helper-urls code { background: #fff; border: 1px solid #ccc; border-radius: 3px; padding: 0.15rem 0.4rem; }
+  .helper-urls button { padding: 0.15rem 0.6rem; }
 `;
+
+// The value pasted into Worktime's Developer Options has to be something a
+// browser/fetch can actually dial — "0.0.0.0" itself isn't (it means "every
+// interface", not an address a client connects to). When bound that way,
+// offer loopback (for Worktime running on this same machine) plus every
+// non-internal IPv4 address (other machines on the LAN, the actual reason to
+// bind 0.0.0.0 in the first place) instead of the raw HOST value. Any other
+// HOST is already a concrete, dialable address, so it's used as-is.
+function candidateHelperUrls(host: string, port: number): string[] {
+  if (host !== "0.0.0.0") return [`http://${host}:${port}`];
+
+  const urls = [`http://127.0.0.1:${port}`];
+  for (const addrs of Object.values(networkInterfaces())) {
+    for (const addr of addrs ?? []) {
+      if (addr.family === "IPv4" && !addr.internal) {
+        urls.push(`http://${addr.address}:${port}`);
+      }
+    }
+  }
+  return urls;
+}
+
+function renderHelperUrls(): string {
+  const urls = candidateHelperUrls(HOST, PORT);
+  return `<div class="helper-urls">
+  <p>Paste one of these into Worktime → Settings → About → Developer Options as the <code>.hday</code> helper URL:</p>
+  <ul>
+    ${urls
+      .map(
+        (url) =>
+          `<li><code>${escapeHtml(url)}</code><button type="button" class="copy-btn" data-url="${escapeHtml(url)}">Copy</button></li>`,
+      )
+      .join("\n    ")}
+  </ul>
+</div>
+<script>
+(function () {
+  // navigator.clipboard requires a secure context (HTTPS, or the
+  // localhost/127.0.0.1 origin) — a LAN address loaded over plain HTTP,
+  // exactly the case these 0.0.0.0-derived URLs exist for, doesn't qualify.
+  // Fall back to the legacy execCommand("copy") technique there.
+  function copyText(text) {
+    if (window.isSecureContext && navigator.clipboard) {
+      return navigator.clipboard.writeText(text);
+    }
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      document.body.removeChild(ta);
+    }
+    return Promise.resolve();
+  }
+
+  document.querySelectorAll(".copy-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      copyText(btn.dataset.url).then(function () {
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(function () { btn.textContent = original; }, 1500);
+      });
+    });
+  });
+})();
+</script>`;
+}
 
 function renderSettingsPage(values: SettingsFormValues, error: string | null): string {
   return `<!doctype html>
@@ -638,6 +716,7 @@ function renderSettingsPage(values: SettingsFormValues, error: string | null): s
 <body>
 <nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
 <h1>.hday Helper Settings</h1>
+${renderHelperUrls()}
 <p class="warn">Saving rewrites <code>.env</code> with just these four keys — any other lines or
 comments in your existing <code>.env</code> file will not be preserved. Saving restarts the helper
 immediately.</p>

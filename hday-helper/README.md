@@ -172,7 +172,12 @@ Response headers include `X-File-Read-Ms` and `X-Parse-Time-Ms`.
 
 ### `GET /settings`
 
-Returns an HTML form pre-filled with the current `SHARE_DIR`/`HOST`/`PORT`/`CORS_ORIGINS` values.
+Returns an HTML form pre-filled with the current `SHARE_DIR`/`HOST`/`PORT`/`CORS_ORIGINS` values,
+plus one or more ready-to-paste `.hday` helper URLs (with a Copy button) for Worktime's Developer
+Options field. `HOST=127.0.0.1` or another specific address is shown as-is; `HOST=0.0.0.0` isn't
+itself a dialable address, so it's expanded into `http://127.0.0.1:PORT` (this machine) plus
+`http://<address>:PORT` for every non-internal IPv4 address found on the host (other machines on
+the LAN — the reason to bind `0.0.0.0` in the first place).
 
 ### `POST /settings`
 
