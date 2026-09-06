@@ -226,13 +226,14 @@ async def test_full_day_off_suppresses_shift_for_every_entry_type(monkeypatch: p
 @pytest.mark.asyncio
 async def test_public_holiday_suppresses_the_shift(monkeypatch: pytest.MonkeyPatch) -> None:
     # Nobody works on a public holiday, regardless of what the roster pattern
-    # says that day - it's looked up against the user's own homeCountry, and
-    # no separate holiday event is added, just the shift suppression.
+    # says that day - looked up against the same single country the rest of
+    # the holiday feature supports (see HOLIDAY_COUNTRY_CODE), matching the
+    # frontend's isPublicHolidayForShift. No separate holiday event is added,
+    # just the shift suppression.
     mocks = _patch_ical(
         monkeypatch,
         schedule_type="9-5",
         team_number=1,
-        settings={"homeCountry": "BE"},
         public_holidays={date(2026, 8, 24)},
     )
 
@@ -242,19 +243,42 @@ async def test_public_holiday_suppresses_the_shift(monkeypatch: pytest.MonkeyPat
     assert "UID:shift-9-5-1-2026-08-20@worktime" in feed  # neighboring working day is unaffected
     assert "Holiday" not in feed  # no standalone holiday event was added
     mocks.public_holiday_dates.assert_awaited_once()
-    assert mocks.public_holiday_dates.call_args.args[1] == "BE"
+    assert mocks.public_holiday_dates.call_args.args[1] == "NL"
 
 
 @pytest.mark.asyncio
-async def test_no_home_country_skips_the_holiday_lookup_entirely(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Without a homeCountry setting there's no country to check holidays
-    # against, so the (network-backed) lookup shouldn't even be attempted.
-    mocks = _patch_ical(monkeypatch, schedule_type="9-5", team_number=1)
+async def test_night_shift_checks_the_next_day_for_a_public_holiday(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 5-shift/team 1 resolves to a Night shift (23:00 -> 07:00) on 2026-08-25
+    # (see test_full_day_time_off_suppresses_its_shift_event). A night shift's
+    # 8 hours run mostly into the next calendar day (7 of 8 hours), so that's
+    # the day whose holiday status should decide whether it's worked -
+    # matching the frontend's isPublicHolidayForShift.
+    _patch_ical(
+        monkeypatch,
+        schedule_type="5-shift",
+        team_number=1,
+        public_holidays={date(2026, 8, 26)},
+    )
 
     feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
 
-    assert "UID:shift-9-5-1-2026-08-24@worktime" in feed
-    mocks.public_holiday_dates.assert_not_awaited()
+    assert "UID:shift-5-shift-1-2026-08-25@worktime" not in feed
+
+
+@pytest.mark.asyncio
+async def test_night_shift_is_unaffected_by_a_holiday_on_its_start_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A holiday on the night shift's *start* date (rather than the day most
+    # of its hours fall on) shouldn't suppress it.
+    _patch_ical(
+        monkeypatch,
+        schedule_type="5-shift",
+        team_number=1,
+        public_holidays={date(2026, 8, 25)},
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-5-shift-1-2026-08-25@worktime" in feed
 
 
 @pytest.mark.asyncio
@@ -268,7 +292,6 @@ async def test_half_day_entry_on_a_public_holiday_falls_back_to_an_all_day_event
         monkeypatch,
         schedule_type="9-5",
         team_number=1,
-        settings={"homeCountry": "BE"},
         public_holidays={date(2026, 8, 24)},
         time_off_entries=[
             SimpleNamespace(
