@@ -249,7 +249,12 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         for day in _time_off_dates(entry, start, end):
             half_off = half_day_off_by_date.get(day)
             window = shift_windows.get(day)
-            if entry.entry_flag in _HALF_DAY_FLAGS and half_off is not None and half_off[0] is entry and window is not None:
+            if (
+                entry.entry_flag in _HALF_DAY_FLAGS
+                and half_off is not None
+                and half_off[0] is entry
+                and window is not None
+            ):
                 shift_start, shift_end = window
                 midpoint = shift_start + (shift_end - shift_start) / 2
                 off_start, off_end = (shift_start, midpoint) if entry.entry_flag == "half_am" else (midpoint, shift_end)

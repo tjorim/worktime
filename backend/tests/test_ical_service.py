@@ -23,9 +23,7 @@ def _patch_ical(
         "get_work_context_for_user",
         AsyncMock(return_value=SimpleNamespace(schedule_type=schedule_type, effective_team_number=team_number)),
     )
-    monkeypatch.setattr(
-        ical_service, "list_time_off_entries", AsyncMock(return_value=time_off_entries or [])
-    )
+    monkeypatch.setattr(ical_service, "list_time_off_entries", AsyncMock(return_value=time_off_entries or []))
     monkeypatch.setattr(ical_service, "list_tasks", AsyncMock(return_value=tasks or []))
     monkeypatch.setattr(ical_service, "list_labels_for_user", AsyncMock(return_value=labels or []))
     monkeypatch.setattr(ical_service, "list_work_locations", AsyncMock(return_value=work_locations or []))
@@ -431,7 +429,7 @@ async def test_running_task_is_excluded_from_the_description(monkeypatch: pytest
     assert "Still going" not in feed
     # No finished tasks that day, so no DESCRIPTION line was added at all.
     lines = feed.split("\r\n")
-    shift_block = lines[lines.index("UID:shift-9-5-1-2026-08-24@worktime") : ]
+    shift_block = lines[lines.index("UID:shift-9-5-1-2026-08-24@worktime") :]
     shift_block = shift_block[: shift_block.index("END:VEVENT") + 1]
     assert not any(line.startswith("DESCRIPTION:") for line in shift_block)
 
