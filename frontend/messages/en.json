@@ -1344,7 +1344,7 @@
   "hday_helper_url_help": "Base URL of the running worktime-hday-helper (e.g. http://127.0.0.1:8080). Its CORS_ORIGINS setting must include this app's origin.",
   "hday_helper_test": "Test",
   "hday_helper_connected": "✓ Connected to .hday helper",
-  "hday_helper_failed": "✗ Could not connect to .hday helper — check URL and ensure it is running",
+  "hday_helper_failed": "✗ Could not connect to .hday helper — check the URL is correct and up to date, and that the helper is running",
   "hday_helper_mixed_content_warning": "⚠ This non-loopback helper uses HTTP while Worktime uses HTTPS, so the browser will block it. Use localhost, serve the helper over HTTPS, or open Worktime over HTTP.",
   "hday_username_label": "Your .hday username",
   "hday_username_placeholder": "e.g. jsmith",
