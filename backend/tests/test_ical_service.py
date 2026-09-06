@@ -18,6 +18,7 @@ def _patch_ical(
     labels: list[SimpleNamespace] | None = None,
     work_locations: list[SimpleNamespace] | None = None,
     settings: dict[str, object] | None = None,
+    public_holidays: set[date] | None = None,
 ) -> SimpleNamespace:
     monkeypatch.setattr(
         ical_service,
@@ -35,7 +36,15 @@ def _patch_ical(
         "get_user_preferences",
         AsyncMock(return_value=SimpleNamespace(data={"settings": settings or {}})),
     )
-    return SimpleNamespace(list_tasks=list_tasks_mock, list_work_locations=list_work_locations_mock)
+    # Never hit the real (network-backed) holiday fetch from a unit test -
+    # tests that care about holiday suppression pass public_holidays directly.
+    public_holidays_mock = AsyncMock(return_value=public_holidays or set())
+    monkeypatch.setattr(ical_service, "_public_holiday_dates", public_holidays_mock)
+    return SimpleNamespace(
+        list_tasks=list_tasks_mock,
+        list_work_locations=list_work_locations_mock,
+        public_holiday_dates=public_holidays_mock,
+    )
 
 
 def _task(
@@ -212,6 +221,76 @@ async def test_full_day_off_suppresses_shift_for_every_entry_type(monkeypatch: p
 
     assert "UID:shift-9-5-1-2026-08-24@worktime" not in feed
     assert "SUMMARY:Business trip" in feed
+
+
+@pytest.mark.asyncio
+async def test_public_holiday_suppresses_the_shift(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Nobody works on a public holiday, regardless of what the roster pattern
+    # says that day - it's looked up against the user's own homeCountry, and
+    # no separate holiday event is added, just the shift suppression.
+    mocks = _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        settings={"homeCountry": "BE"},
+        public_holidays={date(2026, 8, 24)},
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-9-5-1-2026-08-24@worktime" not in feed
+    assert "UID:shift-9-5-1-2026-08-20@worktime" in feed  # neighboring working day is unaffected
+    assert "Holiday" not in feed  # no standalone holiday event was added
+    mocks.public_holiday_dates.assert_awaited_once()
+    assert mocks.public_holiday_dates.call_args.args[1] == "BE"
+
+
+@pytest.mark.asyncio
+async def test_no_home_country_skips_the_holiday_lookup_entirely(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Without a homeCountry setting there's no country to check holidays
+    # against, so the (network-backed) lookup shouldn't even be attempted.
+    mocks = _patch_ical(monkeypatch, schedule_type="9-5", team_number=1)
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-9-5-1-2026-08-24@worktime" in feed
+    mocks.public_holiday_dates.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_half_day_entry_on_a_public_holiday_falls_back_to_an_all_day_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The holiday already means no shift exists that day, so there's nothing
+    # for a half-day entry to split - it degrades to the same all-day shape
+    # used when no schedule is configured at all.
+    _patch_ical(
+        monkeypatch,
+        schedule_type="9-5",
+        team_number=1,
+        settings={"homeCountry": "BE"},
+        public_holidays={date(2026, 8, 24)},
+        time_off_entries=[
+            SimpleNamespace(
+                entry_id="half-on-holiday",
+                entry_kind="date",
+                date=date(2026, 8, 24),
+                start_date=None,
+                end_date=None,
+                weekday=None,
+                entry_type="vacation",
+                entry_flag="half_am",
+                note=None,
+                deleted_at=None,
+            )
+        ],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    assert "UID:shift-9-5-1-2026-08-24@worktime" not in feed
+    assert "DTSTART;VALUE=DATE:20260824" in feed
+    assert "SUMMARY:Holiday" in feed
 
 
 @pytest.mark.asyncio

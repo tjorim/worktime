@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import TimeOffEntry, TimeTrackingTask
+from app.routers.holidays import NAGER_BASE_URL, _build_holiday_date_set, _get_or_fetch_holidays
 from app.services.db_service import (
     get_user_preferences,
     list_labels_for_user,
@@ -150,6 +151,33 @@ def _format_task_line(task: TimeTrackingTask, label_name: str | None) -> str:
     return f"{start_local:%H:%M}–{stop_local:%H:%M} {task.text}{suffix}"
 
 
+async def _public_holiday_dates(session: AsyncSession, country: str, years: Iterable[int]) -> set[date]:
+    """Return public holiday dates for `country` across `years`, for shift suppression.
+
+    Reuses the same L1/L2 cached fetch path as the `/holidays/public` endpoint,
+    but isn't restricted to that endpoint's single supported country - this
+    needs to key off the user's own homeCountry. Silently returns an empty set
+    for a year where the upstream is unreachable and both cache layers are
+    cold, rather than failing the whole feed over an unrelated holiday API.
+    """
+    iso_dates: set[str] = set()
+    for year in years:
+        holidays = await _get_or_fetch_holidays(
+            holiday_type="public",
+            country=country,
+            year=year,
+            language=None,
+            subdivision=None,
+            upstream_url=f"{NAGER_BASE_URL}/PublicHolidays/{year}/{country}",
+            upstream_params={},
+            db=session,
+            response_filter=lambda data: [h for h in data if "Public" in h.get("types", [])],
+        )
+        if holidays:
+            iso_dates |= _build_holiday_date_set(holidays)
+    return {date.fromisoformat(iso) for iso in iso_dates}
+
+
 async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | None = None) -> str:
     today = today or datetime.now(UTC).date()
     start, end = _add_months(today, -3), _add_months(today, 12)
@@ -232,10 +260,26 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     days_with_shift_event: set[date] = set()
 
     if context.schedule_type is not None and context.effective_team_number is not None:
+        # A public holiday isn't personal leave - it just means nobody works
+        # that day, so no shift is even offered up for splitting by a
+        # half-day entry. We don't add a holiday event of our own here, just
+        # suppress the shift; the user's own time-off entries (if any) still
+        # get their usual event via the loop below.
+        home_country = settings.get("homeCountry")
+        public_holiday_dates: set[date] = (
+            await _public_holiday_dates(session, home_country, range(start.year, end.year + 1))
+            if isinstance(home_country, str) and home_country
+            else set()
+        )
         day = start
         while day < end:
             shift = _resolve_shift(context.schedule_type, context.effective_team_number, day)
-            if shift.is_working and shift.start_hour is not None and shift.end_hour is not None:
+            if (
+                shift.is_working
+                and shift.start_hour is not None
+                and shift.end_hour is not None
+                and day not in public_holiday_dates
+            ):
                 shift_start = _utc_at(day, shift.start_hour)
                 shift_end = _utc_at(day, shift.end_hour)
                 if shift_end <= shift_start:
