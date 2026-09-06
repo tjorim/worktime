@@ -713,7 +713,13 @@ function formatHostForUrl(host: string): string {
 // header). See that function for why 0.0.0.0 expands into a concrete list
 // rather than being treated as a wildcard.
 function candidateHelperHosts(host: string, port: number): string[] {
-  if (host !== "0.0.0.0") return [`${formatHostForUrl(host)}:${port}`];
+  // "::" is the IPv6 equivalent of 0.0.0.0 — "every interface" (and, on most
+  // platforms, IPv4 clients too, via a dual-stack socket), not itself a
+  // dialable address. Treated the same as 0.0.0.0 below rather than falling
+  // through to the single-literal branch, which would otherwise produce only
+  // the non-dialable "[::]:port" — offered as the sole copy-paste URL and the
+  // sole allowed Host, locking out every real client bound this way.
+  if (host !== "0.0.0.0" && host !== "::") return [`${formatHostForUrl(host)}:${port}`];
 
   const hosts = [`127.0.0.1:${port}`];
   for (const addrs of Object.values(networkInterfaces())) {
@@ -750,13 +756,20 @@ function candidateHelperUrls(host: string, port: number): string[] {
 // IPv4 address this machine actually has, never treating 0.0.0.0 itself as an
 // allow-all wildcard. ALLOWED_HOSTS adds operator-specified extras (e.g. an
 // mDNS name or a reverse-proxy hostname) the auto-derived IP list can't cover.
+// HTTP's default port for a plain (non-TLS) origin is 80 — a client is
+// allowed to omit ":80" from its Host header entirely, so a candidate ending
+// in it must also match the bare host on its own. A no-op for every other
+// port, which no client omits.
+function withPortlessDefaultVariant(hostPort: string): string[] {
+  const suffix = ":80";
+  return hostPort.endsWith(suffix) ? [hostPort, hostPort.slice(0, -suffix.length)] : [hostPort];
+}
+
 function isAllowedHostHeader(hostHeader: string | null): boolean {
   if (!hostHeader) return false;
   const normalized = hostHeader.toLowerCase();
-  return (
-    candidateHelperHosts(HOST, PORT).some((h) => h.toLowerCase() === normalized) ||
-    ALLOWED_HOSTS.some((h) => h.toLowerCase() === normalized)
-  );
+  const allowed = [...candidateHelperHosts(HOST, PORT), ...ALLOWED_HOSTS].flatMap(withPortlessDefaultVariant);
+  return allowed.some((h) => h.toLowerCase() === normalized);
 }
 
 function renderHelperUrls(): string {

@@ -67,9 +67,11 @@ comparison entirely. A request with an unrecognized `Host` gets HTTP 403, before
 The allowed set is derived automatically from `HOST`/`PORT`:
 
 - A specific bind address (`HOST=127.0.0.1`, or a concrete LAN IP) allows exactly that address.
-- `HOST=0.0.0.0` (LAN access) expands to `127.0.0.1` plus every non-internal IPv4 address this
-  machine has — the same list offered as copy-paste URLs on `/settings`. `0.0.0.0` itself is never
-  treated as an allow-all wildcard.
+- `HOST=0.0.0.0` (LAN access) or `HOST=::` (its IPv6 equivalent) expands to `127.0.0.1` plus every
+  non-internal IPv4 address this machine has — the same list offered as copy-paste URLs on
+  `/settings`. Neither `0.0.0.0` nor `::` is ever treated as an allow-all wildcard.
+- A request's `Host` header may omit HTTP's default port (`:80`) entirely — allowed only when
+  `PORT=80`, since that's the only case a client would ever actually do so.
 
 `ALLOWED_HOSTS` adds extra `host:port` values on top of that auto-derived set, for reaching the
 helper by a name the IP-based list can't express — an mDNS name, or a hostname a reverse proxy in
