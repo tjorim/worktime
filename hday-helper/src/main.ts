@@ -14,6 +14,7 @@
  * | PORT           | 8080                  | HTTP port to listen on              |
  * | HOST           | 127.0.0.1             | Bind address                        |
  * | CORS_ORIGINS   | http://localhost:5173 | Comma-separated allowed origins     |
+ * | ALLOWED_HOSTS  | (empty)               | Comma-separated extra Host header values (host:port) to allow, on top of the auto-derived set — see isAllowedHostHeader() |
  *
  * On Windows, the console window is hidden by default and a status-colored
  * system tray icon takes its place (see `tray.ts`) — set
@@ -27,7 +28,7 @@
  * GET  /hday/:username/events — SSE stream: notifies when that user's file changes on disk
  * GET  /team/:teamId        — read team config + member list
  * GET  /team/:teamId/hday   — read aggregated team .hday files (always includes parsed events)
- * GET  /settings            — HTML form to view/edit SHARE_DIR/PORT/HOST/CORS_ORIGINS
+ * GET  /settings            — HTML form to view/edit SHARE_DIR/PORT/HOST/CORS_ORIGINS/ALLOWED_HOSTS
  * POST /settings            — rewrite .env with the submitted values and restart
  * GET  /logs                — recent log lines (plain text, or an HTML viewer for a browser)
  * GET  /logs/events         — SSE stream: new log lines as they're written
@@ -75,15 +76,28 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// Extra Host header values (host:port) allowed on top of the auto-derived set
+// computed from HOST/PORT — see isAllowedHostHeader().
+const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024; // 10 MiB
 const MAX_SETTINGS_BODY_BYTES = 64 * 1024; // form submissions are tiny; this is generous
 const ENV_FILE_PATH = join(process.cwd(), ".env");
-const ENV_KEYS = ["SHARE_DIR", "PORT", "HOST", "CORS_ORIGINS"] as const;
+const ENV_KEYS = ["SHARE_DIR", "PORT", "HOST", "CORS_ORIGINS", "ALLOWED_HOSTS"] as const;
 type EnvKey = (typeof ENV_KEYS)[number];
 // Set by tests only, so a valid POST /settings can be exercised over real HTTP
 // without the test process detaching a second, untracked OS process — see
 // hday-helper/tests/helper.test.ts's "GET/POST /settings" suite.
 const SKIP_RESTART_FOR_TESTS = process.env.HDAY_HELPER_SKIP_RESTART_FOR_TESTS === "1";
+// Set only on a child spawned by performSettingsRestart() below (never by a
+// user or by the tray's plain "Restart", which don't need a handoff) — this
+// process is a *candidate* replacement that must report back whether it
+// actually bound before the parent decides whether to stop itself. See
+// openHandoffCoordinator() and notifyRestartHandoff().
+const RESTART_HANDOFF_TOKEN = process.env.HDAY_HELPER_RESTART_TOKEN ?? null;
+const RESTART_HANDOFF_CALLBACK = process.env.HDAY_HELPER_RESTART_CALLBACK ?? null;
 
 // ---------------------------------------------------------------------------
 // Per-user write mutex — serializes concurrent writes to the same .hday file
@@ -538,6 +552,21 @@ interface SettingsFormValues {
   HOST: string;
   PORT: string;
   CORS_ORIGINS: string;
+  ALLOWED_HOSTS: string;
+}
+
+// This process's own config, in the same shape a submitted settings form
+// takes — the source of truth GET /settings pre-fills the form with, and
+// performSettingsRestart() rolls `.env` back to if a restart's replacement
+// never confirms it bound.
+function currentEnvValues(): SettingsFormValues {
+  return {
+    SHARE_DIR,
+    HOST,
+    PORT: String(PORT),
+    CORS_ORIGINS: CORS_ORIGINS.join(","),
+    ALLOWED_HOSTS: ALLOWED_HOSTS.join(","),
+  };
 }
 
 function writeEnvFile(values: Record<EnvKey, string>): void {
@@ -615,17 +644,37 @@ function isSameOriginRequest(req: Request): boolean {
 // one we hold; two distinct non-wildcard hosts never overlap) is probed on
 // the exact pair, which also catches an unrelated process already squatting
 // on it — something the weaker port-0 probe can't detect. That residual gap
-// (0.0.0.0 involved, same PORT) is tracked in #1295: closing it fully means
-// not stopping the current server until a replacement has confirmed binding,
-// a materially bigger change than a settings-validation fix.
+// (0.0.0.0 involved, same PORT) is real: an unrelated process could still
+// grab the exact address between this probe and the actual restart. Rather
+// than trusting this validation forever, performSettingsRestart() below
+// closes it with a handoff protocol — where possible it keeps this listener
+// up until a spawned replacement actually confirms it bound, and everywhere
+// else it at least rolls .env back and rebinds this process if that
+// confirmation never comes, instead of stranding the helper (#1295).
+//
+// Shared with performSettingsRestart()'s stop-vs-spawn ordering below: true
+// when `host:port` cannot be bound while this process's own listener
+// (HOST:PORT) is still up, because the wildcard covers every interface,
+// including whatever specific one the other address names. Two listeners
+// that satisfy this can never coexist, no matter how the restart is
+// sequenced — the current one must come down before the other can bind.
+// Shared with candidateHelperHosts() below: "0.0.0.0" and its IPv6
+// equivalent "::" both mean "every interface," not a single concrete
+// address — so either one covers whatever specific interface the other
+// side of a comparison names.
+function isWildcardBindAddress(host: string): boolean {
+  return host === "0.0.0.0" || host === "::";
+}
+
+function couldCollideWithCurrentListener(host: string, port: number): boolean {
+  return host !== HOST && port === PORT && (isWildcardBindAddress(host) || isWildcardBindAddress(HOST));
+}
+
 async function checkAddressBindable(host: string, port: number): Promise<string | null> {
   if (host === HOST && port === PORT) return null;
 
-  const couldCollideWithOurListener =
-    host !== HOST && port === PORT && (host === "0.0.0.0" || HOST === "0.0.0.0");
-
   try {
-    if (couldCollideWithOurListener) {
+    if (couldCollideWithCurrentListener(host, port)) {
       const hostProbe = Bun.serve({ hostname: host, port: 0, fetch: () => new Response(null, { status: 204 }) });
       await hostProbe.stop();
     } else {
@@ -699,18 +748,80 @@ function formatHostForUrl(host: string): string {
 // non-internal IPv4 address (other machines on the LAN, the actual reason to
 // bind 0.0.0.0 in the first place) instead of the raw HOST value. Any other
 // HOST is already a concrete, dialable address, so it's used as-is.
-function candidateHelperUrls(host: string, port: number): string[] {
-  if (host !== "0.0.0.0") return [`http://${formatHostForUrl(host)}:${port}`];
+// Bare "host:port" values (no scheme) a client can actually dial this server
+// at, given its bind address — shared by candidateHelperUrls() (rendered as
+// clickable URLs) and isAllowedHostHeader() (compared against the raw Host
+// header). See that function for why 0.0.0.0 expands into a concrete list
+// rather than being treated as a wildcard.
+function candidateHelperHosts(host: string, port: number): string[] {
+  // "::" is the IPv6 equivalent of 0.0.0.0 — "every interface" (and, on most
+  // platforms, IPv4 clients too, via a dual-stack socket), not itself a
+  // dialable address. Treated the same as 0.0.0.0 below rather than falling
+  // through to the single-literal branch, which would otherwise produce only
+  // the non-dialable "[::]:port" — offered as the sole copy-paste URL and the
+  // sole allowed Host, locking out every real client bound this way.
+  if (!isWildcardBindAddress(host)) return [`${formatHostForUrl(host)}:${port}`];
 
-  const urls = [`http://127.0.0.1:${port}`];
+  // IPv6 loopback only under HOST=:: — a dual-stack socket accepts [::1]
+  // clients there, but HOST=0.0.0.0 is an IPv4-only socket no such client
+  // could ever actually reach, so listing it would be actively misleading.
+  const hosts = host === "::" ? [`127.0.0.1:${port}`, `[::1]:${port}`] : [`127.0.0.1:${port}`];
   for (const addrs of Object.values(networkInterfaces())) {
     for (const addr of addrs ?? []) {
       if (addr.family === "IPv4" && !addr.internal) {
-        urls.push(`http://${addr.address}:${port}`);
+        hosts.push(`${addr.address}:${port}`);
       }
     }
   }
-  return urls;
+  return hosts;
+}
+
+function candidateHelperUrls(host: string, port: number): string[] {
+  return candidateHelperHosts(host, port).map((h) => `http://${h}`);
+}
+
+// DNS-rebinding defense (#1293): a same-origin/CSRF check alone (see
+// isSameOriginRequest above) compares `Origin` against `Host` — but an
+// attacker who controls DNS resolution for a domain can make both headers
+// carry that same attacker-controlled value while the browser is actually
+// connected to this server, defeating that check entirely. Validating `Host`
+// itself against a known-good allowlist closes that gap: an attacker can put
+// anything they want in DNS, but they can't make the victim's browser send a
+// `Host` header this server doesn't recognize as one of its own addresses.
+//
+// Applied to every route, not just the mutating POST /settings — the read
+// endpoints (GET/PUT /hday, GET /team, both SSE streams) have exactly the
+// same exposure and were never carved out as a smaller, deliberately-accepted
+// risk.
+//
+// The allowed set is derived from HOST/PORT the same way the copy-paste URLs
+// on /settings are (candidateHelperHosts) — under HOST=0.0.0.0 (documented,
+// intentional LAN access) that expands to loopback plus every non-internal
+// IPv4 address this machine actually has, never treating 0.0.0.0 itself as an
+// allow-all wildcard. ALLOWED_HOSTS adds operator-specified extras (e.g. an
+// mDNS name or a reverse-proxy hostname) the auto-derived IP list can't cover.
+// HTTP's default port for a plain (non-TLS) origin is 80 — a client is
+// allowed to omit ":80" from its Host header entirely, so a candidate ending
+// in it must also match the bare host on its own. A no-op for every other
+// port, which no client omits.
+function withPortlessDefaultVariant(hostPort: string): string[] {
+  const suffix = ":80";
+  return hostPort.endsWith(suffix) ? [hostPort, hostPort.slice(0, -suffix.length)] : [hostPort];
+}
+
+// Computed once at startup, not per request: HOST/PORT/ALLOWED_HOSTS are
+// fixed for the life of the process (a settings change takes effect via a
+// full restart, never in place), and candidateHelperHosts() calls the
+// synchronous networkInterfaces() syscall under a wildcard bind — worth
+// avoiding on every single request. A LAN interface added after startup
+// (e.g. a new network connected) isn't picked up until the next restart,
+// same as every other setting here.
+const ALLOWED_HOST_HEADERS = new Set(
+  [...candidateHelperHosts(HOST, PORT), ...ALLOWED_HOSTS].flatMap(withPortlessDefaultVariant).map((h) => h.toLowerCase()),
+);
+
+function isAllowedHostHeader(hostHeader: string | null): boolean {
+  return hostHeader !== null && ALLOWED_HOST_HEADERS.has(hostHeader.toLowerCase());
 }
 
 function renderHelperUrls(): string {
@@ -776,7 +887,7 @@ function renderSettingsPage(values: SettingsFormValues, error: string | null): s
 <nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
 <h1>.hday Helper Settings</h1>
 ${renderHelperUrls()}
-<p class="warn">Saving rewrites <code>.env</code> with just these four keys — any other lines or
+<p class="warn">Saving rewrites <code>.env</code> with just these five keys — any other lines or
 comments in your existing <code>.env</code> file will not be preserved. Saving restarts the helper
 immediately.</p>
 ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
@@ -793,6 +904,14 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
   <label>CORS_ORIGINS
     <input type="text" name="CORS_ORIGINS" value="${escapeHtml(values.CORS_ORIGINS)}">
   </label>
+  <label>ALLOWED_HOSTS
+    <input type="text" name="ALLOWED_HOSTS" value="${escapeHtml(values.ALLOWED_HOSTS)}"
+      placeholder="e.g. myhelper.local:8080">
+  </label>
+  <p>Requests are only accepted for a <code>Host</code> matching one of the URLs above or an entry
+  here — comma-separated <code>host:port</code> values, for reaching this helper by a name that
+  isn't one of its own IP addresses (an mDNS name, a reverse-proxy hostname). Defends against DNS
+  rebinding; leave empty unless you need one.</p>
   <button type="submit">Save &amp; restart</button>
 </form>
 </body>
@@ -867,19 +986,38 @@ function renderLogsPage(initialLines: string[]): string {
 </html>`;
 }
 
-let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned once at bootstrap
+let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned at bootstrap; see performSettingsRestart() for the one case it's later reassigned
 let trayHandle: TrayHandle | null = null; // assigned once at bootstrap, Windows only — see tray.ts's startTray()
 
-// Shared tail end of both the settings-triggered restart and the tray's
-// manual "Restart" menu item: stop serving, spawn a replacement process, and
-// exit. `stripEnvKeys` is true only for the settings path — there, this
-// process's env still holds the *old* SHARE_DIR/HOST/PORT/CORS_ORIGINS
-// values (Bun's built-in .env loading does not override already-set
-// environment variables), so those must be stripped from the child's
-// inherited env for it to pick up what was just written to .env. A plain
-// tray-triggered restart has no such staleness to fix, so it inherits
-// process.env unchanged — identical to how this process itself was launched.
-async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean): Promise<void> {
+// Set by worktime-hday-helper.service (Environment=), not auto-detected: an
+// earlier version of this code tried to infer systemd supervision from the
+// INVOCATION_ID environment variable systemd sets on processes it starts
+// directly, but that variable is inherited by every *descendant* process too
+// — including, it turns out, CI test runs, since the GitHub Actions runner's
+// own agent is itself systemd-managed. That made every spawned test instance
+// (not just ones meaning to simulate systemd) skip its self-respawn. An
+// explicit opt-in this repo's own unit file sets has no such inheritance
+// hazard.
+//
+// Under a supervisor that already restarts exited processes, spawning our
+// own detached replacement would race with it for the same port, and the
+// detached one — unknown to the supervisor — would be left running as an
+// orphan the next time someone runs `systemctl restart`. Exiting and letting
+// the supervisor relaunch us avoids that; the fresh process picks up .env on
+// its own via Bun's normal startup, so there's no stale-env-var problem to
+// strip here either, and no way for this process to offer a handoff or a
+// rollback — it doesn't control when or whether the supervisor's replacement
+// starts.
+const NO_SELF_RESPAWN = process.env.HDAY_HELPER_NO_SELF_RESPAWN === "1";
+
+// Tail end of the tray's manual "Restart" menu item: stop serving, spawn a
+// replacement process (inheriting this process's env unchanged — a plain
+// restart doesn't change SHARE_DIR/HOST/PORT/CORS_ORIGINS, so there's no
+// staleness to fix), and exit. HOST/PORT are unchanged, so — unlike
+// performSettingsRestart() below — there's no alternate address to hand off
+// to first: this process must give up the port before the replacement can
+// even attempt to bind it, with no way to confirm success before exiting.
+async function spawnReplacementAndExit(logMessage: string): Promise<void> {
   logLine(logMessage);
   await trayHandle?.destroy();
   try {
@@ -888,32 +1026,21 @@ async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean
     logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
-  // Set by worktime-hday-helper.service (Environment=), not auto-detected:
-  // an earlier version of this code tried to infer systemd supervision from
-  // the INVOCATION_ID environment variable systemd sets on processes it
-  // starts directly, but that variable is inherited by every *descendant*
-  // process too — including, it turns out, CI test runs, since the GitHub
-  // Actions runner's own agent is itself systemd-managed. That made every
-  // spawned test instance (not just ones meaning to simulate systemd) skip
-  // its self-respawn. An explicit opt-in this repo's own unit file sets has
-  // no such inheritance hazard.
-  //
-  // Under a supervisor that already restarts exited processes, spawning our
-  // own detached replacement would race with it for the same port, and the
-  // detached one — unknown to the supervisor — would be left running as an
-  // orphan the next time someone runs `systemctl restart`. Exiting and
-  // letting the supervisor relaunch us avoids that; the fresh process picks
-  // up .env on its own via Bun's normal startup, so there's no
-  // stale-env-var problem to strip here either.
-  if (process.env.HDAY_HELPER_NO_SELF_RESPAWN === "1") {
+  if (NO_SELF_RESPAWN) {
     logLine("HDAY_HELPER_NO_SELF_RESPAWN set — exiting for the service manager to restart it instead of self-spawning");
     process.exit(0);
   }
 
+  // This process may itself be a settings-restart candidate that inherited
+  // HDAY_HELPER_RESTART_TOKEN/CALLBACK (see performSettingsRestart() below) —
+  // those must not propagate to a plain restart's replacement. Its
+  // coordinator is long closed by the time any future restart happens, so a
+  // child that inherited them would bind fine, retry reporting success
+  // against a dead callback, then shut itself back down as an unconfirmed
+  // handoff (see notifyRestartHandoff()) — leaving nothing running.
   const childEnv = { ...process.env };
-  if (stripEnvKeys) {
-    for (const key of ENV_KEYS) delete childEnv[key];
-  }
+  delete childEnv.HDAY_HELPER_RESTART_TOKEN;
+  delete childEnv.HDAY_HELPER_RESTART_CALLBACK;
 
   try {
     const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
@@ -930,8 +1057,247 @@ async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean
   process.exit(0);
 }
 
-async function restartWithNewSettings(): Promise<void> {
-  await spawnReplacementAndExit("Settings changed via /settings — restarting to apply new configuration", true);
+interface HandoffOutcome {
+  ok: boolean;
+  error?: string;
+}
+
+// Opens a short-lived, loopback-only coordination channel a spawned candidate
+// replacement can call back into to report whether it actually bound — see
+// performSettingsRestart() below and the RESTART_HANDOFF_TOKEN/CALLBACK
+// handling near bootstrap. Deliberately independent of HOST/PORT (and of
+// `httpServer`/handleRequest's own routing, CORS, and Host-header allowlist):
+// it has to keep working even when the restart requires stopping the main
+// listener first, and a random unguessable token is by itself enough
+// authorization for a one-shot, loopback-only, single-use signal.
+function openHandoffCoordinator(): {
+  url: string;
+  token: string;
+  outcome: Promise<HandoffOutcome>;
+  close: () => void;
+} {
+  const token = crypto.randomUUID();
+  let resolveOutcome!: (outcome: HandoffOutcome) => void;
+  const outcome = new Promise<HandoffOutcome>((resolve) => {
+    resolveOutcome = resolve;
+  });
+
+  const coordinator = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: async (req) => {
+      if (req.method !== "POST") return new Response(null, { status: 405 });
+      let body: { token?: unknown; ok?: unknown; error?: unknown };
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(null, { status: 400 });
+      }
+      if (body.token !== token) return new Response(null, { status: 403 });
+      resolveOutcome({ ok: body.ok === true, error: typeof body.error === "string" ? body.error : undefined });
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  return {
+    url: `http://127.0.0.1:${coordinator.port}/`,
+    token,
+    outcome,
+    close: () => {
+      // Not force-closed: the report that just resolved `outcome` is itself
+      // an in-flight request on this same server, still waiting on the 204
+      // response above to reach the replacement. Force-closing here would
+      // race that response — if lost, the replacement (thinking its report
+      // never arrived) retries against a coordinator that's already gone,
+      // then shuts itself back down as an unconfirmed handoff even though
+      // this side already knows it succeeded, potentially leaving neither
+      // process listening. A plain stop() only stops accepting *new*
+      // connections, letting that response finish delivering normally.
+      try {
+        coordinator.stop();
+      } catch {
+        // Already stopped — nothing more to clean up.
+      }
+    },
+  };
+}
+
+// The child-side counterpart to openHandoffCoordinator() above — called only
+// when this process was itself spawned as a settings-restart candidate (see
+// RESTART_HANDOFF_TOKEN/CALLBACK near the top of the file); a no-op (treated
+// as already "confirmed") for a plain launch or a tray restart, neither of
+// which set them. Retries briefly since the parent's coordinator can take a
+// moment to come up after spawning this process. Returns whether the report
+// was actually delivered — the bootstrap code below shuts this process back
+// down when a *successful* bind couldn't be confirmed, rather than leave it
+// running unconfirmed: the parent's own wait will have already timed out by
+// then and rolled back to the previous configuration, so an unconfirmed
+// "success" left running here would otherwise become a second, orphaned
+// listener on top of that.
+async function notifyRestartHandoff(ok: boolean, error?: string): Promise<boolean> {
+  if (!RESTART_HANDOFF_TOKEN || !RESTART_HANDOFF_CALLBACK) return true;
+
+  const attempts = 5;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const res = await fetch(RESTART_HANDOFF_CALLBACK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: RESTART_HANDOFF_TOKEN, ok, error }),
+      });
+      if (res.ok) return true;
+    } catch {
+      // Parent's coordinator may not be listening yet, or may already be gone.
+    }
+    if (attempt < attempts) await new Promise((r) => setTimeout(r, 200));
+  }
+  return false;
+}
+
+// Generous relative to an in-process bind attempt (milliseconds) plus its own
+// EADDRINUSE retry loop (BIND_RETRY_ATTEMPTS * BIND_RETRY_DELAY_MS, a few
+// seconds) — this only needs to cover genuine slowness, not the happy path.
+const RESTART_HANDOFF_TIMEOUT_MS = 15_000;
+
+// Settings-triggered restart (POST /settings): unlike spawnReplacementAndExit
+// (the tray's plain "Restart"), a HOST/PORT change is an unproven hypothesis
+// until some process has actually bound it — checkAddressBindable only rules
+// out the *obviously* unbindable cases, and can still be fooled by an
+// unrelated process grabbing the exact target address in between (see its
+// comment, and #1295). This closes that gap with a handoff: spawn the
+// replacement, let it attempt the real bind on the real target address, and
+// only commit to the change once it reports back success over
+// openHandoffCoordinator() — rolling `.env` back to `oldValues` and keeping
+// this process alive otherwise, rather than stopping unconditionally and
+// hoping.
+//
+// When the target address is the one this process already holds — an
+// unchanged HOST/PORT, or the wildcard/same-port overlap
+// couldCollideWithCurrentListener() identifies — the two listeners can never
+// coexist, so this still has to stop first and hand off blind on that front;
+// the coordinator (loopback-only, independent of HOST/PORT) still lets it
+// detect a failed bind afterward and roll back rather than exiting regardless.
+//
+// The caller (POST /settings) must send its HTTP response before doing
+// anything that might call process.exit() — otherwise the response can be
+// cut off mid-flight, never reaching the browser that submitted the form.
+// So on success this hands back a `finish` callback (stop-if-needed, then
+// exit) for the caller to invoke only *after* the response has actually
+// been returned — exactly the role the settings-restart path's `setTimeout`
+// already played before this handoff protocol existed. On failure, by
+// contrast, this process's own recovery (rolling `.env` back, rebinding if
+// it had already given up the address) is already complete by the time this
+// returns — nothing is deferred, and `newValues` was never actually applied.
+type SettingsRestartOutcome = { ok: true; finish: () => Promise<void> } | { ok: false; error: string };
+
+async function performSettingsRestart(
+  oldValues: SettingsFormValues,
+  newValues: SettingsFormValues,
+  newHost: string,
+  newPort: number,
+): Promise<SettingsRestartOutcome> {
+  writeEnvFile(newValues);
+  logLine(`Settings saved via /settings; restarting on ${newHost}:${newPort}`);
+
+  if (NO_SELF_RESPAWN) {
+    // Only the service manager should ever relaunch this process — spawning
+    // our own candidate here would just race its restart policy for the same
+    // port. There's nobody to hand off to (or roll back with) in-process;
+    // trust its restart the same way a plain tray restart does.
+    return { ok: true, finish: () => spawnReplacementAndExit("Handing off to the service manager for restart") };
+  }
+
+  const mustStopFirst = (newHost === HOST && newPort === PORT) || couldCollideWithCurrentListener(newHost, newPort);
+
+  const coordinator = openHandoffCoordinator();
+  const childEnv = { ...process.env };
+  for (const key of ENV_KEYS) delete childEnv[key];
+  childEnv.HDAY_HELPER_RESTART_TOKEN = coordinator.token;
+  childEnv.HDAY_HELPER_RESTART_CALLBACK = coordinator.url;
+
+  const rollback = async (reason: string): Promise<SettingsRestartOutcome> => {
+    coordinator.close();
+    writeEnvFile(oldValues);
+    logLine(`Restart to ${newHost}:${newPort} failed (${reason}); keeping ${HOST}:${PORT}`, true);
+    if (httpServer === null) {
+      // Already gave up the address trying to hand off — rebind it
+      // ourselves so this process keeps serving instead of exiting stranded.
+      try {
+        httpServer = await startServer();
+      } catch (rebindErr) {
+        // Both the candidate address and now the one this process used to
+        // hold are unbindable — there's no configuration left it can serve.
+        // Exit (once this response has actually been sent, same as every
+        // other deferred exit here) rather than linger alive with no
+        // listener at all, which would be worse than the stranding this
+        // handoff exists to prevent: at least a supervisor or a manual
+        // restart can recover from a process that's actually gone.
+        logLine(
+          `Could not rebind ${HOST}:${PORT} either (${rebindErr instanceof Error ? rebindErr.message : String(rebindErr)}) — exiting`,
+          true,
+        );
+        setTimeout(() => process.exit(1), 50);
+      }
+    }
+    return { ok: false, error: `Could not start the helper on ${newHost}:${newPort} (${reason}). Settings were not saved.` };
+  };
+
+  if (mustStopFirst) {
+    // Deliberately not awaited: this process is still in the middle of
+    // handling the very request whose response will become this restart's
+    // outcome, and Server.stop()'s promise only resolves once every active
+    // connection — including this one — has finished. Awaiting it here would
+    // deadlock: this request can't finish until stop() resolves, and stop()
+    // won't resolve until this request finishes. Firing it without waiting
+    // still starts releasing the port immediately (the replacement's own
+    // EADDRINUSE retry loop in startServer() absorbs whatever gap remains).
+    httpServer?.stop().catch((err: unknown) => {
+      logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
+    });
+    httpServer = null;
+  }
+
+  try {
+    const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
+      cwd: process.cwd(),
+      env: childEnv,
+      stdio: ["ignore", "ignore", "ignore"],
+      detached: true,
+    });
+    child.unref();
+  } catch (err) {
+    return await rollback(`failed to spawn replacement process: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  const timeout = new Promise<HandoffOutcome>((resolve) =>
+    setTimeout(
+      () => resolve({ ok: false, error: "replacement did not confirm startup in time" }),
+      RESTART_HANDOFF_TIMEOUT_MS,
+    ),
+  );
+  const result = await Promise.race([coordinator.outcome, timeout]);
+  coordinator.close();
+
+  if (!result.ok) {
+    return await rollback(result.error ?? "unknown error");
+  }
+
+  logLine(`Replacement confirmed on ${newHost}:${newPort} — handing off`);
+  return {
+    ok: true,
+    finish: async () => {
+      await trayHandle?.destroy();
+      if (!mustStopFirst) {
+        // Otherwise already stopped above, before the replacement was spawned.
+        try {
+          await httpServer?.stop();
+        } catch (err) {
+          logLine(`Failed to stop server cleanly after handoff: ${err instanceof Error ? err.message : String(err)}`, true);
+        }
+      }
+      process.exit(0);
+    },
+  };
 }
 
 async function quitFromTray(): Promise<void> {
@@ -1142,6 +1508,14 @@ async function readBodyTextWithLimit(req: Request, maxBytes: number): Promise<st
 // ---------------------------------------------------------------------------
 
 async function handleRequest(req: Request): Promise<Response> {
+  // Checked before anything else — including CORS preflight — so a
+  // DNS-rebinding request never reaches route dispatch and never gets a
+  // populated Access-Control-Allow-Origin to work with. See
+  // isAllowedHostHeader() for what's allowed and why.
+  if (!isAllowedHostHeader(req.headers.get("Host"))) {
+    return jsonResponse({ detail: "Host header not allowed" }, 403, {});
+  }
+
   const url = new URL(req.url);
   const { pathname } = url;
   const origin = req.headers.get("Origin");
@@ -1170,13 +1544,7 @@ async function handleRequest(req: Request): Promise<Response> {
   // GET/POST /settings
   if (pathname === "/settings") {
     if (req.method === "GET") {
-      const values: SettingsFormValues = {
-        SHARE_DIR,
-        HOST,
-        PORT: String(PORT),
-        CORS_ORIGINS: CORS_ORIGINS.join(","),
-      };
-      return new Response(renderSettingsPage(values, null), {
+      return new Response(renderSettingsPage(currentEnvValues(), null), {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
@@ -1211,6 +1579,7 @@ async function handleRequest(req: Request): Promise<Response> {
         HOST: form.get("HOST") ?? "",
         PORT: form.get("PORT") ?? "",
         CORS_ORIGINS: form.get("CORS_ORIGINS") ?? "",
+        ALLOWED_HOSTS: form.get("ALLOWED_HOSTS") ?? "",
       };
 
       const error = validateSettingsForm(values);
@@ -1240,20 +1609,42 @@ async function handleRequest(req: Request): Promise<Response> {
         });
       }
 
-      writeEnvFile({
+      const newValues: SettingsFormValues = {
         SHARE_DIR: newShareDir,
         HOST: newHost,
         PORT: String(newPort),
         CORS_ORIGINS: values.CORS_ORIGINS.trim(),
-      });
+        ALLOWED_HOSTS: values.ALLOWED_HOSTS.trim(),
+      };
 
-      logLine(`Settings saved via /settings; restarting on ${newHost}:${newPort}`);
-
-      if (!SKIP_RESTART_FOR_TESTS) {
-        setTimeout(() => {
-          void restartWithNewSettings();
-        }, 50);
+      // Tests disable the real restart (which detaches a second, untracked OS
+      // process) but still want the rest of the request/response cycle —
+      // validation, the rewritten .env, the response body — real and
+      // observable. There's nothing to hand off to or roll back here without
+      // an actual replacement process, so this mirrors only that much of
+      // performSettingsRestart()'s behavior directly.
+      if (SKIP_RESTART_FOR_TESTS) {
+        writeEnvFile(newValues);
+        logLine(`Settings saved via /settings; restarting on ${newHost}:${newPort}`);
+        return new Response(renderRestartingPage(newPort), {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
       }
+
+      const restartOutcome = await performSettingsRestart(currentEnvValues(), newValues, newHost, newPort);
+      if (!restartOutcome.ok) {
+        return new Response(renderSettingsPage(values, restartOutcome.error), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      // Deferred until after the response below is actually sent: `finish`
+      // may call process.exit(), which would otherwise cut it off mid-flight
+      // (see performSettingsRestart()'s comment).
+      const { finish } = restartOutcome;
+      setTimeout(() => void finish(), 50);
 
       return new Response(renderRestartingPage(newPort), {
         status: 200,
@@ -1646,10 +2037,10 @@ if (!existsSync(SHARE_DIR)) {
   }
 }
 
-// A self-restart (see restartWithNewSettings) spawns the replacement before
-// this process's own `server.stop()` is guaranteed to have fully released the
-// port on every platform — retry binding for a few seconds instead of
-// failing immediately on EADDRINUSE.
+// A self-restart (see spawnReplacementAndExit and performSettingsRestart)
+// spawns the replacement before this process's own `server.stop()` is
+// guaranteed to have fully released the port on every platform — retry
+// binding for a few seconds instead of failing immediately on EADDRINUSE.
 const BIND_RETRY_ATTEMPTS = 20;
 const BIND_RETRY_DELAY_MS = 150;
 
@@ -1667,23 +2058,47 @@ async function startServer(): Promise<ReturnType<typeof Bun.serve>> {
         await new Promise((r) => setTimeout(r, BIND_RETRY_DELAY_MS));
         continue;
       }
-      if (isAddrInUse) {
-        console.error(
-          `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
-            `Either stop whatever else is using it, or set PORT to a different value ` +
-            `(e.g. PORT=8081) in your .env file next to the executable.\n`,
-        );
-      } else {
-        console.error("\nCould not start the .hday helper:", err, "\n");
-      }
-      process.exit(1);
+      throw err;
     }
   }
-  // Unreachable: the loop above always either returns or calls process.exit(1).
+  // Unreachable: the loop above always either returns or throws.
   throw new Error("unreachable");
 }
 
-httpServer = await startServer();
+try {
+  httpServer = await startServer();
+} catch (err) {
+  const isAddrInUse = err instanceof Error && "code" in err && err.code === "EADDRINUSE";
+  if (isAddrInUse) {
+    console.error(
+      `\nCould not start: port ${PORT} is already in use on ${HOST}.\n` +
+        `Either stop whatever else is using it, or set PORT to a different value ` +
+        `(e.g. PORT=8081) in your .env file next to the executable.\n`,
+    );
+  } else {
+    console.error("\nCould not start the .hday helper:", err, "\n");
+  }
+  // A no-op unless this process is itself a settings-restart candidate (see
+  // RESTART_HANDOFF_TOKEN/CALLBACK) — reports the failed bind back to the
+  // process that spawned us so it can roll back instead of leaving both
+  // configurations stranded.
+  await notifyRestartHandoff(false, err instanceof Error ? err.message : String(err));
+  process.exit(1);
+}
+
+if (!(await notifyRestartHandoff(true))) {
+  // Could not confirm success to the parent in time — treat this as a failed
+  // handoff rather than linger as an unconfirmed, possibly orphaned extra
+  // listener: the parent will already have rolled back and rebound the
+  // previous configuration once its own wait timed out.
+  console.error("\nCould not confirm this restart to the previous process in time — shutting down.\n");
+  try {
+    await httpServer?.stop();
+  } catch {
+    // Best-effort — exiting regardless.
+  }
+  process.exit(1);
+}
 
 console.log("============================================================");
 console.log("Worktime .hday Helper");
@@ -1709,7 +2124,7 @@ trayHandle = await startTray(`Worktime .hday Helper — ${HOST}:${PORT}`, {
   onSettings: () => openUrlInBrowser(`${trayHelperUrl}/settings`),
   onLogs: () => openUrlInBrowser(`${trayHelperUrl}/logs`),
   onRestart: () => {
-    void spawnReplacementAndExit("Restart requested from tray menu", false);
+    void spawnReplacementAndExit("Restart requested from tray menu");
   },
   onQuit: () => {
     void quitFromTray();

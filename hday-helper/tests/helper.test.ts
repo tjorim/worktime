@@ -29,6 +29,22 @@ const ipv6LoopbackAvailable = (() => {
   }
 })();
 
+// Binding port 80 requires root (or an OS-specific unprivileged-port
+// exception) on Linux — probe for it once at collection time, the same way
+// as ipv6LoopbackAvailable above, so the default-port test below can skip
+// itself via test.skipIf rather than silently no-op from inside the test
+// body (bun:test has no API for that) if something else is already
+// listening there or the bind is simply not permitted.
+const port80BindAvailable = (() => {
+  try {
+    const probe = Bun.serve({ hostname: "127.0.0.1", port: 80, fetch: () => new Response(null, { status: 204 }) });
+    probe.stop();
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 let shareDir: string;
 let port: number;
 let baseUrl: string;
@@ -173,6 +189,195 @@ describe("GET /health", () => {
     expect(typeof body.version).toBe("string");
     expect(body.version.length).toBeGreaterThan(0);
   });
+});
+
+describe("Host header validation (DNS-rebinding defense, #1293)", () => {
+  // Confirms the check runs for reads, not just the mutating /settings route
+  // the pre-existing same-origin/CSRF check already covered.
+  test("rejects a Host that doesn't match the bind address, on a plain GET route", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: "evil.example:1234" } });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.detail).toMatch(/host/i);
+  });
+
+  test("rejects a mismatched Host on /hday/:username too", async () => {
+    const res = await fetch(`${baseUrl}/hday/alice`, { headers: { Host: "evil.example:1234" } });
+    expect(res.status).toBe(403);
+  });
+
+  test("rejects a mismatched Host on the settings mutation route", async () => {
+    const res = await fetch(`${baseUrl}/settings`, {
+      method: "POST",
+      headers: { Host: "evil.example:1234", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ SHARE_DIR: shareDir, HOST: "127.0.0.1", PORT: String(port), CORS_ORIGINS: "" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test("rejects a Host that matches the bind address but a different port", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port + 1}` } });
+    expect(res.status).toBe(403);
+  });
+
+  test("allows the real bind address with a matching port", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("Host header validation with HOST=0.0.0.0 and ALLOWED_HOSTS", () => {
+  test("allows loopback and every non-internal IPv4 address, rejects an unrelated hostname, ALLOWED_HOSTS adds an extra one, and comparison is case-insensitive", async () => {
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-host-validation-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: {
+        ...process.env,
+        SHARE_DIR: shareDir,
+        PORT: String(port),
+        HOST: "0.0.0.0",
+        CORS_ORIGINS: "",
+        ALLOWED_HOSTS: `myhelper.local:${port}`,
+      },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      const baseUrl = `http://127.0.0.1:${port}`;
+      await waitForServer(`${baseUrl}/health`);
+
+      // Loopback is always allowed once bound to the wildcard address.
+      const loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
+      expect(loopback.status).toBe(200);
+
+      // Every non-internal IPv4 address this machine has is allowed too —
+      // same set the /settings page itself offers as copy-paste URLs.
+      const lanAddresses = Object.values(networkInterfaces())
+        .flat()
+        .filter((addr): addr is NonNullable<typeof addr> => !!addr && addr.family === "IPv4" && !addr.internal);
+      for (const addr of lanAddresses) {
+        const res = await fetch(`${baseUrl}/health`, { headers: { Host: `${addr.address}:${port}` } });
+        expect(res.status).toBe(200);
+      }
+
+      // 0.0.0.0 itself is never treated as a wildcard/allow-all Host value.
+      const wildcard = await fetch(`${baseUrl}/health`, { headers: { Host: `0.0.0.0:${port}` } });
+      expect(wildcard.status).toBe(403);
+
+      // Unlike HOST=:: (a dual-stack socket), HOST=0.0.0.0 is IPv4-only —
+      // no [::1] client could ever actually reach it, so it's not allowed.
+      const ipv6Loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `[::1]:${port}` } });
+      expect(ipv6Loopback.status).toBe(403);
+
+      // An arbitrary hostname (the DNS-rebinding case) is rejected.
+      const rebind = await fetch(`${baseUrl}/health`, { headers: { Host: `attacker.example:${port}` } });
+      expect(rebind.status).toBe(403);
+
+      // ALLOWED_HOSTS explicitly extends the set beyond the auto-derived IPs.
+      const allowlisted = await fetch(`${baseUrl}/health`, { headers: { Host: `myhelper.local:${port}` } });
+      expect(allowlisted.status).toBe(200);
+
+      // Host comparison is case-insensitive. Using a numeric/IP Host here
+      // wouldn't actually exercise that — toUpperCase() is a no-op on
+      // digits and dots — so this specifically needs the lettered
+      // ALLOWED_HOSTS entry above.
+      const upper = await fetch(`${baseUrl}/health`, { headers: { Host: `MyHelper.Local:${port}` } });
+      expect(upper.status).toBe(200);
+    } finally {
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 15000);
+});
+
+describe("Host header validation with HOST=:: (IPv6 wildcard)", () => {
+  test.skipIf(!ipv6LoopbackAvailable)(
+    "treats :: the same as 0.0.0.0 instead of allowing only the non-dialable '[::]:port' literal",
+    async () => {
+      const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-ipv6-wildcard-host-test-"));
+      const port = 20000 + Math.floor(Math.random() * 20000);
+      const proc = Bun.spawn(["bun", MAIN_TS], {
+        env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "::", CORS_ORIGINS: "" },
+        cwd: shareDir,
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+
+      try {
+        const baseUrl = `http://127.0.0.1:${port}`;
+        await waitForServer(`${baseUrl}/health`);
+
+        const loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
+        expect(loopback.status).toBe(200);
+
+        // A dual-stack socket also accepts an IPv6 loopback client directly.
+        const ipv6Loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `[::1]:${port}` } });
+        expect(ipv6Loopback.status).toBe(200);
+
+        // The bare "[::]:port" literal is exactly what a dual-stack wildcard
+        // bind is not itself dialable as — must not be the only thing allowed.
+        const wildcardLiteral = await fetch(`${baseUrl}/health`, { headers: { Host: `[::]:${port}` } });
+        expect(wildcardLiteral.status).toBe(403);
+
+        const rebind = await fetch(`${baseUrl}/health`, { headers: { Host: `attacker.example:${port}` } });
+        expect(rebind.status).toBe(403);
+      } finally {
+        proc.kill();
+        rmSync(shareDir, { recursive: true, force: true });
+      }
+    },
+    15000,
+  );
+});
+
+describe("Host header validation with PORT=80 (default-port Host omission)", () => {
+  test.skipIf(!port80BindAvailable)(
+    "allows a Host header that omits the default HTTP port",
+    async () => {
+      const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-default-port-host-test-"));
+      const proc = Bun.spawn(["bun", MAIN_TS], {
+        env: {
+          ...process.env,
+          SHARE_DIR: shareDir,
+          PORT: "80",
+          HOST: "127.0.0.1",
+          CORS_ORIGINS: "",
+          ALLOWED_HOSTS: "myhelper.local:80",
+        },
+        cwd: shareDir,
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+
+      try {
+        await waitForServer("http://127.0.0.1:80/health");
+
+        // Confirms /health is actually answering from *this* spawned
+        // instance and not some unrelated service already on port 80 —
+        // the port80BindAvailable probe only proves 80 was free a moment
+        // ago, not that it still is by the time this runs.
+        const withPort = await fetch("http://127.0.0.1:80/health", { headers: { Host: "127.0.0.1:80" } });
+        expect(withPort.status).toBe(200);
+        expect((await withPort.json()).share_dir).toBe(shareDir);
+
+        // A browser is allowed to omit ":80" (HTTP's default port) entirely.
+        const withoutPort = await fetch("http://127.0.0.1:80/health", { headers: { Host: "127.0.0.1" } });
+        expect(withoutPort.status).toBe(200);
+
+        // Same leniency applies to an ALLOWED_HOSTS entry that names port 80.
+        const allowlistedWithoutPort = await fetch("http://127.0.0.1:80/health", {
+          headers: { Host: "myhelper.local" },
+        });
+        expect(allowlistedWithoutPort.status).toBe(200);
+      } finally {
+        proc.kill();
+        rmSync(shareDir, { recursive: true, force: true });
+      }
+    },
+    15000,
+  );
 });
 
 describe("GET /hday/:username", () => {
@@ -583,27 +788,50 @@ describe("GET /logs/events", () => {
     // Unauthenticated and reachable over the LAN (HOST=0.0.0.0) — must match
     // MAX_LOG_SSE_SUBSCRIBERS in src/main.ts, kept in sync manually since
     // this suite deliberately has no test-only exports.
-    const MAX_LOG_SSE_SUBSCRIBERS = 50;
-    const controllers: AbortController[] = [];
+    //
+    // Runs against its own dedicated instance rather than the shared
+    // baseUrl/proc: counting up to the exact cap depends on no other
+    // subscriber being open on the same server, and the shared instance
+    // accumulates connections from every other test in this file (some of
+    // which close asynchronously — abort() closes a connection, but the
+    // server only decrements its subscriber count once that close is
+    // actually observed). A dedicated instance starts at zero, so the count
+    // this test drives is exactly the count the server sees.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-log-sse-cap-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
     try {
-      for (let i = 0; i < MAX_LOG_SSE_SUBSCRIBERS; i++) {
-        const controller = new AbortController();
-        const res = await fetch(`${baseUrl}/logs/events`, {
-          headers: { Accept: "text/event-stream" },
-          signal: controller.signal,
-        });
-        expect(res.status).toBe(200);
-        controllers.push(controller);
+      const capBaseUrl = `http://127.0.0.1:${port}`;
+      await waitForServer(`${capBaseUrl}/health`);
+
+      const MAX_LOG_SSE_SUBSCRIBERS = 50;
+      const controllers: AbortController[] = [];
+      try {
+        for (let i = 0; i < MAX_LOG_SSE_SUBSCRIBERS; i++) {
+          const controller = new AbortController();
+          const res = await fetch(`${capBaseUrl}/logs/events`, {
+            headers: { Accept: "text/event-stream" },
+            signal: controller.signal,
+          });
+          expect(res.status).toBe(200);
+          controllers.push(controller);
+        }
+        const overflow = await fetch(`${capBaseUrl}/logs/events`, { headers: { Accept: "text/event-stream" } });
+        expect(overflow.status).toBe(503);
+      } finally {
+        for (const controller of controllers) {
+          controller.abort();
+        }
       }
-      const overflow = await fetch(`${baseUrl}/logs/events`, { headers: { Accept: "text/event-stream" } });
-      expect(overflow.status).toBe(503);
     } finally {
-      // Abort rather than cancel the response body — cancelling only stops
-      // local reads and doesn't reliably close the connection, which would
-      // leave these subscribers counted against the cap for later tests.
-      for (const controller of controllers) {
-        controller.abort();
-      }
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
     }
   }, 15000);
 });
@@ -903,6 +1131,7 @@ describe("GET/POST /settings", () => {
         HOST: "127.0.0.1",
         PORT: String(settingsPort),
         CORS_ORIGINS: "http://new.example",
+        ALLOWED_HOSTS: "myhelper.local:8080",
       }),
     });
     expect(res.status).toBe(200);
@@ -914,6 +1143,7 @@ describe("GET/POST /settings", () => {
     expect(envContent).toContain(`PORT=${settingsPort}`);
     expect(envContent).toContain("HOST=127.0.0.1");
     expect(envContent).toContain("CORS_ORIGINS=http://new.example");
+    expect(envContent).toContain("ALLOWED_HOSTS=myhelper.local:8080");
 
     // The real restart is skipped in this test process, so the original
     // instance (still serving its original SHARE_DIR) must still be up.
@@ -1134,6 +1364,118 @@ describe("POST /settings full restart", () => {
       expect(lastBody.share_dir).toBe(newShareDir);
     } finally {
       await killOwnHelperProcessOnPort(port);
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 20000);
+
+  test("#1295: rolls back and keeps serving when a squatter already holds the wildcard/same-port candidate address", async () => {
+    // checkAddressBindable() can't probe a wildcard/same-port HOST change on
+    // its exact target address without falsely colliding with this process's
+    // own listener (see its comment) — it only proves the new host is
+    // bindable *somewhere*, via a probe on an OS-picked port. A squatter on a
+    // *different*, non-wildcard loopback address set up in advance doesn't
+    // conflict with that probe, or with this process's own 127.0.0.1 bind
+    // below (neither is a wildcard) — so it sails through validation. Only
+    // the real restart attempt, binding the actual wildcard address (which
+    // *does* conflict with the squatter), can catch it. Before this fix, that
+    // meant: .env already rewritten, this process already stopped, and the
+    // replacement fails to bind — stranding the helper with no way back.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+    const envPath = join(shareDir, ".env");
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    const squatter = Bun.serve({
+      hostname: "127.0.0.2",
+      port,
+      fetch: () => new Response(null, { status: 204 }),
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: shareDir,
+          HOST: "0.0.0.0",
+          PORT: String(port),
+          CORS_ORIGINS: "",
+        }),
+      });
+
+      expect(postRes.status).toBe(400);
+      const body = await postRes.text();
+      expect(body).toContain("Could not start the helper");
+
+      // .env must still reflect the original, working HOST — never the
+      // failed candidate — and the original process must still be alive and
+      // serving on it, not stranded.
+      const envContent = readFileSync(envPath, "utf-8");
+      expect(envContent).toContain("HOST=127.0.0.1");
+
+      const healthRes = await fetch(`${url}/health`);
+      expect(healthRes.status).toBe(200);
+    } finally {
+      await squatter.stop(true);
+      await killOwnHelperProcessOnPort(port);
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 20000);
+
+  test("hands off to a different port without stopping until the replacement confirms it bound", async () => {
+    // A different PORT is never held by this process, so — unlike the
+    // wildcard/same-port case above — there's no reason to give up this
+    // process's own listener before a replacement proves it can bind the new
+    // one. This exercises that zero-downtime path (as opposed to every other
+    // test in this file, which changes only SHARE_DIR and so always takes
+    // the stop-then-respawn path, since HOST/PORT can't coexist with
+    // themselves).
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    let newPort = 20000 + Math.floor(Math.random() * 20000);
+    while (newPort === port) newPort = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+    const newUrl = `http://127.0.0.1:${newPort}`;
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: shareDir,
+          HOST: "127.0.0.1",
+          PORT: String(newPort),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(postRes.status).toBe(200);
+      const body = await postRes.text();
+      expect(body).toContain("Restarting");
+
+      await waitForServer(`${newUrl}/health`);
+      const healthRes = await fetch(`${newUrl}/health`);
+      expect((await healthRes.json()).share_dir).toBe(shareDir);
+    } finally {
+      await killOwnHelperProcessOnPort(newPort);
       proc.kill();
       rmSync(shareDir, { recursive: true, force: true });
     }

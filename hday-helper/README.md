@@ -11,8 +11,11 @@ runtime installation required on the target machine.
 - Reads `.hday` files from the share root; reads team config (`.conf`, `.people`) from `{SHARE_DIR}/config/`
 - Reads from / writes to a configurable directory (local path or UNC/mapped-drive path)
 - No database, no OIDC, no authentication — pure file I/O over HTTP
-- `/settings` lets you view and edit `SHARE_DIR`/`PORT`/`HOST`/`CORS_ORIGINS` from a browser instead
-  of hand-editing `.env` and restarting manually — saving restarts the helper for you
+- `/settings` lets you view and edit `SHARE_DIR`/`PORT`/`HOST`/`CORS_ORIGINS`/`ALLOWED_HOSTS` from a
+  browser instead of hand-editing `.env` and restarting manually — saving restarts the helper for you
+- Rejects any request whose `Host` header isn't one of the helper's own addresses (see
+  [Host header allowlist](#host-header-allowlist)) — a DNS-rebinding defense that applies to every
+  route, not just the mutating ones
 - Logs each request (method, path, status, timing) to the console, an in-memory ring buffer, and a
   rotating log file next to the executable — reachable from a browser at `/logs`, so diagnostics
   stay available even with no console window open
@@ -50,6 +53,32 @@ All settings are read from environment variables (or a `.env` file in the curren
 | `PORT`         | `8080`                | TCP port the server listens on                  |
 | `HOST`         | `127.0.0.1`           | Bind address (`0.0.0.0` to allow LAN access)    |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated list of allowed CORS origins. Use `*` only for local dev. |
+| `ALLOWED_HOSTS` | (empty)              | Comma-separated extra `host:port` values to accept in the request `Host` header, on top of the addresses `HOST`/`PORT` already imply — see [Host header allowlist](#host-header-allowlist) below. |
+
+### Host header allowlist
+
+Every request — not just `POST /settings` — is checked against an allowlist of `Host` header
+values before it's handled, closing a [DNS-rebinding](https://github.blog/security/application-security/dns-rebinding-attacks-explained-the-lookup-is-coming-from-inside-the-house/)
+gap that a same-origin/CSRF check alone can't: an attacker who controls DNS resolution for a
+domain can make a victim's browser send a request whose `Origin` and `Host` both carry that
+attacker-controlled value while actually connecting to this server, defeating an `Origin`-vs-`Host`
+comparison entirely. A request with an unrecognized `Host` gets HTTP 403, before any route runs.
+
+The allowed set is derived automatically from `HOST`/`PORT`:
+
+- A specific bind address (`HOST=127.0.0.1`, or a concrete LAN IP) allows exactly that address.
+- `HOST=0.0.0.0` (LAN access) expands to `127.0.0.1` plus every non-internal IPv4 address this
+  machine has — the same list offered as copy-paste URLs on `/settings`. `HOST=::` (its IPv6
+  equivalent) expands the same way, plus `[::1]` for an IPv6 loopback client. Neither `0.0.0.0` nor
+  `::` is ever treated as an allow-all wildcard.
+- A request's `Host` header may omit HTTP's default port (`:80`) entirely whenever the allowed value
+  it would otherwise match already ends in `:80` — that covers `PORT=80` and any `ALLOWED_HOSTS`
+  entry naming port 80 (e.g. a reverse proxy listening on `:80`), regardless of what `PORT` itself
+  is set to.
+
+`ALLOWED_HOSTS` adds extra `host:port` values to that auto-derived set, for reaching the
+helper by a name the IP-based list can't express — an mDNS name, or a hostname a reverse proxy in
+front of the helper is configured to serve. Leave it empty unless you need one.
 
 ### Network share (UNC path)
 
@@ -276,17 +305,17 @@ Response headers include `X-File-Read-Ms` and `X-Parse-Time-Ms`.
 
 ### `GET /settings`
 
-Returns an HTML form pre-filled with the current `SHARE_DIR`/`HOST`/`PORT`/`CORS_ORIGINS` values,
-plus one or more ready-to-paste `.hday` helper URLs (with a Copy button) for Worktime's Developer
-Options field. `HOST=127.0.0.1` or another specific address is shown as-is; `HOST=0.0.0.0` isn't
-itself a dialable address, so it's expanded into `http://127.0.0.1:PORT` (this machine) plus
+Returns an HTML form pre-filled with the current `SHARE_DIR`/`HOST`/`PORT`/`CORS_ORIGINS`/`ALLOWED_HOSTS`
+values, plus one or more ready-to-paste `.hday` helper URLs (with a Copy button) for Worktime's
+Developer Options field. `HOST=127.0.0.1` or another specific address is shown as-is; `HOST=0.0.0.0`
+isn't itself a dialable address, so it's expanded into `http://127.0.0.1:PORT` (this machine) plus
 `http://<address>:PORT` for every non-internal IPv4 address found on the host (other machines on
 the LAN — the reason to bind `0.0.0.0` in the first place).
 
 ### `POST /settings`
 
-Submits the form (`application/x-www-form-urlencoded`, the four fields above) and rewrites `.env`
-next to the executable with **just those four keys** — any other lines, comments, or extra keys in
+Submits the form (`application/x-www-form-urlencoded`, the five fields above) and rewrites `.env`
+next to the executable with **just those five keys** — any other lines, comments, or extra keys in
 an existing `.env` are not preserved. Before anything is written, the new `HOST`/`PORT` are checked
 to actually be bindable (skipped when unchanged) so a typo can't strand the helper mid-restart, and
 the new `SHARE_DIR` is checked to be a usable directory — created if it doesn't exist yet (an empty
@@ -296,7 +325,9 @@ for `PORT`/`HOST`, and simpler than special-casing which settings are hot-reload
 response page polls the new address and redirects back to `/settings` once it's back up. Returns
 HTTP 400 with the form re-rendered if a value is invalid, unbindable, or an unusable `SHARE_DIR`, 403
 if the request's `Origin` doesn't match its own `Host` (CSRF defense — a cross-site form submission
-can't reconfigure the helper), 413 if the body is too large.
+can't reconfigure the helper) or if the request's `Host` itself isn't allowed (see
+[Host header allowlist](#host-header-allowlist) — checked ahead of every route, this one included),
+413 if the body is too large.
 
 ### `GET /logs`
 
