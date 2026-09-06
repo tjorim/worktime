@@ -316,7 +316,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                     lines.extend(
                         [
                             "BEGIN:VEVENT",
-                            f"UID:shift-{context.schedule_type}-{context.effective_team_number}-{day.isoformat()}@worktime",
+                            f"UID:shift-{user_id}-{context.schedule_type}-{context.effective_team_number}-{day.isoformat()}@worktime",
                             f"DTSTAMP:{stamp}",
                             f"DTSTART:{event_start:%Y%m%dT%H%M%SZ}",
                             f"DTEND:{event_end:%Y%m%dT%H%M%SZ}",
