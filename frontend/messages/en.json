@@ -1341,7 +1341,7 @@
   "hday_helper_desc": "Worktime's optional local proxy for team files in the legacy holiday planner. It runs on your device and reads the planner's network share instead of using the hosted Worktime service.",
   "hday_helper_url_label": "Helper URL",
   "hday_helper_url_invalid": "Enter an absolute HTTP or HTTPS URL.",
-  "hday_helper_url_help": "Base URL of the running worktime-hday-helper (e.g. http://localhost:8080). Its CORS_ORIGINS setting must include this app's origin.",
+  "hday_helper_url_help": "Base URL of the running worktime-hday-helper (e.g. http://127.0.0.1:8080). Its CORS_ORIGINS setting must include this app's origin.",
   "hday_helper_test": "Test",
   "hday_helper_connected": "✓ Connected to .hday helper",
   "hday_helper_failed": "✗ Could not connect to .hday helper — check URL and ensure it is running",

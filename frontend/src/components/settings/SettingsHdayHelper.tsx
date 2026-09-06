@@ -91,7 +91,7 @@ export function SettingsHdayHelper() {
         <div className="d-flex flex-column flex-sm-row gap-2">
           <Form.Control
             type="url"
-            placeholder="http://localhost:8080"
+            placeholder="http://127.0.0.1:8080"
             value={urlDraft}
             onChange={(event) => {
               setUrlDraft(event.target.value);
