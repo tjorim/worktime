@@ -213,7 +213,8 @@ event: log_line
 data: {"type":"log_line","line":"[2026-01-01T00:00:00.000Z] GET /health -> 200 (1.2ms)"}
 ```
 
-A `: keepalive` comment is sent every 15s, mirroring `/hday/:username/events`.
+A `: keepalive` comment is sent every 15s, mirroring `/hday/:username/events`. Capped at 50
+concurrent subscribers — further connection attempts get HTTP 503 until one disconnects.
 
 ## Building from source
 

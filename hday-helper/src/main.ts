@@ -436,6 +436,10 @@ function subscribeToHdayChanges(
 // ---------------------------------------------------------------------------
 
 const LOG_RING_BUFFER_SIZE = 500;
+// Unauthenticated and reachable over the LAN (HOST=0.0.0.0) — cap concurrent
+// /logs/events connections so opening many of them can't exhaust file
+// descriptors/memory (each holds an open controller and a keepalive timer).
+const MAX_LOG_SSE_SUBSCRIBERS = 50;
 const LOG_FILE_PATH = join(process.cwd(), "hday-helper.log");
 const LOG_FILE_BACKUP_PATH = `${LOG_FILE_PATH}.1`;
 const LOG_FILE_MAX_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -512,7 +516,11 @@ interface SettingsFormValues {
 }
 
 function writeEnvFile(values: Record<EnvKey, string>): void {
-  const lines = ENV_KEYS.map((key) => `${key}=${values[key]}`);
+  // Bun's .env loader expands unescaped $NAME references when it next reads
+  // this file — a SHARE_DIR like "/mnt/Q$/shared" would silently turn into
+  // something else after the very restart this save triggers. "\$" is Bun's
+  // own escape for a literal dollar sign.
+  const lines = ENV_KEYS.map((key) => `${key}=${values[key].replace(/\$/g, "\\$")}`);
   writeFileSync(ENV_FILE_PATH, lines.join("\n") + "\n", "utf-8");
 }
 
@@ -561,24 +569,32 @@ function isSameOriginRequest(req: Request): boolean {
 // since it's already proven bindable — trying to rebind it here would always
 // collide with the currently running server.
 //
-// A HOST-only change can't be probed on the real PORT either: the current
-// server is still bound there, and if the new host's address range overlaps
-// the current one (e.g. current HOST=127.0.0.1, new HOST=0.0.0.0, which binds
-// every interface including 127.0.0.1), probing would collide with our own
-// still-running listener and report a false failure. Probing on port 0 (the
-// OS picks any free port) checks the new host is bindable at all without
-// that collision; a real PORT change, which never collides since the current
-// server holds a different port, is still probed exactly.
+// Probing the exact (host, port) pair directly would falsely collide with
+// our own still-running listener only when HOST changes, PORT does not, and
+// one of the two addresses is the 0.0.0.0 wildcard (which covers every
+// interface, including whatever specific address the other one names) — that
+// combination is probed on an OS-picked port (port: 0) instead, which only
+// proves the new host is bindable *somewhere*, not on the exact target port.
+// Every other change (a different PORT is always a different port than the
+// one we hold; two distinct non-wildcard hosts never overlap) is probed on
+// the exact pair, which also catches an unrelated process already squatting
+// on it — something the weaker port-0 probe can't detect. That residual gap
+// (0.0.0.0 involved, same PORT) is tracked in #1295: closing it fully means
+// not stopping the current server until a replacement has confirmed binding,
+// a materially bigger change than a settings-validation fix.
 async function checkAddressBindable(host: string, port: number): Promise<string | null> {
   if (host === HOST && port === PORT) return null;
+
+  const couldCollideWithOurListener =
+    host !== HOST && port === PORT && (host === "0.0.0.0" || HOST === "0.0.0.0");
+
   try {
-    if (host !== HOST) {
+    if (couldCollideWithOurListener) {
       const hostProbe = Bun.serve({ hostname: host, port: 0, fetch: () => new Response(null, { status: 204 }) });
       await hostProbe.stop();
-    }
-    if (port !== PORT) {
-      const portProbe = Bun.serve({ hostname: host, port, fetch: () => new Response(null, { status: 204 }) });
-      await portProbe.stop();
+    } else {
+      const probe = Bun.serve({ hostname: host, port, fetch: () => new Response(null, { status: 204 }) });
+      await probe.stop();
     }
     return null;
   } catch (err) {
@@ -633,6 +649,13 @@ const PAGE_STYLE = `
   .helper-urls button { padding: 0.15rem 0.6rem; }
 `;
 
+// An IPv6 literal must be bracketed inside a URL ("http://[::1]:8080") —
+// its own colons would otherwise be indistinguishable from the URL's
+// port separator. IPv4 addresses and hostnames never contain a colon.
+function formatHostForUrl(host: string): string {
+  return host.includes(":") ? `[${host}]` : host;
+}
+
 // The value pasted into Worktime's Developer Options has to be something a
 // browser/fetch can actually dial — "0.0.0.0" itself isn't (it means "every
 // interface", not an address a client connects to). When bound that way,
@@ -641,7 +664,7 @@ const PAGE_STYLE = `
 // bind 0.0.0.0 in the first place) instead of the raw HOST value. Any other
 // HOST is already a concrete, dialable address, so it's used as-is.
 function candidateHelperUrls(host: string, port: number): string[] {
-  if (host !== "0.0.0.0") return [`http://${host}:${port}`];
+  if (host !== "0.0.0.0") return [`http://${formatHostForUrl(host)}:${port}`];
 
   const urls = [`http://127.0.0.1:${port}`];
   for (const addrs of Object.values(networkInterfaces())) {
@@ -753,7 +776,10 @@ function renderRestartingPage(newPort: number): string {
 <p id="status">Settings saved. Waiting for the helper to come back up…</p>
 <script>
 (function () {
-  var newOrigin = "http://" + location.hostname + ":" + ${JSON.stringify(newPort)};
+  // location.hostname reports an IPv6 literal unbracketed (e.g. "::1"), which
+  // must be re-bracketed to build a valid URL — same fix as formatHostForUrl().
+  var hostname = location.hostname.indexOf(":") !== -1 ? "[" + location.hostname + "]" : location.hostname;
+  var newOrigin = "http://" + hostname + ":" + ${JSON.stringify(newPort)};
   var deadline = Date.now() + 20000;
   function poll() {
     fetch(newOrigin + "/health", { mode: "no-cors", cache: "no-store" })
@@ -1176,6 +1202,9 @@ async function handleRequest(req: Request): Promise<Response> {
   if (pathname === "/logs/events") {
     if (req.method !== "GET") {
       return jsonResponse({ detail: "Method not allowed" }, 405, {});
+    }
+    if (logSseSubscribers.size >= MAX_LOG_SSE_SUBSCRIBERS) {
+      return jsonResponse({ detail: "Too many /logs/events subscribers" }, 503, {});
     }
 
     let cleanup: (() => void) | null = null;

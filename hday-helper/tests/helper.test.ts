@@ -16,6 +16,19 @@ import { join } from "path";
 const MAIN_TS = join(import.meta.dir, "..", "src", "main.ts");
 const ALLOWED_ORIGIN = "http://allowed.example";
 
+// Some sandboxed/CI environments have no IPv6 loopback at all (no "::1"
+// route) — probe for it once at collection time so the IPv6 test below can
+// skip itself there instead of failing on an environment limitation.
+const ipv6LoopbackAvailable = (() => {
+  try {
+    const probe = Bun.serve({ hostname: "::1", port: 0, fetch: () => new Response(null, { status: 204 }) });
+    probe.stop();
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 let shareDir: string;
 let port: number;
 let baseUrl: string;
@@ -529,32 +542,70 @@ describe("GET /logs", () => {
 
 describe("GET /logs/events", () => {
   test("streams a log_line event for a subsequent request", async () => {
+    // Cancelling the reader (as readNextSseEvent's own cleanup does) stops
+    // local reads but doesn't reliably close the underlying connection —
+    // aborting the fetch itself does, which keeps this subscriber from
+    // lingering and counting against the cap tested below.
+    const controller = new AbortController();
     const stream = await fetch(`${baseUrl}/logs/events`, {
       headers: { Accept: "text/event-stream" },
+      signal: controller.signal,
     });
-    expect(stream.status).toBe(200);
-    expect(stream.headers.get("content-type")).toContain("text/event-stream");
+    try {
+      expect(stream.status).toBe(200);
+      expect(stream.headers.get("content-type")).toContain("text/event-stream");
 
-    // Connecting itself produces a "GET /logs/events -> 200" log line that
-    // broadcasts to this very subscriber, so filter for the /health line
-    // specifically rather than assuming it's the first log_line received.
-    const eventPromise = readNextSseEvent(
-      stream,
-      "log_line",
-      3000,
-      (data) => (data as { line: string }).line.includes("GET /health"),
-    );
-    await fetch(`${baseUrl}/health`);
+      // Connecting itself produces a "GET /logs/events -> 200" log line that
+      // broadcasts to this very subscriber, so filter for the /health line
+      // specifically rather than assuming it's the first log_line received.
+      const eventPromise = readNextSseEvent(
+        stream,
+        "log_line",
+        3000,
+        (data) => (data as { line: string }).line.includes("GET /health"),
+      );
+      await fetch(`${baseUrl}/health`);
 
-    const event = (await eventPromise) as { type: string; line: string };
-    expect(event.type).toBe("log_line");
-    expect(event.line).toContain("GET /health");
+      const event = (await eventPromise) as { type: string; line: string };
+      expect(event.type).toBe("log_line");
+      expect(event.line).toContain("GET /health");
+    } finally {
+      controller.abort();
+    }
   });
 
   test("405s on a non-GET request", async () => {
     const res = await fetch(`${baseUrl}/logs/events`, { method: "POST" });
     expect(res.status).toBe(405);
   });
+
+  test("rejects a new connection once the concurrent subscriber cap is reached", async () => {
+    // Unauthenticated and reachable over the LAN (HOST=0.0.0.0) — must match
+    // MAX_LOG_SSE_SUBSCRIBERS in src/main.ts, kept in sync manually since
+    // this suite deliberately has no test-only exports.
+    const MAX_LOG_SSE_SUBSCRIBERS = 50;
+    const controllers: AbortController[] = [];
+    try {
+      for (let i = 0; i < MAX_LOG_SSE_SUBSCRIBERS; i++) {
+        const controller = new AbortController();
+        const res = await fetch(`${baseUrl}/logs/events`, {
+          headers: { Accept: "text/event-stream" },
+          signal: controller.signal,
+        });
+        expect(res.status).toBe(200);
+        controllers.push(controller);
+      }
+      const overflow = await fetch(`${baseUrl}/logs/events`, { headers: { Accept: "text/event-stream" } });
+      expect(overflow.status).toBe(503);
+    } finally {
+      // Abort rather than cancel the response body — cancelling only stops
+      // local reads and doesn't reliably close the connection, which would
+      // leave these subscribers counted against the cap for later tests.
+      for (const controller of controllers) {
+        controller.abort();
+      }
+    }
+  }, 15000);
 });
 
 describe("GET/POST /settings", () => {
@@ -728,6 +779,37 @@ describe("GET/POST /settings", () => {
     expect(healthRes.status).toBe(200);
   });
 
+  test("rejects a HOST change to a distinct address already held by another process, without writing .env", async () => {
+    // The running instance holds 127.0.0.1:settingsPort. A HOST-only change
+    // to a *different*, non-wildcard address on the same port must still be
+    // probed on the exact (host, port) pair — otherwise a real conflicting
+    // listener there would go undetected (it previously did, when any HOST
+    // change was probed on port 0 instead).
+    const squatter = Bun.serve({
+      hostname: "127.0.0.2",
+      port: settingsPort,
+      fetch: () => new Response(null, { status: 204 }),
+    });
+    try {
+      const res = await fetch(`${settingsBaseUrl}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: settingsShareDir,
+          HOST: "127.0.0.2",
+          PORT: String(settingsPort),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.text();
+      expect(body).toContain("Could not bind");
+      expect(existsSync(envPath)).toBe(false);
+    } finally {
+      await squatter.stop();
+    }
+  });
+
   test("rejects a SHARE_DIR that points at a file, without writing .env", async () => {
     const filePath = join(tmpdir(), `hday-helper-not-a-dir-${Date.now()}`);
     writeFileSync(filePath, "not a directory");
@@ -842,6 +924,28 @@ describe("GET/POST /settings", () => {
     const logsBody = await logsRes.text();
     expect(logsBody).toContain("Settings saved via /settings");
   });
+
+  test("escapes a literal dollar sign in SHARE_DIR before writing .env", async () => {
+    const dollarShareDir = join(settingsShareDir, "with$dollar");
+    const res = await fetch(`${settingsBaseUrl}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        SHARE_DIR: dollarShareDir,
+        HOST: "127.0.0.1",
+        PORT: String(settingsPort),
+        CORS_ORIGINS: "",
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    // Bun's own .env loader expands an unescaped "$dollar" as a variable
+    // reference the next time it reads this file — "\$" is its escape for a
+    // literal dollar sign, so the written line must carry it escaped.
+    const envContent = readFileSync(envPath, "utf-8");
+    expect(envContent).toContain(`SHARE_DIR=${settingsShareDir}/with\\$dollar`);
+    expect(envContent).not.toContain(`SHARE_DIR=${dollarShareDir}\n`);
+  });
 });
 
 describe("POST /settings full restart", () => {
@@ -951,4 +1055,37 @@ describe("GET /settings with HOST=0.0.0.0", () => {
       rmSync(shareDir, { recursive: true, force: true });
     }
   }, 15000);
+});
+
+describe("GET /settings with HOST=::1 (IPv6)", () => {
+  test.skipIf(!ipv6LoopbackAvailable)(
+    "brackets the IPv6 literal in the copy-paste helper URL",
+    async () => {
+      // An unbracketed "http://::1:PORT" is not a valid URL — the literal's
+      // own colons are indistinguishable from the URL's port separator.
+      const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-ipv6-host-test-"));
+      const port = 20000 + Math.floor(Math.random() * 20000);
+      const proc = Bun.spawn(["bun", MAIN_TS], {
+        env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "::1", CORS_ORIGINS: "" },
+        cwd: shareDir,
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+
+      try {
+        const baseUrl = `http://[::1]:${port}`;
+        await waitForServer(`${baseUrl}/health`);
+
+        const res = await fetch(`${baseUrl}/settings`);
+        const body = await res.text();
+
+        expect(body).toContain(`http://[::1]:${port}`);
+        expect(body).not.toContain(`http://::1:${port}`);
+      } finally {
+        proc.kill();
+        rmSync(shareDir, { recursive: true, force: true });
+      }
+    },
+    15000,
+  );
 });
