@@ -15,6 +15,10 @@
  * | HOST           | 127.0.0.1             | Bind address                        |
  * | CORS_ORIGINS   | http://localhost:5173 | Comma-separated allowed origins     |
  *
+ * On Windows, the console window is hidden by default and a status-colored
+ * system tray icon takes its place (see `tray.ts`) — set
+ * `HDAY_HELPER_NO_TRAY=1` to keep the plain console-app behavior instead.
+ *
  * ## API
  *
  * GET  /health              — health, own version, and share-directory status
@@ -57,6 +61,7 @@ import type { HdayEvent } from "../../frontend/src/lib/hday/types";
 // time (verified to survive `bun build --compile` too), so the compiled EXE reports
 // the version of the source tree it was built from, not whatever's on the host disk.
 import VERSION_FILE from "../../VERSION" with { type: "text" };
+import { hideConsoleWindow, initTray, openUrlInBrowser, type TrayHandle } from "./tray";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -843,21 +848,30 @@ function renderLogsPage(initialLines: string[]): string {
 }
 
 let httpServer: ReturnType<typeof Bun.serve> | null = null; // assigned once at bootstrap
+let trayHandle: TrayHandle | null = null; // assigned once at bootstrap, Windows only — see tray.ts's initTray()
 
-async function restartWithNewSettings(): Promise<void> {
-  logLine("Settings changed via /settings — restarting to apply new configuration");
+// Shared tail end of both the settings-triggered restart and the tray's
+// manual "Restart" menu item: stop serving, spawn a replacement process, and
+// exit. `stripEnvKeys` is true only for the settings path — there, this
+// process's env still holds the *old* SHARE_DIR/HOST/PORT/CORS_ORIGINS
+// values (Bun's built-in .env loading does not override already-set
+// environment variables), so those must be stripped from the child's
+// inherited env for it to pick up what was just written to .env. A plain
+// tray-triggered restart has no such staleness to fix, so it inherits
+// process.env unchanged — identical to how this process itself was launched.
+async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean): Promise<void> {
+  logLine(logMessage);
+  trayHandle?.destroy();
   try {
     await httpServer?.stop();
   } catch (err) {
     logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
-  // Strip the keys we just rewrote in .env from the child's inherited env so
-  // it re-reads them from disk instead of keeping this process's now-stale
-  // values — Bun's built-in .env loading does not override already-set
-  // environment variables.
   const childEnv = { ...process.env };
-  for (const key of ENV_KEYS) delete childEnv[key];
+  if (stripEnvKeys) {
+    for (const key of ENV_KEYS) delete childEnv[key];
+  }
 
   try {
     const child = Bun.spawn([process.execPath, ...process.argv.slice(1)], {
@@ -871,6 +885,21 @@ async function restartWithNewSettings(): Promise<void> {
     logLine(`Failed to spawn replacement process: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
+  process.exit(0);
+}
+
+async function restartWithNewSettings(): Promise<void> {
+  await spawnReplacementAndExit("Settings changed via /settings — restarting to apply new configuration", true);
+}
+
+async function quitFromTray(): Promise<void> {
+  logLine("Quit requested from tray menu");
+  trayHandle?.destroy();
+  try {
+    await httpServer?.stop();
+  } catch (err) {
+    logLine(`Failed to stop server cleanly before quitting: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
   process.exit(0);
 }
 
@@ -1624,3 +1653,21 @@ console.log(`Share dir: ${SHARE_DIR}`);
 console.log(`CORS:      ${CORS_ORIGINS.join(", ")}`);
 console.log("============================================================");
 console.log(`Listening on http://${HOST}:${PORT}`);
+
+// Windows-only; a no-op everywhere else (and when HDAY_HELPER_NO_TRAY=1, for
+// anyone who wants the old plain-console behavior back) — see tray.ts.
+const trayHelperUrl = candidateHelperUrls(HOST, PORT)[0]!;
+hideConsoleWindow();
+trayHandle = initTray({
+  getStatus: () => (isShareAccessible() ? "ok" : "error"),
+  getTooltip: () => `Worktime .hday Helper — ${HOST}:${PORT}`,
+  onOpenStatus: () => openUrlInBrowser(`${trayHelperUrl}/health`),
+  onSettings: () => openUrlInBrowser(`${trayHelperUrl}/settings`),
+  onLogs: () => openUrlInBrowser(`${trayHelperUrl}/logs`),
+  onRestart: () => {
+    void spawnReplacementAndExit("Restart requested from tray menu", false);
+  },
+  onQuit: () => {
+    void quitFromTray();
+  },
+});

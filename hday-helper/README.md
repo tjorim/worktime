@@ -16,6 +16,8 @@ required on the target machine.
 - Logs each request (method, path, status, timing) to the console, an in-memory ring buffer, and a
   rotating log file next to the executable — reachable from a browser at `/logs`, so diagnostics
   stay available even with no console window open
+- On Windows, runs from a system tray icon instead of an open console window — see
+  [Tray icon (Windows)](#tray-icon-windows) below
 
 ## Quick start
 
@@ -59,6 +61,50 @@ Or with a mapped drive letter:
 ```env
 SHARE_DIR=Z:\worktime
 ```
+
+## Tray icon (Windows)
+
+On Windows, the console window is hidden by default and replaced with a system tray icon —
+tinted green when the share is reachable, gray while starting up, red when it isn't (the same
+states `/health` reports). Left- or right-clicking it opens a context menu:
+
+| Item                  | Action                                          |
+|-----------------------|--------------------------------------------------|
+| Open helper status    | Opens `/health` in the default browser            |
+| Settings              | Opens `/settings` in the default browser          |
+| View logs             | Opens `/logs` in the default browser              |
+| Restart               | Restarts the helper (same effect as saving `/settings` with no changes) |
+| Quit                  | Stops the server and exits                        |
+
+Set `HDAY_HELPER_NO_TRAY=1` (as an environment variable or in `.env`) to keep the old plain
+console-app behavior instead — no tray icon, console window left visible. This is also what
+happens automatically on every non-Windows platform, and if tray/window setup fails for any
+reason (logged, not fatal): the HTTP server keeps running either way.
+
+The tray icon variants are pre-rendered PNGs under `hday-helper/assets/` (tinted from
+`frontend/public/assets/icons/icon-16.png` by `hday-helper/scripts/generate-tray-icons.ts`), not
+generated at runtime — re-run that script and commit the result if the source logo changes.
+
+### Manual QA checklist
+
+The tray/window half of this feature (`hday-helper/src/tray.ts`, `hday-helper/src/win32/`) has no
+CI coverage — there's no Windows GUI runner to verify a real `Shell_NotifyIconW`/`WndProc` round
+trip against, only what `bun test` can check without actually calling into `user32.dll`/
+`shell32.dll` (see `hday-helper/tests/tray.test.ts`, `win32-structs.test.ts`). Before shipping a
+change to either, manually verify on real Windows:
+
+- [ ] The console window is hidden on launch and a tray icon appears
+- [ ] The tray icon is gray briefly on startup, then green (with a share directory that's reachable)
+- [ ] Making the share unreachable (e.g. disconnecting the mapped drive) turns the icon red within
+      a few seconds; reconnecting it turns the icon back to green
+- [ ] Left-click and right-click both open the same context menu, positioned at the cursor
+- [ ] Each menu item does what it says: Open helper status / Settings / View logs open the right
+      page in the default browser; Restart briefly drops and re-adds the tray icon; Quit exits
+      the process and removes the tray icon (no ghost icon left behind)
+- [ ] Clicking away from an open context menu (instead of choosing an item) dismisses it normally
+- [ ] The HTTP server keeps responding promptly (e.g. `/health`) while the tray is running —
+      confirms the Win32 message pump isn't blocking Bun's event loop
+- [ ] `HDAY_HELPER_NO_TRAY=1` restores the old plain-console behavior (visible window, no tray icon)
 
 ## API
 

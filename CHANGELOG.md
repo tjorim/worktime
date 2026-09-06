@@ -17,6 +17,12 @@ below predate that switch.
 - Mobile carousel for team browsing
 - Advanced accessibility features (high-contrast mode, font scaling)
 
+## [2026.9.1] - 2026-09-06
+
+### Added
+
+- hday-helper now runs from a Windows system tray icon instead of an open console window — tinted green/gray/red to reflect share status at a glance, with a menu for opening its status page, settings, and logs, plus restart/quit (set HDAY_HELPER_NO_TRAY=1 to keep the old console-only behavior)
+
 ## [2026.8.9] - 2026-08-25
 
 ### Added
@@ -738,7 +744,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.8.9...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.1...HEAD
+[2026.9.1]: https://github.com/tjorim/worktime/compare/v2026.8.9...v2026.9.1
 [2026.8.9]: https://github.com/tjorim/worktime/compare/v2026.8.8...v2026.8.9
 [2026.8.8]: https://github.com/tjorim/worktime/compare/v2026.8.7...v2026.8.8
 [2026.8.7]: https://github.com/tjorim/worktime/compare/v2026.8.6...v2026.8.7

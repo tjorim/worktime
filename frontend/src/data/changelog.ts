@@ -14,9 +14,19 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.9.1",
+    date: "2026-09-06",
+    status: "current",
+    added: [
+      "hday-helper now runs from a Windows system tray icon instead of an open console window — tinted green/gray/red to reflect share status at a glance, with a menu for opening its status page, settings, and logs, plus restart/quit (set HDAY_HELPER_NO_TRAY=1 to keep the old console-only behavior)",
+    ],
+    changed: [],
+    fixed: [],
+  },
+  {
     version: "2026.8.9",
     date: "2026-08-25",
-    status: "current",
+    status: "released",
     added: [
       "Android now learns about a newly-created or rescheduled planned task even while closed, via a silent push signal that just prods it to re-check — the reminder itself still fires locally, the same way it already did",
     ],
