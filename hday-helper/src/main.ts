@@ -896,11 +896,17 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
     <input type="text" name="SHARE_DIR" value="${escapeHtml(values.SHARE_DIR)}" required>
   </label>
   <label>HOST
-    <input type="text" name="HOST" value="${escapeHtml(values.HOST)}" required>
+    <input type="text" name="HOST" id="host-input" data-original="${escapeHtml(values.HOST)}"
+      value="${escapeHtml(values.HOST)}" required>
   </label>
   <label>PORT
-    <input type="number" name="PORT" min="1" max="65535" value="${escapeHtml(values.PORT)}" required>
+    <input type="number" name="PORT" id="port-input" data-original="${escapeHtml(values.PORT)}"
+      min="1" max="65535" value="${escapeHtml(values.PORT)}" required>
   </label>
+  <p id="host-port-warn" class="warn" hidden>Changing HOST or PORT moves this helper to a new
+  address. Any Worktime device already pointed at the current one will show it as unavailable
+  until you paste the new URL (see above) into Worktime → Settings → About → Developer Options
+  on that device.</p>
   <label>CORS_ORIGINS
     <input type="text" name="CORS_ORIGINS" value="${escapeHtml(values.CORS_ORIGINS)}">
   </label>
@@ -914,6 +920,19 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
   rebinding; leave empty unless you need one.</p>
   <button type="submit">Save &amp; restart</button>
 </form>
+<script>
+(function () {
+  var hostInput = document.getElementById("host-input");
+  var portInput = document.getElementById("port-input");
+  var warn = document.getElementById("host-port-warn");
+  function update() {
+    warn.hidden = hostInput.value === hostInput.dataset.original
+      && portInput.value === portInput.dataset.original;
+  }
+  hostInput.addEventListener("input", update);
+  portInput.addEventListener("input", update);
+})();
+</script>
 </body>
 </html>`;
 }

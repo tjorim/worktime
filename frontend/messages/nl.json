@@ -1321,7 +1321,7 @@
   "hday_helper_url_help": "Basis-URL van de actieve worktime-hday-helper (bijv. http://127.0.0.1:8080). De CORS_ORIGINS-instelling ervan moet de origin van deze app bevatten.",
   "hday_helper_test": "Testen",
   "hday_helper_connected": "✓ Verbonden met .hday-helper",
-  "hday_helper_failed": "✗ Kan geen verbinding maken met .hday-helper — controleer de URL en zorg dat deze actief is",
+  "hday_helper_failed": "✗ Kan geen verbinding maken met .hday-helper — controleer of de URL correct en actueel is, en of de helper actief is",
   "hday_helper_mixed_content_warning": "⚠ Deze niet-loopbackhelper gebruikt HTTP terwijl Worktime HTTPS gebruikt, waardoor de browser deze blokkeert. Gebruik localhost, bied de helper via HTTPS aan of open Worktime via HTTP.",
   "hday_username_label": "Uw .hday-gebruikersnaam",
   "hday_username_placeholder": "bijv. jsmith",
