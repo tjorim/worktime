@@ -175,6 +175,100 @@ describe("GET /health", () => {
   });
 });
 
+describe("Host header validation (DNS-rebinding defense, #1293)", () => {
+  // Confirms the check runs for reads, not just the mutating /settings route
+  // the pre-existing same-origin/CSRF check already covered.
+  test("rejects a Host that doesn't match the bind address, on a plain GET route", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: "evil.example:1234" } });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.detail).toMatch(/host/i);
+  });
+
+  test("rejects a mismatched Host on /hday/:username too", async () => {
+    const res = await fetch(`${baseUrl}/hday/alice`, { headers: { Host: "evil.example:1234" } });
+    expect(res.status).toBe(403);
+  });
+
+  test("rejects a mismatched Host on the settings mutation route", async () => {
+    const res = await fetch(`${baseUrl}/settings`, {
+      method: "POST",
+      headers: { Host: "evil.example:1234", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ SHARE_DIR: shareDir, HOST: "127.0.0.1", PORT: String(port), CORS_ORIGINS: "" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test("rejects a Host that matches the bind address but a different port", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port + 1}` } });
+    expect(res.status).toBe(403);
+  });
+
+  test("allows the real bind address with a matching port", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
+    expect(res.status).toBe(200);
+  });
+
+  test("Host comparison is case-insensitive", async () => {
+    const res = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}`.toUpperCase() } });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("Host header validation with HOST=0.0.0.0 and ALLOWED_HOSTS", () => {
+  test("allows loopback and every non-internal IPv4 address, rejects an unrelated hostname, and ALLOWED_HOSTS adds an extra one", async () => {
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-host-validation-test-"));
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: {
+        ...process.env,
+        SHARE_DIR: shareDir,
+        PORT: String(port),
+        HOST: "0.0.0.0",
+        CORS_ORIGINS: "",
+        ALLOWED_HOSTS: `myhelper.local:${port}`,
+      },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      const baseUrl = `http://127.0.0.1:${port}`;
+      await waitForServer(`${baseUrl}/health`);
+
+      // Loopback is always allowed once bound to the wildcard address.
+      const loopback = await fetch(`${baseUrl}/health`, { headers: { Host: `127.0.0.1:${port}` } });
+      expect(loopback.status).toBe(200);
+
+      // Every non-internal IPv4 address this machine has is allowed too —
+      // same set the /settings page itself offers as copy-paste URLs.
+      const lanAddresses = Object.values(networkInterfaces())
+        .flat()
+        .filter((addr): addr is NonNullable<typeof addr> => !!addr && addr.family === "IPv4" && !addr.internal);
+      for (const addr of lanAddresses) {
+        const res = await fetch(`${baseUrl}/health`, { headers: { Host: `${addr.address}:${port}` } });
+        expect(res.status).toBe(200);
+      }
+
+      // 0.0.0.0 itself is never treated as a wildcard/allow-all Host value.
+      const wildcard = await fetch(`${baseUrl}/health`, { headers: { Host: `0.0.0.0:${port}` } });
+      expect(wildcard.status).toBe(403);
+
+      // An arbitrary hostname (the DNS-rebinding case) is rejected.
+      const rebind = await fetch(`${baseUrl}/health`, { headers: { Host: `attacker.example:${port}` } });
+      expect(rebind.status).toBe(403);
+
+      // ALLOWED_HOSTS explicitly extends the set beyond the auto-derived IPs.
+      const allowlisted = await fetch(`${baseUrl}/health`, { headers: { Host: `myhelper.local:${port}` } });
+      expect(allowlisted.status).toBe(200);
+    } finally {
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 15000);
+});
+
 describe("GET /hday/:username", () => {
   test("returns raw content, etag, and parsed events for an existing file", async () => {
     const res = await fetch(`${baseUrl}/hday/alice`);
@@ -903,6 +997,7 @@ describe("GET/POST /settings", () => {
         HOST: "127.0.0.1",
         PORT: String(settingsPort),
         CORS_ORIGINS: "http://new.example",
+        ALLOWED_HOSTS: "myhelper.local:8080",
       }),
     });
     expect(res.status).toBe(200);
@@ -914,6 +1009,7 @@ describe("GET/POST /settings", () => {
     expect(envContent).toContain(`PORT=${settingsPort}`);
     expect(envContent).toContain("HOST=127.0.0.1");
     expect(envContent).toContain("CORS_ORIGINS=http://new.example");
+    expect(envContent).toContain("ALLOWED_HOSTS=myhelper.local:8080");
 
     // The real restart is skipped in this test process, so the original
     // instance (still serving its original SHARE_DIR) must still be up.

@@ -14,6 +14,7 @@
  * | PORT           | 8080                  | HTTP port to listen on              |
  * | HOST           | 127.0.0.1             | Bind address                        |
  * | CORS_ORIGINS   | http://localhost:5173 | Comma-separated allowed origins     |
+ * | ALLOWED_HOSTS  | (empty)               | Comma-separated extra Host header values (host:port) to allow, on top of the auto-derived set — see isAllowedHostHeader() |
  *
  * On Windows, the console window is hidden by default and a status-colored
  * system tray icon takes its place (see `tray.ts`) — set
@@ -27,7 +28,7 @@
  * GET  /hday/:username/events — SSE stream: notifies when that user's file changes on disk
  * GET  /team/:teamId        — read team config + member list
  * GET  /team/:teamId/hday   — read aggregated team .hday files (always includes parsed events)
- * GET  /settings            — HTML form to view/edit SHARE_DIR/PORT/HOST/CORS_ORIGINS
+ * GET  /settings            — HTML form to view/edit SHARE_DIR/PORT/HOST/CORS_ORIGINS/ALLOWED_HOSTS
  * POST /settings            — rewrite .env with the submitted values and restart
  * GET  /logs                — recent log lines (plain text, or an HTML viewer for a browser)
  * GET  /logs/events         — SSE stream: new log lines as they're written
@@ -75,10 +76,16 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// Extra Host header values (host:port) allowed on top of the auto-derived set
+// computed from HOST/PORT — see isAllowedHostHeader().
+const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024; // 10 MiB
 const MAX_SETTINGS_BODY_BYTES = 64 * 1024; // form submissions are tiny; this is generous
 const ENV_FILE_PATH = join(process.cwd(), ".env");
-const ENV_KEYS = ["SHARE_DIR", "PORT", "HOST", "CORS_ORIGINS"] as const;
+const ENV_KEYS = ["SHARE_DIR", "PORT", "HOST", "CORS_ORIGINS", "ALLOWED_HOSTS"] as const;
 type EnvKey = (typeof ENV_KEYS)[number];
 // Set by tests only, so a valid POST /settings can be exercised over real HTTP
 // without the test process detaching a second, untracked OS process — see
@@ -538,6 +545,7 @@ interface SettingsFormValues {
   HOST: string;
   PORT: string;
   CORS_ORIGINS: string;
+  ALLOWED_HOSTS: string;
 }
 
 function writeEnvFile(values: Record<EnvKey, string>): void {
@@ -699,18 +707,56 @@ function formatHostForUrl(host: string): string {
 // non-internal IPv4 address (other machines on the LAN, the actual reason to
 // bind 0.0.0.0 in the first place) instead of the raw HOST value. Any other
 // HOST is already a concrete, dialable address, so it's used as-is.
-function candidateHelperUrls(host: string, port: number): string[] {
-  if (host !== "0.0.0.0") return [`http://${formatHostForUrl(host)}:${port}`];
+// Bare "host:port" values (no scheme) a client can actually dial this server
+// at, given its bind address — shared by candidateHelperUrls() (rendered as
+// clickable URLs) and isAllowedHostHeader() (compared against the raw Host
+// header). See that function for why 0.0.0.0 expands into a concrete list
+// rather than being treated as a wildcard.
+function candidateHelperHosts(host: string, port: number): string[] {
+  if (host !== "0.0.0.0") return [`${formatHostForUrl(host)}:${port}`];
 
-  const urls = [`http://127.0.0.1:${port}`];
+  const hosts = [`127.0.0.1:${port}`];
   for (const addrs of Object.values(networkInterfaces())) {
     for (const addr of addrs ?? []) {
       if (addr.family === "IPv4" && !addr.internal) {
-        urls.push(`http://${addr.address}:${port}`);
+        hosts.push(`${addr.address}:${port}`);
       }
     }
   }
-  return urls;
+  return hosts;
+}
+
+function candidateHelperUrls(host: string, port: number): string[] {
+  return candidateHelperHosts(host, port).map((h) => `http://${h}`);
+}
+
+// DNS-rebinding defense (#1293): a same-origin/CSRF check alone (see
+// isSameOriginRequest above) compares `Origin` against `Host` — but an
+// attacker who controls DNS resolution for a domain can make both headers
+// carry that same attacker-controlled value while the browser is actually
+// connected to this server, defeating that check entirely. Validating `Host`
+// itself against a known-good allowlist closes that gap: an attacker can put
+// anything they want in DNS, but they can't make the victim's browser send a
+// `Host` header this server doesn't recognize as one of its own addresses.
+//
+// Applied to every route, not just the mutating POST /settings — the read
+// endpoints (GET/PUT /hday, GET /team, both SSE streams) have exactly the
+// same exposure and were never carved out as a smaller, deliberately-accepted
+// risk.
+//
+// The allowed set is derived from HOST/PORT the same way the copy-paste URLs
+// on /settings are (candidateHelperHosts) — under HOST=0.0.0.0 (documented,
+// intentional LAN access) that expands to loopback plus every non-internal
+// IPv4 address this machine actually has, never treating 0.0.0.0 itself as an
+// allow-all wildcard. ALLOWED_HOSTS adds operator-specified extras (e.g. an
+// mDNS name or a reverse-proxy hostname) the auto-derived IP list can't cover.
+function isAllowedHostHeader(hostHeader: string | null): boolean {
+  if (!hostHeader) return false;
+  const normalized = hostHeader.toLowerCase();
+  return (
+    candidateHelperHosts(HOST, PORT).some((h) => h.toLowerCase() === normalized) ||
+    ALLOWED_HOSTS.some((h) => h.toLowerCase() === normalized)
+  );
 }
 
 function renderHelperUrls(): string {
@@ -776,7 +822,7 @@ function renderSettingsPage(values: SettingsFormValues, error: string | null): s
 <nav><a href="/settings">Settings</a><a href="/logs">Logs</a></nav>
 <h1>.hday Helper Settings</h1>
 ${renderHelperUrls()}
-<p class="warn">Saving rewrites <code>.env</code> with just these four keys — any other lines or
+<p class="warn">Saving rewrites <code>.env</code> with just these five keys — any other lines or
 comments in your existing <code>.env</code> file will not be preserved. Saving restarts the helper
 immediately.</p>
 ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
@@ -793,6 +839,14 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
   <label>CORS_ORIGINS
     <input type="text" name="CORS_ORIGINS" value="${escapeHtml(values.CORS_ORIGINS)}">
   </label>
+  <label>ALLOWED_HOSTS
+    <input type="text" name="ALLOWED_HOSTS" value="${escapeHtml(values.ALLOWED_HOSTS)}"
+      placeholder="e.g. myhelper.local:8080">
+  </label>
+  <p>Requests are only accepted for a <code>Host</code> matching one of the URLs above or an entry
+  here — comma-separated <code>host:port</code> values, for reaching this helper by a name that
+  isn't one of its own IP addresses (an mDNS name, a reverse-proxy hostname). Defends against DNS
+  rebinding; leave empty unless you need one.</p>
   <button type="submit">Save &amp; restart</button>
 </form>
 </body>
@@ -1142,6 +1196,14 @@ async function readBodyTextWithLimit(req: Request, maxBytes: number): Promise<st
 // ---------------------------------------------------------------------------
 
 async function handleRequest(req: Request): Promise<Response> {
+  // Checked before anything else — including CORS preflight — so a
+  // DNS-rebinding request never reaches route dispatch and never gets a
+  // populated Access-Control-Allow-Origin to work with. See
+  // isAllowedHostHeader() for what's allowed and why.
+  if (!isAllowedHostHeader(req.headers.get("Host"))) {
+    return jsonResponse({ detail: "Host header not allowed" }, 403, {});
+  }
+
   const url = new URL(req.url);
   const { pathname } = url;
   const origin = req.headers.get("Origin");
@@ -1175,6 +1237,7 @@ async function handleRequest(req: Request): Promise<Response> {
         HOST,
         PORT: String(PORT),
         CORS_ORIGINS: CORS_ORIGINS.join(","),
+        ALLOWED_HOSTS: ALLOWED_HOSTS.join(","),
       };
       return new Response(renderSettingsPage(values, null), {
         status: 200,
@@ -1211,6 +1274,7 @@ async function handleRequest(req: Request): Promise<Response> {
         HOST: form.get("HOST") ?? "",
         PORT: form.get("PORT") ?? "",
         CORS_ORIGINS: form.get("CORS_ORIGINS") ?? "",
+        ALLOWED_HOSTS: form.get("ALLOWED_HOSTS") ?? "",
       };
 
       const error = validateSettingsForm(values);
@@ -1245,6 +1309,7 @@ async function handleRequest(req: Request): Promise<Response> {
         HOST: newHost,
         PORT: String(newPort),
         CORS_ORIGINS: values.CORS_ORIGINS.trim(),
+        ALLOWED_HOSTS: values.ALLOWED_HOSTS.trim(),
       });
 
       logLine(`Settings saved via /settings; restarting on ${newHost}:${newPort}`);
