@@ -876,6 +876,14 @@ function renderHelperUrls(): string {
 }
 
 function renderSettingsPage(values: SettingsFormValues, error: string | null): string {
+  // The warning must compare against the address this process is actually
+  // bound to right now — not `values`, which after a rejected submission
+  // (validation, share-dir, or bind-check failure below) holds the rejected
+  // draft the user is being asked to correct, not the config still in
+  // effect. Falling back to `values` here would hide the warning on the very
+  // next (this time valid) submit, since the draft would already equal
+  // itself.
+  const original = currentEnvValues();
   return `<!doctype html>
 <html>
 <head>
@@ -896,11 +904,11 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
     <input type="text" name="SHARE_DIR" value="${escapeHtml(values.SHARE_DIR)}" required>
   </label>
   <label>HOST
-    <input type="text" name="HOST" id="host-input" data-original="${escapeHtml(values.HOST)}"
+    <input type="text" name="HOST" id="host-input" data-original="${escapeHtml(original.HOST)}"
       value="${escapeHtml(values.HOST)}" required>
   </label>
   <label>PORT
-    <input type="number" name="PORT" id="port-input" data-original="${escapeHtml(values.PORT)}"
+    <input type="number" name="PORT" id="port-input" data-original="${escapeHtml(original.PORT)}"
       min="1" max="65535" value="${escapeHtml(values.PORT)}" required>
   </label>
   <p id="host-port-warn" class="warn" hidden>Changing HOST or PORT moves this helper to a new
@@ -926,11 +934,16 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
   var portInput = document.getElementById("port-input");
   var warn = document.getElementById("host-port-warn");
   function update() {
-    warn.hidden = hostInput.value === hostInput.dataset.original
-      && portInput.value === portInput.dataset.original;
+    // Trimmed/numeric comparison so incidental formatting differences (stray
+    // whitespace, a leading zero on the port) don't trigger a false warning
+    // — the same normalization the server applies before writing .env.
+    var hostChanged = hostInput.value.trim() !== hostInput.dataset.original.trim();
+    var portChanged = String(Number(portInput.value)) !== String(Number(portInput.dataset.original));
+    warn.hidden = !hostChanged && !portChanged;
   }
   hostInput.addEventListener("input", update);
   portInput.addEventListener("input", update);
+  update();
 })();
 </script>
 </body>
