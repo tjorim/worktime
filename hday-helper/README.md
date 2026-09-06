@@ -144,11 +144,11 @@ Rather than a tray icon, run it as a `systemd` service:
    sudo systemctl enable --now worktime-hday-helper
    ```
 
-A config change saved via `/settings` still works under systemd: the helper detects it's
-supervised (systemd sets `INVOCATION_ID` on every process it starts) and, instead of spawning its
-own detached replacement the way it does when run directly, just exits and lets the unit's
-`Restart=always` bring it back up — avoiding two processes racing for the same port, and an
-orphaned one `systemctl restart` wouldn't know about.
+A config change saved via `/settings` still works under systemd: the shipped unit file sets
+`HDAY_HELPER_NO_SELF_RESPAWN=1`, which tells the helper to just exit on a settings-triggered
+restart instead of spawning its own detached replacement the way it does when run directly —
+`Restart=always` brings it back up instead, avoiding two processes racing for the same port, and
+an orphaned one `systemctl restart` wouldn't know about.
 
 ## API
 

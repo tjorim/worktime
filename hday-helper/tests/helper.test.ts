@@ -1014,13 +1014,21 @@ describe("POST /settings full restart", () => {
     }
   }, 20000);
 
-  test("under systemd (INVOCATION_ID set), exits instead of self-spawning a replacement", async () => {
+  test("with HDAY_HELPER_NO_SELF_RESPAWN=1 (as worktime-hday-helper.service sets), exits instead of self-spawning a replacement", async () => {
     // See main.ts's spawnReplacementAndExit(): under a service manager, a
     // self-spawned detached replacement would race with the manager's own
-    // restart policy for the same port, and end up unsupervised. Setting
-    // INVOCATION_ID (which systemd sets on every process it starts) should
-    // make the helper just exit and leave restarting to "systemd" — which,
-    // in this test, is nobody, so the port must stay down afterward.
+    // restart policy for the same port, and end up unsupervised. This env
+    // var — set by worktime-hday-helper.service's Environment=, not
+    // auto-detected — should make the helper just exit and leave restarting
+    // to the service manager, which in this test is nobody, so the port
+    // must stay down afterward.
+    //
+    // This is a deliberate opt-in rather than detecting systemd via the
+    // INVOCATION_ID env var systemd sets on processes it starts: that var
+    // is inherited by every descendant process, including (as CI found the
+    // hard way) a `bun test` run itself when the CI runner's own agent is
+    // systemd-managed — which made every spawned test instance skip its
+    // self-respawn, not just ones meaning to simulate it.
     const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
     const newShareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-new-"));
     const port = 20000 + Math.floor(Math.random() * 20000);
@@ -1033,7 +1041,7 @@ describe("POST /settings full restart", () => {
         PORT: String(port),
         HOST: "127.0.0.1",
         CORS_ORIGINS: "",
-        INVOCATION_ID: "test-invocation-id",
+        HDAY_HELPER_NO_SELF_RESPAWN: "1",
       },
       cwd: shareDir,
       stdout: "ignore",

@@ -19,11 +19,11 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/worktime-hday-helper
 ExecStart=/opt/worktime-hday-helper/worktime-hday-helper
-# The app can restart itself (e.g. after a config change saved via
-# /settings) by exiting cleanly and relying on this policy — see
-# main.ts's spawnReplacementAndExit(), which detects systemd via the
-# INVOCATION_ID environment variable systemd sets on every unit it starts,
-# and skips its own detached-child self-respawn in favor of this restart.
+# Tells the app not to spawn its own detached replacement after a config
+# change saved via /settings — that would race this unit's own restart
+# below for the same port. See main.ts's spawnReplacementAndExit(): with
+# this set, it just exits cleanly and leaves restarting to us.
+Environment=HDAY_HELPER_NO_SELF_RESPAWN=1
 Restart=always
 RestartSec=2
 
