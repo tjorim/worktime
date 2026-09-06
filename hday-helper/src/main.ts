@@ -520,6 +520,17 @@ function writeEnvFile(values: Record<EnvKey, string>): void {
   // this file — a SHARE_DIR like "/mnt/Q$/shared" would silently turn into
   // something else after the very restart this save triggers. "\$" is Bun's
   // own escape for a literal dollar sign.
+  //
+  // Deliberately not also escaping literal backslashes: Bun's .env parser
+  // has no general "\\" -> "\" unescape, it *only* special-cases a backslash
+  // directly before "$". Doubling every backslash here would leave a stray
+  // literal backslash in front of any plain one on reload — corrupting every
+  // ordinary Windows/UNC path (e.g. "\\server\C$\worktime", where "C$" is a
+  // literal Windows admin share name, is expected input). Prefixing exactly
+  // one "\" before each "$" round-trips correctly regardless of how many
+  // backslashes already precede it, since Bun's escape only ever consumes
+  // the single backslash immediately adjacent to the "$" — see the restart
+  // test covering a backslash-adjacent "$" in helper.test.ts.
   const lines = ENV_KEYS.map((key) => `${key}=${values[key].replace(/\$/g, "\\$")}`);
   writeFileSync(ENV_FILE_PATH, lines.join("\n") + "\n", "utf-8");
 }

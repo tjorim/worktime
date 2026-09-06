@@ -1013,6 +1013,68 @@ describe("POST /settings full restart", () => {
       rmSync(newShareDir, { recursive: true, force: true });
     }
   }, 20000);
+
+  test("round-trips a SHARE_DIR with a backslash immediately before a dollar sign", async () => {
+    // Windows admin shares are literally named "C$", "D$", etc. — a UNC path
+    // like "\\server\C$\worktime" (backslash directly touching the $) is a
+    // realistic SHARE_DIR, not a contrived edge case. writeEnvFile() only
+    // escapes "$" (inserting one "\" before it) and leaves other backslashes
+    // untouched — escaping backslashes too would double them and corrupt
+    // every plain UNC path, since Bun's .env parser has no general "\\"
+    // escape and would leave a stray literal backslash behind. This proves
+    // the one-character escape survives an actual restart+reload unchanged.
+    const shareDir = mkdtempSync(join(tmpdir(), "hday-helper-restart-test-"));
+    const newShareDir = join(shareDir, "some\\$where");
+    mkdirSync(newShareDir, { recursive: true });
+    const port = 20000 + Math.floor(Math.random() * 20000);
+    const url = `http://127.0.0.1:${port}`;
+
+    const proc = Bun.spawn(["bun", MAIN_TS], {
+      env: { ...process.env, SHARE_DIR: shareDir, PORT: String(port), HOST: "127.0.0.1", CORS_ORIGINS: "" },
+      cwd: shareDir,
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+
+    try {
+      await waitForServer(`${url}/health`);
+
+      const postRes = await fetch(`${url}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: newShareDir,
+          HOST: "127.0.0.1",
+          PORT: String(port),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(postRes.status).toBe(200);
+
+      const deadline = Date.now() + 15000;
+      let lastBody: { share_dir?: string } = {};
+      while (Date.now() < deadline) {
+        try {
+          const res = await fetch(`${url}/health`);
+          if (res.ok) {
+            lastBody = await res.json();
+            if (lastBody.share_dir === newShareDir) break;
+          }
+        } catch {
+          // Old process may already be down and the new one not bound yet.
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      // Bun's .env reader ran on the freshly written file by this point — if
+      // the "$" escape were lost or mishandled, share_dir would come back
+      // with "$where" expanded away (or a stray backslash added/dropped).
+      expect(lastBody.share_dir).toBe(newShareDir);
+    } finally {
+      await killOwnHelperProcessOnPort(port);
+      proc.kill();
+      rmSync(shareDir, { recursive: true, force: true });
+    }
+  }, 20000);
 });
 
 describe("GET /settings with HOST=0.0.0.0", () => {
