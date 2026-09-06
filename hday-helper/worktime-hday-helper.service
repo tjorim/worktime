@@ -1,0 +1,37 @@
+# systemd unit for running the .hday helper as a background service on
+# Linux — see the "Linux (systemd)" section in hday-helper/README.md.
+#
+# Adjust WorkingDirectory/ExecStart to wherever you place the compiled
+# binary, then:
+#   sudo cp worktime-hday-helper.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now worktime-hday-helper
+#
+# Config (SHARE_DIR/PORT/HOST/CORS_ORIGINS) is still read from a .env file in
+# WorkingDirectory, exactly as on Windows — no separate Linux config path.
+
+[Unit]
+Description=Worktime .hday Helper
+Documentation=https://github.com/tjorim/worktime/blob/main/hday-helper/README.md
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/worktime-hday-helper
+ExecStart=/opt/worktime-hday-helper/worktime-hday-helper
+# The app can restart itself (e.g. after a config change saved via
+# /settings) by exiting cleanly and relying on this policy — see
+# main.ts's spawnReplacementAndExit(), which detects systemd via the
+# INVOCATION_ID environment variable systemd sets on every unit it starts,
+# and skips its own detached-child self-respawn in favor of this restart.
+Restart=always
+RestartSec=2
+
+# Uncomment to run as a dedicated, unprivileged user/group instead of
+# whatever this unit's default is (typically root under
+# /etc/systemd/system, unless installed as a `systemctl --user` unit):
+#User=hday-helper
+#Group=hday-helper
+
+[Install]
+WantedBy=multi-user.target

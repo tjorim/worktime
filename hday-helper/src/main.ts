@@ -888,6 +888,21 @@ async function spawnReplacementAndExit(logMessage: string, stripEnvKeys: boolean
     logLine(`Failed to stop server cleanly before restart: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 
+  // systemd sets INVOCATION_ID on every process it starts (has since v232) —
+  // a reliable way to tell "a service manager is supervising this process"
+  // without an extra opt-in flag. Under systemd, spawning our own detached
+  // replacement would race with the unit's own restart (see
+  // worktime-hday-helper.service's Restart=on-success): both processes
+  // would try to bind the same port, and the detached one — unknown to
+  // systemd — would be left running as an orphan the next time someone runs
+  // `systemctl restart`. Exiting and letting systemd relaunch us avoids
+  // that; the fresh process picks up .env on its own via Bun's normal
+  // startup, so there's no stale-env-var problem to strip here either.
+  if (process.env.INVOCATION_ID) {
+    logLine("Running under systemd — exiting for it to restart the service instead of self-spawning");
+    process.exit(0);
+  }
+
   const childEnv = { ...process.env };
   if (stripEnvKeys) {
     for (const key of ENV_KEYS) delete childEnv[key];

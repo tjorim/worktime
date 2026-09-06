@@ -1,8 +1,8 @@
 # Worktime .hday Helper
 
 A minimal, self-contained HTTP server that reads and writes `.hday` files from a local or
-network-share directory. Compiled to a single Windows EXE with Bun — no runtime installation
-required on the target machine.
+network-share directory. Compiled to a single executable with Bun (Windows or Linux) — no
+runtime installation required on the target machine.
 
 ## What it does
 
@@ -18,6 +18,7 @@ required on the target machine.
   stay available even with no console window open
 - On Windows, runs from a system tray icon instead of an open console window — see
   [Tray icon (Windows)](#tray-icon-windows) below
+- On Linux, runs as a `systemd` service instead — see [Linux (systemd)](#linux-systemd) below
 
 ## Quick start
 
@@ -122,6 +123,32 @@ manually verify on real Windows:
       tray-icon-*.png` files before building) and confirm the console stays visible instead of
       being hidden with nothing to show for it
 - [ ] `HDAY_HELPER_NO_TRAY=1` restores the old plain-console behavior (visible window, no tray icon)
+
+## Linux (systemd)
+
+The helper is plain Bun/TypeScript with no OS-specific code outside `tray.ts` (Windows-only, see
+above), so it runs on Linux the same way it does on Windows — just without a tray icon, since
+desktop Linux has no `Shell_NotifyIcon` equivalent (a GNOME/KDE tray icon would go through a
+D-Bus `StatusNotifierItem` service instead, which isn't implemented here).
+
+Rather than a tray icon, run it as a `systemd` service:
+
+1. Build (or download) the Linux binary — see [Building from source](#building-from-source)
+2. Place it somewhere, e.g. `/opt/worktime-hday-helper/worktime-hday-helper`, and `chmod +x` it
+3. Create a `.env` file next to it (same format as Windows — see [Configuration](#configuration)),
+   e.g. with `SHARE_DIR` pointing at an NFS/CIFS mount instead of a UNC path
+4. Copy `hday-helper/worktime-hday-helper.service` to `/etc/systemd/system/`, adjusting its
+   `WorkingDirectory`/`ExecStart` to match, then:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now worktime-hday-helper
+   ```
+
+A config change saved via `/settings` still works under systemd: the helper detects it's
+supervised (systemd sets `INVOCATION_ID` on every process it starts) and, instead of spawning its
+own detached replacement the way it does when run directly, just exits and lets the unit's
+`Restart=always` bring it back up — avoiding two processes racing for the same port, and an
+orphaned one `systemctl restart` wouldn't know about.
 
 ## API
 
@@ -288,6 +315,8 @@ Requires [Bun](https://bun.sh/) ≥ 1.1.
 bun build hday-helper/src/main.ts --compile --outfile worktime-hday-helper
 # Windows cross-compile:
 bun build hday-helper/src/main.ts --compile --target=bun-windows-x64 --outfile worktime-hday-helper.exe
+# Linux cross-compile (explicit target, same result as the untargeted command above on a Linux host):
+bun build hday-helper/src/main.ts --compile --target=bun-linux-x64 --outfile worktime-hday-helper
 ```
 
 ## Testing
