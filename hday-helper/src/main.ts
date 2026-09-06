@@ -585,6 +585,28 @@ async function checkAddressBindable(host: string, port: number): Promise<string 
   }
 }
 
+// Verifying a candidate SHARE_DIR is usable *before* committing to a restart
+// — same rationale as checkAddressBindable for HOST/PORT: catch a bad value
+// here, with the current (working) instance still up to report it, rather
+// than only discovering it via a 503 from /health after restarting into it.
+// A directory with nothing in it yet is fine — that's how a fresh or newly
+// emptied share gets populated — so this only checks the path can actually
+// be created/read/written, not that it already contains any files.
+function checkShareDirUsable(dir: string): string | null {
+  try {
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    if (!statSync(dir).isDirectory()) {
+      return `SHARE_DIR "${dir}" is not a directory. Settings were not saved.`;
+    }
+    accessSync(dir, constants.R_OK | constants.W_OK);
+    return null;
+  } catch (err) {
+    return `SHARE_DIR "${dir}" is not accessible (${err instanceof Error ? err.message : String(err)}). Settings were not saved.`;
+  }
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -1012,6 +1034,15 @@ async function handleRequest(req: Request): Promise<Response> {
         });
       }
 
+      const newShareDir = values.SHARE_DIR.trim();
+      const shareDirError = checkShareDirUsable(newShareDir);
+      if (shareDirError) {
+        return new Response(renderSettingsPage(values, shareDirError), {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
       const newPort = Number(values.PORT);
       const newHost = values.HOST.trim();
       const bindError = await checkAddressBindable(newHost, newPort);
@@ -1023,7 +1054,7 @@ async function handleRequest(req: Request): Promise<Response> {
       }
 
       writeEnvFile({
-        SHARE_DIR: values.SHARE_DIR.trim(),
+        SHARE_DIR: newShareDir,
         HOST: newHost,
         PORT: String(newPort),
         CORS_ORIGINS: values.CORS_ORIGINS.trim(),

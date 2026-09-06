@@ -721,8 +721,54 @@ describe("GET/POST /settings", () => {
     expect(healthRes.status).toBe(200);
   });
 
-  // This test performs a real (non-rejected) save, so it must run after every
-  // test above that asserts .env doesn't exist yet.
+  test("rejects a SHARE_DIR that points at a file, without writing .env", async () => {
+    const filePath = join(tmpdir(), `hday-helper-not-a-dir-${Date.now()}`);
+    writeFileSync(filePath, "not a directory");
+    try {
+      const res = await fetch(`${settingsBaseUrl}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: filePath,
+          HOST: "127.0.0.1",
+          PORT: String(settingsPort),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.text();
+      expect(body).toContain("is not a directory");
+      expect(existsSync(envPath)).toBe(false);
+    } finally {
+      rmSync(filePath, { force: true });
+    }
+  });
+
+  // These two tests perform a real (non-rejected) save, so they must run
+  // after every test above that asserts .env doesn't exist yet.
+  test("accepts a fresh SHARE_DIR that doesn't exist yet, creating it", async () => {
+    const freshDir = join(tmpdir(), `hday-helper-fresh-sharedir-${Date.now()}`);
+    expect(existsSync(freshDir)).toBe(false);
+    try {
+      const res = await fetch(`${settingsBaseUrl}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          SHARE_DIR: freshDir,
+          HOST: "127.0.0.1",
+          PORT: String(settingsPort),
+          CORS_ORIGINS: "",
+        }),
+      });
+      expect(res.status).toBe(200);
+      // An empty, freshly created share is the expected first-run state —
+      // the settings save shouldn't require it to already contain anything.
+      expect(existsSync(freshDir)).toBe(true);
+    } finally {
+      rmSync(freshDir, { recursive: true, force: true });
+    }
+  });
+
   test("accepts a HOST-only change on the same PORT without a false bind collision", async () => {
     const res = await fetch(`${settingsBaseUrl}/settings`, {
       method: "POST",

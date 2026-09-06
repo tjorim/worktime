@@ -179,13 +179,15 @@ Returns an HTML form pre-filled with the current `SHARE_DIR`/`HOST`/`PORT`/`CORS
 Submits the form (`application/x-www-form-urlencoded`, the four fields above) and rewrites `.env`
 next to the executable with **just those four keys** — any other lines, comments, or extra keys in
 an existing `.env` are not preserved. Before anything is written, the new `HOST`/`PORT` are checked
-to actually be bindable (skipped when unchanged) so a typo can't strand the helper mid-restart; if
-saved, the helper immediately restarts itself to apply the change (needed for `PORT`/`HOST`, and
-simpler than special-casing which settings are hot-reloadable), and the response page polls the new
-address and redirects back to `/settings` once it's back up. Returns HTTP 400 with the form
-re-rendered if a value is invalid or unbindable, 403 if the request's `Origin` doesn't match its own
-`Host` (CSRF defense — a cross-site form submission can't reconfigure the helper), 413 if the body is
-too large.
+to actually be bindable (skipped when unchanged) so a typo can't strand the helper mid-restart, and
+the new `SHARE_DIR` is checked to be a usable directory — created if it doesn't exist yet (an empty
+share, e.g. for a first-time setup, is expected and fine), rejected if it can't be created or isn't
+read/write accessible. If saved, the helper immediately restarts itself to apply the change (needed
+for `PORT`/`HOST`, and simpler than special-casing which settings are hot-reloadable), and the
+response page polls the new address and redirects back to `/settings` once it's back up. Returns
+HTTP 400 with the form re-rendered if a value is invalid, unbindable, or an unusable `SHARE_DIR`, 403
+if the request's `Origin` doesn't match its own `Host` (CSRF defense — a cross-site form submission
+can't reconfigure the helper), 413 if the body is too large.
 
 ### `GET /logs`
 
