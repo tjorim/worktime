@@ -111,6 +111,12 @@ export default defineConfig({
   build: {
     outDir: "dist",
     assetsDir: "assets",
+    // Workbox precaches every JS chunk and its SW intercepts all fetches for them, so
+    // Vite's <link rel="modulepreload"> tags are redundant once the SW is active — and
+    // Chromium then discards them with a "cross-world service worker resource mismatch"
+    // console warning, since the preload and the actual module fetch are resolved through
+    // different paths (network vs. SW-served cache).
+    modulePreload: false,
     sourcemap: false,
     minify: "terser",
     cssMinify: "lightningcss",
