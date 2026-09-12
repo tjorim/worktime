@@ -60,6 +60,10 @@ updates:
         patterns:
           - "@tanstack/query-db-collection"
           - "@tanstack/react-db"
+      # Group Schedule-X packages (calendar component + its plugins)
+      schedule-x:
+        patterns:
+          - "@schedule-x/*"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
