@@ -137,7 +137,7 @@ def _build_auth_provider(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> KeycloakAuthProvider | MultiAuth:
     """Build the FastMCP auth provider from Keycloak and managed clients."""
-    base_url = os.environ.get("WORKTIME_MCP_BASE_URL", "http://localhost:8000/mcp")
+    base_url = os.environ.get("MCP_BASE_URL", "http://localhost:8000/mcp")
     realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL)
     audience = settings.OIDC_AUDIENCE or None
 
@@ -764,7 +764,7 @@ def main() -> None:
     """Reject stdio startup because Worktime tools require bearer auth."""
     raise SystemExit(
         "Worktime MCP requires authenticated HTTP transport; run the FastAPI "
-        "application with WORKTIME_MCP_BASE_URL configured and connect to /mcp."
+        "application with MCP_BASE_URL configured and connect to /mcp."
     )
 
 

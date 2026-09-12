@@ -49,7 +49,7 @@ def _make_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
 
 
 def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monkeypatch) -> None:
-    monkeypatch.setenv("WORKTIME_MCP_BASE_URL", "https://api.example/mcp")
+    monkeypatch.setenv("MCP_BASE_URL", "https://api.example/mcp")
     monkeypatch.setenv("WORKTIME_MCP_KEYCLOAK_REALM_URL", "https://auth.example/realms/worktime")
     monkeypatch.setattr("app.mcp_server.settings.OIDC_AUDIENCE", "worktime")
 

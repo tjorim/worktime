@@ -51,7 +51,7 @@ operator-defined overlap window; only one previous secret is accepted.
 ## Connect over authenticated HTTP
 
 Worktime tools require an authenticated principal, so stdio is not a supported
-transport. Configure `WORKTIME_MCP_BASE_URL`, run the FastAPI backend, and
+transport. Configure `MCP_BASE_URL`, run the FastAPI backend, and
 connect to its `/mcp` endpoint using OAuth or a managed integration-client key
 that carries the `worktime:mcp` scope.
 

@@ -74,7 +74,7 @@ def test_404_handling(client):
 
 
 def test_mcp_capabilities_reports_disabled_with_empty_tools_when_unmounted(client):
-    """WORKTIME_MCP_BASE_URL is unset for the test app, so the MCP server isn't
+    """MCP_BASE_URL is unset for the test app, so the MCP server isn't
     mounted — the capability manifest must say so and list no tools, rather
     than advertising tools that aren't actually reachable."""
     response = client.get("/api/mcp/capabilities")
