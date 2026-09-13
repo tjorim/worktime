@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 REMINDER_CHECK_INTERVAL_SECONDS = 60
 REMINDER_LEAD_MINUTES = 10
+STALE_CLAIM_MINUTES = 5
 
 
 def _due_task_conditions(now_utc: dt_datetime) -> tuple[ColumnElement[bool], ...]:
@@ -146,6 +147,37 @@ async def _send_reminder(session: AsyncSession, task: TimeTrackingTask, *, now_u
             .where(TimeTrackingTask.reminder_sent_at == now_utc)
             .values(reminder_sent_at=None)
         )
+    else:
+        # Confirm this claim finished handling -- see _release_stale_claims,
+        # which relies on reminder_completed_at staying unset for a claim
+        # abandoned by a mid-send crash.
+        await session.execute(
+            update(TimeTrackingTask)
+            .where(TimeTrackingTask.id == task.id)
+            .where(TimeTrackingTask.reminder_sent_at == now_utc)
+            .values(reminder_completed_at=now_utc)
+        )
+    await session.commit()
+
+
+async def _release_stale_claims(session: AsyncSession, now_utc: dt_datetime) -> None:
+    """Recover a reminder claim orphaned by a crash between the atomic claim
+    (`_send_reminder`'s first UPDATE) and its own completion-confirmation
+    write. Sending is normally sub-second, so a claim still unconfirmed
+    after STALE_CLAIM_MINUTES is treated as abandoned and released for a
+    retry on the next scan. reminder_completed_at is what makes this safe:
+    without it, a threshold-only check couldn't tell an abandoned claim
+    apart from an ordinary already-sent one, and would re-release (and
+    duplicate-send) every normal reminder once it aged past the threshold.
+    """
+    stale_before = now_utc - timedelta(minutes=STALE_CLAIM_MINUTES)
+    await session.execute(
+        update(TimeTrackingTask)
+        .where(TimeTrackingTask.reminder_sent_at.is_not(None))
+        .where(TimeTrackingTask.reminder_sent_at < stale_before)
+        .where(TimeTrackingTask.reminder_completed_at.is_(None))
+        .values(reminder_sent_at=None)
+    )
     await session.commit()
 
 
@@ -153,6 +185,7 @@ async def _check_and_send_reminders() -> None:
     factory = get_session_factory()
     async with factory() as session:
         now_utc = dt_datetime.now(UTC)
+        await _release_stale_claims(session, now_utc)
         due_tasks = await _find_due_tasks(session, now_utc)
         for task in due_tasks:
             try:

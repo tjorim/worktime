@@ -437,6 +437,66 @@ class TestPlannedTaskReminderScheduler:
         await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
         await db_session.refresh(task)
         assert task.reminder_sent_at == fixed_now
+        assert task.reminder_completed_at == fixed_now
+
+    async def test_release_stale_claims_recovers_a_claim_abandoned_by_a_crash(
+        self, db_session: AsyncSession
+    ) -> None:
+        """A claim left unconfirmed (reminder_completed_at never set) well past when
+        sending should have finished is treated as orphaned by a mid-send crash and
+        released for retry.
+        """
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-stale-claim", display_name="Stale"))
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+        task.reminder_sent_at = fixed_now - timedelta(minutes=scheduler.STALE_CLAIM_MINUTES, seconds=1)
+        await db_session.commit()
+
+        await scheduler._release_stale_claims(db_session, fixed_now)
+
+        await db_session.refresh(task)
+        assert task.reminder_sent_at is None
+        assert await scheduler._find_due_tasks(db_session, fixed_now) == [task]
+
+    async def test_release_stale_claims_leaves_a_completed_claim_alone(self, db_session: AsyncSession) -> None:
+        """An ordinary already-sent claim must never be re-released, even long after
+        the staleness threshold -- doing so would duplicate-send it.
+        """
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-completed-claim", display_name="Done"))
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+        claimed_at = fixed_now - timedelta(minutes=scheduler.STALE_CLAIM_MINUTES, seconds=1)
+        task.reminder_sent_at = claimed_at
+        task.reminder_completed_at = claimed_at
+        await db_session.commit()
+
+        await scheduler._release_stale_claims(db_session, fixed_now)
+
+        await db_session.refresh(task)
+        assert task.reminder_sent_at == claimed_at
+
+    async def test_release_stale_claims_leaves_a_fresh_unconfirmed_claim_alone(
+        self, db_session: AsyncSession
+    ) -> None:
+        """A claim still within the staleness threshold might just be a normal send
+        still in flight -- must not be released out from under it.
+        """
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        user = await create_user(db_session, UserCreate(username="reminder-fresh-claim", display_name="Fresh"))
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, user.id, start_time=fixed_now + timedelta(minutes=5))
+        task.reminder_sent_at = fixed_now - timedelta(minutes=scheduler.STALE_CLAIM_MINUTES - 1)
+        await db_session.commit()
+
+        await scheduler._release_stale_claims(db_session, fixed_now)
+
+        await db_session.refresh(task)
+        assert task.reminder_sent_at is not None
 
     async def test_formats_the_reminder_time_in_the_subscriptions_timezone(
         self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
