@@ -3507,6 +3507,7 @@ class TestSyncCorrectnessFixes:
         task = await db_session.get(TimeTrackingTask, create_item.id)
         assert task is not None
         task.reminder_sent_at = datetime(2026, 2, 1, 8, 50, tzinfo=UTC)
+        task.reminder_completed_at = datetime(2026, 2, 1, 8, 50, tzinfo=UTC)
         db_session.add(task)
         await db_session.commit()
 
@@ -3521,6 +3522,10 @@ class TestSyncCorrectnessFixes:
 
         await db_session.refresh(task)
         assert task.reminder_sent_at is None
+        # Both markers must clear together: a stale reminder_completed_at surviving the
+        # reschedule would make _release_stale_claims mistake the *next* claim on this
+        # task for one already confirmed, permanently hiding a crash during that attempt.
+        assert task.reminder_completed_at is None
 
     async def test_push_task_update_does_not_reset_reminder_when_start_time_is_unchanged(
         self, db_session: AsyncSession
@@ -3545,6 +3550,7 @@ class TestSyncCorrectnessFixes:
         assert task is not None
         sent_at = datetime(2026, 2, 1, 8, 50, tzinfo=UTC)
         task.reminder_sent_at = sent_at
+        task.reminder_completed_at = sent_at
         db_session.add(task)
         await db_session.commit()
 
@@ -3560,6 +3566,7 @@ class TestSyncCorrectnessFixes:
 
         await db_session.refresh(task)
         assert task.reminder_sent_at == sent_at
+        assert task.reminder_completed_at == sent_at
 
     def test_rest_write_triggers_sync_broadcast(self, db_client: TestClient, auth_headers) -> None:
         """CRUD writes must emit a sync_changed hint (previously only /sync/push did)."""
