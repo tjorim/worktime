@@ -277,6 +277,7 @@ async def test_update_task_resets_reminder_on_an_actual_reschedule(db_session: A
         ),
     )
     task.reminder_sent_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
+    task.reminder_completed_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
     db_session.add(task)
     await db_session.commit()
 
@@ -288,6 +289,10 @@ async def test_update_task_resets_reminder_on_an_actual_reschedule(db_session: A
     )
 
     assert updated.reminder_sent_at is None
+    # Both markers must clear together: a stale reminder_completed_at surviving the
+    # reschedule would make _release_stale_claims mistake the *next* claim on this
+    # task for one already confirmed, permanently hiding a crash during that attempt.
+    assert updated.reminder_completed_at is None
 
 
 async def test_update_task_does_not_reset_reminder_when_start_time_is_unchanged(db_session: AsyncSession) -> None:
@@ -303,6 +308,7 @@ async def test_update_task_does_not_reset_reminder_when_start_time_is_unchanged(
     )
     sent_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
     task.reminder_sent_at = sent_at
+    task.reminder_completed_at = sent_at
     db_session.add(task)
     await db_session.commit()
 
@@ -314,6 +320,7 @@ async def test_update_task_does_not_reset_reminder_when_start_time_is_unchanged(
     )
 
     assert updated.reminder_sent_at == sent_at
+    assert updated.reminder_completed_at == sent_at
 
 
 async def test_update_user_rejects_null_for_non_nullable_fields(db_session: AsyncSession) -> None:

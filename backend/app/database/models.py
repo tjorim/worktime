@@ -120,6 +120,11 @@ class TimeTrackingTask(ClientTimestampMixin, Base):
     # periodic scan doesn't re-send while the task is still upcoming. Reset to None
     # whenever start_time changes (a reschedule needs a fresh reminder window).
     reminder_sent_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set only once _send_reminder actually finishes handling a claim (success
+    # or a deliberate give-up), never at claim time -- lets
+    # _release_stale_claims tell an abandoned claim (process crashed between
+    # the claim and this) apart from a normal already-sent one.
+    reminder_completed_at: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )

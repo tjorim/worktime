@@ -517,7 +517,11 @@ async def update_task(
         # back out into the future would stay silently marked as already reminded. Only
         # reset on an actual change: a client resending the same start_time alongside an
         # unrelated edit must not requeue an already-sent reminder into a duplicate.
+        # Both markers must be cleared together: leaving a stale reminder_completed_at
+        # from the previous reminder would make _release_stale_claims think this new
+        # claim is already confirmed, permanently hiding a crash during the new attempt.
         task.reminder_sent_at = None
+        task.reminder_completed_at = None
     # Bump the LWW timestamp so a later sync push carrying stale data cannot
     # silently overwrite this edit (conflict detection compares client_updated_at).
     task.client_updated_at = datetime.now(UTC)

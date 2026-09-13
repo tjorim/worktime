@@ -557,7 +557,12 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
                 # reminded. Only reset on an actual change: a client that resends the same
                 # start_time alongside an unrelated edit (e.g. text) must not requeue an
                 # already-sent reminder and cause a duplicate notification.
+                # Both markers must be cleared together: leaving a stale
+                # reminder_completed_at from the previous reminder would make
+                # _release_stale_claims think this new claim is already confirmed,
+                # permanently hiding a crash during the new attempt.
                 task.reminder_sent_at = None
+                task.reminder_completed_at = None
             task.start_time = item.start_time
         if "stop_time" in provided_fields:
             task.stop_time = item.stop_time
