@@ -439,9 +439,7 @@ class TestPlannedTaskReminderScheduler:
         assert task.reminder_sent_at == fixed_now
         assert task.reminder_completed_at == fixed_now
 
-    async def test_release_stale_claims_recovers_a_claim_abandoned_by_a_crash(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_release_stale_claims_recovers_a_claim_abandoned_by_a_crash(self, db_session: AsyncSession) -> None:
         """A claim left unconfirmed (reminder_completed_at never set) well past when
         sending should have finished is treated as orphaned by a mid-send crash and
         released for retry.
@@ -479,9 +477,7 @@ class TestPlannedTaskReminderScheduler:
         await db_session.refresh(task)
         assert task.reminder_sent_at == claimed_at
 
-    async def test_release_stale_claims_leaves_a_fresh_unconfirmed_claim_alone(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_release_stale_claims_leaves_a_fresh_unconfirmed_claim_alone(self, db_session: AsyncSession) -> None:
         """A claim still within the staleness threshold might just be a normal send
         still in flight -- must not be released out from under it.
         """

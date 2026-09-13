@@ -30,14 +30,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "time_tracking_tasks", sa.Column("reminder_completed_at", sa.DateTime(timezone=True), nullable=True)
-    )
+    op.add_column("time_tracking_tasks", sa.Column("reminder_completed_at", sa.DateTime(timezone=True), nullable=True))
     op.execute(
         sa.text(
-            "UPDATE time_tracking_tasks "
-            "SET reminder_completed_at = reminder_sent_at "
-            "WHERE reminder_sent_at IS NOT NULL"
+            "UPDATE time_tracking_tasks SET reminder_completed_at = reminder_sent_at WHERE reminder_sent_at IS NOT NULL"
         )
     )
 
