@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
@@ -46,7 +46,11 @@ export function useSettingsResetFlow({
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
   const activeAccountIdRef = useRef(isAuthenticated ? accountId : null);
   const resetGenerationRef = useRef(0);
-  useEffect(() => {
+  // A layout effect (not a passive one) so this commits synchronously right
+  // after render — before a pending fetchPreferences response's .then() can
+  // run — so it can never apply a pull meant for an account the user already
+  // switched away from.
+  useLayoutEffect(() => {
     activeAccountIdRef.current = isAuthenticated ? accountId : null;
   }, [isAuthenticated, accountId]);
 

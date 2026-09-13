@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -117,7 +117,11 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   // current view, or a queued retry could write the latest content to the
   // wrong file.
   const hdayTargetRef = useRef({ helperBaseUrl, hdayUsername });
-  useEffect(() => {
+  // A layout effect (not a passive one) so this commits synchronously right
+  // after render — before any pending fetch response's .then() can run — so
+  // an in-flight request can never read a target/etag that is one render
+  // stale and mistake an abandoned target for the current one.
+  useLayoutEffect(() => {
     rawTextRef.current = rawText;
     lastKnownHdayEtagRef.current = lastKnownHdayEtag;
     hdayTargetRef.current = { helperBaseUrl, hdayUsername };

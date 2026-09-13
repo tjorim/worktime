@@ -66,7 +66,13 @@ export function useSettingsSyncStatus({
   // directly in the memo below) keeps render pure.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (retryAfter === null || Date.now() >= retryAfter) return;
+    if (retryAfter === null) return;
+    // Refresh immediately rather than waiting for the first tick below, so a
+    // newly started (or ended) back-off window is never shown using a `now`
+    // left over from whenever it was last updated.
+    const startTime = Date.now();
+    setNow(startTime);
+    if (startTime >= retryAfter) return;
     const id = setInterval(() => {
       const currentTime = Date.now();
       setNow(currentTime);

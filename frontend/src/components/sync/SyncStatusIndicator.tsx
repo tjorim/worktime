@@ -61,7 +61,13 @@ export function SyncStatusIndicator() {
   // it reads `now` from state instead of calling Date.now() itself.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!hasSyncError || retryAfter === null || Date.now() >= retryAfter) return;
+    if (!hasSyncError || retryAfter === null) return;
+    // Refresh immediately rather than waiting for the first tick below, so a
+    // newly started (or ended) back-off window is never shown using a `now`
+    // left over from whenever it was last updated.
+    const startTime = Date.now();
+    setNow(startTime);
+    if (startTime >= retryAfter) return;
     const id = setInterval(() => {
       const currentTime = Date.now();
       setNow(currentTime);
