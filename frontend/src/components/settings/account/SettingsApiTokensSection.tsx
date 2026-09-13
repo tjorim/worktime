@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -48,11 +48,15 @@ export function SettingsApiTokensSection({
     onCreateApiToken(nameDraft);
   };
 
-  useEffect(() => {
+  // Clear the draft the moment a token is created, as a same-render response
+  // to the prop changing rather than a follow-up effect.
+  const [prevCreatedApiToken, setPrevCreatedApiToken] = useState(createdApiToken);
+  if (createdApiToken !== prevCreatedApiToken) {
+    setPrevCreatedApiToken(createdApiToken);
     if (createdApiToken) {
       setNameDraft("");
     }
-  }, [createdApiToken]);
+  }
 
   const handleCopy = async () => {
     if (!createdApiToken) return;

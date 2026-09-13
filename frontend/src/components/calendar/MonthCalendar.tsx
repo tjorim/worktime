@@ -107,8 +107,11 @@ export function MonthCalendar({
     return days.findIndex((d) => d.isSame(month, "month"));
   });
 
-  // Reset focused index when month changes
-  useEffect(() => {
+  // Reset focused index when month changes, as a same-render response rather
+  // than a follow-up effect.
+  const [prevMonth, setPrevMonth] = useState(month);
+  if (prevMonth !== month) {
+    setPrevMonth(month);
     const todayIdx = days.findIndex((d) => d.isSame(today, "day"));
     if (todayIdx >= 0) {
       setFocusedIndex(todayIdx);
@@ -116,15 +119,12 @@ export function MonthCalendar({
       const firstOfMonth = days.findIndex((d) => d.isSame(month, "month"));
       setFocusedIndex(firstOfMonth >= 0 ? firstOfMonth : 0);
     }
-    // oxlint-disable-next-line exhaustive-deps -- days is derived from month; today is a fresh dayjs() each render
-  }, [month]);
-
-  // Cell refs for imperative focus
-  const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
-  // Ensure array size matches days
-  if (cellRefs.current.length !== days.length) {
-    cellRefs.current = new Array(days.length).fill(null);
   }
+
+  // Cell refs for imperative focus. Populated by each cell's ref callback (see
+  // below) as cells mount/unmount, so the array naturally tracks `days` without
+  // needing to be pre-sized here.
+  const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Whether the last focusedIndex change was from keyboard nav (should imperatively focus)
   const shouldFocusRef = useRef(false);

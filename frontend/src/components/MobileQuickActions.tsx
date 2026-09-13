@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -45,9 +45,9 @@ export function MobileQuickActions({
     );
   }, [liveTime, tasks]);
 
-  useEffect(() => {
-    if (!labelId && labels[0]) setLabelId(labels[0].id);
-  }, [labelId, labels]);
+  // Default to the first label once labels are available. Safe to run during
+  // render: the `!labelId` guard makes it idempotent once set.
+  if (!labelId && labels[0]) setLabelId(labels[0].id);
 
   const runAction = (action: () => void) => {
     setShow(false);

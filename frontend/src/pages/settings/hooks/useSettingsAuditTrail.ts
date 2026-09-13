@@ -46,14 +46,24 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
     [fetchFn, userId],
   );
 
-  useEffect(() => {
-    const requestGeneration = ++requestGenerationRef.current;
+  // Reset the loaded entries the moment the trail becomes disabled, rather
+  // than in an effect: this is a same-render response to that prop flipping,
+  // not a side effect that needs to synchronize with anything external.
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
     if (!enabled) {
       setEntries([]);
       setError(null);
       setHasMore(false);
       setIsLoading(false);
       setIsLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    const requestGeneration = ++requestGenerationRef.current;
+    if (!enabled) {
       return;
     }
 

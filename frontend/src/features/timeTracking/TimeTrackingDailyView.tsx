@@ -131,12 +131,13 @@ export function TimeTrackingDailyView({
   );
   const defaultLabelColor = useDefaultLabelColor();
 
-  useEffect(() => {
+  // Fall back to the first label whenever the current selection is empty or
+  // no longer valid. Safe to run during render: once corrected, the
+  // condition is false until `labels` invalidates it again.
+  if (!selectedLabel || !labels.some((item) => item.id === selectedLabel)) {
     const fallback = labels[0]?.id ?? "";
-    if (!selectedLabel || !labels.some((item) => item.id === selectedLabel)) {
-      setSelectedLabel(fallback);
-    }
-  }, [labels, selectedLabel]);
+    if (selectedLabel !== fallback) setSelectedLabel(fallback);
+  }
 
   const { dailyTasks, runningTask } = useDailyTaskSummary(tasks, date);
   const nowFallsInsideTask = dailyTasks.some((task) => {

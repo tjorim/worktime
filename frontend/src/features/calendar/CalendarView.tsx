@@ -114,9 +114,9 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
     updateTaskTimesRef.current = updateTaskTimes;
   }, [tasks, updateTaskTimes]);
 
-  useEffect(() => {
-    if (!addLabel && labels[0]) setAddLabel(labels[0].id);
-  }, [addLabel, labels]);
+  // Default to the first label once labels are available. Safe to run during
+  // render: the `!addLabel` guard makes it idempotent once set.
+  if (!addLabel && labels[0]) setAddLabel(labels[0].id);
 
   const openTask = useCallback((task: StoredTimeTrackingTask) => {
     setSelectedTask(task);

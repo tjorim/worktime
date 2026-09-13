@@ -86,13 +86,15 @@ export function GanttChart({
   const onProgressChangeRef = useRef(onProgressChange);
   const onViewModeChangeRef = useRef(onViewModeChange);
 
-  tasksRef.current = coloredTasks;
-  initialViewModeRef.current = initialViewMode;
-  loggedMinutesByTaskIdRef.current = loggedMinutesByTaskId;
-  onTaskClickRef.current = onTaskClick;
-  onDateChangeRef.current = onDateChange;
-  onProgressChangeRef.current = onProgressChange;
-  onViewModeChangeRef.current = onViewModeChange;
+  useEffect(() => {
+    tasksRef.current = coloredTasks;
+    initialViewModeRef.current = initialViewMode;
+    loggedMinutesByTaskIdRef.current = loggedMinutesByTaskId;
+    onTaskClickRef.current = onTaskClick;
+    onDateChangeRef.current = onDateChange;
+    onProgressChangeRef.current = onProgressChange;
+    onViewModeChangeRef.current = onViewModeChange;
+  });
 
   const hasAnyTasks = tasks.length > 0;
   const holidaysKey = useMemo(

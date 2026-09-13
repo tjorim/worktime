@@ -249,11 +249,11 @@ export function DayCell({
     };
   }, [clearLongPress]);
 
-  useEffect(() => {
-    if (isOverflowExpanded && hiddenCount === 0) {
-      setIsOverflowExpanded(false);
-    }
-  }, [hiddenCount]); // oxlint-disable-line react-hooks/exhaustive-deps -- only hiddenCount should trigger this effect
+  // Collapse the overflow list once there's nothing left hidden. Safe to run
+  // during render: the condition is false again right after correcting it.
+  if (isOverflowExpanded && hiddenCount === 0) {
+    setIsOverflowExpanded(false);
+  }
 
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(

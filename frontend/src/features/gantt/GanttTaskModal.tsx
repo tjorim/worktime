@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type SubmitEventHandler } from "react";
+import { useMemo, useState, type SubmitEventHandler } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -91,13 +91,19 @@ export function GanttTaskModal({
     updateTaskTimes,
   } = useTimeTrackingStorage();
 
-  useEffect(() => {
+  // Reset form state whenever the modal opens/closes or the task changes, as
+  // a same-render response rather than a follow-up effect.
+  const [prevShow, setPrevShow] = useState(show);
+  const [prevTask, setPrevTask] = useState(task);
+  if (prevShow !== show || prevTask !== task) {
+    setPrevShow(show);
+    setPrevTask(task);
     setForm(createInitialValue(task));
     setSelectedDeps(parseDeps(task?.dependencies));
     if (!show) {
       setWasValidated(false);
     }
-  }, [show, task]);
+  }
 
   const isNameValid = form.name.trim().length > 0;
   const isStartDateValid = dayjs(form.start, DATE_FORMAT, true).isValid();

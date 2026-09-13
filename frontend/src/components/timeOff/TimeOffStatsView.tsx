@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -21,11 +21,15 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
   const years = useMemo(() => getAvailableYears(entries, dayjs().year()), [entries]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
 
-  useEffect(() => {
+  // Clamp the selection back to an available year the moment `years` changes
+  // out from under it, as a same-render response rather than a follow-up effect.
+  const [prevYears, setPrevYears] = useState(years);
+  if (prevYears !== years) {
+    setPrevYears(years);
     if (!years.includes(selectedYear)) {
       setSelectedYear(years[0] ?? dayjs().year());
     }
-  }, [selectedYear, years]);
+  }
 
   const stats = useMemo(
     () => calculateVacationStats(entries, selectedYear),

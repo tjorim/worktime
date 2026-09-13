@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useRef } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { LastUsedProvider, type LastUsedContextType } from "@/contexts/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -192,11 +192,11 @@ const shallowEqualObject = <T extends object>(a: T, b: T): boolean => {
 };
 
 function useStableShallowObject<T extends object>(value: T): T {
-  const ref = useRef(value);
-  if (!shallowEqualObject(ref.current, value)) {
-    ref.current = value;
+  const [stable, setStable] = useState(value);
+  if (!shallowEqualObject(stable, value)) {
+    setStable(value);
   }
-  return ref.current;
+  return stable;
 }
 
 const isObjectRecord = (value: unknown): value is RawState =>

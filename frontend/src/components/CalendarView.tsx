@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
@@ -158,12 +158,16 @@ export function CalendarView({
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Close any open time-off modals the moment the feature is disabled, as a
+  // same-render response rather than a follow-up effect.
+  const [prevTimeOffEnabled, setPrevTimeOffEnabled] = useState(timeOffEnabled);
+  if (prevTimeOffEnabled !== timeOffEnabled) {
+    setPrevTimeOffEnabled(timeOffEnabled);
     if (!timeOffEnabled) {
       setShowEventModal(false);
       setShowDeleteConfirm(false);
     }
-  }, [timeOffEnabled]);
+  }
 
   const isFormDirty = isEventFormDirty(
     buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),

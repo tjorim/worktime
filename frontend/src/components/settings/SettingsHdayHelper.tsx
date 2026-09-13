@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -32,8 +32,19 @@ export function SettingsHdayHelper() {
   const [urlIsInvalid, setUrlIsInvalid] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState(settings.hdayUsername ?? "");
 
-  useEffect(() => setUrlDraft(options.hdayHelperUrl ?? ""), [options.hdayHelperUrl]);
-  useEffect(() => setUsernameDraft(settings.hdayUsername ?? ""), [settings.hdayUsername]);
+  // Re-sync the drafts whenever the saved values change externally, as a
+  // same-render response rather than a follow-up effect. The drafts still own
+  // their values the rest of the time (see the form controls below).
+  const [prevHdayHelperUrl, setPrevHdayHelperUrl] = useState(options.hdayHelperUrl);
+  if (prevHdayHelperUrl !== options.hdayHelperUrl) {
+    setPrevHdayHelperUrl(options.hdayHelperUrl);
+    setUrlDraft(options.hdayHelperUrl ?? "");
+  }
+  const [prevHdayUsername, setPrevHdayUsername] = useState(settings.hdayUsername);
+  if (prevHdayUsername !== settings.hdayUsername) {
+    setPrevHdayUsername(settings.hdayUsername);
+    setUsernameDraft(settings.hdayUsername ?? "");
+  }
 
   const normalizedUrl = urlDraft.trim().replace(/\/+$/, "");
   const mixedContentRisk = normalizedUrl !== "" && isHdayHelperMixedContentBlocked(normalizedUrl);

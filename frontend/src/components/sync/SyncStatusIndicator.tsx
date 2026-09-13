@@ -57,14 +57,17 @@ export function SyncStatusIndicator() {
   }, [lastSyncedAt]);
 
   // Tick every second while a back-off window is active so the countdown stays accurate.
-  const [, setSecondTick] = useState(0);
+  // Storing the actual timestamp (rather than a plain counter) lets render stay pure —
+  // it reads `now` from state instead of calling Date.now() itself.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!hasSyncError || retryAfter === null || Date.now() >= retryAfter) return;
     const id = setInterval(() => {
-      if (Date.now() >= retryAfter) {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (currentTime >= retryAfter) {
         clearInterval(id);
       }
-      setSecondTick((t) => t + 1);
     }, MS_PER_SECOND);
     return () => clearInterval(id);
   }, [hasSyncError, retryAfter]);
@@ -111,7 +114,7 @@ export function SyncStatusIndicator() {
     }
     if (hasSyncError) {
       if (retryAfter !== null) {
-        const seconds = Math.max(0, Math.ceil((retryAfter - Date.now()) / MS_PER_SECOND));
+        const seconds = Math.max(0, Math.ceil((retryAfter - now) / MS_PER_SECOND));
         if (seconds > 0) return m.sync_indicator_tooltip_retry_in({ seconds: String(seconds) });
       }
       return m.sync_indicator_tooltip_error();

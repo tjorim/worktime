@@ -405,10 +405,10 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("does not re-render settings-only consumers when lastUsed changes", () => {
-      let settingsRenderCount = 0;
+      const renderSpy = vi.fn();
 
       function SettingsOnlyConsumer() {
-        settingsRenderCount += 1;
+        renderSpy();
         const { settings } = useSettings();
         return <span>{settings.timeFormat}</span>;
       }
@@ -425,9 +425,9 @@ describe("SettingsContext unified user state", () => {
         </SettingsProvider>,
       );
 
-      expect(settingsRenderCount).toBe(1);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
       fireEvent.click(screen.getByRole("button", { name: "Update last used" }));
-      expect(settingsRenderCount).toBe(1);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
     });
   });
 

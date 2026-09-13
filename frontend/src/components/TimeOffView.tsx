@@ -109,9 +109,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   // isPushInFlightRef below) retries with whatever is current when it
   // finally runs, not a stale snapshot from when it was first scheduled.
   const rawTextRef = useRef(rawText);
-  rawTextRef.current = rawText;
   const lastKnownHdayEtagRef = useRef(lastKnownHdayEtag);
-  lastKnownHdayEtagRef.current = lastKnownHdayEtag;
   // The helper/username a pull or push is talking to, read at the point a
   // response arrives (and, for a retried push, at the point it's about to
   // fire) to detect that the user switched targets mid-flight. Without this,
@@ -119,7 +117,11 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   // current view, or a queued retry could write the latest content to the
   // wrong file.
   const hdayTargetRef = useRef({ helperBaseUrl, hdayUsername });
-  hdayTargetRef.current = { helperBaseUrl, hdayUsername };
+  useEffect(() => {
+    rawTextRef.current = rawText;
+    lastKnownHdayEtagRef.current = lastKnownHdayEtag;
+    hdayTargetRef.current = { helperBaseUrl, hdayUsername };
+  }, [rawText, lastKnownHdayEtag, helperBaseUrl, hdayUsername]);
   const rememberHdayEtag = useCallback(
     (username: string, etag: string | null) => {
       // Update the ref immediately rather than waiting for the state update
@@ -159,10 +161,13 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     }, []),
   );
   // A stale prompt for a helper/username combination that's no longer active
-  // would be confusing; drop it whenever either changes.
-  useEffect(() => {
+  // would be confusing; drop it whenever either changes, as a same-render
+  // response rather than a follow-up effect.
+  const [prevHdayChangeEventsUrl, setPrevHdayChangeEventsUrl] = useState(hdayChangeEventsUrl);
+  if (prevHdayChangeEventsUrl !== hdayChangeEventsUrl) {
+    setPrevHdayChangeEventsUrl(hdayChangeEventsUrl);
     setHdayChangedRemotely(false);
-  }, [hdayChangeEventsUrl]);
+  }
 
   const [viewMode, setViewMode] = useState(
     isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
@@ -424,7 +429,11 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     setShowBulkDeleteConfirm(false);
   };
 
-  useEffect(() => {
+  // Prune the selection whenever entries change, as a same-render response
+  // rather than a follow-up effect.
+  const [prevEntries, setPrevEntries] = useState(entries);
+  if (prevEntries !== entries) {
+    setPrevEntries(entries);
     setSelectedIds((prev) => {
       const newSet = new Set<string>();
       const existingIds = new Set(entries.map((entry) => entry.id));
@@ -438,14 +447,20 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       });
       return changed ? newSet : prev;
     });
-  }, [entries]);
+  }
 
-  useEffect(() => {
+  // Re-sync the raw editor from `rawText` whenever it isn't dirty, as a
+  // same-render response rather than a follow-up effect.
+  const [prevIsRawEditorDirty, setPrevIsRawEditorDirty] = useState(isRawEditorDirty);
+  const [prevRawText, setPrevRawText] = useState(rawText);
+  if (prevIsRawEditorDirty !== isRawEditorDirty || prevRawText !== rawText) {
+    setPrevIsRawEditorDirty(isRawEditorDirty);
+    setPrevRawText(rawText);
     if (!isRawEditorDirty) {
       setRawEditorText(rawText);
       setRawEditorError(undefined);
     }
-  }, [isRawEditorDirty, rawText]);
+  }
 
   const handleRawEditorChange = useCallback(
     (value: string) => {
@@ -540,80 +555,81 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   );
 
   const handlePushToHelper = useCallback(async (options?: { silent?: boolean }) => {
-    if (!helperBaseUrl || !hdayUsername) return;
-    if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) return;
+    // A queued retry loops back to the top (re-validating its own target on
+    // entry, so a retry left over from before a helper/username switch
+    // quietly no-ops) instead of the function calling itself recursively —
+    // a self-reference the compiler can't safely analyze for memoization.
+    let currentOptions = options;
+    for (;;) {
+      if (!helperBaseUrl || !hdayUsername) return;
+      if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) return;
 
-    // Never run two requests at once, pull or push: an overlapping one would
-    // read a lastKnownHdayEtag the in-flight one is about to make stale
-    // (producing a spurious conflict or a lost update), or apply a stale GET
-    // after a newer PUT already landed. Queue it instead — handled in the
-    // finally block below.
-    if (isHdaySyncInFlightRef.current) {
-      hdayPushQueuedRef.current = true;
-      return;
-    }
-
-    isHdaySyncInFlightRef.current = true;
-    hdayPushQueuedRef.current = false;
-    setIsPushingToHelper(true);
-    let succeeded = false;
-    try {
-      // Read fresh at send time, not captured at schedule time: a debounced
-      // auto-push can sit queued for a while, during which further edits
-      // (or a completed manual push) may have moved these on.
-      const currentRawText = rawTextRef.current;
-      const currentEtag = lastKnownHdayEtagRef.current;
-      const response = await fetch(`${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(
-          currentEtag ? { raw: currentRawText, etag: currentEtag } : { raw: currentRawText },
-        ),
-      });
-
-      // The user moved on to a different helper/username while this request
-      // was in flight — its result belongs to a view nobody's looking at
-      // anymore. Still counts as "succeeded" for the queued-retry check
-      // below, but there's nothing here to apply or announce.
-      if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) {
-        succeeded = true;
+      // Never run two requests at once, pull or push: an overlapping one would
+      // read a lastKnownHdayEtag the in-flight one is about to make stale
+      // (producing a spurious conflict or a lost update), or apply a stale GET
+      // after a newer PUT already landed. Queue it instead — handled below.
+      if (isHdaySyncInFlightRef.current) {
+        hdayPushQueuedRef.current = true;
         return;
       }
 
-      if (response.status === 409) {
-        // Always surfaced, even for a silent auto-push: this is exactly the
-        // case the user needs to act on (pull first) before anything of
-        // theirs can sync again. Don't auto-retry a queued push against the
-        // same known-stale etag — that would just conflict again silently.
-        toast.showWarning(m.timeoff_push_conflict(), "bi-file-earmark-lock");
-        return;
+      isHdaySyncInFlightRef.current = true;
+      hdayPushQueuedRef.current = false;
+      setIsPushingToHelper(true);
+      let succeeded = false;
+      try {
+        // Read fresh at send time, not captured at schedule time: a debounced
+        // auto-push can sit queued for a while, during which further edits
+        // (or a completed manual push) may have moved these on.
+        const currentRawText = rawTextRef.current;
+        const currentEtag = lastKnownHdayEtagRef.current;
+        const response = await fetch(
+          `${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(
+              currentEtag ? { raw: currentRawText, etag: currentEtag } : { raw: currentRawText },
+            ),
+          },
+        );
+
+        if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) {
+          // The user moved on to a different helper/username while this
+          // request was in flight — its result belongs to a view nobody's
+          // looking at anymore. Still counts as "succeeded" for the
+          // queued-retry check below, but there's nothing here to apply or
+          // announce.
+          succeeded = true;
+        } else if (response.status === 409) {
+          // Always surfaced, even for a silent auto-push: this is exactly the
+          // case the user needs to act on (pull first) before anything of
+          // theirs can sync again. Don't auto-retry a queued push against the
+          // same known-stale etag — that would just conflict again silently.
+          toast.showWarning(m.timeoff_push_conflict(), "bi-file-earmark-lock");
+        } else if (!response.ok) {
+          const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
+          throw new Error(m.timeoff_push_failed({ error: errorMessage }));
+        } else {
+          const data: { etag: string } = await response.json();
+          rememberHdayEtag(hdayUsername, data.etag);
+          setHdayChangedRemotely(false);
+          succeeded = true;
+          if (!currentOptions?.silent) {
+            toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), "bi-cloud-upload");
+          }
+        }
+      } catch (error) {
+        logger.error("Failed to push .hday content to helper:", error);
+        toast.showError(error instanceof Error ? error.message : m.timeoff_push_failed_generic());
+      } finally {
+        setIsPushingToHelper(false);
+        isHdaySyncInFlightRef.current = false;
       }
 
-      if (!response.ok) {
-        const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
-        throw new Error(m.timeoff_push_failed({ error: errorMessage }));
-      }
-
-      const data: { etag: string } = await response.json();
-      rememberHdayEtag(hdayUsername, data.etag);
-      setHdayChangedRemotely(false);
-      succeeded = true;
-      if (!options?.silent) {
-        toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), "bi-cloud-upload");
-      }
-    } catch (error) {
-      logger.error("Failed to push .hday content to helper:", error);
-      toast.showError(error instanceof Error ? error.message : m.timeoff_push_failed_generic());
-    } finally {
-      setIsPushingToHelper(false);
-      isHdaySyncInFlightRef.current = false;
-      if (succeeded && hdayPushQueuedRef.current) {
-        hdayPushQueuedRef.current = false;
-        // Re-validates its own target on entry, so a retry left over from
-        // before a helper/username switch quietly no-ops instead of writing
-        // the latest content to the wrong file.
-        void handlePushToHelper({ silent: true });
-      }
+      if (!succeeded || !hdayPushQueuedRef.current) return;
+      hdayPushQueuedRef.current = false;
+      currentOptions = { silent: true };
     }
   }, [helperBaseUrl, hdayUsername, isHdayTargetCurrent, rememberHdayEtag, toast]);
 

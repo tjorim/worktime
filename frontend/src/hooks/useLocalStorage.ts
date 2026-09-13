@@ -33,13 +33,19 @@ export function useLocalStorage<T>(
   // Track latest value in a ref to handle multiple setValue calls in the same render
   // This prevents stale closure issues when batching updates
   const latestValueRef = useRef(storedValue);
-  latestValueRef.current = storedValue;
   const didMountRef = useRef(false);
   const initialValueRef = useRef(initialValue);
-  initialValueRef.current = initialValue;
   // Prevents the hook instance that dispatched a synthetic StorageEvent from
   // re-processing its own event (it already updated state directly in setValue).
   const isSelfDispatch = useRef(false);
+
+  // Keep the refs in sync with the latest render's values. A layout effect runs
+  // before any event handler can observe the refs, so setValue's functional
+  // updates (which read latestValueRef.current) never see a stale value.
+  useIsomorphicLayoutEffect(() => {
+    latestValueRef.current = storedValue;
+    initialValueRef.current = initialValue;
+  });
 
   const readValueForKey = useCallback((storageKey: string): T => {
     if (typeof window === "undefined") {

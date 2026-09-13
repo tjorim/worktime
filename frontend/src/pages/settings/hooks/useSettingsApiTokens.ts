@@ -52,10 +52,20 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
     }
   }, [fetchFn]);
 
-  useEffect(() => {
+  // Reset the loaded tokens the moment sign-out happens, rather than in an
+  // effect: this is a same-render response to isAuthenticated flipping, not a
+  // side effect that needs to synchronize with anything external.
+  const [wasAuthenticated, setWasAuthenticated] = useState(isAuthenticated);
+  if (wasAuthenticated !== isAuthenticated) {
+    setWasAuthenticated(isAuthenticated);
     if (!isAuthenticated) {
       setApiTokens(null);
       setApiTokensError(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) {
       return;
     }
     void loadApiTokens();

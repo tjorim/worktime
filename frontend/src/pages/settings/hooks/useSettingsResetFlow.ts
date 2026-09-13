@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
@@ -46,7 +46,9 @@ export function useSettingsResetFlow({
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
   const activeAccountIdRef = useRef(isAuthenticated ? accountId : null);
   const resetGenerationRef = useRef(0);
-  activeAccountIdRef.current = isAuthenticated ? accountId : null;
+  useEffect(() => {
+    activeAccountIdRef.current = isAuthenticated ? accountId : null;
+  }, [isAuthenticated, accountId]);
 
   const handleClearData = () => {
     setShowResetConfirm(true);

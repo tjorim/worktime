@@ -237,7 +237,10 @@ export function DailyTaskList({
     return gaps;
   }, [liveTime, tasks]);
 
-  const nowPosition = useMemo<NowPosition>(() => {
+  // Not memoized: the compiler can't prove this stays memoized (it bails out
+  // elsewhere in this component), and the per-render cost of scanning a day's
+  // tasks is negligible.
+  const nowPosition: NowPosition = (() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
 
     const nowMinutes = liveTime.hour() * 60 + liveTime.minute();
@@ -262,7 +265,7 @@ export function DailyTaskList({
     }
 
     return { type: "separator", insertBeforeIndex: tasks.length };
-  }, [isToday, liveTime, tasks]);
+  })();
 
   const gapUntilNextTask = useMemo(() => {
     if (
