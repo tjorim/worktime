@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -32,12 +32,16 @@ export function SettingsIntegrationClientsSection(props: Props) {
   const [confirmation, setConfirmation] = useState<{ action: "rotate" | "revoke"; client: IntegrationClient } | null>(null);
   const mutationInFlight = props.isCreating || props.busyClientId !== null;
 
-  useEffect(() => {
+  // Clear the draft the moment a client is created, as a same-render response
+  // to the prop changing rather than a follow-up effect.
+  const [prevCreatedClient, setPrevCreatedClient] = useState(props.createdClient);
+  if (props.createdClient !== prevCreatedClient) {
+    setPrevCreatedClient(props.createdClient);
     if (props.createdClient) {
       setName("");
       setAdminScope(false);
     }
-  }, [props.createdClient]);
+  }
 
   const copyKey = async () => {
     if (!props.createdClient) return;

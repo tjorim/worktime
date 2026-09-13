@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -193,9 +193,13 @@ export function TodayView({
   // Calculate shifts for the viewing schedule
   const todayShifts = viewingScheduleType ? getAllTeamsShifts(today, viewingScheduleType) : [];
 
-  useEffect(() => {
+  // Reset the mobile team carousel whenever the viewed schedule changes, as a
+  // same-render response rather than a follow-up effect.
+  const [prevViewingScheduleType, setPrevViewingScheduleType] = useState(viewingScheduleType);
+  if (prevViewingScheduleType !== viewingScheduleType) {
+    setPrevViewingScheduleType(viewingScheduleType);
     setMobileTeamIndex(0);
-  }, [viewingScheduleType]);
+  }
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!viewingScheduleType || !shiftResult.shift.isWorking) return false;

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
@@ -61,10 +61,31 @@ export function useSettingsSyncStatus({
     };
   }, [isAuthenticated, hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
 
+  // Tick every second while a back-off window is active so the countdown stays
+  // accurate. Storing the actual timestamp (rather than calling Date.now()
+  // directly in the memo below) keeps render pure.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (retryAfter === null) return;
+    // Refresh immediately rather than waiting for the first tick below, so a
+    // newly started (or ended) back-off window is never shown using a `now`
+    // left over from whenever it was last updated.
+    const startTime = Date.now();
+    setNow(startTime);
+    if (startTime >= retryAfter) return;
+    const id = setInterval(() => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (currentTime >= retryAfter) {
+        clearInterval(id);
+      }
+    }, 1_000);
+    return () => clearInterval(id);
+  }, [retryAfter]);
+
   const { retryInSeconds, lastSyncedLabel, backupStatusLabel } = useMemo(
     () => ({
-      retryInSeconds:
-        retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000)) : null,
+      retryInSeconds: retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - now) / 1_000)) : null,
       lastSyncedLabel: lastSyncedAt
         ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
         : m.sync_never_synced(),
@@ -75,7 +96,7 @@ export function useSettingsSyncStatus({
             ? m.sync_backup_status_disabled()
             : m.sync_backup_status_unknown(),
     }),
-    [retryAfter, lastSyncedAt, backupEnabled],
+    [retryAfter, now, lastSyncedAt, backupEnabled],
   );
 
   return {

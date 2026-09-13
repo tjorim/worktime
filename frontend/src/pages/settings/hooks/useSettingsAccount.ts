@@ -36,12 +36,22 @@ export function useSettingsAccount({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reset the loaded profile the moment sign-out happens, rather than in an
+  // effect: this is a same-render response to isAuthenticated flipping, not a
+  // side effect that needs to synchronize with anything external.
+  const [wasAuthenticated, setWasAuthenticated] = useState(isAuthenticated);
+  if (wasAuthenticated !== isAuthenticated) {
+    setWasAuthenticated(isAuthenticated);
     if (!isAuthenticated) {
       setAccountProfile(null);
       setProfileDraft("");
       setProfileError(null);
       setIsProfileLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) {
       return;
     }
 

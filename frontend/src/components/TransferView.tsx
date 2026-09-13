@@ -397,10 +397,26 @@ export function TransferView({
     return `${prefix}${m.team_label({ team: String(otherTeam) })}`;
   }, [otherScheduleTeamCount, otherScheduleTitle, otherTeam]);
 
-  // Reset pagination when filters change
-  useEffect(() => {
+  // Reset pagination when filters change, as a same-render response rather
+  // than a follow-up effect.
+  const [prevPaginationFilters, setPrevPaginationFilters] = useState([
+    otherTeam,
+    useCustomRange,
+    customStartDate,
+    customEndDate,
+    effectiveOtherScheduleType,
+  ]);
+  const paginationFilters = [
+    otherTeam,
+    useCustomRange,
+    customStartDate,
+    customEndDate,
+    effectiveOtherScheduleType,
+  ];
+  if (paginationFilters.some((value, index) => value !== prevPaginationFilters[index])) {
+    setPrevPaginationFilters(paginationFilters);
     setTransfersToShow(10);
-  }, [otherTeam, useCustomRange, customStartDate, customEndDate, effectiveOtherScheduleType]);
+  }
 
   // Set initial other team if provided (e.g., when coming from Team Detail Modal)
   const initialSetRef = useRef(false);
@@ -472,13 +488,16 @@ export function TransferView({
     [getEventsInRange, timeOffRange],
   );
 
-  // {m.timeoff_clear_selection_btn()} dates when custom range is disabled
-  useEffect(() => {
+  // {m.timeoff_clear_selection_btn()} dates when custom range is disabled, as
+  // a same-render response rather than a follow-up effect.
+  const [prevUseCustomRange, setPrevUseCustomRange] = useState(useCustomRange);
+  if (prevUseCustomRange !== useCustomRange) {
+    setPrevUseCustomRange(useCustomRange);
     if (!useCustomRange) {
       setCustomStartDate("");
       setCustomEndDate("");
     }
-  }, [useCustomRange]);
+  }
 
   // Keep day-bucket grouping in sync when the calendar day rolls over.
   useEffect(() => {

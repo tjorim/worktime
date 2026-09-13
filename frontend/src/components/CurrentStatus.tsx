@@ -61,9 +61,11 @@ export function CurrentStatus({
   // when the default itself changes (e.g. switching tabs or crossing the breakpoint).
   const [expanded, setExpanded] = useState(false);
   const compactByDefault = variant === "compact" || (variant === "responsive" && isMobile);
-  useEffect(() => {
+  const [prevCompactByDefault, setPrevCompactByDefault] = useState(compactByDefault);
+  if (prevCompactByDefault !== compactByDefault) {
+    setPrevCompactByDefault(compactByDefault);
     setExpanded(false);
-  }, [compactByDefault]);
+  }
   const isCompact = compactByDefault && !expanded;
   const canCollapse = compactByDefault && expanded;
 

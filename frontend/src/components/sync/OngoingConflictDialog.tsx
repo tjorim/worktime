@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import type { SyncPushPayload } from "@/utils/syncClient";
@@ -35,12 +35,15 @@ export function OngoingConflictDialog({
 
   // Reset selection when the dialog is closed programmatically (show → false).
   // React-Bootstrap's onHide only fires on user-driven closes (backdrop/Escape),
-  // not when the parent flips show={false} directly.
-  useEffect(() => {
+  // not when the parent flips show={false} directly. Handled as a same-render
+  // response rather than a follow-up effect.
+  const [prevShow, setPrevShow] = useState(show);
+  if (prevShow !== show) {
+    setPrevShow(show);
     if (!show) {
       setSelected(null);
     }
-  }, [show]);
+  }
 
   const handleConfirm = () => {
     if (!selected) return;

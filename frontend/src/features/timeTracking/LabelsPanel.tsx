@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import { useToast } from "@/contexts/ToastContext";
@@ -87,9 +87,14 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     return map;
   }, [labels, templates, tasks]);
 
-  useEffect(() => {
+  // Re-sync the raw JSON editor whenever `labels` changes externally, as a
+  // same-render response rather than a follow-up effect. The editor still
+  // owns its value the rest of the time (see the onChange handler below).
+  const [prevLabels, setPrevLabels] = useState(labels);
+  if (prevLabels !== labels) {
+    setPrevLabels(labels);
     setLabelsJson(JSON.stringify({ labels }, null, 2));
-  }, [labels]);
+  }
 
   const handleCopy = async () => {
     setError("");

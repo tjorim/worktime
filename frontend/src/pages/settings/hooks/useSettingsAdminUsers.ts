@@ -32,13 +32,25 @@ export function useSettingsAdminUsers({
   const [adminUsersDeleteError, setAdminUsersDeleteError] = useState<string | null>(null);
   const [deletingAdminUserId, setDeletingAdminUserId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated || !isAdmin) {
+  // Reset the loaded list the moment the viewer stops being an authenticated
+  // admin, rather than in an effect: this is a same-render response to that
+  // eligibility flipping, not a side effect that needs to synchronize with
+  // anything external.
+  const isEligible = isAuthenticated && isAdmin;
+  const [wasEligible, setWasEligible] = useState(isEligible);
+  if (wasEligible !== isEligible) {
+    setWasEligible(isEligible);
+    if (!isEligible) {
       setAdminUsers([]);
       setAdminUsersError(null);
       setAdminUsersDeleteError(null);
       setIsAdminUsersLoading(false);
       setDeletingAdminUserId(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) {
       return;
     }
 

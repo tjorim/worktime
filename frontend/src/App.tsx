@@ -57,7 +57,10 @@ function AppContent() {
     settings,
   } = useSettings();
   const { lastUsed, updateLastActiveTab } = useLastUsed();
-  const [showTeamModal, setShowTeamModal] = useState(false);
+  // Show the wizard from the first render if onboarding hasn't been
+  // completed yet, matching the effect below that keeps it open/closed as
+  // hasCompletedOnboarding changes later.
+  const [showTeamModal, setShowTeamModal] = useState(() => !hasCompletedOnboarding);
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
@@ -181,18 +184,32 @@ function AppContent() {
   // onboarding mode — e.g. a signed-in user's account data restores it via
   // useFirstSyncFlow, or the "sign in to sync" link on the welcome step pulls
   // it in — close it instead of leaving it stuck open with nothing left to ask.
-  useEffect(() => {
+  // Both reset the onboarding wizard's open/closed state in response to
+  // hasCompletedOnboarding/teamModalMode changing, as a same-render response
+  // rather than a follow-up effect.
+  const [prevHasCompletedOnboarding, setPrevHasCompletedOnboarding] =
+    useState(hasCompletedOnboarding);
+  if (prevHasCompletedOnboarding !== hasCompletedOnboarding) {
+    setPrevHasCompletedOnboarding(hasCompletedOnboarding);
     if (!hasCompletedOnboarding) {
       setTeamModalMode("onboarding");
       setShowTeamModal(true);
     }
-  }, [hasCompletedOnboarding]);
+  }
 
-  useEffect(() => {
+  const [prevOnboardingCloseHasCompleted, setPrevOnboardingCloseHasCompleted] =
+    useState(hasCompletedOnboarding);
+  const [prevOnboardingCloseMode, setPrevOnboardingCloseMode] = useState(teamModalMode);
+  if (
+    prevOnboardingCloseHasCompleted !== hasCompletedOnboarding ||
+    prevOnboardingCloseMode !== teamModalMode
+  ) {
+    setPrevOnboardingCloseHasCompleted(hasCompletedOnboarding);
+    setPrevOnboardingCloseMode(teamModalMode);
     if (hasCompletedOnboarding && teamModalMode === "onboarding") {
       setShowTeamModal(false);
     }
-  }, [hasCompletedOnboarding, teamModalMode]);
+  }
 
   // Theme switching effect - following Bootstrap 5.3 best practices
   useEffect(() => {

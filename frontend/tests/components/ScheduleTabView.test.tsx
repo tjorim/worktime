@@ -208,12 +208,19 @@ describe("ScheduleTabView", () => {
         }),
       );
 
-      // Create a test component that allows us to trigger schedule changes
-      let triggerScheduleChange: (() => void) | null = null;
+      // Create a test component that allows us to trigger schedule changes via
+      // a hidden button, so the test can drive it through user-event semantics
+      // rather than reaching into the render for a captured callback.
       function TestWrapper() {
         const { setScheduleType } = useSettings();
-        triggerScheduleChange = () => setScheduleType("5-shift");
-        return <ScheduleTabView {...defaultProps} />;
+        return (
+          <>
+            <button type="button" onClick={() => setScheduleType("5-shift")}>
+              Trigger schedule change
+            </button>
+            <ScheduleTabView {...defaultProps} />
+          </>
+        );
       }
 
       render(
@@ -233,7 +240,7 @@ describe("ScheduleTabView", () => {
 
       // Simulate onboarding completion by changing the schedule while component is mounted
       await act(async () => {
-        triggerScheduleChange?.();
+        screen.getByRole("button", { name: "Trigger schedule change" }).click();
       });
 
       // TodayView should now show "5-shift" to match the user's schedule

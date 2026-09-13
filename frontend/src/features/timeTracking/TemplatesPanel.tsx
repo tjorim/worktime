@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import { useToast } from "@/contexts/ToastContext";
@@ -103,15 +103,22 @@ export function TemplatesPanel({
 
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
-  useEffect(() => {
+  // Re-sync the raw JSON editor whenever `templates` changes externally, as a
+  // same-render response rather than a follow-up effect. The editor still
+  // owns its value the rest of the time (see the onChange handler below).
+  const [prevTemplates, setPrevTemplates] = useState(templates);
+  if (prevTemplates !== templates) {
+    setPrevTemplates(templates);
     setTemplatesJson(JSON.stringify({ templates }, null, 2));
-  }, [templates]);
+  }
 
-  useEffect(() => {
+  const [prevModalMode, setPrevModalMode] = useState(modalMode);
+  if (prevModalMode !== modalMode) {
+    setPrevModalMode(modalMode);
     if (modalMode === null) {
       resetModalInitialValue();
     }
-  }, [modalMode, resetModalInitialValue]);
+  }
 
   const handleCopy = async () => {
     setError("");

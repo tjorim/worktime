@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { CalendarEvent } from "@/lib/events/types";
 import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
@@ -80,7 +80,9 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
 
   // Stable ref so callbacks don't need to list the live array as a dep
   const sortedEntriesRef = useRef<TimeOffEntry[]>(sortedEntries);
-  sortedEntriesRef.current = sortedEntries;
+  useEffect(() => {
+    sortedEntriesRef.current = sortedEntries;
+  }, [sortedEntries]);
 
   const rawText = useMemo(() => {
     if (sortedEntries.length === 0) return "";

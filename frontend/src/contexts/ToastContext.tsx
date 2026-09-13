@@ -93,7 +93,9 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
   const startedAtRef = useRef<number | null>(null);
   // Keep the latest onClose without re-arming the timer when it changes.
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (toast.autohide === false || paused || remainingRef.current <= 0) {
