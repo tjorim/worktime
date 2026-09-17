@@ -1,5 +1,6 @@
 import { barY, defineChart, ruleY } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
+import { motion } from "@tanstack/charts/motion";
+import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
@@ -11,6 +12,11 @@ interface DayHoursRow {
   label: string;
   hours: number;
 }
+
+// Spring transition for bar height/position as the week's data changes.
+const chartRenderer = motion({
+  transition: { type: "spring", stiffness: 170, damping: 22, mass: 1 },
+});
 
 interface WeeklyHoursChartProps {
   weekDays: WeekDay[];
@@ -69,7 +75,12 @@ export function WeeklyHoursChart({
         {m.tt_daily_hours_chart_heading()}
       </h6>
       <div style={{ minWidth: 0 }}>
-        <Chart definition={definition} height={140} ariaLabel={m.tt_daily_hours_chart_aria()} />
+        <Chart
+          definition={definition}
+          renderer={chartRenderer}
+          height={140}
+          ariaLabel={m.tt_daily_hours_chart_aria()}
+        />
       </div>
       {targetDaily > 0 && (
         <div className="text-muted small mt-1">
