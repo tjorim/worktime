@@ -260,6 +260,8 @@
   "tt_avg_daily_hours": "Avg. Daily Hours",
   "tt_days_tracked": "Days Tracked",
   "tt_top_category": "Top Category",
+  "tt_daily_hours_chart_heading": "Hours at a Glance",
+  "tt_daily_hours_chart_aria": "Hours worked each day this week, compared to your daily target",
   "tt_daily_breakdown": "Daily Breakdown",
   "tt_detailed_breakdown": "Detailed Breakdown",
   "tt_col_day": "Day",
