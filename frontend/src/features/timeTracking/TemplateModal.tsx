@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import type { Label } from "@/lib/timeTracking/constants";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
@@ -43,7 +43,7 @@ export function TemplateModal({
     onSubmit: ({ value }) => onSubmit(value),
   });
 
-  const labelValue = useStore(form.store, (state) => state.values.label);
+  const labelValue = useSelector(form.atom, (state) => state.values.label);
   const selectedLabelOption = useSelectedLabelOption(labels, labelValue);
   const isSubmitDisabled =
     isLabelSelectionDisabled || !labelValue || selectedLabelOption === null;
@@ -74,7 +74,7 @@ export function TemplateModal({
               <Form.Group controlId="templateName" className="mb-3">
                 <Form.Label>{m.form_task_name()}</Form.Label>
                 <Form.Control
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(event) => field.handleChange(event.target.value)}
                   placeholder={m.form_task_name_placeholder()}
                   aria-required="true"
@@ -115,7 +115,7 @@ export function TemplateModal({
                   <Form.Label>{m.form_start()}</Form.Label>
                   <Form.Control
                     type="time"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-required="true"
                     required
@@ -129,7 +129,7 @@ export function TemplateModal({
                   <Form.Label>{m.form_stop()}</Form.Label>
                   <Form.Control
                     type="time"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-required="true"
                     required
