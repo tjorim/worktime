@@ -42,6 +42,7 @@ export default defineConfig({
       "**/coverage/**",
       "**/NextShift/**",
       "**/HdayPlanner/**",
+      "**/e2e/**",
     ],
     typecheck: {
       tsconfig: "./tsconfig.test.json",

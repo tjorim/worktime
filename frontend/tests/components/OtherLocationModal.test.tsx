@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -57,7 +57,7 @@ describe("OtherLocationModal", () => {
     expect(input).toHaveValue("DE");
   });
 
-  it("calls onConfirm with countryCode and label when form is submitted with valid code", () => {
+  it("calls onConfirm with countryCode and label when form is submitted with valid code", async () => {
     const { onConfirm } = renderModal();
     fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "DE" } });
     fireEvent.change(screen.getByLabelText(/^Label/), {
@@ -65,16 +65,18 @@ describe("OtherLocationModal", () => {
     });
     const confirmButton = screen.getByRole("button", { name: /save/i });
     fireEvent.click(confirmButton);
-    expect(onConfirm).toHaveBeenCalledWith("DE", "Berlin office");
+    // v2's validator pipeline runs asynchronously even for sync checks, so the
+    // submit handler's effects land a tick after the click event.
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("DE", "Berlin office"));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onConfirm with undefined label when label is empty", () => {
+  it("calls onConfirm with undefined label when label is empty", async () => {
     const { onConfirm } = renderModal();
     fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "FR" } });
     const confirmButton = screen.getByRole("button", { name: /save/i });
     fireEvent.click(confirmButton);
-    expect(onConfirm).toHaveBeenCalledWith("FR", undefined);
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("FR", undefined));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
