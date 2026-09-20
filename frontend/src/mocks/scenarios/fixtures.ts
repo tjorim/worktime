@@ -1,7 +1,6 @@
 import {
   emptyPullResponse,
   emptyPushResponse,
-  emptyStatus,
   populatedStatus,
 } from "@/mocks/data/syncStore";
 import {
@@ -11,9 +10,121 @@ import {
   seedSchoolHolidays,
 } from "@/mocks/data/holidayStore";
 import type { MockScenarioFixture, MockScenarioId, TeamShiftStatusReadModel } from "./types";
+import type { LabelSyncRead, SyncPullResponse, SyncStatusResponse, TaskSyncRead } from "@/utils/syncClient";
 
 const AS_OF = "2026-05-18T06:00:00.000Z";
 const CREATED_AT = "2026-01-01T00:00:00.000Z";
+
+const DEEP_WORK_LABEL_ID = "d15b0000-0000-4000-8000-000000000001";
+const MEETINGS_LABEL_ID = "d15b0000-0000-4000-8000-000000000002";
+
+/**
+ * A realistic Monday-through-today week of tracked tasks, anchored to the
+ * real current date so local dev (`VITE_MSW=true pnpm dev`) and the
+ * `demo-default` scenario show a populated weekly summary out of the box
+ * instead of an empty state.
+ */
+function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[] } {
+  const now = new Date();
+  const monday = new Date(now);
+  const dayOfWeek = (monday.getDay() + 6) % 7; // 0 = Monday
+  monday.setDate(monday.getDate() - dayOfWeek);
+  monday.setHours(0, 0, 0, 0);
+
+  const labels: LabelSyncRead[] = [
+    {
+      id: DEEP_WORK_LABEL_ID,
+      user_id: 1,
+      name: "Deep work",
+      color: "#2563eb",
+      created_at: CREATED_AT,
+      updated_at: CREATED_AT,
+      deleted_at: null,
+    },
+    {
+      id: MEETINGS_LABEL_ID,
+      user_id: 1,
+      name: "Meetings",
+      color: "#f97316",
+      created_at: CREATED_AT,
+      updated_at: CREATED_AT,
+      deleted_at: null,
+    },
+  ];
+
+  // Mon..Fri: a morning deep-work block plus a short afternoon meeting,
+  // truncated to whatever part of the week has actually happened.
+  const plannedDays = [
+    { deepWorkHours: 5, meetingHours: 1 },
+    { deepWorkHours: 4.5, meetingHours: 1.5 },
+    { deepWorkHours: 5.5, meetingHours: 1 },
+    { deepWorkHours: 4, meetingHours: 0.5 },
+    { deepWorkHours: 5, meetingHours: 1 },
+  ];
+
+  const tasks: TaskSyncRead[] = [];
+  plannedDays.forEach((plan, i) => {
+    const day = new Date(monday);
+    day.setDate(day.getDate() + i);
+    if (day > now) return;
+
+    const deepWorkStart = new Date(day);
+    deepWorkStart.setHours(9, 0, 0, 0);
+    const deepWorkStop = new Date(deepWorkStart.getTime() + plan.deepWorkHours * 60 * 60 * 1000);
+    if (deepWorkStop <= now) {
+      tasks.push({
+        id: `d15b1000-0000-4000-8000-00000000${String(i).padStart(4, "0")}`,
+        user_id: 1,
+        label_id: DEEP_WORK_LABEL_ID,
+        gantt_task_id: null,
+        text: "Feature work",
+        start_time: deepWorkStart.toISOString(),
+        stop_time: deepWorkStop.toISOString(),
+        includes_break: false,
+        created_at: deepWorkStart.toISOString(),
+        updated_at: deepWorkStop.toISOString(),
+        deleted_at: null,
+      });
+    }
+
+    const meetingStart = new Date(deepWorkStop.getTime() + 30 * 60 * 1000);
+    const meetingStop = new Date(meetingStart.getTime() + plan.meetingHours * 60 * 60 * 1000);
+    if (meetingStop <= now) {
+      tasks.push({
+        id: `d15b2000-0000-4000-8000-00000000${String(i).padStart(4, "0")}`,
+        user_id: 1,
+        label_id: MEETINGS_LABEL_ID,
+        gantt_task_id: null,
+        text: "Team sync",
+        start_time: meetingStart.toISOString(),
+        stop_time: meetingStop.toISOString(),
+        includes_break: false,
+        created_at: meetingStart.toISOString(),
+        updated_at: meetingStop.toISOString(),
+        deleted_at: null,
+      });
+    }
+  });
+
+  return { labels, tasks };
+}
+
+function seedPullResponse(): SyncPullResponse {
+  const { labels, tasks } = seedTimeTrackingWeek();
+  return {
+    ...structuredClone(emptyPullResponse),
+    labels,
+    tasks,
+  };
+}
+
+function seedSyncStatus(): SyncStatusResponse {
+  const now = new Date().toISOString();
+  return {
+    ...structuredClone(populatedStatus),
+    tasks_updated_at: now,
+  };
+}
 
 function createShift(
   team_number: number,
@@ -55,8 +166,8 @@ function createBaseFixture(id: MockScenarioId): MockScenarioFixture {
     },
     sync: {
       state: "clean",
-      status: structuredClone(emptyStatus),
-      pullData: structuredClone(emptyPullResponse),
+      status: seedSyncStatus(),
+      pullData: seedPullResponse(),
       pushResponse: structuredClone(emptyPushResponse),
       statusError: null,
       pullError: null,

@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { Dayjs } from "dayjs";
+import { useForm, useSelector } from "@tanstack/react-form";
 import * as m from "@/paraglide/messages.js";
 
 interface FlexStartEditorProps {
@@ -27,12 +28,21 @@ export function FlexStartEditor({
   onClear,
 }: FlexStartEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  const form = useForm({
+    defaultValues: { draft: "" },
+    onSubmit: ({ value }) => {
+      if (value.draft) {
+        onSet(value.draft);
+      }
+      setIsEditing(false);
+    },
+  });
+  const draft = useSelector(form.atom, (state) => state.values.draft);
 
   // Seed the draft directly when editing opens, rather than via an effect: this
   // avoids extra renders and can't clobber the user's typing on a background update.
   const startEditing = () => {
-    setDraft(startTime ? startTime.format("HH:mm") : defaultInputTime);
+    form.reset({ draft: startTime ? startTime.format("HH:mm") : defaultInputTime });
     setIsEditing(true);
   };
 
@@ -50,30 +60,27 @@ export function FlexStartEditor({
     );
   }
 
-  const handleSave = () => {
-    if (draft) {
-      onSet(draft);
-    }
-    setIsEditing(false);
-  };
-
   return (
     <Form
       className="d-flex align-items-center gap-2 flex-wrap mt-1"
       onSubmit={(event) => {
         event.preventDefault();
-        handleSave();
+        void form.handleSubmit();
       }}
     >
-      <Form.Control
-        type="time"
-        size="sm"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        aria-label={m.personalized_status_flex_start_label()}
-        style={{ width: "auto" }}
-        autoFocus
-      />
+      <form.Field name="draft">
+        {(field) => (
+          <Form.Control
+            type="time"
+            size="sm"
+            value={field.value}
+            onChange={(event) => field.handleChange(event.target.value)}
+            aria-label={m.personalized_status_flex_start_label()}
+            style={{ width: "auto" }}
+            autoFocus
+          />
+        )}
+      </form.Field>
       <Button type="submit" variant="primary" size="sm" disabled={!draft}>
         {m.save()}
       </Button>

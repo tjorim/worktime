@@ -10,6 +10,7 @@ import type { WorkLocationMap } from "@/types/workLocation";
 import * as m from "@/paraglide/messages.js";
 import type { LabelPercentage, WeekDay, WeeklySummary } from "./hooks/useWeeklyTimeTrackingSummary";
 import { CopyableHoursCell, MetricCard } from "./WeeklyCells";
+import { WeeklyHoursChart } from "./WeeklyHoursChart";
 
 interface WeeklyDataViewProps {
   weekTotal: number;
@@ -116,6 +117,13 @@ export function WeeklyDataView({
         />
         <MetricCard label={m.tt_top_category()} value={labelPercentages[0]?.label ?? "-"} truncate />
       </div>
+
+      <WeeklyHoursChart
+        weekDays={weekDays}
+        dailyHourTotals={dailyHourTotals}
+        todayIso={todayIso}
+        targetDaily={targetDaily}
+      />
 
       <div className="mb-4">
         <h6 className="text-uppercase text-muted mb-3">
