@@ -71,35 +71,39 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
     const deepWorkStart = new Date(day);
     deepWorkStart.setHours(9, 0, 0, 0);
     const deepWorkStop = new Date(deepWorkStart.getTime() + plan.deepWorkHours * 60 * 60 * 1000);
-    tasks.push({
-      id: `d15b1000-0000-4000-8000-00000000${String(i).padStart(4, "0")}`,
-      user_id: 1,
-      label_id: DEEP_WORK_LABEL_ID,
-      gantt_task_id: null,
-      text: "Feature work",
-      start_time: deepWorkStart.toISOString(),
-      stop_time: deepWorkStop.toISOString(),
-      includes_break: false,
-      created_at: deepWorkStart.toISOString(),
-      updated_at: deepWorkStop.toISOString(),
-      deleted_at: null,
-    });
+    if (deepWorkStop <= now) {
+      tasks.push({
+        id: `d15b1000-0000-4000-8000-00000000${String(i).padStart(4, "0")}`,
+        user_id: 1,
+        label_id: DEEP_WORK_LABEL_ID,
+        gantt_task_id: null,
+        text: "Feature work",
+        start_time: deepWorkStart.toISOString(),
+        stop_time: deepWorkStop.toISOString(),
+        includes_break: false,
+        created_at: deepWorkStart.toISOString(),
+        updated_at: deepWorkStop.toISOString(),
+        deleted_at: null,
+      });
+    }
 
     const meetingStart = new Date(deepWorkStop.getTime() + 30 * 60 * 1000);
     const meetingStop = new Date(meetingStart.getTime() + plan.meetingHours * 60 * 60 * 1000);
-    tasks.push({
-      id: `d15b2000-0000-4000-8000-00000000${String(i).padStart(4, "0")}`,
-      user_id: 1,
-      label_id: MEETINGS_LABEL_ID,
-      gantt_task_id: null,
-      text: "Team sync",
-      start_time: meetingStart.toISOString(),
-      stop_time: meetingStop.toISOString(),
-      includes_break: false,
-      created_at: meetingStart.toISOString(),
-      updated_at: meetingStop.toISOString(),
-      deleted_at: null,
-    });
+    if (meetingStop <= now) {
+      tasks.push({
+        id: `d15b2000-0000-4000-8000-00000000${String(i).padStart(4, "0")}`,
+        user_id: 1,
+        label_id: MEETINGS_LABEL_ID,
+        gantt_task_id: null,
+        text: "Team sync",
+        start_time: meetingStart.toISOString(),
+        stop_time: meetingStop.toISOString(),
+        includes_break: false,
+        created_at: meetingStart.toISOString(),
+        updated_at: meetingStop.toISOString(),
+        deleted_at: null,
+      });
+    }
   });
 
   return { labels, tasks };
