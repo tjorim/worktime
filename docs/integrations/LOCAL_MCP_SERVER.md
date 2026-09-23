@@ -73,8 +73,7 @@ Travel, Worktime, Champagnefestival and Daynest:
   an object of app-specific policy details. Worktime's `access` is
   `{"tier": "owner"}`: every tool acts on the caller's own data.
 - Worktime's finer classification (`personal_write`) is reported as
-  `effect_detail` on write tools. The flat `required_tier` key is a legacy
-  duplicate of `access.tier`, kept for one release.
+  `effect_detail` on write tools.
 - The manifest describes tools; it never grants access. Each tool's
   authorization checks are unchanged (integration-client management tools stay
   hidden from managed/service credentials).

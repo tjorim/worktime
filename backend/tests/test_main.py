@@ -93,7 +93,7 @@ def test_mcp_capabilities_reports_disabled_with_empty_tools_when_unmounted(clien
 def test_mcp_capabilities_enabled_manifest_follows_contract_v1(client, monkeypatch):
     """Tools use the shared read/write vocabulary with the always-present
     requires_confirmation and access fields; Worktime's finer classification
-    survives as effect_detail and the legacy required_tier key is kept."""
+    survives as effect_detail."""
     from types import SimpleNamespace
 
     from app import main
@@ -113,8 +113,11 @@ def test_mcp_capabilities_enabled_manifest_follows_contract_v1(client, monkeypat
     for name, tool in tools.items():
         assert tool["effect"] in ("read", "write"), name
         assert tool["requires_confirmation"] is False, name
-        assert tool["required_tier"] == "owner", name
-        assert tool["access"] == {"tier": tool["required_tier"]}, name
+        expected_keys = {"name", "effect", "requires_confirmation", "access"}
+        if tool["effect"] == "write":
+            expected_keys.add("effect_detail")
+        assert set(tool) == expected_keys, name
+        assert tool["access"] == {"tier": "owner"}, name
         assert ("effect_detail" in tool) is (tool["effect"] == "write"), name
     assert tools["get_current_status"]["effect"] == "read"
     assert tools["create_label"]["effect"] == "write"

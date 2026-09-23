@@ -61,7 +61,6 @@ def _search_serializer(tools: Sequence[Tool]) -> list[dict[str, Any]]:
             "name": tool.name,
             "description": tool.description or "",
             "input_schema": tool.parameters,
-            "required_tier": MCP_TOOL_CAPABILITIES[tool.name].required_tier,
             **tool_manifest_entry(tool.name, include_name=False),
         }
         for tool in tools
@@ -758,7 +757,7 @@ def tool_manifest_entry(tool_name: str, *, include_name: bool = True) -> dict[st
 
     ``effect`` is the shared ``read`` / ``write`` vocabulary; Worktime's finer
     internal classification is kept in ``effect_detail`` for non-read tools.
-    ``required_tier`` is the legacy flat key, mirrored under ``access.tier``.
+    ``access.tier`` carries the tool's tier.
     Worktime has no per-call confirmation step, so ``requires_confirmation`` is
     always false.
     """
@@ -769,7 +768,6 @@ def tool_manifest_entry(tool_name: str, *, include_name: bool = True) -> dict[st
     if not is_read:
         entry["effect_detail"] = capability.effect.value
     entry["requires_confirmation"] = False
-    entry["required_tier"] = capability.required_tier
     entry["access"] = {"tier": capability.required_tier}
     return entry
 
