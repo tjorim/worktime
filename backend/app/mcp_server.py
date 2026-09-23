@@ -62,7 +62,7 @@ def _search_serializer(tools: Sequence[Tool]) -> list[dict[str, Any]]:
             "description": tool.description or "",
             "input_schema": tool.parameters,
             "required_tier": MCP_TOOL_CAPABILITIES[tool.name].required_tier,
-            "effect": MCP_TOOL_CAPABILITIES[tool.name].effect.value,
+            **tool_manifest_entry(tool.name, include_name=False),
         }
         for tool in tools
     ]
@@ -688,8 +688,49 @@ def tool_auth(tool_name: str) -> AuthCheck | None:
     return _require_interactive_auth if tool_name in _INTERACTIVE_ONLY_TOOLS else None
 
 
+# Write tools that only add data and never overwrite or remove existing data.
+# MCP's ``destructiveHint`` means "may delete or overwrite"; a tool absent from
+# this set is treated as destructive, which is also the fallback for any
+# future tool that hasn't been classified yet. ``stop_time_entry`` belongs here
+# because it only fills the empty ``stop_time`` of the running entry.
+# ``create_time_off_event`` is deliberately absent: with an existing
+# ``entry_id`` it upserts, overwriting (or restoring) that entry.
+_ADDITIVE_WRITE_TOOLS = frozenset(
+    {
+        "create_label",
+        "create_time_tracking_task",
+        "create_gantt_task",
+        "create_integration_client",
+        "start_time_entry",
+        "stop_time_entry",
+    }
+)
+
+# Write tools where repeating the identical call leaves no further effect:
+# updates and upserts set absolute values, and repeating a delete of something
+# already gone fails as not-found without writing. Creates, ``start_time_entry``
+# (a new row per call), ``stop_time_entry`` (its default stop time is "now" and
+# it targets whichever entry is running), ``rotate_integration_client`` (a new
+# key per call) and ``revoke_integration_client`` (each call rewrites
+# ``revoked_at`` and appends an audit entry) are not idempotent.
+_IDEMPOTENT_WRITE_TOOLS = frozenset(
+    {
+        "update_label",
+        "delete_label",
+        "update_time_tracking_task",
+        "delete_time_tracking_task",
+        "set_work_location",
+        "delete_work_location",
+        "update_time_off_event",
+        "delete_time_off_event",
+        "update_gantt_task",
+        "delete_gantt_task",
+    }
+)
+
+
 def tool_annotations(tool_name: str) -> ToolAnnotations:
-    """Return explicit MCP safety metadata for ChatGPT and other clients."""
+    """Return standard MCP tool annotations (hints for ChatGPT and other clients)."""
     capability = MCP_TOOL_CAPABILITIES.get(tool_name)
     if capability is not None and capability.effect is ToolEffect.READ:
         return ToolAnnotations(
@@ -701,9 +742,36 @@ def tool_annotations(tool_name: str) -> ToolAnnotations:
 
     return ToolAnnotations(
         read_only_hint=False,
-        destructive_hint=not tool_name.startswith("create_"),
+        destructive_hint=tool_name not in _ADDITIVE_WRITE_TOOLS,
+        idempotent_hint=tool_name in _IDEMPOTENT_WRITE_TOOLS,
         open_world_hint=False,
     )
+
+
+# Version of the cross-app ``GET /api/mcp/capabilities`` manifest contract
+# (tjorim/apps#229). Bump only for a breaking change to the shared fields.
+MCP_CAPABILITY_CONTRACT_VERSION = 1
+
+
+def tool_manifest_entry(tool_name: str, *, include_name: bool = True) -> dict[str, Any]:
+    """Return one tool's capability-manifest entry (contract v1).
+
+    ``effect`` is the shared ``read`` / ``write`` vocabulary; Worktime's finer
+    internal classification is kept in ``effect_detail`` for non-read tools.
+    ``required_tier`` is the legacy flat key, mirrored under ``access.tier``.
+    Worktime has no per-call confirmation step, so ``requires_confirmation`` is
+    always false.
+    """
+    capability = MCP_TOOL_CAPABILITIES[tool_name]
+    is_read = capability.effect is ToolEffect.READ
+    entry: dict[str, Any] = {"name": tool_name} if include_name else {}
+    entry["effect"] = "read" if is_read else "write"
+    if not is_read:
+        entry["effect_detail"] = capability.effect.value
+    entry["requires_confirmation"] = False
+    entry["required_tier"] = capability.required_tier
+    entry["access"] = {"tier": capability.required_tier}
+    return entry
 
 
 def create_mcp_server(

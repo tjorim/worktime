@@ -172,7 +172,8 @@ Under `/api/sync`:
 ### MCP server
 
 - `/mcp` — Model Context Protocol server mount, exposing schedule/status tools over MCP; see
-  `GET /api/mcp/capabilities` for the capability manifest
+  `GET /api/mcp/capabilities` for the capability manifest (cross-app contract v1; field meanings and
+  MCP tool-annotation rules in `docs/integrations/LOCAL_MCP_SERVER.md`)
 
 ## Storage Model
 

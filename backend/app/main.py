@@ -37,12 +37,16 @@ logger = logging.getLogger(__name__)
 
 _worktime_mcp_base_url = os.environ.get("MCP_BASE_URL", "")
 if _worktime_mcp_base_url:
+    from .mcp_server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
     from .mcp_server import create_mcp_http_app as _create_mcp_http_app
+    from .mcp_server import tool_manifest_entry as _tool_manifest_entry
 
     _mcp, _mcp_app = _create_mcp_http_app(path="/", stateless_http=True)
 else:
+    from .mcp_server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
     from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
+    from .mcp_server import tool_manifest_entry as _tool_manifest_entry
 
     _mcp = None
     _mcp_app = None
@@ -261,19 +265,11 @@ async def mcp_capabilities() -> dict[str, object]:
     """
     enabled = _mcp_app is not None
     return {
+        "contract_version": _MCP_CAPABILITY_CONTRACT_VERSION,
         "enabled": enabled,
         "mount_path": "/mcp",
         "version": _mcp.version if _mcp is not None else None,
-        "tools": [
-            {
-                "name": name,
-                "effect": capability.effect.value,
-                "required_tier": capability.required_tier,
-            }
-            for name, capability in sorted(_MCP_TOOL_CAPABILITIES.items())
-        ]
-        if enabled
-        else [],
+        "tools": [_tool_manifest_entry(name) for name in sorted(_MCP_TOOL_CAPABILITIES)] if enabled else [],
         "resources": [],
         "prompts": [],
     }
