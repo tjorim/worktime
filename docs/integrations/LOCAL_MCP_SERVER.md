@@ -59,10 +59,36 @@ that carries the `worktime:mcp` scope.
 
 `GET /api/mcp/capabilities` returns the authoritative, drift-proof list of
 registered tools (sourced directly from `app.mcp_server.MCP_TOOL_CAPABILITIES`,
-the same dict used to register tools), each tagged with its side-effect
-classification (`read` / `personal_write` / `admin_write`) and required
-ownership tier (`owner` / `admin`). Use it instead of trusting this table if
+the same dict used to register tools). Use it instead of trusting this table if
 the two ever appear to disagree — this doc can drift; that endpoint cannot.
+
+The manifest follows the cross-app capability contract v1
+([tjorim/apps#229](https://github.com/tjorim/apps/issues/229)), shared by
+Travel, Worktime, Champagnefestival and Daynest:
+
+- Top level: `contract_version` (`1`), `enabled`, `mount_path`, `version`,
+  `tools`, `resources`, `prompts`. `tools` is empty when MCP isn't mounted.
+- Per tool: `name`; `effect` (`read` or `write`); `requires_confirmation`
+  (always `false` — Worktime has no per-call confirmation step); and `access`,
+  an object of app-specific policy details. Worktime's `access` is
+  `{"tier": "owner"}`: every tool acts on the caller's own data.
+- Worktime's finer classification (`personal_write`) is reported as
+  `effect_detail` on write tools. The flat `required_tier` key is a legacy
+  duplicate of `access.tier`, kept for one release.
+- The manifest describes tools; it never grants access. Each tool's
+  authorization checks are unchanged (integration-client management tools stay
+  hidden from managed/service credentials).
+
+Each registered tool also carries standard MCP tool annotations (`readOnlyHint`,
+`destructiveHint`, `idempotentHint`, `openWorldHint`), which MCP clients read
+from `tools/list`. They are hints, not enforcement. `readOnlyHint` is true
+exactly when `effect` is `read`. For write tools, `destructiveHint` is true when
+the tool can delete or overwrite existing data (updates, deletes,
+`set_work_location`, integration-client rotate/revoke) and false for additive
+ones (creates, `start_time_entry`, `stop_time_entry`, which only fills the empty
+stop time). `idempotentHint` is true only when repeating the identical call has
+no further effect (updates, deletes, `set_work_location`,
+`revoke_integration_client`).
 
 ## Exposed read tools
 

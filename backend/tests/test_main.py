@@ -81,9 +81,41 @@ def test_mcp_capabilities_reports_disabled_with_empty_tools_when_unmounted(clien
 
     assert response.status_code == 200
     data = response.json()
+    assert data["contract_version"] == 1
     assert data["enabled"] is False
     assert data["mount_path"] == "/mcp"
     assert data["version"] is None
     assert data["tools"] == []
     assert data["resources"] == []
     assert data["prompts"] == []
+
+
+def test_mcp_capabilities_enabled_manifest_follows_contract_v1(client, monkeypatch):
+    """Tools use the shared read/write vocabulary with the always-present
+    requires_confirmation and access fields; Worktime's finer classification
+    survives as effect_detail and the legacy required_tier key is kept."""
+    from types import SimpleNamespace
+
+    from app import main
+    from app.mcp_server import MCP_TOOL_CAPABILITIES
+
+    monkeypatch.setattr(main, "_mcp_app", object())
+    monkeypatch.setattr(main, "_mcp", SimpleNamespace(version="test"))
+
+    data = client.get("/api/mcp/capabilities").json()
+
+    assert data["contract_version"] == 1
+    assert data["enabled"] is True
+    assert data["version"] == "test"
+    tools = {tool["name"]: tool for tool in data["tools"]}
+    assert set(tools) == set(MCP_TOOL_CAPABILITIES)
+    assert [tool["name"] for tool in data["tools"]] == sorted(tools)
+    for name, tool in tools.items():
+        assert tool["effect"] in ("read", "write"), name
+        assert tool["requires_confirmation"] is False, name
+        assert tool["required_tier"] == "owner", name
+        assert tool["access"] == {"tier": tool["required_tier"]}, name
+        assert ("effect_detail" in tool) is (tool["effect"] == "write"), name
+    assert tools["get_current_status"]["effect"] == "read"
+    assert tools["create_label"]["effect"] == "write"
+    assert tools["create_label"]["effect_detail"] == "personal_write"

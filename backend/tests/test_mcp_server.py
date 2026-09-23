@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
 from app.mcp_server import (
+    _ADDITIVE_WRITE_TOOLS,
+    _IDEMPOTENT_WRITE_TOOLS,
     MCP_TOOL_CAPABILITIES,
     DbIntegrationClientVerifier,
     McpAuthError,
@@ -24,6 +26,7 @@ from app.mcp_server import (
     create_mcp_server,
     tool_annotations,
     tool_auth,
+    tool_manifest_entry,
 )
 from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
 from app.services import db_service, integration_client_service
@@ -165,6 +168,13 @@ def test_search_serializer_preserves_schema_and_capabilities() -> None:
     assert result["input_schema"] == tool.parameters
     assert result["required_tier"] == "owner"
     assert result["effect"] == "read"
+    assert result["access"] == {"tier": "owner"}
+    assert result["requires_confirmation"] is False
+
+    tool.name = "create_label"
+    write_result = _search_serializer([tool])[0]
+    assert write_result["effect"] == "write"
+    assert write_result["effect_detail"] == "personal_write"
 
 
 async def test_capability_manifest_cannot_drift_from_registered_tools(test_db: AsyncEngine) -> None:
@@ -200,11 +210,43 @@ async def test_registered_tools_advertise_explicit_safety_annotations() -> None:
             assert annotations.idempotent_hint is True
 
 
+def test_tool_annotations_and_manifest_agree_for_every_tool() -> None:
+    """effect drives read_only_hint, and the hint sets only name real write tools."""
+    write_tools = {name for name, cap in MCP_TOOL_CAPABILITIES.items() if cap.effect is not ToolEffect.READ}
+    assert write_tools >= _ADDITIVE_WRITE_TOOLS
+    assert write_tools >= _IDEMPOTENT_WRITE_TOOLS
+    assert not _ADDITIVE_WRITE_TOOLS & _IDEMPOTENT_WRITE_TOOLS
+
+    for name in MCP_TOOL_CAPABILITIES:
+        entry = tool_manifest_entry(name)
+        annotations = tool_annotations(name)
+        assert entry["name"] == name
+        assert entry["effect"] in ("read", "write")
+        assert annotations.read_only_hint is (entry["effect"] == "read"), name
+        if entry["effect"] == "read":
+            assert "effect_detail" not in entry
+            assert annotations.destructive_hint is False
+            assert annotations.idempotent_hint is True
+        else:
+            assert entry["effect_detail"] == MCP_TOOL_CAPABILITIES[name].effect.value
+            # Deletes and overwrites are destructive; only additive writes are not.
+            if name.startswith(("delete_", "update_", "revoke_", "rotate_")) or name == "set_work_location":
+                assert annotations.destructive_hint is True, name
+            if name.startswith("create_") or name == "start_time_entry":
+                assert annotations.destructive_hint is False, name
+                assert annotations.idempotent_hint is False, name
+
+
 def test_write_annotations_distinguish_creation_from_destructive_changes() -> None:
     assert tool_annotations("create_gantt_task").destructive_hint is False
     assert tool_annotations("update_gantt_task").destructive_hint is True
     assert tool_annotations("delete_gantt_task").destructive_hint is True
     assert tool_annotations("future_tool_without_policy").destructive_hint is True
+    assert tool_annotations("future_tool_without_policy").idempotent_hint is False
+    assert tool_annotations("update_gantt_task").idempotent_hint is True
+    assert tool_annotations("create_gantt_task").idempotent_hint is False
+    assert tool_annotations("rotate_integration_client").idempotent_hint is False
+    assert tool_annotations("stop_time_entry").destructive_hint is False
 
 
 async def test_integration_client_management_requires_interactive_oidc() -> None:
