@@ -693,11 +693,12 @@ def tool_auth(tool_name: str) -> AuthCheck | None:
 # this set is treated as destructive, which is also the fallback for any
 # future tool that hasn't been classified yet. ``stop_time_entry`` belongs here
 # because it only fills the empty ``stop_time`` of the running entry.
+# ``create_time_off_event`` is deliberately absent: with an existing
+# ``entry_id`` it upserts, overwriting (or restoring) that entry.
 _ADDITIVE_WRITE_TOOLS = frozenset(
     {
         "create_label",
         "create_time_tracking_task",
-        "create_time_off_event",
         "create_gantt_task",
         "create_integration_client",
         "start_time_entry",
@@ -706,11 +707,12 @@ _ADDITIVE_WRITE_TOOLS = frozenset(
 )
 
 # Write tools where repeating the identical call leaves no further effect:
-# updates and upserts set absolute values, and deletes/revokes of something
-# already gone change nothing. Creates, ``start_time_entry`` (a new row per
-# call), ``stop_time_entry`` (its default stop time is "now" and it targets
-# whichever entry is running) and ``rotate_integration_client`` (a new key per
-# call) are not idempotent.
+# updates and upserts set absolute values, and repeating a delete of something
+# already gone fails as not-found without writing. Creates, ``start_time_entry``
+# (a new row per call), ``stop_time_entry`` (its default stop time is "now" and
+# it targets whichever entry is running), ``rotate_integration_client`` (a new
+# key per call) and ``revoke_integration_client`` (each call rewrites
+# ``revoked_at`` and appends an audit entry) are not idempotent.
 _IDEMPOTENT_WRITE_TOOLS = frozenset(
     {
         "update_label",
@@ -723,7 +725,6 @@ _IDEMPOTENT_WRITE_TOOLS = frozenset(
         "delete_time_off_event",
         "update_gantt_task",
         "delete_gantt_task",
-        "revoke_integration_client",
     }
 )
 

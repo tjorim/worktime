@@ -232,7 +232,8 @@ def test_tool_annotations_and_manifest_agree_for_every_tool() -> None:
             # Deletes and overwrites are destructive; only additive writes are not.
             if name.startswith(("delete_", "update_", "revoke_", "rotate_")) or name == "set_work_location":
                 assert annotations.destructive_hint is True, name
-            if name.startswith("create_") or name == "start_time_entry":
+            # create_time_off_event upserts, so it is checked separately below.
+            if (name.startswith("create_") and name != "create_time_off_event") or name == "start_time_entry":
                 assert annotations.destructive_hint is False, name
                 assert annotations.idempotent_hint is False, name
 
@@ -244,6 +245,15 @@ def test_write_annotations_distinguish_creation_from_destructive_changes() -> No
     assert tool_annotations("future_tool_without_policy").destructive_hint is True
     assert tool_annotations("future_tool_without_policy").idempotent_hint is False
     assert tool_annotations("update_gantt_task").idempotent_hint is True
+
+
+def test_upsert_and_revoke_annotations_are_conservative() -> None:
+    # An existing entry_id makes create_time_off_event overwrite that entry.
+    upsert = tool_annotations("create_time_off_event")
+    assert upsert.destructive_hint is True
+    assert upsert.idempotent_hint is False
+    # Every revoke rewrites revoked_at and appends an audit entry.
+    assert tool_annotations("revoke_integration_client").idempotent_hint is False
     assert tool_annotations("create_gantt_task").idempotent_hint is False
     assert tool_annotations("rotate_integration_client").idempotent_hint is False
     assert tool_annotations("stop_time_entry").destructive_hint is False

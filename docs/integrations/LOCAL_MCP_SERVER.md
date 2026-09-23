@@ -86,9 +86,11 @@ exactly when `effect` is `read`. For write tools, `destructiveHint` is true when
 the tool can delete or overwrite existing data (updates, deletes,
 `set_work_location`, integration-client rotate/revoke) and false for additive
 ones (creates, `start_time_entry`, `stop_time_entry`, which only fills the empty
-stop time). `idempotentHint` is true only when repeating the identical call has
-no further effect (updates, deletes, `set_work_location`,
-`revoke_integration_client`).
+stop time). `create_time_off_event` is destructive because an existing
+`entry_id` makes it overwrite that entry. `idempotentHint` is true only when
+repeating the identical call has no further effect (updates, deletes,
+`set_work_location`); `revoke_integration_client` is not, since every call
+rewrites `revoked_at` and appends an audit entry.
 
 ## Exposed read tools
 
