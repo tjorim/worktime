@@ -166,7 +166,7 @@ def test_search_serializer_preserves_schema_and_capabilities() -> None:
 
     assert result["name"] == tool.name
     assert result["input_schema"] == tool.parameters
-    assert result["required_tier"] == "owner"
+    assert "required_tier" not in result
     assert result["effect"] == "read"
     assert result["access"] == {"tier": "owner"}
     assert result["requires_confirmation"] is False
