@@ -23,7 +23,7 @@ dependencies = [
   "pydantic-settings==2.15.0",
   "PyJWT[crypto]==2.13.0",
   "python-dotenv==1.2.3",
-  "sqlalchemy==2.0.53",
+  "sqlalchemy==2.0.54",
   "uvicorn[standard]==0.53.0",
   "slowapi==0.1.10",
   "aiosqlite>=0.22.1",
