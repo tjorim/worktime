@@ -14,7 +14,12 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
-import { dayjs, formatDisplayDate, formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
+import {
+  dayjs,
+  formatDisplayDate,
+  formatTimeByPreference,
+  formatYYWWD,
+} from "@/utils/dateTimeUtils";
 import { getTeamCountForOption, isValidScheduleType } from "@/utils/scheduleUtils";
 import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
@@ -110,7 +115,12 @@ interface TransferItemsListProps {
   timeOffEvents: CalendarEvent[];
 }
 
-function TransferItemsList({ transfers, scheduleType, myTeam, timeOffEvents }: TransferItemsListProps) {
+function TransferItemsList({
+  transfers,
+  scheduleType,
+  myTeam,
+  timeOffEvents,
+}: TransferItemsListProps) {
   return (
     <ListGroup variant="flush">
       {transfers.map((transfer, index) => {
@@ -382,14 +392,11 @@ export function TransferView({
   const showOverlapsList = overlaps.length > 0;
   const showOverlapsEmptyState = !sameSchedule && overlaps.length === 0;
 
-  const myOverlapLabel = useMemo(
-    () => {
-      if (!myTeam) return "";
-      if (myScheduleTeamCount > 1) return m.team_label({ team: String(myTeam) });
-      return SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)?.title ?? "";
-    },
-    [myScheduleTeamCount, myTeam, scheduleType],
-  );
+  const myOverlapLabel = useMemo(() => {
+    if (!myTeam) return "";
+    if (myScheduleTeamCount > 1) return m.team_label({ team: String(myTeam) });
+    return SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)?.title ?? "";
+  }, [myScheduleTeamCount, myTeam, scheduleType]);
 
   const otherOverlapLabel = useMemo(() => {
     if (otherScheduleTeamCount === 1 && otherScheduleTitle) return otherScheduleTitle;
@@ -662,10 +669,10 @@ export function TransferView({
                     ariaLabel={m.transfer_select_team_aria()}
                     label={
                       <>
-                      <i className="bi bi-people me-1" aria-hidden="true"></i>
-                      {sameSchedule
-                        ? m.transfer_view_with_team_label()
-                        : m.transfer_view_overlaps_with_team_label()}
+                        <i className="bi bi-people me-1" aria-hidden="true"></i>
+                        {sameSchedule
+                          ? m.transfer_view_with_team_label()
+                          : m.transfer_view_overlaps_with_team_label()}
                       </>
                     }
                   />

@@ -39,7 +39,12 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
 import { tasksCollection, setSyncCollectionAuth } from "@/db/collections";
-import { syncStore, populatedStatus, emptyPullResponse, resetSyncStore } from "@/mocks/data/syncStore";
+import {
+  syncStore,
+  populatedStatus,
+  emptyPullResponse,
+  resetSyncStore,
+} from "@/mocks/data/syncStore";
 
 // ---------------------------------------------------------------------------
 // SuperTokens session mock — mutable so individual tests can override it.
@@ -202,9 +207,7 @@ describe("§1 Local-only usage", () => {
   it("renders the app without authentication and shows the onboarding wizard", async () => {
     render(<App />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument());
   });
 
   it("stores no sync cursor when the user has not authenticated", () => {
@@ -215,9 +218,7 @@ describe("§1 Local-only usage", () => {
   it("does not trigger any sync API calls when the user is not authenticated", async () => {
     render(<App />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument());
 
     // When unauthenticated, no sync cursor should be stored — the sync flow never ran.
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).toBeNull();
@@ -371,9 +372,9 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
 
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
-    const pushCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
-      (call) => call[0].includes("/api/sync/push"),
-    );
+    const pushCalls = (
+      (mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).filter((call) => call[0].includes("/api/sync/push"));
     expect(pushCalls.length).toBeGreaterThan(0);
   });
 
@@ -408,9 +409,9 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
       expect(screen.getByTestId("sync-phase")).toHaveTextContent("done");
     });
 
-    const pushCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
-      (call) => call[0] === "/api/sync/push",
-    );
+    const pushCalls = (
+      (mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).filter((call) => call[0] === "/api/sync/push");
     expect(pushCalls.length).toBeGreaterThan(0);
     const body = JSON.parse((pushCalls[0] as [string, RequestInit])[1].body as string);
     expect(body.tasks).toHaveLength(1);
@@ -444,9 +445,9 @@ describe("§2 Branch B / §4 — second-device restore", () => {
       emptyPullResponse.server_timestamp,
     );
 
-    const pullCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
-      (call) => call[0].includes("/api/sync/pull"),
-    );
+    const pullCalls = (
+      (mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).filter((call) => call[0].includes("/api/sync/pull"));
     expect(pullCalls.length).toBeGreaterThan(0);
   });
 
@@ -482,9 +483,9 @@ describe("§2 Branch B / §4 — second-device restore", () => {
 
     // The pull call was made. This scenario only verifies the fetch path because
     // emptyPullResponse contains no entity data to write into local state.
-    const pullCalls = ((mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
-      (call) => call[0].includes("/api/sync/pull"),
-    );
+    const pullCalls = (
+      (mockFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).filter((call) => call[0].includes("/api/sync/pull"));
     expect(pullCalls.length).toBeGreaterThan(0);
   });
 });
@@ -517,7 +518,9 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     );
 
     // Both sides' counts are shown, and the non-destructive option is offered.
-    expect(screen.getByText(/This device has 1 entries; your account has 1\./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/This device has 1 entries; your account has 1\./i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Keep everything/i)).toBeInTheDocument();
   });
 
@@ -654,9 +657,9 @@ describe("§2 Branch C / §5 — conflict handling", () => {
 
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
-    const pushCalls = ((smartFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]).filter(
-      (call) => call[0].includes("/api/sync/push"),
-    );
+    const pushCalls = (
+      (smartFetch as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][]
+    ).filter((call) => call[0].includes("/api/sync/push"));
     expect(pushCalls.length).toBeGreaterThan(0);
   });
 

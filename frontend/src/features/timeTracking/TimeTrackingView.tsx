@@ -94,7 +94,6 @@ export function TimeTrackingView({
     setSelectedDailyDate(pendingEditTask.startTime.slice(0, 10));
   }, [pendingTaskEditId, pendingEditTask, onClearPendingTaskEdit]);
 
-
   const effectiveTeam = useMemo(
     () => getEffectiveTeam(myTeam, scheduleType),
     [myTeam, scheduleType],

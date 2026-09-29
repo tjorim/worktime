@@ -45,10 +45,15 @@ const columnHelper = createDataColumnHelper<TimeOffRow>();
 // Same order the data layer stores entries in, so the table opens unchanged.
 const DEFAULT_SORTING: SortingState = [{ id: "date", desc: false }];
 
+/** Whether a row matches the search box. The one definition, used for filtering and for selection. */
+function matchesSearch(row: TimeOffRow, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  return !needle || row.searchText.includes(needle);
+}
+
 type TimeOffTableViewProps = {
   eventCount: number;
   selectedCount: number;
-  onSelectAll: () => void;
   onClearSelection: () => void;
   onBulkDelete: () => void;
   onImport: () => void;
@@ -78,7 +83,6 @@ type TimeOffTableViewProps = {
 export function TimeOffTableView({
   eventCount,
   selectedCount,
-  onSelectAll,
   onClearSelection,
   onBulkDelete,
   onImport,
@@ -181,10 +185,8 @@ export function TimeOffTableView({
       getRowId: (row) => row.entry.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setSearch,
-      globalFilterFn: (row, _columnId, filterValue) => {
-        const needle = String(filterValue).trim().toLowerCase();
-        return !needle || row.original.searchText.includes(needle);
-      },
+      globalFilterFn: (row, _columnId, filterValue) =>
+        matchesSearch(row.original, String(filterValue)),
     },
     (state) => ({
       sorting: state.sorting,
@@ -198,6 +200,18 @@ export function TimeOffTableView({
   const selectedVisibleCount = visibleIds.filter((id) => selectedIds.has(id)).length;
   const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
   const isFiltering = search.trim() !== "";
+  // Every row the search leaves in, across all pages: what "Select all" means while searching.
+  const filteredIds = table.getPrePaginatedRowModel().rows.map((row) => row.original.entry.id);
+
+  // Selection must never include rows the search hides, or a bulk delete could remove entries
+  // the user cannot see. Changing the search therefore drops hidden rows from the selection.
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    const hiddenSelected = rows
+      .filter((row) => selectedIds.has(row.entry.id) && !matchesSearch(row, value))
+      .map((row) => row.entry.id);
+    if (hiddenSelected.length > 0) onSetSelection(hiddenSelected, false);
+  };
 
   return (
     <>
@@ -205,7 +219,9 @@ export function TimeOffTableView({
         <TimeOffToolbar
           eventCount={eventCount}
           selectedCount={selectedCount}
-          onSelectAll={onSelectAll}
+          onSelectAll={() => onSetSelection(filteredIds, true)}
+          selectableCount={filteredIds.length}
+          isFiltered={isFiltering}
           onClearSelection={onClearSelection}
           onBulkDelete={onBulkDelete}
           onImport={onImport}
@@ -229,12 +245,11 @@ export function TimeOffTableView({
               <Form.Control
                 type="search"
                 size="sm"
-                className="mb-3"
-                style={{ maxWidth: "320px" }}
+                className="mb-3 table-search-input"
                 placeholder={m.timeoff_search_placeholder()}
                 aria-label={m.timeoff_search_aria()}
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => handleSearchChange(event.target.value)}
               />
               {visibleRows.length === 0 && isFiltering ? (
                 <EmptyState

@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { logger } from "@/utils/logger";
 

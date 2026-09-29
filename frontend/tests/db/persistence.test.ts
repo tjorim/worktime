@@ -235,9 +235,9 @@ describe("startPersistingSyncCollections", () => {
     });
 
     await set(snapshotKey("tasks"), { version: 1, items: [{ id: "remote" }] });
-    channel!.onmessage?.(
-      { data: { type: "snapshot_changed", name: "tasks", generation: "default" } } as MessageEvent<unknown>,
-    );
+    channel!.onmessage?.({
+      data: { type: "snapshot_changed", name: "tasks", generation: "default" },
+    } as MessageEvent<unknown>);
     await vi.waitFor(() => expect(getLoadedSnapshot("tasks")).toEqual([{ id: "remote" }]));
   });
 });

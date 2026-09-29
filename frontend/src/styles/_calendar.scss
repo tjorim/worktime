@@ -536,7 +536,7 @@
   }
 
   /* Keeps the month name in view (just right of the sticky name column) while its
-     columns scroll past, instead of sitting centred over a span that may be off-screen. */
+     columns scroll past, instead of sitting centered over a span that may be off-screen. */
   .calendar-month-label {
     display: inline-block;
     position: sticky;
@@ -649,7 +649,7 @@
         --wt-half-rest: var(--wt-team-cal-weekend-cell);
       }
 
-      /* Half-day glyph, kept inside the coloured half (see the shared rules below). */
+      /* Half-day glyph, kept inside the colored half (see the shared rules below). */
       &.calendar-half-am,
       &.calendar-half-pm {
         font-size: 0.625rem;
@@ -668,7 +668,7 @@
         padding-right: 2px;
       }
 
-      /* First/last day of a range: a cap in the cell's own text colour, borders untouched. */
+      /* First/last day of a range: a cap in the cell's own text color, borders untouched. */
       &[tabindex]:focus-visible {
         outline: 2px solid var(--bs-primary);
         outline-offset: -2px;
@@ -729,7 +729,7 @@
   background-color: var(--wt-team-cal-weekend-cell);
 }
 
-/* Half day: only the off half is coloured, the glyph sits inside it. Morning is the
+/* Half day: only the off half is colored, the glyph sits inside it. Morning is the
    left half (◐), afternoon the right half (◑), matching the Time Off table. */
 .team-calendar-grid .calendar-half-am,
 .legend-color-box.calendar-half-am {
@@ -750,7 +750,7 @@
 }
 
 /* Glyph size: fits inside the 14px off half. Any overhang lands on the uncoloured half,
-   where the glyph's text colour is invisible. */
+   where the glyph's text color is invisible. */
 .legend-color-box.calendar-half-am,
 .legend-color-box.calendar-half-pm {
   font-size: 0.625rem;
@@ -782,7 +782,7 @@
   font-size: 0.6rem;
 }
 
-/* Colour chip in a cell popover: same classes as the cell, so it always matches. */
+/* Color chip in a cell popover: same classes as the cell, so it always matches. */
 .team-popover-chip {
   flex-shrink: 0;
   width: 14px;

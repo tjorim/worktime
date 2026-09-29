@@ -63,7 +63,11 @@ export function SettingsAccountSection({
           {isValidating ? (
             <ListGroup.Item>
               <div className="d-flex align-items-center gap-2 text-muted small">
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span
+                  className="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 <span>{m.loading()}</span>
               </div>
             </ListGroup.Item>
@@ -103,7 +107,11 @@ export function SettingsAccountSection({
 
                 {isProfileLoading && accountId === null ? (
                   <div className="d-flex align-items-center gap-2 text-muted small">
-                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     <span>{m.loading()}</span>
                   </div>
                 ) : (
@@ -127,7 +135,8 @@ export function SettingsAccountSection({
 
                     <div className="small text-muted d-flex flex-column gap-1">
                       <div>
-                        <span className="fw-medium">{m.account_profile_username_label()}:</span> {username ?? "—"}
+                        <span className="fw-medium">{m.account_profile_username_label()}:</span>{" "}
+                        {username ?? "—"}
                       </div>
                       <div>
                         <span className="fw-medium">{m.account_profile_user_id_label()}:</span>{" "}
@@ -147,7 +156,9 @@ export function SettingsAccountSection({
                         disabled={!hasProfileChanges || isProfileSaving || accountId === null}
                       >
                         <i className="bi bi-floppy me-1"></i>
-                        {isProfileSaving ? m.account_profile_saving_btn() : m.account_profile_save_btn()}
+                        {isProfileSaving
+                          ? m.account_profile_saving_btn()
+                          : m.account_profile_save_btn()}
                       </Button>
                     </div>
 

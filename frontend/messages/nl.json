@@ -370,6 +370,8 @@
   "timeoff_add_event_btn": "Gebeurtenis toevoegen",
   "timeoff_delete_selected_btn": "Geselecteerde verwijderen",
   "timeoff_select_all_btn": "Alles selecteren",
+  "timeoff_select_all_matching_btn": "Selecteer alle overeenkomsten",
+  "timeoff_select_all_matching_aria": "Selecteer alle gebeurtenissen die overeenkomen met de zoekopdracht",
   "timeoff_clear_selection_btn": "Selectie wissen",
   "timeoff_no_events_title": "Nog geen verlofgebeurtenissen",
   "timeoff_no_events_desc": "Klik op \"Gebeurtenis toevoegen\" om uw eerste gebeurtenis te maken, of op \"Importeren\" om een bestaand .hday-bestand te laden.",

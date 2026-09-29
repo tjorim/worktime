@@ -50,7 +50,6 @@ function renderTable(overrides: Partial<Parameters<typeof TimeOffTableView>[0]> 
       <TimeOffTableView
         eventCount={entries.length}
         selectedCount={0}
-        onSelectAll={vi.fn()}
         onClearSelection={vi.fn()}
         onBulkDelete={vi.fn()}
         onImport={vi.fn()}
@@ -209,5 +208,80 @@ describe("TimeOffTableView", () => {
       expect(badges.join(" ")).toContain("Holiday");
       expect(badges.join(" ")).toContain("Business trip");
     });
+  });
+
+  describe("selection while searching", () => {
+    // Fixture order by start date: range (2026-01-05), date (2026-02-01), weekly.
+
+    it("selects every entry with Select All when no search is active", async () => {
+      const { onSetSelection } = renderTable({
+        selectedCount: 1,
+        selectedIds: new Set(["weekly"]),
+      });
+      await userEvent.setup().click(screen.getByRole("button", { name: /^select all events$/i }));
+      expect(onSetSelection).toHaveBeenCalledWith(["range", "date", "weekly"], true);
+    });
+
+    it("only selects the matching entries once a search is active, on every page", async () => {
+      const { onSetSelection } = renderTable({
+        selectedCount: 1,
+        selectedIds: new Set(["weekly"]),
+      });
+      const user = userEvent.setup();
+      // "2026" is in the dates of the range and the single day, but not in the weekly pattern.
+      await user.type(screen.getByRole("searchbox"), "2026");
+      onSetSelection.mockClear();
+
+      await user.click(
+        screen.getByRole("button", { name: /select all events matching the search/i }),
+      );
+      expect(onSetSelection).toHaveBeenCalledTimes(1);
+      expect(onSetSelection).toHaveBeenCalledWith(["range", "date"], true);
+    });
+
+    it("labels the button as scoped to the search", async () => {
+      renderTable({ selectedCount: 1, selectedIds: new Set(["range"]) });
+      expect(screen.getByRole("button", { name: /^select all events$/i })).toBeInTheDocument();
+      await userEvent.setup().type(screen.getByRole("searchbox"), "ski");
+      expect(screen.getByRole("button", { name: /select all events matching/i })).toHaveTextContent(
+        "Select all matching",
+      );
+    });
+
+    it("disables Select All once every matching entry is already selected", async () => {
+      renderTable({ selectedCount: 1, selectedIds: new Set(["range"]) });
+      await userEvent.setup().type(screen.getByRole("searchbox"), "ski");
+      // Only "Ski trip" matches, and it is the one selected.
+      expect(screen.getByRole("button", { name: /select all events matching/i })).toBeDisabled();
+    });
+
+    it("drops selected entries the new search hides", async () => {
+      const { onSetSelection } = renderTable({
+        selectedCount: 2,
+        selectedIds: new Set(["range", "weekly"]),
+      });
+      await userEvent.setup().type(screen.getByRole("searchbox"), "conf");
+
+      // Final query "conf" only matches the single day, so both selected entries are hidden.
+      const [ids, selected] = onSetSelection.mock.calls.at(-1)!;
+      expect([...ids].sort()).toEqual(["range", "weekly"]);
+      expect(selected).toBe(false);
+    });
+
+    it("keeps selected entries that the search still shows", async () => {
+      const { onSetSelection } = renderTable({ selectedCount: 1, selectedIds: new Set(["date"]) });
+      await userEvent.setup().type(screen.getByRole("searchbox"), "conf");
+      expect(onSetSelection).not.toHaveBeenCalled();
+    });
+  });
+
+  it("sizes the search box and the page-size select with classes, not inline styles", () => {
+    renderTable();
+    const search = screen.getByRole("searchbox");
+    expect(search).toHaveClass("table-search-input");
+    expect(search).not.toHaveAttribute("style");
+    const pageSize = screen.getByRole("combobox", { name: /rows per page/i });
+    expect(pageSize).toHaveClass("w-auto");
+    expect(pageSize).not.toHaveAttribute("style");
   });
 });

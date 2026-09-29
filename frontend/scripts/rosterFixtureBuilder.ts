@@ -77,8 +77,7 @@ export function buildRosterFixture(): RosterFixture {
     const rangeStart = referenceDate
       .subtract(shiftConfig.cycleLengthDays, "day")
       .subtract(PADDING_DAYS, "day");
-    const totalDays =
-      shiftConfig.cycleLengthDays * (SAMPLE_CYCLES + 1) + PADDING_DAYS * 2;
+    const totalDays = shiftConfig.cycleLengthDays * (SAMPLE_CYCLES + 1) + PADDING_DAYS * 2;
 
     for (let team = 1; team <= shiftConfig.teamCount; team++) {
       for (let offset = 0; offset < totalDays; offset++) {

@@ -92,12 +92,12 @@ export function TemplatesPanel({
 
   const resetModalInitialValue = useCallback(
     () =>
-    setModalInitialValue({
-      text: "",
-      label: labels[0]?.id ?? "",
-      start: "",
-      stop: "",
-    }),
+      setModalInitialValue({
+        text: "",
+        label: labels[0]?.id ?? "",
+        start: "",
+        stop: "",
+      }),
     [labels],
   );
 

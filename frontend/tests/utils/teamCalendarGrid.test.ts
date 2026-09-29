@@ -12,11 +12,11 @@ const base = {
 };
 
 describe("getScrollLeftForColumn", () => {
-  it("centres the column in the space right of the sticky column", () => {
+  it("centers the column in the space right of the sticky column", () => {
     // Column sits 1500px into the content (viewport x = 100 + 1500).
     const scrollLeft = getScrollLeftForColumn({ ...base, columnLeft: 1600 });
     // Column x in viewport after scrolling = 100 + 1500 - scrollLeft; the visible
-    // area is [300, 1100], so its centre is 700 => column left 686.
+    // area is [300, 1100], so its center is 700 => column left 686.
     expect(100 + 1500 - scrollLeft).toBeCloseTo(300 + (800 - 28) / 2);
   });
 

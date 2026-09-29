@@ -3,11 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
 import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/syncClient";
 import type { SyncPushPayload } from "@/utils/syncClient";
-import {
-  getSyncCursorKey,
-  getSyncOutboxKey,
-  getSyncQuarantineKey,
-} from "@/constants/storageKeys";
+import { getSyncCursorKey, getSyncOutboxKey, getSyncQuarantineKey } from "@/constants/storageKeys";
 
 const mockFetch = vi.fn();
 
@@ -146,8 +142,8 @@ describe("useOngoingSync", () => {
       // The post-push pull must use the cursor from *before* this push, not a
       // bare status refresh — otherwise a concurrent change from another
       // device landing in that window would be silently skipped forever.
-      const postPushPullCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
-        (call) => call[0].startsWith("/api/sync/pull?since="),
+      const postPushPullCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) =>
+        call[0].startsWith("/api/sync/pull?since="),
       );
       expect(postPushPullCall?.[0]).toBe(
         `/api/sync/pull?since=${encodeURIComponent("2026-01-01T00:00:00.000Z")}`,
@@ -404,9 +400,7 @@ describe("useOngoingSync", () => {
       expect(onIncrementalPull).toHaveBeenCalledWith(
         expect.objectContaining({ full_resync_required: true }),
       );
-      const quarantined = JSON.parse(
-        localStorage.getItem(getSyncQuarantineKey("user-1"))!,
-      );
+      const quarantined = JSON.parse(localStorage.getItem(getSyncQuarantineKey("user-1"))!);
       expect(quarantined[0].status).toBe(410);
       expect(quarantined[0].payload.labels[0].id).toBe("deleted-on-server");
     });
@@ -446,9 +440,7 @@ describe("useOngoingSync", () => {
       expect(getSyncOutboxSize("user-1")).toBe(0);
       expect(result.current.hasSyncError).toBe(true);
 
-      const quarantined = JSON.parse(
-        localStorage.getItem(getSyncQuarantineKey("user-1"))!,
-      );
+      const quarantined = JSON.parse(localStorage.getItem(getSyncQuarantineKey("user-1"))!);
       expect(quarantined[0].status).toBe(409);
       expect(quarantined[0].payload.tasks[0].id).toBe("task-rejected");
     });
@@ -1075,9 +1067,9 @@ describe("useOngoingSync", () => {
       const repushBody = JSON.parse(
         (repushCalls[repushCalls.length - 1]![1] as RequestInit).body! as string,
       ) as typeof changePayload;
-      expect(
-        new Date(repushBody.labels[0]!.client_updated_at).getTime(),
-      ).toBeGreaterThan(new Date(changePayload.labels[0]!.client_updated_at).getTime());
+      expect(new Date(repushBody.labels[0]!.client_updated_at).getTime()).toBeGreaterThan(
+        new Date(changePayload.labels[0]!.client_updated_at).getTime(),
+      );
     });
   });
 
@@ -1205,7 +1197,11 @@ describe("useOngoingSync", () => {
       // (push endpoint), second is the incremental pull (pull endpoint),
       // third is the preferences fetch (/api/preferences).
       expect(mockFetch).toHaveBeenCalledTimes(3);
-      const [firstCall, secondCall, thirdCall] = mockFetch.mock.calls as [[string], [string], [string]];
+      const [firstCall, secondCall, thirdCall] = mockFetch.mock.calls as [
+        [string],
+        [string],
+        [string],
+      ];
       expect(firstCall[0]).toBe("/api/sync/push");
       expect(secondCall[0]).toMatch(/^\/api\/sync\/pull/);
       expect(thirdCall[0]).toBe("/api/preferences");

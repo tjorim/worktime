@@ -42,7 +42,9 @@ describe("TimeOffStatsView", () => {
 
     it("shows empty state when no entries", () => {
       render(<TimeOffStatsView entries={[]} />);
-      expect(screen.getByText(new RegExp(`No time off recorded for ${currentYear}`))).toBeInTheDocument();
+      expect(
+        screen.getByText(new RegExp(`No time off recorded for ${currentYear}`)),
+      ).toBeInTheDocument();
     });
 
     it("shows total days count", () => {

@@ -77,19 +77,14 @@ function toLongWeekendMap(periods: LongWeekend[]): Map<string, LongWeekendDayInf
  * @param maxBridgeDays - Maximum bridge days to include. 0 disables the feature.
  * @param enabled - External enabled flag (e.g. schedule is standard 9-5).
  */
-export function useLongWeekend(
-  year: number,
-  maxBridgeDays: number,
-  enabled: boolean = true,
-) {
+export function useLongWeekend(year: number, maxBridgeDays: number, enabled: boolean = true) {
   const apiFetch = usePublicApiClient();
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
   const isEnabled = enabled && isValidYear && maxBridgeDays > 0;
 
   const { data, isLoading, error } = useQuery<LongWeekend[], Error>({
     queryKey: ["longWeekend", DEFAULT_COUNTRY, year, maxBridgeDays],
-    queryFn: ({ signal }) =>
-      fetchLongWeekends(year, maxBridgeDays, apiFetch, signal),
+    queryFn: ({ signal }) => fetchLongWeekends(year, maxBridgeDays, apiFetch, signal),
     enabled: isEnabled,
     staleTime: 1000 * 60 * 60 * 24, // long weekend data doesn't change intra-day
     retry: 1,

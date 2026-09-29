@@ -123,10 +123,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [oidcAuth.user]);
 
   const triggerLogin = useCallback(() => {
-    oidcAuth.signinRedirect({ state: { returnTo: window.location.pathname } }).catch((error: unknown) => {
-      logger.error("signinRedirect failed:", error);
-      showError(m.auth_error_redirect_signin());
-    });
+    oidcAuth
+      .signinRedirect({ state: { returnTo: window.location.pathname } })
+      .catch((error: unknown) => {
+        logger.error("signinRedirect failed:", error);
+        showError(m.auth_error_redirect_signin());
+      });
   }, [oidcAuth, showError]);
 
   useEffect(() => {
@@ -196,10 +198,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const triggerSignup = useCallback(() => {
     // Most OIDC providers handle sign-up via the same redirect flow.
     // Providers like authentik support a registration URL that can be configured.
-    oidcAuth.signinRedirect({ state: { returnTo: window.location.pathname } }).catch((error: unknown) => {
-      logger.error("signinRedirect (signup) failed:", error);
-      showError(m.auth_error_redirect_signup());
-    });
+    oidcAuth
+      .signinRedirect({ state: { returnTo: window.location.pathname } })
+      .catch((error: unknown) => {
+        logger.error("signinRedirect (signup) failed:", error);
+        showError(m.auth_error_redirect_signup());
+      });
   }, [oidcAuth, showError]);
 
   const logout = useCallback(() => {

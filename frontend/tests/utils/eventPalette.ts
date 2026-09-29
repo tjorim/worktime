@@ -42,7 +42,7 @@ export const bgVar = (type: string, variant: "full" | "half") =>
 export const fgVar = (type: string, variant: "full" | "half") =>
   `var(--wt-event-${type}-${variant}-fg)`;
 
-/** WCAG relative luminance and contrast ratio for `#rrggbb` colours. */
+/** WCAG relative luminance and contrast ratio for `#rrggbb` colors. */
 const luminance = (hex: string): number => {
   const [r, g, b] = [1, 3, 5]
     .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -59,7 +59,7 @@ export const contrastRatio = (a: string, b: string): number => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-/** Euclidean distance between two `#rrggbb` colours in RGB space. */
+/** Euclidean distance between two `#rrggbb` colors in RGB space. */
 export const colorDistance = (a: string, b: string): number => {
   const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   const [ca, cb] = [channels(a), channels(b)];

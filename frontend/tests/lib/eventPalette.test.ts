@@ -11,7 +11,7 @@ import {
 
 /**
  * The palette is defined once, in `src/styles/_variables.scss`. These tests read the compiled
- * values from there, so they guard the real colours rather than a copy.
+ * values from there, so they guard the real colors rather than a copy.
  */
 const TYPES = [
   "holiday",
@@ -32,7 +32,7 @@ const palette = loadEventPalette();
 describe.each(THEMES)("event palette (%s theme)", (theme) => {
   const colors: EventPalette = palette[theme];
 
-  it("defines a background and text colour for every type and variant, plus a fallback", () => {
+  it("defines a background and text color for every type and variant, plus a fallback", () => {
     for (const type of TYPES) {
       for (const variant of VARIANTS) {
         const entry = colors[`${type}-${variant}`];
@@ -44,27 +44,27 @@ describe.each(THEMES)("event palette (%s theme)", (theme) => {
     expect(colors["unknown"]?.fg).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  it("pairs every background with a WCAG AA compliant text colour", () => {
+  it("pairs every background with a WCAG AA compliant text color", () => {
     for (const [key, { bg, fg }] of Object.entries(colors)) {
       expect(contrastRatio(bg, fg), `${key}: ${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
-  it("keeps every full-day colour visibly distinct from the others", () => {
+  it("keeps every full-day color visibly distinct from the others", () => {
     const full = TYPES.map((type) => [type, colors[`${type}-full`]!.bg] as const);
     for (const [i, [typeA, colorA]] of full.entries()) {
       for (const [typeB, colorB] of full.slice(i + 1)) {
         // In office and Other used to be #008899 / #008b8b: ~14 apart in RGB, i.e. the same teal.
         // The closest legitimate pairs (business orange vs course gold) are ~37 apart, so 30
-        // catches look-alikes without flagging colours that are clearly different.
+        // catches look-alikes without flagging colors that are clearly different.
         expect(colorDistance(colorA, colorB), `${typeA} vs ${typeB}`).toBeGreaterThan(30);
       }
     }
   });
 });
 
-describe("event palette (light theme, legacy planner colours)", () => {
-  it("keeps the colours the .hday planner documents", () => {
+describe("event palette (light theme, legacy planner colors)", () => {
+  it("keeps the colors the .hday planner documents", () => {
     const light = palette.light;
     expect(light["holiday-full"]?.bg).toBe("#ec0000");
     expect(light["business-full"]?.bg).toBe("#ff9500");
@@ -116,7 +116,7 @@ describe("palette wiring", () => {
     }
   });
 
-  it("returns a colour and a text colour from the same palette entry", () => {
+  it("returns a color and a text color from the same palette entry", () => {
     for (const { flags, eventType } of combos) {
       const bg = variableName(getEventColor(flags, eventType))!.replace(/-bg$/, "");
       const fg = variableName(getEventTextColor(flags, eventType))!.replace(/-fg$/, "");

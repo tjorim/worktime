@@ -303,11 +303,7 @@ describe("DayCell", () => {
       it("does not also open the view modal for a long press that opened the context menu", async () => {
         const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
         render(
-          <DayCell
-            {...defaultProps}
-            events={events}
-            onEventContextMenu={mockOnEventContextMenu}
-          />,
+          <DayCell {...defaultProps} events={events} onEventContextMenu={mockOnEventContextMenu} />,
         );
         const eventButton = screen.getByRole("button", { name: "View Test Event" });
 
@@ -327,11 +323,7 @@ describe("DayCell", () => {
       it("still opens the view modal for a quick tap that releases before the long-press threshold", async () => {
         const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
         render(
-          <DayCell
-            {...defaultProps}
-            events={events}
-            onEventContextMenu={mockOnEventContextMenu}
-          />,
+          <DayCell {...defaultProps} events={events} onEventContextMenu={mockOnEventContextMenu} />,
         );
         const eventButton = screen.getByRole("button", { name: "View Test Event" });
 
@@ -347,11 +339,7 @@ describe("DayCell", () => {
         const mockOnDayContextMenu = vi.fn();
         const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
         render(
-          <DayCell
-            {...defaultProps}
-            events={events}
-            onDayContextMenu={mockOnDayContextMenu}
-          />,
+          <DayCell {...defaultProps} events={events} onDayContextMenu={mockOnDayContextMenu} />,
         );
         const gridcell = screen.getByRole("gridcell");
 
@@ -478,7 +466,10 @@ describe("DayCell", () => {
 
     it("shows work location indicator when no shift badge is provided", () => {
       render(
-        <DayCell {...defaultProps} workLocation={{ location: "office", countryCode: "BE" as IsoAlpha2 }} />,
+        <DayCell
+          {...defaultProps}
+          workLocation={{ location: "office", countryCode: "BE" as IsoAlpha2 }}
+        />,
       );
 
       const indicator = screen.getByTitle("Working from office");

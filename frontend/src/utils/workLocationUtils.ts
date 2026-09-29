@@ -44,4 +44,3 @@ export function aggregateLocationCounts(
     (a, b) => a.countryCode.localeCompare(b.countryCode) || b.days - a.days,
   );
 }
-

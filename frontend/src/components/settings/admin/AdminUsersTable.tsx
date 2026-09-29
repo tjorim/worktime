@@ -130,8 +130,7 @@ export function AdminUsersTable({
       <Form.Control
         type="search"
         size="sm"
-        className="mb-2"
-        style={{ maxWidth: "320px" }}
+        className="mb-2 table-search-input"
         placeholder={m.account_admin_users_search_placeholder()}
         aria-label={m.account_admin_users_search_aria()}
         value={search}

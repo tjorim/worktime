@@ -107,4 +107,3 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
 
   return normalized;
 }
-

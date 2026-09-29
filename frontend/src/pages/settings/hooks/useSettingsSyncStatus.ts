@@ -85,7 +85,8 @@ export function useSettingsSyncStatus({
 
   const { retryInSeconds, lastSyncedLabel, backupStatusLabel } = useMemo(
     () => ({
-      retryInSeconds: retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - now) / 1_000)) : null,
+      retryInSeconds:
+        retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - now) / 1_000)) : null,
       lastSyncedLabel: lastSyncedAt
         ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
         : m.sync_never_synced(),

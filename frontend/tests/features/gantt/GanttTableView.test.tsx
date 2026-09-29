@@ -357,4 +357,14 @@ describe("GanttTableView", () => {
       expect(screen.queryByRole("button", { name: /Go to/ })).not.toBeInTheDocument();
     });
   });
+
+  it("uses classes, not inline styles, for the search box and progress cell", () => {
+    render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+    const search = screen.getByRole("searchbox");
+    expect(search).toHaveClass("table-search-input");
+    expect(search).not.toHaveAttribute("style");
+    const progressCells = document.querySelectorAll("td.gantt-progress-cell");
+    expect(progressCells).toHaveLength(tasks.length);
+    progressCells.forEach((cell) => expect(cell).not.toHaveAttribute("style"));
+  });
 });

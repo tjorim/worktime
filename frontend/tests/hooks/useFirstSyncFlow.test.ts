@@ -161,7 +161,9 @@ describe("useFirstSyncFlow", () => {
     });
 
     // Push endpoint should have been called
-    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/push");
+    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+      (call) => call[0] === "/api/sync/push",
+    );
     expect(pushCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).not.toBeNull();
   });
@@ -181,7 +183,9 @@ describe("useFirstSyncFlow", () => {
     });
 
     // Push endpoint should have been called with time-off entries
-    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/push");
+    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+      (call) => call[0] === "/api/sync/push",
+    );
     expect(pushCall).toBeDefined();
     const body = JSON.parse((pushCall as [string, RequestInit])[1].body as string);
     expect(body.time_off_entries).toHaveLength(1);
@@ -202,7 +206,9 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/pull");
+    const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+      (call) => call[0] === "/api/sync/pull",
+    );
     expect(pullCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe(
       emptyPullResponse.server_timestamp,
@@ -244,7 +250,9 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/push");
+    const pushCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+      (call) => call[0] === "/api/sync/push",
+    );
     expect(pushCall).toBeDefined();
   });
 
@@ -270,7 +278,9 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find((call) => call[0] === "/api/sync/pull");
+    const pullCall = (mockFetch.mock.calls as [string, RequestInit][]).find(
+      (call) => call[0] === "/api/sync/pull",
+    );
     expect(pullCall).toBeDefined();
   });
 

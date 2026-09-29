@@ -17,6 +17,8 @@
 ```bash
 pnpm dev
 pnpm lint
+pnpm format          # rewrites files in place (Oxfmt)
+pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm typecheck
 pnpm test
 pnpm build
@@ -87,13 +89,13 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
-- `frontend/src/styles/_variables.scss` (the `$event-palette-*` maps) for event colours, in both themes.
+- `frontend/src/styles/_variables.scss` (the `$event-palette-*` maps) for event colors, in both themes.
   It is the only place they are defined: it emits `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
   `.event-*` classes in `_shifts.scss` are generated from them, and `getEventColor()` /
   `getEventTextColor()` in `lib/hday/presentation.ts` return `var(--wt-event-…)` references instead of hex.
-  Change a colour there and update the table in `docs/hday-format-spec.md`; nothing else.
+  Change a color there and update the table in `docs/hday-format-spec.md`; nothing else.
   `tests/lib/eventPalette.test.ts` compiles the SCSS and pins WCAG AA text contrast, that no two full-day
-  colours are near-identical, and that the helpers and generated classes only use declared colours
+  colors are near-identical, and that the helpers and generated classes only use declared colors
 - User-facing event type names come from the `event_type_*` messages via `getEventTypeLabel()` in
   `lib/hday/presentation.ts`, so they are translated; don't reintroduce English strings there
 
@@ -185,7 +187,7 @@ unfamiliar branch's existing commits:
   already uses). Once that lands, generate new UI primitives with the shadcn CLI (Base UI base, pinned
   explicitly) and own them here, rather than hand-writing them; the workflow is set up in
   `tjorim/travel#279`. Until then keep logic in hooks/utils rather than markup, prefer a class over inline
-  `style`, and route colours through CSS variables or the shared palette instead of new hard-coded hex, so
+  `style`, and route colors through CSS variables or the shared palette instead of new hard-coded hex, so
   that move stays cheap. Light and dark themes must both keep working
 - Visual review: UI that needs the .hday helper (the Team tab) can be checked without the real helper by
   seeding `worktime_device_preferences` (`{"hdayHelper":{"url":"http://localhost:<port>"}}`) and
@@ -225,3 +227,7 @@ the separate infra stack noted under Layout; the sibling apps (`tjorim/travel`,
 `tjorim/champagnefestival`) own their own code even where they share this stack. Cross-app frontend
 decisions are recorded as issues in each repo (for example #1375 route loaders and #1376 Tailwind + Base
 UI here) — check them before adding new frontend infrastructure.
+
+GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new
+sub-issue links and corrections by editing the issue body (read it first, keep the original text, and
+add or adjust a clearly headed section). This applies to every repository above, including closed issues.

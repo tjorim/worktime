@@ -102,7 +102,10 @@ export function Step8WorkLocationSetup({
         </Button>
         <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
           {isLastStep ? m.wizard_finish_setup() : m.continue()}
-          <i className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`} aria-hidden="true"></i>
+          <i
+            className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`}
+            aria-hidden="true"
+          ></i>
         </Button>
       </div>
     </>

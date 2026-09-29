@@ -302,8 +302,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
         <Form.Control
           type="search"
           size="sm"
-          className="mb-3"
-          style={{ maxWidth: "320px" }}
+          className="mb-3 table-search-input"
           placeholder={m.gantt_table_search_placeholder()}
           aria-label={m.gantt_table_search_aria()}
           value={search}
@@ -358,6 +357,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     {labelBackground ? (
                       <span
                         className="time-tracking-label"
+                        // Label colors are user-defined data, so this is the one inline style a class can't replace.
                         style={{
                           backgroundColor: labelBackground,
                           color: getContrastingTextColor(labelBackground),
@@ -369,7 +369,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                       "—"
                     )}
                   </td>
-                  <td style={{ minWidth: "8rem" }}>
+                  <td className="gantt-progress-cell">
                     <div className="d-flex align-items-center gap-2">
                       <ProgressBar now={task.progress} className="border flex-grow-1" />
                       <span className="small text-muted text-nowrap">{task.progress}%</span>

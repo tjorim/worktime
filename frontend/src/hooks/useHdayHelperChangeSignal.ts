@@ -93,9 +93,9 @@ export function createHdayHelperChangeTransport(url: string): HdayChangeTranspor
           });
 
           if (
-            !response.ok
-            || !response.body
-            || !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)
+            !response.ok ||
+            !response.body ||
+            !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)
           ) {
             await response.body?.cancel().catch(() => {});
             throw new Error(`hday-helper change stream failed: ${response.status}`);

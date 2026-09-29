@@ -1,6 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createFetchSseTransport, useSyncSignal, type SyncSignalTransport } from "@/hooks/useSyncSignal";
+import {
+  createFetchSseTransport,
+  useSyncSignal,
+  type SyncSignalTransport,
+} from "@/hooks/useSyncSignal";
 import { storeSyncCursor } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 
@@ -10,9 +14,9 @@ import { getSyncCursorKey } from "@/constants/storageKeys";
  * emit a signal.
  */
 function createMockTransport() {
-  let capturedOnSignal: (
-    (serverTimestamp: string, options?: { forcePull?: boolean }) => void
-  ) | null = null;
+  let capturedOnSignal:
+    | ((serverTimestamp: string, options?: { forcePull?: boolean }) => void)
+    | null = null;
   const unsubscribeMock = vi.fn(() => {
     capturedOnSignal = null;
   });
@@ -499,7 +503,10 @@ describe("createFetchSseTransport", () => {
     const onSignal = vi.fn();
     createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
 
-    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" });
+    controller.send("sync_changed", {
+      type: "sync_changed",
+      server_timestamp: "2026-03-01T12:00:00.000Z",
+    });
     await vi.waitFor(() => expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z"));
   });
 
@@ -512,7 +519,10 @@ describe("createFetchSseTransport", () => {
     createFetchSseTransport("/api/sync/events", "token").subscribe(onSignal);
 
     controller.send("keepalive", { irrelevant: true });
-    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" });
+    controller.send("sync_changed", {
+      type: "sync_changed",
+      server_timestamp: "2026-03-01T12:00:00.000Z",
+    });
     await vi.waitFor(() => expect(onSignal).toHaveBeenCalledTimes(1));
     expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z");
   });
@@ -529,7 +539,10 @@ describe("createFetchSseTransport", () => {
     // Follow up with a well-formed event so there's something to waitFor —
     // proves the first (bad) event was processed and skipped, not just
     // "not processed yet".
-    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-03-01T12:00:00.000Z" });
+    controller.send("sync_changed", {
+      type: "sync_changed",
+      server_timestamp: "2026-03-01T12:00:00.000Z",
+    });
 
     await vi.waitFor(() => expect(onSignal).toHaveBeenCalledTimes(1));
     expect(onSignal).toHaveBeenCalledWith("2026-03-01T12:00:00.000Z");
@@ -548,7 +561,10 @@ describe("createFetchSseTransport", () => {
     // Follow up with a well-formed event so there's something to waitFor —
     // proves the malformed one was processed (and skipped), not just "not
     // processed yet".
-    controller.send("sync_changed", { type: "sync_changed", server_timestamp: "2026-05-01T00:00:00.000Z" });
+    controller.send("sync_changed", {
+      type: "sync_changed",
+      server_timestamp: "2026-05-01T00:00:00.000Z",
+    });
 
     await vi.waitFor(() => expect(onSignal).toHaveBeenCalledTimes(1));
     expect(onSignal).toHaveBeenCalledWith("2026-05-01T00:00:00.000Z");
@@ -588,9 +604,9 @@ describe("createFetchSseTransport", () => {
   it("honors Retry-After when the server's SSE connection cap returns 429", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(null, { status: 429, headers: { "Retry-After": "30" } }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 429, headers: { "Retry-After": "30" } }));
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "debug").mockImplementation(() => {});
 
@@ -633,9 +649,7 @@ describe("createFetchSseTransport", () => {
     const stream = sseController();
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(
-        new Response(null, { status: 429, headers: { "Retry-After": "30" } }),
-      )
+      .mockResolvedValueOnce(new Response(null, { status: 429, headers: { "Retry-After": "30" } }))
       .mockResolvedValueOnce(sseResponse(stream.stream));
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "debug").mockImplementation(() => {});

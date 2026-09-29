@@ -103,4 +103,11 @@ describe("AdminUsersTable", () => {
     await user.click(deleteButtons[1]!);
     expect(onRequestDelete).toHaveBeenCalledWith(2);
   });
+
+  it("sizes the search box with a class, not an inline style", () => {
+    renderTable();
+    const search = screen.getByRole("searchbox", { name: "Search users" });
+    expect(search).toHaveClass("table-search-input");
+    expect(search).not.toHaveAttribute("style");
+  });
 });

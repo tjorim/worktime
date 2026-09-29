@@ -209,9 +209,7 @@ export function useTransferCalculations({
 
     // Add performance warning for large date ranges
     if (endDate && endDate.diff(startDate, "day") > 365) {
-      logger.warn(
-        "Large date range detected. Consider limiting the range for better performance.",
-      );
+      logger.warn("Large date range detected. Consider limiting the range for better performance.");
     }
 
     // Bounded by both the transfer limit and the overlap limit: cross-schedule
@@ -402,4 +400,3 @@ export function useTransferCalculations({
     otherScheduleType: effectiveOtherScheduleType,
   };
 }
-

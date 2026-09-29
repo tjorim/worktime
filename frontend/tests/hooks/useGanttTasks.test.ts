@@ -237,11 +237,7 @@ describe("useGanttTasks", () => {
     });
 
     act(() => {
-      replaceCollectionContents(
-        ganttTasksCollection,
-        [] as GanttTask[],
-        (task) => task.id,
-      );
+      replaceCollectionContents(ganttTasksCollection, [] as GanttTask[], (task) => task.id);
     });
 
     await waitFor(() => {

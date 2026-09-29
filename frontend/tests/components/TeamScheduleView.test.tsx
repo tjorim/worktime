@@ -213,14 +213,14 @@ describe("TeamScheduleView", () => {
       expect(cell).toHaveAttribute("aria-label", expect.stringContaining("Sick"));
     });
 
-    it("colours a half day in the full colour with a glyph and a split fill", async () => {
+    it("colors a half day in the full color with a glyph and a split fill", async () => {
       const day = isoSlash(today);
       const grid = await renderGrid([
         { type: "range", start: day, end: day, flags: ["half_am"], title: "Dentist" },
       ]);
 
       const cell = cellFor(grid, today);
-      // Full colour (the fill is split by CSS), not the lighter "-half" colour.
+      // Full color (the fill is split by CSS), not the lighter "-half" color.
       expect(cell).toHaveClass("event-holiday-full", "calendar-half-am");
       expect(cell).not.toHaveClass("event-holiday-half");
       expect(cell.querySelector(".calendar-cell-stack")).toBeNull();

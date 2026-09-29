@@ -32,7 +32,10 @@ export const workLocationHandlers = [
       typeof body?.country_code !== "string"
     ) {
       return HttpResponse.json(
-        { detail: "Invalid or missing required fields: date (YYYY-MM-DD) and country_code must be strings." },
+        {
+          detail:
+            "Invalid or missing required fields: date (YYYY-MM-DD) and country_code must be strings.",
+        },
         { status: 400 },
       );
     }

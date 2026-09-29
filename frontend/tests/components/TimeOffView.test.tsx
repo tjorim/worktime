@@ -643,9 +643,7 @@ describe("TimeOffView", () => {
       });
       await user.click(pullButton);
 
-      expect(
-        await screen.findByText(m.timeoff_pulled({ username: "jsmith" })),
-      ).toBeInTheDocument();
+      expect(await screen.findByText(m.timeoff_pulled({ username: "jsmith" }))).toBeInTheDocument();
       expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
     });
 
@@ -751,9 +749,7 @@ describe("TimeOffView", () => {
       });
       await user.click(pushButton);
 
-      expect(
-        await screen.findByText(m.timeoff_pushed({ username: "jsmith" })),
-      ).toBeInTheDocument();
+      expect(await screen.findByText(m.timeoff_pushed({ username: "jsmith" }))).toBeInTheDocument();
       expect(receivedBodies).toEqual([{ raw: "" }]);
 
       // A second push now includes the etag the helper returned from the first one.
@@ -789,9 +785,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }));
       await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
 
       await user.click(screen.getByRole("button", { name: m.timeoff_push_events_aria() }));
@@ -816,9 +810,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_push_events_aria() }));
 
       expect(await screen.findByText(m.timeoff_push_conflict())).toBeInTheDocument();
     });
@@ -838,9 +830,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_push_events_aria() }));
 
       expect(
         await screen.findByText(m.timeoff_push_failed({ error: "share unreachable" })),
@@ -995,9 +985,7 @@ describe("TimeOffView", () => {
       await waitFor(() => expect(receivedBodies).toHaveLength(1), { timeout: 5000 });
       expect(receivedBodies[0]).toMatchObject({ raw: expect.stringContaining("2025/08/01") });
       // Auto-push is silent on success — no toast, unlike a manual push.
-      expect(
-        screen.queryByText(m.timeoff_pushed({ username: "jsmith" })),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_pushed({ username: "jsmith" }))).not.toBeInTheDocument();
     }, 10000);
 
     it("the auto-push that follows a pull is an idempotent no-op, not a conflict", async () => {
@@ -1033,17 +1021,13 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }));
       await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
 
       await waitFor(() => expect(receivedBodies).toHaveLength(1), { timeout: 5000 });
       expect(receivedBodies[0]).toMatchObject({ etag: "sha256:from-share" });
       // Silent: no push-success toast, and no conflict warning either.
-      expect(
-        screen.queryByText(m.timeoff_pushed({ username: "jsmith" })),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_pushed({ username: "jsmith" }))).not.toBeInTheDocument();
       expect(screen.queryByText(m.timeoff_push_conflict())).not.toBeInTheDocument();
     }, 10000);
 
@@ -1074,9 +1058,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }));
       await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
 
       await user.click(screen.getByRole("button", { name: /Add Event/i }));
@@ -1092,11 +1074,11 @@ describe("TimeOffView", () => {
           expect(
             receivedBodies.some(
               (body) =>
-                typeof body === "object"
-                && body !== null
-                && "raw" in body
-                && typeof body.raw === "string"
-                && body.raw.includes("2025/10/10"),
+                typeof body === "object" &&
+                body !== null &&
+                "raw" in body &&
+                typeof body.raw === "string" &&
+                body.raw.includes("2025/10/10"),
             ),
           ).toBe(true),
         { timeout: 5000 },
@@ -1162,9 +1144,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }));
       // Switch to a different username while alice's pull is still pending.
       await user.click(screen.getByRole("button", { name: "switch username" }));
 
@@ -1181,9 +1161,7 @@ describe("TimeOffView", () => {
 
       // Neither the success toast nor alice's imported entry should appear —
       // the response belongs to a target the user has already left.
-      expect(
-        screen.queryByText(m.timeoff_pulled({ username: "alice" })),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_pulled({ username: "alice" }))).not.toBeInTheDocument();
       expect(screen.queryByText("2025/03/03")).not.toBeInTheDocument();
     });
 
@@ -1203,18 +1181,14 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_push_events_aria() }));
       await user.click(screen.getByRole("button", { name: "switch username" }));
 
       await act(async () => {
         resolvePut(HttpResponse.json({ etag: "sha256:alice" }));
       });
 
-      expect(
-        screen.queryByText(m.timeoff_pushed({ username: "alice" })),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_pushed({ username: "alice" }))).not.toBeInTheDocument();
     });
   });
 
@@ -1251,9 +1225,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(
-        await screen.findByRole("button", { name: m.timeoff_push_events_aria() }),
-      );
+      await user.click(await screen.findByRole("button", { name: m.timeoff_push_events_aria() }));
       await screen.findByText(m.timeoff_pushed({ username: "jsmith" }));
 
       act(() => {
@@ -1311,9 +1283,7 @@ describe("TimeOffView", () => {
         }),
       );
 
-      expect(
-        await screen.findByText(m.timeoff_pulled({ username: "jsmith" })),
-      ).toBeInTheDocument();
+      expect(await screen.findByText(m.timeoff_pulled({ username: "jsmith" }))).toBeInTheDocument();
       expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
       expect(within(screen.getByRole("table")).getByText("2025/07/04")).toBeInTheDocument();
     });
@@ -1333,9 +1303,11 @@ describe("TimeOffView", () => {
       });
       const banner = await findHdayChangedBanner();
 
-      await userEvent.setup().click(
-        within(banner.closest(".alert") as HTMLElement).getByRole("button", { name: /close/i }),
-      );
+      await userEvent
+        .setup()
+        .click(
+          within(banner.closest(".alert") as HTMLElement).getByRole("button", { name: /close/i }),
+        );
 
       expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
     });
@@ -1482,6 +1454,46 @@ describe("TimeOffView", () => {
       await waitFor(() => {
         expect(screen.getByText("Bulk delete me")).toBeInTheDocument();
       });
+    });
+
+    it("never bulk deletes entries the search hides", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      const user = userEvent.setup();
+
+      const addEvent = async (start: string, title: string) => {
+        await user.click(screen.getByRole("button", { name: /Add Event/i }));
+        const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+        await user.clear(startInput);
+        await user.type(startInput, start);
+        await user.type(screen.getByLabelText(/Comment/i), title);
+        await user.click(screen.getByRole("button", { name: /^Add$/i }));
+      };
+      await addEvent("2025-01-15", "Ski trip");
+      await addEvent("2025-02-20", "Dentist");
+
+      // Select the visible row, then narrow the search so that row is hidden.
+      await user.click(screen.getByRole("checkbox", { name: /Select Dentist/i }));
+      await user.type(screen.getByRole("searchbox"), "ski");
+      expect(screen.queryByText("Dentist")).not.toBeInTheDocument();
+
+      // The hidden "Dentist" must no longer be selected, so nothing is offered for deletion.
+      expect(screen.queryByRole("button", { name: /Delete Selected/i })).not.toBeInTheDocument();
+
+      // "Select all" now means "all matching": deleting removes only "Ski trip".
+      await user.click(screen.getByRole("checkbox", { name: /Select Ski trip/i }));
+      await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
+      const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
+      await waitFor(() => {
+        expect(screen.queryByText("Ski trip")).not.toBeInTheDocument();
+      });
+
+      await user.clear(screen.getByRole("searchbox"));
+      expect(screen.getByText("Dentist")).toBeInTheDocument();
     });
   });
 });

@@ -413,10 +413,6 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     });
   };
 
-  const handleSelectAll = () => {
-    setSelectedIds(new Set(entries.map((entry) => entry.id)));
-  };
-
   const handleSetSelection = (ids: string[], selected: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -867,7 +863,6 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         <TimeOffTableView
           eventCount={entries.length}
           selectedCount={selectedIds.size}
-          onSelectAll={handleSelectAll}
           onClearSelection={handleClearSelection}
           onBulkDelete={() => setShowBulkDeleteConfirm(true)}
           onImport={handleImport}

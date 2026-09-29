@@ -135,9 +135,7 @@ describe("usePushSubscription", () => {
     const outcome = await result.current.subscribeToPush();
 
     expect(outcome).toBe(true);
-    expect(subscribe).toHaveBeenCalledWith(
-      expect.objectContaining({ userVisibleOnly: true }),
-    );
+    expect(subscribe).toHaveBeenCalledWith(expect.objectContaining({ userVisibleOnly: true }));
     expect(apiFetch).toHaveBeenCalledTimes(2);
     const [subscribeUrl, subscribeInit] = apiFetch.mock.calls[1]!;
     expect(subscribeUrl).toBe("/api/push/subscribe");
@@ -324,7 +322,9 @@ describe("usePushSubscription", () => {
       mockAuth("user-2");
       rerender();
 
-      await waitFor(() => expect(apiFetch.mock.calls.length).toBeGreaterThan(callsAfterFirstAccount));
+      await waitFor(() =>
+        expect(apiFetch.mock.calls.length).toBeGreaterThan(callsAfterFirstAccount),
+      );
     });
   });
 });

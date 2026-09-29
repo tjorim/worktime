@@ -56,63 +56,60 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     }
   }, []);
 
-  const subscribeToPush = useCallback(
-    async (): Promise<boolean> => {
-      if (!isPushSupported()) return false;
+  const subscribeToPush = useCallback(async (): Promise<boolean> => {
+    if (!isPushSupported()) return false;
 
-      try {
-        const keyResponse = await apiFetch("/api/push/vapid-public-key");
-        if (!keyResponse.ok) return false;
-        const { publicKey } = (await keyResponse.json()) as { publicKey: string | null };
-        if (!publicKey) return false;
+    try {
+      const keyResponse = await apiFetch("/api/push/vapid-public-key");
+      if (!keyResponse.ok) return false;
+      const { publicKey } = (await keyResponse.json()) as { publicKey: string | null };
+      if (!publicKey) return false;
 
-        const registration = await navigator.serviceWorker.ready;
-        let subscription = await registration.pushManager.getSubscription();
-        const isNewSubscription = subscription === null;
-        if (!subscription) {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
-          });
-        }
-
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-        const subscriptionJson = subscription.toJSON();
-        const response = await apiFetch("/api/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            endpoint: subscriptionJson.endpoint,
-            keys: subscriptionJson.keys,
-            timezone,
-          }),
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      const isNewSubscription = subscription === null;
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
         });
-        if (!response.ok) {
-          logger.warn("Failed to register push subscription:", await readErrorDetail(response));
-          // Only a subscription created in this call is rolled back - an existing one
-          // (e.g. a settings update that failed) is left alone, since the backend most
-          // likely already has it registered from a prior successful call. Without this,
-          // a fresh browser-side subscription with no backend record would make
-          // getActiveSubscription() report "active" while nothing can ever be delivered,
-          // silently disabling the foreground fallback too (see App.tsx).
-          if (isNewSubscription) {
-            try {
-              await subscription.unsubscribe();
-            } catch (unsubscribeError) {
-              logger.warn("Failed to roll back orphaned push subscription:", unsubscribeError);
-            }
+      }
+
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const subscriptionJson = subscription.toJSON();
+      const response = await apiFetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: subscriptionJson.endpoint,
+          keys: subscriptionJson.keys,
+          timezone,
+        }),
+      });
+      if (!response.ok) {
+        logger.warn("Failed to register push subscription:", await readErrorDetail(response));
+        // Only a subscription created in this call is rolled back - an existing one
+        // (e.g. a settings update that failed) is left alone, since the backend most
+        // likely already has it registered from a prior successful call. Without this,
+        // a fresh browser-side subscription with no backend record would make
+        // getActiveSubscription() report "active" while nothing can ever be delivered,
+        // silently disabling the foreground fallback too (see App.tsx).
+        if (isNewSubscription) {
+          try {
+            await subscription.unsubscribe();
+          } catch (unsubscribeError) {
+            logger.warn("Failed to roll back orphaned push subscription:", unsubscribeError);
           }
-          return false;
         }
-        setHasActiveSubscription(true);
-        return true;
-      } catch (error) {
-        logger.warn("Push subscription failed:", error);
         return false;
       }
-    },
-    [apiFetch],
-  );
+      setHasActiveSubscription(true);
+      return true;
+    } catch (error) {
+      logger.warn("Push subscription failed:", error);
+      return false;
+    }
+  }, [apiFetch]);
 
   const unsubscribeFromPush = useCallback(async (): Promise<void> => {
     const subscription = await getActiveSubscription();

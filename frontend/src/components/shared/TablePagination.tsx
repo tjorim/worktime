@@ -47,7 +47,7 @@ export function TablePagination({
       <div className="d-flex align-items-center gap-2">
         <Form.Select
           size="sm"
-          style={{ width: "auto" }}
+          className="w-auto"
           value={pageSize}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
           aria-label={m.table_page_size_aria()}

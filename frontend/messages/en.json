@@ -377,6 +377,8 @@
   "timeoff_add_event_btn": "Add Event",
   "timeoff_delete_selected_btn": "Delete Selected",
   "timeoff_select_all_btn": "Select All",
+  "timeoff_select_all_matching_btn": "Select all matching",
+  "timeoff_select_all_matching_aria": "Select all events matching the search",
   "timeoff_clear_selection_btn": "Clear Selection",
   "timeoff_no_events_title": "No time-off events yet",
   "timeoff_no_events_desc": "Click \"Add Event\" to create your first event, or \"Import\" to load an existing .hday file.",

@@ -47,10 +47,11 @@ function Harness({
 
 describe("SettingsAuditTrailSection", () => {
   it("loads the personal trail with an explicit user scope and renders its client", async () => {
-    const fetchFn = vi.fn(async () =>
-      new Response(JSON.stringify({ items: [entry(30)], total: 1 }), {
-        headers: { "Content-Type": "application/json" },
-      }),
+    const fetchFn = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ items: [entry(30)], total: 1 }), {
+          headers: { "Content-Type": "application/json" },
+        }),
     );
 
     render(<Harness fetchFn={fetchFn} userId={7} />);
@@ -87,10 +88,11 @@ describe("SettingsAuditTrailSection", () => {
       .fn<(input: string) => Promise<Response>>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ items: firstPage })))
       .mockReturnValueOnce(stalePage.promise);
-    const renewedFetch = vi.fn(async () =>
-      new Response(JSON.stringify({ items: [entry(200)] }), {
-        headers: { "Content-Type": "application/json" },
-      }),
+    const renewedFetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ items: [entry(200)] }), {
+          headers: { "Content-Type": "application/json" },
+        }),
     );
     const user = userEvent.setup();
     const { rerender } = render(<Harness fetchFn={initialFetch} teamWide />);

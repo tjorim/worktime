@@ -46,7 +46,9 @@ describe("SettingsCalendarFeedSection", () => {
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ configured: true }), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ url_path: "/api/ical/wtical_replacement.ics" }), { status: 201 }),
+        new Response(JSON.stringify({ url_path: "/api/ical/wtical_replacement.ics" }), {
+          status: 201,
+        }),
       );
 
     renderSection(fetchFn);

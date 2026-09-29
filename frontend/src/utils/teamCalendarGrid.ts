@@ -5,7 +5,7 @@ import type { HdayEvent } from "@/lib/hday/types";
  * Horizontal scroll offset that brings a grid column into view.
  *
  * The name column is sticky, so the column has to clear it as well: the target
- * is centred in the space to the right of the sticky column, and never
+ * is centered in the space to the right of the sticky column, and never
  * negative (a column near the start just leaves the grid scrolled to 0).
  */
 export function getScrollLeftForColumn({
@@ -33,7 +33,7 @@ const isoKey = (date: Dayjs) => date.format("YYYY-MM-DD");
 /**
  * Events per day for one member, keyed by ISO date. Built once per member and
  * range instead of re-filtering (and re-parsing dates) for every cell, which
- * also makes the neighbouring-day lookups used to group ranges cheap.
+ * also makes the neighboring-day lookups used to group ranges cheap.
  *
  * Range events use `YYYY/MM/DD`, which converts to ISO keys that compare
  * correctly as strings. Weekly events match on ISO weekday (1 = Monday).

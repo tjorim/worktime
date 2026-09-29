@@ -27,7 +27,10 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     void fetchFn("/api/ical")
       .then(async (response) => {
         if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
-        const payload = (await response.json()) as { configured: boolean; last_used_at?: string | null };
+        const payload = (await response.json()) as {
+          configured: boolean;
+          last_used_at?: string | null;
+        };
         if (active) {
           setConfigured(payload.configured);
           setLastFetchedAt(payload.last_used_at ?? null);
@@ -40,7 +43,9 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
       .finally(() => {
         if (active) setLoading(false);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [fetchFn]);
 
   const rotate = async () => {
@@ -96,19 +101,46 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
 
   return (
     <div className="border-top p-3">
-      <h6 className="text-muted mb-2"><i className="bi bi-calendar3 me-2" />{m.calendar_feed_title()}</h6>
+      <h6 className="text-muted mb-2">
+        <i className="bi bi-calendar3 me-2" />
+        {m.calendar_feed_title()}
+      </h6>
       <p className="text-muted small">{m.calendar_feed_description()}</p>
       <p className="text-muted small">{m.calendar_feed_client_guidance()}</p>
-      <Alert variant="warning" className="small py-2">{m.calendar_feed_warning()}</Alert>
-      {error ? <Alert variant="danger" className="small py-2">{error}</Alert> : null}
+      <Alert variant="warning" className="small py-2">
+        {m.calendar_feed_warning()}
+      </Alert>
+      {error ? (
+        <Alert variant="danger" className="small py-2">
+          {error}
+        </Alert>
+      ) : null}
       {url ? (
         <>
           <Form.Control size="sm" readOnly value={url} aria-label={m.calendar_feed_url_label()} />
           <div className="d-flex gap-2 mt-2">
-            <Button size="sm" onClick={() => void copy()}>{m.calendar_feed_copy()}</Button>
-            <Button size="sm" variant="outline-primary" onClick={openCalendarApp}>{m.calendar_feed_open_app()}</Button>
-            <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => setConfirmRegenerate(true)}>{m.calendar_feed_regenerate()}</Button>
-            <Button size="sm" variant="outline-danger" disabled={busy} onClick={() => void revoke()}>{m.calendar_feed_revoke()}</Button>
+            <Button size="sm" onClick={() => void copy()}>
+              {m.calendar_feed_copy()}
+            </Button>
+            <Button size="sm" variant="outline-primary" onClick={openCalendarApp}>
+              {m.calendar_feed_open_app()}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              disabled={busy}
+              onClick={() => setConfirmRegenerate(true)}
+            >
+              {m.calendar_feed_regenerate()}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-danger"
+              disabled={busy}
+              onClick={() => void revoke()}
+            >
+              {m.calendar_feed_revoke()}
+            </Button>
           </div>
         </>
       ) : loading ? (
@@ -129,18 +161,39 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
             </div>
           </Alert>
           <div className="d-flex gap-2">
-            <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => setConfirmRegenerate(true)}>{m.calendar_feed_regenerate()}</Button>
-            <Button size="sm" variant="outline-danger" disabled={busy} onClick={() => void revoke()}>{m.calendar_feed_revoke()}</Button>
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              disabled={busy}
+              onClick={() => setConfirmRegenerate(true)}
+            >
+              {m.calendar_feed_regenerate()}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-danger"
+              disabled={busy}
+              onClick={() => void revoke()}
+            >
+              {m.calendar_feed_revoke()}
+            </Button>
           </div>
         </div>
-      ) : <Button size="sm" disabled={busy} onClick={() => void rotate()}>{busy ? m.calendar_feed_generating() : m.calendar_feed_generate()}</Button>}
+      ) : (
+        <Button size="sm" disabled={busy} onClick={() => void rotate()}>
+          {busy ? m.calendar_feed_generating() : m.calendar_feed_generate()}
+        </Button>
+      )}
       <ConfirmationDialog
         isOpen={confirmRegenerate}
         title={m.calendar_feed_regenerate_confirm_title()}
         message={m.calendar_feed_regenerate_confirm_message()}
         confirmLabel={m.calendar_feed_regenerate()}
         cancelLabel={m.cancel()}
-        onConfirm={() => { setConfirmRegenerate(false); void rotate(); }}
+        onConfirm={() => {
+          setConfirmRegenerate(false);
+          void rotate();
+        }}
         onCancel={() => setConfirmRegenerate(false)}
         variant="warning"
         icon="bi-arrow-repeat"

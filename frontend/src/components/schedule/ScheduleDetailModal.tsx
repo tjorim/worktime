@@ -273,7 +273,9 @@ export function ScheduleDetailModal({
                 <span className="fw-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
               </Col>
               <Col xs={12}>
-                <small className="text-muted d-block mb-2">{m.schedule_info_available_shifts()}</small>
+                <small className="text-muted d-block mb-2">
+                  {m.schedule_info_available_shifts()}
+                </small>
                 <div className="d-flex flex-wrap gap-2">
                   {availableShifts.map(([code, definition]) => {
                     const meta = SHIFT_DISPLAY_META[code] ?? { variant: "secondary" };

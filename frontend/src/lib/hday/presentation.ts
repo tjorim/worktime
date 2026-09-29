@@ -3,12 +3,12 @@ import * as m from "@/paraglide/messages.js";
 import type { EventFlag, HdayEvent, TypeFlag } from "./types";
 
 /**
- * Palette key for an event: which colour set it uses, and whether it is the full-day or half-day
- * look. The colours themselves are CSS custom properties (`--wt-event-<type>-<variant>-bg/-fg`)
+ * Palette key for an event: which color set it uses, and whether it is the full-day or half-day
+ * look. The colors themselves are CSS custom properties (`--wt-event-<type>-<variant>-bg/-fg`)
  * defined once in `styles/_variables.scss` for both themes; nothing here repeats a hex value.
  *
  * A weekly pattern with no type flag is the standing day off, not booked leave, so it gets its
- * own "recurring" colours instead of the holiday red.
+ * own "recurring" colors instead of the holiday red.
  */
 type EventPaletteType = Exclude<TypeFlag, "holiday"> | "holiday" | "recurring";
 
@@ -25,7 +25,7 @@ function getEventPaletteKey(
 }
 
 /**
- * Background colour for an event as a CSS value (`var(--wt-event-…-bg)`), for the few places that
+ * Background color for an event as a CSS value (`var(--wt-event-…-bg)`), for the few places that
  * need it inline. Being a variable it follows the light/dark theme with no extra work.
  */
 export function getEventColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
@@ -33,7 +33,7 @@ export function getEventColor(flags?: EventFlag[], eventType?: HdayEvent["type"]
   return `var(--wt-event-${type}-${variant}-bg)`;
 }
 
-/** Text colour paired with {@link getEventColor}; both are chosen together to meet WCAG AA. */
+/** Text color paired with {@link getEventColor}; both are chosen together to meet WCAG AA. */
 export function getEventTextColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
   const { type, variant } = getEventPaletteKey(flags, eventType);
   return `var(--wt-event-${type}-${variant}-fg)`;

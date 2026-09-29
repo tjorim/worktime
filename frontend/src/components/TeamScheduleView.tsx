@@ -49,7 +49,7 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-/** Full-day colour class for an event: the half-day look comes from the split fill, not a lighter colour. */
+/** Full-day color class for an event: the half-day look comes from the split fill, not a lighter color. */
 function getGridColorClass(event: HdayEvent): string {
   const typeFlags = event.flags?.filter((flag) => flag !== "half_am" && flag !== "half_pm");
   return getEventColorClass(typeFlags, event.type);
@@ -301,7 +301,7 @@ export function TeamScheduleView() {
   }, [dateRange]);
 
   // Events per member per day, over the range plus one day either side so a
-  // range that continues past the edge is still recognised as continuing.
+  // range that continues past the edge is still recognized as continuing.
   const eventsByMember = useMemo(() => {
     const index = new Map<TeamMemberHdayData, Map<string, HdayEvent[]>>();
     const first = dateRange[0];
@@ -610,7 +610,7 @@ export function TeamScheduleView() {
                                 }
 
                                 // Cells with events are focusable and open a popover on hover,
-                                // focus or tap, so the details don't depend on colour or a mouse.
+                                // focus or tap, so the details don't depend on color or a mouse.
                                 const described = events.map(describeEvent);
                                 const dateLabel = date.format("ddd, MMM D YYYY");
                                 return (

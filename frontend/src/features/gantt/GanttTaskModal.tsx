@@ -55,7 +55,6 @@ function createInitialValue(task?: GanttTask): FormState {
   };
 }
 
-
 function parseDeps(dependencies?: unknown): string[] {
   if (typeof dependencies === "string") {
     return dependencies
@@ -179,7 +178,11 @@ export function GanttTaskModal({
     onHide();
   };
 
-  const handleUnlinkEntry = (entry: { id: string; startTime: string; stopTime?: string | null }) => {
+  const handleUnlinkEntry = (entry: {
+    id: string;
+    startTime: string;
+    stopTime?: string | null;
+  }) => {
     updateTaskTimes({
       id: entry.id,
       newStartTime: entry.startTime,
@@ -207,7 +210,10 @@ export function GanttTaskModal({
           <form.Field
             name="name"
             validators={[
-              { run: ({ value }) => (value.trim().length > 0 ? undefined : "required"), triggers: ["change"] },
+              {
+                run: ({ value }) => (value.trim().length > 0 ? undefined : "required"),
+                triggers: ["change"],
+              },
             ]}
           >
             {(field) => (
@@ -237,7 +243,9 @@ export function GanttTaskModal({
                   isSearchable
                   inputId="ganttTaskLabel"
                   isDisabled={isLabelSelectionDisabled}
-                  placeholder={isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()}
+                  placeholder={
+                    isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
+                  }
                   aria-describedby={isLabelSelectionDisabled ? "ganttTaskLabelHelp" : undefined}
                   options={labelOptions}
                   value={selectedLabelOption}
@@ -258,7 +266,8 @@ export function GanttTaskModal({
               name="start"
               validators={[
                 {
-                  run: ({ value }) => (dayjs(value, DATE_FORMAT, true).isValid() ? undefined : "invalid"),
+                  run: ({ value }) =>
+                    dayjs(value, DATE_FORMAT, true).isValid() ? undefined : "invalid",
                   triggers: ["change"],
                 },
               ]}
@@ -286,7 +295,8 @@ export function GanttTaskModal({
                   run: ({ value, formApi }) => {
                     const start = formApi.state.values.start;
                     const endDate = dayjs(value, DATE_FORMAT, true);
-                    const valid = endDate.isValid() && !endDate.isBefore(dayjs(start, DATE_FORMAT, true));
+                    const valid =
+                      endDate.isValid() && !endDate.isBefore(dayjs(start, DATE_FORMAT, true));
                     return valid ? undefined : "invalid";
                   },
                   triggers: ["change"],
@@ -382,11 +392,14 @@ export function GanttTaskModal({
                     <span>
                       <span className="d-block">{entry.text}</span>
                       <span className="text-muted small">
-                        {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} · {dayjs(entry.startTime).format("YYYY-MM-DD")}
+                        {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} ·{" "}
+                        {dayjs(entry.startTime).format("YYYY-MM-DD")}
                       </span>
                     </span>
                     <span className="d-flex align-items-center gap-2 flex-shrink-0">
-                      <span className="text-nowrap">{formatLoggedDuration(entry.loggedMinutes)}</span>
+                      <span className="text-nowrap">
+                        {formatLoggedDuration(entry.loggedMinutes)}
+                      </span>
                       <Button
                         variant="outline-secondary"
                         size="sm"

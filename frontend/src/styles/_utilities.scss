@@ -61,6 +61,16 @@ body {
   font-size: 2rem;
 }
 
+/* Search box above a data table: capped so it doesn't stretch across a wide card. */
+.table-search-input {
+  max-width: 20rem;
+}
+
+/* Keeps the Gantt progress bar and its percentage readable when the table is squeezed. */
+.gantt-progress-cell {
+  min-width: 8rem;
+}
+
 .progress-thin {
   height: 8px;
 }

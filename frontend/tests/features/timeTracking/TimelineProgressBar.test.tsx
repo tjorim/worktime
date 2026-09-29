@@ -67,7 +67,6 @@ describe("TimelineProgressBar", () => {
     });
   });
 
-
   describe("effective duration with break", () => {
     it("deducts break from displayed hours", () => {
       // 8:00-16:00 = 8 hours raw, 7.5 effective with break
@@ -161,9 +160,7 @@ describe("TimelineProgressBar", () => {
 
       expect(screen.getByLabelText("60 minutes until next task")).toBeInTheDocument();
       expect(screen.getByLabelText("Current work: 0.17h")).toBeInTheDocument();
-      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveClass(
-        "progress-bar-striped",
-      );
+      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveClass("progress-bar-striped");
     });
 
     it("keeps an overrun plan separate from worked time while the timer is running", () => {
@@ -191,9 +188,7 @@ describe("TimelineProgressBar", () => {
 
       expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("1.25h");
       expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 1.00h");
-      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveClass(
-        "progress-bar-striped",
-      );
+      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveClass("progress-bar-striped");
     });
   });
 

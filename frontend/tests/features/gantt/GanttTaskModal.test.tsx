@@ -123,9 +123,7 @@ describe("GanttTaskModal", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Edit Write spec in Time Tracking" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Edit Write spec in Time Tracking" }));
 
     expect(onNavigateToEntry).toHaveBeenCalledWith("logged-task-nav");
     expect(onHide).toHaveBeenCalled();

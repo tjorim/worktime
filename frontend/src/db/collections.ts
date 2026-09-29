@@ -79,7 +79,10 @@ let _currentAccessToken: string | null = null;
  * Must be called whenever the user's authentication state changes — typically
  * from `OngoingSyncProvider`.
  */
-export function setSyncCollectionAuth(userId: string | null, accessToken: string | null = null): void {
+export function setSyncCollectionAuth(
+  userId: string | null,
+  accessToken: string | null = null,
+): void {
   if (_currentUserId === userId && _currentAccessToken === accessToken) {
     return;
   }
@@ -548,9 +551,7 @@ export function mergePullIntoCollections(data: SyncPullResponse): void {
   );
   mergeCollectionContents(
     workLocationsCollection,
-    data.work_locations
-      .filter((item) => item.deleted_at === null)
-      .map(syncWorkLocationToEntry),
+    data.work_locations.filter((item) => item.deleted_at === null).map(syncWorkLocationToEntry),
   );
   mergeCollectionContents(
     timeOffCollection,

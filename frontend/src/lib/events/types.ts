@@ -53,10 +53,7 @@ export type CalendarEvent = ShiftEvent | HolidayEvent | AssignmentEvent;
 /**
  * Metadata for different event types
  */
-export type EventMetadata =
-  | ShiftMetadata
-  | HolidayMetadata
-  | AssignmentMetadata;
+export type EventMetadata = ShiftMetadata | HolidayMetadata | AssignmentMetadata;
 
 /**
  * Metadata for shift events
@@ -89,7 +86,7 @@ export interface HolidayMetadata {
   /** Event background as a CSS value (a `var(--wt-event-…-bg)` reference into the shared palette). */
   color: string;
 
-  /** Text colour paired with `color` (a `var(--wt-event-…-fg)` reference); the pair meets WCAG AA. */
+  /** Text color paired with `color` (a `var(--wt-event-…-fg)` reference); the pair meets WCAG AA. */
   textColor: string;
 
   /** Event flags from .hday format */

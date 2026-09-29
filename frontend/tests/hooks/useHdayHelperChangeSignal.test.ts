@@ -74,9 +74,12 @@ describe("useHdayHelperChangeSignal", () => {
   it("resubscribes when the transport identity changes", () => {
     const first = createMockTransport();
     const second = createMockTransport();
-    const { rerender } = renderHook(({ transport }) => useHdayHelperChangeSignal(transport, vi.fn()), {
-      initialProps: { transport: first.transport },
-    });
+    const { rerender } = renderHook(
+      ({ transport }) => useHdayHelperChangeSignal(transport, vi.fn()),
+      {
+        initialProps: { transport: first.transport },
+      },
+    );
     expect(first.isSubscribed()).toBe(true);
 
     rerender({ transport: second.transport });
@@ -88,9 +91,12 @@ describe("useHdayHelperChangeSignal", () => {
     const { transport, emit, unsubscribeMock } = createMockTransport();
     const first = vi.fn();
     const second = vi.fn();
-    const { rerender } = renderHook(({ onChanged }) => useHdayHelperChangeSignal(transport, onChanged), {
-      initialProps: { onChanged: first },
-    });
+    const { rerender } = renderHook(
+      ({ onChanged }) => useHdayHelperChangeSignal(transport, onChanged),
+      {
+        initialProps: { onChanged: first },
+      },
+    );
 
     rerender({ onChanged: second });
     emit("sha256:xyz");
@@ -159,9 +165,15 @@ describe("createHdayHelperChangeTransport", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(controller.stream)));
 
     const onChanged = vi.fn();
-    createHdayHelperChangeTransport("http://localhost:8080/hday/jsmith/events").subscribe(onChanged);
+    createHdayHelperChangeTransport("http://localhost:8080/hday/jsmith/events").subscribe(
+      onChanged,
+    );
 
-    controller.send("hday_changed", { type: "hday_changed", username: "jsmith", etag: "sha256:new" });
+    controller.send("hday_changed", {
+      type: "hday_changed",
+      username: "jsmith",
+      etag: "sha256:new",
+    });
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledWith("sha256:new"));
   });
 
@@ -170,10 +182,16 @@ describe("createHdayHelperChangeTransport", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(controller.stream)));
 
     const onChanged = vi.fn();
-    createHdayHelperChangeTransport("http://localhost:8080/hday/jsmith/events").subscribe(onChanged);
+    createHdayHelperChangeTransport("http://localhost:8080/hday/jsmith/events").subscribe(
+      onChanged,
+    );
 
     controller.send("keepalive", { irrelevant: true });
-    controller.send("hday_changed", { type: "hday_changed", username: "jsmith", etag: "sha256:new" });
+    controller.send("hday_changed", {
+      type: "hday_changed",
+      username: "jsmith",
+      etag: "sha256:new",
+    });
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(onChanged).toHaveBeenCalledWith("sha256:new");
@@ -185,10 +203,16 @@ describe("createHdayHelperChangeTransport", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const onChanged = vi.fn();
-    createHdayHelperChangeTransport("http://localhost:8080/hday/jsmith/events").subscribe(onChanged);
+    createHdayHelperChangeTransport("http://localhost:8080/hday/jsmith/events").subscribe(
+      onChanged,
+    );
 
     controller.sendRaw("event: hday_changed\ndata: not-json{{{\n\n");
-    controller.send("hday_changed", { type: "hday_changed", username: "jsmith", etag: "sha256:ok" });
+    controller.send("hday_changed", {
+      type: "hday_changed",
+      username: "jsmith",
+      etag: "sha256:ok",
+    });
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(onChanged).toHaveBeenCalledWith("sha256:ok");
