@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
+import { preloadSyncCollections } from "@/db/collections";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { HomePage } from "@/pages/HomePage";
 import { PebblePairPage } from "@/pages/PebblePairPage";
@@ -14,6 +15,12 @@ const rootRoute = createRootRoute({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
+  loader: () => {
+    // Warm the existing QueryCollections on navigation and intent preload.
+    // Do not return the promise: slow/offline sync must not delay navigation,
+    // and the page's live queries remain responsible for loading/error state.
+    void preloadSyncCollections().catch(() => {});
+  },
   component: HomePage,
 });
 
@@ -87,6 +94,8 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   defaultPreload: "intent",
+  // Let the collections own freshness rather than caching the preload hint.
+  defaultPreloadStaleTime: 0,
 });
 
 declare module "@tanstack/react-router" {
