@@ -48,6 +48,7 @@ function mockSettings(overrides: Partial<UserSettings> = {}): void {
     updateUnifiedCalendarEnabled: vi.fn(),
     updateHomeCountry: vi.fn(),
     updateOfficeCountry: vi.fn(),
+    updateHdayUsername: vi.fn(),
     resetSettings: vi.fn(),
     myTeam: null,
     setMyTeam: vi.fn(),

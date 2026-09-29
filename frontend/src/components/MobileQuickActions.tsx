@@ -165,7 +165,7 @@ export function MobileQuickActions({
               {runningTask && (
                 <div className="rounded bg-body-tertiary p-2 d-flex align-items-center gap-2">
                   <i className="bi bi-record-fill text-danger" aria-hidden="true" />
-                  <div className="min-w-0 flex-grow-1">
+                  <div className="tw:min-w-0 flex-grow-1">
                     <div className="fw-semibold text-truncate">{runningTask.text}</div>
                     <div className="small text-muted">
                       {labels.find((label) => label.id === runningTask.label)?.name ??
@@ -195,7 +195,7 @@ export function MobileQuickActions({
               )}
               {(!runningTask || isSwitching) && (
                 <Stack direction="horizontal" gap={2}>
-                  <Form.Group controlId="mobileQuickTask" className="flex-grow-1 min-w-0">
+                  <Form.Group controlId="mobileQuickTask" className="flex-grow-1 tw:min-w-0">
                     <Form.Label visuallyHidden>{m.form_task()}</Form.Label>
                     <Form.Control
                       autoFocus

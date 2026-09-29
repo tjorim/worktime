@@ -81,7 +81,7 @@ describe("reportSyncDiagnostic", () => {
 
     await vi.waitFor(() => expect(reportFetch).toHaveBeenCalled());
 
-    const body = JSON.parse(reportFetch.mock.calls[0][1].body);
+    const body = JSON.parse(reportFetch.mock.calls[0]![1].body);
     expect(body.request_ids).toEqual([]);
   });
 });
