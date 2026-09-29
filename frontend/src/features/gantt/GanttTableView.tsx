@@ -1,8 +1,9 @@
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import { TableSearchInput } from "@/components/shared/TableSearchInput";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import Table from "react-bootstrap/Table";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
@@ -273,9 +274,9 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
           link.known ? (
             <Button
               key={link.id}
-              variant="outline-secondary"
+              variant="outline"
               size="sm"
-              className="py-0 px-2 me-1 mb-1"
+              className="tw:mr-1 tw:mb-1"
               aria-label={m.gantt_table_go_to_task({ name: link.name })}
               onClick={() => handleJumpToTask(link.id)}
             >
@@ -299,37 +300,36 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
   return (
     <>
       {tasks.length > 0 && (
-        <Form.Control
+        <TableSearchInput
           type="search"
-          size="sm"
-          className="mb-3 table-search-input"
+          className="tw:mb-3"
           placeholder={m.gantt_table_search_placeholder()}
           aria-label={m.gantt_table_search_aria()}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
       )}
-      <Table striped hover responsive aria-label={m.gantt_table_aria()}>
-        <thead>
+      <Table aria-label={m.gantt_table_aria()}>
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
+            <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <SortableHeaderCell
                   key={header.id}
                   header={header}
-                  className={header.column.id === "actions" ? "text-end" : undefined}
+                  className={header.column.id === "actions" ? "tw:text-right" : undefined}
                 />
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </thead>
-        <tbody>
+        </TableHeader>
+        <TableBody>
           {visibleRows.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="text-center text-muted py-4">
+            <TableRow>
+              <TableCell colSpan={columns.length} className="text-center text-muted py-4">
                 {isFiltering ? m.gantt_table_no_results() : m.gantt_table_empty()}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ) : (
             visibleRows.map((tableRow) => {
               const { task, labelName, loggedMinutes, dependsOn, requiredBy } = tableRow.original;
@@ -337,55 +337,60 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                 ? (labelColorById[task.label] ?? getDefaultLabelColor())
                 : null;
               return (
-                <tr
+                <TableRow
                   key={task.id}
                   id={rowDomId(task.id)}
-                  className={highlightedId === task.id ? "table-warning" : undefined}
+                  className={
+                    highlightedId === task.id
+                      ? "tw:bg-wt-warning-bg tw:hover:bg-wt-warning-bg"
+                      : "tw:odd:bg-muted/30"
+                  }
                 >
-                  <td>
+                  <TableCell>
                     <Button
                       variant="link"
-                      className="p-0 text-start fw-semibold text-decoration-none text-body"
+                      className="tw:h-auto tw:p-0 tw:text-left tw:font-semibold tw:text-foreground"
                       onClick={() => onTaskClick(task.id)}
                     >
                       {task.name}
                     </Button>
-                  </td>
-                  <td>{formatDate(task.start)}</td>
-                  <td>{formatDate(task.end)}</td>
-                  <td>
+                  </TableCell>
+                  <TableCell>{formatDate(task.start)}</TableCell>
+                  <TableCell>{formatDate(task.end)}</TableCell>
+                  <TableCell>
                     {labelBackground ? (
                       <span
-                        className="time-tracking-label"
-                        // Label colors are user-defined data, so this is the one inline style a class can't replace.
-                        style={{
-                          backgroundColor: labelBackground,
-                          color: getContrastingTextColor(labelBackground),
-                        }}
+                        className="tw:inline-flex tw:items-center tw:rounded-md tw:border tw:border-border tw:px-2 tw:py-0.5 tw:text-xs tw:font-semibold tw:bg-label tw:text-label-foreground"
+                        style={
+                          {
+                            "--label-bg": labelBackground,
+                            "--label-fg": getContrastingTextColor(labelBackground),
+                          } as CSSProperties
+                        }
                       >
                         {labelName}
                       </span>
                     ) : (
                       "—"
                     )}
-                  </td>
-                  <td className="gantt-progress-cell">
+                  </TableCell>
+                  <TableCell className="tw:min-w-32">
                     <div className="d-flex align-items-center gap-2">
                       <ProgressBar now={task.progress} className="border flex-grow-1" />
                       <span className="small text-muted text-nowrap">{task.progress}%</span>
                     </div>
-                  </td>
-                  <td className="text-nowrap">
+                  </TableCell>
+                  <TableCell className="text-nowrap">
                     {loggedMinutes > 0 ? formatLoggedDuration(loggedMinutes) : "—"}
-                  </td>
-                  <td>{renderTaskLinks(dependsOn)}</td>
-                  <td>{renderTaskLinks(requiredBy)}</td>
-                  <td title={task.notes}>{task.notes || "—"}</td>
-                  <td className="text-end text-nowrap">
+                  </TableCell>
+                  <TableCell>{renderTaskLinks(dependsOn)}</TableCell>
+                  <TableCell>{renderTaskLinks(requiredBy)}</TableCell>
+                  <TableCell title={task.notes}>{task.notes || "—"}</TableCell>
+                  <TableCell className="tw:text-right tw:whitespace-nowrap">
                     <Button
                       variant="link"
                       size="sm"
-                      className="text-body"
+                      className="tw:text-foreground"
                       aria-label={m.gantt_table_edit_aria({ name: task.name })}
                       onClick={() => onTaskClick(task.id)}
                     >
@@ -394,7 +399,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     <Button
                       variant="link"
                       size="sm"
-                      className="text-danger"
+                      className="tw:text-destructive"
                       aria-label={m.gantt_table_delete_aria({ name: task.name })}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -403,12 +408,12 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     >
                       <i className="bi bi-trash" aria-hidden="true"></i>
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })
           )}
-        </tbody>
+        </TableBody>
       </Table>
       <TablePagination
         total={table.getPrePaginatedRowModel().rows.length}

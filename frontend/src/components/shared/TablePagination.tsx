@@ -1,5 +1,11 @@
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import * as m from "@/paraglide/messages.js";
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
@@ -40,36 +46,35 @@ export function TablePagination({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top">
-      <span className="text-muted small">
+    <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:border-t tw:border-border tw:pt-2">
+      <span className="tw:text-sm tw:text-muted-foreground">
         {m.table_page_summary({ from: rangeFrom, to: rangeTo, total })}
       </span>
-      <div className="d-flex align-items-center gap-2">
-        <Form.Select
-          size="sm"
-          className="w-auto"
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+        <Select
           value={pageSize}
-          onChange={(event) => onPageSizeChange(Number(event.target.value))}
-          aria-label={m.table_page_size_aria()}
+          onValueChange={(value) => {
+            if (value !== null) onPageSizeChange(value);
+          }}
         >
-          {pageSizeOptions.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </Form.Select>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          disabled={!canPreviousPage}
-          onClick={onPreviousPage}
-        >
+          <SelectTrigger size="sm" aria-label={m.table_page_size_aria()}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizeOptions.map((size) => (
+              <SelectItem key={size} value={size}>
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" disabled={!canPreviousPage} onClick={onPreviousPage}>
           {m.table_page_previous()}
         </Button>
-        <span className="text-muted small">
+        <span className="tw:text-sm tw:text-muted-foreground">
           {pageIndex + 1} / {pageCount}
         </span>
-        <Button variant="outline-secondary" size="sm" disabled={!canNextPage} onClick={onNextPage}>
+        <Button variant="outline" size="sm" disabled={!canNextPage} onClick={onNextPage}>
           {m.table_page_next()}
         </Button>
       </div>

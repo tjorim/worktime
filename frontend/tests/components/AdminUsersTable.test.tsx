@@ -107,7 +107,7 @@ describe("AdminUsersTable", () => {
   it("sizes the search box with a class, not an inline style", () => {
     renderTable();
     const search = screen.getByRole("searchbox", { name: "Search users" });
-    expect(search).toHaveClass("table-search-input");
+    expect(search).toHaveClass("tw:max-w-80");
     expect(search).not.toHaveAttribute("style");
   });
 });

@@ -150,10 +150,21 @@ describe("TimeOffTableView", () => {
 
     it("changes the page size", async () => {
       renderTable({ entries: manyEntries, eventCount: manyEntries.length });
-      await userEvent
-        .setup()
-        .selectOptions(screen.getByRole("combobox", { name: /rows per page/i }), "50");
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("combobox", { name: /rows per page/i }));
+      await user.click(await screen.findByRole("option", { name: "50" }));
       expect(bodyRows()).toHaveLength(25);
+    });
+
+    it("changes page size with the keyboard and returns focus to the trigger", async () => {
+      renderTable({ entries: manyEntries, eventCount: manyEntries.length });
+      const user = userEvent.setup();
+      const trigger = screen.getByRole("combobox", { name: /rows per page/i });
+      trigger.focus();
+      await user.keyboard("{Enter}{Home}{Enter}");
+      expect(bodyRows()).toHaveLength(10);
+      expect(trigger).toHaveFocus();
+      expect(screen.getByText("Showing 1–10 of 25")).toBeInTheDocument();
     });
 
     it("counts search results, not all entries, and returns to the first page", async () => {
@@ -278,10 +289,10 @@ describe("TimeOffTableView", () => {
   it("sizes the search box and the page-size select with classes, not inline styles", () => {
     renderTable();
     const search = screen.getByRole("searchbox");
-    expect(search).toHaveClass("table-search-input");
+    expect(search).toHaveClass("tw:max-w-80");
     expect(search).not.toHaveAttribute("style");
     const pageSize = screen.getByRole("combobox", { name: /rows per page/i });
-    expect(pageSize).toHaveClass("w-auto");
+    expect(pageSize).toHaveClass("tw:w-fit");
     expect(pageSize).not.toHaveAttribute("style");
   });
 });

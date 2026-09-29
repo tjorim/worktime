@@ -1,9 +1,16 @@
 import clsx from "clsx";
 import { useMemo, useState } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
-import Table from "react-bootstrap/Table";
+import { TableSearchInput } from "@/components/shared/TableSearchInput";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -26,8 +33,8 @@ import {
   isTimeOffRangeEntry,
   isTimeOffWeeklyEntry,
 } from "@/lib/timeOff/types";
-import { TimeOffToolbar } from "./TimeOffToolbar";
-import { TimeOffRawView } from "./TimeOffRawView";
+import { TimeOffToolbar } from "@/components/timeOff/TimeOffToolbar";
+import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
 import type { TimeOffViewMode } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
@@ -242,10 +249,9 @@ export function TimeOffTableView({
             />
           ) : (
             <>
-              <Form.Control
+              <TableSearchInput
                 type="search"
-                size="sm"
-                className="mb-3 table-search-input"
+                className="tw:mb-3"
                 placeholder={m.timeoff_search_placeholder()}
                 aria-label={m.timeoff_search_aria()}
                 value={search}
@@ -258,14 +264,14 @@ export function TimeOffTableView({
                   description={m.timeoff_no_results_desc()}
                 />
               ) : (
-                <Table responsive hover>
-                  <thead>
+                <Table>
+                  <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
-                      <tr key={headerGroup.id}>
+                      <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => {
                           if (header.column.id === "select") {
                             return (
-                              <th key={header.id} scope="col">
+                              <TableHead key={header.id} scope="col">
                                 <input
                                   ref={(element) => {
                                     if (element) {
@@ -281,16 +287,16 @@ export function TimeOffTableView({
                                     onSetSelection(visibleIds, event.target.checked)
                                   }
                                 />
-                              </th>
+                              </TableHead>
                             );
                           }
 
                           return <SortableHeaderCell key={header.id} header={header} />;
                         })}
-                      </tr>
+                      </TableRow>
                     ))}
-                  </thead>
-                  <tbody>
+                  </TableHeader>
+                  <TableBody>
                     {visibleRows.map((tableRow) => {
                       const { entry, flags, title, typeLabel } = tableRow.original;
                       const eventColorClass = getEventColorClass(
@@ -300,8 +306,8 @@ export function TimeOffTableView({
                       const symbol = getTimeLocationSymbol(flags);
 
                       return (
-                        <tr key={entry.id}>
-                          <td>
+                        <TableRow key={entry.id}>
+                          <TableCell>
                             <input
                               type="checkbox"
                               className="form-check-input"
@@ -309,45 +315,47 @@ export function TimeOffTableView({
                               checked={selectedIds.has(entry.id)}
                               onChange={() => onToggleSelection(entry.id)}
                             />
-                          </td>
-                          <td>
+                          </TableCell>
+                          <TableCell>
                             <span className={clsx("badge", "event-type-badge", eventColorClass)}>
                               {symbol && `${symbol} `}
                               {typeLabel}
                             </span>
-                          </td>
-                          <td>{renderEntryDisplayDate(entry)}</td>
-                          <td>{entry.note || <span className="text-muted">—</span>}</td>
-                          <td>
+                          </TableCell>
+                          <TableCell>{renderEntryDisplayDate(entry)}</TableCell>
+                          <TableCell>
+                            {entry.note || <span className="text-muted">—</span>}
+                          </TableCell>
+                          <TableCell>
                             {flags.length ? (
                               <span className="text-muted small">{flags.join(", ")}</span>
                             ) : (
                               <span className="text-muted">—</span>
                             )}
-                          </td>
-                          <td>
+                          </TableCell>
+                          <TableCell>
                             <Button
-                              variant="outline-secondary"
+                              variant="outline"
                               size="sm"
                               onClick={() => onEditEvent(entry.id)}
-                              className="me-2"
+                              className="tw:mr-2"
                               aria-label={m.edit_with_name({ name: title })}
                             >
                               <i className="bi bi-pencil" aria-hidden="true"></i>
                             </Button>
                             <Button
-                              variant="outline-danger"
+                              variant="destructive"
                               size="sm"
                               onClick={() => onDeleteEvent(entry.id)}
                               aria-label={m.delete_with_name({ name: title })}
                             >
                               <i className="bi bi-trash" aria-hidden="true"></i>
                             </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
+                  </TableBody>
                 </Table>
               )}
               <TablePagination

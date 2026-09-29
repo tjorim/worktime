@@ -1,3 +1,5 @@
+import { TableHead } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { flexRender, type Header, type RowData } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/hooks/useDataTable";
 
@@ -7,7 +9,7 @@ interface SortableHeaderCellProps<TData extends RowData> {
 }
 
 /**
- * `<th>` for a `useDataTable` column: a click-to-sort button with a direction
+ * `<TableHead>` for a `useDataTable` column: a click-to-sort button with a direction
  * arrow and `aria-sort` when the column is sortable, plain text otherwise.
  */
 export function SortableHeaderCell<TData extends RowData>({
@@ -22,7 +24,7 @@ export function SortableHeaderCell<TData extends RowData>({
     : flexRender(column.columnDef.header, header.getContext());
 
   return (
-    <th
+    <TableHead
       scope="col"
       className={className}
       aria-sort={
@@ -36,17 +38,18 @@ export function SortableHeaderCell<TData extends RowData>({
       }
     >
       {canSort ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
+          variant="ghost"
+          className="tw:h-auto tw:p-0 tw:font-semibold"
           onClick={column.getToggleSortingHandler()}
         >
           {content}
           {sorted === "asc" ? " ↑" : sorted === "desc" ? " ↓" : ""}
-        </button>
+        </Button>
       ) : (
         content
       )}
-    </th>
+    </TableHead>
   );
 }
