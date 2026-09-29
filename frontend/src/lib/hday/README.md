@@ -133,8 +133,8 @@ Warnings are logged to console when multiple flags are found.
 
 All color constants meet **WCAG AA** accessibility standards:
 
-- Minimum 4.5:1 contrast ratio with black text (#000)
-- See `EVENT_COLORS` in `parser.ts` for verified ratios
+- Minimum 4.5:1 contrast ratio between each background and its paired text colour (black or white), in light and dark mode
+- The palette is defined once, in `src/styles/_variables.scss` (`--wt-event-*`); `getEventColor()` and `getEventTextColor()` return references to those variables. `tests/lib/eventPalette.test.ts` verifies the contrast ratios
 
 ## Performance
 

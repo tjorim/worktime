@@ -88,12 +88,12 @@ describe("GanttTableView", () => {
     const user = userEvent.setup();
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: "Sort by Name" }));
+    await user.click(screen.getByRole("button", { name: /^Name/ }));
     let rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
     expect(rows[1]).toHaveTextContent("Build release");
     expect(rows[2]).toHaveTextContent("Write release notes");
 
-    await user.click(screen.getByRole("button", { name: "Sort by Name" }));
+    await user.click(screen.getByRole("button", { name: /^Name/ }));
     rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
     expect(rows[1]).toHaveTextContent("Write release notes");
     expect(rows[2]).toHaveTextContent("Build release");
@@ -184,5 +184,177 @@ describe("GanttTableView", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete Build release" }));
     expect(screen.getByRole("dialog")).not.toHaveTextContent("time-tracking entr");
+  });
+
+  describe("search, sorting and pagination", () => {
+    const bodyRows = () =>
+      within(screen.getByRole("table", { name: "Gantt tasks" }))
+        .getAllByRole("row")
+        .slice(1);
+
+    it("filters tasks by name, notes and resolved dependency names", async () => {
+      const user = userEvent.setup();
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+      const search = screen.getByRole("searchbox", { name: "Search Gantt tasks" });
+
+      await user.type(search, "summarize");
+      expect(bodyRows()).toHaveLength(1);
+      expect(bodyRows()[0]).toHaveTextContent("Write release notes");
+
+      // "task-later" depends on "task-earlier", shown by name as "Build release".
+      await user.clear(search);
+      await user.type(search, "build");
+      expect(bodyRows()).toHaveLength(2);
+    });
+
+    it("searches dates, progress and label too, not just text columns", async () => {
+      const user = userEvent.setup();
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+      const search = screen.getByRole("searchbox");
+
+      await user.type(search, "Jun 5");
+      expect(bodyRows()).toHaveLength(1);
+      expect(bodyRows()[0]).toHaveTextContent("Write release notes");
+
+      await user.clear(search);
+      await user.type(search, "2026-06-01");
+      expect(bodyRows()).toHaveLength(1);
+      expect(bodyRows()[0]).toHaveTextContent("Build release");
+
+      await user.clear(search);
+      await user.type(search, "75%");
+      expect(bodyRows()).toHaveLength(1);
+      expect(bodyRows()[0]).toHaveTextContent("Build release");
+    });
+
+    it("shows a no-results row when nothing matches", async () => {
+      const user = userEvent.setup();
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      await user.type(screen.getByRole("searchbox"), "zzz");
+      expect(screen.getByText("No tasks match your search.")).toBeInTheDocument();
+    });
+
+    it("hides the search box when there are no tasks", () => {
+      render(<GanttTableView tasks={[]} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+      expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+      expect(screen.getByText("No tasks yet. Add a task to start planning.")).toBeInTheDocument();
+    });
+
+    it("sorts by progress, with aria-sort reflecting the active column", async () => {
+      const user = userEvent.setup();
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      await user.click(screen.getByRole("button", { name: /^Progress/ }));
+      expect(screen.getByRole("columnheader", { name: /Progress/ })).toHaveAttribute(
+        "aria-sort",
+        expect.stringMatching(/ascending|descending/),
+      );
+      expect(screen.getByRole("columnheader", { name: /Start/ })).toHaveAttribute(
+        "aria-sort",
+        "none",
+      );
+    });
+
+    it("paginates long task lists", async () => {
+      const user = userEvent.setup();
+      const many: GanttTask[] = Array.from({ length: 25 }, (_, index) => ({
+        id: `t-${index}`,
+        name: `Task ${String(index + 1).padStart(2, "0")}`,
+        start: `2026-07-${String(index + 1).padStart(2, "0")}`,
+        end: `2026-07-${String(index + 1).padStart(2, "0")}`,
+        progress: 0,
+      }));
+      render(<GanttTableView tasks={many} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      expect(bodyRows()).toHaveLength(20);
+      expect(screen.getByText("Showing 1–20 of 25")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      expect(bodyRows()).toHaveLength(5);
+      expect(bodyRows()[0]).toHaveTextContent("Task 21");
+    });
+  });
+
+  describe("navigating between related tasks", () => {
+    const bodyRows = () =>
+      within(screen.getByRole("table", { name: "Gantt tasks" }))
+        .getAllByRole("row")
+        .slice(1);
+    let scrollIntoView: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      scrollIntoView = vi.fn();
+      Element.prototype.scrollIntoView =
+        scrollIntoView as unknown as typeof Element.prototype.scrollIntoView;
+    });
+
+    it("shows dependencies and reverse 'required by' links as buttons", () => {
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      // Build release (row 1) is required by Write release notes, and has no dependencies.
+      const [build, write] = bodyRows();
+      expect(
+        within(build!).getByRole("button", { name: "Go to Write release notes" }),
+      ).toBeInTheDocument();
+      expect(
+        within(write!).getByRole("button", { name: "Go to Build release" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Required by" })).toBeInTheDocument();
+    });
+
+    it("jumps to and highlights the linked task", async () => {
+      const user = userEvent.setup();
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      const [, write] = bodyRows();
+      await user.click(within(write!).getByRole("button", { name: "Go to Build release" }));
+
+      expect(scrollIntoView).toHaveBeenCalled();
+      expect(bodyRows()[0]).toHaveClass("table-warning");
+      expect(bodyRows()[1]).not.toHaveClass("table-warning");
+    });
+
+    it("clears a search that hides the target, so the jump lands", async () => {
+      const user = userEvent.setup();
+      render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      // "summarize" only matches the notes of "Write release notes".
+      await user.type(screen.getByRole("searchbox"), "summarize");
+      expect(bodyRows()).toHaveLength(1);
+
+      await user.click(screen.getByRole("button", { name: "Go to Build release" }));
+      expect(screen.getByRole("searchbox")).toHaveValue("");
+      expect(bodyRows()).toHaveLength(2);
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+
+    it("moves to the page that holds the target", async () => {
+      const user = userEvent.setup();
+      const many: GanttTask[] = Array.from({ length: 25 }, (_, index) => ({
+        id: `t-${index}`,
+        name: `Task ${String(index + 1).padStart(2, "0")}`,
+        start: `2026-07-${String(index + 1).padStart(2, "0")}`,
+        end: `2026-07-${String(index + 1).padStart(2, "0")}`,
+        progress: 0,
+        // The last task depends on the first, which sits on the other page.
+        ...(index === 24 ? { dependencies: "t-0" } : {}),
+      }));
+      render(<GanttTableView tasks={many} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await user.click(screen.getByRole("button", { name: "Go to Task 01" }));
+
+      expect(screen.getByText("Showing 1–20 of 25")).toBeInTheDocument();
+      expect(document.getElementById("gantt-task-row-t-0")).toHaveClass("table-warning");
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+
+    it("shows unknown dependencies as plain text, not a link", () => {
+      const orphan: GanttTask = { ...tasks[1]!, id: "orphan", dependencies: "deleted-task" };
+      render(<GanttTableView tasks={[orphan]} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
+
+      expect(screen.getByText("deleted-task")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Go to/ })).not.toBeInTheDocument();
+    });
   });
 });

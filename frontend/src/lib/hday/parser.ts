@@ -55,11 +55,6 @@
  * - Multiple time/location flags → keeps first, removes rest (with console warning)
  * - No type flag → adds default 'holiday'
  *
- * ## Accessibility
- *
- * All color constants meet WCAG AA standards (4.5:1 minimum contrast with black text).
- * See `EVENT_COLORS` for verified contrast ratios.
- *
  * @module lib/hday/parser
  */
 
@@ -69,38 +64,6 @@
 import { normalizeEventFlags } from "./flags";
 import { isValidHdayDate } from "./dateValidation";
 import type { EventFlag, HdayEvent } from "./types";
-
-/**
- * Color constants for event backgrounds.
- * All colors meet WCAG AA accessibility standards (4.5:1 contrast minimum) with black text (#000).
- * Verified contrast ratios:
- * - HOLIDAY_FULL: 4.57:1   - HOLIDAY_HALF: 9.25:1
- * - BUSINESS_FULL: 9.55:1  - BUSINESS_HALF: 12.90:1
- * - COURSE_FULL: 9.93:1    - COURSE_HALF: 13.83:1
- * - IN_OFFICE_FULL: 4.98:1 - IN_OFFICE_HALF: 8.73:1
- * - WEEKEND_FULL: 5.7:1    - WEEKEND_HALF: 7.8:1
- * - BIRTHDAY_FULL: 4.6:1   - BIRTHDAY_HALF: 8.2:1
- * - ILL_FULL: 6.2:1        - ILL_HALF: 8.7:1
- * - OTHER_FULL: 5.0:1      - OTHER_HALF: 10.1:1
- */
-export const EVENT_COLORS = {
-  HOLIDAY_FULL: "#EC0000", // Red - full day vacation/holiday
-  HOLIDAY_HALF: "#FF8A8A", // Pink - half day vacation/holiday
-  BUSINESS_FULL: "#FF9500", // Orange - full day business trip
-  BUSINESS_HALF: "#FFC04D", // Light orange - half day business
-  COURSE_FULL: "#D9AD00", // Dark yellow/gold - full day course
-  COURSE_HALF: "#F0D04D", // Light yellow - half day course
-  IN_OFFICE_FULL: "#008899", // Teal - full day in-office
-  IN_OFFICE_HALF: "#00B8CC", // Light teal - half day in-office
-  WEEKEND_FULL: "#990099", // Dark magenta - full day weekend
-  WEEKEND_HALF: "#CC66CC", // Light magenta - half day weekend
-  BIRTHDAY_FULL: "#0000CC", // Dark blue - full day birthday
-  BIRTHDAY_HALF: "#6666FF", // Light blue - half day birthday
-  ILL_FULL: "#336600", // Dark olive - full day ill/sick
-  ILL_HALF: "#669933", // Light olive - half day ill/sick
-  OTHER_FULL: "#008B8B", // Dark cyan - full day other
-  OTHER_HALF: "#4DB8B8", // Light cyan - half day other
-} as const;
 
 /**
  * Convert a string of single-character flags into the corresponding event flags.

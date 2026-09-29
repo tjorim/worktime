@@ -86,10 +86,10 @@ export interface ShiftMetadata {
 export interface HolidayMetadata {
   type: "holiday";
 
-  /** Event background color from EVENT_COLORS. */
+  /** Event background as a CSS value (a `var(--wt-event-…-bg)` reference into the shared palette). */
   color: string;
 
-  /** Text color paired with color to meet WCAG AA contrast. */
+  /** Text colour paired with `color` (a `var(--wt-event-…-fg)` reference); the pair meets WCAG AA. */
   textColor: string;
 
   /** Event flags from .hday format */

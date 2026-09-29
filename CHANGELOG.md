@@ -17,6 +17,30 @@ below predate that switch.
 - Mobile carousel for team browsing
 - Advanced accessibility features (high-contrast mode, font scaling)
 
+## [2026.9.3] - 2026-09-29
+
+### Added
+
+- Time Off, Gantt and the admin user list are now searchable, sortable and paged: click a column header to sort (again to reverse, a third time to reset), type in the search box to filter across every visible column, and long lists are split into pages of 20 with a rows-per-page choice
+- Gantt table: dependencies are now buttons that jump straight to the task they point to, and a new "Required by" column shows the tasks that depend on each one, so you can walk the chain in both directions; a search that hides the target clears itself first
+- Gantt table: End, Label, Progress and Logged time are sortable too, not just Name and Start
+- Team schedule: hovering or focusing a day with time off opens a small card with the person, the date and each event's type, title and morning/afternoon — and those days are now reachable with the keyboard and announced by screen readers, so the event type no longer depends on colour alone
+- Team schedule: the grid opens scrolled to today, month names stay visible while you scroll through their days, and the first and last day of a range are capped so it reads as one block
+- Team schedule: half days now show which half is off — the left half is filled with ◐ for the morning, the right half with ◑ for the afternoon, matching the Time Off table
+- Team schedule: legend now lists every look the grid can show, including Other, Weekend event, and Morning/Afternoon off
+
+### Changed
+
+- Team schedule: the team ID field now lives in the grid's header next to the month navigation instead of in its own card, so the grid starts much higher on the page; long names are cut with an ellipsis (full name in the tooltip) and the name column is narrower on phones
+- Team schedule colours: "Available" days are now neutral so time off stands out, "Other" is slate grey and weekly days off are brown (they were two near-identical blues alongside In office), and dark mode uses brighter versions of the same hues so every type stays distinguishable
+
+### Fixed
+
+- Event type names (Holiday, Business trip, Sick leave …) in the Time Off table, month calendar and event dialog are now translated instead of always being English
+- Time Off entries are now ordered strictly by start date — single days used to be listed first and every date range after them
+- Team schedule: "In office" days were invisible in dark mode, days with more than one event only showed the first, and the legend swatches for Available and Weekend didn't match the grid
+- Team schedule: weekend and today column headers were faded or pale-on-pale and hard to read
+
 ## [2026.9.2] - 2026-09-06
 
 ### Added
@@ -750,7 +774,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.2...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.3...HEAD
+[2026.9.3]: https://github.com/tjorim/worktime/compare/v2026.9.2...v2026.9.3
 [2026.9.2]: https://github.com/tjorim/worktime/compare/v2026.9.1...v2026.9.2
 [2026.9.1]: https://github.com/tjorim/worktime/compare/v2026.8.9...v2026.9.1
 [2026.8.9]: https://github.com/tjorim/worktime/compare/v2026.8.8...v2026.8.9

@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SubmitEvent } from "react";
+import type { ReactNode, SubmitEvent } from "react";
 import type { Dayjs } from "dayjs";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -7,9 +7,11 @@ import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Popover from "react-bootstrap/Popover";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import type { HdayEvent } from "@/lib/hday/types";
+import { getPrimaryTypeFlag } from "@/lib/hday/flags";
 import { getEventColorClass } from "@/lib/hday/presentation";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
@@ -17,6 +19,12 @@ import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { getHdayHelperErrorMessage, resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
+import {
+  getHalfDay,
+  getScrollLeftForColumn,
+  indexEventsByDate,
+  type HalfDay,
+} from "@/utils/teamCalendarGrid";
 
 interface TeamMember {
   username: string;
@@ -41,22 +49,79 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-/**
- * Check if a date has an event for a member
- */
-function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] {
-  return member.events.filter((event) => {
-    if (event.type === "range" && event.start && event.end) {
-      const eventStart = dayjs(event.start.replace(/\//g, "-")); // Convert YYYY/MM/DD to YYYY-MM-DD
-      const eventEnd = dayjs(event.end.replace(/\//g, "-"));
-      return date.isSameOrAfter(eventStart, "day") && date.isSameOrBefore(eventEnd, "day");
-    } else if (event.type === "weekly" && event.weekday) {
-      // Check if date matches the weekly pattern (1=Monday, 7=Sunday)
-      const dayOfWeek = date.isoWeekday(); // 1=Monday, 7=Sunday
-      return event.weekday === dayOfWeek;
-    }
-    return false;
-  });
+/** Full-day colour class for an event: the half-day look comes from the split fill, not a lighter colour. */
+function getGridColorClass(event: HdayEvent): string {
+  const typeFlags = event.flags?.filter((flag) => flag !== "half_am" && flag !== "half_pm");
+  return getEventColorClass(typeFlags, event.type);
+}
+
+const HALF_DAY_GLYPH: Record<HalfDay, string> = { am: "◐", pm: "◑" };
+
+function getEventTypeName(event: HdayEvent): string {
+  switch (getPrimaryTypeFlag(event.flags)) {
+    case "business":
+      return m.team_legend_business();
+    case "course":
+      return m.team_legend_training();
+    case "in":
+      return m.team_legend_in_office();
+    case "weekend":
+      return m.team_legend_weekend_event();
+    case "birthday":
+      return m.team_legend_birthday();
+    case "ill":
+      return m.team_legend_sick();
+    case "other":
+      return m.team_legend_other();
+    default:
+      // A weekly pattern with no type is the standing day off, not booked leave.
+      return event.type === "weekly" ? m.team_legend_weekly_off() : m.team_legend_vacation();
+  }
+}
+
+/** Everything a cell needs to say about one event, for the popover and the aria-label alike. */
+function describeEvent(event: HdayEvent) {
+  const half = getHalfDay(event);
+  const halfLabel =
+    half === "am" ? m.team_legend_half_am() : half === "pm" ? m.team_legend_half_pm() : null;
+  const isRecurringVariant =
+    event.type === "weekly" && getPrimaryTypeFlag(event.flags) !== "holiday";
+  const typeLabel = isRecurringVariant
+    ? `${getEventTypeName(event)} (${m.team_popover_weekly()})`
+    : getEventTypeName(event);
+  const title = event.title?.trim() || null;
+  const text = [typeLabel, halfLabel ? `(${halfLabel})` : null, title ? `– ${title}` : null]
+    .filter(Boolean)
+    .join(" ");
+  return { colorClass: getGridColorClass(event), typeLabel, halfLabel, title, text };
+}
+
+// One entry per distinguishable look in the grid. The swatch reuses the grid's own
+// classes, so the legend can't drift from what the cells actually show.
+function getLegendItems() {
+  return [
+    { swatchClass: "calendar-available", label: m.team_legend_available() },
+    { swatchClass: "calendar-weekend", label: m.team_legend_weekend() },
+    { swatchClass: "event-holiday-full", label: m.team_legend_vacation() },
+    { swatchClass: "event-ill-full", label: m.team_legend_sick() },
+    { swatchClass: "event-business-full", label: m.team_legend_business() },
+    { swatchClass: "event-course-full", label: m.team_legend_training() },
+    { swatchClass: "event-recurring-full", label: m.team_legend_weekly_off() },
+    { swatchClass: "event-birthday-full", label: m.team_legend_birthday() },
+    { swatchClass: "event-in-full", label: m.team_legend_in_office() },
+    { swatchClass: "event-other-full", label: m.team_legend_other() },
+    { swatchClass: "event-weekend-full", label: m.team_legend_weekend_event() },
+    {
+      swatchClass: "event-holiday-full calendar-half-am",
+      glyph: HALF_DAY_GLYPH.am,
+      label: m.team_legend_half_am(),
+    },
+    {
+      swatchClass: "event-holiday-full calendar-half-pm",
+      glyph: HALF_DAY_GLYPH.pm,
+      label: m.team_legend_half_pm(),
+    },
+  ];
 }
 
 /**
@@ -83,6 +148,7 @@ export function TeamScheduleView() {
   const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
 
   // Date range for calendar (default: current month ± 1 month)
   const [startMonth, setStartMonth] = useState(() => dayjs().subtract(1, "month").startOf("month"));
@@ -234,6 +300,46 @@ export function TeamScheduleView() {
     return groups;
   }, [dateRange]);
 
+  // Events per member per day, over the range plus one day either side so a
+  // range that continues past the edge is still recognised as continuing.
+  const eventsByMember = useMemo(() => {
+    const index = new Map<TeamMemberHdayData, Map<string, HdayEvent[]>>();
+    const first = dateRange[0];
+    const last = dateRange[dateRange.length - 1];
+    if (!teamData || !first || !last) return index;
+    const padded = [first.subtract(1, "day"), ...dateRange, last.add(1, "day")];
+    for (const section of teamData.sections) {
+      for (const member of section.members) {
+        index.set(member, indexEventsByDate(member.events, padded));
+      }
+    }
+    return index;
+  }, [teamData, dateRange]);
+
+  // Bring today into view whenever the grid (re)appears or the range changes:
+  // the default range spans three months, so today is otherwise off-screen.
+  // A range that doesn't contain today just starts at the beginning.
+  useEffect(() => {
+    const container = gridScrollRef.current;
+    if (!container) return;
+    const todayHeader = container.querySelector<HTMLElement>('th[aria-current="date"]');
+    const nameColumn = container.querySelector<HTMLElement>(".calendar-name-cell");
+    if (!todayHeader) {
+      container.scrollLeft = 0;
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    const todayRect = todayHeader.getBoundingClientRect();
+    container.scrollLeft = getScrollLeftForColumn({
+      containerLeft: containerRect.left,
+      containerWidth: containerRect.width,
+      currentScrollLeft: container.scrollLeft,
+      columnLeft: todayRect.left,
+      columnWidth: todayRect.width,
+      stickyWidth: nameColumn?.getBoundingClientRect().width ?? 0,
+    });
+  }, [teamData, dateRange]);
+
   // This is normally unreachable because TimeOffView only exposes the Team tab
   // after a helper is configured. Keep a guard for direct rendering and stale state.
   if (!helperBaseUrl) {
@@ -246,18 +352,22 @@ export function TeamScheduleView() {
     );
   }
 
+  const legendItems = getLegendItems();
+
   return (
     <div className="team-schedule-view py-3">
       <Card className="mb-3">
-        <Card.Body>
-          <Card.Title>
-            <i className="bi bi-people me-2" aria-hidden="true"></i>
-            {m.team_viewer_title()}
-          </Card.Title>
-          <Card.Text className="text-muted small mb-3">{m.team_viewer_desc()}</Card.Text>
+        <Card.Header>
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 className="mb-0">
+              <i
+                className={`bi ${teamData ? "bi-building" : "bi-people"} me-2`}
+                aria-hidden="true"
+              ></i>
+              {teamData ? teamData.name : m.team_viewer_title()}
+            </h5>
 
-          <Form onSubmit={handleSubmit}>
-            <div className="d-flex gap-2 align-items-start">
+            <Form onSubmit={handleSubmit} className="d-flex gap-2 flex-grow-1 team-id-form">
               <Form.Group className="flex-grow-1">
                 <Form.Label htmlFor="team-id-input" className="visually-hidden">
                   {m.team_id_label()}
@@ -265,6 +375,7 @@ export function TeamScheduleView() {
                 <Form.Control
                   id="team-id-input"
                   type="text"
+                  size="sm"
                   placeholder={m.team_id_placeholder()}
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
@@ -272,7 +383,12 @@ export function TeamScheduleView() {
                   aria-required="true"
                 />
               </Form.Group>
-              <Button type="submit" variant="primary" disabled={isLoading || !teamId.trim()}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={isLoading || !teamId.trim()}
+              >
                 {isLoading ? (
                   <>
                     <Spinner animation="border" size="sm" className="me-2" />
@@ -285,49 +401,41 @@ export function TeamScheduleView() {
                   </>
                 )}
               </Button>
-            </div>
-          </Form>
-        </Card.Body>
-      </Card>
+            </Form>
 
-      {error && (
-        <Alert variant="danger" dismissible onClose={() => setError(null)}>
-          <Alert.Heading>{m.error()}</Alert.Heading>
-          <p className="mb-0">{error}</p>
-        </Alert>
-      )}
+            {teamData && (
+              <MonthNavigationButtonGroup
+                isCurrent={
+                  startMonth.isSame(dayjs().subtract(1, "month").startOf("month"), "day") &&
+                  endMonth.isSame(dayjs().add(1, "month").endOf("month"), "day")
+                }
+                onPrevious={() => {
+                  setStartMonth(startMonth.subtract(1, "month"));
+                  setEndMonth(endMonth.subtract(1, "month"));
+                }}
+                onCurrent={() => {
+                  setStartMonth(dayjs().subtract(1, "month").startOf("month"));
+                  setEndMonth(dayjs().add(1, "month").endOf("month"));
+                }}
+                onNext={() => {
+                  setStartMonth(startMonth.add(1, "month"));
+                  setEndMonth(endMonth.add(1, "month"));
+                }}
+                displayLabel={`${startMonth.format("MMM YYYY")} - ${endMonth.format("MMM YYYY")}`}
+              />
+            )}
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {error && (
+            <Alert variant="danger" dismissible onClose={() => setError(null)}>
+              <Alert.Heading>{m.error()}</Alert.Heading>
+              <p className="mb-0">{error}</p>
+            </Alert>
+          )}
 
-      {teamData && (
-        <>
-          <Card className="mb-3">
-            <Card.Header>
-              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 className="mb-0">
-                  <i className="bi bi-building me-2" aria-hidden="true"></i>
-                  {teamData.name}
-                </h5>
-                <MonthNavigationButtonGroup
-                  isCurrent={
-                    startMonth.isSame(dayjs().subtract(1, "month").startOf("month"), "day") &&
-                    endMonth.isSame(dayjs().add(1, "month").endOf("month"), "day")
-                  }
-                  onPrevious={() => {
-                    setStartMonth(startMonth.subtract(1, "month"));
-                    setEndMonth(endMonth.subtract(1, "month"));
-                  }}
-                  onCurrent={() => {
-                    setStartMonth(dayjs().subtract(1, "month").startOf("month"));
-                    setEndMonth(dayjs().add(1, "month").endOf("month"));
-                  }}
-                  onNext={() => {
-                    setStartMonth(startMonth.add(1, "month"));
-                    setEndMonth(endMonth.add(1, "month"));
-                  }}
-                  displayLabel={`${startMonth.format("MMM YYYY")} - ${endMonth.format("MMM YYYY")}`}
-                />
-              </div>
-            </Card.Header>
-            <Card.Body>
+          {teamData ? (
+            <>
               <h6 className="mb-3">
                 {m.team_members_heading({ count: String(teamData.members.length) })}
                 <span className="text-muted small ms-2">
@@ -335,7 +443,7 @@ export function TeamScheduleView() {
                 </span>
               </h6>
 
-              <div className="table-responsive">
+              <div className="table-responsive" ref={gridScrollRef}>
                 <table className="team-calendar-grid" cellSpacing="0" cellPadding="1">
                   <thead>
                     {/* Month header row */}
@@ -345,7 +453,7 @@ export function TeamScheduleView() {
                       </th>
                       {monthGroups.map((group, idx) => (
                         <th key={idx} className="calendar-month-header" colSpan={group.colspan}>
-                          {group.month}
+                          <span className="calendar-month-label">{group.month}</span>
                         </th>
                       ))}
                     </tr>
@@ -357,16 +465,9 @@ export function TeamScheduleView() {
                         return (
                           <th
                             key={date.format("YYYY-MM-DD")}
-                            className="calendar-day-header"
-                            style={{
-                              background: isToday
-                                ? "var(--wt-team-cal-today)"
-                                : isWeekend
-                                  ? "var(--wt-team-cal-weekend)"
-                                  : undefined,
-                              opacity: isWeekend && !isToday ? 0.6 : 1,
-                            }}
+                            className={`calendar-day-header${isToday ? " is-today" : isWeekend ? " is-weekend" : ""}`}
                             title={date.format("ddd, MMM D")}
+                            aria-current={isToday ? "date" : undefined}
                           >
                             {date.format("D")}
                           </th>
@@ -430,35 +531,59 @@ export function TeamScheduleView() {
                             <tr key={member.username} className="calendar-member-row">
                               <td className="calendar-name-cell">
                                 <OverlayTrigger placement="right" overlay={tooltip}>
-                                  <span className="member-name">{member.display_name}</span>
+                                  <span className="member-name" tabIndex={0}>
+                                    {member.display_name}
+                                  </span>
                                 </OverlayTrigger>
                               </td>
                               {dateRange.map((date) => {
-                                const events = getEventsForDate(member, date);
+                                const memberEvents = eventsByMember.get(member);
+                                const events = memberEvents?.get(date.format("YYYY-MM-DD")) ?? [];
                                 const isWeekend = date.day() === 0 || date.day() === 6;
                                 const isToday = date.isSame(dayjs(), "day");
 
                                 let cellClass = "calendar-day-cell";
-                                let content = "\u00A0"; // Non-breaking space
-                                let isHalfDay = false;
+                                if (isWeekend) cellClass += " on-weekend";
+                                let content: ReactNode = "\u00A0"; // Non-breaking space
 
-                                if (events.length > 0) {
+                                if (events.length === 1) {
                                   const event = events[0];
                                   if (event) {
-                                    // Check for half-day
-                                    isHalfDay =
-                                      event.flags !== undefined &&
-                                      (event.flags.includes("half_am") ||
-                                        event.flags.includes("half_pm"));
-
-                                    // Use first event if multiple
-                                    cellClass += ` ${getEventColorClass(event.flags, event.type)}`;
-
-                                    // Show symbol for half-day events
-                                    if (isHalfDay) {
-                                      content = "½"; // Half-day indicator
+                                    cellClass += ` ${getGridColorClass(event)}`;
+                                    const half = getHalfDay(event);
+                                    if (half) {
+                                      cellClass += ` calendar-half-${half}`;
+                                      content = HALF_DAY_GLYPH[half];
+                                    }
+                                    // Cap the first and last day of a range so it reads as one
+                                    // block while every cell keeps its border.
+                                    if (event.type === "range") {
+                                      const previous = memberEvents?.get(
+                                        date.subtract(1, "day").format("YYYY-MM-DD"),
+                                      );
+                                      const next = memberEvents?.get(
+                                        date.add(1, "day").format("YYYY-MM-DD"),
+                                      );
+                                      if (!previous?.includes(event)) cellClass += " range-start";
+                                      if (!next?.includes(event)) cellClass += " range-end";
                                     }
                                   }
+                                } else if (events.length > 1) {
+                                  // Several events on one day: a stripe each, so none is hidden.
+                                  cellClass += " calendar-multi";
+                                  content = (
+                                    <span className="calendar-cell-stack">
+                                      {events.map((event, index) => {
+                                        const half = getHalfDay(event);
+                                        return (
+                                          <span
+                                            key={index}
+                                            className={`calendar-cell-segment ${getGridColorClass(event)}${half ? ` calendar-half-${half}` : ""}`}
+                                          />
+                                        );
+                                      })}
+                                    </span>
+                                  );
                                 } else if (isWeekend) {
                                   cellClass += " calendar-weekend";
                                 } else {
@@ -469,18 +594,77 @@ export function TeamScheduleView() {
                                   cellClass += " calendar-today";
                                 }
 
+                                const dateKey = date.format("YYYY-MM-DD");
+
+                                if (events.length === 0) {
+                                  return (
+                                    <td
+                                      key={dateKey}
+                                      className={cellClass}
+                                      data-date={dateKey}
+                                      title={date.format("MMM D")}
+                                    >
+                                      {content}
+                                    </td>
+                                  );
+                                }
+
+                                // Cells with events are focusable and open a popover on hover,
+                                // focus or tap, so the details don't depend on colour or a mouse.
+                                const described = events.map(describeEvent);
+                                const dateLabel = date.format("ddd, MMM D YYYY");
                                 return (
-                                  <td
-                                    key={date.format("YYYY-MM-DD")}
-                                    className={cellClass}
-                                    title={
-                                      events.length > 0
-                                        ? `${date.format("MMM D")}: ${events.map((e) => e.title || "Event").join(", ")}`
-                                        : date.format("MMM D")
+                                  <OverlayTrigger
+                                    key={dateKey}
+                                    placement="top"
+                                    trigger={["hover", "focus"]}
+                                    overlay={
+                                      <Popover id={`cell-${member.username}-${dateKey}`}>
+                                        <Popover.Header as="h6">
+                                          {member.display_name}
+                                          <span className="d-block fw-normal text-muted small">
+                                            {dateLabel}
+                                          </span>
+                                        </Popover.Header>
+                                        <Popover.Body>
+                                          {described.map((item, index) => (
+                                            <div
+                                              key={index}
+                                              className="d-flex align-items-start gap-2 mb-1"
+                                            >
+                                              <span
+                                                className={`team-popover-chip ${item.colorClass}`}
+                                                aria-hidden="true"
+                                              ></span>
+                                              <span>
+                                                <strong>{item.typeLabel}</strong>
+                                                {item.halfLabel && (
+                                                  <span className="text-muted">
+                                                    {" "}
+                                                    · {item.halfLabel}
+                                                  </span>
+                                                )}
+                                                {item.title && (
+                                                  <span className="d-block text-muted small">
+                                                    {item.title}
+                                                  </span>
+                                                )}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </Popover.Body>
+                                      </Popover>
                                     }
                                   >
-                                    {content}
-                                  </td>
+                                    <td
+                                      className={cellClass}
+                                      data-date={dateKey}
+                                      tabIndex={0}
+                                      aria-label={`${member.display_name}, ${dateLabel}: ${described.map((item) => item.text).join("; ")}`}
+                                    >
+                                      {content}
+                                    </td>
+                                  </OverlayTrigger>
                                 );
                               })}
                             </tr>
@@ -491,87 +675,37 @@ export function TeamScheduleView() {
                   </tbody>
                 </table>
               </div>
-            </Card.Body>
-          </Card>
-
-          {/* Legend */}
-          <Card className="mb-3">
-            <Card.Header>
-              <h6 className="mb-0">{m.team_legend_heading()}</h6>
-            </Card.Header>
-            <Card.Body>
-              <div className="row g-2">
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box calendar-available"></div>
-                    <span>{m.team_legend_available()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-holiday-full"></div>
-                    <span>{m.team_legend_vacation()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-ill-full"></div>
-                    <span>{m.team_legend_sick()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-business-full"></div>
-                    <span>{m.team_legend_business()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-course-full"></div>
-                    <span>{m.team_legend_training()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-recurring-full"></div>
-                    <span>{m.team_legend_weekly_off()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-birthday-full"></div>
-                    <span>{m.team_legend_birthday()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box calendar-weekend"></div>
-                    <span>{m.team_legend_weekend()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-in-full"></div>
-                    <span>{m.team_legend_in_office()}</span>
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="fw-bold fs-5">½</span>
-                    <span>{m.team_legend_half_day()}</span>
-                  </div>
-                </div>
+            </>
+          ) : (
+            !error &&
+            !isLoading && (
+              <div className="text-center py-4">
+                <i className="bi bi-inbox display-4 text-muted mb-2 d-block" aria-hidden="true"></i>
+                <p className="text-muted mb-0">{m.team_empty_state()}</p>
               </div>
-            </Card.Body>
-          </Card>
-        </>
-      )}
+            )
+          )}
+        </Card.Body>
+      </Card>
 
-      {!teamData && !error && !isLoading && (
-        <Card className="text-center py-5">
+      {teamData && (
+        <Card className="mb-3">
+          <Card.Header>
+            <h6 className="mb-0">{m.team_legend_heading()}</h6>
+          </Card.Header>
           <Card.Body>
-            <i className="bi bi-inbox display-1 text-muted mb-3 d-block" aria-hidden="true"></i>
-            <p className="text-muted">{m.team_empty_state()}</p>
+            <div className="row g-2">
+              {legendItems.map((item) => (
+                <div key={item.swatchClass} className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className={`legend-color-box ${item.swatchClass}`} aria-hidden="true">
+                      {item.glyph}
+                    </div>
+                    <span>{item.label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </Card.Body>
         </Card>
       )}

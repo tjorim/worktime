@@ -365,7 +365,7 @@
 /* ============================================================================
    EVENT INDICATORS & BADGES
    ============================================================================
-   Colors match EVENT_COLORS in parser.ts for time-off events
+   Event colours come from the palette in _variables.scss (--wt-event-*)
    ========================================================================= */
 
 .event-indicators {
@@ -384,180 +384,20 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* Event type colors — text color chosen per background for WCAG AA contrast */
-.event-holiday-full {
-  background-color: #ec0000;
-  color: #fff;
+/* Event type colours. The values live in _variables.scss (--wt-event-*, light and dark);
+   these classes only apply them, so the theme switch needs no per-class overrides. */
+@each $type in (holiday, business, course, in, weekend, recurring, birthday, ill, other) {
+  @each $variant in (full, half) {
+    .event-#{$type}-#{$variant} {
+      background-color: var(--wt-event-#{$type}-#{$variant}-bg);
+      color: var(--wt-event-#{$type}-#{$variant}-fg);
+    }
+  }
 }
-.event-holiday-half {
-  background-color: #ff8a8a;
-  color: #000;
-}
-.event-business-full {
-  background-color: #ff9500;
-  color: #000;
-}
-.event-business-half {
-  background-color: #ffc04d;
-  color: #000;
-}
-.event-course-full {
-  background-color: #d9ad00;
-  color: #000;
-}
-.event-course-half {
-  background-color: #f0d04d;
-  color: #000;
-}
-.event-in-full {
-  background-color: #008899;
-  color: #000;
-}
-.event-in-half {
-  background-color: #00b8cc;
-  color: #000;
-}
-.event-weekend-full {
-  background-color: #990099;
-  color: #fff;
-}
-.event-weekend-half {
-  background-color: #cc66cc;
-  color: #000;
-}
-.event-recurring-full {
-  background-color: #3d6b8c;
-  color: #fff;
-}
-.event-recurring-half {
-  background-color: #7aa8c4;
-  color: #000;
-}
-.event-birthday-full {
-  background-color: #0000cc;
-  color: #fff;
-}
-.event-birthday-half {
-  background-color: #6666ff;
-  color: #000;
-}
-.event-ill-full {
-  background-color: #336600;
-  color: #fff;
-}
-.event-ill-half {
-  background-color: #669933;
-  color: #000;
-}
-.event-other-full {
-  background-color: #008b8b;
-  color: #000;
-}
-.event-other-half {
-  background-color: #4db8b8;
-  color: #000;
-}
+
 .event-unknown {
-  background-color: #ccc;
-  color: #000;
-}
-
-/* Dark mode event color overrides */
-[data-bs-theme="dark"] {
-  .event-holiday-full {
-    background-color: #6b2020;
-    color: #ffb3b3;
-  }
-
-  .event-holiday-half {
-    background-color: #8b3030;
-    color: #ffcccc;
-  }
-
-  .event-business-full {
-    background-color: #6b4820;
-    color: #ffd699;
-  }
-
-  .event-business-half {
-    background-color: #8b5e30;
-    color: #ffe4b3;
-  }
-
-  .event-course-full {
-    background-color: #6b5b20;
-    color: #ffe699;
-  }
-
-  .event-course-half {
-    background-color: #8b7530;
-    color: #ffefb3;
-  }
-
-  .event-in-full {
-    background-color: #004d5c;
-    color: #99e6f0;
-  }
-
-  .event-in-half {
-    background-color: #006675;
-    color: #b3ecf5;
-  }
-
-  .event-weekend-full {
-    background-color: #4d204d;
-    color: #e699e6;
-  }
-
-  .event-weekend-half {
-    background-color: #663066;
-    color: #edb3ed;
-  }
-
-  .event-recurring-full {
-    background-color: #1a3d57;
-    color: #99c2d9;
-  }
-
-  .event-recurring-half {
-    background-color: #2a4f6e;
-    color: #b3d4e6;
-  }
-
-  .event-birthday-full {
-    background-color: #20204d;
-    color: #b3b3ff;
-  }
-
-  .event-birthday-half {
-    background-color: #303066;
-    color: #ccccff;
-  }
-
-  .event-ill-full {
-    background-color: #2d4020;
-    color: #b3d699;
-  }
-
-  .event-ill-half {
-    background-color: #3d5530;
-    color: #c6e0b3;
-  }
-
-  .event-other-full {
-    background-color: #204d4d;
-    color: #99e6e6;
-  }
-
-  .event-other-half {
-    background-color: #306666;
-    color: #b3eded;
-  }
-
-  .event-unknown {
-    background-color: #555;
-    color: #ccc;
-  }
+  background-color: var(--wt-event-unknown-bg);
+  color: var(--wt-event-unknown-fg);
 }
 
 /* ============================================================================
