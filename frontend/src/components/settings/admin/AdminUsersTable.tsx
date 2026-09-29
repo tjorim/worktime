@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import Table from "react-bootstrap/Table";
+import { Button } from "@/components/ui/button";
+import { TableSearchInput } from "@/components/shared/TableSearchInput";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
 import { TablePagination } from "@/components/shared/TablePagination";
@@ -127,71 +127,68 @@ export function AdminUsersTable({
 
   return (
     <>
-      <Form.Control
+      <TableSearchInput
         type="search"
-        size="sm"
-        className="mb-2 table-search-input"
+        className="tw:mb-2"
         placeholder={m.account_admin_users_search_placeholder()}
         aria-label={m.account_admin_users_search_aria()}
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      <div className="table-responsive">
-        <Table size="sm" striped hover className="mb-0 align-middle">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <SortableHeaderCell
-                    key={header.id}
-                    header={header}
-                    className={header.column.id === "actions" ? "text-end" : undefined}
-                  />
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {visibleRows.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="text-center text-muted py-3">
-                  {m.account_admin_users_no_results()}
-                </td>
-              </tr>
-            ) : (
-              visibleRows.map((tableRow) => {
-                const user = tableRow.original;
-                return (
-                  <tr key={user.id}>
-                    <td>{user.id}</td>
-                    <td>{user.username}</td>
-                    <td>{user.display_name}</td>
-                    <td>{formatTimestamp(user.created_at)}</td>
-                    <td>{formatTimestamp(user.updated_at)}</td>
-                    <td className="text-end">
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        disabled={currentAccountId === user.id || deletingAdminUserId !== null}
-                        title={
-                          currentAccountId === user.id
-                            ? m.account_admin_users_delete_self_blocked()
-                            : undefined
-                        }
-                        onClick={() => onRequestDelete(user.id)}
-                      >
-                        {deletingAdminUserId === user.id
-                          ? m.account_admin_users_delete_busy()
-                          : m.delete()}
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-      </div>
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <SortableHeaderCell
+                  key={header.id}
+                  header={header}
+                  className={header.column.id === "actions" ? "tw:text-right" : undefined}
+                />
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {visibleRows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="text-center text-muted py-3">
+                {m.account_admin_users_no_results()}
+              </TableCell>
+            </TableRow>
+          ) : (
+            visibleRows.map((tableRow) => {
+              const user = tableRow.original;
+              return (
+                <TableRow key={user.id} className="tw:odd:bg-muted/30">
+                  <TableCell>{user.id}</TableCell>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{user.display_name}</TableCell>
+                  <TableCell>{formatTimestamp(user.created_at)}</TableCell>
+                  <TableCell>{formatTimestamp(user.updated_at)}</TableCell>
+                  <TableCell className="tw:text-right">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={currentAccountId === user.id || deletingAdminUserId !== null}
+                      title={
+                        currentAccountId === user.id
+                          ? m.account_admin_users_delete_self_blocked()
+                          : undefined
+                      }
+                      onClick={() => onRequestDelete(user.id)}
+                    >
+                      {deletingAdminUserId === user.id
+                        ? m.account_admin_users_delete_busy()
+                        : m.delete()}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
       <TablePagination
         total={table.getPrePaginatedRowModel().rows.length}
         pageIndex={table.state.pagination.pageIndex}

@@ -14,7 +14,6 @@
   "src/components/status/FlexStartEditor.tsx": ["width"],
   "src/components/wizard/Step9AccountSetup.tsx": ["fontSize"],
   "src/contexts/ToastContext.tsx": ["zIndex"],
-  "src/features/gantt/GanttTableView.tsx": ["backgroundColor", "color"],
   "src/features/timeTracking/DailyTaskList.tsx": [
     "backgroundColor",
     "borderLeft",

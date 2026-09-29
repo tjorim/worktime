@@ -7,6 +7,9 @@
 
 @theme inline {
   --color-*: initial;
+  --color-label: var(--label-bg);
+  --color-label-foreground: var(--label-fg);
+  --color-wt-warning-bg: var(--bs-warning-bg-subtle);
   --color-wt-calendar-time-off-bg: var(--wt-calendar-time-off-bg);
   --color-wt-context-menu-bg: var(--wt-context-menu-bg);
   --color-wt-context-menu-border: var(--wt-context-menu-border);

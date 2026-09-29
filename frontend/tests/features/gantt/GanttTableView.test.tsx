@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GanttTableView } from "@/features/gantt/GanttTableView";
-import { tasksCollection } from "@/db/collections";
+import { labelsCollection, tasksCollection } from "@/db/collections";
 import type { GanttTask } from "@/types/gantt";
 
 function clearTasksCollection() {
@@ -61,6 +61,28 @@ describe("GanttTableView", () => {
     expect(rows[1]).toHaveTextContent("Jun 1, 2026");
     expect(rows[2]).not.toHaveTextContent("2026-06-05");
     expect(rows[2]).toHaveTextContent("Jun 5, 2026");
+  });
+
+  it("passes user-defined label colors through CSS variables", () => {
+    const label = { id: "custom-label", name: "Custom label", color: "#663399" };
+    labelsCollection.insert(label);
+    try {
+      render(
+        <GanttTableView
+          tasks={[{ ...tasks[0]!, label: label.id }]}
+          onTaskClick={vi.fn()}
+          onDeleteTask={vi.fn()}
+        />,
+      );
+      const chip = screen.getByText(label.name);
+      expect(chip.style.getPropertyValue("--label-bg")).toBe(label.color);
+      expect(chip.style.getPropertyValue("--label-fg")).not.toBe("");
+      expect(chip.style.backgroundColor).toBe("");
+      expect(chip.style.color).toBe("");
+      expect(chip).toHaveClass("tw:bg-label", "tw:text-label-foreground");
+    } finally {
+      labelsCollection.delete(label.id);
+    }
   });
 
   it("shows a visible label for tasks with 0% progress", () => {
@@ -310,8 +332,8 @@ describe("GanttTableView", () => {
       await user.click(within(write!).getByRole("button", { name: "Go to Build release" }));
 
       expect(scrollIntoView).toHaveBeenCalled();
-      expect(bodyRows()[0]).toHaveClass("table-warning");
-      expect(bodyRows()[1]).not.toHaveClass("table-warning");
+      expect(bodyRows()[0]).toHaveClass("tw:bg-wt-warning-bg");
+      expect(bodyRows()[1]).not.toHaveClass("tw:bg-wt-warning-bg");
     });
 
     it("clears a search that hides the target, so the jump lands", async () => {
@@ -345,7 +367,7 @@ describe("GanttTableView", () => {
       await user.click(screen.getByRole("button", { name: "Go to Task 01" }));
 
       expect(screen.getByText("Showing 1–20 of 25")).toBeInTheDocument();
-      expect(document.getElementById("gantt-task-row-t-0")).toHaveClass("table-warning");
+      expect(document.getElementById("gantt-task-row-t-0")).toHaveClass("tw:bg-wt-warning-bg");
       expect(scrollIntoView).toHaveBeenCalled();
     });
 
@@ -361,9 +383,9 @@ describe("GanttTableView", () => {
   it("uses classes, not inline styles, for the search box and progress cell", () => {
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
     const search = screen.getByRole("searchbox");
-    expect(search).toHaveClass("table-search-input");
+    expect(search).toHaveClass("tw:max-w-80");
     expect(search).not.toHaveAttribute("style");
-    const progressCells = document.querySelectorAll("td.gantt-progress-cell");
+    const progressCells = document.querySelectorAll("td.tw\\:min-w-32");
     expect(progressCells).toHaveLength(tasks.length);
     progressCells.forEach((cell) => expect(cell).not.toHaveAttribute("style"));
   });
