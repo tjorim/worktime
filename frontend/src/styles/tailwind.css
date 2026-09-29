@@ -88,9 +88,9 @@
   --color-wt-shift-night-text: var(--wt-shift-night-text);
   --color-wt-shift-off: var(--wt-shift-off);
   --color-wt-shift-off-text: var(--wt-shift-off-text);
-  --color-wt-surface-1: var(--wt-surface-1);
-  --color-wt-surface-2: var(--wt-surface-2);
-  --color-wt-surface-3: var(--wt-surface-3);
+  --color-wt-surface-1: var(--wt-surface-1, var(--bs-body-bg));
+  --color-wt-surface-2: var(--wt-surface-2, var(--bs-body-bg));
+  --color-wt-surface-3: var(--wt-surface-3, var(--bs-tertiary-bg));
   --color-wt-team-cal-available: var(--wt-team-cal-available);
   --color-wt-team-cal-today-ring: var(--wt-team-cal-today-ring);
   --color-wt-team-cal-weekend-cell: var(--wt-team-cal-weekend-cell);

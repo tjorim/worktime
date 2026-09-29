@@ -264,3 +264,29 @@ remove allowances as those components migrate, and do not extend them for new co
 Verify new components in light and dark, and run lint, typecheck, tests and build. The
 `tailwind-coexistence.spec.ts` browser test checks a real Bootstrap/Tailwind padding conflict and token
 resolution in both themes.
+
+### Removing the coexistence scaffolding (#1384)
+
+The `tw:` prefix and `legacy` layer are temporary migration scaffolding. As each component migrates,
+delete its unused legacy selectors, regenerate the class list and remove its inline-style allowances.
+Keep the prefix until Bootstrap and all potentially colliding legacy utilities are gone.
+
+The final cleanup is tracked in #1384 and must include:
+
+- Remove Bootstrap, react-bootstrap and Bootstrap Icons, then delete obsolete legacy Sass, the
+  `meta.load-css` wrapper and the `legacy` layer declaration. Keep required third-party styles (for
+  example Schedule-X and Frappe Gantt) in an appropriate layer below utilities.
+- Delete `legacy-classes.json`, `legacy-inline-styles.json`, their generator/helper, the generation and
+  drift-check commands and the associated lint allowances/overrides. Audit CSS-less DOM hooks:
+  remove obsolete hooks or use explicit data attributes for integrations/tests instead of a blanket
+  class allowance. Keep all four shadcn lint rules active without migration exceptions.
+- Remove `prefix(tw)` from both Tailwind imports, clear `tailwind.prefix` in `components.json` and
+  remove the prefix configuration from `@/lib/utils`'s tailwind-merge setup. Update every utility and
+  variant in source and tests together (`tw:px-2` → `px-2`, `tw:dark:bg-background` →
+  `dark:bg-background`), including dynamic class builders; audit for leftover `tw:` references.
+- Replace Bootstrap token dependencies and `data-bs-theme` with the final theme mechanism. Preserve
+  the single event palette source and token aliases. Decide whether to enable Tailwind preflight only
+  after Bootstrap reboot is removed, and verify that base-style change explicitly.
+- Update or replace coexistence-specific tests with final token, dark-variant and class-merging checks,
+  and rewrite this guidance for the final stack. Run lint, formatting, app/test type checks, tests and
+  build; capture the main views in both themes at desktop and mobile sizes.
