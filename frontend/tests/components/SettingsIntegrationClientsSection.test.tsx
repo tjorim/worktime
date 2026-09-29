@@ -258,7 +258,7 @@ describe("Settings integration clients", () => {
     expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Revoke" }));
     await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke" }),
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Revoke" }),
     );
     await waitFor(() => expect(screen.queryByText("wtic_replacement")).not.toBeInTheDocument());
     expect(await screen.findByText("Revoked")).toBeInTheDocument();

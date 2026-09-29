@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ListGroup from "react-bootstrap/ListGroup";
 import ReactSelect from "react-select";
 import { useForm, useSelector } from "@tanstack/react-form";
@@ -192,251 +198,258 @@ export function GanttTaskModal({
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>{modalTitle}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <Form
-          as="form"
-          id="ganttTaskForm"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            setWasValidated(true);
-            void form.handleSubmit();
-          }}
-        >
-          <form.Field
-            name="name"
-            validators={[
-              {
-                run: ({ value }) => (value.trim().length > 0 ? undefined : "required"),
-                triggers: ["change"],
-              },
-            ]}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{modalTitle}</DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          <Form
+            as="form"
+            id="ganttTaskForm"
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              setWasValidated(true);
+              void form.handleSubmit();
+            }}
           >
-            {(field) => (
-              <Form.Group className="mb-3" controlId="ganttTaskName">
-                <Form.Label>{m.gantt_task_name_label()}</Form.Label>
-                <Form.Control
-                  type="text"
-                  required
-                  value={field.value}
-                  isInvalid={wasValidated && field.errors.length > 0}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-                <Form.Control.Feedback type="invalid">
-                  {m.gantt_task_name_required()}
-                </Form.Control.Feedback>
-              </Form.Group>
-            )}
-          </form.Field>
-
-          <form.Field name="label">
-            {(field) => (
-              <Form.Group className="mb-3" controlId="ganttTaskLabel">
-                <Form.Label>{m.form_label()}</Form.Label>
-                <ReactSelect<LabelOption>
-                  unstyled
-                  isClearable
-                  isSearchable
-                  inputId="ganttTaskLabel"
-                  isDisabled={isLabelSelectionDisabled}
-                  placeholder={
-                    isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
-                  }
-                  aria-describedby={isLabelSelectionDisabled ? "ganttTaskLabelHelp" : undefined}
-                  options={labelOptions}
-                  value={selectedLabelOption}
-                  onChange={(selected) => field.handleChange(selected?.value ?? "")}
-                  classNames={bootstrapSelectClassNames}
-                />
-                {isLabelSelectionDisabled ? (
-                  <Form.Text id="ganttTaskLabelHelp" muted>
-                    {m.tt_add_labels_first_help()}
-                  </Form.Text>
-                ) : null}
-              </Form.Group>
-            )}
-          </form.Field>
-
-          <div className="d-flex gap-3 mb-3">
             <form.Field
-              name="start"
+              name="name"
               validators={[
                 {
-                  run: ({ value }) =>
-                    dayjs(value, DATE_FORMAT, true).isValid() ? undefined : "invalid",
+                  run: ({ value }) => (value.trim().length > 0 ? undefined : "required"),
                   triggers: ["change"],
                 },
               ]}
             >
               {(field) => (
-                <Form.Group className="flex-fill" controlId="ganttTaskStart">
-                  <Form.Label>{m.gantt_task_start_label()}</Form.Label>
+                <Form.Group className="mb-3" controlId="ganttTaskName">
+                  <Form.Label>{m.gantt_task_name_label()}</Form.Label>
                   <Form.Control
-                    type="date"
+                    type="text"
                     required
                     value={field.value}
                     isInvalid={wasValidated && field.errors.length > 0}
                     onChange={(event) => field.handleChange(event.target.value)}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {m.gantt_task_start_invalid()}
+                    {m.gantt_task_name_required()}
                   </Form.Control.Feedback>
                 </Form.Group>
               )}
             </form.Field>
-            <form.Field
-              name="end"
-              validators={[
-                {
-                  run: ({ value, formApi }) => {
-                    const start = formApi.state.values.start;
-                    const endDate = dayjs(value, DATE_FORMAT, true);
-                    const valid =
-                      endDate.isValid() && !endDate.isBefore(dayjs(start, DATE_FORMAT, true));
-                    return valid ? undefined : "invalid";
+
+            <form.Field name="label">
+              {(field) => (
+                <Form.Group className="mb-3" controlId="ganttTaskLabel">
+                  <Form.Label>{m.form_label()}</Form.Label>
+                  <ReactSelect<LabelOption>
+                    unstyled
+                    isClearable
+                    isSearchable
+                    inputId="ganttTaskLabel"
+                    isDisabled={isLabelSelectionDisabled}
+                    placeholder={
+                      isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
+                    }
+                    aria-describedby={isLabelSelectionDisabled ? "ganttTaskLabelHelp" : undefined}
+                    options={labelOptions}
+                    value={selectedLabelOption}
+                    onChange={(selected) => field.handleChange(selected?.value ?? "")}
+                    classNames={bootstrapSelectClassNames}
+                  />
+                  {isLabelSelectionDisabled ? (
+                    <Form.Text id="ganttTaskLabelHelp" muted>
+                      {m.tt_add_labels_first_help()}
+                    </Form.Text>
+                  ) : null}
+                </Form.Group>
+              )}
+            </form.Field>
+
+            <div className="d-flex gap-3 mb-3">
+              <form.Field
+                name="start"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      dayjs(value, DATE_FORMAT, true).isValid() ? undefined : "invalid",
+                    triggers: ["change"],
                   },
-                  triggers: ["change"],
-                  watchFields: ["start"],
-                },
-              ]}
-            >
+                ]}
+              >
+                {(field) => (
+                  <Form.Group className="flex-fill" controlId="ganttTaskStart">
+                    <Form.Label>{m.gantt_task_start_label()}</Form.Label>
+                    <Form.Control
+                      type="date"
+                      required
+                      value={field.value}
+                      isInvalid={wasValidated && field.errors.length > 0}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {m.gantt_task_start_invalid()}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                )}
+              </form.Field>
+              <form.Field
+                name="end"
+                validators={[
+                  {
+                    run: ({ value, formApi }) => {
+                      const start = formApi.state.values.start;
+                      const endDate = dayjs(value, DATE_FORMAT, true);
+                      const valid =
+                        endDate.isValid() && !endDate.isBefore(dayjs(start, DATE_FORMAT, true));
+                      return valid ? undefined : "invalid";
+                    },
+                    triggers: ["change"],
+                    watchFields: ["start"],
+                  },
+                ]}
+              >
+                {(field) => (
+                  <Form.Group className="flex-fill" controlId="ganttTaskEnd">
+                    <Form.Label>{m.gantt_task_end_label()}</Form.Label>
+                    <Form.Control
+                      type="date"
+                      required
+                      value={field.value}
+                      isInvalid={wasValidated && field.errors.length > 0}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {m.gantt_task_end_invalid()}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                )}
+              </form.Field>
+            </div>
+
+            <form.Field name="progress">
               {(field) => (
-                <Form.Group className="flex-fill" controlId="ganttTaskEnd">
-                  <Form.Label>{m.gantt_task_end_label()}</Form.Label>
-                  <Form.Control
-                    type="date"
-                    required
-                    value={field.value}
-                    isInvalid={wasValidated && field.errors.length > 0}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                <Form.Group className="mb-3" controlId="ganttTaskProgress">
+                  <Form.Label className="d-flex justify-content-between align-items-center">
+                    <span>{m.gantt_task_progress_label()}</span>
+                    <span className="text-muted small">{field.value ?? 0}%</span>
+                  </Form.Label>
+                  <Form.Range
+                    min={0}
+                    max={100}
+                    value={field.value ?? 0}
+                    onChange={(event) => field.handleChange(Number(event.target.value))}
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {m.gantt_task_end_invalid()}
-                  </Form.Control.Feedback>
                 </Form.Group>
               )}
             </form.Field>
-          </div>
 
-          <form.Field name="progress">
-            {(field) => (
-              <Form.Group className="mb-3" controlId="ganttTaskProgress">
-                <Form.Label className="d-flex justify-content-between align-items-center">
-                  <span>{m.gantt_task_progress_label()}</span>
-                  <span className="text-muted small">{field.value ?? 0}%</span>
-                </Form.Label>
-                <Form.Range
-                  min={0}
-                  max={100}
-                  value={field.value ?? 0}
-                  onChange={(event) => field.handleChange(Number(event.target.value))}
-                />
-              </Form.Group>
-            )}
-          </form.Field>
+            <Form.Group className="mb-3" controlId="ganttTaskDependencies">
+              <Form.Label>{m.gantt_task_deps_label()}</Form.Label>
+              <ReactSelect<DepOption, true>
+                isMulti
+                unstyled
+                inputId="ganttTaskDependencies"
+                placeholder={m.gantt_task_deps_placeholder()}
+                options={depOptions}
+                value={depValue}
+                onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
+                classNames={{
+                  ...bootstrapSelectClassNames,
+                  control: () => "form-control d-flex flex-wrap h-auto gap-1 py-1",
+                }}
+              />
+            </Form.Group>
 
-          <Form.Group className="mb-3" controlId="ganttTaskDependencies">
-            <Form.Label>{m.gantt_task_deps_label()}</Form.Label>
-            <ReactSelect<DepOption, true>
-              isMulti
-              unstyled
-              inputId="ganttTaskDependencies"
-              placeholder={m.gantt_task_deps_placeholder()}
-              options={depOptions}
-              value={depValue}
-              onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
-              classNames={{
-                ...bootstrapSelectClassNames,
-                control: () => "form-control d-flex flex-wrap h-auto gap-1 py-1",
-              }}
-            />
-          </Form.Group>
-
-          <form.Field name="notes">
-            {(field) => (
-              <Form.Group className="mb-1" controlId="ganttTaskNotes">
-                <Form.Label>{m.gantt_task_notes_label()}</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={field.value ?? ""}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-              </Form.Group>
-            )}
-          </form.Field>
-        </Form>
-        {task && (
-          <section className="border-top mt-3 pt-3" aria-labelledby="ganttLoggedTimeHeading">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <h6 id="ganttLoggedTimeHeading" className="mb-0">
-                {m.gantt_logged_time_heading()}
-              </h6>
-              <span className="text-muted small">
-                {m.gantt_logged_total({ duration: formatLoggedDuration(totalLoggedMinutes) })}
-              </span>
-            </div>
-            {loggedEntries.length === 0 ? (
-              <p className="text-muted small mb-0">{m.gantt_logged_empty()}</p>
-            ) : (
-              <ListGroup variant="flush">
-                {loggedEntries.map((entry) => (
-                  <ListGroup.Item
-                    key={entry.id}
-                    className="px-0 py-2 d-flex justify-content-between align-items-center gap-3"
-                  >
-                    <span>
-                      <span className="d-block">{entry.text}</span>
-                      <span className="text-muted small">
-                        {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} ·{" "}
-                        {dayjs(entry.startTime).format("YYYY-MM-DD")}
+            <form.Field name="notes">
+              {(field) => (
+                <Form.Group className="mb-1" controlId="ganttTaskNotes">
+                  <Form.Label>{m.gantt_task_notes_label()}</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={field.value ?? ""}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  />
+                </Form.Group>
+              )}
+            </form.Field>
+          </Form>
+          {task && (
+            <section className="border-top mt-3 pt-3" aria-labelledby="ganttLoggedTimeHeading">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <h6 id="ganttLoggedTimeHeading" className="mb-0">
+                  {m.gantt_logged_time_heading()}
+                </h6>
+                <span className="text-muted small">
+                  {m.gantt_logged_total({ duration: formatLoggedDuration(totalLoggedMinutes) })}
+                </span>
+              </div>
+              {loggedEntries.length === 0 ? (
+                <p className="text-muted small mb-0">{m.gantt_logged_empty()}</p>
+              ) : (
+                <ListGroup variant="flush">
+                  {loggedEntries.map((entry) => (
+                    <ListGroup.Item
+                      key={entry.id}
+                      className="px-0 py-2 d-flex justify-content-between align-items-center gap-3"
+                    >
+                      <span>
+                        <span className="d-block">{entry.text}</span>
+                        <span className="text-muted small">
+                          {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} ·{" "}
+                          {dayjs(entry.startTime).format("YYYY-MM-DD")}
+                        </span>
                       </span>
-                    </span>
-                    <span className="d-flex align-items-center gap-2 flex-shrink-0">
-                      <span className="text-nowrap">
-                        {formatLoggedDuration(entry.loggedMinutes)}
+                      <span className="d-flex align-items-center gap-2 flex-shrink-0">
+                        <span className="text-nowrap">
+                          {formatLoggedDuration(entry.loggedMinutes)}
+                        </span>
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          aria-label={m.gantt_logged_edit_entry_aria({ name: entry.text })}
+                          onClick={() => handleEditEntry(entry.id)}
+                        >
+                          <i className="bi bi-pencil" aria-hidden="true"></i>
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          aria-label={m.gantt_logged_unlink_entry_aria({ name: entry.text })}
+                          onClick={() => handleUnlinkEntry(entry)}
+                        >
+                          <i className="bi bi-x-circle" aria-hidden="true"></i>
+                        </Button>
                       </span>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        aria-label={m.gantt_logged_edit_entry_aria({ name: entry.text })}
-                        onClick={() => handleEditEntry(entry.id)}
-                      >
-                        <i className="bi bi-pencil" aria-hidden="true"></i>
-                      </Button>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        aria-label={m.gantt_logged_unlink_entry_aria({ name: entry.text })}
-                        onClick={() => handleUnlinkEntry(entry)}
-                      >
-                        <i className="bi bi-x-circle" aria-hidden="true"></i>
-                      </Button>
-                    </span>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            )}
-          </section>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        {task && onDelete && (
-          <Button variant="outline-danger" onClick={onDelete} className="me-auto">
-            {m.gantt_task_delete_btn()}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
+            </section>
+          )}
+        </div>
+        <DialogFooter>
+          {task && onDelete && (
+            <Button variant="outline-danger" onClick={onDelete} className="me-auto">
+              {m.gantt_task_delete_btn()}
+            </Button>
+          )}
+          <Button variant="outline-secondary" onClick={onHide}>
+            {m.cancel()}
           </Button>
-        )}
-        <Button variant="outline-secondary" onClick={onHide}>
-          {m.cancel()}
-        </Button>
-        <Button variant="primary" type="submit" form="ganttTaskForm">
-          {submitLabel}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          <Button variant="primary" type="submit" form="ganttTaskForm">
+            {submitLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

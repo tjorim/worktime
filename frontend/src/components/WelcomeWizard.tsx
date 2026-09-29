@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Modal from "react-bootstrap/Modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -244,145 +244,149 @@ export function WelcomeWizard({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      backdrop="static"
-      centered
-      size="lg"
-      onEntered={handleModalEntered}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+      disablePointerDismissal
+      onOpenChangeComplete={(open) => {
+        if (open) handleModalEntered();
+      }}
     >
-      <Modal.Header>
-        <Modal.Title>{getStepTitle()}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {/* Progress bar */}
-        <div className="mb-4">
-          <ProgressBar
-            now={getProgressPercentage()}
-            aria-label={m.wizard_onboarding_progress({
-              step: String(getStepIndex(effectiveStep, wizardContext)),
-              total: String(getTotalSteps(wizardContext)),
-            })}
-            variant="primary"
-            style={{ height: "4px" }}
-            className="mb-2"
-          />
-          <div className="small text-muted">
-            {m.wizard_step_of({
-              step: String(getStepIndex(effectiveStep, wizardContext)),
-              total: String(getTotalSteps(wizardContext)),
-            })}
+      <DialogContent size="lg" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>{getStepTitle()}</DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          {/* Progress bar */}
+          <div className="mb-4">
+            <ProgressBar
+              now={getProgressPercentage()}
+              aria-label={m.wizard_onboarding_progress({
+                step: String(getStepIndex(effectiveStep, wizardContext)),
+                total: String(getTotalSteps(wizardContext)),
+              })}
+              variant="primary"
+              style={{ height: "4px" }}
+              className="mb-2"
+            />
+            <div className="small text-muted">
+              {m.wizard_step_of({
+                step: String(getStepIndex(effectiveStep, wizardContext)),
+                total: String(getTotalSteps(wizardContext)),
+              })}
+            </div>
           </div>
+          {isLoading ? (
+            <div className="text-center py-5" role="status">
+              <Spinner animation="border" aria-hidden="true" />
+              <div className="mt-3 text-muted">{m.wizard_setting_up()}</div>
+            </div>
+          ) : (
+            <>
+              {effectiveStep === "welcome" && (
+                <Step1Welcome
+                  onDefer={onDefer}
+                  onHide={onHide}
+                  onNext={nextStep}
+                  onSignIn={triggerLogin}
+                  isAuthenticated={isAuthenticated}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "features" && (
+                <Step2Features
+                  onPrev={prevStep}
+                  onNext={nextStep}
+                  firstButtonRef={firstButtonRef}
+                  settingsLocationText={SETTINGS_LOCATION_TEXT}
+                />
+              )}
+              {effectiveStep === "schedule-selection" && (
+                <Step3ScheduleSelection
+                  selectedSchedule={selectedSchedule}
+                  onScheduleChange={setSelectedSchedule}
+                  onPrev={prevStep}
+                  onNext={nextStep}
+                  isChangeFlow={isChangeFlow}
+                  shouldShowTeamSelection={shouldShowTeamSelection}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "team-selection" && (
+                <Step4TeamSelection
+                  teams={teams}
+                  onTeamSelect={handleTeamSelect}
+                  onSkip={handleSkip}
+                  onPrev={prevStep}
+                  isChangeFlow={isChangeFlow}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "timeoff-setup" && (
+                <Step5TimeOffSetup
+                  isEnabled={isTimeOffEnabled}
+                  onToggle={setIsTimeOffEnabled}
+                  onPrev={prevStep}
+                  onNext={handleTimeOffComplete}
+                  isLastStep={isLastStep}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "time-tracking-setup" && (
+                <Step6TimeTrackingSetup
+                  isEnabled={isTimeTrackingEnabled}
+                  onToggle={setIsTimeTrackingEnabled}
+                  onPrev={prevStep}
+                  onComplete={handleTimeTrackingComplete}
+                  isLastStep={isLastStep}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "gantt-setup" && (
+                <Step7GanttSetup
+                  isEnabled={isGanttEnabled}
+                  onToggle={setIsGanttEnabled}
+                  onPrev={prevStep}
+                  onNext={nextStep}
+                  isLastStep={isLastStep}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "work-location-setup" && (
+                <Step8WorkLocationSetup
+                  isEnabled={isCrossBorderEnabled}
+                  onToggle={setIsCrossBorderEnabled}
+                  homeCountry={homeCountry}
+                  officeCountry={officeCountry}
+                  onHomeCountryChange={setHomeCountry}
+                  onOfficeCountryChange={setOfficeCountry}
+                  onPrev={prevStep}
+                  onComplete={handleWorkLocationComplete}
+                  isLastStep={isLastStep}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+              {effectiveStep === "account-setup" && (
+                <Step9AccountSetup
+                  isAuthenticated={isAuthenticated}
+                  displayName={displayName}
+                  onConnectAccount={() => {
+                    // Complete the wizard without marking the flag — the useEffect in App.tsx
+                    // sets accountSyncAnnouncementSeen: true when the user returns authenticated.
+                    handleAccountSetupComplete(undefined);
+                    triggerSignup();
+                  }}
+                  onSkip={() => handleAccountSetupComplete(isAuthenticated)}
+                  onPrev={prevStep}
+                  firstButtonRef={firstButtonRef}
+                />
+              )}
+            </>
+          )}
         </div>
-        {isLoading ? (
-          <div className="text-center py-5" role="status">
-            <Spinner animation="border" aria-hidden="true" />
-            <div className="mt-3 text-muted">{m.wizard_setting_up()}</div>
-          </div>
-        ) : (
-          <>
-            {effectiveStep === "welcome" && (
-              <Step1Welcome
-                onDefer={onDefer}
-                onHide={onHide}
-                onNext={nextStep}
-                onSignIn={triggerLogin}
-                isAuthenticated={isAuthenticated}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "features" && (
-              <Step2Features
-                onPrev={prevStep}
-                onNext={nextStep}
-                firstButtonRef={firstButtonRef}
-                settingsLocationText={SETTINGS_LOCATION_TEXT}
-              />
-            )}
-            {effectiveStep === "schedule-selection" && (
-              <Step3ScheduleSelection
-                selectedSchedule={selectedSchedule}
-                onScheduleChange={setSelectedSchedule}
-                onPrev={prevStep}
-                onNext={nextStep}
-                isChangeFlow={isChangeFlow}
-                shouldShowTeamSelection={shouldShowTeamSelection}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "team-selection" && (
-              <Step4TeamSelection
-                teams={teams}
-                onTeamSelect={handleTeamSelect}
-                onSkip={handleSkip}
-                onPrev={prevStep}
-                isChangeFlow={isChangeFlow}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "timeoff-setup" && (
-              <Step5TimeOffSetup
-                isEnabled={isTimeOffEnabled}
-                onToggle={setIsTimeOffEnabled}
-                onPrev={prevStep}
-                onNext={handleTimeOffComplete}
-                isLastStep={isLastStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "time-tracking-setup" && (
-              <Step6TimeTrackingSetup
-                isEnabled={isTimeTrackingEnabled}
-                onToggle={setIsTimeTrackingEnabled}
-                onPrev={prevStep}
-                onComplete={handleTimeTrackingComplete}
-                isLastStep={isLastStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "gantt-setup" && (
-              <Step7GanttSetup
-                isEnabled={isGanttEnabled}
-                onToggle={setIsGanttEnabled}
-                onPrev={prevStep}
-                onNext={nextStep}
-                isLastStep={isLastStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "work-location-setup" && (
-              <Step8WorkLocationSetup
-                isEnabled={isCrossBorderEnabled}
-                onToggle={setIsCrossBorderEnabled}
-                homeCountry={homeCountry}
-                officeCountry={officeCountry}
-                onHomeCountryChange={setHomeCountry}
-                onOfficeCountryChange={setOfficeCountry}
-                onPrev={prevStep}
-                onComplete={handleWorkLocationComplete}
-                isLastStep={isLastStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "account-setup" && (
-              <Step9AccountSetup
-                isAuthenticated={isAuthenticated}
-                displayName={displayName}
-                onConnectAccount={() => {
-                  // Complete the wizard without marking the flag — the useEffect in App.tsx
-                  // sets accountSyncAnnouncementSeen: true when the user returns authenticated.
-                  handleAccountSetupComplete(undefined);
-                  triggerSignup();
-                }}
-                onSkip={() => handleAccountSetupComplete(isAuthenticated)}
-                onPrev={prevStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-          </>
-        )}
-      </Modal.Body>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

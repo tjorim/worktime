@@ -325,12 +325,12 @@ describe("SettingsPage Account Section", () => {
     renderSettingsAccountHarness({ fetchFn });
 
     await user.click(await screen.findByRole("button", { name: "Delete my account" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Delete your account?")).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(fetchFn).not.toHaveBeenCalledWith(
       "/api/me",
       expect.objectContaining({ method: "DELETE" }),
@@ -360,7 +360,7 @@ describe("SettingsPage Account Section", () => {
     renderSettingsAccountHarness({ fetchFn, showSuccessToast, onAccountDeleted });
 
     await user.click(await screen.findByRole("button", { name: "Delete my account" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
@@ -395,7 +395,7 @@ describe("SettingsPage Account Section", () => {
     renderSettingsAccountHarness({ fetchFn, onAccountDeleted });
 
     await user.click(await screen.findByRole("button", { name: "Delete my account" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     expect(await screen.findByText("Could not delete your account right now.")).toBeInTheDocument();
@@ -642,7 +642,7 @@ describe("SettingsPage API Tokens Section", () => {
     renderSettingsApiTokensHarness({ fetchFn });
 
     await user.click(await screen.findByRole("button", { name: "Revoke" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
 
     await waitFor(() => {
@@ -749,7 +749,7 @@ describe("SettingsPage Admin Section", () => {
 
     await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Delete account?")).toBeInTheDocument();
     expect(
       within(dialog).getByText(
@@ -802,7 +802,7 @@ describe("SettingsPage Admin Section", () => {
     expect(memberRow).not.toBeNull();
 
     await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     expect(await screen.findByText("Could not delete user.")).toBeInTheDocument();

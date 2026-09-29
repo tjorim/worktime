@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { CalendarView } from "@/components/CalendarView";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -619,6 +619,9 @@ describe("CalendarView Integration Tests", () => {
       fireEvent.click(addButton);
 
       // Verify modal closes and event is added
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Doctor Appointment/i })).toBeInTheDocument();
     });
@@ -727,6 +730,9 @@ describe("CalendarView Integration Tests", () => {
         screen.getByRole("dialog", { description: /You have unsaved changes/i }),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /Keep Editing/i }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
       expect(
         screen.queryByRole("dialog", { description: /You have unsaved changes/i }),
       ).not.toBeInTheDocument();

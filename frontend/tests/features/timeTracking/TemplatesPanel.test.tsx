@@ -207,7 +207,7 @@ describe("TemplatesPanel", () => {
 
       await user.click(screen.getByRole("button", { name: /Delete Morning Support/i }));
 
-      const dialog = screen.getByRole("dialog");
+      const dialog = screen.getByRole("alertdialog");
       expect(within(dialog).getByText(/Delete "Morning Support"/i)).toBeInTheDocument();
 
       await user.click(within(dialog).getByRole("button", { name: /^Delete$/i }));

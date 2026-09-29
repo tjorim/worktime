@@ -140,13 +140,6 @@ body {
    RESPONSIVE ADJUSTMENTS
    ========================================================================= */
 
-@media (width <= 768px) {
-  /* Ensure modals fit on small screens */
-  .modal-dialog {
-    margin: 0.5rem;
-  }
-}
-
 /* ============================================================================
    NAVBAR (THM-2)
    ============================================================================
@@ -211,7 +204,7 @@ body {
   font-size: 1.35rem;
 }
 
-.modal-open .mobile-quick-actions {
+body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobile-quick-actions {
   display: none !important;
 }
 
@@ -416,5 +409,78 @@ body {
   .sync-indicator--neutral {
     background: rgb(255 255 255 / 14%);
     border-color: rgb(255 255 255 / 18%);
+  }
+}
+
+// Base UI owns focus management, inertness and scroll locking.
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: var(--bs-black);
+  opacity: 0.5;
+}
+.dialog-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1055;
+  width: calc(100% - 1rem);
+  max-width: 500px;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg);
+  outline: none;
+  .modal-header {
+    padding-right: 3.5rem;
+  }
+}
+.dialog-popup-lg {
+  max-width: 800px;
+}
+.dialog-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+}
+.dialog-popup {
+  --bs-modal-header-padding: 1rem;
+  --bs-modal-header-border-width: var(--bs-border-width);
+  --bs-modal-header-border-color: var(--bs-border-color);
+  --bs-modal-footer-gap: 0.5rem;
+  --bs-modal-padding: 1rem;
+  --bs-modal-footer-border-width: var(--bs-border-width);
+  --bs-modal-footer-border-color: var(--bs-border-color);
+  --bs-modal-title-line-height: 1.5;
+  --bs-modal-inner-border-radius: var(--bs-border-radius-lg);
+  .modal-title {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+}
+.dialog-popup[data-closed],
+.dialog-backdrop[data-closed] {
+  display: none;
+}
+
+.dialog-popup-top {
+  top: 1.75rem;
+  transform: translateX(-50%);
+}
+.dialog-popup-scrollable {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  .modal-header,
+  .modal-footer {
+    flex-shrink: 0;
+  }
+  .modal-body {
+    overflow-y: auto;
+    min-height: 0;
   }
 }

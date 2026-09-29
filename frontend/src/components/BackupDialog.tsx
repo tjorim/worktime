@@ -1,7 +1,13 @@
 import { useEffect, useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
   checkBackupDataPresence,
@@ -68,79 +74,86 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
     !includeGanttTasks;
 
   return (
-    <Modal show={show} onHide={onHide} centered aria-labelledby={titleId}>
-      <Modal.Header closeButton>
-        <Modal.Title id={titleId}>
-          <i className="bi bi-download me-2" aria-hidden="true"></i>
-          {m.backup_app_data_label()}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <p className="fw-medium mb-2">{m.backup_include_label()}</p>
-        <div className="d-flex flex-column gap-2">
-          <Form.Check
-            type="checkbox"
-            id="backup-user-state"
-            label={m.backup_include_settings()}
-            checked={includeUserState}
-            onChange={(e) => setIncludeUserState(e.target.checked)}
-          />
-          {presence?.hasTimeOff && (
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent aria-labelledby={titleId}>
+        <DialogHeader>
+          <DialogTitle id={titleId}>
+            <i className="bi bi-download me-2" aria-hidden="true"></i>
+            {m.backup_app_data_label()}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          <p className="fw-medium mb-2">{m.backup_include_label()}</p>
+          <div className="d-flex flex-column gap-2">
             <Form.Check
               type="checkbox"
-              id="backup-time-off"
-              label={m.backup_include_time_off()}
-              checked={includeTimeOff}
-              onChange={(e) => setIncludeTimeOff(e.target.checked)}
+              id="backup-user-state"
+              label={m.backup_include_settings()}
+              checked={includeUserState}
+              onChange={(e) => setIncludeUserState(e.target.checked)}
             />
-          )}
-          {presence?.hasWorkLocations && (
-            <Form.Check
-              type="checkbox"
-              id="backup-work-locations"
-              label={m.backup_include_work_locations()}
-              checked={includeWorkLocations}
-              onChange={(e) => setIncludeWorkLocations(e.target.checked)}
-            />
-          )}
-          {presence?.hasTasks && (
-            <Form.Check
-              type="checkbox"
-              id="backup-tasks"
-              label={m.backup_include_tasks()}
-              checked={includeTasks}
-              onChange={(e) => setIncludeTasks(e.target.checked)}
-            />
-          )}
-          {(presence?.hasTemplates || presence?.hasLabels) && (
-            <Form.Check
-              type="checkbox"
-              id="backup-templates-labels"
-              label={m.backup_include_templates()}
-              checked={includeTemplatesAndLabels}
-              onChange={(e) => setIncludeTemplatesAndLabels(e.target.checked)}
-            />
-          )}
-          {presence?.hasGanttTasks && (
-            <Form.Check
-              type="checkbox"
-              id="backup-gantt-tasks"
-              label={m.backup_include_gantt()}
-              checked={includeGanttTasks}
-              onChange={(e) => setIncludeGanttTasks(e.target.checked)}
-            />
-          )}
+            {presence?.hasTimeOff && (
+              <Form.Check
+                type="checkbox"
+                id="backup-time-off"
+                label={m.backup_include_time_off()}
+                checked={includeTimeOff}
+                onChange={(e) => setIncludeTimeOff(e.target.checked)}
+              />
+            )}
+            {presence?.hasWorkLocations && (
+              <Form.Check
+                type="checkbox"
+                id="backup-work-locations"
+                label={m.backup_include_work_locations()}
+                checked={includeWorkLocations}
+                onChange={(e) => setIncludeWorkLocations(e.target.checked)}
+              />
+            )}
+            {presence?.hasTasks && (
+              <Form.Check
+                type="checkbox"
+                id="backup-tasks"
+                label={m.backup_include_tasks()}
+                checked={includeTasks}
+                onChange={(e) => setIncludeTasks(e.target.checked)}
+              />
+            )}
+            {(presence?.hasTemplates || presence?.hasLabels) && (
+              <Form.Check
+                type="checkbox"
+                id="backup-templates-labels"
+                label={m.backup_include_templates()}
+                checked={includeTemplatesAndLabels}
+                onChange={(e) => setIncludeTemplatesAndLabels(e.target.checked)}
+              />
+            )}
+            {presence?.hasGanttTasks && (
+              <Form.Check
+                type="checkbox"
+                id="backup-gantt-tasks"
+                label={m.backup_include_gantt()}
+                checked={includeGanttTasks}
+                onChange={(e) => setIncludeGanttTasks(e.target.checked)}
+              />
+            )}
+          </div>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="outline-secondary" onClick={onHide}>
-          {m.cancel()}
-        </Button>
-        <Button variant="primary" onClick={handleExport} disabled={nothingSelected}>
-          <i className="bi bi-download me-1" aria-hidden="true"></i>
-          {m.backup_export_btn()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        <DialogFooter>
+          <Button variant="outline-secondary" onClick={onHide}>
+            {m.cancel()}
+          </Button>
+          <Button variant="primary" onClick={handleExport} disabled={nothingSelected}>
+            <i className="bi bi-download me-1" aria-hidden="true"></i>
+            {m.backup_export_btn()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
