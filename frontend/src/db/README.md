@@ -23,6 +23,19 @@ The following remain non-collection by design:
 - **Preferences/settings sync metadata**: synchronized via `/api/preferences` helpers in `syncClient.ts` and `SettingsContext`, not QueryCollection-backed.
 - **Read-only external/computed lookups**: `useOpenHolidays` (and wrappers like `useLongWeekend` and `usePaydates`) may use plain `useQuery`.
 
+## Route preloading
+
+The home route starts `preloadSyncCollections()` on navigation and intent preload,
+without awaiting it. This warms the same collections consumed by the home tabs
+(including Gantt), backed by the shared `src/lib/queryClient.ts` instance used by
+`QueryClientProvider`. There is no separate router cache of domain data and no
+second QueryClient; the loader does not need QueryClient context for collection
+preloading. Collection hooks retain ownership of loading and error state.
+
+Keep preloading non-blocking and catch failures so offline navigation still works.
+Holiday lookups remain in their hooks because their parameters depend on the
+selected date and user settings rather than route search parameters.
+
 ## Guardrails
 
 - Static architecture test: `tests/architecture/frontendDataStandard.test.ts`
