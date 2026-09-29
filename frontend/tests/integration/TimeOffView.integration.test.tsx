@@ -544,7 +544,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
 
       // Confirm in dialog
-      const dialog = await screen.findByRole("dialog");
+      const dialog = await screen.findByRole("alertdialog");
       await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
 
       // Verify only Event 3 remains

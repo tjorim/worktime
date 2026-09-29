@@ -1,6 +1,12 @@
 import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { SyncPushPayload } from "@/utils/syncClient";
 import * as m from "@/paraglide/messages.js";
 
@@ -87,107 +93,106 @@ export function OngoingConflictDialog({
     : [];
 
   return (
-    <Modal
-      show={show}
-      onHide={handleHide}
-      centered
-      // Both outcomes discard one side's version, so the dialog requires an
-      // explicit choice rather than letting a click-away decide.
-      backdrop="static"
-      keyboard={false}
-      aria-describedby={bodyId}
+    <Dialog
+      open={show}
+      onOpenChange={(open, details) => {
+        if (!open && details.reason !== "escape-key") handleHide();
+      }}
+      disablePointerDismissal
     >
-      <Modal.Header>
-        <Modal.Title>
-          <i className="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>
-          {conflictCount === 1
-            ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
-            : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body id={bodyId}>
-        <p className="text-muted small mb-3">
-          {conflictCount === 1
-            ? m.ongoing_conflict_body_one({ count: String(conflictCount) })
-            : m.ongoing_conflict_body_other({ count: String(conflictCount) })}
-        </p>
+      <DialogContent aria-describedby={bodyId} showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>
+            <i className="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>
+            {conflictCount === 1
+              ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
+              : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="modal-body" id={bodyId}>
+          <p className="text-muted small mb-3">
+            {conflictCount === 1
+              ? m.ongoing_conflict_body_one({ count: String(conflictCount) })
+              : m.ongoing_conflict_body_other({ count: String(conflictCount) })}
+          </p>
 
-        {entityCounts.length > 0 && (
-          <ul className="small text-muted mb-4 ps-3">
-            {entityCounts.map(([entity, count]) => (
-              <li key={entity}>
-                {count} {getEntityLabel(entity)}
-              </li>
-            ))}
-          </ul>
-        )}
+          {entityCounts.length > 0 && (
+            <ul className="small text-muted mb-4 ps-3">
+              {entityCounts.map(([entity, count]) => (
+                <li key={entity}>
+                  {count} {getEntityLabel(entity)}
+                </li>
+              ))}
+            </ul>
+          )}
 
-        <div className="d-grid gap-2">
-          {/* Keep server version */}
-          <button
-            type="button"
-            className={`btn btn-outline-${selected === "keep-server" ? "primary" : "secondary"} text-start p-3`}
-            onClick={() => setSelected("keep-server")}
-            aria-pressed={selected === "keep-server"}
-          >
-            <div className="d-flex align-items-start gap-3">
-              <i
-                className={`bi bi-cloud-download-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-secondary"}`}
-                aria-hidden="true"
-              ></i>
-              <div>
-                <div className="fw-semibold">{m.ongoing_conflict_keep_server()}</div>
-                <div className="text-muted small">{m.ongoing_conflict_keep_server_desc()}</div>
-              </div>
-              {selected === "keep-server" && (
+          <div className="d-grid gap-2">
+            {/* Keep server version */}
+            <button
+              type="button"
+              className={`btn btn-outline-${selected === "keep-server" ? "primary" : "secondary"} text-start p-3`}
+              onClick={() => setSelected("keep-server")}
+              aria-pressed={selected === "keep-server"}
+            >
+              <div className="d-flex align-items-start gap-3">
                 <i
-                  className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
+                  className={`bi bi-cloud-download-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-secondary"}`}
                   aria-hidden="true"
                 ></i>
-              )}
-            </div>
-          </button>
-
-          {/* Keep my version */}
-          <button
-            type="button"
-            className={`btn btn-outline-${selected === "keep-mine" ? "primary" : "secondary"} text-start p-3`}
-            onClick={() => setSelected("keep-mine")}
-            aria-pressed={selected === "keep-mine"}
-          >
-            <div className="d-flex align-items-start gap-3">
-              <i
-                className={`bi bi-hdd-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-secondary"}`}
-                aria-hidden="true"
-              ></i>
-              <div>
-                <div className="fw-semibold">{m.ongoing_conflict_keep_mine()}</div>
-                <div className="text-muted small">{m.ongoing_conflict_keep_mine_desc()}</div>
+                <div>
+                  <div className="fw-semibold">{m.ongoing_conflict_keep_server()}</div>
+                  <div className="text-muted small">{m.ongoing_conflict_keep_server_desc()}</div>
+                </div>
+                {selected === "keep-server" && (
+                  <i
+                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
+                    aria-hidden="true"
+                  ></i>
+                )}
               </div>
-              {selected === "keep-mine" && (
+            </button>
+
+            {/* Keep my version */}
+            <button
+              type="button"
+              className={`btn btn-outline-${selected === "keep-mine" ? "primary" : "secondary"} text-start p-3`}
+              onClick={() => setSelected("keep-mine")}
+              aria-pressed={selected === "keep-mine"}
+            >
+              <div className="d-flex align-items-start gap-3">
                 <i
-                  className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
+                  className={`bi bi-hdd-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-secondary"}`}
                   aria-hidden="true"
                 ></i>
-              )}
-            </div>
-          </button>
+                <div>
+                  <div className="fw-semibold">{m.ongoing_conflict_keep_mine()}</div>
+                  <div className="text-muted small">{m.ongoing_conflict_keep_mine_desc()}</div>
+                </div>
+                {selected === "keep-mine" && (
+                  <i
+                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
+                    aria-hidden="true"
+                  ></i>
+                )}
+              </div>
+            </button>
+          </div>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            onResolve("keep-server");
-            setSelected(null);
-          }}
-        >
-          {m.ongoing_conflict_dismiss()}
-        </Button>
-        <Button variant="primary" onClick={handleConfirm} disabled={!selected}>
-          {m.ongoing_conflict_confirm()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              onResolve("keep-server");
+              setSelected(null);
+            }}
+          >
+            {m.ongoing_conflict_dismiss()}
+          </Button>
+          <Button variant="primary" onClick={handleConfirm} disabled={!selected}>
+            {m.ongoing_conflict_confirm()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

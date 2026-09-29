@@ -12,7 +12,7 @@ import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
 import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
 import { TaskEntryForm } from "@/components/shared/TaskEntryForm";
@@ -316,53 +316,67 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
         error={editError}
       />
 
-      <Modal show={Boolean(addDate)} onHide={() => setAddDate("")} size="lg" centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Add time-tracking task</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <TaskEntryForm
-            labels={labels}
-            text={addText}
-            onTextChange={setAddText}
-            label={addLabel}
-            onLabelChange={setAddLabel}
-            start={addStart}
-            onStartChange={setAddStart}
-            stop={addStop}
-            onStopChange={setAddStop}
-            canSubmit={canAddTask}
-            canStartNow={false}
-            showTimerControls={false}
-            isTimerRunning={false}
-            startDisabledReason="Use Time Tracking to start a live timer."
-            addDisabledReason="Enter a task, label, and valid time range."
-            onSubmit={saveNewTask}
-            onStartNow={() => undefined}
-            onStopNow={() => undefined}
-          />
-        </Modal.Body>
-      </Modal>
+      <Dialog
+        open={Boolean(addDate)}
+        onOpenChange={(open) => {
+          if (!open) (() => setAddDate(""))();
+        }}
+      >
+        <DialogContent size="lg">
+          <DialogHeader>
+            <DialogTitle>Add time-tracking task</DialogTitle>
+          </DialogHeader>
+          <div className="modal-body">
+            <TaskEntryForm
+              labels={labels}
+              text={addText}
+              onTextChange={setAddText}
+              label={addLabel}
+              onLabelChange={setAddLabel}
+              start={addStart}
+              onStartChange={setAddStart}
+              stop={addStop}
+              onStopChange={setAddStop}
+              canSubmit={canAddTask}
+              canStartNow={false}
+              showTimerControls={false}
+              isTimerRunning={false}
+              startDisabledReason="Use Time Tracking to start a live timer."
+              addDisabledReason="Enter a task, label, and valid time range."
+              onSubmit={saveNewTask}
+              onStartNow={() => undefined}
+              onStopNow={() => undefined}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      <Modal show={timeOffEvent !== null} onHide={() => setTimeOffEvent(null)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Time-off details</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <dl className="mb-0">
-            <dt>Title</dt>
-            <dd>{timeOffEvent?.title}</dd>
-            <dt>Dates</dt>
-            <dd>
-              {timeOffEvent
-                ? `${calendarDate(timeOffEvent.start)} – ${calendarDate(timeOffEvent.end)}`
-                : ""}
-            </dd>
-            <dt>Type</dt>
-            <dd>{String(timeOffEvent?.entryType ?? "")}</dd>
-          </dl>
-        </Modal.Body>
-      </Modal>
+      <Dialog
+        open={timeOffEvent !== null}
+        onOpenChange={(open) => {
+          if (!open) (() => setTimeOffEvent(null))();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Time-off details</DialogTitle>
+          </DialogHeader>
+          <div className="modal-body">
+            <dl className="mb-0">
+              <dt>Title</dt>
+              <dd>{timeOffEvent?.title}</dd>
+              <dt>Dates</dt>
+              <dd>
+                {timeOffEvent
+                  ? `${calendarDate(timeOffEvent.start)} – ${calendarDate(timeOffEvent.end)}`
+                  : ""}
+              </dd>
+              <dt>Type</dt>
+              <dd>{String(timeOffEvent?.entryType ?? "")}</dd>
+            </dl>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {shiftTeam !== null && scheduleType && (
         <ScheduleDetailModal

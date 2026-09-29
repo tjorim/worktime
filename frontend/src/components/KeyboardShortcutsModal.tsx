@@ -1,4 +1,10 @@
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Button from "react-bootstrap/Button";
 import * as m from "@/paraglide/messages.js";
 
@@ -49,43 +55,50 @@ export function KeyboardShortcutsModal({
   }
 
   return (
-    <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <i className="bi bi-keyboard me-2"></i>
-          {m.keyboard_shortcuts_label()}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {categories.map(({ category, items }) => (
-          <div key={category} className="mb-3">
-            <h6 className="text-muted mb-2">{category}</h6>
-            <div className="row g-2">
-              {items.map(({ keys, description }) => (
-                <div
-                  key={description}
-                  className="col-12 d-flex justify-content-between align-items-center"
-                >
-                  <span className="text-muted small">{description}</span>
-                  <span>
-                    {keys.map((key, i) => (
-                      <span key={key}>
-                        {i > 0 && <span className="text-muted mx-1">+</span>}
-                        <kbd>{key}</kbd>
-                      </span>
-                    ))}
-                  </span>
-                </div>
-              ))}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            <i className="bi bi-keyboard me-2"></i>
+            {m.keyboard_shortcuts_label()}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          {categories.map(({ category, items }) => (
+            <div key={category} className="mb-3">
+              <h6 className="text-muted mb-2">{category}</h6>
+              <div className="row g-2">
+                {items.map(({ keys, description }) => (
+                  <div
+                    key={description}
+                    className="col-12 d-flex justify-content-between align-items-center"
+                  >
+                    <span className="text-muted small">{description}</span>
+                    <span>
+                      {keys.map((key, i) => (
+                        <span key={key}>
+                          {i > 0 && <span className="text-muted mx-1">+</span>}
+                          <kbd>{key}</kbd>
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
-          {m.close()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onHide}>
+            {m.close()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

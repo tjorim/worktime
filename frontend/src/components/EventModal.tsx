@@ -1,5 +1,12 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { RefObject } from "react";
-import { Badge, Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
+import { Badge, Button, Card, Col, Form, Row } from "react-bootstrap";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
 import { getWeekdayName } from "@/utils/dateTimeUtils";
@@ -197,7 +204,7 @@ type EventModalProps = {
  * to assistive technologies via ARIA attributes.
  *
  * Accessibility Features:
- * - Modal.Header closeButton provides keyboard-accessible close (Escape key, X button)
+ * - DialogHeader closeButton provides keyboard-accessible close (Escape key, X button)
  * - All form inputs have associated <Form.Label> elements for screen readers
  * - Required fields marked with aria-required="true" and visual * indicator
  * - Form validation errors use aria-describedby to link error messages to inputs
@@ -270,208 +277,220 @@ export function EventModal({
   onCancelEditMode,
 }: EventModalProps) {
   return (
-    <Modal show={show} onHide={onHide} onEntered={onEntered} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          {mode === "view"
-            ? m.event_modal_view_event()
-            : mode === "edit"
-              ? m.event_modal_edit_event()
-              : m.event_modal_new_event()}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body ref={formRef} tabIndex={-1}>
-        <Form>
-          <Row className="g-3">
-            {mode !== "view" && (
-              <Col xs={12}>
-                <Card className="preview-card border-0 bg-body-secondary">
-                  <Card.Body className="py-2">
-                    <div className="small text-uppercase text-muted">
-                      {m.event_modal_preview_label()}
-                    </div>
-                    <div className="fw-semibold">
-                      {getEventTypeLabel(eventFlags)}{" "}
-                      {eventType === "weekly"
-                        ? eventWeekday
-                          ? "· " + getWeekdayName(eventWeekday)
-                          : ""
-                        : eventStart
-                          ? eventEnd && eventEnd !== eventStart
-                            ? "· " + eventStart + " → " + eventEnd
-                            : "· " + eventStart
-                          : m.event_modal_select_date()}
-                    </div>
-                    {eventTitle && <div className="text-muted">{eventTitle}</div>}
-                    {eventFlags.length > 0 && (
-                      <div className="text-muted small">
-                        {m.event_modal_flags_label({
-                          flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
-                        })}
-                      </div>
-                    )}
-                    <div className="mt-2">
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+      onOpenChangeComplete={(open) => {
+        if (open) onEntered();
+      }}
+    >
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "view"
+              ? m.event_modal_view_event()
+              : mode === "edit"
+                ? m.event_modal_edit_event()
+                : m.event_modal_new_event()}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="modal-body" ref={formRef} tabIndex={-1}>
+          <Form>
+            <Row className="g-3">
+              {mode !== "view" && (
+                <Col xs={12}>
+                  <Card className="preview-card border-0 bg-body-secondary">
+                    <Card.Body className="py-2">
                       <div className="small text-uppercase text-muted">
-                        {m.event_modal_raw_line_label()}
+                        {m.event_modal_preview_label()}
                       </div>
-                      <div className="font-monospace">
-                        {previewLine || m.event_modal_fill_required()}
+                      <div className="fw-semibold">
+                        {getEventTypeLabel(eventFlags)}{" "}
+                        {eventType === "weekly"
+                          ? eventWeekday
+                            ? "· " + getWeekdayName(eventWeekday)
+                            : ""
+                          : eventStart
+                            ? eventEnd && eventEnd !== eventStart
+                              ? "· " + eventStart + " → " + eventEnd
+                              : "· " + eventStart
+                            : m.event_modal_select_date()}
                       </div>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            )}
-            <Col md={6}>
-              <Form.Group controlId="eventType">
-                <Form.Label>{m.event_modal_event_type_label()}</Form.Label>
-                <Form.Select
-                  aria-label={m.event_modal_event_type_label()}
-                  value={eventType}
-                  onChange={(event) => onEventTypeChange(event.target.value as "range" | "weekly")}
-                  disabled={mode === "view"}
-                >
-                  <option value="range">{m.event_modal_type_range()}</option>
-                  <option value="weekly">{m.event_modal_type_weekly()}</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col md={6}>
-              <Form.Group controlId="eventTitle">
-                <Form.Label>{m.event_modal_comment_label()}</Form.Label>
-                <Form.Control
-                  aria-label={m.event_modal_comment_label()}
-                  value={eventTitle}
-                  onChange={(event) => onEventTitleChange(event.target.value)}
-                  placeholder={m.event_modal_comment_placeholder()}
-                  disabled={mode === "view"}
-                />
-              </Form.Group>
-            </Col>
-
-            {eventType === "range" ? (
-              <>
-                <Col md={6}>
-                  <Form.Group controlId="eventStart">
-                    <Form.Label>
-                      {m.event_modal_start_label()} <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={eventStart ? eventStart.replace(/\//g, "-") : ""}
-                      onChange={(event) =>
-                        onStartDateChange(
-                          event.target.value ? event.target.value.replace(/-/g, "/") : "",
-                        )
-                      }
-                      isInvalid={!!startDateError}
-                      aria-required="true"
-                      aria-describedby={startDateError ? "eventStart-error" : undefined}
-                      disabled={mode === "view"}
-                    />
-                    {startDateError && (
-                      <Form.Control.Feedback type="invalid" id="eventStart-error">
-                        {startDateError}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
+                      {eventTitle && <div className="text-muted">{eventTitle}</div>}
+                      {eventFlags.length > 0 && (
+                        <div className="text-muted small">
+                          {m.event_modal_flags_label({
+                            flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
+                          })}
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <div className="small text-uppercase text-muted">
+                          {m.event_modal_raw_line_label()}
+                        </div>
+                        <div className="font-monospace">
+                          {previewLine || m.event_modal_fill_required()}
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
                 </Col>
-                <Col md={6}>
-                  <Form.Group controlId="eventEnd">
-                    <Form.Label>{m.event_modal_end_label()}</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
-                      onChange={(event) =>
-                        onEndDateChange(
-                          event.target.value ? event.target.value.replace(/-/g, "/") : "",
-                        )
-                      }
-                      isInvalid={!!endDateError}
-                      aria-describedby={endDateError ? "eventEnd-error" : undefined}
-                      disabled={mode === "view"}
-                    />
-                    {endDateError && (
-                      <Form.Control.Feedback type="invalid" id="eventEnd-error">
-                        {endDateError}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                </Col>
-              </>
-            ) : (
+              )}
               <Col md={6}>
-                <Form.Group controlId="eventWeekday">
-                  <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
+                <Form.Group controlId="eventType">
+                  <Form.Label>{m.event_modal_event_type_label()}</Form.Label>
                   <Form.Select
-                    aria-label={m.event_modal_weekday_label()}
-                    value={String(eventWeekday)}
-                    onChange={(event) => onEventWeekdayChange(Number(event.target.value))}
+                    aria-label={m.event_modal_event_type_label()}
+                    value={eventType}
+                    onChange={(event) =>
+                      onEventTypeChange(event.target.value as "range" | "weekly")
+                    }
                     disabled={mode === "view"}
                   >
-                    <option value="1">{m.weekday_mon()}</option>
-                    <option value="2">{m.weekday_tue()}</option>
-                    <option value="3">{m.weekday_wed()}</option>
-                    <option value="4">{m.weekday_thu()}</option>
-                    <option value="5">{m.weekday_fri()}</option>
-                    <option value="6">{m.weekday_sat()}</option>
-                    <option value="7">{m.weekday_sun()}</option>
+                    <option value="range">{m.event_modal_type_range()}</option>
+                    <option value="weekly">{m.event_modal_type_weekly()}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
-            )}
 
-            <FlagSection
-              mode={mode}
-              title={m.event_modal_type_section_title()}
-              fieldsetTitle={m.event_modal_type_fieldset_title()}
-              flagOptions={typeFlagOptions}
-              eventFlags={eventFlags}
-              flagGroup={typeFlagsAsEventFlags}
-              onFlagChange={onTypeFlagChange}
-            />
+              <Col md={6}>
+                <Form.Group controlId="eventTitle">
+                  <Form.Label>{m.event_modal_comment_label()}</Form.Label>
+                  <Form.Control
+                    aria-label={m.event_modal_comment_label()}
+                    value={eventTitle}
+                    onChange={(event) => onEventTitleChange(event.target.value)}
+                    placeholder={m.event_modal_comment_placeholder()}
+                    disabled={mode === "view"}
+                  />
+                </Form.Group>
+              </Col>
 
-            <FlagSection
-              mode={mode}
-              title={m.event_modal_location_section_title()}
-              fieldsetTitle={m.event_modal_location_fieldset_title()}
-              flagOptions={timeLocationFlagOptions}
-              eventFlags={eventFlags}
-              flagGroup={timeLocationFlagsAsEventFlags}
-              onFlagChange={onTimeFlagChange}
-            />
-          </Row>
-        </Form>
-      </Modal.Body>
-      <Modal.Footer>
-        {mode === "view" ? (
-          <>
-            <Button variant="secondary" onClick={onHide}>
-              {m.close()}
-            </Button>
-            {onSwitchToEdit && (
-              <Button variant="primary" onClick={onSwitchToEdit}>
-                {m.edit()}
+              {eventType === "range" ? (
+                <>
+                  <Col md={6}>
+                    <Form.Group controlId="eventStart">
+                      <Form.Label>
+                        {m.event_modal_start_label()} <span className="text-danger">*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={eventStart ? eventStart.replace(/\//g, "-") : ""}
+                        onChange={(event) =>
+                          onStartDateChange(
+                            event.target.value ? event.target.value.replace(/-/g, "/") : "",
+                          )
+                        }
+                        isInvalid={!!startDateError}
+                        aria-required="true"
+                        aria-describedby={startDateError ? "eventStart-error" : undefined}
+                        disabled={mode === "view"}
+                      />
+                      {startDateError && (
+                        <Form.Control.Feedback type="invalid" id="eventStart-error">
+                          {startDateError}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group controlId="eventEnd">
+                      <Form.Label>{m.event_modal_end_label()}</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
+                        onChange={(event) =>
+                          onEndDateChange(
+                            event.target.value ? event.target.value.replace(/-/g, "/") : "",
+                          )
+                        }
+                        isInvalid={!!endDateError}
+                        aria-describedby={endDateError ? "eventEnd-error" : undefined}
+                        disabled={mode === "view"}
+                      />
+                      {endDateError && (
+                        <Form.Control.Feedback type="invalid" id="eventEnd-error">
+                          {endDateError}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  </Col>
+                </>
+              ) : (
+                <Col md={6}>
+                  <Form.Group controlId="eventWeekday">
+                    <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
+                    <Form.Select
+                      aria-label={m.event_modal_weekday_label()}
+                      value={String(eventWeekday)}
+                      onChange={(event) => onEventWeekdayChange(Number(event.target.value))}
+                      disabled={mode === "view"}
+                    >
+                      <option value="1">{m.weekday_mon()}</option>
+                      <option value="2">{m.weekday_tue()}</option>
+                      <option value="3">{m.weekday_wed()}</option>
+                      <option value="4">{m.weekday_thu()}</option>
+                      <option value="5">{m.weekday_fri()}</option>
+                      <option value="6">{m.weekday_sat()}</option>
+                      <option value="7">{m.weekday_sun()}</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              )}
+
+              <FlagSection
+                mode={mode}
+                title={m.event_modal_type_section_title()}
+                fieldsetTitle={m.event_modal_type_fieldset_title()}
+                flagOptions={typeFlagOptions}
+                eventFlags={eventFlags}
+                flagGroup={typeFlagsAsEventFlags}
+                onFlagChange={onTypeFlagChange}
+              />
+
+              <FlagSection
+                mode={mode}
+                title={m.event_modal_location_section_title()}
+                fieldsetTitle={m.event_modal_location_fieldset_title()}
+                flagOptions={timeLocationFlagOptions}
+                eventFlags={eventFlags}
+                flagGroup={timeLocationFlagsAsEventFlags}
+                onFlagChange={onTimeFlagChange}
+              />
+            </Row>
+          </Form>
+        </div>
+        <DialogFooter>
+          {mode === "view" ? (
+            <>
+              <Button variant="secondary" onClick={onHide}>
+                {m.close()}
               </Button>
-            )}
-          </>
-        ) : (
-          <>
-            {mode === "edit" && onCancelEditMode && (
-              <Button variant="secondary" onClick={onCancelEditMode}>
-                {m.cancel()}
+              {onSwitchToEdit && (
+                <Button variant="primary" onClick={onSwitchToEdit}>
+                  {m.edit()}
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              {mode === "edit" && onCancelEditMode && (
+                <Button variant="secondary" onClick={onCancelEditMode}>
+                  {m.cancel()}
+                </Button>
+              )}
+              <Button variant="outline-secondary" onClick={onResetForm}>
+                {m.event_modal_reset_form()}
               </Button>
-            )}
-            <Button variant="outline-secondary" onClick={onResetForm}>
-              {m.event_modal_reset_form()}
-            </Button>
-            <Button variant="primary" onClick={onSubmit}>
-              {mode === "edit" ? m.event_modal_update_btn() : m.event_modal_add_btn()}
-            </Button>
-          </>
-        )}
-      </Modal.Footer>
-    </Modal>
+              <Button variant="primary" onClick={onSubmit}>
+                {mode === "edit" ? m.event_modal_update_btn() : m.event_modal_add_btn()}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

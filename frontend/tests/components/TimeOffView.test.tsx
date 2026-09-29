@@ -488,7 +488,7 @@ describe("TimeOffView", () => {
       await user.click(deleteButton);
 
       // No confirmation dialog — the entry is removed right away.
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
       await waitFor(() => {
         expect(screen.queryByText("To be deleted")).not.toBeInTheDocument();
       });
@@ -1442,7 +1442,7 @@ describe("TimeOffView", () => {
       await user.click(screen.getByRole("checkbox", { name: /Select Bulk delete me/i }));
       await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
 
-      const dialog = await screen.findByRole("dialog");
+      const dialog = await screen.findByRole("alertdialog");
       await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
 
       await waitFor(() => {
@@ -1486,7 +1486,7 @@ describe("TimeOffView", () => {
       // "Select all" now means "all matching": deleting removes only "Ski trip".
       await user.click(screen.getByRole("checkbox", { name: /Select Ski trip/i }));
       await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
-      const dialog = await screen.findByRole("dialog");
+      const dialog = await screen.findByRole("alertdialog");
       await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
       await waitFor(() => {
         expect(screen.queryByText("Ski trip")).not.toBeInTheDocument();

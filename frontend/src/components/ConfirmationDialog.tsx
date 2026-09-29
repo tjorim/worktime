@@ -1,7 +1,20 @@
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -43,23 +56,41 @@ export function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   const bodyId = useId();
 
+  const Root = variant === "danger" ? AlertDialog : Dialog;
+  const Content = variant === "danger" ? AlertDialogContent : DialogContent;
+  const Header = variant === "danger" ? AlertDialogHeader : DialogHeader;
+  const Title = variant === "danger" ? AlertDialogTitle : DialogTitle;
+  const Footer = variant === "danger" ? AlertDialogFooter : DialogFooter;
+
   return (
-    <Modal show={isOpen} onHide={onCancel} centered aria-describedby={bodyId}>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          {icon && <i className={`bi ${icon} me-2`} aria-hidden="true"></i>}
-          {title}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body id={bodyId}>{message}</Modal.Body>
-      <Modal.Footer>
-        <Button variant="outline-secondary" onClick={onCancel}>
-          {cancelLabel}
-        </Button>
-        <Button variant={variant} onClick={onConfirm}>
-          {confirmLabel}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+    <Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
+      <Content
+        aria-describedby={bodyId}
+        overlayProps={variant === "danger" ? { onClick: onCancel } : undefined}
+      >
+        <Header>
+          <Title>
+            {icon && <i className={`bi ${icon} me-2`} aria-hidden="true"></i>}
+            {title}
+          </Title>
+        </Header>
+        <div className="modal-body" id={bodyId}>
+          {message}
+        </div>
+        <Footer>
+          <Button variant="outline-secondary" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button variant={variant} onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </Footer>
+      </Content>
+    </Root>
   );
 }

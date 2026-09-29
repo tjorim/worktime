@@ -4,7 +4,13 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
@@ -189,172 +195,248 @@ export function ScheduleDetailModal({
   ).filter(([code, definition]) => code !== "O" && definition !== undefined);
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <i
-            className={clsx(
-              "bi",
-              hasTeams ? "bi-people" : "bi-calendar-week",
-              "me-2",
-              "text-primary",
-            )}
-          ></i>
-          {hasTeams
-            ? m.schedule_detail_title_team({ team: String(teamNumber) })
-            : m.schedule_detail_title_schedule()}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {/* Current Status Card */}
-        <Card className="mb-4">
-          <Card.Body>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="mb-1">
-                  <i className="bi bi-clock me-2"></i>
-                  {m.schedule_current_status()}
-                </h6>
-                <div className="d-flex align-items-center gap-2">
-                  {currentStatus.shift.code === "O" ? (
-                    <Badge bg="secondary" pill>
-                      <i className="bi bi-house me-1"></i>
-                      {m.schedule_off_duty()}
-                    </Badge>
-                  ) : (
-                    <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
-                  )}
-                  <small className="text-muted">{currentStatus.date.format("dddd, MMM D")}</small>
-                </div>
-              </div>
-              {nextShift && (
-                <div className="text-end">
-                  <small className="text-muted d-block">{m.schedule_next_shift()}</small>
-                  <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
-                  <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
-                </div>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            <i
+              className={clsx(
+                "bi",
+                hasTeams ? "bi-people" : "bi-calendar-week",
+                "me-2",
+                "text-primary",
               )}
-            </div>
-          </Card.Body>
-        </Card>
+            ></i>
+            {hasTeams
+              ? m.schedule_detail_title_team({ team: String(teamNumber) })
+              : m.schedule_detail_title_schedule()}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          {/* Current Status Card */}
+          <Card className="mb-4">
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="mb-1">
+                    <i className="bi bi-clock me-2"></i>
+                    {m.schedule_current_status()}
+                  </h6>
+                  <div className="d-flex align-items-center gap-2">
+                    {currentStatus.shift.code === "O" ? (
+                      <Badge bg="secondary" pill>
+                        <i className="bi bi-house me-1"></i>
+                        {m.schedule_off_duty()}
+                      </Badge>
+                    ) : (
+                      <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
+                    )}
+                    <small className="text-muted">{currentStatus.date.format("dddd, MMM D")}</small>
+                  </div>
+                </div>
+                {nextShift && (
+                  <div className="text-end">
+                    <small className="text-muted d-block">{m.schedule_next_shift()}</small>
+                    <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
+                    <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
+                  </div>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
 
-        <Card className="mb-4">
-          <Card.Body>
-            <h6 className="mb-3">
-              <i className="bi bi-info-circle me-2" aria-hidden="true"></i>
-              {m.schedule_info_heading()}
-            </h6>
-            <Row className="g-3">
-              <Col xs={6} md={3}>
-                <small className="text-muted d-block">{m.schedule_info_type()}</small>
-                <span className="fw-semibold">{scheduleMetadata.title}</span>
-              </Col>
-              {hasTeams ? (
+          <Card className="mb-4">
+            <Card.Body>
+              <h6 className="mb-3">
+                <i className="bi bi-info-circle me-2" aria-hidden="true"></i>
+                {m.schedule_info_heading()}
+              </h6>
+              <Row className="g-3">
                 <Col xs={6} md={3}>
-                  <small className="text-muted d-block">{m.schedule_info_team()}</small>
+                  <small className="text-muted d-block">{m.schedule_info_type()}</small>
+                  <span className="fw-semibold">{scheduleMetadata.title}</span>
+                </Col>
+                {hasTeams ? (
+                  <Col xs={6} md={3}>
+                    <small className="text-muted d-block">{m.schedule_info_team()}</small>
+                    <span className="fw-semibold">
+                      {m.schedule_info_team_value({
+                        team: String(teamNumber),
+                        total: String(teamCount),
+                      })}
+                    </span>
+                  </Col>
+                ) : null}
+                <Col xs={6} md={3}>
+                  <small className="text-muted d-block">{m.schedule_info_cycle()}</small>
                   <span className="fw-semibold">
-                    {m.schedule_info_team_value({
-                      team: String(teamNumber),
-                      total: String(teamCount),
+                    {m.schedule_info_cycle_days({
+                      days: String(scheduleConfig.shiftConfig.cycleLengthDays),
                     })}
                   </span>
                 </Col>
-              ) : null}
-              <Col xs={6} md={3}>
-                <small className="text-muted d-block">{m.schedule_info_cycle()}</small>
-                <span className="fw-semibold">
-                  {m.schedule_info_cycle_days({
-                    days: String(scheduleConfig.shiftConfig.cycleLengthDays),
-                  })}
-                </span>
-              </Col>
-              <Col xs={6} md={3}>
-                <small className="text-muted d-block">{m.schedule_info_shifts_per_day()}</small>
-                <span className="fw-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
-              </Col>
-              <Col xs={12}>
-                <small className="text-muted d-block mb-2">
-                  {m.schedule_info_available_shifts()}
-                </small>
-                <div className="d-flex flex-wrap gap-2">
-                  {availableShifts.map(([code, definition]) => {
-                    const meta = SHIFT_DISPLAY_META[code] ?? { variant: "secondary" };
-                    return (
-                      <Badge key={code} bg={meta.variant} className="fw-normal">
-                        {definition?.displayCode ?? code}
-                        <span className="ms-1">
-                          {getLocalizedShiftTime(
-                            definition?.start ?? null,
-                            definition?.end ?? null,
-                            settings.timeFormat,
+                <Col xs={6} md={3}>
+                  <small className="text-muted d-block">{m.schedule_info_shifts_per_day()}</small>
+                  <span className="fw-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
+                </Col>
+                <Col xs={12}>
+                  <small className="text-muted d-block mb-2">
+                    {m.schedule_info_available_shifts()}
+                  </small>
+                  <div className="d-flex flex-wrap gap-2">
+                    {availableShifts.map(([code, definition]) => {
+                      const meta = SHIFT_DISPLAY_META[code] ?? { variant: "secondary" };
+                      return (
+                        <Badge key={code} bg={meta.variant} className="fw-normal">
+                          {definition?.displayCode ?? code}
+                          <span className="ms-1">
+                            {getLocalizedShiftTime(
+                              definition?.start ?? null,
+                              definition?.end ?? null,
+                              settings.timeFormat,
+                            )}
+                          </span>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </Col>
+                <Col xs={12}>
+                  <small className="text-muted d-block">{m.schedule_info_description()}</small>
+                  <span>{scheduleMetadata.description}</span>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+
+          {/* 7-Day Schedule */}
+          <div className="mb-4">
+            <h6 className="mb-3">
+              <i className="bi bi-calendar-week me-2"></i>
+              {m.schedule_7day_heading()}
+            </h6>
+
+            {/* Desktop table view */}
+            <div className="d-none d-md-block">
+              <div className="table-responsive">
+                <Table
+                  className="mb-0 schedule-detail-table"
+                  aria-label={
+                    hasTeams
+                      ? m.schedule_7day_aria_team({ team: String(teamNumber) })
+                      : m.schedule_7day_aria_personal()
+                  }
+                >
+                  <thead>
+                    <tr>
+                      <th>{m.schedule_col_date()}</th>
+                      <th>{m.schedule_col_day()}</th>
+                      <th>{m.schedule_col_shift()}</th>
+                      <th>{m.schedule_col_hours()}</th>
+                      <th>{m.schedule_col_status()}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weekSchedule.map((day) => (
+                      <tr
+                        key={day.date.format("YYYY-MM-DD")}
+                        className={clsx(day.isToday && "today-row")}
+                      >
+                        <td>
+                          <strong>{day.date.format("MMM D")}</strong>
+                          {day.isToday && (
+                            <Badge bg="primary" className="ms-2">
+                              <i
+                                className="bi bi-circle-fill me-1"
+                                style={{ fontSize: SMALL_ICON_SIZE }}
+                                aria-hidden="true"
+                              ></i>
+                              {m.today()}
+                            </Badge>
                           )}
-                        </span>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </Col>
-              <Col xs={12}>
-                <small className="text-muted d-block">{m.schedule_info_description()}</small>
-                <span>{scheduleMetadata.description}</span>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
+                          {day.isTomorrow && (
+                            <Badge bg="info" className="ms-2">
+                              {m.schedule_tomorrow()}
+                            </Badge>
+                          )}
+                        </td>
+                        <td>{day.date.format("ddd")}</td>
+                        <td>
+                          {day.shift.code === "O" ? (
+                            <Badge bg="secondary" pill>
+                              {m.schedule_off()}
+                            </Badge>
+                          ) : (
+                            <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
+                          )}
+                        </td>
+                        <td>
+                          <small className="text-muted">
+                            {day.shift.code === "O"
+                              ? "—"
+                              : (getLocalizedShiftTime(
+                                  day.shift.start,
+                                  day.shift.end,
+                                  settings.timeFormat,
+                                ) ?? "—")}
+                          </small>
+                        </td>
+                        <td>
+                          {day.shift.code === "O" ? (
+                            <small className="text-muted">
+                              <i className="bi bi-house me-1" aria-hidden="true"></i>
+                              {m.schedule_rest_day()}
+                            </small>
+                          ) : (
+                            <small className="text-success">
+                              <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
+                              {m.schedule_working()}
+                            </small>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </div>
 
-        {/* 7-Day Schedule */}
-        <div className="mb-4">
-          <h6 className="mb-3">
-            <i className="bi bi-calendar-week me-2"></i>
-            {m.schedule_7day_heading()}
-          </h6>
-
-          {/* Desktop table view */}
-          <div className="d-none d-md-block">
-            <div className="table-responsive">
-              <Table
-                className="mb-0 schedule-detail-table"
-                aria-label={
-                  hasTeams
-                    ? m.schedule_7day_aria_team({ team: String(teamNumber) })
-                    : m.schedule_7day_aria_personal()
-                }
-              >
-                <thead>
-                  <tr>
-                    <th>{m.schedule_col_date()}</th>
-                    <th>{m.schedule_col_day()}</th>
-                    <th>{m.schedule_col_shift()}</th>
-                    <th>{m.schedule_col_hours()}</th>
-                    <th>{m.schedule_col_status()}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {weekSchedule.map((day) => (
-                    <tr
-                      key={day.date.format("YYYY-MM-DD")}
-                      className={clsx(day.isToday && "today-row")}
-                    >
-                      <td>
-                        <strong>{day.date.format("MMM D")}</strong>
-                        {day.isToday && (
-                          <Badge bg="primary" className="ms-2">
-                            <i
-                              className="bi bi-circle-fill me-1"
-                              style={{ fontSize: SMALL_ICON_SIZE }}
-                              aria-hidden="true"
-                            ></i>
-                            {m.today()}
-                          </Badge>
-                        )}
-                        {day.isTomorrow && (
-                          <Badge bg="info" className="ms-2">
-                            {m.schedule_tomorrow()}
-                          </Badge>
-                        )}
-                      </td>
-                      <td>{day.date.format("ddd")}</td>
-                      <td>
+            {/* Mobile card view */}
+            <div className="d-md-none">
+              {weekSchedule.map((day) => (
+                <Card
+                  key={day.date.format("YYYY-MM-DD")}
+                  className={clsx("mb-3", day.isToday && "border-primary shadow-sm today-card")}
+                >
+                  <Card.Body className="py-3">
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <h6 className="mb-1">
+                          {day.date.format("dddd")}
+                          {day.isToday && (
+                            <Badge bg="primary" className="ms-2">
+                              <i
+                                className="bi bi-circle-fill me-1"
+                                style={{ fontSize: SMALL_ICON_SIZE }}
+                                aria-hidden="true"
+                              ></i>
+                              {m.today()}
+                            </Badge>
+                          )}
+                          {day.isTomorrow && (
+                            <Badge bg="info" className="ms-2">
+                              {m.schedule_tomorrow()}
+                            </Badge>
+                          )}
+                        </h6>
+                        <small className="text-muted">{day.date.format("MMMM D, YYYY")}</small>
+                      </div>
+                      <div>
                         {day.shift.code === "O" ? (
                           <Badge bg="secondary" pill>
                             {m.schedule_off()}
@@ -362,9 +444,15 @@ export function ScheduleDetailModal({
                         ) : (
                           <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
                         )}
-                      </td>
-                      <td>
-                        <small className="text-muted">
+                      </div>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                      <div>
+                        <small className="text-muted d-block">
+                          <i className="bi bi-clock me-1" aria-hidden="true"></i>
+                          {m.schedule_col_hours()}
+                        </small>
+                        <span className="text-body">
                           {day.shift.code === "O"
                             ? "—"
                             : (getLocalizedShiftTime(
@@ -372,205 +460,130 @@ export function ScheduleDetailModal({
                                 day.shift.end,
                                 settings.timeFormat,
                               ) ?? "—")}
-                        </small>
-                      </td>
-                      <td>
+                        </span>
+                      </div>
+                      <div className="text-end">
+                        <small className="text-muted d-block">{m.schedule_col_status()}</small>
                         {day.shift.code === "O" ? (
-                          <small className="text-muted">
+                          <span className="text-muted">
                             <i className="bi bi-house me-1" aria-hidden="true"></i>
                             {m.schedule_rest_day()}
-                          </small>
+                          </span>
                         ) : (
-                          <small className="text-success">
+                          <span className="text-success">
                             <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
                             {m.schedule_working()}
-                          </small>
+                          </span>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+                      </div>
+                    </div>
+                  </Card.Body>
+                </Card>
+              ))}
             </div>
           </div>
 
-          {/* Mobile card view */}
-          <div className="d-md-none">
-            {weekSchedule.map((day) => (
-              <Card
-                key={day.date.format("YYYY-MM-DD")}
-                className={clsx("mb-3", day.isToday && "border-primary shadow-sm today-card")}
-              >
-                <Card.Body className="py-3">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <h6 className="mb-1">
-                        {day.date.format("dddd")}
-                        {day.isToday && (
-                          <Badge bg="primary" className="ms-2">
-                            <i
-                              className="bi bi-circle-fill me-1"
-                              style={{ fontSize: SMALL_ICON_SIZE }}
-                              aria-hidden="true"
-                            ></i>
-                            {m.today()}
-                          </Badge>
-                        )}
-                        {day.isTomorrow && (
-                          <Badge bg="info" className="ms-2">
-                            {m.schedule_tomorrow()}
-                          </Badge>
-                        )}
-                      </h6>
-                      <small className="text-muted">{day.date.format("MMMM D, YYYY")}</small>
-                    </div>
-                    <div>
-                      {day.shift.code === "O" ? (
-                        <Badge bg="secondary" pill>
-                          {m.schedule_off()}
-                        </Badge>
-                      ) : (
-                        <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
-                      )}
-                    </div>
-                  </div>
-                  <div className="d-flex justify-content-between align-items-center pt-2 border-top">
-                    <div>
-                      <small className="text-muted d-block">
-                        <i className="bi bi-clock me-1" aria-hidden="true"></i>
-                        {m.schedule_col_hours()}
+          {/* Team Statistics */}
+          <Row className="mb-4">
+            <Col md={6}>
+              <Card>
+                <Card.Body>
+                  <h6 className="mb-3">
+                    <i className="bi bi-bar-chart me-2"></i>
+                    {m.schedule_weekly_stats()}
+                  </h6>
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="fw-semibold">{m.schedule_working_vs_rest()}</span>
+                      <small className="text-muted">
+                        {m.schedule_stats_summary({
+                          working: String(stats.workingDays),
+                          rest: String(stats.offDays),
+                        })}
                       </small>
-                      <span className="text-body">
-                        {day.shift.code === "O"
-                          ? "—"
-                          : (getLocalizedShiftTime(
-                              day.shift.start,
-                              day.shift.end,
-                              settings.timeFormat,
-                            ) ?? "—")}
-                      </span>
                     </div>
-                    <div className="text-end">
-                      <small className="text-muted d-block">{m.schedule_col_status()}</small>
-                      {day.shift.code === "O" ? (
-                        <span className="text-muted">
-                          <i className="bi bi-house me-1" aria-hidden="true"></i>
-                          {m.schedule_rest_day()}
-                        </span>
-                      ) : (
-                        <span className="text-success">
-                          <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
-                          {m.schedule_working()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Team Statistics */}
-        <Row className="mb-4">
-          <Col md={6}>
-            <Card>
-              <Card.Body>
-                <h6 className="mb-3">
-                  <i className="bi bi-bar-chart me-2"></i>
-                  {m.schedule_weekly_stats()}
-                </h6>
-                <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="fw-semibold">{m.schedule_working_vs_rest()}</span>
-                    <small className="text-muted">
-                      {m.schedule_stats_summary({
-                        working: String(stats.workingDays),
-                        rest: String(stats.offDays),
-                      })}
-                    </small>
-                  </div>
-                  <ProgressBar aria-label={m.schedule_working_vs_rest()}>
-                    <ProgressBar
-                      now={(stats.workingDays / 7) * 100}
-                      variant="success"
-                      key="working"
-                      label={m.schedule_working_label({ count: String(stats.workingDays) })}
-                    />
-                    <ProgressBar
-                      now={(stats.offDays / 7) * 100}
-                      variant="secondary"
-                      key="rest"
-                      label={m.schedule_rest_label({ count: String(stats.offDays) })}
-                    />
-                  </ProgressBar>
-                </div>
-                <ListGroup variant="flush">
-                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>
-                      <i className="bi bi-clock me-1" aria-hidden="true"></i>
-                      {m.schedule_total_weekly_hours()}
-                    </span>
-                    <Badge bg="primary">
-                      {Number.isInteger(stats.totalWeeklyHours)
-                        ? `${stats.totalWeeklyHours}h`
-                        : `${stats.totalWeeklyHours.toFixed(1)}h`}
-                    </Badge>
-                  </ListGroup.Item>
-                </ListGroup>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={6}>
-            <Card>
-              <Card.Body>
-                <h6 className="mb-3">
-                  <i className="bi bi-pie-chart me-2"></i>
-                  {m.schedule_shift_distribution()}
-                </h6>
-                <ProgressBar className="mb-3" aria-label={m.schedule_shift_distribution()}>
-                  {stats.shiftDistribution
-                    .filter((item) => item.count > 0)
-                    .map((item) => (
+                    <ProgressBar aria-label={m.schedule_working_vs_rest()}>
                       <ProgressBar
-                        key={item.key}
-                        now={(item.count / 7) * 100}
-                        variant={item.variant}
-                        label={
-                          item.count >= 2 ? `${Math.round((item.count / 7) * 100)}%` : undefined
-                        }
+                        now={(stats.workingDays / 7) * 100}
+                        variant="success"
+                        key="working"
+                        label={m.schedule_working_label({ count: String(stats.workingDays) })}
                       />
-                    ))}
-                </ProgressBar>
-                <ListGroup variant="flush">
-                  {stats.shiftDistribution.map((item) => (
-                    <ListGroup.Item
-                      key={item.key}
-                      className="px-0 py-2 d-flex justify-content-between"
-                    >
+                      <ProgressBar
+                        now={(stats.offDays / 7) * 100}
+                        variant="secondary"
+                        key="rest"
+                        label={m.schedule_rest_label({ count: String(stats.offDays) })}
+                      />
+                    </ProgressBar>
+                  </div>
+                  <ListGroup variant="flush">
+                    <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                       <span>
-                        <i
-                          className={clsx(item.icon, "me-1", item.iconClassName)}
-                          aria-hidden="true"
-                        ></i>
-                        {getShiftLabel(item.key)}
+                        <i className="bi bi-clock me-1" aria-hidden="true"></i>
+                        {m.schedule_total_weekly_hours()}
                       </span>
-                      <Badge bg={item.variant}>
-                        {item.count}/7 ({Math.round((item.count / 7) * 100)}%)
+                      <Badge bg="primary">
+                        {Number.isInteger(stats.totalWeeklyHours)
+                          ? `${stats.totalWeeklyHours}h`
+                          : `${stats.totalWeeklyHours.toFixed(1)}h`}
                       </Badge>
                     </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
-          {m.close()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+                  </ListGroup>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={6}>
+              <Card>
+                <Card.Body>
+                  <h6 className="mb-3">
+                    <i className="bi bi-pie-chart me-2"></i>
+                    {m.schedule_shift_distribution()}
+                  </h6>
+                  <ProgressBar className="mb-3" aria-label={m.schedule_shift_distribution()}>
+                    {stats.shiftDistribution
+                      .filter((item) => item.count > 0)
+                      .map((item) => (
+                        <ProgressBar
+                          key={item.key}
+                          now={(item.count / 7) * 100}
+                          variant={item.variant}
+                          label={
+                            item.count >= 2 ? `${Math.round((item.count / 7) * 100)}%` : undefined
+                          }
+                        />
+                      ))}
+                  </ProgressBar>
+                  <ListGroup variant="flush">
+                    {stats.shiftDistribution.map((item) => (
+                      <ListGroup.Item
+                        key={item.key}
+                        className="px-0 py-2 d-flex justify-content-between"
+                      >
+                        <span>
+                          <i
+                            className={clsx(item.icon, "me-1", item.iconClassName)}
+                            aria-hidden="true"
+                          ></i>
+                          {getShiftLabel(item.key)}
+                        </span>
+                        <Badge bg={item.variant}>
+                          {item.count}/7 ({Math.round((item.count / 7) * 100)}%)
+                        </Badge>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onHide}>
+            {m.close()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

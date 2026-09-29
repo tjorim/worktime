@@ -1,6 +1,13 @@
+import { useLayoutEffect, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { Dayjs } from "dayjs";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { hasIsoAlpha2Format } from "@/types/countries";
@@ -52,95 +59,111 @@ export function OtherLocationModal({
     hasIsoAlpha2Format(state.values.countryCode),
   );
 
-  const handleShow = () => {
-    // Reset to initial values when modal opens
-    form.reset(getInitialOtherLocation(existing));
-  };
+  const dateKey = date.format("YYYY-MM-DD");
+  const previousDialog = useRef({ show: false, dateKey });
+
+  useLayoutEffect(() => {
+    const previous = previousDialog.current;
+    previousDialog.current = { show, dateKey };
+    // Sync can replace existing while the user is editing. Only initialize a new edit session.
+    if (show && (!previous.show || previous.dateKey !== dateKey)) {
+      form.reset(getInitialOtherLocation(existing));
+    }
+  }, [show, dateKey, existing, form]);
 
   const handleHide = () => {
     onHide();
   };
 
   return (
-    <Modal show={show} onHide={handleHide} onShow={handleShow} centered>
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            {m.calendar_other_location_title({
-              date: new Intl.DateTimeFormat(getLocale(), {
-                weekday: "long",
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              }).format(date.toDate()),
-            })}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <form.Field
-            name="countryCode"
-            validators={[
-              {
-                run: ({ value }) => (hasIsoAlpha2Format(value) ? undefined : "invalid"),
-                triggers: ["change", "blur"],
-              },
-            ]}
-          >
-            {(field) => (
-              <Form.Group className="mb-3" controlId="other-location-country">
-                <Form.Label>{m.other_location_country_code()}</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder={m.other_location_country_placeholder()}
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value.toUpperCase().slice(0, 2))}
-                  onBlur={field.handleBlur}
-                  maxLength={2}
-                  isInvalid={field.meta.isTouched && field.errors.length > 0}
-                  autoFocus
-                  aria-required="true"
-                  aria-describedby="other-location-country-feedback"
-                />
-                <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
-                  {m.other_location_country_feedback()}
-                </Form.Control.Feedback>
-                <Form.Text className="text-muted">{m.other_location_country_help()}</Form.Text>
-              </Form.Group>
-            )}
-          </form.Field>
-          <form.Field name="label">
-            {(field) => (
-              <Form.Group>
-                <Form.Label htmlFor="other-location-label-input">
-                  {m.form_label()}{" "}
-                  <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
-                </Form.Label>
-                <Form.Control
-                  id="other-location-label-input"
-                  type="text"
-                  placeholder={m.other_location_label_placeholder()}
-                  value={field.value}
-                  maxLength={100}
-                  onChange={(e) => field.handleChange(e.target.value.slice(0, 100))}
-                />
-              </Form.Group>
-            )}
-          </form.Field>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="outline-secondary" onClick={handleHide}>
-            {m.cancel()}
-          </Button>
-          <Button type="submit" variant="primary" disabled={!isCodeValid}>
-            {m.save()}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) handleHide();
+      }}
+    >
+      <DialogContent>
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {m.calendar_other_location_title({
+                date: new Intl.DateTimeFormat(getLocale(), {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }).format(date.toDate()),
+              })}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="modal-body">
+            <form.Field
+              name="countryCode"
+              validators={[
+                {
+                  run: ({ value }) => (hasIsoAlpha2Format(value) ? undefined : "invalid"),
+                  triggers: ["change", "blur"],
+                },
+              ]}
+            >
+              {(field) => (
+                <Form.Group className="mb-3" controlId="other-location-country">
+                  <Form.Label>{m.other_location_country_code()}</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder={m.other_location_country_placeholder()}
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value.toUpperCase().slice(0, 2))}
+                    onBlur={field.handleBlur}
+                    maxLength={2}
+                    isInvalid={field.meta.isTouched && field.errors.length > 0}
+                    autoFocus
+                    aria-required="true"
+                    aria-describedby="other-location-country-feedback"
+                  />
+                  <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
+                    {m.other_location_country_feedback()}
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted">{m.other_location_country_help()}</Form.Text>
+                </Form.Group>
+              )}
+            </form.Field>
+            <form.Field name="label">
+              {(field) => (
+                <Form.Group>
+                  <Form.Label htmlFor="other-location-label-input">
+                    {m.form_label()}{" "}
+                    <span className="text-muted fw-normal">
+                      {m.other_location_label_optional()}
+                    </span>
+                  </Form.Label>
+                  <Form.Control
+                    id="other-location-label-input"
+                    type="text"
+                    placeholder={m.other_location_label_placeholder()}
+                    value={field.value}
+                    maxLength={100}
+                    onChange={(e) => field.handleChange(e.target.value.slice(0, 100))}
+                  />
+                </Form.Group>
+              )}
+            </form.Field>
+          </div>
+          <DialogFooter>
+            <Button variant="outline-secondary" onClick={handleHide}>
+              {m.cancel()}
+            </Button>
+            <Button type="submit" variant="primary" disabled={!isCodeValid}>
+              {m.save()}
+            </Button>
+          </DialogFooter>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

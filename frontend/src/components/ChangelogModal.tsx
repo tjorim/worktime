@@ -3,7 +3,13 @@ import Accordion from "react-bootstrap/Accordion";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import clsx from "clsx";
 import { type ChangelogVersion, changelogData, futurePlans } from "@/data/changelog";
 import * as m from "@/paraglide/messages.js";
@@ -82,101 +88,108 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" scrollable>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <i className={clsx("bi", "bi-journal-text", "me-2")}></i>
-          {m.changelog_modal_title()}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="mb-3">
-          <p className="text-muted">{m.changelog_modal_description()}</p>
-        </div>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent size="lg" scrollable position="top">
+        <DialogHeader>
+          <DialogTitle>
+            <i className={clsx("bi", "bi-journal-text", "me-2")}></i>
+            {m.changelog_modal_title()}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          <div className="mb-3">
+            <p className="text-muted">{m.changelog_modal_description()}</p>
+          </div>
 
-        <Accordion
-          activeKey={activeKey}
-          onSelect={(key) => {
-            if (Array.isArray(key)) {
-              setActiveKey(key[0] ?? "");
-              return;
-            }
-            setActiveKey(key ?? "");
-          }}
-        >
-          {changelogData.map((version, index) => (
-            <Accordion.Item eventKey={index.toString()} key={version.version}>
-              <Accordion.Header>
-                <div className="d-flex justify-content-between align-items-center w-100 me-2">
-                  <div>
-                    <strong>{m.changelog_version_label({ version: version.version })}</strong>
-                    <small className="text-muted ms-2">{version.date}</small>
+          <Accordion
+            activeKey={activeKey}
+            onSelect={(key) => {
+              if (Array.isArray(key)) {
+                setActiveKey(key[0] ?? "");
+                return;
+              }
+              setActiveKey(key ?? "");
+            }}
+          >
+            {changelogData.map((version, index) => (
+              <Accordion.Item eventKey={index.toString()} key={version.version}>
+                <Accordion.Header>
+                  <div className="d-flex justify-content-between align-items-center w-100 me-2">
+                    <div>
+                      <strong>{m.changelog_version_label({ version: version.version })}</strong>
+                      <small className="text-muted ms-2">{version.date}</small>
+                    </div>
+                    {getStatusBadge(version.status)}
                   </div>
-                  {getStatusBadge(version.status)}
-                </div>
-              </Accordion.Header>
-              <Accordion.Body>
-                {renderChangeSection(
-                  "added",
-                  m.changelog_section_added(),
-                  version.added,
-                  "text-success",
-                )}
-                {renderChangeSection(
-                  "changed",
-                  m.changelog_section_changed(),
-                  version.changed,
-                  "text-info",
-                )}
-                {renderChangeSection(
-                  "fixed",
-                  m.changelog_section_fixed(),
-                  version.fixed,
-                  "text-warning",
-                )}
-                {version.planned &&
-                  renderChangeSection(
-                    "planned",
-                    m.changelog_section_planned(),
-                    version.planned,
-                    "text-secondary",
+                </Accordion.Header>
+                <Accordion.Body>
+                  {renderChangeSection(
+                    "added",
+                    m.changelog_section_added(),
+                    version.added,
+                    "text-success",
                   )}
+                  {renderChangeSection(
+                    "changed",
+                    m.changelog_section_changed(),
+                    version.changed,
+                    "text-info",
+                  )}
+                  {renderChangeSection(
+                    "fixed",
+                    m.changelog_section_fixed(),
+                    version.fixed,
+                    "text-warning",
+                  )}
+                  {version.planned &&
+                    renderChangeSection(
+                      "planned",
+                      m.changelog_section_planned(),
+                      version.planned,
+                      "text-secondary",
+                    )}
 
-                {version.technicalDetails && (
-                  <Card className="mt-3 border-0 bg-body-secondary">
-                    <Card.Body className="py-2">
-                      <small className="text-muted">
-                        <i className={clsx("bi", "bi-info-circle", "me-1")}></i>
-                        <strong>{version.technicalDetails.title}:</strong>{" "}
-                        {version.technicalDetails.description}
-                      </small>
-                    </Card.Body>
-                  </Card>
-                )}
-              </Accordion.Body>
-            </Accordion.Item>
-          ))}
-        </Accordion>
+                  {version.technicalDetails && (
+                    <Card className="mt-3 border-0 bg-body-secondary">
+                      <Card.Body className="py-2">
+                        <small className="text-muted">
+                          <i className={clsx("bi", "bi-info-circle", "me-1")}></i>
+                          <strong>{version.technicalDetails.title}:</strong>{" "}
+                          {version.technicalDetails.description}
+                        </small>
+                      </Card.Body>
+                    </Card>
+                  )}
+                </Accordion.Body>
+              </Accordion.Item>
+            ))}
+          </Accordion>
 
-        <div className="mt-4 p-3 bg-body-secondary rounded">
-          <h6 className="text-primary mb-2">
-            <i className={clsx("bi", "bi-rocket", "me-2")}></i>
-            {m.changelog_coming_soon_heading()}
-          </h6>
-          <p className="mb-0 small text-muted">{futurePlans.join(", ")}</p>
+          <div className="mt-4 p-3 bg-body-secondary rounded">
+            <h6 className="text-primary mb-2">
+              <i className={clsx("bi", "bi-rocket", "me-2")}></i>
+              {m.changelog_coming_soon_heading()}
+            </h6>
+            <p className="mb-0 small text-muted">{futurePlans.join(", ")}</p>
+          </div>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <small className="text-muted me-auto">
-          {m.changelog_versioning_text()}{" "}
-          <a href="https://calver.org/" target="_blank" rel="noopener noreferrer">
-            {m.changelog_versioning_link()}
-          </a>
-        </small>
-        <Button variant="secondary" onClick={onHide}>
-          {m.close()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        <DialogFooter>
+          <small className="text-muted me-auto">
+            {m.changelog_versioning_text()}{" "}
+            <a href="https://calver.org/" target="_blank" rel="noopener noreferrer">
+              {m.changelog_versioning_link()}
+            </a>
+          </small>
+          <Button variant="secondary" onClick={onHide}>
+            {m.close()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

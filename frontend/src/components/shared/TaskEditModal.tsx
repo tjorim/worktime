@@ -2,7 +2,13 @@ import { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ReactSelect from "react-select";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Label } from "@/lib/timeTracking/constants";
@@ -71,108 +77,115 @@ export function TaskEditModal({
   );
 
   return (
-    <Modal show={show} onHide={onClose} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>{m.tt_edit_task_title()}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && (
-          <Alert variant="danger" aria-live="polite">
-            {error}
-          </Alert>
-        )}
-        {info && (
-          <Alert variant="info" aria-live="polite">
-            {info}
-          </Alert>
-        )}
-        <Form
-          as="form"
-          id="taskEditForm"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmit();
-          }}
-        >
-          <Form.Group controlId="editTaskName" className="mb-3">
-            <Form.Label>{m.form_task()}</Form.Label>
-            <Form.Control
-              value={value.text}
-              onChange={(event) => onChange({ ...value, text: event.target.value })}
-            />
-          </Form.Group>
-          <Form.Group controlId="editTaskLabel" className="mb-3">
-            <Form.Label>{m.form_label()}</Form.Label>
-            <ReactSelect<LabelOption>
-              unstyled
-              isClearable
-              isSearchable
-              inputId="editTaskLabel"
-              placeholder={m.tt_select_label()}
-              options={labels.map((l) => ({ value: l.id, label: l.name }))}
-              value={selectedLabelOption}
-              onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
-              classNames={bootstrapSelectClassNames}
-            />
-          </Form.Group>
-          {showGanttPicker && (
-            <Form.Group controlId="editTaskGanttTask" className="mb-3">
-              <Form.Label>{m.tt_gantt_task()}</Form.Label>
-              <ReactSelect<GanttTaskOption>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{m.tt_edit_task_title()}</DialogTitle>
+        </DialogHeader>
+        <div className="modal-body">
+          {error && (
+            <Alert variant="danger" aria-live="polite">
+              {error}
+            </Alert>
+          )}
+          {info && (
+            <Alert variant="info" aria-live="polite">
+              {info}
+            </Alert>
+          )}
+          <Form
+            as="form"
+            id="taskEditForm"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit();
+            }}
+          >
+            <Form.Group controlId="editTaskName" className="mb-3">
+              <Form.Label>{m.form_task()}</Form.Label>
+              <Form.Control
+                value={value.text}
+                onChange={(event) => onChange({ ...value, text: event.target.value })}
+              />
+            </Form.Group>
+            <Form.Group controlId="editTaskLabel" className="mb-3">
+              <Form.Label>{m.form_label()}</Form.Label>
+              <ReactSelect<LabelOption>
                 unstyled
                 isClearable
                 isSearchable
-                inputId="editTaskGanttTask"
-                placeholder={m.tt_no_gantt_task()}
-                options={ganttTaskOptions}
-                value={selectedGanttTaskOption}
-                onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value })}
+                inputId="editTaskLabel"
+                placeholder={m.tt_select_label()}
+                options={labels.map((l) => ({ value: l.id, label: l.name }))}
+                value={selectedLabelOption}
+                onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
                 classNames={bootstrapSelectClassNames}
               />
             </Form.Group>
-          )}
-          <div className="d-flex gap-3 mb-3">
-            <Form.Group controlId="editTaskStart" className="flex-fill">
-              <Form.Label>{m.form_start()}</Form.Label>
-              <Form.Control
-                type="time"
-                value={value.start}
-                onChange={(event) => onChange({ ...value, start: event.target.value })}
-              />
-            </Form.Group>
-            <Form.Group controlId="editTaskStop" className="flex-fill">
-              <Form.Label>{m.form_stop()}</Form.Label>
-              <Form.Control
-                type="time"
-                value={value.stop}
-                onChange={(event) => onChange({ ...value, stop: event.target.value })}
-              />
-              <Form.Text className="text-muted">{m.tt_stop_empty_hint()}</Form.Text>
-            </Form.Group>
-          </div>
-          <Form.Check
-            id="editTaskBreak"
-            type="checkbox"
-            label={m.tt_includes_break({ minutes: BREAK_DURATION_MINUTES })}
-            checked={value.includesBreak}
-            onChange={(event) => onChange({ ...value, includesBreak: event.target.checked })}
-            disabled={!value.includesBreak && isTooShortForBreak}
-          />
-          {isTooShortForBreak && !value.includesBreak && (
-            <Form.Text className="text-danger" data-testid="break-too-short-help">
-              {m.tt_task_too_short_break()}
-            </Form.Text>
-          )}
-        </Form>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="outline-secondary" onClick={onClose}>
-          {m.cancel()}
-        </Button>
-        <Button variant="primary" type="submit" form="taskEditForm" disabled={!canSubmit}>
-          {m.tt_save_changes()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+            {showGanttPicker && (
+              <Form.Group controlId="editTaskGanttTask" className="mb-3">
+                <Form.Label>{m.tt_gantt_task()}</Form.Label>
+                <ReactSelect<GanttTaskOption>
+                  unstyled
+                  isClearable
+                  isSearchable
+                  inputId="editTaskGanttTask"
+                  placeholder={m.tt_no_gantt_task()}
+                  options={ganttTaskOptions}
+                  value={selectedGanttTaskOption}
+                  onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value })}
+                  classNames={bootstrapSelectClassNames}
+                />
+              </Form.Group>
+            )}
+            <div className="d-flex gap-3 mb-3">
+              <Form.Group controlId="editTaskStart" className="flex-fill">
+                <Form.Label>{m.form_start()}</Form.Label>
+                <Form.Control
+                  type="time"
+                  value={value.start}
+                  onChange={(event) => onChange({ ...value, start: event.target.value })}
+                />
+              </Form.Group>
+              <Form.Group controlId="editTaskStop" className="flex-fill">
+                <Form.Label>{m.form_stop()}</Form.Label>
+                <Form.Control
+                  type="time"
+                  value={value.stop}
+                  onChange={(event) => onChange({ ...value, stop: event.target.value })}
+                />
+                <Form.Text className="text-muted">{m.tt_stop_empty_hint()}</Form.Text>
+              </Form.Group>
+            </div>
+            <Form.Check
+              id="editTaskBreak"
+              type="checkbox"
+              label={m.tt_includes_break({ minutes: BREAK_DURATION_MINUTES })}
+              checked={value.includesBreak}
+              onChange={(event) => onChange({ ...value, includesBreak: event.target.checked })}
+              disabled={!value.includesBreak && isTooShortForBreak}
+            />
+            {isTooShortForBreak && !value.includesBreak && (
+              <Form.Text className="text-danger" data-testid="break-too-short-help">
+                {m.tt_task_too_short_break()}
+              </Form.Text>
+            )}
+          </Form>
+        </div>
+        <DialogFooter>
+          <Button variant="outline-secondary" onClick={onClose}>
+            {m.cancel()}
+          </Button>
+          <Button variant="primary" type="submit" form="taskEditForm" disabled={!canSubmit}>
+            {m.tt_save_changes()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

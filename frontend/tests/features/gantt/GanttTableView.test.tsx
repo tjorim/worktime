@@ -139,7 +139,7 @@ describe("GanttTableView", () => {
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={onDeleteTask} />);
 
     await user.click(screen.getByRole("button", { name: "Delete Build release" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent(
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
       'Are you sure you want to delete "Build release"?',
     );
 
@@ -169,7 +169,7 @@ describe("GanttTableView", () => {
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: "Delete Build release" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent(
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
       "This will also unlink 2 time-tracking entries.",
     );
   });
@@ -205,7 +205,7 @@ describe("GanttTableView", () => {
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: "Delete Build release" }));
-    expect(screen.getByRole("dialog")).not.toHaveTextContent("time-tracking entr");
+    expect(screen.getByRole("alertdialog")).not.toHaveTextContent("time-tracking entr");
   });
 
   describe("search, sorting and pagination", () => {
