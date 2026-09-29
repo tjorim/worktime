@@ -66,6 +66,7 @@ export function Header() {
             <Button
               variant={isSettingsPage ? "light" : "outline-light"}
               size="sm"
+              className="tw:px-2"
               onClick={handleToggleSettings}
               onMouseEnter={isSettingsPage ? handlePreloadHome : undefined}
               onFocus={isSettingsPage ? handlePreloadHome : undefined}

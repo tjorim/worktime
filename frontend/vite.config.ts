@@ -1,4 +1,5 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
@@ -23,6 +24,7 @@ export default defineConfig({
       strategy: ["localStorage", "preferredLanguage", "baseLocale"],
     }),
     reactPlugin(),
+    tailwindcss(),
     VitePWA({
       // "prompt" (not "autoUpdate") so the app controls when the new SW activates,
       // via the "new version available" toast (see src/components/PwaUpdateToast.tsx).

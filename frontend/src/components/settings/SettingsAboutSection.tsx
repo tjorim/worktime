@@ -24,7 +24,7 @@ export function SettingsAboutSection({
   return (
     <div className="border-bottom">
       <div className="p-3">
-        <h6 className="text-muted mb-3">
+        <h6 className="tw:text-muted-foreground mb-3">
           <i className="bi bi-info-circle me-2"></i>
           {m.information_title()}
         </h6>

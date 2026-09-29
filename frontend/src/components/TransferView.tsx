@@ -555,7 +555,7 @@ export function TransferView({
   const comparisonScheduleSelector = onOtherScheduleTypeChange && (
     <>
       <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
-        <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+        <i className="bi bi-clipboard2-data me-1" aria-hidden="true"></i>
         {m.schedule_compare_label()}
       </Form.Label>
       <Form.Select

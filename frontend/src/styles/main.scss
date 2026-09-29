@@ -10,24 +10,13 @@
    - _shifts.scss: Shift badges, timeline, schedule table, event indicators
    ========================================================================= */
 
-/* Bootstrap Configuration */
-@use "bootstrap/scss/bootstrap" as * with (
-  $color-mode-type: data,
-  $body-bg-dark: #181a1b,
-  $body-color-dark: #e0e0e0,
-  $body-secondary-bg-dark: #23272b,
-  $body-tertiary-bg-dark: #1f242a,
-  $border-color-dark: #495057
-);
+@use "sass:meta";
 
-/* Worktime Modular Styles */
-@use "variables";
-@use "utilities";
-@use "calendar";
-@use "shifts";
+@layer theme, legacy, base, components, utilities;
 
-/* Frappe Gantt (CSS must be imported separately when JS is bundled via ESM) */
-@import "../../node_modules/frappe-gantt/dist/frappe-gantt.css";
+@import "../../node_modules/frappe-gantt/dist/frappe-gantt.css" layer(legacy);
+@import "bootstrap-icons/font/bootstrap-icons.css" layer(legacy);
 
-/* Bootstrap Icons */
-@import "bootstrap-icons/font/bootstrap-icons.css";
+@layer legacy {
+  @include meta.load-css("legacy");
+}

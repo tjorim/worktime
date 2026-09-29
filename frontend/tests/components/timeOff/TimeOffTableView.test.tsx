@@ -76,7 +76,7 @@ function renderTable(overrides: Partial<Parameters<typeof TimeOffTableView>[0]> 
   return { onSetSelection };
 }
 
-const bodyRows = () => within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row");
+const bodyRows = () => within(screen.getAllByRole("rowgroup")[1]!).getAllByRole("row");
 
 describe("TimeOffTableView", () => {
   it("opens sorted by start date with weekly entries last", () => {
@@ -172,7 +172,7 @@ describe("TimeOffTableView", () => {
         eventCount: manyEntries.length,
       });
       await userEvent.setup().click(screen.getByRole("checkbox", { name: /select all/i }));
-      const [ids, selected] = onSetSelection.mock.calls[0];
+      const [ids, selected] = onSetSelection.mock.calls[0]!;
       expect(ids).toHaveLength(20);
       expect(selected).toBe(true);
     });

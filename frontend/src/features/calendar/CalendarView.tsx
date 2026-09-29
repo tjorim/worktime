@@ -25,7 +25,6 @@ import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
-import "@schedule-x/theme-default/dist/index.css";
 import "@/features/calendar/calendar.css";
 import * as m from "@/paraglide/messages.js";
 

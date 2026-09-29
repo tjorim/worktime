@@ -219,7 +219,7 @@ export function TodayView({
           </span>
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-              <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+              <i className="bi bi-clipboard2-data me-1" aria-hidden="true"></i>
               {m.schedule_view_label()}
             </Form.Label>
             <Form.Select
