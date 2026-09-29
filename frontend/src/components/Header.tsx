@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
@@ -16,6 +16,7 @@ import * as m from "@/paraglide/messages.js";
 export function Header() {
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   const navigate = useNavigate();
+  const router = useRouter();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isSettingsPage = pathname === "/settings";
   const { openShortcuts } = useAppShellContext();
@@ -27,6 +28,10 @@ export function Header() {
   const handleNavigateHome = useCallback(() => {
     void navigate({ to: "/" });
   }, [navigate]);
+
+  const handlePreloadHome = useCallback(() => {
+    void router.preloadRoute({ to: "/" }).catch(() => {});
+  }, [router]);
 
   const shortcuts = useMemo(
     () => ({
@@ -49,6 +54,8 @@ export function Header() {
             as="button"
             type="button"
             onClick={handleNavigateHome}
+            onMouseEnter={handlePreloadHome}
+            onFocus={handlePreloadHome}
             className="d-flex align-items-center border-0 bg-transparent"
           >
             <i className="bi bi-clock-history me-2 header-icon"></i>
@@ -60,6 +67,8 @@ export function Header() {
               variant={isSettingsPage ? "light" : "outline-light"}
               size="sm"
               onClick={handleToggleSettings}
+              onMouseEnter={isSettingsPage ? handlePreloadHome : undefined}
+              onFocus={isSettingsPage ? handlePreloadHome : undefined}
               aria-label={isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
               title={
                 isSettingsPage
