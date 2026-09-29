@@ -18,10 +18,7 @@ async function fetchPaydates(
   return response.json() as Promise<string[]>;
 }
 
-export function usePaydates(
-  year: number,
-  enabled: boolean = true,
-) {
+export function usePaydates(year: number, enabled: boolean = true) {
   const apiFetch = usePublicApiClient();
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
   const isEnabled = enabled && isValidYear;

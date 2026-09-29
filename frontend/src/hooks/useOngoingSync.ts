@@ -50,10 +50,7 @@ import { logger } from "@/utils/logger";
 type BackgroundSafeRequestInit = RequestInit & {
   suppressUnauthorizedRedirect?: boolean;
 };
-type FetchFn = (
-  url: string,
-  init?: BackgroundSafeRequestInit,
-) => Promise<Response>;
+type FetchFn = (url: string, init?: BackgroundSafeRequestInit) => Promise<Response>;
 
 /** Minimum delay (ms) for the first outbox flush retry after a failure. */
 export const INITIAL_BACK_OFF_MS = 1_000;
@@ -111,9 +108,7 @@ export type TriggerPullFn = () => void;
  * - `"keep-mine"`: re-push the conflicted local items with `client_updated_at = now()` so
  *   they win the last-write-wins check on the next push.
  */
-export type ResolveOngoingConflictsFn = (
-  choice: "keep-server" | "keep-mine",
-) => void;
+export type ResolveOngoingConflictsFn = (choice: "keep-server" | "keep-mine") => void;
 
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
@@ -154,8 +149,7 @@ export function useOngoingSync(
   });
   const [hasSyncError, setHasSyncError] = useState(false);
   const [conflictCount, setConflictCount] = useState(0);
-  const [conflictedPayload, setConflictedPayload] =
-    useState<SyncPushPayload | null>(null);
+  const [conflictedPayload, setConflictedPayload] = useState<SyncPushPayload | null>(null);
   // Keep a stable ref to conflictedPayload for use inside callbacks without
   // creating stale closures.
   const conflictedPayloadRef = useRef<SyncPushPayload | null>(null);
@@ -266,18 +260,12 @@ export function useOngoingSync(
       if (isFlushingRef.current) return;
       // Respect back-off unless the caller explicitly forces a flush (e.g. the
       // `online` event after a real reconnect, or an SSE-triggered pull).
-      if (
-        !force &&
-        retryAfterRef.current !== null &&
-        Date.now() < retryAfterRef.current
-      )
-        return;
+      if (!force && retryAfterRef.current !== null && Date.now() < retryAfterRef.current) return;
       isFlushingRef.current = true;
       setIsSyncing(true);
       try {
         const syncFetch: FetchFn = suppressUnauthorizedRedirect
-          ? (url, init = {}) =>
-              fetchFn(url, { ...init, suppressUnauthorizedRedirect: true })
+          ? (url, init = {}) => fetchFn(url, { ...init, suppressUnauthorizedRedirect: true })
           : fetchFn;
 
         // --- Flush outbox ---
@@ -307,10 +295,10 @@ export function useOngoingSync(
             // or the bulk-delete guard). Leaving it queued would wedge the
             // outbox forever and block every later change behind it, so move
             // it aside — preserved and inspectable — and let sync carry on.
-            logger.error(
-              "useOngoingSync: outbox batch permanently rejected; quarantining",
-              { userId, status: outcome.status },
-            );
+            logger.error("useOngoingSync: outbox batch permanently rejected; quarantining", {
+              userId,
+              status: outcome.status,
+            });
             // Only drop it from the outbox once it is safely somewhere else.
             // Quarantining and committing are the two halves of a move: if the
             // quarantine write fails (quota, private browsing) and the outbox
@@ -434,10 +422,7 @@ export function useOngoingSync(
       if (document.visibilityState === "visible") {
         // Passive trigger — respect the current back-off window.
         flushAndPull(false, true).catch((err: unknown) => {
-          logger.error(
-            "useOngoingSync: flush on visibility change failed:",
-            err,
-          );
+          logger.error("useOngoingSync: flush on visibility change failed:", err);
         });
       }
     };
@@ -460,9 +445,7 @@ export function useOngoingSync(
   // once on mount, so without this effect they would serve stale data for the
   // new user.
   useEffect(() => {
-    setLastSyncedAt(
-      userId ? localStorage.getItem(getSyncCursorKey(userId)) : null,
-    );
+    setLastSyncedAt(userId ? localStorage.getItem(getSyncCursorKey(userId)) : null);
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
     setQuarantineCount(userId ? getSyncQuarantineSize(userId) : 0);
     setHasSyncError(false);
@@ -556,10 +539,7 @@ export function useOngoingSync(
             // localStorage rejected the write (quota, private browsing). The
             // change is now only in memory; say so rather than showing a
             // healthy sync state over data that will never be uploaded.
-            logger.error(
-              "useOngoingSync: change could not be persisted to the outbox",
-              { userId },
-            );
+            logger.error("useOngoingSync: change could not be persisted to the outbox", { userId });
           }
           return;
         }
@@ -572,8 +552,7 @@ export function useOngoingSync(
           if (conflicts > 0) {
             const extracted = extractConflictedItems(change, result);
             conflictedPayloadRef.current = extracted;
-            conflictServerTimestampRef.current =
-              maxConflictServerTimestamp(result);
+            conflictServerTimestampRef.current = maxConflictServerTimestamp(result);
             setConflictedPayload(extracted);
             setConflictCount(conflicts);
             let pullResult: SyncPullResponse | null = null;
@@ -599,10 +578,7 @@ export function useOngoingSync(
                 setHasSyncError(false);
               } catch (err) {
                 // Post-success callback threw — log but do NOT requeue the change.
-                logger.error(
-                  "useOngoingSync: post-reconciliation callback threw:",
-                  err,
-                );
+                logger.error("useOngoingSync: post-reconciliation callback threw:", err);
                 if (mountedRef.current) {
                   setHasSyncError(true);
                 }

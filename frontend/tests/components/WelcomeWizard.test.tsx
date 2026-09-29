@@ -394,7 +394,6 @@ describe("WelcomeWizard", () => {
 
       expect(screen.getByText(/Step 5 of 9/i)).toBeInTheDocument();
     });
-
   });
 
   describe("Account Setup Step", () => {

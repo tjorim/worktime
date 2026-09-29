@@ -49,11 +49,17 @@ export function SettingsAuditTrailSection({
             </p>
             {isLoading ? (
               <div className="d-flex align-items-center gap-2 text-muted small">
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span
+                  className="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 <span>{m.audit_trail_loading()}</span>
               </div>
             ) : error && entries.length === 0 ? (
-              <Alert variant="warning" className="mb-0 py-2">{error}</Alert>
+              <Alert variant="warning" className="mb-0 py-2">
+                {error}
+              </Alert>
             ) : entries.length === 0 ? (
               <p className="text-muted small mb-0">{m.audit_trail_empty()}</p>
             ) : (
@@ -66,7 +72,8 @@ export function SettingsAuditTrailSection({
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 gap-md-3">
                           <div className="small">
                             <div className="fw-medium text-capitalize">
-                              {humanize(entry.action)} · {humanize(entry.resource_type)} {entry.resource_id}
+                              {humanize(entry.action)} · {humanize(entry.resource_type)}{" "}
+                              {entry.resource_id}
                             </div>
                             <div className="text-muted">
                               {entry.actor_label} ({humanize(entry.auth_source)})
@@ -74,11 +81,16 @@ export function SettingsAuditTrailSection({
                             {hasDetails ? (
                               <details className="mt-1">
                                 <summary className="text-muted">{m.audit_trail_details()}</summary>
-                                <code className="small text-break">{JSON.stringify(entry.details)}</code>
+                                <code className="small text-break">
+                                  {JSON.stringify(entry.details)}
+                                </code>
                               </details>
                             ) : null}
                           </div>
-                          <time className="small text-muted text-nowrap" dateTime={entry.created_at}>
+                          <time
+                            className="small text-muted text-nowrap"
+                            dateTime={entry.created_at}
+                          >
                             {formatTimestamp(entry.created_at)}
                           </time>
                         </div>
@@ -86,9 +98,18 @@ export function SettingsAuditTrailSection({
                     );
                   })}
                 </ListGroup>
-                {error ? <Alert variant="warning" className="py-2">{error}</Alert> : null}
+                {error ? (
+                  <Alert variant="warning" className="py-2">
+                    {error}
+                  </Alert>
+                ) : null}
                 {hasMore ? (
-                  <Button variant="outline-secondary" size="sm" disabled={isLoadingMore} onClick={onLoadMore}>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={isLoadingMore}
+                    onClick={onLoadMore}
+                  >
                     {isLoadingMore ? m.audit_trail_loading_more() : m.audit_trail_load_more()}
                   </Button>
                 ) : null}

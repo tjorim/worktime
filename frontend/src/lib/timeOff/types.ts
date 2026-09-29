@@ -76,11 +76,11 @@ export function isTimeOffWeeklyEntry(entry: TimeOffEntry): entry is TimeOffWeekl
 export function getTimeOffEntrySortKey(entry: TimeOffEntry): string {
   switch (entry.entryKind) {
     case "date":
-      return `0:${entry.date}`;
+      return `0:${entry.date}:${entry.date}`;
     case "range":
-      return `1:${entry.start}:${entry.end}`;
+      return `0:${entry.start}:${entry.end}`;
     case "weekly":
-      return `2:${entry.weekday}`;
+      return `1:${entry.weekday}`;
   }
 }
 

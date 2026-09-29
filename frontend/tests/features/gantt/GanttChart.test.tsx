@@ -448,7 +448,11 @@ describe("GanttChart", () => {
     const [instance] = mockInstances!;
 
     instance!.options.on_click?.({ id: "task-1" });
-    instance!.options.on_date_change?.({ id: "task-1" }, new Date(2026, 2, 2), new Date(2026, 2, 4));
+    instance!.options.on_date_change?.(
+      { id: "task-1" },
+      new Date(2026, 2, 2),
+      new Date(2026, 2, 4),
+    );
     instance!.options.on_progress_change?.({ id: "task-1" }, 75);
 
     expect(onTaskClick).toHaveBeenCalledWith("task-1");

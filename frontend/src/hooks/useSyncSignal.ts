@@ -134,8 +134,8 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
         if (stopped) return;
         shouldCatchUpOnConnect = true;
         const minimumInterval = Math.max(retryMs, retryAfterMs);
-        const interval = minimumInterval
-          + Math.random() * minimumInterval * RETRY_AFTER_JITTER_RATIO;
+        const interval =
+          minimumInterval + Math.random() * minimumInterval * RETRY_AFTER_JITTER_RATIO;
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
         retryTimer = setTimeout(() => {
           retryTimer = null;
@@ -180,7 +180,11 @@ export function createFetchSseTransport(url: string, accessToken: string): SyncS
             scheduleReconnect(retryAfterMs);
             return;
           }
-          if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)) {
+          if (
+            !response.ok ||
+            !response.body ||
+            !response.headers.get("content-type")?.startsWith(EVENT_STREAM_CONTENT_TYPE)
+          ) {
             throw new Error(`SSE connection failed: ${response.status}`);
           }
 

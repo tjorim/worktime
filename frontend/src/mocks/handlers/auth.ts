@@ -12,6 +12,8 @@ export function buildAuthFailureResponse(): Response | null {
   }
 
   const detail =
-    authState === "expired_session" ? "Session expired, please sign in again." : "Authentication required.";
+    authState === "expired_session"
+      ? "Session expired, please sign in again."
+      : "Authentication required.";
   return HttpResponse.json({ detail }, { status: 401 });
 }

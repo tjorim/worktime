@@ -36,10 +36,7 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
     [entries, selectedYear],
   );
 
-  const filteredTypes = useMemo(
-    () => stats.byType.filter((type) => type.days > 0),
-    [stats.byType],
-  );
+  const filteredTypes = useMemo(() => stats.byType.filter((type) => type.days > 0), [stats.byType]);
 
   return (
     <Card className="mb-3 shadow-sm">

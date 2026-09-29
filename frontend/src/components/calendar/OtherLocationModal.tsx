@@ -48,7 +48,9 @@ export function OtherLocationModal({
       onConfirm(value.countryCode, value.label.trim() || undefined);
     },
   });
-  const isCodeValid = useSelector(form.atom, (state) => hasIsoAlpha2Format(state.values.countryCode));
+  const isCodeValid = useSelector(form.atom, (state) =>
+    hasIsoAlpha2Format(state.values.countryCode),
+  );
 
   const handleShow = () => {
     // Reset to initial values when modal opens

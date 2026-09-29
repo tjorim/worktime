@@ -137,7 +137,11 @@ export function SettingsApiTokensSection({
 
         {isApiTokensLoading ? (
           <div className="d-flex align-items-center gap-2 text-muted small">
-            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span
+              className="spinner-border spinner-border-sm"
+              role="status"
+              aria-hidden="true"
+            ></span>
             <span>{m.loading()}</span>
           </div>
         ) : apiTokens && apiTokens.length > 0 ? (
@@ -150,7 +154,9 @@ export function SettingsApiTokensSection({
                     <div className="text-muted small">
                       •••• {token.token_preview} · {m.api_tokens_created_at_label()}{" "}
                       {formatTokenDate(token.created_at)} · {m.api_tokens_last_used_label()}{" "}
-                      {token.last_used_at ? formatTokenDate(token.last_used_at) : m.api_tokens_last_used_never()}
+                      {token.last_used_at
+                        ? formatTokenDate(token.last_used_at)
+                        : m.api_tokens_last_used_never()}
                     </div>
                     <div className="text-muted small">
                       {m.api_tokens_scopes_label()}: {token.scopes.join(", ")}
@@ -162,7 +168,9 @@ export function SettingsApiTokensSection({
                     disabled={revokingApiTokenId === token.id}
                     onClick={() => setTokenPendingRevoke(token)}
                   >
-                    {revokingApiTokenId === token.id ? m.api_tokens_revoke_busy() : m.api_tokens_revoke_btn()}
+                    {revokingApiTokenId === token.id
+                      ? m.api_tokens_revoke_busy()
+                      : m.api_tokens_revoke_btn()}
                   </Button>
                 </div>
               </ListGroup.Item>

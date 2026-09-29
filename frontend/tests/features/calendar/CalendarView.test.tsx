@@ -1,9 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  DEVICE_PREFERENCES_STORAGE_KEY,
-  USER_STATE_STORAGE_KEY,
-} from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { CalendarView } from "@/features/calendar/CalendarView";
 import { TestProviders } from "@tests/utils/testProviders";
 
@@ -43,13 +40,15 @@ describe("CalendarView (unified calendar) roster warning", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Close alert" }));
-    expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}"))
-      .toMatchObject({ dismissedHints: { unifiedCalendar: true } });
+    expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}")).toMatchObject({
+      dismissedHints: { unifiedCalendar: true },
+    });
     expect(screen.queryByText(/Shifts, time off, and time tracking/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show calendar help" }));
-    expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}"))
-      .toMatchObject({ dismissedHints: { unifiedCalendar: false } });
+    expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}")).toMatchObject({
+      dismissedHints: { unifiedCalendar: false },
+    });
     expect(screen.getByText(/Shifts, time off, and time tracking/i)).toBeInTheDocument();
   });
 

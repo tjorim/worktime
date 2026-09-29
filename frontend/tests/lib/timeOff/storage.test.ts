@@ -114,6 +114,23 @@ describe("normalizeTimeOffEntries", () => {
     ]);
   });
 
+  it("interleaves single dates and ranges by start date, with weekly entries last", () => {
+    const ids = normalizeTimeOffEntries([
+      { id: "weekly", entryKind: "weekly", weekday: 1, entryType: "in" },
+      { id: "date-late", entryKind: "date", date: "2026-03-01", entryType: "vacation" },
+      {
+        id: "range-early",
+        entryKind: "range",
+        start: "2026-01-05",
+        end: "2026-01-09",
+        entryType: "vacation",
+      },
+      { id: "date-mid", entryKind: "date", date: "2026-02-01", entryType: "vacation" },
+    ]).map((entry) => entry.id);
+
+    expect(ids).toEqual(["range-early", "date-mid", "date-late", "weekly"]);
+  });
+
   it("sorts by entry kind/date key, then identity, then id for stability", () => {
     expect(
       normalizeTimeOffEntries([

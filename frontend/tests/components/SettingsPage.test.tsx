@@ -1055,7 +1055,6 @@ describe("SettingsPage General Section", () => {
     expect(requestPermission).not.toHaveBeenCalled();
     await waitFor(() => expect(toggle).not.toBeChecked());
   });
-
 });
 
 describe("SettingsPage Time Tracking Section", () => {

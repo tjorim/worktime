@@ -10,8 +10,6 @@ export type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "./types";
 export { parseHday } from "./parser";
 export { normalizeEventFlags } from "./flags";
 export {
-  EVENT_COLORS,
-  EVENT_TEXT_COLORS,
   getEventClass,
   getEventColor,
   getEventTextColor,

@@ -1,8 +1,17 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
+import type { SortingState } from "@tanstack/react-table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
+import { TablePagination } from "@/components/shared/TablePagination";
+import {
+  createDataColumnHelper,
+  DATA_TABLE_DEFAULT_PAGE_SIZE,
+  useDataTable,
+} from "@/hooks/useDataTable";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
 import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
@@ -17,24 +26,53 @@ import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 
-type SortColumn = "name" | "start";
-type SortDirection = "asc" | "desc";
-
 interface GanttTableViewProps {
   tasks: GanttTask[];
   onTaskClick: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
-function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
-  const icon = active ? (direction === "asc" ? "bi-sort-up" : "bi-sort-down") : "bi-arrow-down-up";
-  return <i className={`bi ${icon} ms-1`} aria-hidden="true"></i>;
+type TaskLink = { id: string; name: string; known: boolean };
+
+type GanttRow = {
+  task: GanttTask;
+  labelName: string;
+  loggedMinutes: number;
+  /** Tasks this one depends on (its predecessors), in the order they were entered. */
+  dependsOn: TaskLink[];
+  /** Tasks that depend on this one (its successors). Derived, never stored. */
+  requiredBy: TaskLink[];
+  searchText: string;
+};
+
+const columnHelper = createDataColumnHelper<GanttRow>();
+
+const DEFAULT_SORTING: SortingState = [{ id: "start", desc: false }];
+
+const HIGHLIGHT_MS = 2000;
+
+function parseDependencyIds(dependencies: unknown): string[] {
+  // Imported data isn't always well-formed, so guard the non-string case.
+  if (typeof dependencies !== "string") return [];
+  return dependencies
+    .split(",")
+    .map((dependency) => dependency.trim())
+    .filter(Boolean);
 }
 
+const linkNames = (links: TaskLink[]) => links.map((link) => link.name).join(", ");
+
+const rowDomId = (taskId: string) => `gantt-task-row-${taskId}`;
+
 export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableViewProps) {
-  const [sortColumn, setSortColumn] = useState<SortColumn>("start");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  const [search, setSearch] = useState("");
   const [deletingTask, setDeletingTask] = useState<GanttTask | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  // Bumped per jump so the effect below re-runs even for the same target.
+  const [jumpRequest, setJumpRequest] = useState(0);
+  const jumpTargetRef = useRef<string | null>(null);
+  const highlightTimerRef = useRef<number | undefined>(undefined);
   const { tasks: timeTrackingTasks, labels } = useTimeTrackingStorage();
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
   const labelColorById = useMemo(() => buildLabelColorMap(labels), [labels]);
@@ -51,31 +89,204 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
     [deletingTask, timeTrackingTasks],
   );
 
-  const sortedTasks = useMemo(
-    () =>
-      [...tasks].sort((left, right) => {
-        const comparison = left[sortColumn].localeCompare(right[sortColumn]);
-        return sortDirection === "asc" ? comparison : -comparison;
-      }),
-    [sortColumn, sortDirection, tasks],
-  );
-
   const locale = getLocale();
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
     [locale],
   );
-  const formatDate = (isoDate: string) => dateFormatter.format(dayjs(isoDate).toDate());
 
-  const handleSort = (column: SortColumn) => {
-    if (column === sortColumn) {
-      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
-      return;
+  const formatDate = useCallback(
+    (isoDate: string) => dateFormatter.format(dayjs(isoDate).toDate()),
+    [dateFormatter],
+  );
+
+  const rows = useMemo<GanttRow[]>(() => {
+    const dependentsById = new Map<string, TaskLink[]>();
+    const dependsOnById = new Map<string, TaskLink[]>();
+    for (const task of tasks) {
+      const links = parseDependencyIds(task.dependencies).map((id) => ({
+        id,
+        name: taskNames.get(id) ?? id,
+        known: taskNames.has(id),
+      }));
+      dependsOnById.set(task.id, links);
+      for (const link of links) {
+        if (!link.known) continue;
+        const dependents = dependentsById.get(link.id) ?? [];
+        dependents.push({ id: task.id, name: task.name, known: true });
+        dependentsById.set(link.id, dependents);
+      }
     }
 
-    setSortColumn(column);
-    setSortDirection("asc");
+    return tasks.map((task) => {
+      const labelName = task.label ? (labelNameById[task.label] ?? m.tt_unknown_label()) : "";
+      const dependsOn = dependsOnById.get(task.id) ?? [];
+      const requiredBy = dependentsById.get(task.id) ?? [];
+      const loggedMinutes = loggedMinutesByTaskId.get(task.id) ?? 0;
+      return {
+        task,
+        labelName,
+        loggedMinutes,
+        dependsOn,
+        requiredBy,
+        // Every visible column is searchable, dates as displayed and as ISO.
+        // Newline-joined so a query can't match across two fields.
+        searchText: [
+          task.name,
+          formatDate(task.start),
+          task.start,
+          formatDate(task.end),
+          task.end,
+          labelName,
+          `${task.progress}%`,
+          loggedMinutes > 0 ? formatLoggedDuration(loggedMinutes) : "",
+          linkNames(dependsOn),
+          linkNames(requiredBy),
+          task.notes ?? "",
+        ]
+          .join("\n")
+          .toLowerCase(),
+      };
+    });
+  }, [tasks, labelNameById, taskNames, loggedMinutesByTaskId, formatDate]);
+
+  // Columns only drive headers, sorting and search. Body cells are rendered
+  // directly below: TanStack renders `cell` functions as components, so a
+  // column list that changed identity would remount the row buttons.
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor((row) => row.task.name, {
+          id: "name",
+          header: () => m.gantt_table_name(),
+          sortFn: "text",
+        }),
+        // ISO dates sort correctly as text.
+        columnHelper.accessor((row) => row.task.start, {
+          id: "start",
+          header: () => m.gantt_table_start(),
+          sortFn: "text",
+        }),
+        columnHelper.accessor((row) => row.task.end, {
+          id: "end",
+          header: () => m.gantt_table_end(),
+          sortFn: "text",
+        }),
+        columnHelper.accessor("labelName", {
+          id: "label",
+          header: () => m.form_label(),
+          sortFn: "text",
+        }),
+        columnHelper.accessor((row) => row.task.progress, {
+          id: "progress",
+          header: () => m.gantt_table_progress(),
+          sortFn: "basic",
+        }),
+        columnHelper.accessor("loggedMinutes", {
+          id: "logged",
+          header: () => m.gantt_table_logged(),
+          sortFn: "basic",
+        }),
+        columnHelper.accessor((row) => linkNames(row.dependsOn), {
+          id: "dependencies",
+          header: () => m.gantt_table_dependencies(),
+          enableSorting: false,
+        }),
+        columnHelper.accessor((row) => linkNames(row.requiredBy), {
+          id: "requiredBy",
+          header: () => m.gantt_table_required_by(),
+          enableSorting: false,
+        }),
+        columnHelper.accessor((row) => row.task.notes ?? "", {
+          id: "notes",
+          header: () => m.gantt_table_notes(),
+          enableSorting: false,
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: () => m.gantt_table_actions(),
+        }),
+      ]),
+    [],
+  );
+
+  const table = useDataTable(
+    {
+      data: rows,
+      columns,
+      state: { sorting, globalFilter: search },
+      initialState: { pagination: { pageIndex: 0, pageSize: DATA_TABLE_DEFAULT_PAGE_SIZE } },
+      getRowId: (row) => row.task.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setSearch,
+      globalFilterFn: (row, _columnId, filterValue) => {
+        const needle = String(filterValue).trim().toLowerCase();
+        return !needle || row.original.searchText.includes(needle);
+      },
+    },
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      pagination: state.pagination,
+    }),
+  );
+
+  const prePaginatedRows = table.getPrePaginatedRowModel().rows;
+  const { pageIndex, pageSize } = table.state.pagination;
+  const isFiltering = search.trim() !== "";
+
+  // Finishes a jump once the target row is in the filtered/sorted list: moves
+  // to the page holding it, then scrolls it into view. Re-runs as the search
+  // clears and the page changes, and stops once the row is on screen.
+  useEffect(() => {
+    const targetId = jumpTargetRef.current;
+    if (targetId === null) return;
+    const index = prePaginatedRows.findIndex((row) => row.id === targetId);
+    if (index === -1) return;
+    const targetPage = Math.floor(index / pageSize);
+    if (targetPage !== pageIndex) {
+      table.setPageIndex(targetPage);
+      return;
+    }
+    jumpTargetRef.current = null;
+    document.getElementById(rowDomId(targetId))?.scrollIntoView({ block: "center" });
+  }, [jumpRequest, prePaginatedRows, pageIndex, pageSize, table]);
+
+  useEffect(() => () => window.clearTimeout(highlightTimerRef.current), []);
+
+  const handleJumpToTask = (taskId: string) => {
+    jumpTargetRef.current = taskId;
+    // A search that hides the target would make the jump land nowhere.
+    if (isFiltering && !prePaginatedRows.some((row) => row.id === taskId)) {
+      setSearch("");
+    }
+    setHighlightedId(taskId);
+    window.clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = window.setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS);
+    setJumpRequest((request) => request + 1);
   };
+
+  const renderTaskLinks = (links: TaskLink[]) =>
+    links.length === 0
+      ? "—"
+      : links.map((link) =>
+          link.known ? (
+            <Button
+              key={link.id}
+              variant="outline-secondary"
+              size="sm"
+              className="py-0 px-2 me-1 mb-1"
+              aria-label={m.gantt_table_go_to_task({ name: link.name })}
+              onClick={() => handleJumpToTask(link.id)}
+            >
+              {link.name}
+            </Button>
+          ) : (
+            <span key={link.id} className="text-muted me-1">
+              {link.name}
+            </span>
+          ),
+        );
 
   const handleDelete = () => {
     if (!deletingTask) return;
@@ -83,79 +294,54 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
     setDeletingTask(null);
   };
 
-  const getLoggedLabel = (taskId: string) => {
-    const minutes = loggedMinutesByTaskId.get(taskId) ?? 0;
-    return minutes > 0 ? formatLoggedDuration(minutes) : "—";
-  };
-
-  const getDependencies = (dependencies?: string) => {
-    if (typeof dependencies !== "string") return "—";
-
-    return (
-      dependencies
-        .split(",")
-        .map((dependency) => dependency.trim())
-        .filter(Boolean)
-        .map((dependency) => taskNames.get(dependency) ?? dependency)
-        .join(", ") || "—"
-    );
-  };
+  const visibleRows = table.getRowModel().rows;
 
   return (
     <>
+      {tasks.length > 0 && (
+        <Form.Control
+          type="search"
+          size="sm"
+          className="mb-3 table-search-input"
+          placeholder={m.gantt_table_search_placeholder()}
+          aria-label={m.gantt_table_search_aria()}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      )}
       <Table striped hover responsive aria-label={m.gantt_table_aria()}>
         <thead>
-          <tr>
-            <th scope="col">
-              <Button
-                variant="link"
-                className="p-0 fw-semibold text-decoration-none"
-                aria-label={m.gantt_table_sort_aria({ column: m.gantt_table_name() })}
-                onClick={() => handleSort("name")}
-              >
-                {m.gantt_table_name()}
-                <SortIcon active={sortColumn === "name"} direction={sortDirection} />
-              </Button>
-            </th>
-            <th scope="col">
-              <Button
-                variant="link"
-                className="p-0 fw-semibold text-decoration-none"
-                aria-label={m.gantt_table_sort_aria({ column: m.gantt_table_start() })}
-                onClick={() => handleSort("start")}
-              >
-                {m.gantt_table_start()}
-                <SortIcon active={sortColumn === "start"} direction={sortDirection} />
-              </Button>
-            </th>
-            <th scope="col">{m.gantt_table_end()}</th>
-            <th scope="col">{m.form_label()}</th>
-            <th scope="col">{m.gantt_table_progress()}</th>
-            <th scope="col">{m.gantt_table_logged()}</th>
-            <th scope="col">{m.gantt_table_dependencies()}</th>
-            <th scope="col">{m.gantt_table_notes()}</th>
-            <th scope="col" className="text-end">
-              {m.gantt_table_actions()}
-            </th>
-          </tr>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <SortableHeaderCell
+                  key={header.id}
+                  header={header}
+                  className={header.column.id === "actions" ? "text-end" : undefined}
+                />
+              ))}
+            </tr>
+          ))}
         </thead>
         <tbody>
-          {sortedTasks.length === 0 ? (
+          {visibleRows.length === 0 ? (
             <tr>
-              <td colSpan={9} className="text-center text-muted py-4">
-                {m.gantt_table_empty()}
+              <td colSpan={columns.length} className="text-center text-muted py-4">
+                {isFiltering ? m.gantt_table_no_results() : m.gantt_table_empty()}
               </td>
             </tr>
           ) : (
-            sortedTasks.map((task) => {
+            visibleRows.map((tableRow) => {
+              const { task, labelName, loggedMinutes, dependsOn, requiredBy } = tableRow.original;
               const labelBackground = task.label
                 ? (labelColorById[task.label] ?? getDefaultLabelColor())
                 : null;
-              const labelTextColor = labelBackground
-                ? getContrastingTextColor(labelBackground)
-                : null;
               return (
-                <tr key={task.id}>
+                <tr
+                  key={task.id}
+                  id={rowDomId(task.id)}
+                  className={highlightedId === task.id ? "table-warning" : undefined}
+                >
                   <td>
                     <Button
                       variant="link"
@@ -168,28 +354,32 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                   <td>{formatDate(task.start)}</td>
                   <td>{formatDate(task.end)}</td>
                   <td>
-                    {task.label ? (
+                    {labelBackground ? (
                       <span
                         className="time-tracking-label"
+                        // Label colors are user-defined data, so this is the one inline style a class can't replace.
                         style={{
-                          backgroundColor: labelBackground ?? undefined,
-                          color: labelTextColor ?? undefined,
+                          backgroundColor: labelBackground,
+                          color: getContrastingTextColor(labelBackground),
                         }}
                       >
-                        {labelNameById[task.label] ?? m.tt_unknown_label()}
+                        {labelName}
                       </span>
                     ) : (
                       "—"
                     )}
                   </td>
-                  <td style={{ minWidth: "8rem" }}>
+                  <td className="gantt-progress-cell">
                     <div className="d-flex align-items-center gap-2">
                       <ProgressBar now={task.progress} className="border flex-grow-1" />
                       <span className="small text-muted text-nowrap">{task.progress}%</span>
                     </div>
                   </td>
-                  <td className="text-nowrap">{getLoggedLabel(task.id)}</td>
-                  <td>{getDependencies(task.dependencies)}</td>
+                  <td className="text-nowrap">
+                    {loggedMinutes > 0 ? formatLoggedDuration(loggedMinutes) : "—"}
+                  </td>
+                  <td>{renderTaskLinks(dependsOn)}</td>
+                  <td>{renderTaskLinks(requiredBy)}</td>
                   <td title={task.notes}>{task.notes || "—"}</td>
                   <td className="text-end text-nowrap">
                     <Button
@@ -220,11 +410,23 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
           )}
         </tbody>
       </Table>
+      <TablePagination
+        total={table.getPrePaginatedRowModel().rows.length}
+        pageIndex={table.state.pagination.pageIndex}
+        pageSize={table.state.pagination.pageSize}
+        canPreviousPage={table.getCanPreviousPage()}
+        canNextPage={table.getCanNextPage()}
+        onPreviousPage={() => table.previousPage()}
+        onNextPage={() => table.nextPage()}
+        onPageSizeChange={(size) => table.setPageSize(size)}
+      />
 
       <ConfirmationDialog
         isOpen={deletingTask !== null}
         title={m.gantt_delete_task_title()}
-        message={deletingTask ? getGanttDeleteConfirmMessage(deletingTask.name, linkedEntryCount) : ""}
+        message={
+          deletingTask ? getGanttDeleteConfirmMessage(deletingTask.name, linkedEntryCount) : ""
+        }
         confirmLabel={m.gantt_delete_label()}
         variant="danger"
         icon="bi-trash"

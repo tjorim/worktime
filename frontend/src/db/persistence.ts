@@ -242,11 +242,7 @@ function openSnapshotChannel(): void {
   };
 }
 
-function scheduleSnapshot(
-  name: string,
-  read: () => unknown[],
-  getItemKey: SnapshotItemKey,
-): void {
+function scheduleSnapshot(name: string, read: () => unknown[], getItemKey: SnapshotItemKey): void {
   const pending = timers.get(name);
   if (pending) clearTimeout(pending);
   timers.set(
@@ -283,10 +279,7 @@ export function startPersistingSyncCollections(
   if (subscriptions.length > 0) return;
   openSnapshotChannel();
   for (const [name, collection] of Object.entries(collections)) {
-    baselines.set(
-      name,
-      fingerprints(name, loadedSnapshots.get(name) ?? [], getItemKey),
-    );
+    baselines.set(name, fingerprints(name, loadedSnapshots.get(name) ?? [], getItemKey));
     try {
       subscriptions.push(
         collection.subscribeChanges(() => {
@@ -380,9 +373,7 @@ export async function purgeSnapshotsOnOwnerChange(
       clearLoadedSnapshots();
       const previousGeneration = activeGeneration;
       const nextGeneration = createSnapshotGeneration();
-      await Promise.all(
-        collectionNames.map((name) => del(snapshotKey(name, previousGeneration))),
-      );
+      await Promise.all(collectionNames.map((name) => del(snapshotKey(name, previousGeneration))));
       await setMany([
         [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, owner],
         [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, nextGeneration],

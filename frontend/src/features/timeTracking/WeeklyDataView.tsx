@@ -74,7 +74,10 @@ export function WeeklyDataView({
                 <span className="text-muted">
                   {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} /{" "}
                   {m.tt_hours_value({ hours: weeklyTargetHours.toFixed(1) })}
-                  <Badge bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"} className="ms-2">
+                  <Badge
+                    bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
+                    className="ms-2"
+                  >
                     {weekTotal >= weeklyTargetHours
                       ? m.tt_hours_delta({ hours: (weekTotal - weeklyTargetHours).toFixed(1) })
                       : m.tt_hours_remaining({
@@ -106,7 +109,10 @@ export function WeeklyDataView({
       )}
 
       <div className="row g-3 mb-4">
-        <MetricCard label={m.tt_total_hours()} value={m.tt_hours_value({ hours: weekTotal.toFixed(1) })} />
+        <MetricCard
+          label={m.tt_total_hours()}
+          value={m.tt_hours_value({ hours: weekTotal.toFixed(1) })}
+        />
         <MetricCard
           label={m.tt_avg_daily_hours()}
           value={m.tt_hours_value({ hours: avgDailyHours.toFixed(1) })}
@@ -115,7 +121,11 @@ export function WeeklyDataView({
           label={m.tt_days_tracked()}
           value={String(dailyHourTotals.filter((h) => h > 0).length)}
         />
-        <MetricCard label={m.tt_top_category()} value={labelPercentages[0]?.label ?? "-"} truncate />
+        <MetricCard
+          label={m.tt_top_category()}
+          value={labelPercentages[0]?.label ?? "-"}
+          truncate
+        />
       </div>
 
       <WeeklyHoursChart
@@ -155,7 +165,9 @@ export function WeeklyDataView({
                     onKeyDown={onSwitchToDaily ? createDayKeyDownHandler(day.iso, true) : undefined}
                     style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                   >
-                    <div className={`small mb-1 ${isToday ? "fw-bold text-primary" : "text-muted"}`}>
+                    <div
+                      className={`small mb-1 ${isToday ? "fw-bold text-primary" : "text-muted"}`}
+                    >
                       {day.label.substring(0, 3)}
                       {isToday && (
                         <Badge bg="primary" className="ms-1">

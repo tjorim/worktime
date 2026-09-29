@@ -64,6 +64,10 @@ jobs:
         working-directory: frontend
         run: pnpm run lint
 
+      - name: Check formatting
+        working-directory: frontend
+        run: pnpm run format:check
+
   test_build:
     name: Test & Build
     runs-on: ubuntu-latest

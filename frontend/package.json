@@ -1,6 +1,6 @@
 {
   "name": "worktime",
-  "version": "2026.9.2",
+  "version": "2026.9.3",
   "description": "Team Shift Tracker + Time Off Management for 5-team continuous (24/7) schedules",
   "keywords": [
     "continuous",
@@ -33,6 +33,7 @@
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "lint": "oxlint",
     "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:watch": "vitest",

@@ -128,9 +128,9 @@ export function TimelineProgressBar({
         percentage: (durationHours / sanitizedTargetHours) * 100,
         isPlanned: Boolean(
           task.stopTime &&
-            liveTime &&
-            (startDayjs.isAfter(liveTime) ||
-              (runningTaskStart && startDayjs.isAfter(runningTaskStart))),
+          liveTime &&
+          (startDayjs.isAfter(liveTime) ||
+            (runningTaskStart && startDayjs.isAfter(runningTaskStart))),
         ),
         includesBreak: task.includesBreak,
       };
@@ -266,8 +266,7 @@ export function TimelineProgressBar({
               ) {
                 const beforePct =
                   (rs.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-                const breakPct =
-                  (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                const breakPct = (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
                 const afterPct =
                   (rs.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
                 const breakTooltipText = m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES });
@@ -333,9 +332,7 @@ export function TimelineProgressBar({
                   striped={rs.isPlanned}
                   aria-label={tooltipText}
                   label={
-                    normalizedPercent > 10 ? (
-                      <span style={LABEL_STYLE}>{rs.text}</span>
-                    ) : undefined
+                    normalizedPercent > 10 ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined
                   }
                   onMouseEnter={showTooltip(tooltipText)}
                   onMouseLeave={hideTooltip}

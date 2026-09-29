@@ -27,10 +27,7 @@ const toHolidayMap = (holidays: PublicHoliday[]) => {
   return map;
 };
 
-export function usePublicHolidays(
-  year: number,
-  enabled: boolean = true,
-) {
+export function usePublicHolidays(year: number, enabled: boolean = true) {
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
   const isEnabled = enabled && isValidYear;
   const params = useMemo(

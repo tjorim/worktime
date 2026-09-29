@@ -30,7 +30,10 @@ export function Step9AccountSetup({
 
       {isAuthenticated ? (
         <div className="text-center py-3">
-          <i className="bi bi-person-check-fill text-success display-6 mb-3 d-block" aria-hidden="true"></i>
+          <i
+            className="bi bi-person-check-fill text-success display-6 mb-3 d-block"
+            aria-hidden="true"
+          ></i>
           <p className="fw-medium">
             {displayName ? m.auth_logged_in_as({ displayName }) : m.account_signed_in()}
           </p>

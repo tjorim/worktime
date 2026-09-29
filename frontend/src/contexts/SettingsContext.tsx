@@ -230,12 +230,17 @@ const nullableTrimmedStringWithDefault =
   };
 
 const nullableScheduleOptionWithDefault =
-  (validValues: ReadonlySet<string>, fallback: ScheduleOption | null): Validator<ScheduleOption | null> =>
+  (
+    validValues: ReadonlySet<string>,
+    fallback: ScheduleOption | null,
+  ): Validator<ScheduleOption | null> =>
   (value) => {
     if (value === null) {
       return null;
     }
-    return typeof value === "string" && validValues.has(value) ? (value as ScheduleOption) : fallback;
+    return typeof value === "string" && validValues.has(value)
+      ? (value as ScheduleOption)
+      : fallback;
   };
 
 const nullableFiniteNumberWithDefault =
@@ -310,17 +315,17 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       defaultLastUsed.otherSchedule,
     ),
     timeOffView: enumWithDefault(validTimeOffViewKeys, defaultLastUsed.timeOffView),
-    timeTrackingView: enumWithDefault(
-      validTimeTrackingViewKeys,
-      defaultLastUsed.timeTrackingView,
-    ),
+    timeTrackingView: enumWithDefault(validTimeTrackingViewKeys, defaultLastUsed.timeTrackingView),
     otherTeam: nullableFiniteNumberWithDefault(defaultLastUsed.otherTeam),
     ganttViewMode: enumWithDefault(validGanttViewModes, defaultLastUsed.ganttViewMode),
     ganttView: enumWithDefault(validGanttViewKeys, defaultLastUsed.ganttView),
   } satisfies { [K in keyof LastUsed]: Validator<LastUsed[K]> };
 
   const normalizedLastUsed = Object.fromEntries(
-    Object.entries(lastUsedValidators).map(([key, validator]) => [key, validator(rawLastUsed[key])]),
+    Object.entries(lastUsedValidators).map(([key, validator]) => [
+      key,
+      validator(rawLastUsed[key]),
+    ]),
   ) as unknown as LastUsed;
 
   // --- Validate scheduleType ---

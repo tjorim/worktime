@@ -6,11 +6,231 @@
    overrides (--bs-*) used primarily for dark mode.
    ========================================================================= */
 
+@use "sass:list";
+
+/* ============================================================================
+   EVENT PALETTE — the single source of truth for time-off event colors
+   ============================================================================
+   Each type has a full-day and a half-day look, as (background, text). Text is
+   chosen so every pair meets WCAG AA (4.5:1) on its background; the test in
+   tests/lib/eventPalette.test.ts checks that and that no two full-day colors
+   are near-identical, in both themes.
+
+   These maps only emit CSS custom properties (--wt-event-<type>-<variant>-bg/-fg).
+   Everything else derives from them: the .event-* classes in _shifts.scss and
+   the colors returned by getEventColor()/getEventTextColor() in
+   src/lib/hday/presentation.ts. Add or change a color here and nowhere else;
+   also update the color table in docs/hday-format-spec.md.
+   ========================================================================= */
+
+$event-palette-light: (
+  holiday: (
+    full: (
+      #ec0000,
+      #ffffff,
+    ),
+    half: (
+      #ff8a8a,
+      #000000,
+    ),
+  ),
+  business: (
+    full: (
+      #ff9500,
+      #000000,
+    ),
+    half: (
+      #ffc04d,
+      #000000,
+    ),
+  ),
+  course: (
+    full: (
+      #d9ad00,
+      #000000,
+    ),
+    half: (
+      #f0d04d,
+      #000000,
+    ),
+  ),
+  in: (
+    full: (
+      #008899,
+      #000000,
+    ),
+    half: (
+      #00b8cc,
+      #000000,
+    ),
+  ),
+  weekend: (
+    full: (
+      #990099,
+      #ffffff,
+    ),
+    half: (
+      #cc66cc,
+      #000000,
+    ),
+  ),
+  recurring: (
+    full: (
+      #8b5a2b,
+      #ffffff,
+    ),
+    half: (
+      #c9a27a,
+      #000000,
+    ),
+  ),
+  birthday: (
+    full: (
+      #0000cc,
+      #ffffff,
+    ),
+    half: (
+      #6666ff,
+      #000000,
+    ),
+  ),
+  ill: (
+    full: (
+      #336600,
+      #ffffff,
+    ),
+    half: (
+      #669933,
+      #000000,
+    ),
+  ),
+  other: (
+    full: (
+      #6c757d,
+      #ffffff,
+    ),
+    half: (
+      #adb5bd,
+      #000000,
+    ),
+  ),
+);
+
+$event-palette-dark: (
+  holiday: (
+    full: (
+      #c62828,
+      #ffffff,
+    ),
+    half: (
+      #e57373,
+      #000000,
+    ),
+  ),
+  business: (
+    full: (
+      #e68a00,
+      #000000,
+    ),
+    half: (
+      #ffb74d,
+      #000000,
+    ),
+  ),
+  course: (
+    full: (
+      #c9a100,
+      #000000,
+    ),
+    half: (
+      #e6c84d,
+      #000000,
+    ),
+  ),
+  in: (
+    full: (
+      #00838f,
+      #ffffff,
+    ),
+    half: (
+      #26a6b3,
+      #000000,
+    ),
+  ),
+  weekend: (
+    full: (
+      #a020a0,
+      #ffffff,
+    ),
+    half: (
+      #c77dc7,
+      #000000,
+    ),
+  ),
+  recurring: (
+    full: (
+      #a06a3a,
+      #ffffff,
+    ),
+    half: (
+      #c8a07a,
+      #000000,
+    ),
+  ),
+  birthday: (
+    full: (
+      #4f5fc9,
+      #ffffff,
+    ),
+    half: (
+      #7986cb,
+      #000000,
+    ),
+  ),
+  ill: (
+    full: (
+      #2e7d32,
+      #ffffff,
+    ),
+    half: (
+      #81c784,
+      #000000,
+    ),
+  ),
+  other: (
+    full: (
+      #6c757d,
+      #ffffff,
+    ),
+    half: (
+      #aab2b8,
+      #000000,
+    ),
+  ),
+);
+
+/* Fallback for events whose type isn't recognized. */
+$event-unknown-light: (#cccccc, #000000);
+$event-unknown-dark: (#555555, #cccccc);
+
+@mixin event-palette-vars($palette, $unknown) {
+  @each $type, $variants in $palette {
+    @each $variant, $pair in $variants {
+      --wt-event-#{$type}-#{$variant}-bg: #{list.nth($pair, 1)};
+      --wt-event-#{$type}-#{$variant}-fg: #{list.nth($pair, 2)};
+    }
+  }
+  --wt-event-unknown-bg: #{list.nth($unknown, 1)};
+  --wt-event-unknown-fg: #{list.nth($unknown, 2)};
+}
+
 /* ============================================================================
    LIGHT MODE VARIABLES
    ========================================================================= */
 
 :root {
+  @include event-palette-vars($event-palette-light, $event-unknown-light);
+
   /* --- Motion --- */
   --wt-motion-fast: 120ms;
   --wt-motion-base: 180ms;
@@ -85,9 +305,8 @@
   --wt-gantt-time-off-bg: rgba(13, 202, 240, 0.2);
 
   /* --- Team Calendar Grid --- */
-  --wt-team-cal-today: #fff3cd;
-  --wt-team-cal-weekend: #d6d8db;
-  --wt-team-cal-available: #b3e5ec;
+  /* Neutral on purpose: most cells are "available", so a tint here drowns out the events. */
+  --wt-team-cal-available: var(--bs-body-bg);
   --wt-team-cal-weekend-cell: #e0e0e0;
   --wt-team-cal-today-ring: var(--bs-warning);
   --wt-navbar-height: 60px;
@@ -104,6 +323,8 @@
    ========================================================================= */
 
 [data-bs-theme="dark"] {
+  @include event-palette-vars($event-palette-dark, $event-unknown-dark);
+
   /* --- Month Calendar Component --- */
   /* Background and borders */
   --wt-month-calendar-bg: #1f242a;
@@ -171,9 +392,7 @@
   --wt-gantt-time-off-bg: rgba(13, 202, 240, 0.3);
 
   /* --- Team Calendar Grid --- */
-  --wt-team-cal-today: rgba(255, 193, 7, 0.3);
-  --wt-team-cal-weekend: #3a3f44;
-  --wt-team-cal-available: #004d5c;
+  --wt-team-cal-available: var(--bs-body-bg);
   --wt-team-cal-weekend-cell: #383838;
   --wt-team-cal-today-ring: #ffda6a;
 

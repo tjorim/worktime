@@ -38,10 +38,7 @@ export function useApiClient() {
   const { showError, showWarning } = useToast();
 
   const authenticatedFetch = useCallback(
-    async (
-      url: string,
-      init: AuthenticatedRequestInit = {},
-    ): Promise<Response> => {
+    async (url: string, init: AuthenticatedRequestInit = {}): Promise<Response> => {
       const { suppressUnauthorizedRedirect = false, ...requestInit } = init;
 
       const attempt = (tokenOverride?: string | null) => {

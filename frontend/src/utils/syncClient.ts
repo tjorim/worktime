@@ -322,8 +322,7 @@ function dedupeByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
  */
 export function countPushConflicts(response: SyncPushResponse): number {
   return Object.values(response.results ?? {}).reduce(
-    (total, records) =>
-      total + (records ?? []).filter((r) => r.status === "conflict").length,
+    (total, records) => total + (records ?? []).filter((r) => r.status === "conflict").length,
     0,
   );
 }
@@ -448,8 +447,7 @@ type SyncPushEntityKey = Exclude<
 /** Count delete actions across every entity list in a payload. */
 export function countPayloadDeletes(payload: SyncPushPayload): number {
   return PUSH_ENTITY_ORDER.reduce(
-    (total, key) =>
-      total + (payload[key] ?? []).filter((item) => item.action === "delete").length,
+    (total, key) => total + (payload[key] ?? []).filter((item) => item.action === "delete").length,
     0,
   );
 }

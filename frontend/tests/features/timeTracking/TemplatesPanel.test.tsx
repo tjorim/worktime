@@ -172,7 +172,9 @@ describe("TemplatesPanel", () => {
 
       await user.click(within(dialog).getByRole("button", { name: /Save Template/i }));
 
-      expect(await within(dialog).findByText(/stop time must be after start time/i)).toBeInTheDocument();
+      expect(
+        await within(dialog).findByText(/stop time must be after start time/i),
+      ).toBeInTheDocument();
       expect(onAddTemplate).not.toHaveBeenCalled();
     });
 

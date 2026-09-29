@@ -273,7 +273,11 @@ export function SettingsContent({
     isAuthenticated,
     fetchFn,
   });
-  const integrationClients = useSettingsIntegrationClients({ isAuthenticated, accountIdentity: userId, fetchFn });
+  const integrationClients = useSettingsIntegrationClients({
+    isAuthenticated,
+    accountIdentity: userId,
+    fetchFn,
+  });
   const {
     adminUsers,
     isAdminUsersLoading,
@@ -289,8 +293,7 @@ export function SettingsContent({
     showSuccessToast: toast.showSuccess,
   });
   const personalAuditTrail = useSettingsAuditTrail({
-    enabled:
-      activeSection === "account" && isAuthenticated && accountProfile?.id !== undefined,
+    enabled: activeSection === "account" && isAuthenticated && accountProfile?.id !== undefined,
     userId: accountProfile?.id,
     fetchFn,
   });

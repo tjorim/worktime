@@ -153,7 +153,9 @@ describe("ShiftTimeline", () => {
 
     beforeEach(() => {
       // Reset to default 5-shift before each test
-      vi.mocked(useSettings).mockReturnValue(defaultSettings as unknown as ReturnType<typeof useSettings>);
+      vi.mocked(useSettings).mockReturnValue(
+        defaultSettings as unknown as ReturnType<typeof useSettings>,
+      );
     });
 
     afterEach(() => {

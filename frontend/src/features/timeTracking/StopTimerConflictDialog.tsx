@@ -33,10 +33,11 @@ export function StopTimerConflictDialog({
     () =>
       isValid
         ? conflictingTasks.map((task) => {
-        const taskStart = dayjs(task.startTime).format("HH:mm");
-        const taskStop = task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "";
-        const outcome = stopTime <= taskStart ? "unchanged" : stopTime < taskStop ? "shortened" : "removed";
-        return { task, taskStart, taskStop, outcome };
+            const taskStart = dayjs(task.startTime).format("HH:mm");
+            const taskStop = task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "";
+            const outcome =
+              stopTime <= taskStart ? "unchanged" : stopTime < taskStop ? "shortened" : "removed";
+            return { task, taskStart, taskStop, outcome };
           })
         : [],
     [conflictingTasks, isValid, stopTime],

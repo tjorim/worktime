@@ -44,10 +44,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const MAX_TRACKED_REQUEST_IDS = 20;
 
 /** Wrap authenticated fetch so API request IDs can be correlated with a client failure. */
-export function trackSyncRequests(
-  fetch: FetchFn,
-  diagnostics: SyncAttemptDiagnostics,
-): FetchFn {
+export function trackSyncRequests(fetch: FetchFn, diagnostics: SyncAttemptDiagnostics): FetchFn {
   return async (url, init) => {
     const response = await fetch(url, init);
     const requestId = response.headers?.get("X-Request-ID");
@@ -69,9 +66,7 @@ export function trackSyncRequests(
   };
 }
 
-export function countSyncPayloadEntities(
-  payload: SyncPushPayload,
-): Record<SyncEntityKey, number> {
+export function countSyncPayloadEntities(payload: SyncPushPayload): Record<SyncEntityKey, number> {
   return {
     labels: payload.labels.length,
     tasks: payload.tasks.length,

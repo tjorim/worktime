@@ -1,8 +1,4 @@
-import {
-  emptyPullResponse,
-  emptyPushResponse,
-  populatedStatus,
-} from "@/mocks/data/syncStore";
+import { emptyPullResponse, emptyPushResponse, populatedStatus } from "@/mocks/data/syncStore";
 import {
   seedLongWeekends,
   seedPaydates,
@@ -10,7 +6,12 @@ import {
   seedSchoolHolidays,
 } from "@/mocks/data/holidayStore";
 import type { MockScenarioFixture, MockScenarioId, TeamShiftStatusReadModel } from "./types";
-import type { LabelSyncRead, SyncPullResponse, SyncStatusResponse, TaskSyncRead } from "@/utils/syncClient";
+import type {
+  LabelSyncRead,
+  SyncPullResponse,
+  SyncStatusResponse,
+  TaskSyncRead,
+} from "@/utils/syncClient";
 
 const AS_OF = "2026-05-18T06:00:00.000Z";
 const CREATED_AT = "2026-01-01T00:00:00.000Z";
@@ -302,27 +303,36 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
       validation_errors: ["Tracked time is shorter than required shift target."],
     },
   })),
-  "time-tracking-validation-failure": withFixture("time-tracking-validation-failure", (fixture) => ({
-    ...fixture,
-    timeTracking: {
-      ...fixture.timeTracking,
-      state: "validation_failure",
-      validation_errors: ["start_time must be before end_time"],
-    },
-  })),
+  "time-tracking-validation-failure": withFixture(
+    "time-tracking-validation-failure",
+    (fixture) => ({
+      ...fixture,
+      timeTracking: {
+        ...fixture.timeTracking,
+        state: "validation_failure",
+        validation_errors: ["start_time must be before end_time"],
+      },
+    }),
+  ),
   "time-off-pending": createBaseFixture("time-off-pending"),
   "time-off-approved": withFixture("time-off-approved", (fixture) => ({
     ...fixture,
     timeOffRequests: {
       ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({ ...request, status: "approved" })),
+      requests: fixture.timeOffRequests.requests.map((request) => ({
+        ...request,
+        status: "approved",
+      })),
     },
   })),
   "time-off-rejected": withFixture("time-off-rejected", (fixture) => ({
     ...fixture,
     timeOffRequests: {
       ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({ ...request, status: "rejected" })),
+      requests: fixture.timeOffRequests.requests.map((request) => ({
+        ...request,
+        status: "rejected",
+      })),
     },
   })),
   "time-off-overlap": withFixture("time-off-overlap", (fixture) => ({

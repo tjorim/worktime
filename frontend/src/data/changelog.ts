@@ -14,9 +14,33 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "2026.9.3",
+    date: "2026-09-29",
+    status: "current",
+    added: [
+      "Time Off, Gantt and the admin user list are now searchable, sortable and paged: click a column header to sort (again to reverse, a third time to reset), type in the search box to filter across every visible column, and long lists are split into pages of 20 with a rows-per-page choice",
+      'Gantt table: dependencies are now buttons that jump straight to the task they point to, and a new "Required by" column shows the tasks that depend on each one, so you can walk the chain in both directions; a search that hides the target clears itself first',
+      "Gantt table: End, Label, Progress and Logged time are sortable too, not just Name and Start",
+      "Team schedule: hovering or focusing a day with time off opens a small card with the person, the date and each event's type, title and morning/afternoon — and those days are now reachable with the keyboard and announced by screen readers, so the event type no longer depends on colour alone",
+      "Team schedule: the grid opens scrolled to today, month names stay visible while you scroll through their days, and the first and last day of a range are capped so it reads as one block",
+      "Team schedule: half days now show which half is off — the left half is filled with ◐ for the morning, the right half with ◑ for the afternoon, matching the Time Off table",
+      "Team schedule: legend now lists every look the grid can show, including Other, Weekend event, and Morning/Afternoon off",
+    ],
+    changed: [
+      "Team schedule: the team ID field now lives in the grid's header next to the month navigation instead of in its own card, so the grid starts much higher on the page; long names are cut with an ellipsis (full name in the tooltip) and the name column is narrower on phones",
+      'Team schedule colours: "Available" days are now neutral so time off stands out, "Other" is slate grey and weekly days off are brown (they were two near-identical blues alongside In office), and dark mode uses brighter versions of the same hues so every type stays distinguishable',
+    ],
+    fixed: [
+      "Event type names (Holiday, Business trip, Sick leave …) in the Time Off table, month calendar and event dialog are now translated instead of always being English",
+      "Time Off entries are now ordered strictly by start date — single days used to be listed first and every date range after them",
+      'Team schedule: "In office" days were invisible in dark mode, days with more than one event only showed the first, and the legend swatches for Available and Weekend didn\'t match the grid',
+      "Team schedule: weekend and today column headers were faded or pale-on-pale and hard to read",
+    ],
+  },
+  {
     version: "2026.9.2",
     date: "2026-09-06",
-    status: "current",
+    status: "released",
     added: [
       "hday-helper now builds a Linux binary too, with a systemd unit file for running it as a background service (no tray icon on Linux — see the Windows entry below for that)",
     ],
@@ -48,7 +72,7 @@ export const changelogData: ChangelogVersion[] = [
     date: "2026-08-25",
     status: "released",
     added: [
-      "Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. \"2pm: Team meeting\") now nudges you about 10 minutes before it starts, on the web app and Android",
+      'Reminder for upcoming planned time-tracking entries: a task logged ahead of time (e.g. "2pm: Team meeting") now nudges you about 10 minutes before it starts, on the web app and Android',
     ],
     changed: [
       "Removed the shift-start reminder (lead time, quiet hours, and its own push subscription plumbing) — most people are already at work by the time it fires. The Notifications setting now controls the new planned-task reminder instead",
@@ -68,7 +92,7 @@ export const changelogData: ChangelogVersion[] = [
       "A full-day time-off entry no longer leaves a duplicate shift event in the iCal feed alongside it",
       "Fixed a bug that could sign you out even after a successful silent session renewal: the retried request was reusing the old, already-expired token instead of the freshly renewed one",
       "The sync status badge's spinning icon no longer freezes mid-animation while syncing a nonempty outbox — the common case, since a sync is usually triggered by having queued changes in the first place",
-      "Adding, editing, or deleting an entry now refreshes the sync status badge (and its \"last synced\" time) right away, instead of leaving it showing a stale time until something else happened to trigger a pull",
+      'Adding, editing, or deleting an entry now refreshes the sync status badge (and its "last synced" time) right away, instead of leaving it showing a stale time until something else happened to trigger a pull',
       "Fixed a data-loss bug: an entry added in the brief window before your session finished reloading could silently disappear once sync caught up, since nothing recorded that it still needed to reach the server. It's now queued the same way an entry made while offline already was",
       "The calendar's shift badge no longer shows the day's regular working shift in full color on a day you actually have off (time off or a public holiday) — it now falls back to the same muted style as a scheduled day off, matching the iCal feed",
       "Fixed a long-press on a calendar event (opening its context menu) on touch devices also opening the View Event dialog on top of it, from the tap that mobile browsers still send after the touch sequence ends",
@@ -79,7 +103,7 @@ export const changelogData: ChangelogVersion[] = [
     date: "2026-08-19",
     status: "released",
     added: [
-      "The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual \"Install App\" action in Settings > About (#273)",
+      'The app now offers to install itself as a PWA after a bit of engagement (a few visits, a little time in the current one) via a dismissible toast, plus a manual "Install App" action in Settings > About (#273)',
     ],
     changed: [],
     fixed: [],
@@ -116,7 +140,7 @@ export const changelogData: ChangelogVersion[] = [
       "The Current Status card now shows only a compact one-line summary outside the Calendar and Schedule tabs, expandable back to the full card, so tab content is visible without scrolling (#1126)",
     ],
     fixed: [
-      "\"Up Next\" no longer duplicates \"Today\" when they resolve to the same date and shift (#1126)",
+      '"Up Next" no longer duplicates "Today" when they resolve to the same date and shift (#1126)',
     ],
   },
   {

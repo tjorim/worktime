@@ -34,10 +34,7 @@ describe("frontend data standard guardrails", () => {
     for (const file of files) {
       const rawSource = readFileSync(file, "utf8");
       const source = rawSource.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
-      if (
-        !/\buse(?:Suspense)?(?:Infinite)?Queries?\s*[<(]/.test(source)
-      )
-        continue;
+      if (!/\buse(?:Suspense)?(?:Infinite)?Queries?\s*[<(]/.test(source)) continue;
       const rel = relative(SRC_DIR, file).replaceAll("\\", "/");
       if (!ALLOWED_PLAIN_USE_QUERY.has(rel)) offenders.push(rel);
     }

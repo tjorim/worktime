@@ -216,9 +216,7 @@ describe("useTransferCalculations", () => {
       );
 
       expect(result.current.overlaps).toHaveLength(1);
-      expect(result.current.overlaps[0]?.start.format("YYYY-MM-DD HH:mm")).toBe(
-        "2025-01-02 06:30",
-      );
+      expect(result.current.overlaps[0]?.start.format("YYYY-MM-DD HH:mm")).toBe("2025-01-02 06:30");
       expect(result.current.overlaps[0]?.end.format("YYYY-MM-DD HH:mm")).toBe("2025-01-02 07:00");
     });
 
@@ -234,8 +232,7 @@ describe("useTransferCalculations", () => {
         customEndDate: "2025-06-30",
       };
       const { result: smallLimit } = renderHook(
-        () =>
-          useTransferCalculations({ myTeam: 1, otherScheduleType: "9-5", ...range, limit: 3 }),
+        () => useTransferCalculations({ myTeam: 1, otherScheduleType: "9-5", ...range, limit: 3 }),
         { wrapper },
       );
       const { result: largeLimit } = renderHook(

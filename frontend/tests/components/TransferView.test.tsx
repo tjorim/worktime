@@ -251,7 +251,9 @@ describe("TransferView", () => {
       const user = userEvent.setup();
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const otherTeamSelect = screen.getByRole("combobox", { name: "Select team to view transfers with" });
+      const otherTeamSelect = screen.getByRole("combobox", {
+        name: "Select team to view transfers with",
+      });
       await user.selectOptions(otherTeamSelect, "3");
 
       expect(mockSetOtherTeam).toHaveBeenCalledWith(3);

@@ -67,7 +67,12 @@
 
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "@/data/rosters";
-import { dayjs, formatYYWWD, getLocalizedShiftTime, setTimeFromFractionalHour } from "./dateTimeUtils";
+import {
+  dayjs,
+  formatYYWWD,
+  getLocalizedShiftTime,
+  setTimeFromFractionalHour,
+} from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 import { logger } from "@/utils/logger";
 
@@ -149,9 +154,7 @@ const buildShift = (
     ...(definition.flexStartEarliest != null
       ? { flexStartEarliest: definition.flexStartEarliest }
       : {}),
-    ...(definition.flexStartLatest != null
-      ? { flexStartLatest: definition.flexStartLatest }
-      : {}),
+    ...(definition.flexStartLatest != null ? { flexStartLatest: definition.flexStartLatest } : {}),
     ...(definition.presenceHours != null ? { presenceHours: definition.presenceHours } : {}),
   };
 };

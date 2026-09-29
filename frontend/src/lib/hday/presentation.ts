@@ -1,118 +1,47 @@
 import { getPrimaryTimeLocationFlag, getPrimaryTypeFlag, hasHalfDayFlag } from "./flags";
-import type { EventFlag, HdayEvent } from "./types";
+import * as m from "@/paraglide/messages.js";
+import type { EventFlag, HdayEvent, TypeFlag } from "./types";
 
-/** Event background colors paired with text colors that meet WCAG AA contrast. */
-export const EVENT_COLORS = {
-  HOLIDAY_FULL: "#EC0000",
-  HOLIDAY_HALF: "#FF8A8A",
-  BUSINESS_FULL: "#FF9500",
-  BUSINESS_HALF: "#FFC04D",
-  COURSE_FULL: "#D9AD00",
-  COURSE_HALF: "#F0D04D",
-  IN_OFFICE_FULL: "#008899",
-  IN_OFFICE_HALF: "#00B8CC",
-  WEEKEND_FULL: "#990099",
-  WEEKEND_HALF: "#CC66CC",
-  BIRTHDAY_FULL: "#0000CC",
-  BIRTHDAY_HALF: "#6666FF",
-  ILL_FULL: "#336600",
-  ILL_HALF: "#669933",
-  OTHER_FULL: "#008B8B",
-  OTHER_HALF: "#4DB8B8",
-  RECURRING_FULL: "#3D6B8C",
-  RECURRING_HALF: "#7AA8C4",
-} as const;
+/**
+ * Palette key for an event: which color set it uses, and whether it is the full-day or half-day
+ * look. The colors themselves are CSS custom properties (`--wt-event-<type>-<variant>-bg/-fg`)
+ * defined once in `styles/_variables.scss` for both themes; nothing here repeats a hex value.
+ *
+ * A weekly pattern with no type flag is the standing day off, not booked leave, so it gets its
+ * own "recurring" colors instead of the holiday red.
+ */
+type EventPaletteType = Exclude<TypeFlag, "holiday"> | "holiday" | "recurring";
 
-export const EVENT_TEXT_COLORS = {
-  HOLIDAY_FULL: "#FFFFFF",
-  HOLIDAY_HALF: "#000000",
-  BUSINESS_FULL: "#000000",
-  BUSINESS_HALF: "#000000",
-  COURSE_FULL: "#000000",
-  COURSE_HALF: "#000000",
-  IN_OFFICE_FULL: "#000000",
-  IN_OFFICE_HALF: "#000000",
-  WEEKEND_FULL: "#FFFFFF",
-  WEEKEND_HALF: "#000000",
-  BIRTHDAY_FULL: "#FFFFFF",
-  BIRTHDAY_HALF: "#000000",
-  ILL_FULL: "#FFFFFF",
-  ILL_HALF: "#000000",
-  OTHER_FULL: "#000000",
-  OTHER_HALF: "#000000",
-  RECURRING_FULL: "#FFFFFF",
-  RECURRING_HALF: "#000000",
-} as const;
-
-export function getEventColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
-  const isHalfDay = hasHalfDayFlag(flags);
+function getEventPaletteKey(
+  flags?: ReadonlyArray<EventFlag>,
+  eventType?: HdayEvent["type"],
+): { type: EventPaletteType; variant: "full" | "half" } {
+  const variant = hasHalfDayFlag(flags) ? "half" : "full";
   const primaryType = getPrimaryTypeFlag(flags);
-
   if (primaryType === "holiday" && eventType === "weekly") {
-    return isHalfDay ? EVENT_COLORS.RECURRING_HALF : EVENT_COLORS.RECURRING_FULL;
+    return { type: "recurring", variant };
   }
-
-  switch (primaryType) {
-    case "business":
-      return isHalfDay ? EVENT_COLORS.BUSINESS_HALF : EVENT_COLORS.BUSINESS_FULL;
-    case "weekend":
-      return isHalfDay ? EVENT_COLORS.WEEKEND_HALF : EVENT_COLORS.WEEKEND_FULL;
-    case "birthday":
-      return isHalfDay ? EVENT_COLORS.BIRTHDAY_HALF : EVENT_COLORS.BIRTHDAY_FULL;
-    case "ill":
-      return isHalfDay ? EVENT_COLORS.ILL_HALF : EVENT_COLORS.ILL_FULL;
-    case "course":
-      return isHalfDay ? EVENT_COLORS.COURSE_HALF : EVENT_COLORS.COURSE_FULL;
-    case "in":
-      return isHalfDay ? EVENT_COLORS.IN_OFFICE_HALF : EVENT_COLORS.IN_OFFICE_FULL;
-    case "other":
-      return isHalfDay ? EVENT_COLORS.OTHER_HALF : EVENT_COLORS.OTHER_FULL;
-    default:
-      return isHalfDay ? EVENT_COLORS.HOLIDAY_HALF : EVENT_COLORS.HOLIDAY_FULL;
-  }
+  return { type: primaryType, variant };
 }
 
+/**
+ * Background color for an event as a CSS value (`var(--wt-event-…-bg)`), for the few places that
+ * need it inline. Being a variable it follows the light/dark theme with no extra work.
+ */
+export function getEventColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
+  const { type, variant } = getEventPaletteKey(flags, eventType);
+  return `var(--wt-event-${type}-${variant}-bg)`;
+}
+
+/** Text color paired with {@link getEventColor}; both are chosen together to meet WCAG AA. */
 export function getEventTextColor(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
-  const isHalfDay = hasHalfDayFlag(flags);
-  const primaryType = getPrimaryTypeFlag(flags);
-
-  if (primaryType === "holiday" && eventType === "weekly") {
-    return isHalfDay ? EVENT_TEXT_COLORS.RECURRING_HALF : EVENT_TEXT_COLORS.RECURRING_FULL;
-  }
-
-  switch (primaryType) {
-    case "business":
-      return isHalfDay ? EVENT_TEXT_COLORS.BUSINESS_HALF : EVENT_TEXT_COLORS.BUSINESS_FULL;
-    case "weekend":
-      return isHalfDay ? EVENT_TEXT_COLORS.WEEKEND_HALF : EVENT_TEXT_COLORS.WEEKEND_FULL;
-    case "birthday":
-      return isHalfDay ? EVENT_TEXT_COLORS.BIRTHDAY_HALF : EVENT_TEXT_COLORS.BIRTHDAY_FULL;
-    case "ill":
-      return isHalfDay ? EVENT_TEXT_COLORS.ILL_HALF : EVENT_TEXT_COLORS.ILL_FULL;
-    case "course":
-      return isHalfDay ? EVENT_TEXT_COLORS.COURSE_HALF : EVENT_TEXT_COLORS.COURSE_FULL;
-    case "in":
-      return isHalfDay ? EVENT_TEXT_COLORS.IN_OFFICE_HALF : EVENT_TEXT_COLORS.IN_OFFICE_FULL;
-    case "other":
-      return isHalfDay ? EVENT_TEXT_COLORS.OTHER_HALF : EVENT_TEXT_COLORS.OTHER_FULL;
-    default:
-      return isHalfDay ? EVENT_TEXT_COLORS.HOLIDAY_HALF : EVENT_TEXT_COLORS.HOLIDAY_FULL;
-  }
+  const { type, variant } = getEventPaletteKey(flags, eventType);
+  return `var(--wt-event-${type}-${variant}-fg)`;
 }
 
 export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
-  const suffix = hasHalfDayFlag(flags) ? "half" : "full";
-  const primaryType = getPrimaryTypeFlag(flags);
-
-  if (primaryType !== "holiday") {
-    return `event-${primaryType}-${suffix}`;
-  }
-
-  if (eventType === "weekly") {
-    return `event-recurring-${suffix}`;
-  }
-
-  return `event-holiday-${suffix}`;
+  const { type, variant } = getEventPaletteKey(flags, eventType);
+  return `event-${type}-${variant}`;
 }
 
 export function getTimeLocationSymbol(flags?: EventFlag[]): string {
@@ -145,23 +74,24 @@ export function getEventClass(flags?: EventFlag[]): string {
   return `event-${primaryType}-${half}`;
 }
 
+/** Translated name of an event's type, e.g. "Business trip" / "Zakenreis". */
 export function getEventTypeLabel(flags?: ReadonlyArray<EventFlag>): string {
   switch (getPrimaryTypeFlag(flags)) {
     case "business":
-      return "Business trip";
+      return m.event_type_business();
     case "weekend":
-      return "Weekend";
+      return m.event_type_weekend();
     case "birthday":
-      return "Birthday";
+      return m.event_type_birthday();
     case "ill":
-      return "Sick leave";
+      return m.event_type_ill();
     case "course":
-      return "Training";
+      return m.event_type_course();
     case "in":
-      return "In office";
+      return m.event_type_in();
     case "other":
-      return "Other";
+      return m.event_type_other();
     default:
-      return "Holiday";
+      return m.event_type_holiday();
   }
 }

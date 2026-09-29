@@ -3,11 +3,7 @@ import type { PublicHoliday } from "@/hooks/usePublicHolidays";
 import type { SchoolHoliday } from "@/hooks/useSchoolHolidays";
 import type { LongWeekend } from "@/types/longWeekend";
 
-export type AuthScenarioState =
-  | "valid_session"
-  | "signed_out"
-  | "expired_session"
-  | "forbidden";
+export type AuthScenarioState = "valid_session" | "signed_out" | "expired_session" | "forbidden";
 
 export type SyncScenarioState =
   | "clean"

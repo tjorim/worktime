@@ -99,10 +99,7 @@ function GapIndicator({
         className="flex-grow-1"
         style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
       />
-      <OverlayTrigger
-        placement="top"
-        overlay={<Tooltip id={tooltipId}>{ariaLabel}</Tooltip>}
-      >
+      <OverlayTrigger placement="top" overlay={<Tooltip id={tooltipId}>{ariaLabel}</Tooltip>}>
         <Badge
           bg="warning"
           text="dark"
@@ -268,11 +265,7 @@ export function DailyTaskList({
   })();
 
   const gapUntilNextTask = useMemo(() => {
-    if (
-      nowPosition?.type !== "separator" ||
-      nowPosition.insertBeforeIndex !== 0 ||
-      !liveTime
-    ) {
+    if (nowPosition?.type !== "separator" || nowPosition.insertBeforeIndex !== 0 || !liveTime) {
       return null;
     }
     const firstTask = tasks[0];
@@ -549,9 +542,9 @@ export function DailyTaskList({
             const taskStart = dayjs(task.startTime);
             const isPlanned = Boolean(
               task.stopTime &&
-                liveTime &&
-                (taskStart.isAfter(liveTime) ||
-                  (runningTaskStart && taskStart.isAfter(runningTaskStart))),
+              liveTime &&
+              (taskStart.isAfter(liveTime) ||
+                (runningTaskStart && taskStart.isAfter(runningTaskStart))),
             );
             const gap = gapAfter[index] ?? null;
             const ganttTaskName = task.ganttTaskId

@@ -96,8 +96,7 @@ export const syncHandlers = [
     syncStore.preferences = {
       user_id: 1,
       data: (body as { data: Record<string, unknown> }).data ?? {},
-      client_updated_at:
-        (body as { client_updated_at: string }).client_updated_at ?? now,
+      client_updated_at: (body as { client_updated_at: string }).client_updated_at ?? now,
       created_at: syncStore.preferences?.created_at ?? now,
       updated_at: now,
     };

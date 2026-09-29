@@ -10,6 +10,10 @@ type TimeOffToolbarProps = {
   eventCount: number;
   selectedCount: number;
   onSelectAll: () => void;
+  /** How many entries "Select all" would select. Defaults to `eventCount`; smaller while a search is active. */
+  selectableCount?: number;
+  /** A search is active, so "Select all" selects only the matching entries. */
+  isFiltered?: boolean;
   onClearSelection: () => void;
   onBulkDelete: () => void;
 
@@ -37,6 +41,8 @@ function TimeOffToolbarComponent({
   eventCount,
   selectedCount,
   onSelectAll,
+  selectableCount,
+  isFiltered = false,
   onClearSelection,
   onBulkDelete,
   onImport,
@@ -136,10 +142,12 @@ function TimeOffToolbarComponent({
             variant="outline-secondary"
             size="sm"
             onClick={onSelectAll}
-            disabled={selectedCount === eventCount}
-            aria-label={m.timeoff_select_all_events_aria()}
+            disabled={selectedCount >= (selectableCount ?? eventCount)}
+            aria-label={
+              isFiltered ? m.timeoff_select_all_matching_aria() : m.timeoff_select_all_events_aria()
+            }
           >
-            {m.timeoff_select_all_btn()}
+            {isFiltered ? m.timeoff_select_all_matching_btn() : m.timeoff_select_all_btn()}
           </Button>
           <Button
             variant="outline-secondary"

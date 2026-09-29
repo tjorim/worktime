@@ -6,7 +6,9 @@ const MOCK_SCENARIO_QUERY_PARAM = "mswScenario";
 const MOCK_SCENARIO_PATH_PREFIX = "/__mock/";
 
 let activeScenarioId: MockScenarioId = DEFAULT_MOCK_SCENARIO_ID;
-let activeScenario: MockScenarioFixture = structuredClone(mockScenarioFixtures[DEFAULT_MOCK_SCENARIO_ID]);
+let activeScenario: MockScenarioFixture = structuredClone(
+  mockScenarioFixtures[DEFAULT_MOCK_SCENARIO_ID],
+);
 
 function applySyncScenarioToStore(scenario: MockScenarioFixture): void {
   syncStore.status = structuredClone(scenario.sync.status);

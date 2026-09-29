@@ -53,16 +53,19 @@ export function SettingsSyncSection({
                 </div>
                 <div className="small text-muted d-flex flex-column gap-1">
                   <div>
-                    <span className="fw-medium">{m.sync_last_synced_label()}:</span> {lastSyncedLabel}
+                    <span className="fw-medium">{m.sync_last_synced_label()}:</span>{" "}
+                    {lastSyncedLabel}
                   </div>
                   <div>
-                    <span className="fw-medium">{m.sync_pending_changes_label()}:</span> {outboxCount}
+                    <span className="fw-medium">{m.sync_pending_changes_label()}:</span>{" "}
+                    {outboxCount}
                   </div>
                   <div>
                     <span className="fw-medium">{m.sync_conflicts_label()}:</span> {conflictCount}
                   </div>
                   <div>
-                    <span className="fw-medium">{m.sync_backup_status_label()}:</span> {backupStatusLabel}
+                    <span className="fw-medium">{m.sync_backup_status_label()}:</span>{" "}
+                    {backupStatusLabel}
                   </div>
                   {hasSyncError && retryInSeconds !== null ? (
                     <div>
@@ -72,7 +75,12 @@ export function SettingsSyncSection({
                   ) : null}
                 </div>
                 <div className="d-flex gap-2 flex-wrap">
-                  <Button variant="outline-primary" size="sm" onClick={onTriggerPull} disabled={isSyncing}>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={onTriggerPull}
+                    disabled={isSyncing}
+                  >
                     <i className="bi bi-arrow-repeat me-1"></i>
                     {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}
                   </Button>

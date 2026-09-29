@@ -236,16 +236,16 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
             if (label === undefined) {
               return null;
             }
-          return (
-            <Form.Check
-              key={column.id}
-              type="switch"
-              id={`location-column-${column.id}`}
-              label={label}
-              checked={column.getIsVisible()}
-              onChange={column.getToggleVisibilityHandler()}
-            />
-          );
+            return (
+              <Form.Check
+                key={column.id}
+                type="switch"
+                id={`location-column-${column.id}`}
+                label={label}
+                checked={column.getIsVisible()}
+                onChange={column.getToggleVisibilityHandler()}
+              />
+            );
           })}
       </div>
       <Table size="sm" bordered hover className="mb-0">
@@ -255,7 +255,8 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
               {headerGroup.headers.map((header) => {
                 const sorted = header.column.getIsSorted();
                 const meta = header.column.columnDef.meta;
-                const ariaSort = sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none";
+                const ariaSort =
+                  sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none";
                 return (
                   <th
                     key={header.id}

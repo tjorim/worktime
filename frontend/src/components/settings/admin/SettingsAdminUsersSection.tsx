@@ -1,23 +1,9 @@
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
-import Table from "react-bootstrap/Table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { AdminUsersTable } from "./AdminUsersTable";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
-
-const formatTimestamp = (value: string): string => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  const locale = getLocale() === "nl" ? "nl-NL" : "en-US";
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(parsed);
-};
 
 interface SettingsAdminUsersSectionProps {
   currentAccountId: number | null;
@@ -59,7 +45,11 @@ export function SettingsAdminUsersSection({
             <p className="text-muted small mb-2">{m.account_admin_users_description()}</p>
             {isAdminUsersLoading ? (
               <div className="d-flex align-items-center gap-2 text-muted small">
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span
+                  className="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 <span>{m.account_admin_users_loading()}</span>
               </div>
             ) : adminUsersError ? (
@@ -76,48 +66,12 @@ export function SettingsAdminUsersSection({
                 {adminUsers.length === 0 ? (
                   <p className="text-muted small mb-0">{m.account_admin_users_empty()}</p>
                 ) : (
-                  <div className="table-responsive">
-                    <Table size="sm" striped hover className="mb-0 align-middle">
-                      <thead>
-                        <tr>
-                          <th>{m.account_admin_users_user_id()}</th>
-                          <th>{m.account_admin_users_username()}</th>
-                          <th>{m.account_admin_users_display_name()}</th>
-                          <th>{m.account_admin_users_created_at()}</th>
-                          <th>{m.account_admin_users_updated_at()}</th>
-                          <th className="text-end">{m.account_admin_users_actions()}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {adminUsers.map((user) => (
-                          <tr key={user.id}>
-                            <td>{user.id}</td>
-                            <td>{user.username}</td>
-                            <td>{user.display_name}</td>
-                            <td>{formatTimestamp(user.created_at)}</td>
-                            <td>{formatTimestamp(user.updated_at)}</td>
-                            <td className="text-end">
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                disabled={currentAccountId === user.id || deletingAdminUserId !== null}
-                                title={
-                                  currentAccountId === user.id
-                                    ? m.account_admin_users_delete_self_blocked()
-                                    : undefined
-                                }
-                                onClick={() => setPendingDeleteUserId(user.id)}
-                              >
-                                {deletingAdminUserId === user.id
-                                  ? m.account_admin_users_delete_busy()
-                                  : m.delete()}
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
+                  <AdminUsersTable
+                    users={adminUsers}
+                    currentAccountId={currentAccountId}
+                    deletingAdminUserId={deletingAdminUserId}
+                    onRequestDelete={setPendingDeleteUserId}
+                  />
                 )}
               </>
             )}

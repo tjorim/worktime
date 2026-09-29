@@ -151,7 +151,9 @@ export function useSettingsAccount({
     } catch (error) {
       logger.error("Failed to delete account:", error);
       setDeleteAccountError(
-        error instanceof Error && error.message.trim() !== "" ? error.message : m.account_delete_failed(),
+        error instanceof Error && error.message.trim() !== ""
+          ? error.message
+          : m.account_delete_failed(),
       );
     } finally {
       setIsDeletingAccount(false);
@@ -173,4 +175,3 @@ export function useSettingsAccount({
     handleDeleteAccount,
   };
 }
-

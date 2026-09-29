@@ -99,7 +99,9 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
     } catch (error) {
       logger.error("Failed to create API token:", error);
       setCreateApiTokenError(
-        error instanceof Error && error.message.trim() !== "" ? error.message : m.api_tokens_create_failed(),
+        error instanceof Error && error.message.trim() !== ""
+          ? error.message
+          : m.api_tokens_create_failed(),
       );
     } finally {
       setIsCreatingApiToken(false);
@@ -122,7 +124,9 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
     } catch (error) {
       logger.error("Failed to revoke API token:", error);
       setRevokeApiTokenError(
-        error instanceof Error && error.message.trim() !== "" ? error.message : m.api_tokens_revoke_failed(),
+        error instanceof Error && error.message.trim() !== ""
+          ? error.message
+          : m.api_tokens_revoke_failed(),
       );
     } finally {
       setRevokingApiTokenId(null);

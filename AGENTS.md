@@ -17,6 +17,8 @@
 ```bash
 pnpm dev
 pnpm lint
+pnpm format          # rewrites files in place (Oxfmt)
+pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm typecheck
 pnpm test
 pnpm build
@@ -87,6 +89,15 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
+- `frontend/src/styles/_variables.scss` (the `$event-palette-*` maps) for event colors, in both themes.
+  It is the only place they are defined: it emits `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
+  `.event-*` classes in `_shifts.scss` are generated from them, and `getEventColor()` /
+  `getEventTextColor()` in `lib/hday/presentation.ts` return `var(--wt-event-…)` references instead of hex.
+  Change a color there and update the table in `docs/hday-format-spec.md`; nothing else.
+  `tests/lib/eventPalette.test.ts` compiles the SCSS and pins WCAG AA text contrast, that no two full-day
+  colors are near-identical, and that the helpers and generated classes only use declared colors
+- User-facing event type names come from the `event_type_*` messages via `getEventTypeLabel()` in
+  `lib/hday/presentation.ts`, so they are translated; don't reintroduce English strings there
 
 ## Live Updates
 
@@ -166,6 +177,25 @@ unfamiliar branch's existing commits:
   Feature folders may import shared code, but must not import another feature directly; move code used
   by multiple features to `components/shared/`, `hooks/`, `lib/`, `types/`, or `utils/` as appropriate.
 - All storage keys live in `frontend/src/constants/storageKeys.ts`
+- List-style tables (search, click-to-sort headers, pagination) share `hooks/useDataTable.ts`,
+  `components/shared/SortableHeaderCell.tsx` and `components/shared/TablePagination.tsx` — reuse them
+  instead of hand-rolling sort/search/paging. Render body cells directly in the row markup rather than via
+  column `cell` renderers: TanStack renders those as components, so a column list that changes identity
+  remounts the buttons in every row and drops clicks. Join searchable fields with `\n` (not a space) so a
+  query can't match across two columns
+- Styling is Bootstrap + SCSS today; #1376 tracks moving to Tailwind + Base UI (the stack `tjorim/travel`
+  already uses). Once that lands, generate new UI primitives with the shadcn CLI (Base UI base, pinned
+  explicitly) and own them here, rather than hand-writing them; the workflow is set up in
+  `tjorim/travel#279`. Until then keep logic in hooks/utils rather than markup, prefer a class over inline
+  `style`, and route colors through CSS variables or the shared palette instead of new hard-coded hex, so
+  that move stays cheap. Light and dark themes must both keep working
+- Visual review: UI that needs the .hday helper (the Team tab) can be checked without the real helper by
+  seeding `worktime_device_preferences` (`{"hdayHelper":{"url":"http://localhost:<port>"}}`) and
+  `worktime_user_state` (`enableTimeOff: true`, `lastUsed.timeOffView: "team"`, `hasCompletedOnboarding:
+  true`) in localStorage, and running a tiny stub that answers `/health` and
+  `/team/:id/hday?format=parsed`. Check light, dark and a ~390px viewport. Full-page screenshots draw
+  `position: fixed` elements (e.g. the mobile "+" button) at the top of the page, so judge overlap in a
+  normal viewport capture
 - Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
   authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,
   and a "potential issue" flagged as high-confidence still needs verifying against current code before
@@ -178,3 +208,26 @@ unfamiliar branch's existing commits:
   Fetching only inline review threads (e.g. `pull_request_read` with `get_review_comments`) will miss
   them entirely; also read the review body itself (`get_reviews`, or the `pull_request_review.submitted`
   webhook payload) to see the full finding set before deciding what to address.
+
+## Deferred work and repo scope
+
+If a gap fits inside the change already in progress — same repository, fixable now, nothing else it
+depends on is missing — fix it there instead of deferring it. Opening an issue for something you could
+just do is its own way of leaving it undone.
+
+When a change surfaces work that is legitimately out of scope (it belongs in another repository, depends
+on work that doesn't exist yet, or was deliberately excluded by a product decision), open a concrete
+GitHub issue for it before considering the change done. A sentence in a comment, commit message or PR
+description is not the same as something that will actually happen. Check for an existing issue first,
+and link the originating issue/PR instead of copying its context.
+
+Route each issue to the repository that owns the work: `tjorim/worktime` owns this app (web, backend,
+Android, Pebble, hday-helper); shared VPS infrastructure (Caddy, Keycloak, scheduling, backups) lives in
+the separate infra stack noted under Layout; the sibling apps (`tjorim/travel`,
+`tjorim/champagnefestival`) own their own code even where they share this stack. Cross-app frontend
+decisions are recorded as issues in each repo (for example #1375 route loaders and #1376 Tailwind + Base
+UI here) — check them before adding new frontend infrastructure.
+
+GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new
+sub-issue links and corrections by editing the issue body (read it first, keep the original text, and
+add or adjust a clearly headed section). This applies to every repository above, including closed issues.

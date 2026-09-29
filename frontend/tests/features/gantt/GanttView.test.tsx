@@ -5,15 +5,12 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsProvider, defaultLastUsed, defaultSettings } from "@/contexts/SettingsContext";
 
-vi.mock(
-  "frappe-gantt",
-  () => ({
-    default: class MockFrappeGantt {
-      refresh() {}
-      change_view_mode() {}
-    },
-  }),
-);
+vi.mock("frappe-gantt", () => ({
+  default: class MockFrappeGantt {
+    refresh() {}
+    change_view_mode() {}
+  },
+}));
 
 vi.mock("@/contexts/EventStoreContext", () => ({
   useEventStore: () => ({
@@ -108,9 +105,7 @@ type MockUserStateOverrides = {
   lastUsed?: Partial<typeof defaultLastUsed>;
 };
 
-function createMockUserState(
-  overrides: MockUserStateOverrides = {},
-): MockUserState {
+function createMockUserState(overrides: MockUserStateOverrides = {}): MockUserState {
   const baseState: MockUserState = {
     hasCompletedOnboarding: true,
     myTeam: 1,

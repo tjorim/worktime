@@ -45,8 +45,7 @@ export function TemplateModal({
 
   const labelValue = useSelector(form.atom, (state) => state.values.label);
   const selectedLabelOption = useSelectedLabelOption(labels, labelValue);
-  const isSubmitDisabled =
-    isLabelSelectionDisabled || !labelValue || selectedLabelOption === null;
+  const isSubmitDisabled = isLabelSelectionDisabled || !labelValue || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -93,7 +92,9 @@ export function TemplateModal({
                   isSearchable
                   inputId="templateLabel"
                   isDisabled={isLabelSelectionDisabled}
-                  placeholder={isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()}
+                  placeholder={
+                    isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
+                  }
                   aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
                   options={labels.map((l) => ({ value: l.id, label: l.name }))}
                   value={selectedLabelOption}

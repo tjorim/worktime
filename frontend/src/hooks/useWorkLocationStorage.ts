@@ -151,4 +151,3 @@ export function useWorkLocationStorage(year: number) {
     clearLocationForDate,
   };
 }
-

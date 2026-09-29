@@ -88,7 +88,10 @@ export function Step3ScheduleSelection({
 
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
         <Button variant="outline-secondary" onClick={onPrev} className="order-2 order-sm-1">
-          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")} aria-hidden="true"></i>{" "}
+          <i
+            className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}
+            aria-hidden="true"
+          ></i>{" "}
           {isChangeFlow ? m.cancel() : m.back()}
         </Button>
         <Button

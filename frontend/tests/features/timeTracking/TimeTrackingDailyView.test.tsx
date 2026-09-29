@@ -165,7 +165,9 @@ describe("TimeTrackingDailyView", () => {
       expect(screen.getByText("Night handover")).toBeInTheDocument();
       expect(screen.getByText("Support", { selector: ".time-tracking-label" })).toBeInTheDocument();
       expect(screen.getByText("Started 2025-01-01 23:30")).toBeInTheDocument();
-      expect(screen.queryByText("Night handover", { selector: ".list-group-item *" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Night handover", { selector: ".list-group-item *" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Stop Timer · 10:30:00/i })).toBeInTheDocument();
     });
 

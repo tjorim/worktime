@@ -6,7 +6,6 @@ import { getLocale } from "./paraglide/runtime.js";
 import { logger } from "@/utils/logger";
 import { initSyncCollectionPersistence } from "@/db/collections";
 
-
 // Set the HTML lang attribute based on the current locale
 document.documentElement.lang = getLocale();
 
@@ -58,4 +57,3 @@ async function startApp(): Promise<void> {
 }
 
 void startApp();
-

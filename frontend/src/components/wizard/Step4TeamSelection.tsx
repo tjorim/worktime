@@ -66,7 +66,10 @@ export function Step4TeamSelection({
 
       <div className="d-flex justify-content-start mt-3">
         <Button variant="outline-secondary" size="sm" onClick={onPrev}>
-          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")} aria-hidden="true"></i>
+          <i
+            className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}
+            aria-hidden="true"
+          ></i>
           {isChangeFlow ? m.cancel() : m.back()}
         </Button>
       </div>

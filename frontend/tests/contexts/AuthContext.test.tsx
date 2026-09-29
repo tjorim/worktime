@@ -199,7 +199,9 @@ describe("AuthContext", () => {
 
       renderWithProviders(<AuthStatusDisplay />);
 
-      expect(await screen.findByText("Sign-in failed: Invalid state parameter")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Sign-in failed: Invalid state parameter"),
+      ).toBeInTheDocument();
     });
 
     it("does not show duplicate toasts for the same OIDC error object", async () => {
@@ -303,7 +305,9 @@ describe("AuthContext", () => {
       handler(new Error("login_required"));
 
       expect(
-        await screen.findByText("Your session could not be refreshed. Please sign in again to keep syncing changes."),
+        await screen.findByText(
+          "Your session could not be refreshed. Please sign in again to keep syncing changes.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -316,13 +320,17 @@ describe("AuthContext", () => {
       const userLoadedHandler = mockAddUserLoaded.mock.calls.at(-1)?.[0];
       renewErrorHandler(new Error("temporarily_unavailable"));
       expect(
-        await screen.findByText("Your session could not be refreshed. Please sign in again to keep syncing changes."),
+        await screen.findByText(
+          "Your session could not be refreshed. Please sign in again to keep syncing changes.",
+        ),
       ).toBeInTheDocument();
 
       userLoadedHandler({ access_token: "fresh-token" });
       await waitFor(() => {
         expect(
-          screen.queryByText("Your session could not be refreshed. Please sign in again to keep syncing changes."),
+          screen.queryByText(
+            "Your session could not be refreshed. Please sign in again to keep syncing changes.",
+          ),
         ).not.toBeInTheDocument();
       });
     });

@@ -39,8 +39,7 @@ describe("useSettingsResetFlow", () => {
       fetchFn,
     };
     const { result, rerender } = renderHook(
-      ({ accountId }: { accountId: string }) =>
-        useSettingsResetFlow({ ...sharedProps, accountId }),
+      ({ accountId }: { accountId: string }) => useSettingsResetFlow({ ...sharedProps, accountId }),
       { initialProps: { accountId: "account-a" } },
     );
 

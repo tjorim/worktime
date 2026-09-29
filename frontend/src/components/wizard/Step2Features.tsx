@@ -28,7 +28,10 @@ export function Step2Features({
         <Row className="g-3">
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature" aria-hidden="true"></i>
+              <i
+                className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"
+                aria-hidden="true"
+              ></i>
               <div>
                 <h6 className="mb-1">{m.wizard_feature_countdown_title()}</h6>
                 <small className="text-muted">{m.wizard_feature_countdown_desc()}</small>
@@ -46,7 +49,10 @@ export function Step2Features({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-people text-warning me-3 mt-1 icon-feature" aria-hidden="true"></i>
+              <i
+                className="bi bi-people text-warning me-3 mt-1 icon-feature"
+                aria-hidden="true"
+              ></i>
               <div>
                 <h6 className="mb-1">{m.wizard_feature_team_title()}</h6>
                 <small className="text-muted">{m.wizard_feature_team_desc()}</small>
@@ -55,7 +61,10 @@ export function Step2Features({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-calendar-check text-primary me-3 mt-1 icon-feature" aria-hidden="true"></i>
+              <i
+                className="bi bi-calendar-check text-primary me-3 mt-1 icon-feature"
+                aria-hidden="true"
+              ></i>
               <div>
                 <h6 className="mb-1">{m.wizard_feature_timeoff_title()}</h6>
                 <small className="text-muted">{m.wizard_feature_timeoff_desc()}</small>
@@ -64,7 +73,10 @@ export function Step2Features({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-clock-history text-success me-3 mt-1 icon-feature" aria-hidden="true"></i>
+              <i
+                className="bi bi-clock-history text-success me-3 mt-1 icon-feature"
+                aria-hidden="true"
+              ></i>
               <div>
                 <h6 className="mb-1">{m.wizard_feature_tracking_title()}</h6>
                 <small className="text-muted">{m.wizard_feature_tracking_desc()}</small>
@@ -73,7 +85,10 @@ export function Step2Features({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-bar-chart-steps text-warning me-3 mt-1 icon-feature" aria-hidden="true"></i>
+              <i
+                className="bi bi-bar-chart-steps text-warning me-3 mt-1 icon-feature"
+                aria-hidden="true"
+              ></i>
               <div>
                 <h6 className="mb-1">{m.wizard_feature_gantt_title()}</h6>
                 <small className="text-muted">{m.wizard_feature_gantt_desc()}</small>
@@ -105,7 +120,8 @@ export function Step2Features({
           <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {m.wizard_choose_schedule_btn()} <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          {m.wizard_choose_schedule_btn()}{" "}
+          <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
         </Button>
       </div>
     </>
