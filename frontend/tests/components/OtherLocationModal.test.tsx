@@ -43,6 +43,34 @@ describe("OtherLocationModal", () => {
     expect(screen.getByLabelText("Country Code")).toHaveValue("");
   });
 
+  it("preserves edits across background updates and initializes on date changes and reopening", () => {
+    const onHide = vi.fn();
+    const onConfirm = vi.fn();
+    const existing = { location: "other" as const, countryCode: cc("DE"), label: "Berlin office" };
+    const props = { show: true, date: DATE, existing, onHide, onConfirm };
+    const { rerender } = render(<OtherLocationModal {...props} />);
+    fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "FR" } });
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "My draft" } });
+
+    rerender(
+      <OtherLocationModal {...props} date={dayjs("2026-02-18")} existing={{ ...existing }} />,
+    );
+    expect(screen.getByLabelText("Country Code")).toHaveValue("FR");
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("My draft");
+
+    const synced = { ...existing, countryCode: cc("NL"), label: "Synced office" };
+    rerender(<OtherLocationModal {...props} existing={synced} />);
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("My draft");
+    rerender(<OtherLocationModal {...props} date={DATE.add(1, "day")} existing={synced} />);
+    expect(screen.getByLabelText("Country Code")).toHaveValue("NL");
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("Synced office");
+
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "Another draft" } });
+    rerender(<OtherLocationModal {...props} show={false} />);
+    rerender(<OtherLocationModal {...props} existing={synced} />);
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("Synced office");
+  });
+
   it("auto-uppercases typed country code", async () => {
     renderModal();
     const input = screen.getByLabelText("Country Code");

@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import {
@@ -59,11 +59,17 @@ export function OtherLocationModal({
     hasIsoAlpha2Format(state.values.countryCode),
   );
 
+  const dateKey = date.format("YYYY-MM-DD");
+  const previousDialog = useRef({ show: false, dateKey });
+
   useLayoutEffect(() => {
-    if (!show) return;
-    // Reset to initial values when modal opens
-    form.reset(getInitialOtherLocation(existing));
-  }, [show, existing, form]);
+    const previous = previousDialog.current;
+    previousDialog.current = { show, dateKey };
+    // Sync can replace existing while the user is editing. Only initialize a new edit session.
+    if (show && (!previous.show || previous.dateKey !== dateKey)) {
+      form.reset(getInitialOtherLocation(existing));
+    }
+  }, [show, dateKey, existing, form]);
 
   const handleHide = () => {
     onHide();
