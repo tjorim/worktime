@@ -45,7 +45,7 @@ export function LabelModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           <Form
             id="labelForm"
             onSubmit={(event) => {

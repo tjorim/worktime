@@ -8,12 +8,8 @@
   "src/components/schedule/TodayView.tsx": ["cursor", "width"],
   "src/components/settings/SettingsFeaturesSection.tsx": ["minWidth"],
   "src/components/settings/SettingsScheduleSection.tsx": ["fontSize"],
-  "src/components/shared/ContextMenu.tsx": ["left", "top"],
-  "src/components/shared/EmptyState.tsx": ["fontSize"],
-  "src/components/shared/TaskEntryForm.tsx": ["backgroundColor", "color"],
   "src/components/status/FlexStartEditor.tsx": ["width"],
   "src/components/wizard/Step9AccountSetup.tsx": ["fontSize"],
-  "src/contexts/ToastContext.tsx": ["zIndex"],
   "src/features/timeTracking/DailyTaskList.tsx": [
     "backgroundColor",
     "borderLeft",
@@ -63,6 +59,5 @@
     "verticalAlign",
     "width"
   ],
-  "src/pages/PrivacyPage.tsx": ["maxWidth"],
   "src/pages/SettingsPage.tsx": ["maxWidth"]
 }

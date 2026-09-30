@@ -26,7 +26,10 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
-      className={cn("dialog-backdrop", className)}
+      className={cn(
+        "tw:fixed tw:inset-0 tw:z-dialog-overlay tw:bg-overlay/50 tw:data-closed:hidden",
+        className,
+      )}
       {...props}
     />
   );
@@ -54,10 +57,10 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "dialog-popup",
-          size === "lg" && "dialog-popup-lg",
-          scrollable && "dialog-popup-scrollable",
-          position === "top" && "dialog-popup-top",
+          "tw:dialog-viewport tw:fixed tw:top-1/2 tw:left-1/2 tw:z-dialog tw:max-w-dialog tw:-translate-x-1/2 tw:-translate-y-1/2 tw:overflow-y-auto tw:rounded-lg tw:border tw:border-border tw:bg-background tw:text-foreground tw:outline-none tw:data-closed:hidden",
+          size === "lg" && "tw:max-w-dialog-lg",
+          scrollable && "tw:flex tw:flex-col tw:overflow-hidden",
+          position === "top" && "tw:top-7 tw:translate-y-0",
           className,
         )}
         {...props}
@@ -67,7 +70,9 @@ function DialogContent({
           <DialogPrimitive.Close
             aria-label={m.close()}
             data-slot="dialog-close"
-            render={<Button variant="ghost" className="dialog-close" size="icon-sm" />}
+            render={
+              <Button variant="ghost" className="tw:absolute tw:top-3 tw:right-3" size="icon-sm" />
+            }
           >
             <XIcon />
           </DialogPrimitive.Close>
@@ -78,7 +83,16 @@ function DialogContent({
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-header" className={cn("modal-header", className)} {...props} />;
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn(
+        "tw:flex tw:shrink-0 tw:items-center tw:border-b tw:border-border tw:p-4 tw:pr-14",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 function DialogFooter({
@@ -90,7 +104,14 @@ function DialogFooter({
   showCloseButton?: boolean;
 }) {
   return (
-    <div data-slot="dialog-footer" className={cn("modal-footer", className)} {...props}>
+    <div
+      data-slot="dialog-footer"
+      className={cn(
+        "tw:flex tw:shrink-0 tw:flex-wrap tw:justify-end tw:gap-2 tw:border-t tw:border-border tw:p-4",
+        className,
+      )}
+      {...props}
+    >
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
@@ -105,7 +126,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("modal-title", className)}
+      className={cn("tw:m-0 tw:text-xl tw:font-medium tw:leading-normal", className)}
       {...props}
     />
   );

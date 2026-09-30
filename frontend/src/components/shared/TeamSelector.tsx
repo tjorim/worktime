@@ -1,10 +1,11 @@
 import { useId, type ReactNode } from "react";
-import Form from "react-bootstrap/Form";
+import { Field, FieldLabel } from "@/components/ui/field";
+
 import ReactSelect from "react-select";
 import type { ScheduleOption } from "@/data/rosters";
 import * as m from "@/paraglide/messages.js";
 import { getTeamCountForOption } from "@/utils/scheduleUtils";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { selectClassNames } from "@/utils/reactSelectStyles";
 
 type TeamOption = { value: number; label: string };
 
@@ -41,8 +42,10 @@ export function TeamSelector({
   const value = options.find((option) => option.value === selectedTeam) ?? null;
 
   return (
-    <Form.Group className={className} controlId={effectiveId}>
-      <Form.Label className="fw-semibold">{label}</Form.Label>
+    <Field className={className}>
+      <FieldLabel htmlFor={effectiveId} className="tw:font-semibold">
+        {label}
+      </FieldLabel>
       <ReactSelect<TeamOption>
         unstyled
         isSearchable={false}
@@ -53,8 +56,8 @@ export function TeamSelector({
         onChange={(option) => {
           if (option) onChange(Number(option.value));
         }}
-        classNames={bootstrapSelectClassNames}
+        classNames={selectClassNames}
       />
-    </Form.Group>
+    </Field>
   );
 }

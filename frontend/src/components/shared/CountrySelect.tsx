@@ -1,6 +1,6 @@
 import ReactSelect from "react-select";
 import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "@/types/countries";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { selectClassNames } from "@/utils/reactSelectStyles";
 
 type CountryOption = { value: string; label: string };
 
@@ -32,7 +32,7 @@ export function CountrySelect({ value, onChange, ariaLabel, inputId }: CountrySe
         const code = s?.value ?? null;
         onChange(isValidCountryCode(code) ? code : null);
       }}
-      classNames={bootstrapSelectClassNames}
+      classNames={selectClassNames}
     />
   );
 }

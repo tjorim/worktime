@@ -156,7 +156,7 @@ function renderWithProviders(
 // Test helper functions
 const findModalTitle = async (text: RegExp) => {
   const headings = await screen.findAllByText(text);
-  const modalHeading = headings.find((el) => el.className.includes("modal-title"));
+  const modalHeading = headings.find((el) => el.getAttribute("data-slot") === "dialog-title");
   expect(modalHeading).toBeInTheDocument();
   return modalHeading;
 };
@@ -537,8 +537,8 @@ describe("WelcomeWizard", () => {
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
       const welcomeHeadingsAfterReset = await screen.findAllByText(/Welcome to Worktime/i);
-      const modalHeadingAfterReset = welcomeHeadingsAfterReset.find((el) =>
-        el.className.includes("modal-title"),
+      const modalHeadingAfterReset = welcomeHeadingsAfterReset.find(
+        (el) => el.getAttribute("data-slot") === "dialog-title",
       );
       expect(modalHeadingAfterReset).toBeInTheDocument();
     }, 15000);
@@ -577,8 +577,8 @@ describe("WelcomeWizard", () => {
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
       const welcomeHeadingsAfterReset = await screen.findAllByText(/Welcome to Worktime/i);
-      const modalHeadingAfterReset = welcomeHeadingsAfterReset.find((el) =>
-        el.className.includes("modal-title"),
+      const modalHeadingAfterReset = welcomeHeadingsAfterReset.find(
+        (el) => el.getAttribute("data-slot") === "dialog-title",
       );
       expect(modalHeadingAfterReset).toBeInTheDocument();
     }, 15000);

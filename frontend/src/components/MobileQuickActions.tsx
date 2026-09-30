@@ -174,7 +174,7 @@ export function MobileQuickActions({
           <DialogHeader>
             <DialogTitle>{m.mobile_quick_actions_title()}</DialogTitle>
           </DialogHeader>
-          <div className="modal-body d-grid gap-3 pt-2">
+          <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4 d-grid gap-3 pt-2">
             {canTrackTime && (
               <div className="d-grid gap-2">
                 {runningTask && (

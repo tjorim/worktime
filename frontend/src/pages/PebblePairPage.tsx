@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Container from "react-bootstrap/Container";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";
@@ -63,14 +63,14 @@ export function PebblePairPage() {
   const isSigningIn = !isValidating && !isAuthenticated;
 
   return (
-    <Container as="main" className="py-5 text-center">
-      <h1 className="h4 mb-3">{m.pebble_pair_title()}</h1>
-      <p className="text-body-secondary mb-4">{m.pebble_pair_description()}</p>
+    <main className="tw:mx-auto tw:max-w-3xl tw:px-3 tw:py-12 tw:text-center">
+      <h1 className="tw:text-xl tw:mb-4">{m.pebble_pair_title()}</h1>
+      <p className="tw:text-muted-foreground tw:mb-6">{m.pebble_pair_description()}</p>
 
       {pairingError ? (
-        <Alert variant="danger" role="alert">
+        <Alert variant="destructive" role="alert">
           <div>{pairingError}</div>
-          <Button className="mt-3" variant="outline-danger" size="sm" onClick={retryPairing}>
+          <Button className="tw:mt-4" variant="destructive" size="sm" onClick={retryPairing}>
             {m.pebble_pair_retry()}
           </Button>
         </Alert>
@@ -80,17 +80,17 @@ export function PebblePairPage() {
         </Alert>
       ) : (
         <div aria-live="polite">
-          <div className="d-flex align-items-center justify-content-center gap-2 text-body-secondary">
-            <Spinner animation="border" size="sm" aria-hidden="true" />
+          <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-muted-foreground">
+            <Spinner size="sm" aria-hidden="true" />
             <span>{isSigningIn ? m.pebble_pair_signing_in() : m.pebble_pair_connecting()}</span>
           </div>
           {isSigningIn ? (
-            <Button className="mt-3" variant="outline-primary" size="sm" onClick={retrySignIn}>
+            <Button className="tw:mt-4" variant="outline" size="sm" onClick={retrySignIn}>
               {m.account_sign_in_btn()}
             </Button>
           ) : null}
         </div>
       )}
-    </Container>
+    </main>
   );
 }

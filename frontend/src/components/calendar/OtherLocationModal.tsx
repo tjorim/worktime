@@ -101,7 +101,7 @@ export function OtherLocationModal({
               })}
             </DialogTitle>
           </DialogHeader>
-          <div className="modal-body">
+          <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
             <form.Field
               name="countryCode"
               validators={[

@@ -65,7 +65,7 @@ describe("ChangelogModal", () => {
       render(<ChangelogModal {...defaultProps} />);
 
       // Test accordion structure exists
-      const accordionItems = document.querySelectorAll(".accordion-item");
+      const accordionItems = document.querySelectorAll("[data-slot=accordion-item]");
       expect(accordionItems.length).toBe(changelogData.length);
     });
   });
@@ -109,34 +109,33 @@ describe("ChangelogModal", () => {
       });
     });
 
-    it("renders technical details for versions that have them", () => {
+    it("renders technical details when their version is expanded", async () => {
       render(<ChangelogModal {...defaultProps} />);
-
-      // Test that technical details render when present in data
-      const versionsWithTechnicalDetails = changelogData.filter((v) => v.technicalDetails);
-
-      if (versionsWithTechnicalDetails.length > 0) {
-        // Look for technical details cards with correct Bootstrap class
-        const technicalCards = document.querySelectorAll(".card.bg-body-secondary");
-        expect(technicalCards.length).toBe(versionsWithTechnicalDetails.length);
-      }
+      const version = changelogData.find((v) => v.technicalDetails);
+      expect(version).toBeDefined();
+      const trigger = screen.getByRole("button", {
+        name: new RegExp(`Version ${version!.version}`),
+      });
+      if (trigger.getAttribute("aria-expanded") !== "true") fireEvent.click(trigger);
+      expect(await screen.findByText(`${version!.technicalDetails!.title}:`)).toBeInTheDocument();
+      expect(screen.getByText(version!.technicalDetails!.description)).toBeInTheDocument();
     });
 
     it("displays version content in collapsible accordion format", () => {
       render(<ChangelogModal {...defaultProps} />);
 
       // Test that accordion structure exists
-      const accordionItems = document.querySelectorAll(".accordion-item");
+      const accordionItems = document.querySelectorAll("[data-slot=accordion-item]");
       expect(accordionItems.length).toBe(changelogData.length);
 
       // Test that first version has expanded content by default
       const firstVersionHeader = screen.getByText(`Version ${changelogData[0]!.version}`);
-      const accordionItem = firstVersionHeader.closest(".accordion-item");
+      const accordionItem = firstVersionHeader.closest("[data-slot=accordion-item]");
       expect(accordionItem).toBeInTheDocument();
 
       if (accordionItem) {
         // Verify the accordion body exists
-        const accordionBody = accordionItem.querySelector(".accordion-body");
+        const accordionBody = accordionItem.querySelector("[data-slot=accordion-content]");
         expect(accordionBody).toBeInTheDocument();
       }
     });
@@ -161,14 +160,14 @@ describe("ChangelogModal", () => {
     it("renders correct badge variants for each status", () => {
       render(<ChangelogModal {...defaultProps} />);
 
-      // Check badge colors through Bootstrap classes
+      // Check badge colors through semantic token classes
       const currentBadge = screen.getByText("Current");
-      expect(currentBadge).toHaveClass("bg-primary");
+      expect(currentBadge).toHaveClass("tw:bg-primary");
 
       const releasedBadges = screen.getAllByText("Released");
       expect(releasedBadges.length).toBeGreaterThan(0);
       releasedBadges.forEach((badge) => {
-        expect(badge).toHaveClass("bg-success");
+        expect(badge).toHaveClass("tw:bg-success-bg");
       });
     });
   });
@@ -185,7 +184,7 @@ describe("ChangelogModal", () => {
       // Section headings include decorative SVG icons.
       const addedElements = screen.getAllByText("Added");
       expect(addedElements.length).toBeGreaterThan(0);
-      expect(addedElements[0].querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+      expect(addedElements[0]?.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
     });
 
     it("renders appropriate sections for each version", () => {

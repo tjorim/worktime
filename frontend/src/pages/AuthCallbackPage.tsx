@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import * as m from "@/paraglide/messages.js";
 
@@ -15,14 +15,17 @@ export function AuthCallbackPage() {
   }, [isValidating, navigate]);
 
   return (
-    <main className="container py-5 text-center" aria-labelledby="auth-callback-title">
-      <Spinner animation="border" role="status" className="mb-3">
-        <span className="visually-hidden">{m.auth_callback_spinner()}</span>
+    <main
+      className="tw:mx-auto tw:w-full tw:max-w-6xl tw:px-3 tw:py-12 tw:text-center"
+      aria-labelledby="auth-callback-title"
+    >
+      <Spinner role="status" className="tw:mb-4">
+        <span className="tw:sr-only">{m.auth_callback_spinner()}</span>
       </Spinner>
-      <h1 id="auth-callback-title" className="h4 mb-2">
+      <h1 id="auth-callback-title" className="tw:text-xl tw:mb-2">
         {m.auth_callback_title()}
       </h1>
-      <p className="text-muted mb-0">{m.auth_callback_description()}</p>
+      <p className="tw:text-muted-foreground tw:mb-0">{m.auth_callback_description()}</p>
     </main>
   );
 }

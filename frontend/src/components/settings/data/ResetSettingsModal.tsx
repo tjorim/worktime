@@ -40,7 +40,7 @@ export function ResetSettingsModal({
         <DialogHeader>
           <DialogTitle>{m.reset_settings_modal_title()}</DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           <p className="mb-3">{m.reset_settings_modal_body()}</p>
           <Form>
             <Form.Check

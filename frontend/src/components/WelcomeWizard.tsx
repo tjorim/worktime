@@ -258,7 +258,7 @@ export function WelcomeWizard({
         <DialogHeader>
           <DialogTitle>{getStepTitle()}</DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           {/* Progress bar */}
           <div className="mb-4">
             <ProgressBar

@@ -145,3 +145,34 @@
   --shadow-team-name: 2px 0 4px color-mix(in srgb, var(--bs-black) 10%, transparent);
   --shadow-team-today: inset 0 0 0 2px var(--wt-team-cal-today-ring);
 }
+
+@theme inline {
+  --color-danger-text: var(--bs-danger-text-emphasis);
+  --color-success: var(--bs-success-text-emphasis);
+  --color-success-bg: var(--bs-success-bg-subtle);
+  --color-warning: var(--bs-warning-text-emphasis);
+  --color-warning-bg: var(--bs-warning-bg-subtle);
+  --color-info: var(--bs-info-text-emphasis);
+  --color-info-bg: var(--bs-info-bg-subtle);
+  --color-overlay: var(--bs-black);
+  --z-index-dialog-overlay: 1050;
+  --z-index-dialog: 1055;
+  --z-index-feedback: 1100;
+  --container-dialog: 500px;
+  --container-dialog-lg: 800px;
+}
+@utility grid-cols-alert {
+  grid-template-columns: auto 1fr;
+}
+@utility dialog-viewport {
+  width: calc(100% - 1rem);
+  max-height: calc(100dvh - 2rem);
+}
+@utility grid-cols-card {
+  grid-template-columns: 1fr auto;
+}
+@utility icon-em {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}

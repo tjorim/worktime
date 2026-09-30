@@ -229,7 +229,7 @@ export function ScheduleDetailModal({
               : m.schedule_detail_title_schedule()}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           {/* Current Status Card */}
           <Card className="mb-4">
             <Card.Body>

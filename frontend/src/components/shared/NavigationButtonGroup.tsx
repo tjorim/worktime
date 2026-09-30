@@ -8,8 +8,10 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import { FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+
 import { IconButton } from "@/components/shared/IconButton";
 
 type NavigationButtonGroupProps = {
@@ -54,24 +56,24 @@ function NavigationButtonGroup({
   const buttons = (
     <>
       <IconButton
-        variant="outline-secondary"
+        variant="outline"
         size={size}
         onClick={onPrevious}
         icon={ChevronLeftIcon}
         label={previousAriaLabel}
       />
       <Button
-        variant={isCurrent ? "primary" : "outline-primary"}
+        variant={isCurrent ? "default" : "outline"}
         size={size}
         onClick={onCurrent}
         disabled={isCurrent}
         aria-label={currentAriaLabel}
       >
-        <Icon icon={currentIcon} className="me-1" />
+        <Icon icon={currentIcon} className="tw:me-1" />
         {currentLabel}
       </Button>
       <IconButton
-        variant="outline-secondary"
+        variant="outline"
         size={size}
         onClick={onNext}
         icon={ChevronRightIcon}
@@ -85,24 +87,26 @@ function NavigationButtonGroup({
   }
 
   return (
-    <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
-      {displayLabel && <span className="text-muted small">{displayLabel}</span>}
+    <div className="tw:flex tw:flex-col tw:sm:flex-row tw:items-stretch tw:sm:items-center tw:gap-2">
+      {displayLabel && <span className="tw:text-muted-foreground tw:text-sm">{displayLabel}</span>}
       {selectorLabel && selectorValue !== undefined && onSelectorChange && (
-        <div className="d-flex align-items-center justify-content-between gap-2">
-          <Form.Label htmlFor={effectiveSelectorId} className="mb-0 small text-muted">
+        <div className="tw:flex tw:items-center tw:justify-between tw:gap-2">
+          <FieldLabel
+            htmlFor={effectiveSelectorId}
+            className="tw:mb-0 tw:text-sm tw:text-muted-foreground"
+          >
             {selectorLabel}
-          </Form.Label>
-          <Form.Control
+          </FieldLabel>
+          <Input
             type="date"
             id={effectiveSelectorId}
-            size="sm"
             value={selectorValue}
             onChange={(event) => onSelectorChange(event.target.value)}
-            className="date-picker-auto"
+            className="tw:w-auto"
           />
         </div>
       )}
-      <div className="d-flex gap-2">{buttons}</div>
+      <div className="tw:flex tw:gap-2">{buttons}</div>
     </div>
   );
 }

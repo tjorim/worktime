@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Hint } from "@/components/ui/tooltip";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -153,15 +154,24 @@ export function SyncStatusIndicator() {
 
   const indicator = (
     <span
-      className={`sync-indicator sync-indicator--${tone}`}
+      className={cn(
+        "tw:inline-flex tw:min-h-8 tw:items-center tw:gap-1.5 tw:rounded-full tw:border tw:border-border tw:bg-popover tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold",
+        tone === "success" && "tw:bg-success-bg tw:text-success",
+        tone === "warning" && "tw:bg-warning-bg tw:text-warning",
+        tone === "danger" && "tw:text-danger-text",
+        tone === "info" && "tw:bg-info-bg tw:text-info",
+      )}
       aria-label={`${m.sync_indicator_aria_label()}: ${label}`}
       aria-live="polite"
       aria-atomic="true"
       tabIndex={tooltipText ? 0 : undefined}
       aria-describedby={tooltipText ? tooltipId : undefined}
     >
-      <Icon icon={icon} className={`${shouldSpin ? " sync-spin" : ""}`} />
-      <span className="d-none d-sm-inline">{label}</span>
+      <Icon
+        icon={icon}
+        className={shouldSpin ? "tw:animate-spin tw:motion-reduce:animate-none" : undefined}
+      />
+      <span className="tw:hidden tw:sm:inline">{label}</span>
     </span>
   );
 

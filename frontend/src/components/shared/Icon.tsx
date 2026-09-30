@@ -10,7 +10,7 @@ export function Icon({ icon: SvgIcon, className, ...props }: IconProps) {
   return (
     <SvgIcon
       {...props}
-      className={cn("app-icon", className)}
+      className={cn("tw:icon-em tw:shrink-0", className)}
       aria-hidden="true"
       focusable="false"
     />

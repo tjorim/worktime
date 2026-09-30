@@ -53,7 +53,7 @@ export function SettingsSyncSection({
                 <div className={`fw-medium text-${syncStatus.variant}`}>
                   <Icon
                     icon={syncStatus.icon}
-                    className={`${isSyncing ? " sync-spin" : ""} me-2`}
+                    className={`${isSyncing ? " tw:animate-spin tw:motion-reduce:animate-none" : ""} me-2`}
                   />
                   {syncStatus.label}
                 </div>

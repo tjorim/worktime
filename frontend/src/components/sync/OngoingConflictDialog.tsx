@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ export function OngoingConflictDialog({
   const [selected, setSelected] = useState<ConflictChoice | null>(null);
 
   // Reset selection when the dialog is closed programmatically (show → false).
-  // React-Bootstrap's onHide only fires on user-driven closes (backdrop/Escape),
+  // A dialog close handler only fires on user-driven closes (backdrop/Escape),
   // not when the parent flips show={false} directly. Handled as a same-render
   // response rather than a follow-up effect.
   const [prevShow, setPrevShow] = useState(show);
@@ -64,7 +64,7 @@ export function OngoingConflictDialog({
     setSelected(null);
   };
 
-  // Backdrop and Escape are disabled below, so this only runs if react-bootstrap
+  // Backdrop and Escape are disabled below, so this only runs if the dialog
   // closes the modal some other way. It deliberately does *not* resolve the
   // conflict: dismissal used to be mapped to "keep-server", which meant a stray
   // Escape keypress silently discarded the user's local edits for every
@@ -110,21 +110,21 @@ export function OngoingConflictDialog({
       <DialogContent aria-describedby={bodyId} showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={TriangleAlertIcon} className="text-warning me-2" />
+            <Icon icon={TriangleAlertIcon} className="tw:text-warning tw:me-2" />
             {conflictCount === 1
               ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
               : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body" id={bodyId}>
-          <p className="text-muted small mb-3">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" id={bodyId}>
+          <p className="tw:text-muted-foreground tw:text-sm tw:mb-4">
             {conflictCount === 1
               ? m.ongoing_conflict_body_one({ count: String(conflictCount) })
               : m.ongoing_conflict_body_other({ count: String(conflictCount) })}
           </p>
 
           {entityCounts.length > 0 && (
-            <ul className="small text-muted mb-4 ps-3">
+            <ul className="tw:text-sm tw:text-muted-foreground tw:mb-6 tw:ps-4">
               {entityCounts.map(([entity, count]) => (
                 <li key={entity}>
                   {count} {getEntityLabel(entity)}
@@ -133,27 +133,29 @@ export function OngoingConflictDialog({
             </ul>
           )}
 
-          <div className="d-grid gap-2">
+          <div className="tw:grid tw:gap-2">
             {/* Keep server version */}
             <button
               type="button"
-              className={`btn btn-outline-${selected === "keep-server" ? "primary" : "secondary"} text-start p-3`}
+              className={`tw:rounded-lg tw:border tw:p-4 tw:text-left tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 ${selected === "keep-server" ? "tw:border-primary tw:bg-primary/5" : "tw:border-border tw:bg-background tw:hover:bg-muted"}`}
               onClick={() => setSelected("keep-server")}
               aria-pressed={selected === "keep-server"}
             >
-              <div className="d-flex align-items-start gap-3">
+              <div className="tw:flex tw:items-start tw:gap-4">
                 <Icon
                   icon={CloudDownloadIcon}
-                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-secondary"}`}
+                  className={`tw:text-lg tw:shrink-0 tw:mt-1 ${selected === "keep-server" ? "tw:text-primary" : "tw:text-muted-foreground"}`}
                 />
                 <div>
-                  <div className="fw-semibold">{m.ongoing_conflict_keep_server()}</div>
-                  <div className="text-muted small">{m.ongoing_conflict_keep_server_desc()}</div>
+                  <div className="tw:font-semibold">{m.ongoing_conflict_keep_server()}</div>
+                  <div className="tw:text-muted-foreground tw:text-sm">
+                    {m.ongoing_conflict_keep_server_desc()}
+                  </div>
                 </div>
                 {selected === "keep-server" && (
                   <Icon
                     icon={CircleCheckIcon}
-                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                    className="tw:text-primary tw:ms-auto tw:shrink-0 tw:mt-1"
                   />
                 )}
               </div>
@@ -162,23 +164,25 @@ export function OngoingConflictDialog({
             {/* Keep my version */}
             <button
               type="button"
-              className={`btn btn-outline-${selected === "keep-mine" ? "primary" : "secondary"} text-start p-3`}
+              className={`tw:rounded-lg tw:border tw:p-4 tw:text-left tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 ${selected === "keep-mine" ? "tw:border-primary tw:bg-primary/5" : "tw:border-border tw:bg-background tw:hover:bg-muted"}`}
               onClick={() => setSelected("keep-mine")}
               aria-pressed={selected === "keep-mine"}
             >
-              <div className="d-flex align-items-start gap-3">
+              <div className="tw:flex tw:items-start tw:gap-4">
                 <Icon
                   icon={HardDriveIcon}
-                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-secondary"}`}
+                  className={`tw:text-lg tw:shrink-0 tw:mt-1 ${selected === "keep-mine" ? "tw:text-primary" : "tw:text-muted-foreground"}`}
                 />
                 <div>
-                  <div className="fw-semibold">{m.ongoing_conflict_keep_mine()}</div>
-                  <div className="text-muted small">{m.ongoing_conflict_keep_mine_desc()}</div>
+                  <div className="tw:font-semibold">{m.ongoing_conflict_keep_mine()}</div>
+                  <div className="tw:text-muted-foreground tw:text-sm">
+                    {m.ongoing_conflict_keep_mine_desc()}
+                  </div>
                 </div>
                 {selected === "keep-mine" && (
                   <Icon
                     icon={CircleCheckIcon}
-                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                    className="tw:text-primary tw:ms-auto tw:shrink-0 tw:mt-1"
                   />
                 )}
               </div>
@@ -195,7 +199,7 @@ export function OngoingConflictDialog({
           >
             {m.ongoing_conflict_dismiss()}
           </Button>
-          <Button variant="primary" onClick={handleConfirm} disabled={!selected}>
+          <Button variant="default" onClick={handleConfirm} disabled={!selected}>
             {m.ongoing_conflict_confirm()}
           </Button>
         </DialogFooter>

@@ -1,7 +1,7 @@
 import { CirclePlus as CirclePlusIcon, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { ReactNode } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
   /** Lucide icon component */
@@ -15,38 +15,25 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
     icon?: LucideIcon;
-    variant?: string;
+    variant?: React.ComponentProps<typeof Button>["variant"];
   };
-  /** Optional icon size (default: "3rem") */
-  iconSize?: string;
 }
 
 /**
  * Reusable empty state component for views with no data.
  * Provides consistent styling and accessibility across all panels.
  */
-export function EmptyState({
-  icon,
-  title,
-  description,
-  ctaButton,
-  iconSize = "3rem",
-}: EmptyStateProps) {
+export function EmptyState({ icon, title, description, ctaButton }: EmptyStateProps) {
   return (
-    <div className="text-center py-4">
-      <div className="mb-3">
-        <Icon
-          icon={icon}
-          className="text-muted"
-
-          style={{ fontSize: iconSize }}
-        />
+    <div className="tw:text-center tw:py-6">
+      <div className="tw:mb-4">
+        <Icon icon={icon} className="tw:size-12 tw:text-muted-foreground" />
       </div>
-      <h6 className="text-muted mb-2">{title}</h6>
-      <p className="text-muted small mb-3">{description}</p>
+      <h6 className="tw:text-muted-foreground tw:mb-2">{title}</h6>
+      <p className="tw:text-muted-foreground tw:text-sm tw:mb-4">{description}</p>
       {ctaButton && (
         <Button size="sm" variant={ctaButton.variant} onClick={ctaButton.onClick}>
-          <Icon icon={ctaButton.icon ?? CirclePlusIcon} className="me-1" />
+          <Icon icon={ctaButton.icon ?? CirclePlusIcon} className="tw:me-1" />
           {ctaButton.label}
         </Button>
       )}

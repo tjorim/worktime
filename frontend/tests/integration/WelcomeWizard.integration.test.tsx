@@ -124,7 +124,7 @@ function renderWithProviders(
  */
 async function findModalTitle(text: RegExp) {
   const headings = await screen.findAllByText(text);
-  const modalHeading = headings.find((el) => el.className.includes("modal-title"));
+  const modalHeading = headings.find((el) => el.getAttribute("data-slot") === "dialog-title");
   expect(modalHeading).toBeInTheDocument();
   return modalHeading;
 }
