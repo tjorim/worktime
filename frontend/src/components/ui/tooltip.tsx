@@ -25,22 +25,33 @@ export function Hint({
   const generatedTriggerId = useId();
   const triggerId = children.props.id ?? generatedTriggerId;
   const popupId = useId();
-  const [clickedOpen, setClickedOpen] = useState(false);
-  const controlledOpen = open ?? (openOnClick ? clickedOpen : undefined);
+  const [interactionOpen, setInteractionOpen] = useState(false);
+  const controlledOpen = open ?? (openOnClick ? interactionOpen : undefined);
   return (
     <TooltipPrimitive.Root
       open={controlledOpen}
       disabled={disabled}
-      onOpenChange={openOnClick ? setClickedOpen : undefined}
+      onOpenChange={(nextOpen, details) => {
+        if (
+          openOnClick &&
+          !nextOpen &&
+          details.reason === "trigger-hover" &&
+          document.activeElement?.id === triggerId
+        ) {
+          details.cancel();
+          return;
+        }
+        setInteractionOpen(nextOpen);
+      }}
       triggerId={controlledOpen === undefined ? undefined : triggerId}
     >
       <TooltipPrimitive.Trigger
         id={triggerId}
         render={children}
         delay={0}
-        aria-describedby={popupId}
+        aria-describedby={!disabled && (open ?? interactionOpen) ? popupId : undefined}
         closeOnClick={!openOnClick && open === undefined}
-        onClick={openOnClick ? () => setClickedOpen(true) : undefined}
+        onClick={openOnClick ? () => setInteractionOpen(true) : undefined}
       />
       <TooltipContent id={popupId} side={placement} variant={variant}>
         {content}

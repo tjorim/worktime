@@ -53,6 +53,10 @@ describe("Hint", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Copied");
     expect(screen.getByRole("cell").parentElement?.tagName).toBe("TR");
     expect(screen.getByRole("cell")).toHaveAttribute("id", "hours");
+    expect(screen.getByRole("cell")).toHaveAttribute(
+      "aria-describedby",
+      screen.getByRole("tooltip").id,
+    );
     view.rerender(
       <table>
         <tbody>
@@ -64,6 +68,49 @@ describe("Hint", () => {
         </tbody>
       </table>,
     );
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    expect(screen.getByRole("cell")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("only references its description while the popup is open", async () => {
+    const user = userEvent.setup();
+    render(
+      <Hint content="Details">
+        <button>Action</button>
+      </Hint>,
+    );
+    const trigger = screen.getByRole("button");
+    expect(trigger).not.toHaveAttribute("aria-describedby");
+    await user.tab();
+    const popup = await screen.findByRole("tooltip");
+    expect(trigger).toHaveAttribute("aria-describedby", popup.id);
+    await user.tab();
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    expect(trigger).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("dismisses click-enabled details after pointer exit and blur", async () => {
+    const user = userEvent.setup();
+    render(
+      <Hint openOnClick content="Status">
+        <button>Sync</button>
+      </Hint>,
+    );
+    const trigger = screen.getByRole("button");
+    await user.hover(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Status");
+    await user.unhover(trigger);
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    await user.tab();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Status");
+    await user.tab();
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    await user.click(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Status");
+    await user.unhover(trigger);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Status");
+    expect(trigger).toHaveFocus();
+    await user.tab();
     await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
   });
 

@@ -110,6 +110,24 @@ for (const theme of ["light", "dark"] as const) {
         "background-color",
         theme === "light" ? "rgb(236, 0, 0)" : "rgb(198, 40, 40)",
       );
+      await expect(today).toHaveCSS("filter", "brightness(1.2)");
+      const ringColor = await today.evaluate((cell) => {
+        const probe = document.createElement("span");
+        probe.style.color = "var(--wt-team-cal-today-ring)";
+        cell.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      });
+      await expect
+        .poll(() => today.evaluate((cell) => getComputedStyle(cell).boxShadow))
+        .toContain(`${ringColor} 0px 0px 0px 2px inset`);
+      const todayHeader = grid.locator('th[aria-current="date"]');
+      await expect(todayHeader).toHaveCount(1);
+      await expect(todayHeader).toHaveText("15");
+      await expect(todayHeader).toHaveCSS("background-color", "rgb(255, 193, 7)");
+      await expect(todayHeader).toHaveCSS("color", "rgb(0, 0, 0)");
+      await expect(todayHeader).toHaveCSS("font-weight", "700");
       const half = row.locator('[data-date="2026-09-16"]');
       await expect(half).toHaveCSS("font-size", "10px");
       await expect(half).toHaveCSS("text-align", "right");

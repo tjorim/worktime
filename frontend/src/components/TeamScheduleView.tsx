@@ -514,7 +514,7 @@ export function TeamScheduleView() {
                         return (
                           <th
                             key={date.format("YYYY-MM-DD")}
-                            className={`tw:min-w-7 tw:border-l tw:border-team-day-divider tw:p-1 tw:text-center tw:text-xs tw:font-medium${isToday ? " tw:bg-team-today tw:text-team-today-foreground tw:font-bold" : isWeekend ? " tw:bg-team-header-weekend" : ""}`}
+                            className={`tw:min-w-7 tw:border-l tw:border-team-day-divider tw:p-1 tw:text-center tw:text-xs${isToday ? " tw:bg-team-today tw:text-team-today-foreground tw:font-bold" : isWeekend ? " tw:bg-team-header-weekend tw:font-medium" : " tw:font-medium"}`}
                             title={date.format("ddd, MMM D")}
                             aria-current={isToday ? "date" : undefined}
                           >
