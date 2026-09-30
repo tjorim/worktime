@@ -7,7 +7,12 @@ import {
 import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import { useToast } from "@/contexts/ToastContext";
-import Accordion from "react-bootstrap/Accordion";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import * as m from "@/paraglide/messages.js";
@@ -44,8 +49,8 @@ export function TimeOffRawView({
 
   return (
     <Accordion>
-      <Accordion.Item eventKey="raw-editor">
-        <Accordion.Header>
+      <AccordionItem value="raw-editor">
+        <AccordionTrigger>
           <Icon icon={SquareCodeIcon} className="me-2" />
           {m.timeoff_raw_editor_heading()}
           {isDirty && (
@@ -53,8 +58,8 @@ export function TimeOffRawView({
               •
             </span>
           )}
-        </Accordion.Header>
-        <Accordion.Body>
+        </AccordionTrigger>
+        <AccordionContent>
           <p className="text-muted">{m.timeoff_raw_help()}</p>
           <Form.Group controlId="hdayText" className="mb-3">
             <Form.Label className="visually-hidden">{m.timeoff_raw_content_label()}</Form.Label>
@@ -112,8 +117,8 @@ export function TimeOffRawView({
               {m.timeoff_reset_btn()}
             </Button>
           </div>
-        </Accordion.Body>
-      </Accordion.Item>
+        </AccordionContent>
+      </AccordionItem>
     </Accordion>
   );
 }

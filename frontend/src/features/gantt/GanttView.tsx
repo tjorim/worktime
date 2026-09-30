@@ -7,7 +7,7 @@ import {
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { Button as ToggleButton } from "@/components/ui/button";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
@@ -136,26 +136,32 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   return (
     <div className="gantt-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <ButtonGroup className="view-toggle-group" aria-label={m.gantt_toggle_view_aria()}>
-          <Button
-            variant={view === "chart" ? "primary" : "outline-primary"}
+        <div
+          role="group"
+          className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
+          aria-label={m.gantt_toggle_view_aria()}
+        >
+          <ToggleButton
+            className="tw:flex-1"
+            variant={view === "chart" ? "default" : "outline"}
             size="sm"
             aria-pressed={view === "chart"}
             onClick={() => updateLastGanttView("chart")}
           >
-            <Icon icon={ChartColumnIcon} className="me-1" />
+            <Icon icon={ChartColumnIcon} className="tw:mr-1" />
             {m.gantt_chart_view()}
-          </Button>
-          <Button
-            variant={view === "table" ? "primary" : "outline-primary"}
+          </ToggleButton>
+          <ToggleButton
+            className="tw:flex-1"
+            variant={view === "table" ? "default" : "outline"}
             size="sm"
             aria-pressed={view === "table"}
             onClick={() => updateLastGanttView("table")}
           >
-            <Icon icon={TableIcon} className="me-1" />
+            <Icon icon={TableIcon} className="tw:mr-1" />
             {m.gantt_table_view()}
-          </Button>
-        </ButtonGroup>
+          </ToggleButton>
+        </div>
         <Button size="sm" onClick={handleAddTask}>
           <Icon icon={CirclePlusIcon} className="me-1" />
           {m.gantt_task_modal_add()}

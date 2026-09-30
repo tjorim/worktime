@@ -14,11 +14,6 @@ html {
   max-width: 100%;
 }
 
-/* Account for fixed navbar height */
-body {
-  padding-top: var(--wt-navbar-height);
-}
-
 /* Calendar legend popover - below fixed navbar (1030) */
 #calendar-legend-popover {
   z-index: 1020;
@@ -84,18 +79,6 @@ body {
    LAYOUT UTILITIES
    ========================================================================= */
 
-/* Remove top border radius from main component cards in tab content for seamless look, but not nested cards */
-.tab-content .card:not(.card .card) {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-
-/* Also remove top border radius from card headers in main tab content cards */
-.tab-content .card:not(.card .card) > .card-header {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-
 /* Gantt chart: keep horizontal scrolling from frappe-gantt but suppress vertical scrollbar */
 .gantt-scroll-container .gantt-container {
   overflow-y: hidden;
@@ -128,18 +111,6 @@ body {
    ========================================================================= */
 
 /* ============================================================================
-   NAVBAR (THM-2)
-   ============================================================================
-   Header.tsx uses this class instead of Bootstrap's bg="primary" so dark mode
-   can tone the navbar down (see --wt-navbar-bg, _variables.scss) instead of
-   keeping a fully-saturated blue band across a near-black page.
-   ========================================================================= */
-
-.navbar-worktime {
-  background-color: var(--wt-navbar-bg);
-}
-
-/* ============================================================================
    DARK MODE CARD ELEVATION (THM-1)
    ========================================================================= */
 
@@ -158,52 +129,15 @@ body {
    MAIN TAB NAVIGATION
    ========================================================================= */
 
-/* Scroll instead of wrap so the bar never breaks into a cramped second row */
-.main-tabs {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-
-  .nav-item {
-    flex-shrink: 0;
-  }
-
-  .nav-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-    min-height: 44px;
-    white-space: nowrap;
-  }
-}
-
 .mobile-quick-actions {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
   bottom: calc(5rem + env(safe-area-inset-bottom));
   z-index: 1020;
-  width: 3.25rem;
-  height: 3.25rem;
-  padding: 0;
-  font-size: 1.35rem;
 }
 
 body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobile-quick-actions {
   display: none !important;
-}
-
-/* Keep the primary view switcher consistent across Schedule, Time Off,
-   Time Tracking, and Gantt. It fills narrow screens and uses the same
-   bounded width with equal segments on larger screens. */
-.view-toggle-group {
-  width: min(100%, 24rem);
-
-  > .btn {
-    flex: 1 1 0;
-  }
 }
 
 @keyframes wt-view-enter {
@@ -265,40 +199,6 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
   .btn:not(:disabled):active {
     transform: none;
   }
-}
-
-/* Below `sm`, stack the label under the icon instead of hiding it — six
-   near-identical calendar-family glyphs aren't enough to navigate by on
-   their own, so keep a (smaller) accessible name visible for sighted users
-   too. Still fits the 44px touch target with room to spare. */
-@media (width <= 575.98px) {
-  .main-tabs {
-    overflow-x: hidden;
-  }
-
-  .main-tabs .nav-item {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-
-  .main-tabs .nav-link {
-    flex-direction: column;
-    gap: 0.125rem;
-    width: 100%;
-    padding-inline: 0.125rem;
-    white-space: normal;
-  }
-
-  .main-tab-label {
-    font-size: 0.65rem;
-    line-height: 1;
-    overflow-wrap: anywhere;
-  }
-}
-
-/* Shared with the navigation header until its migration. */
-.header-icon {
-  font-size: 1.25rem;
 }
 
 /* Preserve compact spacing for Bootstrap consumers during the staged migration. */

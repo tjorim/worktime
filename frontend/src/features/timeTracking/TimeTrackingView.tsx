@@ -3,8 +3,7 @@ import {
   ListChecks as ListChecksIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { Button as ToggleButton } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/contexts/LastUsedContext";
@@ -114,26 +113,32 @@ export function TimeTrackingView({
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center gap-2 flex-wrap">
-        <ButtonGroup className="view-toggle-group" aria-label={m.tt_toggle_view_aria()}>
-          <Button
-            variant={viewMode === "daily" ? "primary" : "outline-primary"}
+        <div
+          role="group"
+          className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
+          aria-label={m.tt_toggle_view_aria()}
+        >
+          <ToggleButton
+            className="tw:flex-1"
+            variant={viewMode === "daily" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "daily"}
             onClick={() => setViewMode("daily")}
           >
-            <Icon icon={ListChecksIcon} className="me-1" />
+            <Icon icon={ListChecksIcon} className="tw:mr-1" />
             {m.tt_daily_log()}
-          </Button>
-          <Button
-            variant={viewMode === "weekly" ? "primary" : "outline-primary"}
+          </ToggleButton>
+          <ToggleButton
+            className="tw:flex-1"
+            variant={viewMode === "weekly" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "weekly"}
             onClick={() => setViewMode("weekly")}
           >
-            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="me-1" />
+            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-1" />
             {m.tt_weekly_summary()}
-          </Button>
-        </ButtonGroup>
+          </ToggleButton>
+        </div>
       </div>
 
       {viewMode === "daily" && (

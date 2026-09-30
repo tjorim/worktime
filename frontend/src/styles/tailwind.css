@@ -194,3 +194,9 @@
   height: 1em;
   vertical-align: -0.125em;
 }
+
+@theme inline {
+  --spacing-header: var(--wt-navbar-height);
+  --z-index-header: 1030;
+  --color-header-foreground: var(--bs-white);
+}

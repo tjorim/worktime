@@ -1,5 +1,4 @@
 {
-  "src/components/MobileQuickActions.tsx": ["width"],
   "src/components/TransferView.tsx": ["backgroundColor", "color", "fontSize", "minHeight"],
   "src/components/WelcomeWizard.tsx": ["height"],
   "src/components/settings/SettingsFeaturesSection.tsx": ["minWidth"],

@@ -17,7 +17,7 @@ import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { Button as ToggleButton } from "@/components/ui/button";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
 import {
@@ -834,37 +834,44 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         </Alert>
       )}
       <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
-        <ButtonGroup className="view-toggle-group" aria-label={m.timeoff_toggle_view_aria()}>
-          <Button
-            variant={viewMode === "table" ? "primary" : "outline-primary"}
+        <div
+          role="group"
+          className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
+          aria-label={m.timeoff_toggle_view_aria()}
+        >
+          <ToggleButton
+            className="tw:flex-1"
+            variant={viewMode === "table" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "table"}
             onClick={() => setViewMode("table")}
           >
-            <Icon icon={TableIcon} className="me-1" />
+            <Icon icon={TableIcon} className="tw:mr-1" />
             {m.timeoff_view_table()}
-          </Button>
-          <Button
-            variant={viewMode === "stats" ? "primary" : "outline-primary"}
+          </ToggleButton>
+          <ToggleButton
+            className="tw:flex-1"
+            variant={viewMode === "stats" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "stats"}
             onClick={() => setViewMode("stats")}
           >
-            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="me-1" />
+            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-1" />
             {m.timeoff_view_statistics()}
-          </Button>
+          </ToggleButton>
           {helperConnectionStatus === "connected" && (
-            <Button
-              variant={viewMode === "team" ? "primary" : "outline-primary"}
+            <ToggleButton
+              className="tw:flex-1"
+              variant={viewMode === "team" ? "default" : "outline"}
               size="sm"
               aria-pressed={viewMode === "team"}
               onClick={() => setViewMode("team")}
             >
-              <Icon icon={UsersIcon} className="me-1" />
+              <Icon icon={UsersIcon} className="tw:mr-1" />
               {m.timeoff_view_team()}
-            </Button>
+            </ToggleButton>
           )}
-        </ButtonGroup>
+        </div>
         {(viewMode !== "table" || entries.length > 0) && (
           <span className="text-muted small">
             {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}

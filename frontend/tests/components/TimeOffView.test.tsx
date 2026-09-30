@@ -163,7 +163,10 @@ describe("TimeOffView", () => {
       await act(async () => {
         resolveHealth(HttpResponse.json({ status: "ok" }));
       });
-      expect(await screen.findByRole("button", { name: "Team" })).toHaveClass("btn-primary");
+      expect(await screen.findByRole("button", { name: "Team" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
       expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
     });
 
@@ -279,6 +282,7 @@ describe("TimeOffView", () => {
 
       await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
 
+      await user.click(screen.getByRole("button", { name: /Raw \.hday Editor/i }));
       const errors = await screen.findAllByText("Failed to import file. Please check the format.");
       expect(errors.length).toBeGreaterThanOrEqual(2);
     });

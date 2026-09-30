@@ -1,4 +1,3 @@
-import Container from "react-bootstrap/Container";
 import { Outlet } from "@tanstack/react-router";
 import { AboutModal } from "@/components/AboutModal";
 import { FeatureIntroAlert } from "@/components/FeatureIntroAlert";
@@ -24,8 +23,8 @@ export function AppLayout() {
   const { conflictCount, conflictedPayload, resolveOngoingConflicts } = useOngoingSyncContext();
 
   return (
-    <div className="min-vh-100">
-      <Container fluid>
+    <div className="tw:min-h-screen tw:pt-header">
+      <div className="tw:px-2 tw:md:px-3">
         <Header />
         {shell.featureAnnouncements.length > 0 && (
           <FeatureIntroAlert
@@ -64,7 +63,7 @@ export function AppLayout() {
           conflictedPayload={conflictedPayload}
           onResolve={resolveOngoingConflicts}
         />
-      </Container>
+      </div>
     </div>
   );
 }
