@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 
-const shiftColors: Record<string, string> = {
+export const shiftColors: Record<string, string> = {
   "shift-morning": "tw:bg-wt-shift-morning tw:text-wt-shift-morning-text",
   "shift-late": "tw:bg-wt-shift-late tw:text-wt-shift-late-text",
   "shift-night": "tw:bg-wt-shift-night tw:text-wt-shift-night-text",

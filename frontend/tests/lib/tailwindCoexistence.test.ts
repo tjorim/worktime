@@ -27,7 +27,7 @@ describe("Tailwind coexistence", () => {
     expect(rules).toContain(".btn");
     expect(rules).toContain(".form-control");
     expect(rules).toContain(".modal-content");
-    expect(css).toContain("@layer theme, legacy, base, components, utilities");
+    expect(css).toContain("@layer theme, legacy, base, calendar, components, utilities");
   });
 
   it("maps every event palette variable without copying its value", () => {

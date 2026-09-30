@@ -1,3 +1,4 @@
+import { Grid, GridItem } from "@/components/ui/grid";
 import {
   Briefcase as BriefcaseIcon,
   CalendarDays as CalendarDaysIcon,
@@ -15,11 +16,10 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo } from "react";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
 import {
   Dialog,
   DialogContent,
@@ -27,9 +27,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ProgressBar from "react-bootstrap/ProgressBar";
-import Row from "react-bootstrap/Row";
-import Table from "react-bootstrap/Table";
+import { Progress } from "@/components/ui/progress";
+
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import clsx from "clsx";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { ScheduleOption, ShiftCode } from "@/data/rosters";
@@ -40,33 +47,37 @@ import * as m from "@/paraglide/messages.js";
 
 import { calculateShift } from "@/utils/shiftCalculations";
 
-// Icon size for small decorative icons (e.g., live indicator dot)
-const SMALL_ICON_SIZE = "0.5rem";
-
 // Display metadata for each working shift code — icons, colors, and variants only (labels are translated at render time).
 // Any shift code present in a schedule's shiftTimes but absent here will receive a generic fallback.
 const SHIFT_DISPLAY_META: Partial<
-  Record<ShiftCode, { icon: LucideIcon; iconClassName: string; variant: string }>
+  Record<
+    ShiftCode,
+    {
+      icon: LucideIcon;
+      iconClassName: string;
+      variant: "warning" | "info" | "default" | "secondary";
+    }
+  >
 > = {
   M: {
     icon: SunIcon,
-    iconClassName: "text-warning",
+    iconClassName: "tw:text-warning",
     variant: "warning",
   },
   L: {
     icon: SunsetIcon,
-    iconClassName: "text-info",
+    iconClassName: "tw:text-info",
     variant: "info",
   },
   D: {
     icon: SunIcon,
-    iconClassName: "text-primary",
-    variant: "primary",
+    iconClassName: "tw:text-primary",
+    variant: "default",
   },
   N: {
     icon: MoonIcon,
-    iconClassName: "text-secondary",
-    variant: "dark",
+    iconClassName: "tw:text-muted-foreground",
+    variant: "secondary",
   },
 };
 
@@ -187,8 +198,8 @@ export function ScheduleDetailModal({
         const count = weekSchedule.filter((day) => day.shift.code === code).length;
         const meta = SHIFT_DISPLAY_META[code] ?? {
           icon: CircleIcon,
-          iconClassName: "text-muted",
-          variant: "secondary",
+          iconClassName: "tw:text-muted-foreground",
+          variant: "secondary" as const,
         };
         return { key: code, ...meta, count };
       });
@@ -222,7 +233,7 @@ export function ScheduleDetailModal({
           <DialogTitle>
             <Icon
               icon={hasTeams ? UsersIcon : CalendarDaysIcon}
-              className={clsx("me-2", "text-primary")}
+              className={clsx("tw:mr-2", "tw:text-primary")}
             />
             {hasTeams
               ? m.schedule_detail_title_team({ team: String(teamNumber) })
@@ -231,82 +242,98 @@ export function ScheduleDetailModal({
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           {/* Current Status Card */}
-          <Card className="mb-4">
-            <Card.Body>
-              <div className="d-flex justify-content-between align-items-center">
+          <Card className="tw:mb-6">
+            <CardContent>
+              <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center">
                 <div>
-                  <h6 className="mb-1">
-                    <Icon icon={ClockIcon} className="me-2" />
+                  <h6 className="tw:mb-1">
+                    <Icon icon={ClockIcon} className="tw:mr-2" />
                     {m.schedule_current_status()}
                   </h6>
-                  <div className="d-flex align-items-center gap-2">
+                  <div className="tw:flex tw:items-center tw:gap-2">
                     {currentStatus.shift.code === "O" ? (
-                      <Badge bg="secondary" pill>
-                        <Icon icon={HouseIcon} className="me-1" />
+                      <Badge variant="secondary">
+                        <Icon icon={HouseIcon} className="tw:mr-1" />
                         {m.schedule_off_duty()}
                       </Badge>
                     ) : (
                       <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
                     )}
-                    <small className="text-muted">{currentStatus.date.format("dddd, MMM D")}</small>
+                    <small className="tw:text-muted-foreground">
+                      {currentStatus.date.format("dddd, MMM D")}
+                    </small>
                   </div>
                 </div>
                 {nextShift && (
-                  <div className="text-end">
-                    <small className="text-muted d-block">{m.schedule_next_shift()}</small>
+                  <div className="tw:text-right">
+                    <small className="tw:text-muted-foreground tw:block">
+                      {m.schedule_next_shift()}
+                    </small>
                     <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
-                    <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
+                    <small className="tw:text-muted-foreground tw:block">
+                      {nextShift.date.format("MMM D")}
+                    </small>
                   </div>
                 )}
               </div>
-            </Card.Body>
+            </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <Card.Body>
-              <h6 className="mb-3">
-                <Icon icon={InfoIcon} className="me-2" />
+          <Card className="tw:mb-6">
+            <CardContent>
+              <h6 className="tw:mb-4">
+                <Icon icon={InfoIcon} className="tw:mr-2" />
                 {m.schedule_info_heading()}
               </h6>
-              <Row className="g-3">
-                <Col xs={6} md={3}>
-                  <small className="text-muted d-block">{m.schedule_info_type()}</small>
-                  <span className="fw-semibold">{scheduleMetadata.title}</span>
-                </Col>
+              <Grid className="tw:gap-4">
+                <GridItem span={6} desktopSpan={3}>
+                  <small className="tw:text-muted-foreground tw:block">
+                    {m.schedule_info_type()}
+                  </small>
+                  <span className="tw:font-semibold">{scheduleMetadata.title}</span>
+                </GridItem>
                 {hasTeams ? (
-                  <Col xs={6} md={3}>
-                    <small className="text-muted d-block">{m.schedule_info_team()}</small>
-                    <span className="fw-semibold">
+                  <GridItem span={6} desktopSpan={3}>
+                    <small className="tw:text-muted-foreground tw:block">
+                      {m.schedule_info_team()}
+                    </small>
+                    <span className="tw:font-semibold">
                       {m.schedule_info_team_value({
                         team: String(teamNumber),
                         total: String(teamCount),
                       })}
                     </span>
-                  </Col>
+                  </GridItem>
                 ) : null}
-                <Col xs={6} md={3}>
-                  <small className="text-muted d-block">{m.schedule_info_cycle()}</small>
-                  <span className="fw-semibold">
+                <GridItem span={6} desktopSpan={3}>
+                  <small className="tw:text-muted-foreground tw:block">
+                    {m.schedule_info_cycle()}
+                  </small>
+                  <span className="tw:font-semibold">
                     {m.schedule_info_cycle_days({
                       days: String(scheduleConfig.shiftConfig.cycleLengthDays),
                     })}
                   </span>
-                </Col>
-                <Col xs={6} md={3}>
-                  <small className="text-muted d-block">{m.schedule_info_shifts_per_day()}</small>
-                  <span className="fw-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
-                </Col>
-                <Col xs={12}>
-                  <small className="text-muted d-block mb-2">
+                </GridItem>
+                <GridItem span={6} desktopSpan={3}>
+                  <small className="tw:text-muted-foreground tw:block">
+                    {m.schedule_info_shifts_per_day()}
+                  </small>
+                  <span className="tw:font-semibold">
+                    {scheduleConfig.shiftConfig.shiftsPerDay}
+                  </span>
+                </GridItem>
+                <GridItem span={12}>
+                  <small className="tw:text-muted-foreground tw:block tw:mb-2">
                     {m.schedule_info_available_shifts()}
                   </small>
-                  <div className="d-flex flex-wrap gap-2">
+                  <div className="tw:flex tw:flex-wrap tw:gap-2">
                     {availableShifts.map(([code, definition]) => {
                       const meta = SHIFT_DISPLAY_META[code] ?? { variant: "secondary" };
                       return (
-                        <Badge key={code} bg={meta.variant} className="fw-normal">
+                        <Badge key={code} variant={meta.variant} className="tw:font-normal">
                           {definition?.displayCode ?? code}
-                          <span className="ms-1">
+                          <span className="tw:ml-1">
                             {getLocalizedShiftTime(
                               definition?.start ?? null,
                               definition?.end ?? null,
@@ -317,80 +344,78 @@ export function ScheduleDetailModal({
                       );
                     })}
                   </div>
-                </Col>
-                <Col xs={12}>
-                  <small className="text-muted d-block">{m.schedule_info_description()}</small>
+                </GridItem>
+                <GridItem span={12}>
+                  <small className="tw:text-muted-foreground tw:block">
+                    {m.schedule_info_description()}
+                  </small>
                   <span>{scheduleMetadata.description}</span>
-                </Col>
-              </Row>
-            </Card.Body>
+                </GridItem>
+              </Grid>
+            </CardContent>
           </Card>
 
           {/* 7-Day Schedule */}
-          <div className="mb-4">
-            <h6 className="mb-3">
-              <Icon icon={CalendarDaysIcon} className="me-2" />
+          <div className="tw:mb-6">
+            <h6 className="tw:mb-4">
+              <Icon icon={CalendarDaysIcon} className="tw:mr-2" />
               {m.schedule_7day_heading()}
             </h6>
 
             {/* Desktop table view */}
-            <div className="d-none d-md-block">
-              <div className="table-responsive">
+            <div className="tw:hidden tw:md:block">
+              <div className="tw:overflow-x-auto">
                 <Table
-                  className="mb-0 schedule-detail-table"
+                  className="tw:mb-0 tw:[&_th]:bg-muted tw:[&_th]:p-3 tw:[&_td]:p-3 tw:[&_tr]:border-b tw:[&_tr]:border-border tw:[&_tbody_tr]:hover:bg-muted/50"
                   aria-label={
                     hasTeams
                       ? m.schedule_7day_aria_team({ team: String(teamNumber) })
                       : m.schedule_7day_aria_personal()
                   }
                 >
-                  <thead>
-                    <tr>
-                      <th>{m.schedule_col_date()}</th>
-                      <th>{m.schedule_col_day()}</th>
-                      <th>{m.schedule_col_shift()}</th>
-                      <th>{m.schedule_col_hours()}</th>
-                      <th>{m.schedule_col_status()}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{m.schedule_col_date()}</TableHead>
+                      <TableHead>{m.schedule_col_day()}</TableHead>
+                      <TableHead>{m.schedule_col_shift()}</TableHead>
+                      <TableHead>{m.schedule_col_hours()}</TableHead>
+                      <TableHead>{m.schedule_col_status()}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {weekSchedule.map((day) => (
-                      <tr
+                      <TableRow
                         key={day.date.format("YYYY-MM-DD")}
-                        className={clsx(day.isToday && "today-row")}
+                        className={clsx(day.isToday && "tw:bg-primary/10 tw:font-medium")}
                       >
-                        <td>
+                        <TableCell>
                           <strong>{day.date.format("MMM D")}</strong>
                           {day.isToday && (
-                            <Badge bg="primary" className="ms-2">
+                            <Badge variant="default" className="tw:ml-2">
                               <Icon
                                 icon={CircleIcon}
-                                className="me-1"
+                                className="tw:mr-1 tw:size-2"
                                 fill="currentColor"
-
-                                style={{ fontSize: SMALL_ICON_SIZE }}
                               />
                               {m.today()}
                             </Badge>
                           )}
                           {day.isTomorrow && (
-                            <Badge bg="info" className="ms-2">
+                            <Badge variant="info" className="tw:ml-2">
                               {m.schedule_tomorrow()}
                             </Badge>
                           )}
-                        </td>
-                        <td>{day.date.format("ddd")}</td>
-                        <td>
+                        </TableCell>
+                        <TableCell>{day.date.format("ddd")}</TableCell>
+                        <TableCell>
                           {day.shift.code === "O" ? (
-                            <Badge bg="secondary" pill>
-                              {m.schedule_off()}
-                            </Badge>
+                            <Badge variant="secondary">{m.schedule_off()}</Badge>
                           ) : (
                             <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
                           )}
-                        </td>
-                        <td>
-                          <small className="text-muted">
+                        </TableCell>
+                        <TableCell>
+                          <small className="tw:text-muted-foreground">
                             {day.shift.code === "O"
                               ? "—"
                               : (getLocalizedShiftTime(
@@ -399,76 +424,78 @@ export function ScheduleDetailModal({
                                   settings.timeFormat,
                                 ) ?? "—")}
                           </small>
-                        </td>
-                        <td>
+                        </TableCell>
+                        <TableCell>
                           {day.shift.code === "O" ? (
-                            <small className="text-muted">
-                              <Icon icon={HouseIcon} className="me-1" />
+                            <small className="tw:text-muted-foreground">
+                              <Icon icon={HouseIcon} className="tw:mr-1" />
                               {m.schedule_rest_day()}
                             </small>
                           ) : (
-                            <small className="text-success">
-                              <Icon icon={BriefcaseIcon} className="me-1" />
+                            <small className="tw:text-success">
+                              <Icon icon={BriefcaseIcon} className="tw:mr-1" />
                               {m.schedule_working()}
                             </small>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
+                  </TableBody>
                 </Table>
               </div>
             </div>
 
             {/* Mobile card view */}
-            <div className="d-md-none">
+            <div className="tw:md:hidden">
               {weekSchedule.map((day) => (
                 <Card
                   key={day.date.format("YYYY-MM-DD")}
-                  className={clsx("mb-3", day.isToday && "border-primary shadow-sm today-card")}
+                  className={clsx(
+                    "tw:mb-4",
+                    day.isToday &&
+                      "tw:border-primary tw:shadow-sm tw:ring-2 tw:ring-primary tw:bg-primary/10",
+                  )}
                 >
-                  <Card.Body className="py-3">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
+                  <CardContent className="tw:py-4">
+                    <div className="tw:flex tw:justify-between tw:items-start tw:mb-2">
                       <div>
-                        <h6 className="mb-1">
+                        <h6 className="tw:mb-1">
                           {day.date.format("dddd")}
                           {day.isToday && (
-                            <Badge bg="primary" className="ms-2">
+                            <Badge variant="default" className="tw:ml-2">
                               <Icon
                                 icon={CircleIcon}
-                                className="me-1"
+                                className="tw:mr-1 tw:size-2"
                                 fill="currentColor"
-
-                                style={{ fontSize: SMALL_ICON_SIZE }}
                               />
                               {m.today()}
                             </Badge>
                           )}
                           {day.isTomorrow && (
-                            <Badge bg="info" className="ms-2">
+                            <Badge variant="info" className="tw:ml-2">
                               {m.schedule_tomorrow()}
                             </Badge>
                           )}
                         </h6>
-                        <small className="text-muted">{day.date.format("MMMM D, YYYY")}</small>
+                        <small className="tw:text-muted-foreground">
+                          {day.date.format("MMMM D, YYYY")}
+                        </small>
                       </div>
                       <div>
                         {day.shift.code === "O" ? (
-                          <Badge bg="secondary" pill>
-                            {m.schedule_off()}
-                          </Badge>
+                          <Badge variant="secondary">{m.schedule_off()}</Badge>
                         ) : (
                           <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
                         )}
                       </div>
                     </div>
-                    <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                    <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center tw:pt-2 tw:border-t tw:border-border">
                       <div>
-                        <small className="text-muted d-block">
-                          <Icon icon={ClockIcon} className="me-1" />
+                        <small className="tw:text-muted-foreground tw:block">
+                          <Icon icon={ClockIcon} className="tw:mr-1" />
                           {m.schedule_col_hours()}
                         </small>
-                        <span className="text-body">
+                        <span className="tw:text-foreground">
                           {day.shift.code === "O"
                             ? "—"
                             : (getLocalizedShiftTime(
@@ -478,118 +505,109 @@ export function ScheduleDetailModal({
                               ) ?? "—")}
                         </span>
                       </div>
-                      <div className="text-end">
-                        <small className="text-muted d-block">{m.schedule_col_status()}</small>
+                      <div className="tw:text-right">
+                        <small className="tw:text-muted-foreground tw:block">
+                          {m.schedule_col_status()}
+                        </small>
                         {day.shift.code === "O" ? (
-                          <span className="text-muted">
-                            <Icon icon={HouseIcon} className="me-1" />
+                          <span className="tw:text-muted-foreground">
+                            <Icon icon={HouseIcon} className="tw:mr-1" />
                             {m.schedule_rest_day()}
                           </span>
                         ) : (
-                          <span className="text-success">
-                            <Icon icon={BriefcaseIcon} className="me-1" />
+                          <span className="tw:text-success">
+                            <Icon icon={BriefcaseIcon} className="tw:mr-1" />
                             {m.schedule_working()}
                           </span>
                         )}
                       </div>
                     </div>
-                  </Card.Body>
+                  </CardContent>
                 </Card>
               ))}
             </div>
           </div>
 
           {/* Team Statistics */}
-          <Row className="mb-4">
-            <Col md={6}>
+          <Grid className="tw:mb-6">
+            <GridItem desktopSpan={6}>
               <Card>
-                <Card.Body>
-                  <h6 className="mb-3">
-                    <Icon icon={ChartColumnIcon} className="me-2" />
+                <CardContent>
+                  <h6 className="tw:mb-4">
+                    <Icon icon={ChartColumnIcon} className="tw:mr-2" />
                     {m.schedule_weekly_stats()}
                   </h6>
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="fw-semibold">{m.schedule_working_vs_rest()}</span>
-                      <small className="text-muted">
+                  <div className="tw:mb-4">
+                    <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center tw:mb-2">
+                      <span className="tw:font-semibold">{m.schedule_working_vs_rest()}</span>
+                      <small className="tw:text-muted-foreground">
                         {m.schedule_stats_summary({
                           working: String(stats.workingDays),
                           rest: String(stats.offDays),
                         })}
                       </small>
                     </div>
-                    <ProgressBar aria-label={m.schedule_working_vs_rest()}>
-                      <ProgressBar
-                        now={(stats.workingDays / 7) * 100}
-                        variant="success"
-                        key="working"
-                        label={m.schedule_working_label({ count: String(stats.workingDays) })}
-                      />
-                      <ProgressBar
-                        now={(stats.offDays / 7) * 100}
-                        variant="secondary"
-                        key="rest"
-                        label={m.schedule_rest_label({ count: String(stats.offDays) })}
-                      />
-                    </ProgressBar>
+                    <Progress
+                      indicatorClassName="tw:bg-success"
+                      value={(stats.workingDays / 7) * 100}
+                      aria-label={m.schedule_working_vs_rest()}
+                    />
                   </div>
-                  <ListGroup variant="flush">
-                    <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
+                  <ul className="tw:list-none tw:pl-0 tw:mb-0 tw:divide-y tw:divide-border">
+                    <li className="tw:px-0 tw:py-2 tw:flex tw:justify-between">
                       <span>
-                        <Icon icon={ClockIcon} className="me-1" />
+                        <Icon icon={ClockIcon} className="tw:mr-1" />
                         {m.schedule_total_weekly_hours()}
                       </span>
-                      <Badge bg="primary">
+                      <Badge variant="default">
                         {Number.isInteger(stats.totalWeeklyHours)
                           ? `${stats.totalWeeklyHours}h`
                           : `${stats.totalWeeklyHours.toFixed(1)}h`}
                       </Badge>
-                    </ListGroup.Item>
-                  </ListGroup>
-                </Card.Body>
+                    </li>
+                  </ul>
+                </CardContent>
               </Card>
-            </Col>
-            <Col md={6}>
+            </GridItem>
+            <GridItem desktopSpan={6}>
               <Card>
-                <Card.Body>
-                  <h6 className="mb-3">
-                    <Icon icon={ChartPieIcon} className="me-2" />
+                <CardContent>
+                  <h6 className="tw:mb-4">
+                    <Icon icon={ChartPieIcon} className="tw:mr-2" />
                     {m.schedule_shift_distribution()}
                   </h6>
-                  <ProgressBar className="mb-3" aria-label={m.schedule_shift_distribution()}>
+                  <div className="tw:mb-4 tw:space-y-2">
                     {stats.shiftDistribution
                       .filter((item) => item.count > 0)
                       .map((item) => (
-                        <ProgressBar
-                          key={item.key}
-                          now={(item.count / 7) * 100}
-                          variant={item.variant}
-                          label={
-                            item.count >= 2 ? `${Math.round((item.count / 7) * 100)}%` : undefined
-                          }
-                        />
+                        <div key={item.key}>
+                          <span className="tw:text-sm tw:text-muted-foreground">
+                            {getShiftLabel(item.key)}
+                          </span>
+                          <Progress
+                            value={(item.count / 7) * 100}
+                            aria-label={getShiftLabel(item.key)}
+                          />
+                        </div>
                       ))}
-                  </ProgressBar>
-                  <ListGroup variant="flush">
+                  </div>
+                  <ul className="tw:list-none tw:pl-0 tw:mb-0 tw:divide-y tw:divide-border">
                     {stats.shiftDistribution.map((item) => (
-                      <ListGroup.Item
-                        key={item.key}
-                        className="px-0 py-2 d-flex justify-content-between"
-                      >
+                      <li key={item.key} className="tw:px-0 tw:py-2 tw:flex tw:justify-between">
                         <span>
-                          <Icon icon={item.icon} className={clsx("me-1", item.iconClassName)} />
+                          <Icon icon={item.icon} className={clsx("tw:mr-1", item.iconClassName)} />
                           {getShiftLabel(item.key)}
                         </span>
-                        <Badge bg={item.variant}>
+                        <Badge variant={item.variant}>
                           {item.count}/7 ({Math.round((item.count / 7) * 100)}%)
                         </Badge>
-                      </ListGroup.Item>
+                      </li>
                     ))}
-                  </ListGroup>
-                </Card.Body>
+                  </ul>
+                </CardContent>
               </Card>
-            </Col>
-          </Row>
+            </GridItem>
+          </Grid>
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onHide}>

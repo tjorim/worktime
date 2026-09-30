@@ -74,7 +74,7 @@ describe("ScheduleDetailModal", () => {
       <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
     );
 
-    expect(screen.getByText("Day Shifts")).toBeInTheDocument();
+    expect(screen.getAllByText("Day Shifts").length).toBeGreaterThan(0);
     expect(screen.queryByText("Morning Shifts")).not.toBeInTheDocument();
     expect(screen.queryByText("Evening Shifts")).not.toBeInTheDocument();
     expect(screen.queryByText("Night Shifts")).not.toBeInTheDocument();

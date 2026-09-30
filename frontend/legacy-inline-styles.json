@@ -2,13 +2,8 @@
   "src/components/MobileQuickActions.tsx": ["width"],
   "src/components/TransferView.tsx": ["backgroundColor", "color", "fontSize", "minHeight"],
   "src/components/WelcomeWizard.tsx": ["height"],
-  "src/components/calendar/LocationYearSummary.tsx": ["maxWidth"],
-  "src/components/calendar/LongWeekendModal.tsx": ["maxWidth"],
-  "src/components/schedule/ScheduleDetailModal.tsx": ["fontSize"],
-  "src/components/schedule/TodayView.tsx": ["cursor", "width"],
   "src/components/settings/SettingsFeaturesSection.tsx": ["minWidth"],
   "src/components/settings/SettingsScheduleSection.tsx": ["fontSize"],
-  "src/components/status/FlexStartEditor.tsx": ["width"],
   "src/components/wizard/Step9AccountSetup.tsx": ["fontSize"],
   "src/features/timeTracking/DailyTaskList.tsx": [
     "backgroundColor",

@@ -7,10 +7,17 @@ import {
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
-import Badge from "react-bootstrap/Badge";
-import Card from "react-bootstrap/Card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/tooltip";
-import Table from "react-bootstrap/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import clsx from "clsx";
 import type { ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -121,10 +128,10 @@ export function WeekView({
   if (!scheduleType) {
     return (
       <Card>
-        <Card.Body className="text-center py-4">
-          <Icon icon={CalendarPlusIcon} className="text-muted mb-3 icon-lg" />
-          <p className="text-muted mb-3">{m.week_view_no_schedule()}</p>
-        </Card.Body>
+        <CardContent className="tw:text-center tw:py-6">
+          <Icon icon={CalendarPlusIcon} className="tw:text-muted-foreground tw:mb-4 tw:size-10" />
+          <p className="tw:text-muted-foreground tw:mb-4">{m.week_view_no_schedule()}</p>
+        </CardContent>
       </Card>
     );
   }
@@ -139,15 +146,15 @@ export function WeekView({
     myTeam = null;
   }
   const isMyTeam = (teamNumber: number) => {
-    return myTeam === teamNumber ? "my-team" : "";
+    return myTeam === teamNumber ? "tw:ring-2 tw:ring-primary" : "";
   };
 
   return (
     <Card>
-      <Card.Header>
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
-          <span className="fw-semibold">
-            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="me-2" />
+      <CardHeader>
+        <div className="tw:flex tw:flex-col tw:sm:flex-row tw:justify-between tw:items-stretch tw:sm:items-center tw:gap-2 tw:mb-2">
+          <span className="tw:font-semibold">
+            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="tw:mr-2" />
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <WeekNavigationButtonGroup
@@ -160,72 +167,72 @@ export function WeekView({
             onSelectorChange={handleDateChange}
           />
         </div>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-          <div className="text-muted small">
+        <div className="tw:flex tw:flex-col tw:md:flex-row tw:justify-between tw:items-start tw:md:items-center tw:gap-2">
+          <div className="tw:text-muted-foreground tw:text-sm">
             {m.week_label({ week: String(selectedWeekNumber), year: String(selectedWeekYear) })}
             {isCurrentWeek && (
-              <Badge bg="success" className="ms-2" aria-label={m.this_week()}>
+              <Badge variant="success" className="tw:ml-2" aria-label={m.this_week()}>
                 {m.this_week()}
               </Badge>
             )}
           </div>
-          <div className="small text-muted d-none d-lg-block">
-            <Icon icon={KeyboardIcon} className="me-1" />
+          <div className="tw:text-sm tw:text-muted-foreground tw:hidden tw:lg:block">
+            <Icon icon={KeyboardIcon} className="tw:mr-1" />
             {m.week_view_keyboard_hint()}
           </div>
         </div>
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {myTeam && hasTeams && (
-          <div className="mb-3">
+          <div className="tw:mb-4">
             <strong>
-              <Icon icon={UsersIcon} className="me-1" />
+              <Icon icon={UsersIcon} className="tw:mr-1" />
               {m.week_view_team_schedule_heading({ team: String(myTeam) })}
             </strong>
-            <div className="text-muted small">
+            <div className="tw:text-muted-foreground tw:text-sm">
               {m.week_number({ week: String(selectedWeekNumber) })}
             </div>
           </div>
         )}
 
         {!hasTeams && (
-          <div className="mb-3">
+          <div className="tw:mb-4">
             <strong>
-              <Icon icon={CalendarIcon} className="me-1" />
+              <Icon icon={CalendarIcon} className="tw:mr-1" />
               {m.week_view_your_schedule_heading()}
             </strong>
-            <div className="text-muted small">
+            <div className="tw:text-muted-foreground tw:text-sm">
               {m.week_number({ week: String(selectedWeekNumber) })}
             </div>
           </div>
         )}
 
-        <div className="table-responsive">
+        <div className="tw:overflow-x-auto">
           <Table
-            className="schedule-table table-sm"
+            className="tw:[&_th]:text-center tw:[&_td]:text-center tw:[&_th]:p-2 tw:[&_td]:p-2 tw:[&_td]:align-middle "
             aria-label={m.week_view_table_aria({
               startDate: formatShortDate(startOfWeek),
               endDate: formatShortDate(startOfWeek.add(6, "day")),
             })}
           >
-            <thead>
-              <tr>
-                <th className="team-header">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="tw:bg-muted tw:font-semibold">
                   {hasTeams ? m.week_view_team_header() : m.week_view_schedule_label()}
-                </th>
+                </TableHead>
                 {weekDays.map((day, dayIndex) => {
                   const isToday = day.isSame(today, "day");
                   return (
-                    <th
+                    <TableHead
                       key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
-                      className={clsx("text-center", isToday && "today-column")}
+                      className={clsx("tw:text-center", isToday && "tw:bg-primary/10")}
                       aria-label={m.week_view_day_header_aria({
                         date: formatLongDate(day),
                         today: isToday ? m.daycell_today_label() : "",
                       })}
                     >
-                      <div className="fw-semibold">{formatShortWeekday(day)}</div>
-                      <div className="small text-muted">
+                      <div className="tw:font-semibold">{formatShortWeekday(day)}</div>
+                      <div className="tw:text-sm tw:text-muted-foreground">
                         <Hint
                           placement="bottom"
                           content={
@@ -248,14 +255,14 @@ export function WeekView({
                           <span className="help-underline">{formatYYWWD(day)}</span>
                         </Hint>
                       </div>
-                    </th>
+                    </TableHead>
                   );
                 })}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {Array.from({ length: teamCount }, (_, i) => i + 1).map((teamNumber) => (
-                <tr
+                <TableRow
                   key={teamNumber}
                   className={isMyTeam(teamNumber)}
                   aria-label={
@@ -267,21 +274,21 @@ export function WeekView({
                       : m.week_view_schedule_label()
                   }
                 >
-                  <td className="team-header">
+                  <TableCell className="tw:bg-muted tw:font-semibold">
                     <strong>
                       {hasTeams
                         ? m.team_label({ team: String(teamNumber) })
                         : m.week_view_schedule_label()}
                     </strong>
-                  </td>
+                  </TableCell>
                   {weekDays.map((day, dayIndex) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);
                     const isToday = day.isSame(today, "day");
 
                     return (
-                      <td
+                      <TableCell
                         key={`team-${teamNumber}-day-${dayIndex}-${day.format("YYYY-MM-DD")}`}
-                        className={clsx("text-center", isToday && "today-column")}
+                        className={clsx("tw:text-center", isToday && "tw:bg-primary/10")}
                         aria-label={
                           hasTeams
                             ? m.week_view_team_day_shift_aria({
@@ -296,15 +303,15 @@ export function WeekView({
                         }
                       >
                         {shift.isWorking && <ShiftBadge shift={shift} />}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           </Table>
         </div>
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

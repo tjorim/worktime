@@ -1,6 +1,6 @@
+import { Input } from "@/components/ui/input";
 import { useLayoutEffect, useRef } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -83,7 +83,7 @@ export function OtherLocationModal({
       }}
     >
       <DialogContent>
-        <Form
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();
@@ -112,37 +112,44 @@ export function OtherLocationModal({
               ]}
             >
               {(field) => (
-                <Form.Group className="mb-3" controlId="other-location-country">
-                  <Form.Label>{m.other_location_country_code()}</Form.Label>
-                  <Form.Control
+                <div className="tw:mb-4">
+                  <label htmlFor="other-location-country">{m.other_location_country_code()}</label>
+                  <Input
                     type="text"
                     placeholder={m.other_location_country_placeholder()}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value.toUpperCase().slice(0, 2))}
                     onBlur={field.handleBlur}
                     maxLength={2}
-                    isInvalid={field.meta.isTouched && field.errors.length > 0}
+                    id="other-location-country"
+                    aria-invalid={field.meta.isTouched && field.errors.length > 0}
                     autoFocus
                     aria-required="true"
                     aria-describedby="other-location-country-feedback"
                   />
-                  <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
+                  <div
+                    className="tw:text-danger-text tw:text-sm"
+                    hidden={!field.meta.isTouched || field.errors.length === 0}
+                    id="other-location-country-feedback"
+                  >
                     {m.other_location_country_feedback()}
-                  </Form.Control.Feedback>
-                  <Form.Text className="text-muted">{m.other_location_country_help()}</Form.Text>
-                </Form.Group>
+                  </div>
+                  <small className="tw:text-muted-foreground">
+                    {m.other_location_country_help()}
+                  </small>
+                </div>
               )}
             </form.Field>
             <form.Field name="label">
               {(field) => (
-                <Form.Group>
-                  <Form.Label htmlFor="other-location-label-input">
+                <div>
+                  <label htmlFor="other-location-label-input">
                     {m.form_label()}{" "}
-                    <span className="text-muted fw-normal">
+                    <span className="tw:text-muted-foreground tw:font-normal">
                       {m.other_location_label_optional()}
                     </span>
-                  </Form.Label>
-                  <Form.Control
+                  </label>
+                  <Input
                     id="other-location-label-input"
                     type="text"
                     placeholder={m.other_location_label_placeholder()}
@@ -150,19 +157,19 @@ export function OtherLocationModal({
                     maxLength={100}
                     onChange={(e) => field.handleChange(e.target.value.slice(0, 100))}
                   />
-                </Form.Group>
+                </div>
               )}
             </form.Field>
           </div>
           <DialogFooter>
-            <Button variant="outline-secondary" onClick={handleHide}>
+            <Button variant="outline" onClick={handleHide}>
               {m.cancel()}
             </Button>
-            <Button type="submit" variant="primary" disabled={!isCodeValid}>
+            <Button type="submit" variant="default" disabled={!isCodeValid}>
               {m.save()}
             </Button>
           </DialogFooter>
-        </Form>
+        </form>
       </DialogContent>
     </Dialog>
   );

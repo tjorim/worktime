@@ -1,8 +1,8 @@
+import { Input } from "@/components/ui/input";
 import { Pencil as PencilIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
 import type { Dayjs } from "dayjs";
 import { useForm, useSelector } from "@tanstack/react-form";
 import * as m from "@/paraglide/messages.js";
@@ -53,18 +53,18 @@ export function FlexStartEditor({
       <Button
         variant="link"
         size="sm"
-        className="p-0 text-decoration-none align-baseline"
+        className="tw:p-0 tw:no-underline tw:align-baseline"
         onClick={startEditing}
       >
-        <Icon icon={PencilIcon} className="me-1" />
+        <Icon icon={PencilIcon} className="tw:mr-1" />
         {startTime ? m.edit() : m.personalized_status_flex_set_start()}
       </Button>
     );
   }
 
   return (
-    <Form
-      className="d-flex align-items-center gap-2 flex-wrap mt-1"
+    <form
+      className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap tw:mt-1"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
@@ -72,24 +72,23 @@ export function FlexStartEditor({
     >
       <form.Field name="draft">
         {(field) => (
-          <Form.Control
+          <Input
             type="time"
-            size="sm"
             value={field.value}
             onChange={(event) => field.handleChange(event.target.value)}
             aria-label={m.personalized_status_flex_start_label()}
-            style={{ width: "auto" }}
+            className="tw:w-auto"
             autoFocus
           />
         )}
       </form.Field>
-      <Button type="submit" variant="primary" size="sm" disabled={!draft}>
+      <Button type="submit" variant="default" size="sm" disabled={!draft}>
         {m.save()}
       </Button>
       {startTime && (
         <Button
           type="button"
-          variant="outline-secondary"
+          variant="outline"
           size="sm"
           onClick={() => {
             onClear();
@@ -103,11 +102,11 @@ export function FlexStartEditor({
         type="button"
         variant="link"
         size="sm"
-        className="p-0 text-decoration-none"
+        className="tw:p-0 tw:no-underline"
         onClick={() => setIsEditing(false)}
       >
         {m.cancel()}
       </Button>
-    </Form>
+    </form>
   );
 }

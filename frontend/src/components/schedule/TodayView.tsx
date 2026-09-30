@@ -1,3 +1,5 @@
+import { Alert } from "@/components/ui/alert";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Calendar as CalendarIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -7,13 +9,11 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Carousel from "react-bootstrap/Carousel";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import Row from "react-bootstrap/Row";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { TeamCarousel } from "@/components/shared/TeamCarousel";
+
 import { Hint } from "@/components/ui/tooltip";
 import clsx from "clsx";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
@@ -46,7 +46,7 @@ interface TodayViewProps {
  * the card is rendered as interactive and invokes the callback with the team number on click or keyboard activation.
  *
  * @param shiftResult - ShiftResult containing team number, shift, date and full code to display
- * @param isMyTeam - Whether this card corresponds to the current user's team (applies "my-team" styling)
+ * @param isMyTeam - Whether this card corresponds to the current user's team (applies "tw:ring-2 tw:ring-primary" styling)
  * @param isCurrentlyActive - Whether the team's shift is currently active (controls live overlay and badge)
  * @param onTeamClick - Optional callback invoked with the team number and schedule type when the card is activated
  * @returns The Card element for the given team and shift; interactive when `onTeamClick` is provided
@@ -74,10 +74,10 @@ function TeamCard({
     <>
       {isCurrentlyActive && (
         <>
-          <div className="live-team-overlay"></div>
+          <div className="tw:absolute tw:inset-0 tw:pointer-events-none tw:rounded-xl tw:bg-success-bg/50"></div>
           <Badge
-            bg="success"
-            className="live-badge"
+            variant="success"
+            className="tw:absolute tw:bottom-4 tw:right-4 tw:z-10 tw:text-xs"
             aria-label={
               hasTeams
                 ? m.schedule_team_working_aria({ team: String(shiftResult.teamNumber) })
@@ -88,23 +88,25 @@ function TeamCard({
           </Badge>
         </>
       )}
-      <div className="team-card-header d-flex justify-content-between align-items-center mb-2">
-        <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">
+      <div className="tw:relative tw:z-10 tw:flex tw:justify-between tw:items-center tw:mb-2">
+        <div className="tw:flex tw:items-center tw:gap-2">
+          <h6 className="tw:mb-0">
             {hasTeams
               ? m.team_label({ team: String(shiftResult.teamNumber) })
               : m.week_view_schedule_label()}
           </h6>
-          {onTeamClick && <Icon icon={ChevronRightIcon} className="text-muted small" />}
+          {onTeamClick && (
+            <Icon icon={ChevronRightIcon} className="tw:text-muted-foreground tw:text-sm" />
+          )}
         </div>
         <ShiftBadge shift={shift} />
       </div>
-      <div className="text-muted small">
+      <div className="tw:text-muted-foreground tw:text-sm">
         {shift.name}
         <br />
         {shift.isWorking ? shiftTimeLabel : m.schedule_not_working_today()}
       </div>
-      <div className="text-muted small mt-1">
+      <div className="tw:text-muted-foreground tw:text-sm tw:mt-1">
         <Hint
           placement="bottom"
           content={
@@ -134,7 +136,11 @@ function TeamCard({
   if (onTeamClick) {
     return (
       <Card
-        className={clsx("team-card-interactive", "w-100", isMyTeam && "my-team")}
+        className={clsx(
+          "tw:relative tw:cursor-pointer tw:transition tw:hover:bg-muted tw:focus-visible:outline-2 tw:focus-visible:outline-ring",
+          "tw:w-full",
+          isMyTeam && "tw:ring-2 tw:ring-primary",
+        )}
         onClick={() => onTeamClick(shiftResult.teamNumber, scheduleType)}
         role="button"
         aria-label={
@@ -147,7 +153,7 @@ function TeamCard({
             ? m.today_view_team_details_aria({ team: String(shiftResult.teamNumber) })
             : m.week_view_schedule_label()
         }
-        style={{ cursor: "pointer" }}
+
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -156,14 +162,14 @@ function TeamCard({
           }
         }}
       >
-        <Card.Body className="p-3">{cardContent}</Card.Body>
+        <CardContent className="tw:p-4">{cardContent}</CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className={isMyTeam ? "my-team" : ""}>
-      <Card.Body className="p-3">{cardContent}</Card.Body>
+    <Card className={clsx("tw:relative", isMyTeam && "tw:ring-2 tw:ring-primary")}>
+      <CardContent className="tw:p-4">{cardContent}</CardContent>
     </Card>
   );
 }
@@ -213,26 +219,28 @@ export function TodayView({
 
   return (
     <Card>
-      <Card.Header>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
-          <span className="fw-semibold">
-            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="me-2" />
+      <CardHeader>
+        <div className="tw:flex tw:flex-col tw:md:flex-row tw:justify-between tw:items-start tw:md:items-center tw:gap-2 tw:mb-2">
+          <span className="tw:font-semibold">
+            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="tw:mr-2" />
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
-          <div className="d-flex align-items-center gap-2 flex-wrap">
-            <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-              <Icon icon={ClipboardListIcon} className="me-1" />
+          <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
+            <label
+              htmlFor={scheduleSelectId}
+              className="tw:mb-0 tw:text-sm tw:text-muted-foreground"
+            >
+              <Icon icon={ClipboardListIcon} className="tw:mr-1" />
               {m.schedule_view_label()}
-            </Form.Label>
-            <Form.Select
+            </label>
+            <NativeSelect
               id={scheduleSelectId}
-              size="sm"
               value={viewingScheduleType || ""}
               onChange={(e) => {
                 const value = e.target.value;
                 onViewingScheduleTypeChange(isValidScheduleType(value) ? value : null);
               }}
-              style={{ width: "auto" }}
+              className="tw:w-auto"
             >
               <option value="" disabled>
                 {m.schedule_select_placeholder()}
@@ -245,35 +253,39 @@ export function TodayView({
                     : ""}
                 </option>
               ))}
-            </Form.Select>
+            </NativeSelect>
           </div>
         </div>
         {viewingScheduleType && (
-          <div className="text-muted small">
+          <div className="tw:text-muted-foreground tw:text-sm">
             {new Intl.DateTimeFormat(getLocale(), {
               weekday: "long",
               month: "long",
               day: "numeric",
               year: "numeric",
             }).format(today.toDate())}
-            <Badge bg="success" className="ms-2" aria-label={m.today_view_current_day_aria()}>
+            <Badge
+              variant="success"
+              className="tw:ml-2"
+              aria-label={m.today_view_current_day_aria()}
+            >
               {m.today()}
             </Badge>
           </div>
         )}
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {!viewingScheduleType ? (
-          <div className="alert alert-info mb-0" role="status">
+          <Alert variant="info" role="status">
             {m.schedule_select_hint()}
-          </div>
+          </Alert>
         ) : (
           <>
             {todayShifts.length > 1 && (
-              <div className="d-sm-none">
-                <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="tw:sm:hidden">
+                <div className="tw:flex tw:items-center tw:justify-between tw:mb-2">
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     aria-label={m.today_view_previous_team()}
                     onClick={() =>
@@ -284,14 +296,14 @@ export function TodayView({
                   >
                     <Icon icon={ChevronLeftIcon} />
                   </Button>
-                  <span className="small text-muted" aria-live="polite">
+                  <span className="tw:text-sm tw:text-muted-foreground" aria-live="polite">
                     {m.today_view_team_position({
                       current: String(mobileTeamIndex + 1),
                       total: String(todayShifts.length),
                     })}
                   </span>
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     aria-label={m.today_view_next_team()}
                     onClick={() => setMobileTeamIndex((mobileTeamIndex + 1) % todayShifts.length)}
@@ -299,18 +311,9 @@ export function TodayView({
                     <Icon icon={ChevronRightIcon} />
                   </Button>
                 </div>
-                <Carousel
-                  activeIndex={mobileTeamIndex}
-                  onSelect={setMobileTeamIndex}
-                  controls={false}
-                  indicators={false}
-                  interval={null}
-                  touch
-                  wrap
-                  className="team-mobile-carousel"
-                >
+                <TeamCarousel activeIndex={mobileTeamIndex} onSelect={setMobileTeamIndex}>
                   {todayShifts.map((shiftResult) => (
-                    <Carousel.Item key={shiftResult.teamNumber}>
+                    <div key={shiftResult.teamNumber}>
                       <TeamCard
                         shiftResult={shiftResult}
                         isMyTeam={myTeam === shiftResult.teamNumber}
@@ -319,14 +322,20 @@ export function TodayView({
                         onTeamClick={onTeamClick}
                         scheduleType={viewingScheduleType}
                       />
-                    </Carousel.Item>
+                    </div>
                   ))}
-                </Carousel>
+                </TeamCarousel>
               </div>
             )}
-            <Row className={todayShifts.length > 1 ? "g-2 d-none d-sm-flex" : "g-2"}>
+            <div
+              className={
+                todayShifts.length > 1
+                  ? "tw:hidden tw:sm:grid tw:sm:grid-cols-2 tw:md:grid-cols-3 tw:lg:grid-cols-5 tw:gap-2"
+                  : "tw:grid tw:gap-2"
+              }
+            >
               {todayShifts.map((shiftResult) => (
-                <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
+                <div key={shiftResult.teamNumber} className="tw:min-w-0">
                   <TeamCard
                     shiftResult={shiftResult}
                     isMyTeam={myTeam === shiftResult.teamNumber}
@@ -335,12 +344,12 @@ export function TodayView({
                     onTeamClick={onTeamClick}
                     scheduleType={viewingScheduleType}
                   />
-                </Col>
+                </div>
               ))}
-            </Row>
+            </div>
           </>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

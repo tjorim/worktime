@@ -12,7 +12,7 @@ import {
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { dayjs, getWeekdayName } from "@/utils/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
@@ -21,7 +21,7 @@ import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import type { ShiftResult } from "@/utils/shiftCalculations";
-import { DayCell, type DayEvent } from "./DayCell";
+import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
 import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import * as m from "@/paraglide/messages.js";
 
@@ -433,13 +433,13 @@ export function MonthCalendar({
 
   return (
     <div className="month-calendar">
-      <div className="month-calendar-header d-flex align-items-center justify-content-between mb-3">
+      <div className="month-calendar-header tw:flex tw:items-center tw:justify-between tw:mb-4">
         <div className="month-calendar-title" data-testid="month-title" aria-live="polite">
           <span>{month.format("MMMM YYYY")}</span>
         </div>
-        <div className="d-flex gap-2">
+        <div className="tw:flex tw:gap-2">
           <Button
-            variant="outline-secondary"
+            variant="outline"
             size="sm"
             onClick={() => onMonthChange(month.subtract(1, "month"))}
             aria-label={m.calendar_nav_previous_month()}
@@ -447,17 +447,17 @@ export function MonthCalendar({
             <Icon icon={ChevronLeftIcon} />
           </Button>
           <Button
-            variant={isCurrentMonth ? "primary" : "outline-primary"}
+            variant={isCurrentMonth ? "default" : "outline"}
             size="sm"
             onClick={() => onMonthChange(today.startOf("month"))}
             disabled={isCurrentMonth}
             aria-label={m.calendar_nav_current_month_label()}
           >
-            <Icon icon={HouseIcon} className="me-1" />
+            <Icon icon={HouseIcon} className="tw:mr-1" />
             {m.calendar_nav_current_month_text()}
           </Button>
           <Button
-            variant="outline-secondary"
+            variant="outline"
             size="sm"
             onClick={() => onMonthChange(month.add(1, "month"))}
             aria-label={m.calendar_nav_next_month()}

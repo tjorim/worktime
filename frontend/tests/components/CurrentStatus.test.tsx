@@ -409,7 +409,7 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Today")).toBeInTheDocument();
       expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
 
-      const todayCard = screen.getByText("Today").closest(".col-md-12");
+      const todayCard = screen.getByText("Today").closest('[class~="tw:md:col-span-12"]');
       expect(todayCard).toBeInTheDocument();
     });
   });
@@ -442,7 +442,7 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Today")).toBeInTheDocument();
       expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
 
-      const todayCard = screen.getByText("Today").closest(".col-md-12");
+      const todayCard = screen.getByText("Today").closest('[class~="tw:md:col-span-12"]');
       expect(todayCard).toBeInTheDocument();
     });
 
@@ -591,6 +591,19 @@ describe("CurrentStatus Component", () => {
 
       expect(screen.getByText("Current Status")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /collapse status/i })).toBeInTheDocument();
+    });
+
+    it("expands and collapses generic status without changing hook order", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} variant="compact" />,
+      );
+      await user.click(screen.getByRole("button", { name: /expand status/i }));
+      expect(
+        screen.getAllByText("Current Status", { selector: '[data-slot="card-title"]' }).length,
+      ).toBeGreaterThan(0);
+      await user.click(screen.getByRole("button", { name: /collapse status/i }));
+      expect(screen.getByRole("button", { name: /expand status/i })).toBeInTheDocument();
     });
 
     it("collapses back to the compact strip when the collapse toggle is clicked", async () => {
@@ -878,12 +891,12 @@ describe("CurrentStatus Component", () => {
     });
   });
 
-  describe("Bootstrap Components Integration", () => {
-    it("should render with correct Bootstrap classes", () => {
+  describe("Owned UI integration", () => {
+    it("should render with owned card structure", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      // Check for Bootstrap card structure
-      const cardElement = screen.getByText("Current Status").closest(".card");
+      // Check for owned card structure
+      const cardElement = screen.getByText("Current Status").closest('[data-slot="card"]');
       expect(cardElement).toBeInTheDocument();
     });
 

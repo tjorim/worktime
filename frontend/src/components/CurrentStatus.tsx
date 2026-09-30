@@ -6,9 +6,9 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useMemo, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+
 import { Hint } from "@/components/ui/tooltip";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
@@ -16,10 +16,10 @@ import { formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/utils/shiftCalculations";
-import { PersonalizedStatusContent } from "./status/PersonalizedStatus";
-import { GenericStatusContent } from "./status/GenericStatus";
-import { SetupActionButton } from "./shared/SetupActionButton";
-import { ShiftTimeline } from "./ShiftTimeline";
+import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatus";
+import { GenericStatusContent } from "@/components/status/GenericStatus";
+import { SetupActionButton } from "@/components/shared/SetupActionButton";
+import { ShiftTimeline } from "@/components/ShiftTimeline";
 import * as m from "@/paraglide/messages.js";
 
 interface CurrentStatusProps {
@@ -108,23 +108,25 @@ export function CurrentStatus({
   // No schedule selected - show setup prompt
   if (!scheduleType) {
     return (
-      <Col className="mb-4">
+      <div className="tw:mb-6">
         <Card>
-          <Card.Body className="text-center py-4">
-            <Icon icon={CalendarPlusIcon} className="text-muted mb-3 icon-lg" />
-            <p className="text-muted mb-3">{m.current_status_select_schedule_prompt()}</p>
+          <CardContent className="tw:text-center tw:py-6">
+            <Icon icon={CalendarPlusIcon} className="tw:text-muted-foreground tw:mb-4 tw:size-10" />
+            <p className="tw:text-muted-foreground tw:mb-4">
+              {m.current_status_select_schedule_prompt()}
+            </p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
-          </Card.Body>
+          </CardContent>
         </Card>
-      </Col>
+      </div>
     );
   }
 
   if (isCompact) {
     return (
-      <Col className="mb-4">
-        <Card className="current-status-card current-status-compact">
-          <Card.Body className="d-flex align-items-center justify-content-between gap-2 py-2">
+      <div className="tw:mb-6">
+        <Card>
+          <CardContent className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:py-2">
             {effectiveTeam ? (
               <PersonalizedStatusContent
                 myTeam={effectiveTeam}
@@ -137,7 +139,7 @@ export function CurrentStatus({
             <Button
               variant="link"
               size="sm"
-              className="p-0 current-status-toggle flex-shrink-0"
+              className="tw:p-0 tw:text-muted-foreground tw:no-underline tw:shrink-0"
               onClick={() => setExpanded(true)}
               aria-expanded={false}
               aria-label={m.current_status_expand()}
@@ -145,21 +147,21 @@ export function CurrentStatus({
             >
               <Icon icon={ChevronDownIcon} />
             </Button>
-          </Card.Body>
+          </CardContent>
         </Card>
-      </Col>
+      </div>
     );
   }
 
   return (
-    <Col className="mb-4">
-      <Card className="current-status-card">
-        <Card.Body>
+    <div className="tw:mb-6">
+      <Card>
+        <CardContent>
           {/* Common Header Row */}
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <div className="d-flex align-items-center gap-3">
-              <Card.Title className="mb-0">{m.schedule_current_status()}</Card.Title>
-              <div className="text-muted">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center tw:mb-4">
+            <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-4">
+              <CardTitle className="tw:mb-0">{m.schedule_current_status()}</CardTitle>
+              <div className="tw:text-muted-foreground">
                 <Hint
                   placement="bottom"
                   content={
@@ -181,19 +183,19 @@ export function CurrentStatus({
                   }
                 >
                   <small className="help-underline">
-                    <Icon icon={CalendarIcon} className="me-1" />
+                    <Icon icon={CalendarIcon} className="tw:mr-1" />
                     {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
                 </Hint>
               </div>
             </div>
-            <div className="d-flex align-items-center gap-2">
+            <div className="tw:flex tw:items-center tw:gap-2">
               {canCollapse && (
                 <Button
                   variant="link"
                   size="sm"
-                  className="p-0 current-status-toggle"
+                  className="tw:p-0 tw:text-muted-foreground tw:no-underline"
                   onClick={() => setExpanded(false)}
                   aria-expanded={true}
                   aria-label={m.current_status_collapse()}
@@ -212,7 +214,7 @@ export function CurrentStatus({
 
           {/* Timeline Row */}
           {currentWorkingTeam && (
-            <div className="mb-3">
+            <div className="tw:mb-4">
               <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />
             </div>
           )}
@@ -223,8 +225,8 @@ export function CurrentStatus({
           ) : (
             <GenericStatusContent scheduleType={scheduleType} />
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
-    </Col>
+    </div>
   );
 }

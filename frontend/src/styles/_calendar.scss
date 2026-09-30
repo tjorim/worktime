@@ -302,89 +302,6 @@
   margin-bottom: 0.25rem;
 }
 
-/* ============================================================================
-   WORKING CALENDAR
-   ========================================================================= */
-
-.working-schedule-calendar .calendar-grid {
-  margin-bottom: 0;
-}
-
-.calendar-day-cell {
-  vertical-align: top;
-  position: relative;
-  min-height: 80px;
-  transition: background-color 0.15s ease-in-out;
-}
-
-.calendar-day-cell.today-cell {
-  background-color: var(--wt-month-calendar-today-bg);
-  border: 2px solid var(--wt-month-calendar-today-border) !important;
-  box-shadow: 0 0 0 1px var(--wt-month-calendar-today-shadow);
-}
-
-.calendar-day-cell.focused-cell {
-  outline: 2px solid var(--wt-month-calendar-focus-outline);
-  outline-offset: -2px;
-}
-
-.calendar-day-cell.weekend-cell {
-  background-color: var(--wt-month-calendar-day-weekend);
-}
-
-.calendar-day-cell.public-holiday-cell {
-  background-color: var(--wt-month-calendar-public-holiday-bg);
-  border-left: 3px solid var(--wt-month-calendar-public-holiday-border) !important;
-}
-
-.calendar-day-cell.time-off-cell {
-  background-color: var(--wt-calendar-time-off-bg);
-}
-
-.calendar-day-cell.text-muted {
-  opacity: 0.5;
-}
-
-.calendar-legend .badge {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-}
-
-/* ============================================================================
-   TEAM CARDS
-   ========================================================================= */
-
-/* Header styling */
-.header-icon {
-  font-size: 1.25rem;
-}
-
-/* Team card hover effects */
-.team-card-interactive {
-  transition: all 0.2s ease;
-  cursor: pointer;
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  background: none;
-}
-
-.team-card-interactive:hover,
-.team-card-interactive:focus {
-  background-color: var(--bs-body-bg, #fff);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--bs-primary, #0d6efd);
-}
-
-/* Team card header - ensures content stays above decorative elements */
-.team-card-header {
-  position: relative;
-  z-index: 2;
-}
-
-/* ============================================================================
-   CONTEXT MENU
-   ========================================================================= */
-
 @media (width <= 768px) {
   .month-calendar-grid {
     gap: 0.35rem;
@@ -420,30 +337,5 @@
     width: 1.1rem;
     height: 1.1rem;
     font-size: 0.75rem;
-  }
-}
-
-/* ============================================================================
-   DARK MODE OVERRIDES
-   ========================================================================= */
-
-[data-bs-theme="dark"] {
-  .team-card-interactive:hover,
-  .team-card-interactive:focus {
-    background-color: var(--bs-body-bg, #181a1b);
-    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
-  }
-
-  .nav-tabs .nav-link {
-    color: #adb5bd;
-  }
-
-  .nav-tabs .nav-link.active {
-    font-weight: 600;
-  }
-
-  .nav-tabs .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #e0e0e0;
   }
 }

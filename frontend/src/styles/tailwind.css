@@ -1,5 +1,5 @@
 /* Bootstrap owns reboot. Prefix prevents collisions with legacy utilities. */
-@layer theme, legacy, base, components, utilities;
+@layer theme, legacy, base, calendar, components, utilities;
 @import "tailwindcss/theme.css" layer(theme) prefix(tw);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
 @import "./event-palette.css";

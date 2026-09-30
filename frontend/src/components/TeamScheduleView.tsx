@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import {
   Building as BuildingIcon,
   FileText as FileTextIcon,
@@ -10,11 +11,10 @@ import { Icon } from "@/components/shared/Icon";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, SubmitEvent } from "react";
 import type { Dayjs } from "dayjs";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { Hint } from "@/components/ui/tooltip";
 import { DetailsHeader, PopoverBody } from "@/components/ui/popover";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
@@ -381,10 +381,10 @@ export function TeamScheduleView() {
   // after a helper is configured. Keep a guard for direct rendering and stale state.
   if (!helperBaseUrl) {
     return (
-      <Alert variant="info" className="mt-3">
-        <Alert.Heading>{m.team_helper_required_heading()}</Alert.Heading>
+      <Alert variant="info" className="tw:mt-4">
+        <h5>{m.team_helper_required_heading()}</h5>
         <p>{m.team_helper_required_body()}</p>
-        <p className="mb-0 small">{m.team_helper_required_help()}</p>
+        <p className="tw:mb-0 tw:text-sm">{m.team_helper_required_help()}</p>
       </Alert>
     );
   }
@@ -392,53 +392,52 @@ export function TeamScheduleView() {
   const legendItems = getLegendItems();
 
   return (
-    <div className="team-schedule-view py-3">
-      <Card className="mb-3">
-        <Card.Header>
-          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <h5 className="mb-0">
-              <Icon icon={teamData ? BuildingIcon : UsersIcon} className="me-2" />
+    <div className="team-schedule-view tw:py-4">
+      <Card className="tw:mb-4">
+        <CardHeader>
+          <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+            <h5 className="tw:mb-0">
+              <Icon icon={teamData ? BuildingIcon : UsersIcon} className="tw:mr-2" />
               {teamData ? teamData.name : m.team_viewer_title()}
             </h5>
 
-            <Form
+            <form
               onSubmit={handleSubmit}
-              className="d-flex gap-2 flex-grow-1 tw:min-w-56 tw:max-w-md"
+              className="tw:flex tw:gap-2 tw:grow tw:min-w-56 tw:max-w-md"
             >
-              <Form.Group className="flex-grow-1">
-                <Form.Label htmlFor="team-id-input" className="visually-hidden">
+              <div className="tw:grow">
+                <label htmlFor="team-id-input" className="tw:sr-only">
                   {m.team_id_label()}
-                </Form.Label>
-                <Form.Control
+                </label>
+                <Input
                   id="team-id-input"
                   type="text"
-                  size="sm"
                   placeholder={m.team_id_placeholder()}
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
                   disabled={isLoading}
                   aria-required="true"
                 />
-              </Form.Group>
+              </div>
               <Button
                 type="submit"
-                variant="primary"
+                variant="default"
                 size="sm"
                 disabled={isLoading || !teamId.trim()}
               >
                 {isLoading ? (
                   <>
-                    <Spinner animation="border" size="sm" className="me-2" />
+                    <Spinner size="sm" className="tw:mr-2" />
                     {m.loading()}
                   </>
                 ) : (
                   <>
-                    <Icon icon={SearchIcon} className="me-1" />
+                    <Icon icon={SearchIcon} className="tw:mr-1" />
                     {m.team_load_btn()}
                   </>
                 )}
               </Button>
-            </Form>
+            </form>
 
             {teamData && (
               <MonthNavigationButtonGroup
@@ -462,25 +461,33 @@ export function TeamScheduleView() {
               />
             )}
           </div>
-        </Card.Header>
-        <Card.Body>
+        </CardHeader>
+        <CardContent>
           {error && (
-            <Alert variant="danger" dismissible onClose={() => setError(null)}>
-              <Alert.Heading>{m.error()}</Alert.Heading>
-              <p className="mb-0">{error}</p>
+            <Alert variant="destructive">
+              <h5>{m.error()}</h5>
+              <p className="tw:mb-0">{error}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setError(null)}
+                aria-label={m.close()}
+              >
+                {m.close()}
+              </Button>
             </Alert>
           )}
 
           {teamData ? (
             <>
-              <h6 className="mb-3">
+              <h6 className="tw:mb-4">
                 {m.team_members_heading({ count: String(teamData.members.length) })}
-                <span className="text-muted small ms-2">
+                <span className="tw:text-muted-foreground tw:text-sm tw:ml-2">
                   {m.team_id_display({ id: teamData.team_id })}
                 </span>
               </h6>
 
-              <div className="table-responsive" ref={gridScrollRef}>
+              <div className="tw:overflow-x-auto" ref={gridScrollRef}>
                 <table
                   data-team-grid
                   className="tw:team-grid tw:w-full tw:border-collapse tw:text-sm"
@@ -553,10 +560,12 @@ export function TeamScheduleView() {
                         {section.members.map((member) => {
                           const tooltip = (
                             <div id={`tooltip-${member.username}`}>
-                              <div className="text-start">
+                              <div className="tw:text-left">
                                 <strong>{member.display_name}</strong>
                                 <br />
-                                <code className="text-white">{member.username}</code>
+                                <code className="tw:text-primary-foreground">
+                                  {member.username}
+                                </code>
                                 <br />
                                 {member.events.length === 1
                                   ? m.team_events_count_one({ count: String(member.events.length) })
@@ -565,13 +574,13 @@ export function TeamScheduleView() {
                                     })}
                                 <br />
                                 {member.etag ? (
-                                  <span className="text-success">
-                                    <Icon icon={FileTextIcon} className="me-1" />
+                                  <span className="tw:text-success">
+                                    <Icon icon={FileTextIcon} className="tw:mr-1" />
                                     {m.team_hday_file()}
                                   </span>
                                 ) : (
-                                  <span className="text-muted">
-                                    <Icon icon={FileXIcon} className="me-1" />
+                                  <span className="tw:text-muted-foreground">
+                                    <Icon icon={FileXIcon} className="tw:mr-1" />
                                     {m.team_no_hday_file()}
                                   </span>
                                 )}
@@ -694,7 +703,7 @@ export function TeamScheduleView() {
                                       <>
                                         <DetailsHeader>
                                           {member.display_name}
-                                          <span className="d-block fw-normal text-muted small">
+                                          <span className="tw:block tw:font-normal tw:text-muted-foreground tw:text-sm">
                                             {dateLabel}
                                           </span>
                                         </DetailsHeader>
@@ -702,7 +711,7 @@ export function TeamScheduleView() {
                                           {described.map((item, index) => (
                                             <div
                                               key={index}
-                                              className="d-flex align-items-start gap-2 mb-1"
+                                              className="tw:flex tw:items-start tw:gap-2 tw:mb-1"
                                             >
                                               <span
                                                 className={`tw:shrink-0 tw:size-3.5 tw:mt-0.75 tw:rounded-xs tw:border tw:border-border ${item.colorClass}`}
@@ -711,13 +720,13 @@ export function TeamScheduleView() {
                                               <span>
                                                 <strong>{item.typeLabel}</strong>
                                                 {item.halfLabel && (
-                                                  <span className="text-muted">
+                                                  <span className="tw:text-muted-foreground">
                                                     {" "}
                                                     · {item.halfLabel}
                                                   </span>
                                                 )}
                                                 {item.title && (
-                                                  <span className="d-block text-muted small">
+                                                  <span className="tw:block tw:text-muted-foreground tw:text-sm">
                                                     {item.title}
                                                   </span>
                                                 )}
@@ -751,25 +760,31 @@ export function TeamScheduleView() {
           ) : (
             !error &&
             !isLoading && (
-              <div className="text-center py-4">
-                <Icon icon={InboxIcon} className="display-4 text-muted mb-2 d-block" />
-                <p className="text-muted mb-0">{m.team_empty_state()}</p>
+              <div className="tw:text-center tw:py-6">
+                <Icon
+                  icon={InboxIcon}
+                  className="tw:size-12 tw:text-muted-foreground tw:mb-2 tw:block"
+                />
+                <p className="tw:text-muted-foreground tw:mb-0">{m.team_empty_state()}</p>
               </div>
             )
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
 
       {teamData && (
-        <Card className="mb-3">
-          <Card.Header>
-            <h6 className="mb-0">{m.team_legend_heading()}</h6>
-          </Card.Header>
-          <Card.Body>
-            <div className="row g-2">
+        <Card className="tw:mb-4">
+          <CardHeader>
+            <h6 className="tw:mb-0">{m.team_legend_heading()}</h6>
+          </CardHeader>
+          <CardContent>
+            <div className="tw:grid tw:grid-cols-12 tw:gap-4 tw:gap-2">
               {legendItems.map((item) => (
-                <div key={item.swatchClass} className="col-md-6 col-lg-4">
-                  <div className="d-flex align-items-center gap-2">
+                <div
+                  key={item.swatchClass}
+                  className="tw:col-span-12 tw:md:col-span-6 tw:lg:col-span-4"
+                >
+                  <div className="tw:flex tw:items-center tw:gap-2">
                     <div
                       data-team-swatch
                       className={`tw:flex tw:items-center tw:shrink-0 tw:size-7 tw:rounded tw:border tw:border-border ${item.swatchClass}`}
@@ -782,7 +797,7 @@ export function TeamScheduleView() {
                 </div>
               ))}
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
       )}
     </div>

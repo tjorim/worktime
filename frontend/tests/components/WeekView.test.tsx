@@ -212,7 +212,7 @@ describe("WeekView", () => {
       // The my team row should have my-team class
       const team2Element = screen.getByText("Team 2");
       const teamRow = team2Element.closest("tr");
-      expect(teamRow).toHaveClass("my-team");
+      expect(teamRow).toHaveClass("tw:ring-primary");
     });
 
     it("handles no my team", () => {

@@ -1,3 +1,4 @@
+import { Grid, GridItem } from "@/components/ui/grid";
 import {
   CalendarX as CalendarXIcon,
   CircleArrowRight as CircleArrowRightIcon,
@@ -9,11 +10,11 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useMemo } from "react";
-import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+
 import { Hint } from "@/components/ui/tooltip";
-import ProgressBar from "react-bootstrap/ProgressBar";
-import Row from "react-bootstrap/Row";
+import { Progress } from "@/components/ui/progress";
+
 import type { ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
 import { getScheduleConfig, isValidScheduleType } from "@/utils/scheduleUtils";
@@ -25,7 +26,7 @@ import { useFlexStartOverride } from "@/hooks/useFlexStartOverride";
 import { formatTimeByPreference, setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
 import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/utils/flexShift";
 import { getLocale } from "@/paraglide/runtime.js";
-import { FlexStartEditor } from "./FlexStartEditor";
+import { FlexStartEditor } from "@/components/status/FlexStartEditor";
 import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
 import { CountdownBadge } from "@/components/shared/CountdownBadge";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
@@ -195,36 +196,39 @@ export function PersonalizedStatusContent({
     const isWorking = currentShift.shift.isWorking;
     const hasStarted = effectiveStartTime != null && today.isAfter(effectiveStartTime);
     return (
-      <div className="d-flex align-items-center gap-2 flex-wrap current-status-compact-line">
+      <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap ">
         {hasTeams && (
-          <span className="fw-semibold compact-item">
+          <span className="tw:font-semibold ">
             {m.personalized_status_team({ team: String(myTeam) })}
           </span>
         )}
-        <span className="compact-item">
+        <span>
           <ShiftBadge shift={currentShift.shift} showEmoji showName size="sm" showTooltip={false} />
         </span>
         {currentShift.shift.start != null && currentShift.shift.end != null && !isFlexShift && (
-          <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted compact-item" />
+          <ShiftTimeDisplay
+            shift={currentShift.shift}
+            className="tw:text-sm tw:text-muted-foreground"
+          />
         )}
         {isFlexShift && flexStartTime && flexEndTime && (
-          <span className="small text-muted compact-item">
+          <span className="tw:text-sm tw:text-muted-foreground">
             {formatTimeByPreference(flexStartTime, settings.timeFormat)}–
             {formatTimeByPreference(flexEndTime, settings.timeFormat)}
           </span>
         )}
         {isWorking && effectiveStartTime && !hasStarted && !shiftStartCountdown.isExpired && (
-          <span className="small text-muted compact-item">
+          <span className="tw:text-sm tw:text-muted-foreground">
             {m.current_status_starts_in({ time: shiftStartCountdown.formatted })}
           </span>
         )}
         {isWorking && effectiveStartTime && hasStarted && !shiftEndCountdown.isExpired && (
-          <span className="small text-warning compact-item">
+          <span className="tw:text-sm tw:text-warning">
             {m.personalized_status_ends_in()} {shiftEndCountdown.formatted}
           </span>
         )}
         {!isWorking && nextShiftStartTime && !countdown.isExpired && (
-          <span className="small text-muted compact-item">
+          <span className="tw:text-sm tw:text-muted-foreground">
             {m.current_status_next_in({ time: countdown.formatted })}
           </span>
         )}
@@ -233,17 +237,17 @@ export function PersonalizedStatusContent({
   }
 
   return (
-    <Row>
-      <Col md={showUpNext ? 6 : 12}>
-        <Card className="h-100">
-          <Card.Body className="d-flex flex-column">
-            <Card.Title as="h6" className="mb-2 text-primary">
-              <Icon icon={TagIcon} className="me-1" />
+    <Grid>
+      <GridItem desktopSpan={showUpNext ? 6 : 12}>
+        <Card className="tw:h-full">
+          <CardContent className="tw:flex tw:grow tw:flex-col">
+            <CardTitle className="tw:mb-2 tw:text-primary">
+              <Icon icon={TagIcon} className="tw:mr-1" />
               {m.personalized_status_today()}
-            </Card.Title>
-            <div className="flex-grow-1">
+            </CardTitle>
+            <div className="tw:grow">
               {hasTeams && (
-                <span className="fw-semibold me-1">
+                <span className="tw:font-semibold tw:mr-1">
                   {m.personalized_status_team({ team: String(myTeam) })}
                 </span>
               )}
@@ -267,17 +271,20 @@ export function PersonalizedStatusContent({
                   showName
                   size="lg"
                   showTooltip={false}
-                  className="cursor-help"
+                  className="tw:cursor-help"
                 />
               </Hint>
               {currentShift.shift.start != null &&
                 currentShift.shift.end != null &&
                 !isFlexShift && (
-                  <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
+                  <ShiftTimeDisplay
+                    shift={currentShift.shift}
+                    className="tw:text-sm tw:text-muted-foreground tw:mt-1"
+                  />
                 )}
               {isFlexShift && flexWindow && (
-                <div className="small text-muted mt-1">
-                  <Icon icon={HourglassIcon} className="me-1" />
+                <div className="tw:text-sm tw:text-muted-foreground tw:mt-1">
+                  <Icon icon={HourglassIcon} className="tw:mr-1" />
                   {m.personalized_status_flex_window({
                     earliest: flexHourLabel(flexWindow.earliestStart),
                     latest: flexHourLabel(flexWindow.latestStart),
@@ -286,8 +293,8 @@ export function PersonalizedStatusContent({
                 </div>
               )}
               {isFlexShift && flexStartTime && flexEndTime && (
-                <div className="small text-muted mt-1">
-                  <Icon icon={LogInIcon} className="me-1" />
+                <div className="tw:text-sm tw:text-muted-foreground tw:mt-1">
+                  <Icon icon={LogInIcon} className="tw:mr-1" />
                   {m.personalized_status_flex_clocked({
                     start: formatTimeByPreference(flexStartTime, settings.timeFormat),
                     end: formatTimeByPreference(flexEndTime, settings.timeFormat),
@@ -295,9 +302,9 @@ export function PersonalizedStatusContent({
                 </div>
               )}
               {isFlexShift && flexEndRange && (
-                <div className="mt-2">
-                  <span className="fw-semibold">
-                    <Icon icon={LogOutIcon} className="me-1" />
+                <div className="tw:mt-2">
+                  <span className="tw:font-semibold">
+                    <Icon icon={LogOutIcon} className="tw:mr-1" />
                     {m.personalized_status_flex_leave_range({
                       earliest: formatTimeByPreference(
                         flexEndRange.earliestEnd,
@@ -307,7 +314,7 @@ export function PersonalizedStatusContent({
                     })}
                   </span>
                   {settings.enableTimeTracking && (
-                    <div className="small text-muted mt-1">
+                    <div className="tw:text-sm tw:text-muted-foreground tw:mt-1">
                       {m.personalized_status_flex_leave_hint()}
                     </div>
                   )}
@@ -329,17 +336,17 @@ export function PersonalizedStatusContent({
                       variant="warning"
                     />
                     {shiftProgress && (
-                      <div className="mt-2">
-                        <div className="small text-muted mb-1">
+                      <div className="tw:mt-2">
+                        <div className="tw:text-sm tw:text-muted-foreground tw:mb-1">
                           {m.personalized_status_shift_progress({
                             elapsedHours: String(shiftProgress.elapsedHours),
                             totalHours: String(shiftProgress.totalHours),
                           })}
                         </div>
-                        <ProgressBar
-                          now={shiftProgress.percentage}
-                          variant="warning"
-                          className="progress-thin"
+                        <Progress
+                          indicatorClassName="tw:bg-warning"
+                          value={shiftProgress.percentage}
+
                           aria-label={
                             shiftProgress.totalHours === 1
                               ? m.personalized_status_shift_progress_aria_one({
@@ -357,7 +364,7 @@ export function PersonalizedStatusContent({
                   </>
                 )}
               {showFlexEditor && flexWindow && (
-                <div className="mt-2">
+                <div className="tw:mt-2">
                   <FlexStartEditor
                     startTime={manualStart.startTime}
                     defaultInputTime={setTimeFromFractionalHour(
@@ -370,17 +377,17 @@ export function PersonalizedStatusContent({
                 </div>
               )}
               {!currentShift.shift.isWorking && offDayProgress && (
-                <div className="mt-2">
-                  <div className="small text-muted mb-1">
+                <div className="tw:mt-2">
+                  <div className="tw:text-sm tw:text-muted-foreground tw:mb-1">
                     {m.personalized_status_off_day_progress({
                       current: String(offDayProgress.current),
                       total: String(offDayProgress.total),
                     })}
                   </div>
-                  <ProgressBar
-                    now={(offDayProgress.current / offDayProgress.total) * 100}
-                    variant="info"
-                    className="progress-thin"
+                  <Progress
+                    indicatorClassName="tw:bg-info"
+                    value={(offDayProgress.current / offDayProgress.total) * 100}
+
                     aria-label={
                       offDayProgress.total === 1
                         ? m.personalized_status_off_day_progress_aria_one({
@@ -396,21 +403,21 @@ export function PersonalizedStatusContent({
                 </div>
               )}
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
-      </Col>
+      </GridItem>
       {showUpNext && (
-        <Col md={6}>
-          <Card className="h-100">
-            <Card.Body className="d-flex flex-column">
-              <Card.Title as="h6" className="mb-2 text-success">
-                <Icon icon={CircleArrowRightIcon} className="me-1" />
+        <GridItem desktopSpan={6}>
+          <Card className="tw:h-full">
+            <CardContent className="tw:flex tw:grow tw:flex-col">
+              <CardTitle className="tw:mb-2 tw:text-success">
+                <Icon icon={CircleArrowRightIcon} className="tw:mr-1" />
                 {m.personalized_status_up_next()}
-              </Card.Title>
-              <div className="text-muted flex-grow-1">
+              </CardTitle>
+              <div className="tw:text-muted-foreground tw:grow">
                 {nextShift ? (
                   <div>
-                    <div className="fw-semibold">
+                    <div className="tw:font-semibold">
                       {nextShiftIsLaterToday
                         ? m.personalized_status_later_today()
                         : nextShift.date.isSame(today, "day")
@@ -425,7 +432,10 @@ export function PersonalizedStatusContent({
                               : nextShift.date.format("ddd, MMM D")}{" "}
                       - {nextShift.shift.name}
                     </div>
-                    <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
+                    <ShiftTimeDisplay
+                      shift={nextShift.shift}
+                      className="tw:text-sm tw:text-muted-foreground"
+                    />
                     {shiftStartCountdown.isExpired && shiftEndCountdown.isExpired && (
                       <CountdownBadge
                         countdown={countdown}
@@ -442,10 +452,10 @@ export function PersonalizedStatusContent({
                   />
                 )}
               </div>
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </GridItem>
       )}
-    </Row>
+    </Grid>
   );
 }

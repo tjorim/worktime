@@ -110,8 +110,8 @@ describe("LocationYearSummary", () => {
     expect(bodyRows[0]).toHaveTextContent("Office");
     expect(bodyRows[1]).toHaveTextContent("Other");
     expect(bodyRows[2]).toHaveTextContent("Home");
-    expect(screen.getByRole("columnheader", { name: /^Days/ })).toHaveClass("text-end");
-    expect(screen.getByRole("columnheader", { name: "%" })).toHaveClass("text-end");
+    expect(screen.getByRole("columnheader", { name: /^Days/ })).toHaveClass("tw:text-right");
+    expect(screen.getByRole("columnheader", { name: "%" })).toHaveClass("tw:text-right");
   });
 
   it("sorts rows by country when the country header is clicked", async () => {
@@ -164,7 +164,7 @@ describe("LocationYearSummary", () => {
     const map: WorkLocationMap = new Map([["2026-01-05", HOME_NL]]);
     renderSummary(2026, map);
 
-    await user.click(screen.getByRole("checkbox", { name: /^Country$/i }));
+    await user.click(screen.getByRole("switch", { name: /^Country$/i }));
 
     expect(screen.queryByRole("button", { name: /^Country/ })).not.toBeInTheDocument();
     expect(screen.queryByText("NL")).not.toBeInTheDocument();
