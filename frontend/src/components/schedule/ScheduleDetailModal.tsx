@@ -1,3 +1,19 @@
+import {
+  Briefcase as BriefcaseIcon,
+  CalendarDays as CalendarDaysIcon,
+  ChartColumn as ChartColumnIcon,
+  ChartPie as ChartPieIcon,
+  Circle as CircleIcon,
+  Clock as ClockIcon,
+  House as HouseIcon,
+  Info as InfoIcon,
+  Moon as MoonIcon,
+  Sun as SunIcon,
+  Sunset as SunsetIcon,
+  Users as UsersIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -30,25 +46,25 @@ const SMALL_ICON_SIZE = "0.5rem";
 // Display metadata for each working shift code — icons, colors, and variants only (labels are translated at render time).
 // Any shift code present in a schedule's shiftTimes but absent here will receive a generic fallback.
 const SHIFT_DISPLAY_META: Partial<
-  Record<ShiftCode, { icon: string; iconClassName: string; variant: string }>
+  Record<ShiftCode, { icon: LucideIcon; iconClassName: string; variant: string }>
 > = {
   M: {
-    icon: "bi bi-sun",
+    icon: SunIcon,
     iconClassName: "text-warning",
     variant: "warning",
   },
   L: {
-    icon: "bi bi-sunset",
+    icon: SunsetIcon,
     iconClassName: "text-info",
     variant: "info",
   },
   D: {
-    icon: "bi bi-brightness-high",
+    icon: SunIcon,
     iconClassName: "text-primary",
     variant: "primary",
   },
   N: {
-    icon: "bi bi-moon",
+    icon: MoonIcon,
     iconClassName: "text-secondary",
     variant: "dark",
   },
@@ -170,7 +186,7 @@ export function ScheduleDetailModal({
       .map((code) => {
         const count = weekSchedule.filter((day) => day.shift.code === code).length;
         const meta = SHIFT_DISPLAY_META[code] ?? {
-          icon: "bi bi-circle",
+          icon: CircleIcon,
           iconClassName: "text-muted",
           variant: "secondary",
         };
@@ -204,14 +220,10 @@ export function ScheduleDetailModal({
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>
-            <i
-              className={clsx(
-                "bi",
-                hasTeams ? "bi-people" : "bi-calendar-week",
-                "me-2",
-                "text-primary",
-              )}
-            ></i>
+            <Icon
+              icon={hasTeams ? UsersIcon : CalendarDaysIcon}
+              className={clsx("me-2", "text-primary")}
+            />
             {hasTeams
               ? m.schedule_detail_title_team({ team: String(teamNumber) })
               : m.schedule_detail_title_schedule()}
@@ -224,13 +236,13 @@ export function ScheduleDetailModal({
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <h6 className="mb-1">
-                    <i className="bi bi-clock me-2"></i>
+                    <Icon icon={ClockIcon} className="me-2" />
                     {m.schedule_current_status()}
                   </h6>
                   <div className="d-flex align-items-center gap-2">
                     {currentStatus.shift.code === "O" ? (
                       <Badge bg="secondary" pill>
-                        <i className="bi bi-house me-1"></i>
+                        <Icon icon={HouseIcon} className="me-1" />
                         {m.schedule_off_duty()}
                       </Badge>
                     ) : (
@@ -253,7 +265,7 @@ export function ScheduleDetailModal({
           <Card className="mb-4">
             <Card.Body>
               <h6 className="mb-3">
-                <i className="bi bi-info-circle me-2" aria-hidden="true"></i>
+                <Icon icon={InfoIcon} className="me-2" />
                 {m.schedule_info_heading()}
               </h6>
               <Row className="g-3">
@@ -317,7 +329,7 @@ export function ScheduleDetailModal({
           {/* 7-Day Schedule */}
           <div className="mb-4">
             <h6 className="mb-3">
-              <i className="bi bi-calendar-week me-2"></i>
+              <Icon icon={CalendarDaysIcon} className="me-2" />
               {m.schedule_7day_heading()}
             </h6>
 
@@ -351,11 +363,13 @@ export function ScheduleDetailModal({
                           <strong>{day.date.format("MMM D")}</strong>
                           {day.isToday && (
                             <Badge bg="primary" className="ms-2">
-                              <i
-                                className="bi bi-circle-fill me-1"
+                              <Icon
+                                icon={CircleIcon}
+                                className="me-1"
+                                fill="currentColor"
+
                                 style={{ fontSize: SMALL_ICON_SIZE }}
-                                aria-hidden="true"
-                              ></i>
+                              />
                               {m.today()}
                             </Badge>
                           )}
@@ -389,12 +403,12 @@ export function ScheduleDetailModal({
                         <td>
                           {day.shift.code === "O" ? (
                             <small className="text-muted">
-                              <i className="bi bi-house me-1" aria-hidden="true"></i>
+                              <Icon icon={HouseIcon} className="me-1" />
                               {m.schedule_rest_day()}
                             </small>
                           ) : (
                             <small className="text-success">
-                              <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
+                              <Icon icon={BriefcaseIcon} className="me-1" />
                               {m.schedule_working()}
                             </small>
                           )}
@@ -420,11 +434,13 @@ export function ScheduleDetailModal({
                           {day.date.format("dddd")}
                           {day.isToday && (
                             <Badge bg="primary" className="ms-2">
-                              <i
-                                className="bi bi-circle-fill me-1"
+                              <Icon
+                                icon={CircleIcon}
+                                className="me-1"
+                                fill="currentColor"
+
                                 style={{ fontSize: SMALL_ICON_SIZE }}
-                                aria-hidden="true"
-                              ></i>
+                              />
                               {m.today()}
                             </Badge>
                           )}
@@ -449,7 +465,7 @@ export function ScheduleDetailModal({
                     <div className="d-flex justify-content-between align-items-center pt-2 border-top">
                       <div>
                         <small className="text-muted d-block">
-                          <i className="bi bi-clock me-1" aria-hidden="true"></i>
+                          <Icon icon={ClockIcon} className="me-1" />
                           {m.schedule_col_hours()}
                         </small>
                         <span className="text-body">
@@ -466,12 +482,12 @@ export function ScheduleDetailModal({
                         <small className="text-muted d-block">{m.schedule_col_status()}</small>
                         {day.shift.code === "O" ? (
                           <span className="text-muted">
-                            <i className="bi bi-house me-1" aria-hidden="true"></i>
+                            <Icon icon={HouseIcon} className="me-1" />
                             {m.schedule_rest_day()}
                           </span>
                         ) : (
                           <span className="text-success">
-                            <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
+                            <Icon icon={BriefcaseIcon} className="me-1" />
                             {m.schedule_working()}
                           </span>
                         )}
@@ -489,7 +505,7 @@ export function ScheduleDetailModal({
               <Card>
                 <Card.Body>
                   <h6 className="mb-3">
-                    <i className="bi bi-bar-chart me-2"></i>
+                    <Icon icon={ChartColumnIcon} className="me-2" />
                     {m.schedule_weekly_stats()}
                   </h6>
                   <div className="mb-3">
@@ -520,7 +536,7 @@ export function ScheduleDetailModal({
                   <ListGroup variant="flush">
                     <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                       <span>
-                        <i className="bi bi-clock me-1" aria-hidden="true"></i>
+                        <Icon icon={ClockIcon} className="me-1" />
                         {m.schedule_total_weekly_hours()}
                       </span>
                       <Badge bg="primary">
@@ -537,7 +553,7 @@ export function ScheduleDetailModal({
               <Card>
                 <Card.Body>
                   <h6 className="mb-3">
-                    <i className="bi bi-pie-chart me-2"></i>
+                    <Icon icon={ChartPieIcon} className="me-2" />
                     {m.schedule_shift_distribution()}
                   </h6>
                   <ProgressBar className="mb-3" aria-label={m.schedule_shift_distribution()}>
@@ -561,10 +577,7 @@ export function ScheduleDetailModal({
                         className="px-0 py-2 d-flex justify-content-between"
                       >
                         <span>
-                          <i
-                            className={clsx(item.icon, "me-1", item.iconClassName)}
-                            aria-hidden="true"
-                          ></i>
+                          <Icon icon={item.icon} className={clsx("me-1", item.iconClassName)} />
                           {getShiftLabel(item.key)}
                         </span>
                         <Badge bg={item.variant}>

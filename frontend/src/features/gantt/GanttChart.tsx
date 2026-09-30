@@ -1,3 +1,4 @@
+import { Network as NetworkIcon } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
@@ -268,7 +269,7 @@ export function GanttChart({
   if (tasks.length === 0) {
     return (
       <EmptyState
-        icon="bi-diagram-3"
+        icon={NetworkIcon}
         title="No tasks yet"
         description="Add your first task to start building your personal timeline."
       />

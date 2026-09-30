@@ -45,6 +45,13 @@ body {
   width: auto;
 }
 
+.app-icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
 .toast-icon {
   font-size: 1.2em;
 }

@@ -1,3 +1,5 @@
+import { Globe as GlobeIcon, LayoutGrid as LayoutGridIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import { CountrySelect } from "@/components/shared/CountrySelect";
@@ -42,7 +44,7 @@ export function SettingsFeaturesSection({
       <div className="border-bottom">
         <div className="p-3">
           <h6 className="text-muted mb-3">
-            <i className="bi bi-grid me-2"></i>
+            <Icon icon={LayoutGridIcon} className="me-2" />
             {m.features_title()}
           </h6>
           <ListGroup variant="flush">
@@ -131,7 +133,7 @@ export function SettingsFeaturesSection({
         <div className="border-bottom">
           <div className="p-3">
             <h6 className="text-muted mb-3">
-              <i className="bi bi-globe me-2"></i>
+              <Icon icon={GlobeIcon} className="me-2" />
               {m.cross_border_setup_label()}
             </h6>
             <small className="text-muted d-block mb-3">{m.cross_border_setup_description()}</small>

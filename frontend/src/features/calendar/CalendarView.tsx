@@ -1,3 +1,5 @@
+import { Info as InfoIcon, TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import "temporal-polyfill/global";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "@schedule-x/calendar";
@@ -277,14 +279,14 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
       ) : (
         <div className="d-flex justify-content-end mb-2">
           <Button variant="link" size="sm" className="text-muted p-0" onClick={restoreHelp}>
-            <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
+            <Icon icon={InfoIcon} className="me-1" />
             {m.unified_calendar_show_help()}
           </Button>
         </div>
       )}
       {effectiveTeam === null && (
         <Alert variant="warning" className="d-flex align-items-center gap-2 py-2">
-          <i className="bi bi-exclamation-triangle" aria-hidden="true"></i>
+          <Icon icon={TriangleAlertIcon} />
           <span>
             No roster configured — no shifts will appear.
             {onChangeSchedule && (

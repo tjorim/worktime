@@ -1,3 +1,10 @@
+import {
+  Contrast as ContrastIcon,
+  Moon as MoonIcon,
+  SlidersHorizontal as SlidersHorizontalIcon,
+  Sun as SunIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -28,7 +35,7 @@ export function SettingsGeneralSection({
   return (
     <div className="p-3">
       <h6 className="text-muted mb-3">
-        <i className="bi bi-sliders me-2"></i>
+        <Icon icon={SlidersHorizontalIcon} className="me-2" />
         {m.preferences_title()}
       </h6>
       <ListGroup variant="flush">
@@ -68,7 +75,7 @@ export function SettingsGeneralSection({
                 aria-pressed={theme === "auto"}
                 onClick={() => onThemeChange("auto")}
               >
-                <i className="bi bi-circle-half me-1"></i>
+                <Icon icon={ContrastIcon} className="me-1" />
                 {m.theme_auto()}
               </Button>
               <Button
@@ -76,7 +83,7 @@ export function SettingsGeneralSection({
                 aria-pressed={theme === "light"}
                 onClick={() => onThemeChange("light")}
               >
-                <i className="bi bi-sun me-1"></i>
+                <Icon icon={SunIcon} className="me-1" />
                 {m.theme_light()}
               </Button>
               <Button
@@ -84,7 +91,7 @@ export function SettingsGeneralSection({
                 aria-pressed={theme === "dark"}
                 onClick={() => onThemeChange("dark")}
               >
-                <i className="bi bi-moon me-1"></i>
+                <Icon icon={MoonIcon} className="me-1" />
                 {m.theme_dark()}
               </Button>
             </ButtonGroup>

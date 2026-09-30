@@ -173,6 +173,9 @@ unfamiliar branch's existing commits:
 - Prefer targeted tests first, then broader checks before handoff
 - Do not commit automatically unless explicitly asked
 - Always include screenshots in PR comments when making UI changes (all visible states)
+- Icons use named `lucide-react` imports and the decorative `components/shared/Icon.tsx` wrapper.
+  Shared icon props accept `LucideIcon` components; icon-only controls must have a text alternative.
+  The previous Bootstrap Icon mapping and fill choices are recorded in `docs/icon-migration.md`.
 - Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
 - Frontend product slices with their own view and supporting components belong under
   `frontend/src/features/<feature>/`, with matching tests under `frontend/tests/features/<feature>/`.
@@ -255,9 +258,9 @@ utilities still win: remove the conflicting Bootstrap utility when migrating, ra
 another important declaration. The prefix prevents accidental restyling of legacy `p-2`, `border`, etc.
 
 `oxlint.config.ts` activates `@shadcn/lint`: no-arbitrary-values, no-raw-colors, no-inline-styles and
-no-unknown-classes. `legacy-classes.json` is generated from compiled Sass plus Bootstrap Icons,
+no-unknown-classes. `legacy-classes.json` is generated from compiled Sass plus
 Frappe Gantt and Schedule-X CSS by `pnpm generate-legacy-classes`; lint checks it for drift. Its printed
-count is a migration progress measure (icons contribute a fixed floor until their migration).
+count is a migration progress measure.
 Never hand-edit this list. A separate short list in the config permits existing DOM hooks without CSS.
 `legacy-inline-styles.json` freezes existing property allowances by file for the staged migration;
 remove allowances as those components migrate, and do not extend them for new code.

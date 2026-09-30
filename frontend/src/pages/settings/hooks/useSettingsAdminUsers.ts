@@ -1,3 +1,4 @@
+import { Trash2 as Trash2Icon, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
@@ -16,7 +17,7 @@ interface UseSettingsAdminUsersParams {
   isAdmin: boolean;
   currentAccountId: number | null;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
-  showSuccessToast: (message: string, icon?: string) => void;
+  showSuccessToast: (message: string, icon?: LucideIcon) => void;
 }
 
 export function useSettingsAdminUsers({
@@ -104,7 +105,7 @@ export function useSettingsAdminUsers({
       }
 
       setAdminUsers((current) => current.filter((user) => user.id !== userId));
-      showSuccessToast(m.account_admin_users_deleted(), "bi-trash");
+      showSuccessToast(m.account_admin_users_deleted(), Trash2Icon);
     } catch (error) {
       logger.error("Failed to delete admin-managed user:", error);
       setAdminUsersDeleteError(

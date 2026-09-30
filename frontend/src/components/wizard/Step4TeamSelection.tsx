@@ -1,7 +1,8 @@
+import { ArrowLeft as ArrowLeftIcon, Eye as EyeIcon, X as XIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
-import clsx from "clsx";
 import * as m from "@/paraglide/messages.js";
 
 interface Step4TeamSelectionProps {
@@ -57,7 +58,7 @@ export function Step4TeamSelection({
             <h6 className="mb-2">{m.wizard_team_option2_heading()}</h6>
             <p className="small text-muted mb-3">{m.wizard_team_option2_desc()}</p>
             <Button variant="outline-secondary" onClick={onSkip}>
-              <i className="bi bi-eye me-1" aria-hidden="true"></i>
+              <Icon icon={EyeIcon} className="me-1" />
               {m.wizard_team_browse_btn()}
             </Button>
           </div>
@@ -66,10 +67,7 @@ export function Step4TeamSelection({
 
       <div className="d-flex justify-content-start mt-3">
         <Button variant="outline-secondary" size="sm" onClick={onPrev}>
-          <i
-            className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}
-            aria-hidden="true"
-          ></i>
+          <Icon icon={isChangeFlow ? XIcon : ArrowLeftIcon} className="me-1" />
           {isChangeFlow ? m.cancel() : m.back()}
         </Button>
       </div>

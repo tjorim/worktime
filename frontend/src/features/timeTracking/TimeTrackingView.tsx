@@ -1,3 +1,8 @@
+import {
+  ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon,
+  ListChecks as ListChecksIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -116,7 +121,7 @@ export function TimeTrackingView({
             aria-pressed={viewMode === "daily"}
             onClick={() => setViewMode("daily")}
           >
-            <i className="bi bi-list-check me-1" aria-hidden="true"></i>
+            <Icon icon={ListChecksIcon} className="me-1" />
             {m.tt_daily_log()}
           </Button>
           <Button
@@ -125,7 +130,7 @@ export function TimeTrackingView({
             aria-pressed={viewMode === "weekly"}
             onClick={() => setViewMode("weekly")}
           >
-            <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
+            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="me-1" />
             {m.tt_weekly_summary()}
           </Button>
         </ButtonGroup>

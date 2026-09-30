@@ -1,3 +1,10 @@
+import {
+  Calendar as CalendarIcon,
+  CalendarPlus as CalendarPlusIcon,
+  ChevronDown as ChevronDownIcon,
+  ChevronUp as ChevronUpIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -104,7 +111,7 @@ export function CurrentStatus({
       <Col className="mb-4">
         <Card>
           <Card.Body className="text-center py-4">
-            <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+            <Icon icon={CalendarPlusIcon} className="text-muted mb-3 icon-lg" />
             <p className="text-muted mb-3">{m.current_status_select_schedule_prompt()}</p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </Card.Body>
@@ -136,7 +143,7 @@ export function CurrentStatus({
               aria-label={m.current_status_expand()}
               title={m.current_status_expand()}
             >
-              <i className="bi bi-chevron-down" aria-hidden="true"></i>
+              <Icon icon={ChevronDownIcon} />
             </Button>
           </Card.Body>
         </Card>
@@ -174,7 +181,7 @@ export function CurrentStatus({
                   }
                 >
                   <small className="help-underline">
-                    <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
+                    <Icon icon={CalendarIcon} className="me-1" />
                     {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
@@ -192,7 +199,7 @@ export function CurrentStatus({
                   aria-label={m.current_status_collapse()}
                   title={m.current_status_collapse()}
                 >
-                  <i className="bi bi-chevron-up" aria-hidden="true"></i>
+                  <Icon icon={ChevronUpIcon} />
                 </Button>
               )}
               <SetupActionButton

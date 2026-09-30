@@ -1,3 +1,11 @@
+import {
+  ArrowLeftRight as ArrowLeftRightIcon,
+  CircleCheck as CircleCheckIcon,
+  CloudDownload as CloudDownloadIcon,
+  Combine as CombineIcon,
+  HardDrive as HardDriveIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import {
@@ -63,7 +71,7 @@ export function FirstSyncConflictDialog({
       <DialogContent aria-describedby={bodyId}>
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
+            <Icon icon={ArrowLeftRightIcon} className="me-2" />
             {m.first_sync_conflict_title()}
           </DialogTitle>
         </DialogHeader>
@@ -88,19 +96,19 @@ export function FirstSyncConflictDialog({
               aria-pressed={selected === "keep-both"}
             >
               <div className="d-flex align-items-start gap-3">
-                <i
-                  className={`bi bi-union fs-5 flex-shrink-0 mt-1 ${selected === "keep-both" ? "text-primary" : "text-secondary"}`}
-                  aria-hidden="true"
-                ></i>
+                <Icon
+                  icon={CombineIcon}
+                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "keep-both" ? "text-primary" : "text-secondary"}`}
+                />
                 <div>
                   <div className="fw-semibold">{m.first_sync_conflict_keep_both()}</div>
                   <div className="text-muted small">{m.first_sync_conflict_keep_both_desc()}</div>
                 </div>
                 {selected === "keep-both" && (
-                  <i
-                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={CircleCheckIcon}
+                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                  />
                 )}
               </div>
             </button>
@@ -113,19 +121,19 @@ export function FirstSyncConflictDialog({
               aria-pressed={selected === "keep-local"}
             >
               <div className="d-flex align-items-start gap-3">
-                <i
-                  className={`bi bi-hdd-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-local" ? "text-primary" : "text-secondary"}`}
-                  aria-hidden="true"
-                ></i>
+                <Icon
+                  icon={HardDriveIcon}
+                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "keep-local" ? "text-primary" : "text-secondary"}`}
+                />
                 <div>
                   <div className="fw-semibold">{m.first_sync_conflict_keep_local()}</div>
                   <div className="text-muted small">{m.first_sync_conflict_keep_local_desc()}</div>
                 </div>
                 {selected === "keep-local" && (
-                  <i
-                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={CircleCheckIcon}
+                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                  />
                 )}
               </div>
             </button>
@@ -138,19 +146,19 @@ export function FirstSyncConflictDialog({
               aria-pressed={selected === "use-server"}
             >
               <div className="d-flex align-items-start gap-3">
-                <i
-                  className={`bi bi-cloud-download-fill fs-5 flex-shrink-0 mt-1 ${selected === "use-server" ? "text-primary" : "text-secondary"}`}
-                  aria-hidden="true"
-                ></i>
+                <Icon
+                  icon={CloudDownloadIcon}
+                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "use-server" ? "text-primary" : "text-secondary"}`}
+                />
                 <div>
                   <div className="fw-semibold">{m.first_sync_conflict_use_server()}</div>
                   <div className="text-muted small">{m.first_sync_conflict_use_server_desc()}</div>
                 </div>
                 {selected === "use-server" && (
-                  <i
-                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={CircleCheckIcon}
+                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                  />
                 )}
               </div>
             </button>

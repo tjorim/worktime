@@ -1,3 +1,10 @@
+import {
+  Calendar as CalendarIcon,
+  CalendarPlus as CalendarPlusIcon,
+  Keyboard as KeyboardIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
@@ -115,7 +122,7 @@ export function WeekView({
     return (
       <Card>
         <Card.Body className="text-center py-4">
-          <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+          <Icon icon={CalendarPlusIcon} className="text-muted mb-3 icon-lg" />
           <p className="text-muted mb-3">{m.week_view_no_schedule()}</p>
         </Card.Body>
       </Card>
@@ -140,10 +147,7 @@ export function WeekView({
       <Card.Header>
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
           <span className="fw-semibold">
-            <i
-              className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
-              aria-hidden="true"
-            ></i>
+            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="me-2" />
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <WeekNavigationButtonGroup
@@ -166,7 +170,7 @@ export function WeekView({
             )}
           </div>
           <div className="small text-muted d-none d-lg-block">
-            <i className="bi bi-keyboard me-1" aria-hidden="true"></i>
+            <Icon icon={KeyboardIcon} className="me-1" />
             {m.week_view_keyboard_hint()}
           </div>
         </div>
@@ -175,7 +179,7 @@ export function WeekView({
         {myTeam && hasTeams && (
           <div className="mb-3">
             <strong>
-              <i className="bi bi-people me-1" aria-hidden="true"></i>
+              <Icon icon={UsersIcon} className="me-1" />
               {m.week_view_team_schedule_heading({ team: String(myTeam) })}
             </strong>
             <div className="text-muted small">
@@ -187,7 +191,7 @@ export function WeekView({
         {!hasTeams && (
           <div className="mb-3">
             <strong>
-              <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
+              <Icon icon={CalendarIcon} className="me-1" />
               {m.week_view_your_schedule_heading()}
             </strong>
             <div className="text-muted small">

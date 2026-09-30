@@ -1,3 +1,8 @@
+import {
+  ArrowLeftRight as ArrowLeftRightIcon,
+  CalendarDays as CalendarDaysIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
@@ -98,7 +103,7 @@ export function ScheduleTabView({
           aria-pressed={viewMode === "schedule"}
           onClick={() => setViewMode("schedule")}
         >
-          <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
+          <Icon icon={CalendarDaysIcon} className="me-1" />
           {m.schedule_overview_tab()}
         </Button>
         <Button
@@ -107,7 +112,7 @@ export function ScheduleTabView({
           aria-pressed={viewMode === "transfer"}
           onClick={() => setViewMode("transfer")}
         >
-          <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+          <Icon icon={ArrowLeftRightIcon} className="me-1" />
           {m.schedule_transfers_tab()}
         </Button>
       </ButtonGroup>

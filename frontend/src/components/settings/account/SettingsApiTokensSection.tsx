@@ -1,3 +1,5 @@
+import { Clipboard as ClipboardIcon, Key as KeyIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -72,7 +74,7 @@ export function SettingsApiTokensSection({
     <div>
       <div className="p-3">
         <h6 className="text-muted mb-3">
-          <i className="bi bi-key me-2"></i>
+          <Icon icon={KeyIcon} className="me-2" />
           {m.api_tokens_section_title()}
         </h6>
         <p className="text-muted small mb-3">{m.api_tokens_description()}</p>
@@ -87,7 +89,7 @@ export function SettingsApiTokensSection({
             </code>
             <div className="d-flex gap-2">
               <Button variant="outline-success" size="sm" onClick={() => void handleCopy()}>
-                <i className="bi bi-clipboard me-1"></i>
+                <Icon icon={ClipboardIcon} className="me-1" />
                 {m.api_tokens_copy_btn()}
               </Button>
               <Button variant="success" size="sm" onClick={onDismissCreatedApiToken}>
@@ -194,7 +196,7 @@ export function SettingsApiTokensSection({
         }}
         onCancel={() => setTokenPendingRevoke(null)}
         variant="danger"
-        icon="bi-key"
+        icon={KeyIcon}
       />
     </div>
   );

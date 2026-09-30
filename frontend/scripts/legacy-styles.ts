@@ -14,11 +14,9 @@ export function legacyClasses() {
   for (const source of [
     css,
     readFileSync(resolve(root, "src/features/calendar/calendar.css"), "utf8"),
-    ...[
-      "bootstrap-icons/font/bootstrap-icons.css",
-      "frappe-gantt/dist/frappe-gantt.css",
-      "@schedule-x/theme-default/dist/index.css",
-    ].map((file) => readFileSync(resolve(root, "node_modules", file), "utf8")),
+    ...["frappe-gantt/dist/frappe-gantt.css", "@schedule-x/theme-default/dist/index.css"].map(
+      (file) => readFileSync(resolve(root, "node_modules", file), "utf8"),
+    ),
   ]) {
     postcss.parse(source).walkRules((rule) => {
       selectorParser((selectors) => {

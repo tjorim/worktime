@@ -1,3 +1,10 @@
+import {
+  CircleCheck as CircleCheckIcon,
+  Clipboard as ClipboardIcon,
+  RotateCcw as RotateCcwIcon,
+  SquareCode as SquareCodeIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import Accordion from "react-bootstrap/Accordion";
@@ -39,7 +46,7 @@ export function TimeOffRawView({
     <Accordion>
       <Accordion.Item eventKey="raw-editor">
         <Accordion.Header>
-          <i className="bi bi-code-square me-2" aria-hidden="true"></i>
+          <Icon icon={SquareCodeIcon} className="me-2" />
           {m.timeoff_raw_editor_heading()}
           {isDirty && (
             <span className="badge bg-warning text-dark ms-2" title={m.timeoff_unsaved_changes()}>
@@ -93,15 +100,15 @@ export function TimeOffRawView({
               aria-label={m.timeoff_copy_raw_aria()}
               title={m.timeoff_copy_raw_aria()}
             >
-              <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
+              <Icon icon={ClipboardIcon} className="me-1" />
               {m.timeoff_copy_raw()}
             </Button>
             <Button variant="primary" onClick={onApply}>
-              <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
+              <Icon icon={CircleCheckIcon} className="me-1" />
               {m.timeoff_apply_raw()}
             </Button>
             <Button variant="outline-secondary" onClick={onReset} disabled={!isDirty}>
-              <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
+              <Icon icon={RotateCcwIcon} className="me-1" />
               {m.timeoff_reset_btn()}
             </Button>
           </div>

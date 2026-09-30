@@ -1,3 +1,5 @@
+import { ArrowRight as ArrowRightIcon, History as HistoryIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import * as m from "@/paraglide/messages.js";
 
@@ -23,7 +25,7 @@ export function Step1Welcome({
     <>
       <div className="text-center mb-4">
         <div className="mb-3">
-          <i className="bi bi-clock-history text-primary icon-display" aria-hidden="true"></i>
+          <Icon icon={HistoryIcon} className="text-primary icon-display" />
         </div>
         <p className="lead mb-3">{m.wizard_welcome_lead()}</p>
         <p className="text-muted">{m.wizard_welcome_description()}</p>
@@ -44,7 +46,7 @@ export function Step1Welcome({
           {m.wizard_maybe_later()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {m.wizard_get_started()} <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          {m.wizard_get_started()} <Icon icon={ArrowRightIcon} className="ms-1" />
         </Button>
       </div>
       {onSignIn && !isAuthenticated && (

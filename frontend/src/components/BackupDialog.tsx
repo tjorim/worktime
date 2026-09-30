@@ -1,3 +1,5 @@
+import { Download as DownloadIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -83,7 +85,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       <DialogContent aria-labelledby={titleId}>
         <DialogHeader>
           <DialogTitle id={titleId}>
-            <i className="bi bi-download me-2" aria-hidden="true"></i>
+            <Icon icon={DownloadIcon} className="me-2" />
             {m.backup_app_data_label()}
           </DialogTitle>
         </DialogHeader>
@@ -149,7 +151,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             {m.cancel()}
           </Button>
           <Button variant="primary" onClick={handleExport} disabled={nothingSelected}>
-            <i className="bi bi-download me-1" aria-hidden="true"></i>
+            <Icon icon={DownloadIcon} className="me-1" />
             {m.backup_export_btn()}
           </Button>
         </DialogFooter>

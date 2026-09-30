@@ -450,7 +450,7 @@ describe("TimeOffView", () => {
 
       // Click edit button - find by icon class
       const editButtons = screen.getAllByRole("button");
-      const editButton = editButtons.find((btn) => btn.querySelector(".bi-pencil"));
+      const editButton = editButtons.find((btn) => btn.querySelector(".lucide-pencil"));
       if (editButton) {
         await user.click(editButton);
       }

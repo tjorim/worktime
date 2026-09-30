@@ -1,3 +1,5 @@
+import { Clock as ClockIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Badge from "react-bootstrap/Badge";
 import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { dayjs } from "@/utils/dateTimeUtils";
@@ -22,7 +24,7 @@ export function DailyViewHeader({
     <>
       <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
         <span className="fw-semibold">
-          <i className="bi bi-clock me-2" aria-hidden="true"></i>
+          <Icon icon={ClockIcon} className="me-2" />
           {m.tt_daily_heading()}
         </span>
         <DayNavigationButtonGroup

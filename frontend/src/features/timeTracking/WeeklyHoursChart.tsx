@@ -1,3 +1,5 @@
+import { ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { barY, defineChart, ruleY } from "@tanstack/charts";
 import { motion } from "@tanstack/charts/motion";
 import { Chart } from "@tanstack/charts/react/core";
@@ -71,7 +73,7 @@ export function WeeklyHoursChart({
   return (
     <div className="mb-4">
       <h6 className="text-uppercase text-muted mb-3">
-        <i className="bi bi-bar-chart-line me-2" aria-hidden="true"></i>
+        <Icon icon={ChartNoAxesColumnIncreasingIcon} className="me-2" />
         {m.tt_daily_hours_chart_heading()}
       </h6>
       <div style={{ minWidth: 0 }}>

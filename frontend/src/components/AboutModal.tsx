@@ -1,3 +1,25 @@
+import {
+  ArrowLeftRight as ArrowLeftRightIcon,
+  Book as BookIcon,
+  Bug as BugIcon,
+  CalendarDays as CalendarDaysIcon,
+  CircleUser as CircleUserIcon,
+  Code as CodeIcon,
+  CodeXml as CodeXmlIcon,
+  FileText as FileTextIcon,
+  Headset as HeadsetIcon,
+  History as HistoryIcon,
+  Info as InfoIcon,
+  Lightbulb as LightbulbIcon,
+  Link as LinkIcon,
+  Shield as ShieldIcon,
+  ShieldCheck as ShieldCheckIcon,
+  SquareCode as SquareCodeIcon,
+  Star as StarIcon,
+  Tag as TagIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -42,7 +64,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
       <DialogContent size="lg" scrollable>
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-info-circle me-2"></i>
+            <Icon icon={InfoIcon} className="me-2" />
             {m.about_modal_title()}
           </DialogTitle>
         </DialogHeader>
@@ -50,12 +72,12 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           {/* App Title & Version */}
           <div className="text-center mb-4">
             <div className="mb-2">
-              <i className="bi bi-clock-history text-primary icon-lg"></i>
+              <Icon icon={HistoryIcon} className="text-primary icon-lg" />
             </div>
             <h5 className="mb-2">{m.about_app_subtitle()}</h5>
             <div className="mb-2">
               <Badge bg="primary">
-                <i className="bi bi-tag me-1"></i>
+                <Icon icon={TagIcon} className="me-1" />
                 {m.about_version_badge({ version: CONFIG.VERSION })}
               </Badge>
             </div>
@@ -64,7 +86,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           {/* Author Section */}
           <div className="text-center mb-4">
             <div className="d-flex justify-content-center align-items-center gap-2 mb-2">
-              <i className="bi bi-person-circle text-muted"></i>
+              <Icon icon={CircleUserIcon} className="text-muted" />
               <span className="fw-semibold">{m.about_created_by()}</span>
             </div>
             <a
@@ -73,7 +95,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
               rel="noopener noreferrer"
               className="btn btn-outline-primary btn-sm"
             >
-              <i className="bi bi-github me-1"></i>
+              <Icon icon={CodeXmlIcon} className="me-1" />
               {m.about_github_profile_btn()}
             </a>
           </div>
@@ -83,7 +105,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           {/* Features List with Icons */}
           <div className="mb-4">
             <h6 className="mb-3">
-              <i className="bi bi-star me-2 text-warning"></i>
+              <Icon icon={StarIcon} className="me-2 text-warning" />
               {m.about_key_features_heading()}
             </h6>
             <Row className="g-2">
@@ -91,12 +113,12 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                 <div className="d-flex align-items-center small">
                   {isFiveShift ? (
                     <>
-                      <i className="bi bi-people text-primary me-2"></i>
+                      <Icon icon={UsersIcon} className="text-primary me-2" />
                       <span>{m.about_feature_5shift()}</span>
                     </>
                   ) : (
                     <>
-                      <i className="bi bi-calendar2-week text-primary me-2"></i>
+                      <Icon icon={CalendarDaysIcon} className="text-primary me-2" />
                       <span>
                         {m.about_feature_schedule_type({ scheduleTitle: scheduleConfig.title })}
                       </span>
@@ -106,21 +128,21 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
               </Col>
               <Col xs={6}>
                 <div className="d-flex align-items-center small">
-                  <i className="bi bi-file-earmark-text text-success me-2"></i>
+                  <Icon icon={FileTextIcon} className="text-success me-2" />
                   <span>{m.about_feature_hday()}</span>
                 </div>
               </Col>
               {isFiveShift && (
                 <Col xs={6}>
                   <div className="d-flex align-items-center small">
-                    <i className="bi bi-arrow-left-right text-info me-2"></i>
+                    <Icon icon={ArrowLeftRightIcon} className="text-info me-2" />
                     <span>{m.about_feature_transfers()}</span>
                   </div>
                 </Col>
               )}
               <Col xs={6}>
                 <div className="d-flex align-items-center small">
-                  <i className="bi bi-calendar-date text-secondary me-2"></i>
+                  <Icon icon={CalendarDaysIcon} className="text-secondary me-2" />
                   <span>{m.about_feature_date_format()}</span>
                 </div>
               </Col>
@@ -132,7 +154,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           {/* Quick Links */}
           <div className="mb-4">
             <h6 className="mb-3">
-              <i className="bi bi-link-45deg me-2 text-info"></i>
+              <Icon icon={LinkIcon} className="me-2 text-info" />
               {m.about_quick_links_heading()}
             </h6>
             <div className="d-grid gap-2">
@@ -144,7 +166,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     rel="noopener noreferrer"
                     className="btn btn-outline-secondary btn-sm w-100"
                   >
-                    <i className="bi bi-book me-1"></i>
+                    <Icon icon={BookIcon} className="me-1" />
                     {m.about_documentation_btn()}
                   </a>
                 </Col>
@@ -155,7 +177,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     rel="noopener noreferrer"
                     className="btn btn-outline-secondary btn-sm w-100"
                   >
-                    <i className="bi bi-code-slash me-1"></i>
+                    <Icon icon={CodeIcon} className="me-1" />
                     {m.about_source_code_btn()}
                   </a>
                 </Col>
@@ -165,7 +187,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     onClick={onHide}
                     className="btn btn-outline-secondary btn-sm w-100"
                   >
-                    <i className="bi bi-shield-lock me-1"></i>
+                    <Icon icon={ShieldIcon} className="me-1" />
                     {m.about_privacy_policy_btn()}
                   </Link>
                 </Col>
@@ -176,7 +198,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           {/* Support Section */}
           <div className="mb-4">
             <h6 className="mb-3">
-              <i className="bi bi-headset me-2 text-success"></i>
+              <Icon icon={HeadsetIcon} className="me-2 text-success" />
               {m.about_support_heading()}
             </h6>
             <div className="d-grid gap-2">
@@ -188,7 +210,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     rel="noopener noreferrer"
                     className="btn btn-outline-danger btn-sm w-100"
                   >
-                    <i className="bi bi-bug me-1"></i>
+                    <Icon icon={BugIcon} className="me-1" />
                     {m.about_report_bug_btn()}
                   </a>
                 </Col>
@@ -199,7 +221,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     rel="noopener noreferrer"
                     className="btn btn-outline-success btn-sm w-100"
                   >
-                    <i className="bi bi-lightbulb me-1"></i>
+                    <Icon icon={LightbulbIcon} className="me-1" />
                     {m.about_request_feature_btn()}
                   </a>
                 </Col>
@@ -211,11 +233,12 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <div className="text-center">
             <div className="d-flex justify-content-center align-items-center gap-3 small text-muted">
               <span>
-                <i className="bi bi-shield-check me-1"></i>
+                <Icon icon={ShieldCheckIcon} className="me-1" />
                 Apache 2.0
               </span>
               <span>
-                <i className="bi bi-code-square me-1"></i>React + TypeScript
+                <Icon icon={SquareCodeIcon} className="me-1" />
+                React + TypeScript
               </span>
             </div>
           </div>

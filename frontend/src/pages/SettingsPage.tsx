@@ -1,3 +1,15 @@
+import {
+  CalendarDays as CalendarDaysIcon,
+  CircleUser as CircleUserIcon,
+  Database as DatabaseIcon,
+  History as HistoryIcon,
+  Info as InfoIcon,
+  LayoutGrid as LayoutGridIcon,
+  SlidersHorizontal as SlidersHorizontalIcon,
+  Users as UsersIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import Button from "react-bootstrap/Button";
@@ -47,18 +59,18 @@ import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 const SETTINGS_SECTIONS: Array<{
   key: SettingsSection;
-  icon: string;
+  icon: LucideIcon;
   label: () => string;
   adminOnly?: boolean;
 }> = [
-  { key: "scheduleTeam", icon: "bi-calendar-week", label: m.schedule_team_section_title },
-  { key: "general", icon: "bi-sliders", label: m.preferences_title },
-  { key: "features", icon: "bi-grid", label: m.features_title },
-  { key: "timeTracking", icon: "bi-clock-history", label: m.time_tracking_section_title },
-  { key: "account", icon: "bi-person-circle", label: m.account_section_title },
-  { key: "admin", icon: "bi-people", label: m.account_admin_users_title, adminOnly: true },
-  { key: "data", icon: "bi-database", label: m.quick_actions_title },
-  { key: "about", icon: "bi-info-circle", label: m.information_title },
+  { key: "scheduleTeam", icon: CalendarDaysIcon, label: m.schedule_team_section_title },
+  { key: "general", icon: SlidersHorizontalIcon, label: m.preferences_title },
+  { key: "features", icon: LayoutGridIcon, label: m.features_title },
+  { key: "timeTracking", icon: HistoryIcon, label: m.time_tracking_section_title },
+  { key: "account", icon: CircleUserIcon, label: m.account_section_title },
+  { key: "admin", icon: UsersIcon, label: m.account_admin_users_title, adminOnly: true },
+  { key: "data", icon: DatabaseIcon, label: m.quick_actions_title },
+  { key: "about", icon: InfoIcon, label: m.information_title },
 ];
 
 export function SettingsPage() {
@@ -143,7 +155,7 @@ export function SettingsPage() {
                         })
                       }
                     >
-                      <i className={`bi ${section.icon}`}></i>
+                      <Icon icon={section.icon} />
                       <span>{section.label()}</span>
                     </Button>
                   );

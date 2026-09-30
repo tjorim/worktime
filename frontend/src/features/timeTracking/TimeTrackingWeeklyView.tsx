@@ -1,3 +1,5 @@
+import { ChartColumn as ChartColumnIcon, CirclePlus as CirclePlusIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
@@ -87,7 +89,7 @@ export function TimeTrackingWeeklyView({
       <Card.Header>
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
           <span className="fw-semibold">
-            <i className="bi bi-bar-chart me-2" aria-hidden="true"></i>
+            <Icon icon={ChartColumnIcon} className="me-2" />
             {m.tt_weekly_heading()}
           </span>
           <WeekNavigationButtonGroup
@@ -116,7 +118,7 @@ export function TimeTrackingWeeklyView({
       <Card.Body>
         {summary.rows.length === 0 && (
           <EmptyState
-            icon="bi-bar-chart"
+            icon={ChartColumnIcon}
             title={m.tt_no_weekly_data_title()}
             description={m.tt_no_weekly_data_desc()}
             ctaButton={
@@ -124,7 +126,7 @@ export function TimeTrackingWeeklyView({
                 ? {
                     label: m.tt_go_to_daily_log(),
                     onClick: () => onSwitchToDaily(todayIso),
-                    icon: "bi-plus-circle",
+                    icon: CirclePlusIcon,
                   }
                 : undefined
             }

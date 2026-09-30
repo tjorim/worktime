@@ -1,3 +1,10 @@
+import {
+  Building as BuildingIcon,
+  House as HouseIcon,
+  MapPin as MapPinIcon,
+  X as XIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import { Hint } from "@/components/ui/tooltip";
@@ -50,7 +57,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             onClick={handleHome}
             aria-pressed={stored?.location === "home"}
           >
-            <i className="bi bi-house me-1" aria-hidden="true"></i>
+            <Icon icon={HouseIcon} className="me-1" />
             {m.work_location_home()}
           </Button>
         )}
@@ -61,7 +68,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             onClick={handleOffice}
             aria-pressed={stored?.location === "office"}
           >
-            <i className="bi bi-building me-1" aria-hidden="true"></i>
+            <Icon icon={BuildingIcon} className="me-1" />
             {m.work_location_office()}
           </Button>
         )}
@@ -71,7 +78,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           onClick={() => setShowOtherModal(true)}
           aria-pressed={stored?.location === "other"}
         >
-          <i className="bi bi-geo-alt me-1" aria-hidden="true"></i>
+          <Icon icon={MapPinIcon} className="me-1" />
           {m.tt_other_location()}
         </Button>
         {stored && (
@@ -83,7 +90,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
               size="sm"
               variant="outline-danger"
               onClick={handleClear}
-              icon="bi-x"
+              icon={XIcon}
               label={m.tt_clear_work_location()}
             />
           </Hint>

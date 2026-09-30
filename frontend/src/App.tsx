@@ -1,3 +1,4 @@
+import { CloudCheck as CloudCheckIcon, Users as UsersIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
@@ -91,7 +92,7 @@ function AppContent() {
         showInfo(m.first_sync_pulling());
         break;
       case "done":
-        showSuccess(m.first_sync_done(), "bi-cloud-check-fill");
+        showSuccess(m.first_sync_done(), CloudCheckIcon);
         break;
       case "error":
         showError(m.first_sync_error());
@@ -293,7 +294,7 @@ function AppContent() {
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
       if (teamForCompletion !== null) {
-        showSuccess(m.team_selected_success({ team: teamForCompletion }), "bi-people-fill");
+        showSuccess(m.team_selected_success({ team: teamForCompletion }), UsersIcon);
       }
     }
     setShowTeamModal(false);

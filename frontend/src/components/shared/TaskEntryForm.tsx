@@ -1,3 +1,5 @@
+import { Circle as CircleIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -116,7 +118,7 @@ export function TaskEntryForm({
             <div className="d-flex flex-column gap-1 flex-grow-1 tw:min-w-0">
               <div className="d-flex align-items-center flex-wrap gap-2">
                 <span className="badge text-bg-danger d-inline-flex align-items-center gap-1">
-                  <i className="bi bi-record-fill" aria-hidden="true" />
+                  <Icon icon={CircleIcon} fill="currentColor" />
                   {m.tt_running_status()}
                 </span>
                 <span className="fw-semibold text-truncate">{runningTaskSummary.task}</span>

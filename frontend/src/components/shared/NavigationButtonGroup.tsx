@@ -1,3 +1,12 @@
+import {
+  CalendarCheck as CalendarCheckIcon,
+  CalendarClock as CalendarClockIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  House as HouseIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -9,7 +18,7 @@ type NavigationButtonGroupProps = {
   onCurrent: () => void;
   onNext: () => void;
   currentLabel?: string;
-  currentIcon?: string;
+  currentIcon?: LucideIcon;
   previousAriaLabel?: string;
   currentAriaLabel?: string;
   nextAriaLabel?: string;
@@ -28,7 +37,7 @@ function NavigationButtonGroup({
   onCurrent,
   onNext,
   currentLabel = "Today",
-  currentIcon = "bi-calendar-check",
+  currentIcon = CalendarCheckIcon,
   previousAriaLabel = "Go to previous day",
   currentAriaLabel = "Go to today",
   nextAriaLabel = "Go to next day",
@@ -48,7 +57,7 @@ function NavigationButtonGroup({
         variant="outline-secondary"
         size={size}
         onClick={onPrevious}
-        icon="bi-chevron-left"
+        icon={ChevronLeftIcon}
         label={previousAriaLabel}
       />
       <Button
@@ -58,14 +67,14 @@ function NavigationButtonGroup({
         disabled={isCurrent}
         aria-label={currentAriaLabel}
       >
-        <i className={`bi ${currentIcon} me-1`} aria-hidden="true"></i>
+        <Icon icon={currentIcon} className="me-1" />
         {currentLabel}
       </Button>
       <IconButton
         variant="outline-secondary"
         size={size}
         onClick={onNext}
-        icon="bi-chevron-right"
+        icon={ChevronRightIcon}
         label={nextAriaLabel}
       />
     </>
@@ -99,7 +108,7 @@ function NavigationButtonGroup({
 }
 
 export function DayNavigationButtonGroup(props: Omit<NavigationButtonGroupProps, "currentIcon">) {
-  return <NavigationButtonGroup currentIcon="bi-calendar-check" {...props} />;
+  return <NavigationButtonGroup currentIcon={CalendarCheckIcon} {...props} />;
 }
 
 export function WeekNavigationButtonGroup({
@@ -111,7 +120,7 @@ export function WeekNavigationButtonGroup({
 }: Omit<NavigationButtonGroupProps, "currentIcon">) {
   return (
     <NavigationButtonGroup
-      currentIcon="bi-house"
+      currentIcon={HouseIcon}
       currentLabel={currentLabel}
       previousAriaLabel={previousAriaLabel}
       currentAriaLabel={currentAriaLabel}
@@ -130,7 +139,7 @@ export function MonthNavigationButtonGroup({
 }: Omit<NavigationButtonGroupProps, "currentIcon">) {
   return (
     <NavigationButtonGroup
-      currentIcon="bi-calendar-event"
+      currentIcon={CalendarClockIcon}
       currentLabel={currentLabel}
       previousAriaLabel={previousAriaLabel}
       currentAriaLabel={currentAriaLabel}

@@ -1,3 +1,5 @@
+import { Pencil as PencilIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -54,7 +56,7 @@ export function FlexStartEditor({
         className="p-0 text-decoration-none align-baseline"
         onClick={startEditing}
       >
-        <i className="bi bi-pencil me-1" aria-hidden="true"></i>
+        <Icon icon={PencilIcon} className="me-1" />
         {startTime ? m.edit() : m.personalized_status_flex_set_start()}
       </Button>
     );

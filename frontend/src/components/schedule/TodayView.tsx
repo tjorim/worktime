@@ -1,3 +1,11 @@
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  ClipboardList as ClipboardListIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -87,9 +95,7 @@ function TeamCard({
               ? m.team_label({ team: String(shiftResult.teamNumber) })
               : m.week_view_schedule_label()}
           </h6>
-          {onTeamClick && (
-            <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
-          )}
+          {onTeamClick && <Icon icon={ChevronRightIcon} className="text-muted small" />}
         </div>
         <ShiftBadge shift={shift} />
       </div>
@@ -210,15 +216,12 @@ export function TodayView({
       <Card.Header>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
           <span className="fw-semibold">
-            <i
-              className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
-              aria-hidden="true"
-            ></i>
+            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="me-2" />
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-              <i className="bi bi-clipboard2-data me-1" aria-hidden="true"></i>
+              <Icon icon={ClipboardListIcon} className="me-1" />
               {m.schedule_view_label()}
             </Form.Label>
             <Form.Select
@@ -279,7 +282,7 @@ export function TodayView({
                       )
                     }
                   >
-                    <i className="bi bi-chevron-left" aria-hidden="true" />
+                    <Icon icon={ChevronLeftIcon} />
                   </Button>
                   <span className="small text-muted" aria-live="polite">
                     {m.today_view_team_position({
@@ -293,7 +296,7 @@ export function TodayView({
                     aria-label={m.today_view_next_team()}
                     onClick={() => setMobileTeamIndex((mobileTeamIndex + 1) % todayShifts.length)}
                   >
-                    <i className="bi bi-chevron-right" aria-hidden="true" />
+                    <Icon icon={ChevronRightIcon} />
                   </Button>
                 </div>
                 <Carousel

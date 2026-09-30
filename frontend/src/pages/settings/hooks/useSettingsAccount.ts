@@ -1,3 +1,4 @@
+import { Trash2 as Trash2Icon, UserCheck as UserCheckIcon, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
@@ -17,7 +18,7 @@ interface UseSettingsAccountParams {
   isAuthenticated: boolean;
   displayName: string | null;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
-  showSuccessToast: (message: string, icon?: string) => void;
+  showSuccessToast: (message: string, icon?: LucideIcon) => void;
   onAccountDeleted: () => void;
 }
 
@@ -127,7 +128,7 @@ export function useSettingsAccount({
           : current,
       );
       setProfileDraft(updatedProfile.display_name);
-      showSuccessToast(m.account_profile_saved(), "bi-person-check");
+      showSuccessToast(m.account_profile_saved(), UserCheckIcon);
     } catch (error) {
       logger.error("Failed to save account profile:", error);
       setProfileError(m.account_profile_save_failed());
@@ -146,7 +147,7 @@ export function useSettingsAccount({
         throw new Error((await readErrorDetail(response)) ?? m.account_delete_failed());
       }
 
-      showSuccessToast(m.account_deleted(), "bi-trash");
+      showSuccessToast(m.account_deleted(), Trash2Icon);
       onAccountDeleted();
     } catch (error) {
       logger.error("Failed to delete account:", error);

@@ -1,3 +1,15 @@
+import {
+  CalendarClock as CalendarClockIcon,
+  ChartGantt as ChartGanttIcon,
+  CircleX as CircleXIcon,
+  Clock as ClockIcon,
+  Coffee as CoffeeIcon,
+  History as HistoryIcon,
+  Hourglass as HourglassIcon,
+  Pencil as PencilIcon,
+  Trash2 as Trash2Icon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -65,7 +77,7 @@ function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
     >
       <div className="flex-grow-1" style={{ borderTop: "2px solid var(--bs-danger)" }} />
       <Badge bg="danger" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }}>
-        <i className="bi bi-clock me-1" aria-hidden="true" />
+        <Icon icon={ClockIcon} className="me-1" />
         {liveTime.format("HH:mm")}
       </Badge>
       <div className="flex-grow-1" style={{ borderTop: "2px solid var(--bs-danger)" }} />
@@ -107,7 +119,7 @@ function GapIndicator({
           style={{ fontSize: "0.75rem" }}
           tabIndex={0}
         >
-          <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
+          <Icon icon={HourglassIcon} className="me-1" />
           {label}
         </Badge>
       </Hint>
@@ -473,33 +485,33 @@ export function DailyTaskList({
     if (isCurrentBreakTask) {
       items.push({
         label: m.tt_remove_break(),
-        icon: "bi-x-circle",
+        icon: CircleXIcon,
         onClick: () => handleToggleBreak(task.id),
       });
     } else if (isTooShort && !isRunning) {
       items.push({
         label: m.tt_too_short_for_break({ minutes: BREAK_DURATION_MINUTES }),
-        icon: "bi-cup-hot",
+        icon: CoffeeIcon,
         onClick: () => {},
         disabled: true,
       });
     } else {
       items.push({
         label: m.tt_context_includes_break({ minutes: BREAK_DURATION_MINUTES }),
-        icon: "bi-cup-hot",
+        icon: CoffeeIcon,
         onClick: () => handleToggleBreak(task.id),
       });
     }
 
     items.push({
       label: m.edit(),
-      icon: "bi-pencil",
+      icon: PencilIcon,
       onClick: () => openEditModal(task),
     });
 
     items.push({
       label: m.remove(),
-      icon: "bi-trash",
+      icon: Trash2Icon,
       onClick: () => onRemoveTask(task.id),
       variant: "danger",
     });
@@ -510,7 +522,7 @@ export function DailyTaskList({
   if (tasks.length === 0 && !editingTask) {
     return (
       <EmptyState
-        icon="bi-clock-history"
+        icon={HistoryIcon}
         title={m.tt_no_entries_title()}
         description={m.tt_no_entries_desc()}
       />
@@ -577,13 +589,13 @@ export function DailyTaskList({
                         </span>
                         {isCurrentTask && (
                           <Badge bg="danger" className="ms-2" aria-label={m.tt_now_aria()}>
-                            <i className="bi bi-clock me-1" aria-hidden="true" />
+                            <Icon icon={ClockIcon} className="me-1" />
                             {m.tt_now()}
                           </Badge>
                         )}
                         {isPlanned && (
                           <Badge bg="secondary" className="ms-2">
-                            <i className="bi bi-calendar-event me-1" aria-hidden="true" />
+                            <Icon icon={CalendarClockIcon} className="me-1" />
                             {m.tt_planned_status()}
                           </Badge>
                         )}
@@ -602,8 +614,8 @@ export function DailyTaskList({
                               aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
                               tabIndex={0}
                             >
-                              <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                              {BREAK_DURATION_MINUTES}min
+                              <Icon icon={CoffeeIcon} className="me-1" />-{BREAK_DURATION_MINUTES}
+                              min
                             </Badge>
                           </Hint>
                         )}
@@ -622,7 +634,7 @@ export function DailyTaskList({
                               aria-label={m.tt_gantt_task_badge({ name: ganttTaskName })}
                               tabIndex={0}
                             >
-                              <i className="bi bi-bar-chart-steps me-1" aria-hidden="true"></i>
+                              <Icon icon={ChartGanttIcon} className="me-1" />
                               {ganttTaskName}
                             </Badge>
                           </Hint>
@@ -642,7 +654,7 @@ export function DailyTaskList({
                         aria-label={m.edit_with_name({ name: task.text })}
                         onClick={() => openEditModal(task)}
                       >
-                        <i className="bi bi-pencil" aria-hidden="true"></i>
+                        <Icon icon={PencilIcon} />
                       </Button>
                       <Button
                         variant="outline-danger"
@@ -650,7 +662,7 @@ export function DailyTaskList({
                         aria-label={m.delete_with_name({ name: task.text })}
                         onClick={() => onRemoveTask(task.id)}
                       >
-                        <i className="bi bi-trash" aria-hidden="true"></i>
+                        <Icon icon={Trash2Icon} />
                       </Button>
                     </div>
                   </div>

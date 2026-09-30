@@ -1,3 +1,12 @@
+import {
+  Calendar as CalendarIcon,
+  CalendarDays as CalendarDaysIcon,
+  Columns3 as Columns3Icon,
+  Info as InfoIcon,
+  Pencil as PencilIcon,
+  Trash2 as Trash2Icon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -263,7 +272,7 @@ export function CalendarView({
 
     if (modalMode === "edit" && editEntryId) {
       updateEntry(editEntryId, nextEntry);
-      toast.showSuccess(m.calendar_event_updated(), "bi-pencil-fill");
+      toast.showSuccess(m.calendar_event_updated(), PencilIcon);
     } else {
       addEntries([nextEntry]);
       toast.showSuccess(m.calendar_event_added());
@@ -284,7 +293,7 @@ export function CalendarView({
     if (!timeOffEnabled) return;
     if (deleteEntryId) {
       deleteEntry(deleteEntryId);
-      toast.showSuccess(m.calendar_event_deleted(), "bi-trash");
+      toast.showSuccess(m.calendar_event_deleted(), Trash2Icon);
     }
     setShowDeleteConfirm(false);
     setDeleteEntryId(null);
@@ -407,12 +416,12 @@ export function CalendarView({
       <Card>
         <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
           <span className="fw-semibold">
-            <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
+            <Icon icon={CalendarIcon} className="me-2" />
             {m.calendar_heading()}
           </span>
           {!getShiftForDate ? (
             <small className="text-muted">
-              <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
+              <Icon icon={InfoIcon} className="me-1" />
               {m.calendar_select_schedule_hint()}
             </small>
           ) : (
@@ -425,7 +434,7 @@ export function CalendarView({
                   aria-pressed={showAnnualSummary}
                   title={m.calendar_annual_summary_toggle_title()}
                 >
-                  <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
+                  <Icon icon={Columns3Icon} className="me-1" />
                   {m.calendar_annual_summary()}
                 </Button>
               )}
@@ -448,7 +457,7 @@ export function CalendarView({
           {!getShiftForDate ? (
             <div className="text-center">
               <EmptyState
-                icon="bi-calendar3"
+                icon={CalendarIcon}
                 title={m.calendar_welcome_title()}
                 iconSize="2.5rem"
                 description={
@@ -469,7 +478,7 @@ export function CalendarView({
               {onOpenScheduleTab && (
                 <div>
                   <Button size="sm" variant="outline-secondary" onClick={onOpenScheduleTab}>
-                    <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
+                    <Icon icon={CalendarDaysIcon} className="me-2" />
                     {m.calendar_view_schedule_btn()}
                   </Button>
                 </div>

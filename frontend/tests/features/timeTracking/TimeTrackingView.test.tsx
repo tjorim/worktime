@@ -69,11 +69,11 @@ describe("TimeTrackingView", () => {
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
 
-      const dailyIcon = dailyButton.querySelector("i");
-      const weeklyIcon = weeklyButton.querySelector("i");
+      const dailyIcon = dailyButton.querySelector("svg");
+      const weeklyIcon = weeklyButton.querySelector("svg");
 
-      expect(dailyIcon).toHaveClass("bi-list-check");
-      expect(weeklyIcon).toHaveClass("bi-bar-chart-line");
+      expect(dailyIcon).toHaveClass("lucide-list-checks");
+      expect(weeklyIcon).toHaveClass("lucide-chart-no-axes-column-increasing");
     });
   });
 

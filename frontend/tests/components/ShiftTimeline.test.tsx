@@ -83,7 +83,7 @@ describe("ShiftTimeline", () => {
       <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />,
     );
     expect(screen.getByText("Today's Shift Timeline")).toBeInTheDocument();
-    expect(container.querySelector(".bi-clock")).toBeInTheDocument();
+    expect(container.querySelector(".lucide-clock")).toBeInTheDocument();
   });
 
   it("displays current working team with active indicator", () => {

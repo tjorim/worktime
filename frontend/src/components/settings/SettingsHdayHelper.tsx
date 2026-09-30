@@ -1,3 +1,5 @@
+import { FileText as FileTextIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -90,7 +92,7 @@ export function SettingsHdayHelper() {
     <div>
       <div className="d-flex align-items-center gap-2 mb-1">
         <h6 className="text-muted mb-0">
-          <i className="bi bi-file-earmark-text me-2" aria-hidden="true"></i>
+          <Icon icon={FileTextIcon} className="me-2" />
           {m.hday_helper_heading()}
         </h6>
         {statusBadge(helperConnectionStatus)}

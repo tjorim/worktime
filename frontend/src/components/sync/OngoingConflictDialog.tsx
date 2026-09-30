@@ -1,3 +1,10 @@
+import {
+  CircleCheck as CircleCheckIcon,
+  CloudDownload as CloudDownloadIcon,
+  HardDrive as HardDriveIcon,
+  TriangleAlert as TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import {
@@ -103,7 +110,7 @@ export function OngoingConflictDialog({
       <DialogContent aria-describedby={bodyId} showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>
+            <Icon icon={TriangleAlertIcon} className="text-warning me-2" />
             {conflictCount === 1
               ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
               : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
@@ -135,19 +142,19 @@ export function OngoingConflictDialog({
               aria-pressed={selected === "keep-server"}
             >
               <div className="d-flex align-items-start gap-3">
-                <i
-                  className={`bi bi-cloud-download-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-secondary"}`}
-                  aria-hidden="true"
-                ></i>
+                <Icon
+                  icon={CloudDownloadIcon}
+                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-secondary"}`}
+                />
                 <div>
                   <div className="fw-semibold">{m.ongoing_conflict_keep_server()}</div>
                   <div className="text-muted small">{m.ongoing_conflict_keep_server_desc()}</div>
                 </div>
                 {selected === "keep-server" && (
-                  <i
-                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={CircleCheckIcon}
+                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                  />
                 )}
               </div>
             </button>
@@ -160,19 +167,19 @@ export function OngoingConflictDialog({
               aria-pressed={selected === "keep-mine"}
             >
               <div className="d-flex align-items-start gap-3">
-                <i
-                  className={`bi bi-hdd-fill fs-5 flex-shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-secondary"}`}
-                  aria-hidden="true"
-                ></i>
+                <Icon
+                  icon={HardDriveIcon}
+                  className={`fs-5 flex-shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-secondary"}`}
+                />
                 <div>
                   <div className="fw-semibold">{m.ongoing_conflict_keep_mine()}</div>
                   <div className="text-muted small">{m.ongoing_conflict_keep_mine_desc()}</div>
                 </div>
                 {selected === "keep-mine" && (
-                  <i
-                    className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={CircleCheckIcon}
+                    className="text-primary ms-auto flex-shrink-0 mt-1"
+                  />
                 )}
               </div>
             </button>

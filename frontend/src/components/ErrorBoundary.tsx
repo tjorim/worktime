@@ -1,3 +1,5 @@
+import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -62,7 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <Container className="mt-4">
           <Card>
             <Card.Header className="text-bg-danger fw-semibold">
-              <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+              <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.error_boundary_heading()}
             </Card.Header>
             <Card.Body>

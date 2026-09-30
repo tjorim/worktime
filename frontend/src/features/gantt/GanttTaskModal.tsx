@@ -1,3 +1,5 @@
+import { CircleX as CircleXIcon, Pencil as PencilIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -418,7 +420,7 @@ export function GanttTaskModal({
                           aria-label={m.gantt_logged_edit_entry_aria({ name: entry.text })}
                           onClick={() => handleEditEntry(entry.id)}
                         >
-                          <i className="bi bi-pencil" aria-hidden="true"></i>
+                          <Icon icon={PencilIcon} />
                         </Button>
                         <Button
                           variant="outline-secondary"
@@ -426,7 +428,7 @@ export function GanttTaskModal({
                           aria-label={m.gantt_logged_unlink_entry_aria({ name: entry.text })}
                           onClick={() => handleUnlinkEntry(entry)}
                         >
-                          <i className="bi bi-x-circle" aria-hidden="true"></i>
+                          <Icon icon={CircleXIcon} />
                         </Button>
                       </span>
                     </ListGroup.Item>

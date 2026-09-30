@@ -1,3 +1,14 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Bug as BugIcon,
+  CalendarClock as CalendarClockIcon,
+  CirclePlus as CirclePlusIcon,
+  Info as InfoIcon,
+  NotebookText as NotebookTextIcon,
+  RefreshCw as RefreshCwIcon,
+  Rocket as RocketIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import Accordion from "react-bootstrap/Accordion";
 import Badge from "react-bootstrap/Badge";
@@ -42,18 +53,18 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     }
   };
 
-  const getIconForSection = (title: string): string => {
+  const getIconForSection = (title: string): LucideIcon => {
     switch (title) {
       case "added":
-        return "bi-plus-circle";
+        return CirclePlusIcon;
       case "changed":
-        return "bi-arrow-repeat";
+        return RefreshCwIcon;
       case "fixed":
-        return "bi-bug";
+        return BugIcon;
       case "planned":
-        return "bi-calendar-event";
+        return CalendarClockIcon;
       default:
-        return "bi-info-circle";
+        return InfoIcon;
     }
   };
 
@@ -69,7 +80,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     return (
       <div className="mb-3">
         <h6 className={clsx(textClass, "mb-2")}>
-          <i className={clsx("bi", getIconForSection(key), "me-2")}></i>
+          <Icon icon={getIconForSection(key)} className="me-2" />
           {label}
         </h6>
         <ul className="list-unstyled">
@@ -97,7 +108,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
       <DialogContent size="lg" scrollable position="top">
         <DialogHeader>
           <DialogTitle>
-            <i className={clsx("bi", "bi-journal-text", "me-2")}></i>
+            <Icon icon={NotebookTextIcon} className="me-2" />
             {m.changelog_modal_title()}
           </DialogTitle>
         </DialogHeader>
@@ -158,7 +169,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                     <Card className="mt-3 border-0 bg-body-secondary">
                       <Card.Body className="py-2">
                         <small className="text-muted">
-                          <i className={clsx("bi", "bi-info-circle", "me-1")}></i>
+                          <Icon icon={InfoIcon} className="me-1" />
                           <strong>{version.technicalDetails.title}:</strong>{" "}
                           {version.technicalDetails.description}
                         </small>
@@ -172,7 +183,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
 
           <div className="mt-4 p-3 bg-body-secondary rounded">
             <h6 className="text-primary mb-2">
-              <i className={clsx("bi", "bi-rocket", "me-2")}></i>
+              <Icon icon={RocketIcon} className="me-2" />
               {m.changelog_coming_soon_heading()}
             </h6>
             <p className="mb-0 small text-muted">{futurePlans.join(", ")}</p>

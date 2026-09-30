@@ -1,3 +1,5 @@
+import { Clock as ClockIcon, Radio as RadioIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
 import { Hint } from "@/components/ui/tooltip";
@@ -171,7 +173,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
       aria-labelledby={timelineHeaderId}
     >
       <div className="timeline-header text-center" id={timelineHeaderId}>
-        <i className="bi bi-clock me-2" aria-hidden="true"></i>
+        <Icon icon={ClockIcon} className="me-2" />
         {m.shift_timeline_title()}
       </div>
       <div className="d-flex timeline-flow flex-wrap">
@@ -221,7 +223,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
                 </div>
               }
             >
-              <i className="bi bi-broadcast text-success live-indicator ms-1"></i>
+              <Icon icon={RadioIcon} className="text-success live-indicator ms-1" />
             </Hint>
           </div>
         </div>

@@ -1,3 +1,12 @@
+import {
+  Calendar as CalendarIcon,
+  ChartGantt as ChartGanttIcon,
+  Layers as LayersIcon,
+  List as ListIcon,
+  Plane as PlaneIcon,
+  Timer as TimerIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
@@ -187,7 +196,7 @@ export function MainTabs({
             eventKey="calendar"
             title={
               <>
-                <i className="bi bi-calendar3" aria-hidden="true"></i>
+                <Icon icon={CalendarIcon} />
                 <span className="main-tab-label">{m.tab_calendar()}</span>
               </>
             }
@@ -210,7 +219,7 @@ export function MainTabs({
               eventKey="unified-calendar"
               title={
                 <>
-                  <i className="bi bi-layers" aria-hidden="true"></i>
+                  <Icon icon={LayersIcon} />
                   <span className="main-tab-label">{m.tab_unified_calendar()}</span>
                 </>
               }
@@ -231,7 +240,7 @@ export function MainTabs({
             eventKey="schedule"
             title={
               <>
-                <i className="bi bi-list-ul" aria-hidden="true"></i>
+                <Icon icon={ListIcon} />
                 <span className="main-tab-label">{m.tab_schedule()}</span>
               </>
             }
@@ -253,7 +262,7 @@ export function MainTabs({
               eventKey="timeoff"
               title={
                 <>
-                  <i className="bi bi-airplane" aria-hidden="true"></i>
+                  <Icon icon={PlaneIcon} />
                   <span className="main-tab-label">{m.tab_time_off()}</span>
                 </>
               }
@@ -273,7 +282,7 @@ export function MainTabs({
               eventKey="timetracking"
               title={
                 <>
-                  <i className="bi bi-stopwatch" aria-hidden="true"></i>
+                  <Icon icon={TimerIcon} />
                   <span className="main-tab-label">{m.tab_time_tracking()}</span>
                 </>
               }
@@ -295,7 +304,7 @@ export function MainTabs({
               eventKey="gantt"
               title={
                 <>
-                  <i className="bi bi-bar-chart-steps" aria-hidden="true"></i>
+                  <Icon icon={ChartGanttIcon} />
                   <span className="main-tab-label">{m.tab_gantt()}</span>
                 </>
               }

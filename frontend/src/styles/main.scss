@@ -15,7 +15,6 @@
 @layer theme, legacy, base, components, utilities;
 
 @import "../../node_modules/frappe-gantt/dist/frappe-gantt.css" layer(legacy);
-@import "bootstrap-icons/font/bootstrap-icons.css" layer(legacy);
 
 @layer legacy {
   @include meta.load-css("legacy");

@@ -1,3 +1,15 @@
+import {
+  Building as BuildingIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  CirclePlus as CirclePlusIcon,
+  CircleX as CircleXIcon,
+  House as HouseIcon,
+  MapPin as MapPinIcon,
+  Pencil as PencilIcon,
+  Trash2 as Trash2Icon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
@@ -326,7 +338,7 @@ export function MonthCalendar({
       if (allowEventActions) {
         items.push({
           label: m.calendar_context_add_event(),
-          icon: "bi-plus-circle",
+          icon: CirclePlusIcon,
           onClick: () => handleAddEventWrapper(date),
         });
       }
@@ -335,7 +347,7 @@ export function MonthCalendar({
         if (showHomeLocationAction) {
           items.push({
             label: m.calendar_context_work_from_home(),
-            icon: "bi-house",
+            icon: HouseIcon,
             disabled: currentLocation === "home",
             onClick: () => {
               handleCloseContextMenu();
@@ -346,7 +358,7 @@ export function MonthCalendar({
         if (showOfficeLocationAction) {
           items.push({
             label: m.calendar_context_work_from_office(),
-            icon: "bi-building",
+            icon: BuildingIcon,
             disabled: currentLocation === "office",
             onClick: () => {
               handleCloseContextMenu();
@@ -360,7 +372,7 @@ export function MonthCalendar({
         if (items.length) items.push({ separator: true });
         items.push({
           label: m.calendar_context_other_location(),
-          icon: "bi-geo-alt",
+          icon: MapPinIcon,
           onClick: () => {
             handleCloseContextMenu();
             onSetOtherLocation(date);
@@ -371,7 +383,7 @@ export function MonthCalendar({
       if (hasStoredLocation && onSetWorkLocation) {
         items.push({
           label: m.calendar_context_clear_work_location(),
-          icon: "bi-x-circle",
+          icon: CircleXIcon,
           onClick: () => {
             handleCloseContextMenu();
             onSetWorkLocation(date, null);
@@ -384,14 +396,14 @@ export function MonthCalendar({
       const items: ContextMenuItem[] = [
         {
           label: m.calendar_context_edit_event(),
-          icon: "bi-pencil",
+          icon: PencilIcon,
           onClick: () => handleEditEventWrapper(contextMenu.eventId!),
         },
       ];
       if (onDeleteEvent) {
         items.push({
           label: m.calendar_context_delete_event(),
-          icon: "bi-trash",
+          icon: Trash2Icon,
           variant: "danger" as const,
           onClick: () => {
             handleCloseContextMenu();
@@ -432,7 +444,7 @@ export function MonthCalendar({
             onClick={() => onMonthChange(month.subtract(1, "month"))}
             aria-label={m.calendar_nav_previous_month()}
           >
-            <i className="bi bi-chevron-left" aria-hidden="true"></i>
+            <Icon icon={ChevronLeftIcon} />
           </Button>
           <Button
             variant={isCurrentMonth ? "primary" : "outline-primary"}
@@ -441,7 +453,7 @@ export function MonthCalendar({
             disabled={isCurrentMonth}
             aria-label={m.calendar_nav_current_month_label()}
           >
-            <i className="bi bi-house me-1" aria-hidden="true"></i>
+            <Icon icon={HouseIcon} className="me-1" />
             {m.calendar_nav_current_month_text()}
           </Button>
           <Button
@@ -450,7 +462,7 @@ export function MonthCalendar({
             onClick={() => onMonthChange(month.add(1, "month"))}
             aria-label={m.calendar_nav_next_month()}
           >
-            <i className="bi bi-chevron-right" aria-hidden="true"></i>
+            <Icon icon={ChevronRightIcon} />
           </Button>
         </div>
       </div>

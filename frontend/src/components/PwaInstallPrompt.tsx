@@ -1,3 +1,4 @@
+import { Download as DownloadIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { usePwaInstall } from "@/contexts/PwaInstallContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -38,7 +39,7 @@ export function PwaInstallPrompt() {
       const toastId = addToast({
         message: m.pwa_install_prompt_message(),
         variant: "info",
-        icon: "bi-download",
+        icon: DownloadIcon,
         autohide: false,
         action: {
           label: m.pwa_install_now(),

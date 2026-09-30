@@ -1,3 +1,5 @@
+import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { ChangeEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -102,7 +104,7 @@ export function LongWeekendModal({
 
           {!loading && error && (
             <p className="text-danger small mb-0">
-              <i className="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+              <Icon icon={TriangleAlertIcon} className="me-1" />
               {error}
             </p>
           )}

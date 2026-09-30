@@ -1,3 +1,4 @@
+import { Trash2 as Trash2Icon, type LucideIcon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -9,7 +10,7 @@ interface UseSettingsResetFlowParams {
   resetSettings: () => void;
   clearTimeOffEvents: () => void;
   onHide: () => void;
-  showSuccessToast: (message: string, icon?: string) => void;
+  showSuccessToast: (message: string, icon?: LucideIcon) => void;
   showWarningToast: (message: string) => void;
   /** When true and `fetchFn` is provided, a successful reset re-pulls the
    * account's saved preferences afterward — see the comment on the pull call
@@ -138,7 +139,7 @@ export function useSettingsResetFlow({
       if (settingsCleared) parts.push(m.reset_item_settings());
       if (timeTrackingCleared) parts.push(m.reset_item_time_tracking_data());
       if (timeOffCleared) parts.push(m.reset_item_time_off_data());
-      showSuccessToast(m.data_cleared({ items: listFormat.format(parts) }), "bi-trash");
+      showSuccessToast(m.data_cleared({ items: listFormat.format(parts) }), Trash2Icon);
     } else if (!anythingSucceeded && somethingFailed) {
       showWarningToast(m.failed_to_clear({ items: listFormat.format(errors) }));
     } else if (anythingSucceeded && somethingFailed) {

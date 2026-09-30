@@ -1,3 +1,10 @@
+import {
+  ChartColumn as ChartColumnIcon,
+  CirclePlus as CirclePlusIcon,
+  Table as TableIcon,
+  Trash2 as Trash2Icon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -136,7 +143,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
             aria-pressed={view === "chart"}
             onClick={() => updateLastGanttView("chart")}
           >
-            <i className="bi bi-bar-chart me-1" aria-hidden="true"></i>
+            <Icon icon={ChartColumnIcon} className="me-1" />
             {m.gantt_chart_view()}
           </Button>
           <Button
@@ -145,12 +152,12 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
             aria-pressed={view === "table"}
             onClick={() => updateLastGanttView("table")}
           >
-            <i className="bi bi-table me-1" aria-hidden="true"></i>
+            <Icon icon={TableIcon} className="me-1" />
             {m.gantt_table_view()}
           </Button>
         </ButtonGroup>
         <Button size="sm" onClick={handleAddTask}>
-          <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+          <Icon icon={CirclePlusIcon} className="me-1" />
           {m.gantt_task_modal_add()}
         </Button>
       </div>
@@ -192,7 +199,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
         message={getGanttDeleteConfirmMessage(editingTask?.name, linkedEntryCount)}
         confirmLabel={m.gantt_delete_label()}
         variant="danger"
-        icon="bi-trash"
+        icon={Trash2Icon}
         onConfirm={handleDeleteTask}
         onCancel={() => setShowDeleteConfirm(false)}
       />

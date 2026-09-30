@@ -1,3 +1,5 @@
+import { Keyboard as KeyboardIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import {
   Dialog,
   DialogContent,
@@ -64,7 +66,7 @@ export function KeyboardShortcutsModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-keyboard me-2"></i>
+            <Icon icon={KeyboardIcon} className="me-2" />
             {m.keyboard_shortcuts_label()}
           </DialogTitle>
         </DialogHeader>

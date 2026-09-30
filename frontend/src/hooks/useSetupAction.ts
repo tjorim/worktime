@@ -1,3 +1,8 @@
+import {
+  CalendarDays as CalendarDaysIcon,
+  UserPlus as UserPlusIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
 
@@ -21,8 +26,8 @@ interface SetupActionResult {
   teamCount: number;
   /** Semantic button key based on what's needed */
   buttonTextKey: "select_schedule" | "select_team";
-  /** Appropriate Bootstrap icon class (without "bi " prefix) */
-  buttonIcon: string;
+  /** Appropriate Lucide icon component */
+  buttonIcon: LucideIcon;
 }
 
 /**
@@ -47,7 +52,7 @@ export function useSetupAction(options?: UseSetupActionOptions): SetupActionResu
 
   // Button text and icon based on context
   const buttonTextKey = needsSchedule ? "select_schedule" : "select_team";
-  const buttonIcon = needsSchedule ? "bi-calendar-week" : "bi-person-plus";
+  const buttonIcon = needsSchedule ? CalendarDaysIcon : UserPlusIcon;
 
   return {
     needsSchedule,

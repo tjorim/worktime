@@ -1,3 +1,5 @@
+import { ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, X as XIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import { Hint } from "@/components/ui/tooltip";
 import clsx from "clsx";
@@ -87,10 +89,7 @@ export function Step3ScheduleSelection({
 
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
         <Button variant="outline-secondary" onClick={onPrev} className="order-2 order-sm-1">
-          <i
-            className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}
-            aria-hidden="true"
-          ></i>{" "}
+          <Icon icon={isChangeFlow ? XIcon : ArrowLeftIcon} className="me-1" />{" "}
           {isChangeFlow ? m.cancel() : m.back()}
         </Button>
         <Button
@@ -99,7 +98,7 @@ export function Step3ScheduleSelection({
           disabled={!selectedSchedule}
           className="order-1 order-sm-2"
         >
-          {continueLabel} <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          {continueLabel} <Icon icon={ArrowRightIcon} className="ms-1" />
         </Button>
       </div>
     </>

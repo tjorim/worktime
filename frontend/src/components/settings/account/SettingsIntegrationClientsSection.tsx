@@ -1,3 +1,5 @@
+import { Plug as PlugIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -63,7 +65,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
   return (
     <div className="p-3">
       <h6 className="text-muted mb-3">
-        <i className="bi bi-plug me-2"></i>
+        <Icon icon={PlugIcon} className="me-2" />
         {m.integration_clients_section_title()}
       </h6>
       <p className="text-muted small mb-3">{m.integration_clients_description()}</p>
@@ -213,7 +215,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
         }}
         onCancel={() => setConfirmation(null)}
         variant={confirmation?.action === "revoke" ? "danger" : "primary"}
-        icon="bi-plug"
+        icon={PlugIcon}
       />
     </div>
   );

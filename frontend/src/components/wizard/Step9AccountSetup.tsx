@@ -1,3 +1,14 @@
+import {
+  ArrowLeft as ArrowLeftIcon,
+  Check as CheckIcon,
+  CircleCheck as CircleCheckIcon,
+  CircleX as CircleXIcon,
+  Cloud as CloudIcon,
+  HardDrive as HardDriveIcon,
+  UserCheck as UserCheckIcon,
+  UserPlus as UserPlusIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
@@ -30,10 +41,7 @@ export function Step9AccountSetup({
 
       {isAuthenticated ? (
         <div className="text-center py-3">
-          <i
-            className="bi bi-person-check-fill text-success display-6 mb-3 d-block"
-            aria-hidden="true"
-          ></i>
+          <Icon icon={UserCheckIcon} className="text-success display-6 mb-3 d-block" />
           <p className="fw-medium">
             {displayName ? m.auth_logged_in_as({ displayName }) : m.account_signed_in()}
           </p>
@@ -46,24 +54,24 @@ export function Step9AccountSetup({
             <Card className="h-100 border-secondary">
               <Card.Body className="p-3">
                 <Card.Title className="fs-6 fw-semibold text-secondary mb-3">
-                  <i className="bi bi-hdd me-2" aria-hidden="true"></i>
+                  <Icon icon={HardDriveIcon} className="me-2" />
                   {m.wizard_account_local_card_title()}
                 </Card.Title>
                 <ul className="list-unstyled small mb-3">
                   <li className="mb-2">
-                    <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleCheckIcon} className="text-success me-2" />
                     {m.wizard_account_local_pro_1()}
                   </li>
                   <li className="mb-2">
-                    <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleCheckIcon} className="text-success me-2" />
                     {m.wizard_account_local_pro_2()}
                   </li>
                   <li className="mb-2 text-muted">
-                    <i className="bi bi-x-circle text-danger me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleXIcon} className="text-danger me-2" />
                     {m.wizard_account_local_con_1()}
                   </li>
                   <li className="text-muted">
-                    <i className="bi bi-x-circle text-danger me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleXIcon} className="text-danger me-2" />
                     {m.wizard_account_local_con_2()}
                   </li>
                 </ul>
@@ -79,7 +87,7 @@ export function Step9AccountSetup({
             <Card className="h-100 border-primary">
               <Card.Body className="p-3">
                 <Card.Title className="fs-6 fw-semibold text-primary mb-3">
-                  <i className="bi bi-cloud me-2" aria-hidden="true"></i>
+                  <Icon icon={CloudIcon} className="me-2" />
                   {m.wizard_account_connected_card_title()}
                   <Badge bg="primary" className="ms-2 fw-normal" style={{ fontSize: "0.65em" }}>
                     {m.wizard_account_recommended()}
@@ -87,20 +95,20 @@ export function Step9AccountSetup({
                 </Card.Title>
                 <ul className="list-unstyled small mb-3">
                   <li className="mb-2">
-                    <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleCheckIcon} className="text-success me-2" />
                     {m.wizard_account_connected_pro_1()}
                   </li>
                   <li className="mb-2">
-                    <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleCheckIcon} className="text-success me-2" />
                     {m.wizard_account_connected_pro_2()}
                   </li>
                   <li className="mb-2">
-                    <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <Icon icon={CircleCheckIcon} className="text-success me-2" />
                     {m.wizard_account_connected_pro_3()}
                   </li>
                 </ul>
                 <Button variant="primary" size="sm" className="w-100" onClick={onConnectAccount}>
-                  <i className="bi bi-person-plus me-1" aria-hidden="true"></i>
+                  <Icon icon={UserPlusIcon} className="me-1" />
                   {m.account_connect_btn()}
                 </Button>
               </Card.Body>
@@ -111,11 +119,11 @@ export function Step9AccountSetup({
 
       <div className="d-flex justify-content-between mt-2">
         <Button variant="outline-secondary" size="sm" onClick={onPrev} ref={firstButtonRef}>
-          <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
+          <Icon icon={ArrowLeftIcon} className="me-1" /> {m.back()}
         </Button>
         {isAuthenticated && (
           <Button variant="primary" onClick={onSkip}>
-            {m.wizard_finish_setup()} <i className="bi bi-check-lg ms-1" aria-hidden="true"></i>
+            {m.wizard_finish_setup()} <Icon icon={CheckIcon} className="ms-1" />
           </Button>
         )}
       </div>

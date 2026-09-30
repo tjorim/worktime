@@ -108,7 +108,7 @@ describe("SyncStatusIndicator spin state", () => {
     render(<SyncStatusIndicator />);
 
     const indicator = screen.getByLabelText("Sync status: Syncing…");
-    expect(indicator.querySelector("i")).toHaveClass("sync-spin");
+    expect(indicator.querySelector("svg")).toHaveClass("sync-spin");
   });
 
   it("does not spin the static pending icon once syncing has stopped", () => {
@@ -118,6 +118,6 @@ describe("SyncStatusIndicator spin state", () => {
     render(<SyncStatusIndicator />);
 
     const indicator = screen.getByLabelText("Sync status: 2 pending");
-    expect(indicator.querySelector("i")).not.toHaveClass("sync-spin");
+    expect(indicator.querySelector("svg")).not.toHaveClass("sync-spin");
   });
 });
