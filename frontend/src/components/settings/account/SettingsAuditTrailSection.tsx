@@ -1,3 +1,5 @@
+import { History as HistoryIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -39,7 +41,7 @@ export function SettingsAuditTrailSection({
     <div className="border-bottom">
       <div className="p-3">
         <h6 className="text-muted mb-3">
-          <i className="bi bi-clock-history me-2"></i>
+          <Icon icon={HistoryIcon} className="me-2" />
           {teamWide ? m.audit_trail_admin_title() : m.audit_trail_title()}
         </h6>
         <ListGroup variant="flush">

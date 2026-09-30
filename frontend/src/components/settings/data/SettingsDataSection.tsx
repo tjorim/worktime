@@ -1,3 +1,12 @@
+import {
+  ChevronRight as ChevronRightIcon,
+  Download as DownloadIcon,
+  RotateCw as RotateCwIcon,
+  Trash2 as Trash2Icon,
+  Upload as UploadIcon,
+  Zap as ZapIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import ListGroup from "react-bootstrap/ListGroup";
 import * as m from "@/paraglide/messages.js";
 
@@ -18,7 +27,7 @@ export function SettingsDataSection({
     <div>
       <div className="p-3">
         <h6 className="text-muted mb-3">
-          <i className="bi bi-lightning me-2"></i>
+          <Icon icon={ZapIcon} className="me-2" />
           {m.quick_actions_title()}
         </h6>
         <ListGroup variant="flush">
@@ -26,12 +35,12 @@ export function SettingsDataSection({
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <div className="fw-medium">
-                  <i className="bi bi-download me-2"></i>
+                  <Icon icon={DownloadIcon} className="me-2" />
                   {m.backup_app_data_label()}
                 </div>
                 <small className="text-muted">{m.backup_app_data_description()}</small>
               </div>
-              <i className="bi bi-chevron-right text-muted"></i>
+              <Icon icon={ChevronRightIcon} className="text-muted" />
             </div>
           </ListGroup.Item>
           <ListGroup.Item
@@ -43,24 +52,24 @@ export function SettingsDataSection({
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <div className="fw-medium">
-                  <i className="bi bi-upload me-2"></i>
+                  <Icon icon={UploadIcon} className="me-2" />
                   {isRestoringBackup ? m.restore_backup_busy() : m.restore_backup_label()}
                 </div>
                 <small className="text-muted">{m.restore_backup_description()}</small>
               </div>
-              <i className="bi bi-chevron-right text-muted"></i>
+              <Icon icon={ChevronRightIcon} className="text-muted" />
             </div>
           </ListGroup.Item>
           <ListGroup.Item action onClick={onResetSettings} className="text-danger">
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <div className="fw-medium">
-                  <i className="bi bi-trash me-2"></i>
+                  <Icon icon={Trash2Icon} className="me-2" />
                   {m.reset_settings_label()}
                 </div>
                 <small className="text-muted">{m.reset_settings_description()}</small>
               </div>
-              <i className="bi bi-arrow-clockwise text-danger"></i>
+              <Icon icon={RotateCwIcon} className="text-danger" />
             </div>
           </ListGroup.Item>
         </ListGroup>

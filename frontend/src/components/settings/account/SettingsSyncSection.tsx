@@ -1,9 +1,15 @@
+import {
+  CloudCheck as CloudCheckIcon,
+  RefreshCw as RefreshCwIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import * as m from "@/paraglide/messages.js";
 
 interface SyncStatusViewModel {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   variant: string;
 }
@@ -37,7 +43,7 @@ export function SettingsSyncSection({
     <div className="border-bottom">
       <div className="p-3">
         <h6 className="text-muted mb-3">
-          <i className="bi bi-cloud-check me-2"></i>
+          <Icon icon={CloudCheckIcon} className="me-2" />
           {m.sync_section_title()}
         </h6>
         <ListGroup variant="flush">
@@ -45,10 +51,10 @@ export function SettingsSyncSection({
             <ListGroup.Item>
               <div className="d-flex flex-column gap-3">
                 <div className={`fw-medium text-${syncStatus.variant}`}>
-                  <i
-                    className={`bi ${syncStatus.icon}${isSyncing ? " sync-spin" : ""} me-2`}
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={syncStatus.icon}
+                    className={`${isSyncing ? " sync-spin" : ""} me-2`}
+                  />
                   {syncStatus.label}
                 </div>
                 <div className="small text-muted d-flex flex-column gap-1">
@@ -81,7 +87,7 @@ export function SettingsSyncSection({
                     onClick={onTriggerPull}
                     disabled={isSyncing}
                   >
-                    <i className="bi bi-arrow-repeat me-1"></i>
+                    <Icon icon={RefreshCwIcon} className="me-1" />
                     {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}
                   </Button>
                 </div>

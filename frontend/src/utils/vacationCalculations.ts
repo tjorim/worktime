@@ -1,3 +1,14 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Briefcase as BriefcaseIcon,
+  Building as BuildingIcon,
+  CalendarX as CalendarXIcon,
+  Ellipsis as EllipsisIcon,
+  Gift as GiftIcon,
+  GraduationCap as GraduationCapIcon,
+  Thermometer as ThermometerIcon,
+  Umbrella as UmbrellaIcon,
+} from "lucide-react";
 import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { dayjs } from "./dateTimeUtils";
@@ -34,15 +45,15 @@ export const EVENT_TYPE_ORDER: EventTypeKey[] = [
   "other",
 ];
 
-export const EVENT_TYPE_ICONS: Record<EventTypeKey, string> = {
-  holiday: "bi-umbrella",
-  business: "bi-briefcase",
-  course: "bi-mortarboard",
-  in: "bi-building",
-  weekend: "bi-calendar-x",
-  birthday: "bi-gift",
-  ill: "bi-thermometer-half",
-  other: "bi-three-dots",
+export const EVENT_TYPE_ICONS: Record<EventTypeKey, LucideIcon> = {
+  holiday: UmbrellaIcon,
+  business: BriefcaseIcon,
+  course: GraduationCapIcon,
+  in: BuildingIcon,
+  weekend: CalendarXIcon,
+  birthday: GiftIcon,
+  ill: ThermometerIcon,
+  other: EllipsisIcon,
 };
 
 export const EVENT_TYPE_COLORS: Record<EventTypeKey, string> = {

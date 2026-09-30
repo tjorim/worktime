@@ -1,3 +1,5 @@
+import { type LucideIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -25,7 +27,7 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   variant?: "danger" | "primary" | "warning";
-  icon?: string;
+  icon?: LucideIcon;
 }
 
 /**
@@ -40,7 +42,7 @@ interface ConfirmationDialogProps {
  * @param onConfirm - Callback invoked when the confirm button is clicked
  * @param onCancel - Callback invoked when the dialog is dismissed (cancel action, backdrop click or Escape)
  * @param variant - Visual variant of the confirm button; typically "danger", "primary" or "warning" (defaults to "primary")
- * @param icon - Optional Bootstrap icon class (e.g., "bi-exclamation-triangle") displayed before the title
+ * @param icon - Optional Lucide icon component displayed before the title
  * @returns The dialog element when `isOpen` is true, `null` otherwise
  */
 export function ConfirmationDialog({
@@ -75,7 +77,7 @@ export function ConfirmationDialog({
       >
         <Header>
           <Title>
-            {icon && <i className={`bi ${icon} me-2`} aria-hidden="true"></i>}
+            {icon && <Icon icon={icon} className="me-2" />}
             {title}
           </Title>
         </Header>

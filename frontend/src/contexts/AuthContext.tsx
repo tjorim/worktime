@@ -1,3 +1,4 @@
+import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
@@ -155,7 +156,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       sessionWarningToastIdRef.current = addToast({
         message,
         variant: "warning",
-        icon: "bi-exclamation-triangle-fill",
+        icon: TriangleAlertIcon,
         // The default 4s autohide is not long enough to notice a toast and
         // reach its button; match the error delay so the action stays usable.
         delay: 10000,

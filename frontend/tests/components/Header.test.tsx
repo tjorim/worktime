@@ -43,7 +43,7 @@ describe("Header", () => {
       await user.click(screen.getByLabelText("Settings"));
 
       const backButton = await screen.findByLabelText("Back to app");
-      expect(backButton.querySelector(".bi-arrow-left")).toBeInTheDocument();
+      expect(backButton.querySelector(".lucide-arrow-left")).toBeInTheDocument();
       await user.click(backButton);
       expect(await screen.findByLabelText("Settings")).toBeInTheDocument();
     });

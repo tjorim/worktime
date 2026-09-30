@@ -1,3 +1,5 @@
+import { Clipboard as ClipboardIcon, Columns3 as Columns3Icon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -23,7 +25,7 @@ import {
 import { useToast } from "@/contexts/ToastContext";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
 import type { WorkLocationMap } from "@/types/workLocation";
-import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
+import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 
@@ -113,10 +115,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           header: m.location_col_location({}, { locale }),
           cell: (context) => (
             <>
-              <i
-                className={`bi ${WORK_LOCATION_ICON_CLASS[context.row.original.location]} me-1`}
-                aria-hidden="true"
-              ></i>
+              <Icon icon={WORK_LOCATION_ICONS[context.row.original.location]} className="me-1" />
               {context.getValue()}
             </>
           ),
@@ -201,7 +200,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     <div>
       <div className="d-flex justify-content-between align-items-center mb-2">
         <span className="fw-semibold small">
-          <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
+          <Icon icon={Columns3Icon} className="me-1" />
           {m.location_summary_title({ year })}
         </span>
         <Button
@@ -210,7 +209,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           onClick={handleCopy}
           aria-label={m.location_copy_aria()}
         >
-          <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
+          <Icon icon={ClipboardIcon} className="me-1" />
           {m.location_copy_btn()}
         </Button>
       </div>

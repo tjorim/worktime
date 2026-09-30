@@ -1,3 +1,10 @@
+import {
+  ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
+  CalendarCheck as CalendarCheckIcon,
+  Check as CheckIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -24,7 +31,7 @@ export function Step5TimeOffSetup({
   return (
     <>
       <div className="text-center mb-4">
-        <i className="bi bi-calendar-check display-4 text-primary" aria-hidden="true"></i>
+        <Icon icon={CalendarCheckIcon} className="display-4 text-primary" />
         <h4 className="mt-3">{m.wizard_timeoff_heading()}</h4>
         <p className="text-muted">{m.wizard_timeoff_subtitle()}</p>
       </div>
@@ -60,14 +67,11 @@ export function Step5TimeOffSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
+          <Icon icon={ArrowLeftIcon} className="me-1" /> {m.back()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
           {isLastStep ? m.wizard_finish_setup() : m.continue()}
-          <i
-            className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`}
-            aria-hidden="true"
-          ></i>
+          <Icon icon={isLastStep ? CheckIcon : ArrowRightIcon} className="ms-1" />
         </Button>
       </div>
     </>

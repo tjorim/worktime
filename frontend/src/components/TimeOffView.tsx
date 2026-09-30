@@ -1,3 +1,19 @@
+import {
+  ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon,
+  CircleCheck as CircleCheckIcon,
+  CloudDownload as CloudDownloadIcon,
+  CloudUpload as CloudUploadIcon,
+  Download as DownloadIcon,
+  FileLock as FileLockIcon,
+  FileX as FileXIcon,
+  Pencil as PencilIcon,
+  Plug as PlugIcon,
+  Table as TableIcon,
+  TriangleAlert as TriangleAlertIcon,
+  Upload as UploadIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -198,7 +214,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     ) {
       setViewMode(DEFAULT_TIME_OFF_VIEW);
       if (wasConnected) {
-        toast.showWarning(m.team_helper_unavailable_toast(), "bi-plug");
+        toast.showWarning(m.team_helper_unavailable_toast(), PlugIcon);
       }
     }
   }, [hdayHelperOptions.hdayHelperUrl, helperConnectionStatus, toast, viewMode]);
@@ -380,7 +396,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
 
     if (editEntryId) {
       updateEntry(editEntryId, nextEntry);
-      toast.showSuccess(m.timeoff_event_updated(), "bi-pencil-fill");
+      toast.showSuccess(m.timeoff_event_updated(), PencilIcon);
     } else {
       addEntries([nextEntry]);
       toast.showSuccess(m.timeoff_event_added());
@@ -496,9 +512,9 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           result.skippedLines.length === 1
             ? m.timeoff_hday_skipped_one()
             : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
-        toast.showWarning(`${m.timeoff_hday_applied()} ${skippedMsg}`, "bi-exclamation-triangle");
+        toast.showWarning(`${m.timeoff_hday_applied()} ${skippedMsg}`, TriangleAlertIcon);
       } else {
-        toast.showSuccess(m.timeoff_hday_applied(), "bi-check-circle");
+        toast.showSuccess(m.timeoff_hday_applied(), CircleCheckIcon);
       }
     } catch (error) {
       logger.error("Failed to parse raw .hday content:", error);
@@ -537,10 +553,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
         toast.showWarning(
           `${m.timeoff_imported({ name: file.name })} ${skippedMsg}`,
-          "bi-exclamation-triangle",
+          TriangleAlertIcon,
         );
       } else {
-        toast.showSuccess(m.timeoff_imported({ name: file.name }), "bi-download");
+        toast.showSuccess(m.timeoff_imported({ name: file.name }), DownloadIcon);
       }
     } catch (error) {
       logger.error("Failed to import .hday file:", error);
@@ -619,7 +635,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             // case the user needs to act on (pull first) before anything of
             // theirs can sync again. Don't auto-retry a queued push against the
             // same known-stale etag — that would just conflict again silently.
-            toast.showWarning(m.timeoff_push_conflict(), "bi-file-earmark-lock");
+            toast.showWarning(m.timeoff_push_conflict(), FileLockIcon);
           } else if (!response.ok) {
             const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
             throw new Error(m.timeoff_push_failed({ error: errorMessage }));
@@ -629,7 +645,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             setHdayChangedRemotely(false);
             succeeded = true;
             if (!currentOptions?.silent) {
-              toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), "bi-cloud-upload");
+              toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), CloudUploadIcon);
             }
           }
         } catch (error) {
@@ -671,10 +687,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) return;
 
       if (response.status === 404) {
-        toast.showWarning(
-          m.timeoff_pull_not_found({ username: hdayUsername }),
-          "bi-file-earmark-x",
-        );
+        toast.showWarning(m.timeoff_pull_not_found({ username: hdayUsername }), FileXIcon);
         return;
       }
 
@@ -704,10 +717,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
         toast.showWarning(
           `${m.timeoff_pulled({ username: hdayUsername })} ${skippedMsg}`,
-          "bi-exclamation-triangle",
+          TriangleAlertIcon,
         );
       } else {
-        toast.showSuccess(m.timeoff_pulled({ username: hdayUsername }), "bi-cloud-download");
+        toast.showSuccess(m.timeoff_pulled({ username: hdayUsername }), CloudDownloadIcon);
       }
     } catch (error) {
       logger.error("Failed to pull .hday content from helper:", error);
@@ -762,7 +775,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.showSuccess(m.timeoff_exported(), "bi-upload");
+    toast.showSuccess(m.timeoff_exported(), UploadIcon);
   }, [entries, rawText, toast]);
 
   // Use custom hook for keyboard shortcuts
@@ -807,7 +820,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           dismissible
         >
           <span>
-            <i className="bi bi-cloud-arrow-down me-2" aria-hidden="true"></i>
+            <Icon icon={CloudDownloadIcon} className="me-2" />
             {m.timeoff_hday_changed_remotely()}
           </span>
           <Button
@@ -828,7 +841,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             aria-pressed={viewMode === "table"}
             onClick={() => setViewMode("table")}
           >
-            <i className="bi bi-table me-1" aria-hidden="true"></i>
+            <Icon icon={TableIcon} className="me-1" />
             {m.timeoff_view_table()}
           </Button>
           <Button
@@ -837,7 +850,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             aria-pressed={viewMode === "stats"}
             onClick={() => setViewMode("stats")}
           >
-            <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
+            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="me-1" />
             {m.timeoff_view_statistics()}
           </Button>
           {helperConnectionStatus === "connected" && (
@@ -847,7 +860,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
               aria-pressed={viewMode === "team"}
               onClick={() => setViewMode("team")}
             >
-              <i className="bi bi-people me-1" aria-hidden="true"></i>
+              <Icon icon={UsersIcon} className="me-1" />
               {m.timeoff_view_team()}
             </Button>
           )}

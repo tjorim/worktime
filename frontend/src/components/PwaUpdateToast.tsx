@@ -1,3 +1,4 @@
+import { RotateCw as RotateCwIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useToast } from "@/contexts/ToastContext";
@@ -27,7 +28,7 @@ export function PwaUpdateToast() {
     const toastId = addToast({
       message: m.pwa_update_available(),
       variant: "info",
-      icon: "bi-arrow-clockwise",
+      icon: RotateCwIcon,
       autohide: false,
       action: {
         label: m.pwa_update_reload(),

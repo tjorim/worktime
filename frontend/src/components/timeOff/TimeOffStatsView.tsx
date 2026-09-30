@@ -1,3 +1,5 @@
+import { TrendingUp as TrendingUpIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
@@ -43,7 +45,7 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
       <Card.Header>
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
           <span className="fw-semibold">
-            <i className="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>
+            <Icon icon={TrendingUpIcon} className="me-2" />
             {m.timeoff_vacation_stats()}
           </span>
           <div className="d-flex align-items-center gap-2">
@@ -81,9 +83,9 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
             {filteredTypes.map((type) => (
               <div key={type.key} className="d-flex justify-content-between align-items-center">
                 <div className="d-flex align-items-center gap-2">
-                  <i
-                    className={`bi ${EVENT_TYPE_ICONS[type.key]} text-${EVENT_TYPE_COLORS[type.key]}`}
-                    aria-hidden="true"
+                  <Icon
+                    icon={EVENT_TYPE_ICONS[type.key]}
+                    className={`text-${EVENT_TYPE_COLORS[type.key]}`}
                   />
                   <span>{type.label}</span>
                 </div>

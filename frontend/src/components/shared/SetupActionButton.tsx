@@ -1,4 +1,4 @@
-import clsx from "clsx";
+import { Icon } from "@/components/shared/Icon";
 import Button from "react-bootstrap/Button";
 import { useSetupAction } from "@/hooks/useSetupAction";
 import * as m from "@/paraglide/messages.js";
@@ -57,7 +57,7 @@ export function SetupActionButton({
         onClick={onChangeSchedule}
         title={m.setup_btn_select_schedule_title()}
       >
-        <i className={clsx("bi", buttonIcon, "me-1")} aria-hidden="true"></i>
+        <Icon icon={buttonIcon} className="me-1" />
         {buttonText}
       </Button>
     );
@@ -72,7 +72,7 @@ export function SetupActionButton({
         onClick={onChangeTeam}
         title={m.setup_btn_select_team_title()}
       >
-        <i className={clsx("bi", buttonIcon, "me-1")} aria-hidden="true"></i>
+        <Icon icon={buttonIcon} className="me-1" />
         {buttonText}
       </Button>
     );

@@ -1,3 +1,13 @@
+import {
+  Calendar as CalendarIcon,
+  CalendarX as CalendarXIcon,
+  CircleArrowRight as CircleArrowRightIcon,
+  CircleCheck as CircleCheckIcon,
+  Lightbulb as LightbulbIcon,
+  MoonStar as MoonStarIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
@@ -195,10 +205,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
-              <i
-                className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-1`}
-                aria-hidden="true"
-              ></i>
+              <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="me-1" />
               {m.schedule_current_status()}
             </Card.Title>
             <div className="flex-grow-1">
@@ -220,7 +227,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                     className="small text-muted mt-1"
                   />
                   <div className="small text-success mt-2">
-                    <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
+                    <Icon icon={CircleCheckIcon} className="me-1" />
                     {m.generic_status_currently_working()}
                   </div>
                   {shiftEndCountdown && !shiftEndCountdown.isExpired && (
@@ -265,7 +272,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                 </div>
               ) : (
                 <EmptyState
-                  icon="bi-moon-stars"
+                  icon={MoonStarIcon}
                   title={m.generic_status_no_teams_title()}
                   description={m.generic_status_no_teams_desc()}
                 />
@@ -288,7 +295,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
-              <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
+              <Icon icon={CircleArrowRightIcon} className="me-1" />
               {m.generic_status_next_activity()}
             </Card.Title>
             <div className="text-muted flex-grow-1">
@@ -312,7 +319,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                 </div>
               ) : (
                 <EmptyState
-                  icon="bi-calendar-x"
+                  icon={CalendarXIcon}
                   title={m.generic_status_no_upcoming_title()}
                   description={m.generic_status_no_upcoming_desc()}
                 />
@@ -324,7 +331,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
       {hasTeams && (
         <Col xs={12} className="mt-3">
           <div className="small text-muted text-center">
-            <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
+            <Icon icon={LightbulbIcon} className="me-1" />
             {m.generic_status_select_team_hint()}
           </div>
         </Col>

@@ -1,3 +1,10 @@
+import {
+  ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
+  Check as CheckIcon,
+  Globe as GlobeIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -34,7 +41,7 @@ export function Step8WorkLocationSetup({
   return (
     <>
       <div className="text-center mb-4">
-        <i className="bi bi-globe display-4 text-primary" aria-hidden="true"></i>
+        <Icon icon={GlobeIcon} className="display-4 text-primary" />
         <h4 className="mt-3">{m.wizard_location_heading()}</h4>
         <p className="text-muted">{m.wizard_location_subtitle()}</p>
       </div>
@@ -98,14 +105,11 @@ export function Step8WorkLocationSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
+          <Icon icon={ArrowLeftIcon} className="me-1" /> {m.back()}
         </Button>
         <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
           {isLastStep ? m.wizard_finish_setup() : m.continue()}
-          <i
-            className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`}
-            aria-hidden="true"
-          ></i>
+          <Icon icon={isLastStep ? CheckIcon : ArrowRightIcon} className="ms-1" />
         </Button>
       </div>
     </>

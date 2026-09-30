@@ -1,3 +1,5 @@
+import { CalendarX as CalendarXIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Card from "react-bootstrap/Card";
@@ -466,7 +468,7 @@ export function TimeTrackingDailyView({
       <Card.Body>
         {isDayOff && (
           <Alert variant="info" className="d-flex align-items-center gap-2">
-            <i className="bi bi-calendar-x" aria-hidden="true"></i>
+            <Icon icon={CalendarXIcon} />
             {m.tt_day_off_notice()}
           </Alert>
         )}

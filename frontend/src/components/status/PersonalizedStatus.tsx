@@ -1,3 +1,13 @@
+import {
+  CalendarX as CalendarXIcon,
+  CircleArrowRight as CircleArrowRightIcon,
+  Hourglass as HourglassIcon,
+  LogIn as LogInIcon,
+  LogOut as LogOutIcon,
+  Tag as TagIcon,
+  TriangleAlert as TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useId, useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -54,7 +64,7 @@ export function PersonalizedStatusContent({
   if (!isValidScheduleType(scheduleType)) {
     return (
       <EmptyState
-        icon="bi-exclamation-triangle"
+        icon={TriangleAlertIcon}
         title={m.personalized_status_invalid_title()}
         description={m.personalized_status_invalid_desc()}
       />
@@ -228,7 +238,7 @@ export function PersonalizedStatusContent({
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
-              <i className="bi bi-tag me-1" aria-hidden="true"></i>
+              <Icon icon={TagIcon} className="me-1" />
               {m.personalized_status_today()}
             </Card.Title>
             <div className="flex-grow-1">
@@ -267,7 +277,7 @@ export function PersonalizedStatusContent({
                 )}
               {isFlexShift && flexWindow && (
                 <div className="small text-muted mt-1">
-                  <i className="bi bi-hourglass-split me-1" aria-hidden="true"></i>
+                  <Icon icon={HourglassIcon} className="me-1" />
                   {m.personalized_status_flex_window({
                     earliest: flexHourLabel(flexWindow.earliestStart),
                     latest: flexHourLabel(flexWindow.latestStart),
@@ -277,7 +287,7 @@ export function PersonalizedStatusContent({
               )}
               {isFlexShift && flexStartTime && flexEndTime && (
                 <div className="small text-muted mt-1">
-                  <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
+                  <Icon icon={LogInIcon} className="me-1" />
                   {m.personalized_status_flex_clocked({
                     start: formatTimeByPreference(flexStartTime, settings.timeFormat),
                     end: formatTimeByPreference(flexEndTime, settings.timeFormat),
@@ -287,7 +297,7 @@ export function PersonalizedStatusContent({
               {isFlexShift && flexEndRange && (
                 <div className="mt-2">
                   <span className="fw-semibold">
-                    <i className="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+                    <Icon icon={LogOutIcon} className="me-1" />
                     {m.personalized_status_flex_leave_range({
                       earliest: formatTimeByPreference(
                         flexEndRange.earliestEnd,
@@ -394,7 +404,7 @@ export function PersonalizedStatusContent({
           <Card className="h-100">
             <Card.Body className="d-flex flex-column">
               <Card.Title as="h6" className="mb-2 text-success">
-                <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
+                <Icon icon={CircleArrowRightIcon} className="me-1" />
                 {m.personalized_status_up_next()}
               </Card.Title>
               <div className="text-muted flex-grow-1">
@@ -426,7 +436,7 @@ export function PersonalizedStatusContent({
                   </div>
                 ) : (
                   <EmptyState
-                    icon="bi-calendar-x"
+                    icon={CalendarXIcon}
                     title={m.personalized_status_no_next_title()}
                     description={m.personalized_status_no_next_desc()}
                   />

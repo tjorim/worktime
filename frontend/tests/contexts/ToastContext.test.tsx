@@ -1,3 +1,4 @@
+import { Star as StarIcon } from "lucide-react";
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
@@ -26,7 +27,7 @@ function TestComponent() {
           addToast({
             message: "Custom toast",
             variant: "success",
-            icon: "bi-star-fill",
+            icon: StarIcon,
             autohide: false,
           })
         }
@@ -72,8 +73,8 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Success message")).toBeInTheDocument();
-    // Check for Bootstrap icon class
-    const icon = document.querySelector(".bi-check-circle-fill");
+    // Check for the Lucide SVG
+    const icon = document.querySelector(".lucide-circle-check");
     expect(icon).toBeInTheDocument();
   });
 
@@ -91,8 +92,8 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Error message")).toBeInTheDocument();
-    // Check for Bootstrap icon class
-    const icon = document.querySelector(".bi-x-circle-fill");
+    // Check for the Lucide SVG
+    const icon = document.querySelector(".lucide-circle-x");
     expect(icon).toBeInTheDocument();
   });
 
@@ -110,8 +111,8 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Warning message")).toBeInTheDocument();
-    // Check for Bootstrap icon class
-    const icon = document.querySelector(".bi-exclamation-triangle-fill");
+    // Check for the Lucide SVG
+    const icon = document.querySelector(".lucide-triangle-alert");
     expect(icon).toBeInTheDocument();
   });
 
@@ -129,8 +130,8 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Info message")).toBeInTheDocument();
-    // Check for Bootstrap icon class
-    const icon = document.querySelector(".bi-info-circle-fill");
+    // Check for the Lucide SVG
+    const icon = document.querySelector(".lucide-info");
     expect(icon).toBeInTheDocument();
   });
 
@@ -148,8 +149,8 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Custom toast")).toBeInTheDocument();
-    // Check for Bootstrap icon class
-    const icon = document.querySelector(".bi-star-fill");
+    // Check for the Lucide SVG
+    const icon = document.querySelector(".lucide-star");
     expect(icon).toBeInTheDocument();
   });
 

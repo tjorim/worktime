@@ -1,3 +1,13 @@
+import {
+  CalendarCheck as CalendarCheckIcon,
+  CloudDownload as CloudDownloadIcon,
+  CloudUpload as CloudUploadIcon,
+  Download as DownloadIcon,
+  Plus as PlusIcon,
+  Trash2 as Trash2Icon,
+  Upload as UploadIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -58,7 +68,7 @@ function TimeOffToolbarComponent({
     <Card.Header>
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <span className="fw-semibold">
-          <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
+          <Icon icon={CalendarCheckIcon} className="me-2" />
           {m.timeoff_management_heading()}
         </span>
         <div className="d-flex flex-wrap gap-2">
@@ -69,7 +79,7 @@ function TimeOffToolbarComponent({
               onClick={onAddEvent}
               aria-label={m.timeoff_add_event_aria()}
             >
-              <i className="bi bi-plus-lg me-1" aria-hidden="true"></i>
+              <Icon icon={PlusIcon} className="me-1" />
               {m.timeoff_add_event_btn()}
             </Button>
           )}
@@ -79,7 +89,7 @@ function TimeOffToolbarComponent({
             onClick={onImport}
             aria-label={m.timeoff_import_events_aria()}
           >
-            <i className="bi bi-download me-1" aria-hidden="true"></i>
+            <Icon icon={DownloadIcon} className="me-1" />
             {m.timeoff_import_btn()}
           </Button>
           {onPullFromHelper && (
@@ -93,7 +103,7 @@ function TimeOffToolbarComponent({
               {isPullingFromHelper ? (
                 <Spinner animation="border" size="sm" className="me-1" />
               ) : (
-                <i className="bi bi-cloud-download me-1" aria-hidden="true"></i>
+                <Icon icon={CloudDownloadIcon} className="me-1" />
               )}
               {m.timeoff_pull_btn()}
             </Button>
@@ -109,7 +119,7 @@ function TimeOffToolbarComponent({
               {isPushingToHelper ? (
                 <Spinner animation="border" size="sm" className="me-1" />
               ) : (
-                <i className="bi bi-cloud-upload me-1" aria-hidden="true"></i>
+                <Icon icon={CloudUploadIcon} className="me-1" />
               )}
               {m.timeoff_push_btn()}
             </Button>
@@ -121,7 +131,7 @@ function TimeOffToolbarComponent({
               onClick={onExport}
               aria-label={m.timeoff_export_events_aria()}
             >
-              <i className="bi bi-upload me-1" aria-hidden="true"></i>
+              <Icon icon={UploadIcon} className="me-1" />
               {m.timeoff_export_btn()}
             </Button>
           )}
@@ -135,7 +145,7 @@ function TimeOffToolbarComponent({
             onClick={onBulkDelete}
             aria-label={m.timeoff_delete_selected_events_aria()}
           >
-            <i className="bi bi-trash me-1" aria-hidden="true"></i>
+            <Icon icon={Trash2Icon} className="me-1" />
             {m.timeoff_delete_selected_btn()}
           </Button>
           <Button

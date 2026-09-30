@@ -1,3 +1,12 @@
+import {
+  Cloud as CloudIcon,
+  CloudCheck as CloudCheckIcon,
+  CloudOff as CloudOffIcon,
+  CloudUpload as CloudUploadIcon,
+  RefreshCw as RefreshCwIcon,
+  TriangleAlert as TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Hint } from "@/components/ui/tooltip";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
@@ -81,7 +90,7 @@ export function SyncStatusIndicator() {
   const { icon, label, tone } = useMemo(() => {
     if (!isOnline)
       return {
-        icon: "bi-cloud-slash",
+        icon: CloudOffIcon,
         label:
           outboxCount > 0
             ? m.sync_indicator_offline_pending({ count: String(outboxCount) })
@@ -89,24 +98,23 @@ export function SyncStatusIndicator() {
         tone: "warning",
       };
     if (hasSyncError)
-      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), tone: "danger" };
+      return { icon: CloudOffIcon, label: m.sync_indicator_error(), tone: "danger" };
     if (conflictCount > 0)
       return {
-        icon: "bi-exclamation-triangle",
+        icon: TriangleAlertIcon,
         label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
         tone: "warning",
       };
-    if (isSyncing)
-      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), tone: "info" };
+    if (isSyncing) return { icon: RefreshCwIcon, label: m.sync_indicator_syncing(), tone: "info" };
     if (outboxCount > 0)
       return {
-        icon: "bi-cloud-upload",
+        icon: CloudUploadIcon,
         label: m.sync_indicator_pending({ count: String(outboxCount) }),
         tone: "warning",
       };
     if (lastSyncedAt)
-      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), tone: "success" };
-    return { icon: "bi-cloud", label: "", tone: "neutral" };
+      return { icon: CloudCheckIcon, label: m.sync_indicator_synced(), tone: "success" };
+    return { icon: CloudIcon, label: "", tone: "neutral" };
   }, [isOnline, hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
 
   // Tooltip text is computed fresh every render so fromNow() stays accurate
@@ -152,7 +160,7 @@ export function SyncStatusIndicator() {
       tabIndex={tooltipText ? 0 : undefined}
       aria-describedby={tooltipText ? tooltipId : undefined}
     >
-      <i className={`bi ${icon}${shouldSpin ? " sync-spin" : ""}`} aria-hidden="true" />
+      <Icon icon={icon} className={`${shouldSpin ? " sync-spin" : ""}`} />
       <span className="d-none d-sm-inline">{label}</span>
     </span>
   );

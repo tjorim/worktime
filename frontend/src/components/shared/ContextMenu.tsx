@@ -1,3 +1,5 @@
+import { type LucideIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useRef, useState, useId, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
@@ -6,7 +8,7 @@ export type ContextMenuItem =
   | {
       separator?: false;
       label: string;
-      icon?: string;
+      icon?: LucideIcon;
       onClick: () => void;
       variant?: "danger";
       disabled?: boolean;
@@ -187,7 +189,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
             onClick={() => handleItemClick(item)}
             disabled={item.disabled}
           >
-            {item.icon && <i className={clsx("bi", item.icon)} aria-hidden="true"></i>}
+            {item.icon && <Icon icon={item.icon} />}
             {item.label}
           </button>
         );

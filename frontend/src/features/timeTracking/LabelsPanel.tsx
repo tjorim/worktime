@@ -1,3 +1,5 @@
+import { Tags as TagsIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -197,7 +199,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       )}
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 className="mb-0">
-          <i className="bi bi-tags me-2" aria-hidden="true"></i>
+          <Icon icon={TagsIcon} className="me-2" />
           {m.tt_labels_heading()}
         </h5>
         <Button
@@ -224,7 +226,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         {labels.length === 0 ? (
           <div className="border rounded bg-body-tertiary">
             <EmptyState
-              icon="bi-tags"
+              icon={TagsIcon}
               title={m.tt_no_labels_title()}
               description={m.tt_no_labels_desc()}
               ctaButton={{

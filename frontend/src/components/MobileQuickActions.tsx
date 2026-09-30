@@ -1,3 +1,12 @@
+import {
+  Calendar as CalendarIcon,
+  Circle as CircleIcon,
+  Plane as PlaneIcon,
+  Play as PlayIcon,
+  Plus as PlusIcon,
+  Timer as TimerIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -152,7 +161,7 @@ export function MobileQuickActions({
         aria-expanded={show}
         onClick={() => setShow(true)}
       >
-        <i className="bi bi-plus-lg" aria-hidden="true" />
+        <Icon icon={PlusIcon} />
       </Button>
 
       <Dialog
@@ -170,7 +179,7 @@ export function MobileQuickActions({
               <div className="d-grid gap-2">
                 {runningTask && (
                   <div className="rounded bg-body-tertiary p-2 d-flex align-items-center gap-2">
-                    <i className="bi bi-record-fill text-danger" aria-hidden="true" />
+                    <Icon icon={CircleIcon} className="text-danger" fill="currentColor" />
                     <div className="tw:min-w-0 flex-grow-1">
                       <div className="fw-semibold text-truncate">{runningTask.text}</div>
                       <div className="small text-muted">
@@ -235,7 +244,7 @@ export function MobileQuickActions({
                     disabled={Boolean((!runningTask && taskAtCurrentTime) || !labelId)}
                     onClick={() => void handleStartTimer()}
                   >
-                    <i className="bi bi-play-fill me-1" aria-hidden="true" />
+                    <Icon icon={PlayIcon} className="me-1" />
                     {runningTask ? m.mobile_quick_actions_switch_now() : m.tt_start_now()}
                   </Button>
                 )}
@@ -254,7 +263,7 @@ export function MobileQuickActions({
                   aria-label={m.mobile_quick_actions_open_time_tracking()}
                   onClick={() => runAction(onTrackTime)}
                 >
-                  <i className="bi bi-stopwatch me-1" aria-hidden="true" />
+                  <Icon icon={TimerIcon} className="me-1" />
                   {m.mobile_quick_actions_time()}
                 </Button>
               )}
@@ -266,7 +275,7 @@ export function MobileQuickActions({
                   aria-label={m.mobile_quick_actions_add_time_off()}
                   onClick={() => runAction(onAddTimeOff)}
                 >
-                  <i className="bi bi-airplane me-1" aria-hidden="true" />
+                  <Icon icon={PlaneIcon} className="me-1" />
                   {m.mobile_quick_actions_time_off()}
                 </Button>
               )}
@@ -277,7 +286,7 @@ export function MobileQuickActions({
                 aria-label={m.mobile_quick_actions_open_calendar()}
                 onClick={() => runAction(onOpenCalendar)}
               >
-                <i className="bi bi-calendar3 me-1" aria-hidden="true" />
+                <Icon icon={CalendarIcon} className="me-1" />
                 {m.mobile_quick_actions_calendar()}
               </Button>
             </Stack>

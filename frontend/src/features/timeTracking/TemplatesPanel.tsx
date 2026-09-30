@@ -1,3 +1,5 @@
+import { ClipboardCheck as ClipboardCheckIcon, FileText as FileTextIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -213,7 +215,7 @@ export function TemplatesPanel({
       )}
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 className="mb-0">
-          <i className="bi bi-clipboard-check me-2" aria-hidden="true"></i>
+          <Icon icon={ClipboardCheckIcon} className="me-2" />
           {m.tt_templates_heading()}
         </h5>
         <Button
@@ -232,7 +234,7 @@ export function TemplatesPanel({
         {templates.length === 0 ? (
           <div className="border rounded bg-body-tertiary">
             <EmptyState
-              icon="bi-file-earmark-text"
+              icon={FileTextIcon}
               title={m.tt_no_templates_title()}
               description={m.tt_no_templates_desc()}
               ctaButton={{

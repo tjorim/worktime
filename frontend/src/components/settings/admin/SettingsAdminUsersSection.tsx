@@ -1,3 +1,5 @@
+import { Trash2 as Trash2Icon, Users as UsersIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -37,7 +39,7 @@ export function SettingsAdminUsersSection({
     <div className="border-bottom">
       <div className="p-3">
         <h6 className="text-muted mb-3">
-          <i className="bi bi-people me-2"></i>
+          <Icon icon={UsersIcon} className="me-2" />
           {m.account_admin_users_title()}
         </h6>
         <ListGroup variant="flush">
@@ -100,7 +102,7 @@ export function SettingsAdminUsersSection({
         }}
         onCancel={() => setPendingDeleteUserId(null)}
         variant="danger"
-        icon="bi-trash"
+        icon={Trash2Icon}
       />
     </div>
   );

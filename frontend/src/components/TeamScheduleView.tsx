@@ -1,3 +1,12 @@
+import {
+  Building as BuildingIcon,
+  FileText as FileTextIcon,
+  FileX as FileXIcon,
+  Inbox as InboxIcon,
+  Search as SearchIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, SubmitEvent } from "react";
 import type { Dayjs } from "dayjs";
@@ -388,10 +397,7 @@ export function TeamScheduleView() {
         <Card.Header>
           <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
             <h5 className="mb-0">
-              <i
-                className={`bi ${teamData ? "bi-building" : "bi-people"} me-2`}
-                aria-hidden="true"
-              ></i>
+              <Icon icon={teamData ? BuildingIcon : UsersIcon} className="me-2" />
               {teamData ? teamData.name : m.team_viewer_title()}
             </h5>
 
@@ -427,7 +433,7 @@ export function TeamScheduleView() {
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-search me-1" aria-hidden="true"></i>
+                    <Icon icon={SearchIcon} className="me-1" />
                     {m.team_load_btn()}
                   </>
                 )}
@@ -529,12 +535,9 @@ export function TeamScheduleView() {
                       <Fragment key={`section-${sectionIndex}`}>
                         {/* Section header row (if multiple sections with titles) */}
                         {section.title && teamData.sections.length > 1 && (
-                          <tr className="">
+                          <tr>
                             <td className="tw:team-name-width tw:sticky tw:left-0 tw:z-5 tw:box-border tw:truncate tw:border-t-2 tw:border-b tw:border-r-2 tw:border-border tw:bg-secondary tw:px-2 tw:team:px-4 tw:py-2 tw:text-foreground tw:font-semibold">
-                              <i
-                                className="bi bi-people-fill tw:hidden tw:team:inline tw:mr-2"
-                                aria-hidden="true"
-                              ></i>
+                              <Icon icon={UsersIcon} className="tw:hidden tw:team:inline tw:mr-2" />
                               {section.title}
                             </td>
                             {/* Empty cells for date columns */}
@@ -563,15 +566,12 @@ export function TeamScheduleView() {
                                 <br />
                                 {member.etag ? (
                                   <span className="text-success">
-                                    <i
-                                      className="bi bi-file-earmark-text me-1"
-                                      aria-hidden="true"
-                                    ></i>
+                                    <Icon icon={FileTextIcon} className="me-1" />
                                     {m.team_hday_file()}
                                   </span>
                                 ) : (
                                   <span className="text-muted">
-                                    <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
+                                    <Icon icon={FileXIcon} className="me-1" />
                                     {m.team_no_hday_file()}
                                   </span>
                                 )}
@@ -752,7 +752,7 @@ export function TeamScheduleView() {
             !error &&
             !isLoading && (
               <div className="text-center py-4">
-                <i className="bi bi-inbox display-4 text-muted mb-2 d-block" aria-hidden="true"></i>
+                <Icon icon={InboxIcon} className="display-4 text-muted mb-2 d-block" />
                 <p className="text-muted mb-0">{m.team_empty_state()}</p>
               </div>
             )

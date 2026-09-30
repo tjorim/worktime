@@ -1,3 +1,5 @@
+import { CloudCheck as CloudCheckIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -35,7 +37,7 @@ export function SettingsBackendStatus() {
       <div className="d-flex justify-content-between align-items-center gap-3">
         <div>
           <div className="fw-medium">
-            <i className="bi bi-cloud-check me-2" aria-hidden="true"></i>
+            <Icon icon={CloudCheckIcon} className="me-2" />
             {m.backend_status_label()}
           </div>
           <small className="text-muted">{m.backend_status_description()}</small>

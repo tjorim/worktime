@@ -1,3 +1,10 @@
+import {
+  CalendarX as CalendarXIcon,
+  Pencil as PencilIcon,
+  Search as SearchIcon,
+  Trash2 as Trash2Icon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -243,7 +250,7 @@ export function TimeOffTableView({
         <Card.Body>
           {entries.length === 0 ? (
             <EmptyState
-              icon="bi-calendar-x"
+              icon={CalendarXIcon}
               title={m.timeoff_no_events_title()}
               description={m.timeoff_no_events_desc()}
             />
@@ -259,7 +266,7 @@ export function TimeOffTableView({
               />
               {visibleRows.length === 0 && isFiltering ? (
                 <EmptyState
-                  icon="bi-search"
+                  icon={SearchIcon}
                   title={m.timeoff_no_results_title()}
                   description={m.timeoff_no_results_desc()}
                 />
@@ -341,7 +348,7 @@ export function TimeOffTableView({
                               className="tw:mr-2"
                               aria-label={m.edit_with_name({ name: title })}
                             >
-                              <i className="bi bi-pencil" aria-hidden="true"></i>
+                              <Icon icon={PencilIcon} />
                             </Button>
                             <Button
                               variant="destructive"
@@ -349,7 +356,7 @@ export function TimeOffTableView({
                               onClick={() => onDeleteEvent(entry.id)}
                               aria-label={m.delete_with_name({ name: title })}
                             >
-                              <i className="bi bi-trash" aria-hidden="true"></i>
+                              <Icon icon={Trash2Icon} />
                             </Button>
                           </TableCell>
                         </TableRow>

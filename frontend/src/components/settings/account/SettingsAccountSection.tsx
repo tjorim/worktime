@@ -1,3 +1,15 @@
+import {
+  CircleUser as CircleUserIcon,
+  CloudCheck as CloudCheckIcon,
+  LogIn as LogInIcon,
+  LogOut as LogOutIcon,
+  Save as SaveIcon,
+  Smartphone as SmartphoneIcon,
+  Trash2 as Trash2Icon,
+  UserCheck as UserCheckIcon,
+  UserX as UserXIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
@@ -56,7 +68,7 @@ export function SettingsAccountSection({
     <div className="border-bottom">
       <div className="p-3">
         <h6 className="text-muted mb-3">
-          <i className="bi bi-person-circle me-2"></i>
+          <Icon icon={CircleUserIcon} className="me-2" />
           {m.account_section_title()}
         </h6>
         <ListGroup variant="flush">
@@ -77,7 +89,7 @@ export function SettingsAccountSection({
                 <div className="d-flex justify-content-between align-items-start gap-3">
                   <div>
                     <div className="fw-medium">
-                      <i className="bi bi-person-check me-2 text-success"></i>
+                      <Icon icon={UserCheckIcon} className="me-2 text-success" />
                       {resolvedDisplayName
                         ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
                         : m.account_signed_in()}
@@ -85,7 +97,7 @@ export function SettingsAccountSection({
                     {username ? <small className="text-muted">@{username}</small> : null}
                   </div>
                   <Button variant="outline-secondary" size="sm" onClick={onLogout}>
-                    <i className="bi bi-box-arrow-right me-1"></i>
+                    <Icon icon={LogOutIcon} className="me-1" />
                     {m.auth_logout()}
                   </Button>
                 </div>
@@ -155,7 +167,7 @@ export function SettingsAccountSection({
                         onClick={onSaveProfile}
                         disabled={!hasProfileChanges || isProfileSaving || accountId === null}
                       >
-                        <i className="bi bi-floppy me-1"></i>
+                        <Icon icon={SaveIcon} className="me-1" />
                         {isProfileSaving
                           ? m.account_profile_saving_btn()
                           : m.account_profile_save_btn()}
@@ -176,7 +188,7 @@ export function SettingsAccountSection({
                         disabled={isDeletingAccount}
                         onClick={() => setShowDeleteAccountConfirm(true)}
                       >
-                        <i className="bi bi-trash me-1"></i>
+                        <Icon icon={Trash2Icon} className="me-1" />
                         {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
                       </Button>
                     </div>
@@ -188,24 +200,24 @@ export function SettingsAccountSection({
             <ListGroup.Item>
               <div className="mb-2">
                 <div className="fw-medium mb-1">
-                  <i className="bi bi-person-x me-2 text-muted"></i>
+                  <Icon icon={UserXIcon} className="me-2 text-muted" />
                   {m.account_not_signed_in()}
                 </div>
                 <small className="text-muted d-block mb-2">{m.account_sync_benefits()}</small>
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   <small className="text-muted">
-                    <i className="bi bi-cloud-check text-success me-1"></i>
+                    <Icon icon={CloudCheckIcon} className="text-success me-1" />
                     {m.account_sync_benefit_backup()}
                   </small>
                   <small className="text-muted">
-                    <i className="bi bi-phone text-success me-1"></i>
+                    <Icon icon={SmartphoneIcon} className="text-success me-1" />
                     {m.account_sync_benefit_crossdevice()}
                   </small>
                 </div>
               </div>
               <div className="d-flex gap-2 flex-wrap">
                 <Button variant="primary" size="sm" onClick={onLogin}>
-                  <i className="bi bi-box-arrow-in-right me-1"></i>
+                  <Icon icon={LogInIcon} className="me-1" />
                   {m.account_sign_in_btn()}
                 </Button>
               </div>
@@ -225,7 +237,7 @@ export function SettingsAccountSection({
         }}
         onCancel={() => setShowDeleteAccountConfirm(false)}
         variant="danger"
-        icon="bi-trash"
+        icon={Trash2Icon}
       />
     </div>
   );

@@ -1,3 +1,5 @@
+import { Calendar as CalendarIcon, RefreshCw as RefreshCwIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -102,7 +104,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
   return (
     <div className="border-top p-3">
       <h6 className="text-muted mb-2">
-        <i className="bi bi-calendar3 me-2" />
+        <Icon icon={CalendarIcon} className="me-2" />
         {m.calendar_feed_title()}
       </h6>
       <p className="text-muted small">{m.calendar_feed_description()}</p>
@@ -196,7 +198,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
         }}
         onCancel={() => setConfirmRegenerate(false)}
         variant="warning"
-        icon="bi-arrow-repeat"
+        icon={RefreshCwIcon}
       />
     </div>
   );

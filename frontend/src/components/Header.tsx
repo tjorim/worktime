@@ -1,3 +1,9 @@
+import {
+  ArrowLeft as ArrowLeftIcon,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
@@ -58,7 +64,7 @@ export function Header() {
             onFocus={handlePreloadHome}
             className="d-flex align-items-center border-0 bg-transparent"
           >
-            <i className="bi bi-clock-history me-2 header-icon"></i>
+            <Icon icon={HistoryIcon} className="me-2 header-icon" />
             <span className="fw-bold">Worktime</span>
           </Navbar.Brand>
           <div className="d-flex align-items-center gap-3 ms-auto">
@@ -80,7 +86,7 @@ export function Header() {
               }
               aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
             >
-              <i className={`bi ${isSettingsPage ? "bi-arrow-left" : "bi-gear"}`}></i>
+              <Icon icon={isSettingsPage ? ArrowLeftIcon : SettingsIcon} />
               <span className="d-none d-lg-inline ms-1">
                 {isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
               </span>

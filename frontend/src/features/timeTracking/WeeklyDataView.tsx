@@ -1,10 +1,17 @@
+import {
+  CalendarDays as CalendarDaysIcon,
+  ChartPie as ChartPieIcon,
+  ListChecks as ListChecksIcon,
+  Table as TableIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import { Hint } from "@/components/ui/tooltip";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
-import { WORK_LOCATION_ICON_CLASS } from "@/components/calendar/workLocationConstants";
+import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";
 import type { WorkLocationMap } from "@/types/workLocation";
 import * as m from "@/paraglide/messages.js";
 import type { LabelPercentage, WeekDay, WeeklySummary } from "./hooks/useWeeklyTimeTrackingSummary";
@@ -136,7 +143,7 @@ export function WeeklyDataView({
 
       <div className="mb-4">
         <h6 className="text-uppercase text-muted mb-3">
-          <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
+          <Icon icon={CalendarDaysIcon} className="me-2" />
           {m.tt_daily_breakdown()}
         </h6>
         <div className="row g-2">
@@ -218,10 +225,7 @@ export function WeeklyDataView({
                     </div>
                     {location && (
                       <div className="text-muted mt-1" style={{ fontSize: "0.65rem" }}>
-                        <i
-                          className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
-                          aria-hidden="true"
-                        />{" "}
+                        <Icon icon={WORK_LOCATION_ICONS[location.location]} />{" "}
                         {location.countryCode}
                       </div>
                     )}
@@ -235,7 +239,7 @@ export function WeeklyDataView({
 
       <div className="mb-4">
         <h6 className="text-uppercase text-muted mb-3">
-          <i className="bi bi-table me-2" aria-hidden="true"></i>
+          <Icon icon={TableIcon} className="me-2" />
           {m.tt_detailed_breakdown()}
         </h6>
         <Table striped bordered hover responsive>
@@ -278,10 +282,7 @@ export function WeeklyDataView({
                     )}
                     {location && (
                       <span className="ms-2 text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
-                        <i
-                          className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
-                          aria-hidden="true"
-                        />{" "}
+                        <Icon icon={WORK_LOCATION_ICONS[location.location]} />{" "}
                         {location.countryCode}
                       </span>
                     )}
@@ -317,7 +318,7 @@ export function WeeklyDataView({
       {labelPercentages.length > 0 && (
         <div className="mb-4">
           <h6 className="text-uppercase text-muted mb-3">
-            <i className="bi bi-pie-chart me-2" aria-hidden="true"></i>
+            <Icon icon={ChartPieIcon} className="me-2" />
             {m.tt_category_breakdown()}
           </h6>
           <div className="row g-3">
@@ -358,7 +359,7 @@ export function WeeklyDataView({
       <Card className="mt-4">
         <Card.Body>
           <h6 className="text-uppercase text-muted mb-3">
-            <i className="bi bi-list-check me-2" aria-hidden="true"></i>
+            <Icon icon={ListChecksIcon} className="me-2" />
             {m.tt_weekly_summary_heading()}
           </h6>
           <div className="row">

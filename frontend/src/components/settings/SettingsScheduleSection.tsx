@@ -1,3 +1,5 @@
+import { CalendarDays as CalendarDaysIcon, Check as CheckIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { Hint } from "@/components/ui/tooltip";
@@ -23,7 +25,7 @@ export function SettingsScheduleSection({
   return (
     <div className="p-3">
       <h6 className="text-muted mb-3">
-        <i className="bi bi-calendar-week me-2"></i>
+        <Icon icon={CalendarDaysIcon} className="me-2" />
         {m.select_schedule_label()}
       </h6>
       <ListGroup variant="flush" className="mb-3">
@@ -51,7 +53,7 @@ export function SettingsScheduleSection({
                   {schedule.description}
                 </small>
               </div>
-              {isSelected && <i className="bi bi-check-lg ms-2 flex-shrink-0" aria-hidden="true" />}
+              {isSelected && <Icon icon={CheckIcon} className="ms-2 flex-shrink-0" />}
             </ListGroup.Item>
           );
           return schedule.isAvailable ? (

@@ -1,3 +1,4 @@
+import { type LucideIcon, Trash2 as Trash2Icon } from "lucide-react";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
@@ -130,7 +131,7 @@ function renderSettingsAccountHarness({
   onAccountDeleted = vi.fn(),
 }: {
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
-  showSuccessToast?: (message: string, icon?: string) => void;
+  showSuccessToast?: (message: string, icon?: LucideIcon) => void;
   onAccountDeleted?: () => void;
 }) {
   function Harness() {
@@ -190,7 +191,7 @@ function renderSettingsAdminUsersHarness({
   currentAccountId = null,
 }: {
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
-  showSuccessToast?: (message: string, icon?: string) => void;
+  showSuccessToast?: (message: string, icon?: LucideIcon) => void;
   currentAccountId?: number | null;
 }) {
   function Harness() {
@@ -367,7 +368,7 @@ describe("SettingsPage Account Section", () => {
       expect(onAccountDeleted).toHaveBeenCalledTimes(1);
     });
     expect(fetchFn).toHaveBeenCalledWith("/api/me", { method: "DELETE" });
-    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", "bi-trash");
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", Trash2Icon);
   });
 
   it("shows an inline error when self-service account deletion fails", async () => {
@@ -762,7 +763,7 @@ describe("SettingsPage Admin Section", () => {
     await waitFor(() => {
       expect(screen.queryByText("member-user")).not.toBeInTheDocument();
     });
-    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", "bi-trash");
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", Trash2Icon);
     expect(fetchFn).toHaveBeenCalledWith("/api/users/2", { method: "DELETE" });
   });
 

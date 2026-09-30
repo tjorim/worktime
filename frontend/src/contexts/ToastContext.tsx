@@ -1,4 +1,13 @@
 import {
+  CircleCheck as CircleCheckIcon,
+  CircleX as CircleXIcon,
+  Info as InfoIcon,
+  Trash2 as Trash2Icon,
+  TriangleAlert as TriangleAlertIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
+import {
   createContext,
   useCallback,
   useContext,
@@ -30,7 +39,7 @@ export interface ToastMessage {
   id: string;
   message: string;
   variant?: "success" | "danger" | "warning" | "info";
-  icon?: string;
+  icon?: LucideIcon;
   delay?: number;
   autohide?: boolean;
   action?: ToastAction;
@@ -40,15 +49,15 @@ interface ToastContextType {
   /** Add a toast and return its generated id. */
   addToast: (message: Omit<ToastMessage, "id">) => string;
   removeToast: (id: string) => void;
-  showSuccess: (message: string, icon?: string) => void;
-  showError: (message: string, icon?: string) => void;
-  showWarning: (message: string, icon?: string) => void;
-  showInfo: (message: string, icon?: string) => void;
+  showSuccess: (message: string, icon?: LucideIcon) => void;
+  showError: (message: string, icon?: LucideIcon) => void;
+  showWarning: (message: string, icon?: LucideIcon) => void;
+  showInfo: (message: string, icon?: LucideIcon) => void;
   /**
    * Show a toast with an "Undo" action for a recently performed destructive
    * action. Invoking undo runs `onUndo` and dismisses the toast.
    */
-  showUndo: (message: string, onUndo: () => void, icon?: string) => void;
+  showUndo: (message: string, onUndo: () => void, icon?: LucideIcon) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -136,7 +145,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
       aria-live={isError ? "assertive" : "polite"}
     >
       <Toast.Body className="d-flex align-items-center">
-        {toast.icon && <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>}
+        {toast.icon && <Icon icon={toast.icon} className="me-2" />}
         <span className={`${isLight ? "text-dark" : "text-white"} me-2`}>{toast.message}</span>
         {toast.action && (
           <Button
@@ -189,18 +198,18 @@ export function ToastProvider({ children }: ToastProviderProps) {
   }, []);
 
   const showSuccess = useCallback(
-    (message: string, icon?: string) => {
-      addToast({ message, variant: "success", icon: icon ?? "bi-check-circle-fill" });
+    (message: string, icon?: LucideIcon) => {
+      addToast({ message, variant: "success", icon: icon ?? CircleCheckIcon });
     },
     [addToast],
   );
 
   const showError = useCallback(
-    (message: string, icon?: string) => {
+    (message: string, icon?: LucideIcon) => {
       addToast({
         message,
         variant: "danger",
-        icon: icon ?? "bi-x-circle-fill",
+        icon: icon ?? CircleXIcon,
         delay: ERROR_TOAST_DELAY,
       });
     },
@@ -208,26 +217,26 @@ export function ToastProvider({ children }: ToastProviderProps) {
   );
 
   const showWarning = useCallback(
-    (message: string, icon?: string) => {
-      addToast({ message, variant: "warning", icon: icon ?? "bi-exclamation-triangle-fill" });
+    (message: string, icon?: LucideIcon) => {
+      addToast({ message, variant: "warning", icon: icon ?? TriangleAlertIcon });
     },
     [addToast],
   );
 
   const showInfo = useCallback(
-    (message: string, icon?: string) => {
-      addToast({ message, variant: "info", icon: icon ?? "bi-info-circle-fill" });
+    (message: string, icon?: LucideIcon) => {
+      addToast({ message, variant: "info", icon: icon ?? InfoIcon });
     },
     [addToast],
   );
 
   const showUndo = useCallback(
-    (message: string, onUndo: () => void, icon?: string) => {
+    (message: string, onUndo: () => void, icon?: LucideIcon) => {
       let clicked = false;
       const id = addToast({
         message,
         variant: "info",
-        icon: icon ?? "bi-trash",
+        icon: icon ?? Trash2Icon,
         delay: UNDO_TOAST_DELAY,
         action: {
           label: m.toast_undo(),

@@ -1,3 +1,11 @@
+import {
+  Cloud as CloudIcon,
+  CloudCheck as CloudCheckIcon,
+  CloudOff as CloudOffIcon,
+  CloudUpload as CloudUploadIcon,
+  RefreshCw as RefreshCwIcon,
+  TriangleAlert as TriangleAlertIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
@@ -26,36 +34,36 @@ export function useSettingsSyncStatus({
   const syncStatus = useMemo(() => {
     if (!isAuthenticated) {
       return {
-        icon: "bi-cloud-slash",
+        icon: CloudOffIcon,
         label: m.account_not_signed_in(),
         variant: "muted",
       };
     }
     if (hasSyncError) {
-      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
+      return { icon: CloudOffIcon, label: m.sync_indicator_error(), variant: "danger" };
     }
     if (conflictCount > 0) {
       return {
-        icon: "bi-exclamation-triangle",
+        icon: TriangleAlertIcon,
         label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
         variant: "warning",
       };
     }
     if (isSyncing) {
-      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
+      return { icon: RefreshCwIcon, label: m.sync_indicator_syncing(), variant: "info" };
     }
     if (outboxCount > 0) {
       return {
-        icon: "bi-cloud-upload",
+        icon: CloudUploadIcon,
         label: m.sync_indicator_pending({ count: String(outboxCount) }),
         variant: "warning",
       };
     }
     if (lastSyncedAt) {
-      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
+      return { icon: CloudCheckIcon, label: m.sync_indicator_synced(), variant: "success" };
     }
     return {
-      icon: "bi-cloud",
+      icon: CloudIcon,
       label: m.sync_never_synced(),
       variant: "muted",
     };

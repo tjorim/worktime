@@ -1,3 +1,5 @@
+import { Info as InfoIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import { DetailsPopover, PopoverHeader, PopoverBody } from "@/components/ui/popover";
@@ -83,7 +85,7 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
   return (
     <DetailsPopover placement="left-end" content={legendPopover}>
       <Button variant="link" size="sm" className="text-muted p-0 text-decoration-none">
-        <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
+        <Icon icon={InfoIcon} className="me-1" />
         {m.calendar_legend_btn_label()}
       </Button>
     </DetailsPopover>

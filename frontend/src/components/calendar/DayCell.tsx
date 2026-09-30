@@ -1,3 +1,5 @@
+import { Plus as PlusIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
@@ -7,7 +9,7 @@ import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocationInfo } from "@/types/workLocation";
 import type { ShiftResult } from "@/utils/shiftCalculations";
-import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
+import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import {
   getEventColorClass,
@@ -448,7 +450,7 @@ export function DayCell({
               className="month-calendar-day-indicator month-calendar-work-location"
               title={workLocationLabel}
             >
-              <i className={clsx("bi", WORK_LOCATION_ICON_CLASS[workLocation.location])}></i>
+              <Icon icon={WORK_LOCATION_ICONS[workLocation.location]} />
             </span>
           )}
         </span>
@@ -473,7 +475,7 @@ export function DayCell({
               );
             }}
           >
-            <i className="bi bi-plus" aria-hidden="true"></i>
+            <Icon icon={PlusIcon} />
           </button>
         )}
       </div>

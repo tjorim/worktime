@@ -1,3 +1,21 @@
+import {
+  ArrowLeftRight as ArrowLeftRightIcon,
+  ArrowRight as ArrowRightIcon,
+  CalendarPlus as CalendarPlusIcon,
+  CalendarRange as CalendarRangeIcon,
+  CalendarX as CalendarXIcon,
+  CircleArrowLeft as CircleArrowLeftIcon,
+  CircleArrowRight as CircleArrowRightIcon,
+  CirclePlus as CirclePlusIcon,
+  CircleX as CircleXIcon,
+  ClipboardList as ClipboardListIcon,
+  Info as InfoIcon,
+  Plane as PlaneIcon,
+  UserCheck as UserCheckIcon,
+  UserPlus as UserPlusIcon,
+  Users as UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
@@ -65,7 +83,7 @@ function TimeOffIndicator({ event }: { event: CalendarEvent | undefined }) {
       style={{ backgroundColor: color, color: textColor }}
       title={label}
     >
-      <i className="bi bi-airplane-fill" aria-hidden="true"></i>
+      <Icon icon={PlaneIcon} />
       <span className="visually-hidden">{label}</span>
     </span>
   );
@@ -136,10 +154,10 @@ function TransferItemsList({
             <Row className="g-2 align-items-center">
               <Col xs={4} md={3}>
                 <div className="fw-semibold d-flex align-items-center gap-2">
-                  <i
-                    className={`bi ${transfer.type === "handover" ? "bi-arrow-right-circle text-success" : "bi-arrow-left-circle text-info"}`}
-                    aria-hidden="true"
-                  ></i>
+                  <Icon
+                    icon={transfer.type === "handover" ? CircleArrowRightIcon : CircleArrowLeftIcon}
+                    className={`${transfer.type === "handover" ? "text-success" : "text-info"}`}
+                  />
                   {formatYYWWD(transfer.date)}
                 </div>
                 <small className="text-muted d-flex align-items-center gap-1">
@@ -166,7 +184,7 @@ function TransferItemsList({
                       m.team_label({ team: String(transfer.fromTeam) })
                     )}
                   </Badge>
-                  <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+                  <Icon icon={ArrowRightIcon} className="text-muted" />
                   <Badge
                     bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
                     className="text-nowrap"
@@ -207,7 +225,7 @@ function TransferItemsList({
                       size="sm"
                       showTooltip={false}
                     />
-                    <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+                    <Icon icon={ArrowRightIcon} className="text-muted" />
                     <ShiftBadge
                       shift={toShift}
                       showEmoji
@@ -255,7 +273,7 @@ function OverlapItemsList({
             <Row className="g-2 align-items-center">
               <Col xs={5} md={3}>
                 <div className="fw-semibold d-flex align-items-center gap-2">
-                  <i className="bi bi-people-fill text-primary" aria-hidden="true"></i>
+                  <Icon icon={UsersIcon} className="text-primary" />
                   {formatYYWWD(overlap.start)}
                 </div>
                 <small className="text-muted d-flex align-items-center gap-1">
@@ -272,7 +290,7 @@ function OverlapItemsList({
                     <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
                     {myLabel}
                   </Badge>
-                  <i className="bi bi-arrow-left-right text-muted" aria-hidden="true"></i>
+                  <Icon icon={ArrowLeftRightIcon} className="text-muted" />
                   <Badge bg="secondary" className="text-nowrap" pill>
                     {otherLabel}
                   </Badge>
@@ -555,7 +573,7 @@ export function TransferView({
   const comparisonScheduleSelector = onOtherScheduleTypeChange && (
     <>
       <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
-        <i className="bi bi-clipboard2-data me-1" aria-hidden="true"></i>
+        <Icon icon={ClipboardListIcon} className="me-1" />
         {m.schedule_compare_label()}
       </Form.Label>
       <Form.Select
@@ -612,12 +630,12 @@ export function TransferView({
     <Card>
       <Card.Header className="d-flex justify-content-between align-items-center">
         <span className="fw-semibold">
-          <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
+          <Icon icon={ArrowLeftRightIcon} className="me-2" />
           {m.transfer_team_transfers()}
         </span>
         {myTeam && myScheduleTeamCount > 1 && (
           <Badge bg="primary" pill>
-            <i className="bi bi-person-check me-1" aria-hidden="true"></i>
+            <Icon icon={UserCheckIcon} className="me-1" />
             {m.transfer_your_team({ team: String(myTeam) })}
           </Badge>
         )}
@@ -625,13 +643,13 @@ export function TransferView({
       <Card.Body>
         {!scheduleType ? (
           <div className="text-center py-4">
-            <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+            <Icon icon={CalendarPlusIcon} className="text-muted mb-3 icon-lg" />
             <p className="text-muted mb-3">{m.transfer_select_schedule_prompt()}</p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </div>
         ) : !myTeam ? (
           <div className="text-center py-4">
-            <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
+            <Icon icon={UserPlusIcon} className="text-muted mb-3 icon-lg" />
             <p className="text-muted mb-3">{m.transfer_select_team_prompt()}</p>
             <SetupActionButton
               onChangeSchedule={onChangeSchedule}
@@ -647,7 +665,7 @@ export function TransferView({
               </Row>
             )}
             <EmptyState
-              icon="bi-people"
+              icon={UsersIcon}
               title={m.transfer_no_teams_title()}
               description={m.transfer_no_teams_desc()}
             />
@@ -669,7 +687,7 @@ export function TransferView({
                     ariaLabel={m.transfer_select_team_aria()}
                     label={
                       <>
-                        <i className="bi bi-people me-1" aria-hidden="true"></i>
+                        <Icon icon={UsersIcon} className="me-1" />
                         {sameSchedule
                           ? m.transfer_view_with_team_label()
                           : m.transfer_view_overlaps_with_team_label()}
@@ -684,11 +702,11 @@ export function TransferView({
                       {m.transfer_flow_label()}
                     </span>
                     <Badge bg="success" pill className="d-inline-flex align-items-center gap-1">
-                      <i className="bi bi-arrow-right-circle" aria-hidden="true"></i>
+                      <Icon icon={CircleArrowRightIcon} />
                       {m.transfer_handovers_count({ count: String(transferStats.handovers) })}
                     </Badge>
                     <Badge bg="info" pill className="d-inline-flex align-items-center gap-1">
-                      <i className="bi bi-arrow-left-circle" aria-hidden="true"></i>
+                      <Icon icon={CircleArrowLeftIcon} />
                       {m.transfer_takeovers_count({ count: String(transferStats.takeovers) })}
                     </Badge>
                   </div>
@@ -699,7 +717,7 @@ export function TransferView({
                       {m.transfer_overlaps_section_title()}
                     </span>
                     <Badge bg="primary" pill className="d-inline-flex align-items-center gap-1">
-                      <i className="bi bi-people-fill" aria-hidden="true"></i>
+                      <Icon icon={UsersIcon} />
                       {overlaps.length}
                     </Badge>
                   </div>
@@ -737,7 +755,7 @@ export function TransferView({
                         <Row className="g-2 mt-1">
                           <Col md={5}>
                             <Form.Label htmlFor={startDateId} className="fw-semibold">
-                              <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
+                              <Icon icon={CalendarRangeIcon} className="me-1" />
                               {m.transfer_start_date_label()}
                             </Form.Label>
                             <Form.Control
@@ -778,7 +796,7 @@ export function TransferView({
                               }}
                               disabled={!customStartDate && !customEndDate}
                             >
-                              <i className="bi bi-x-circle me-1" aria-hidden="true"></i>
+                              <Icon icon={CircleXIcon} className="me-1" />
                               {m.timeoff_clear_selection_btn()}
                             </Button>
                           </Col>
@@ -792,7 +810,7 @@ export function TransferView({
 
             {!sameSchedule && otherScheduleTitle && (
               <Alert variant="secondary" className="d-flex align-items-center gap-2 py-2 mb-3">
-                <i className="bi bi-info-circle" aria-hidden="true"></i>
+                <Icon icon={InfoIcon} />
                 {m.transfer_comparing_schedule_note({ scheduleTitle: otherScheduleTitle })}
               </Alert>
             )}
@@ -808,7 +826,7 @@ export function TransferView({
                   <>
                     {transfers.length === 0 ? (
                       <EmptyState
-                        icon="bi-calendar-x"
+                        icon={CalendarXIcon}
                         title={m.transfer_no_results_title()}
                         description={
                           useCustomRange && (customStartDate || customEndDate)
@@ -863,7 +881,7 @@ export function TransferView({
                               size="sm"
                               onClick={() => setTransfersToShow((prev) => prev + 10)}
                             >
-                              <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                              <Icon icon={CirclePlusIcon} className="me-1" />
                               {m.transfer_load_more()}
                             </Button>
                           )}
@@ -876,7 +894,7 @@ export function TransferView({
                 {showOverlapsEmptyState && (
                   <div className={showTransfers ? "mt-4" : undefined}>
                     <EmptyState
-                      icon="bi-calendar-x"
+                      icon={CalendarXIcon}
                       title={m.transfer_no_overlaps_title()}
                       description={m.transfer_no_overlaps_desc({ otherTeam: String(otherTeam) })}
                     />
@@ -928,7 +946,7 @@ export function TransferView({
                           size="sm"
                           onClick={() => setTransfersToShow((prev) => prev + 10)}
                         >
-                          <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                          <Icon icon={CirclePlusIcon} className="me-1" />
                           {m.transfer_load_more_overlaps()}
                         </Button>
                       )}

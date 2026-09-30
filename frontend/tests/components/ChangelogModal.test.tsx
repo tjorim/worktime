@@ -182,9 +182,10 @@ describe("ChangelogModal", () => {
       expect(screen.getAllByText("Changed").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Fixed").length).toBeGreaterThan(0);
 
-      // Check for Bootstrap icons (via class names) in the DOM
+      // Section headings include decorative SVG icons.
       const addedElements = screen.getAllByText("Added");
       expect(addedElements.length).toBeGreaterThan(0);
+      expect(addedElements[0].querySelector("svg")).toHaveAttribute("aria-hidden", "true");
     });
 
     it("renders appropriate sections for each version", () => {
