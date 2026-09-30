@@ -31,7 +31,8 @@ describe("Tailwind coexistence", () => {
   });
 
   it("maps every event palette variable without copying its value", () => {
-    const variables = new Set(css.match(/--wt-event-[\w-]+(?=:)/g));
+    const palette = readFileSync(path.join(root, "src/styles/event-palette.css"), "utf8");
+    const variables = new Set(palette.match(/--wt-event-[\w-]+(?=:)/g));
     expect(variables.size).toBeGreaterThan(30);
     for (const variable of variables) {
       expect(tailwind).toContain(`--color-${variable.slice(2)}: var(${variable})`);

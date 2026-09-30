@@ -2,8 +2,7 @@ import type { Dayjs } from "dayjs";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -99,7 +98,7 @@ function GapIndicator({
         className="flex-grow-1"
         style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
       />
-      <OverlayTrigger placement="top" overlay={<Tooltip id={tooltipId}>{ariaLabel}</Tooltip>}>
+      <Hint placement="top" content={<div id={tooltipId}>{ariaLabel}</div>}>
         <Badge
           bg="warning"
           text="dark"
@@ -111,7 +110,7 @@ function GapIndicator({
           <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
           {label}
         </Badge>
-      </OverlayTrigger>
+      </Hint>
       <div
         className="flex-grow-1"
         style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
@@ -589,12 +588,12 @@ export function DailyTaskList({
                           </Badge>
                         )}
                         {task.includesBreak && (
-                          <OverlayTrigger
+                          <Hint
                             placement="top"
-                            overlay={
-                              <Tooltip id={`break-badge-${task.id}`}>
+                            content={
+                              <div id={`break-badge-${task.id}`}>
                                 {m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
-                              </Tooltip>
+                              </div>
                             }
                           >
                             <Badge
@@ -606,15 +605,15 @@ export function DailyTaskList({
                               <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
                               {BREAK_DURATION_MINUTES}min
                             </Badge>
-                          </OverlayTrigger>
+                          </Hint>
                         )}
                         {ganttTaskName && (
-                          <OverlayTrigger
+                          <Hint
                             placement="top"
-                            overlay={
-                              <Tooltip id={`gantt-badge-${task.id}`}>
+                            content={
+                              <div id={`gantt-badge-${task.id}`}>
                                 {m.tt_gantt_task_badge({ name: ganttTaskName })}
-                              </Tooltip>
+                              </div>
                             }
                           >
                             <Badge
@@ -626,7 +625,7 @@ export function DailyTaskList({
                               <i className="bi bi-bar-chart-steps me-1" aria-hidden="true"></i>
                               {ganttTaskName}
                             </Badge>
-                          </OverlayTrigger>
+                          </Hint>
                         )}
                       </div>
                       <div className="small text-muted">

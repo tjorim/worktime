@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as m from "@/paraglide/messages.js";
@@ -161,12 +160,8 @@ export function SyncStatusIndicator() {
   if (!tooltipText) return indicator;
 
   return (
-    <OverlayTrigger
-      placement="bottom"
-      trigger={["hover", "focus", "click"]}
-      overlay={<Tooltip id={tooltipId}>{tooltipText}</Tooltip>}
-    >
+    <Hint placement="bottom" openOnClick content={<div id={tooltipId}>{tooltipText}</div>}>
       {indicator}
-    </OverlayTrigger>
+    </Hint>
   );
 }

@@ -1,15 +1,15 @@
 import path from "node:path";
-import * as sass from "sass";
+import { readFileSync } from "node:fs";
 
 /**
- * The event palette lives only in `src/styles/_variables.scss`, as `--wt-event-<type>-<variant>-bg/-fg`
+ * The event palette lives only in `src/styles/event-palette.css`, as `--wt-event-<type>-<variant>-bg/-fg`
  * custom properties for the light (`:root`) and dark (`[data-bs-theme="dark"]`) themes. Tests read it
- * by compiling that file, so they check the real values instead of a second copy.
+ * by reading that file, so they check the real values instead of a second copy.
  */
 export type PaletteEntry = { bg: string; fg: string };
 export type EventPalette = Record<string, PaletteEntry>;
 
-const VARIABLES_SCSS = path.resolve(__dirname, "../../src/styles/_variables.scss");
+const PALETTE_CSS = path.resolve(__dirname, "../../src/styles/event-palette.css");
 
 function readVars(cssBlock: string): EventPalette {
   const entries: Record<string, Partial<PaletteEntry>> = {};
@@ -26,12 +26,12 @@ let cached: { light: EventPalette; dark: EventPalette } | undefined;
 /** Palette for both themes, keyed like `"holiday-full"`, `"in-half"`, `"unknown"`. */
 export function loadEventPalette(): { light: EventPalette; dark: EventPalette } {
   if (cached) return cached;
-  const css = sass.compile(VARIABLES_SCSS).css;
+  const css = readFileSync(PALETTE_CSS, "utf8");
   const blockFor = (selector: string) =>
     [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
   cached = {
     light: readVars(blockFor(":root")),
-    dark: readVars(blockFor("\\[data-bs-theme=dark\\]")),
+    dark: readVars(blockFor('\\[data-bs-theme="dark"\\]')),
   };
   return cached;
 }

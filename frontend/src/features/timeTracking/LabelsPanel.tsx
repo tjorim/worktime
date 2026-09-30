@@ -3,8 +3,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import { useToast } from "@/contexts/ToastContext";
 import ListGroup from "react-bootstrap/ListGroup";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
@@ -288,14 +287,13 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       {m.edit()}
                     </Button>
                     {isInUse ? (
-                      <OverlayTrigger
-                        trigger={["hover", "focus"]}
-                        overlay={
-                          <Tooltip id={`delete-label-${label.id}`}>
+                      <Hint
+                        content={
+                          <div id={`delete-label-${label.id}`}>
                             {m.tt_label_in_use_tooltip({
                               usage: usageParts.join(` ${m.tt_and()} `),
                             })}
-                          </Tooltip>
+                          </div>
                         }
                       >
                         <span className="d-inline-block" tabIndex={0}>
@@ -309,7 +307,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                             {m.delete()}
                           </Button>
                         </span>
-                      </OverlayTrigger>
+                      </Hint>
                     ) : (
                       <Button
                         size="sm"

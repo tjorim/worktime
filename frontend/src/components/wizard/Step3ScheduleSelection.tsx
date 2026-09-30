@@ -1,6 +1,5 @@
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import clsx from "clsx";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import * as m from "@/paraglide/messages.js";
@@ -54,13 +53,13 @@ export function Step3ScheduleSelection({
 
           if (!schedule.isAvailable) {
             return (
-              <OverlayTrigger
+              <Hint
                 key={schedule.value}
                 placement="top"
-                overlay={
-                  <Tooltip id={`schedule-coming-soon-${schedule.value}`}>
+                content={
+                  <div id={`schedule-coming-soon-${schedule.value}`}>
                     {m.wizard_schedule_coming_soon_tooltip()}
-                  </Tooltip>
+                  </div>
                 }
               >
                 <span className="d-block" tabIndex={0}>
@@ -68,7 +67,7 @@ export function Step3ScheduleSelection({
                     {buttonInner}
                   </Button>
                 </span>
-              </OverlayTrigger>
+              </Hint>
             );
           }
 

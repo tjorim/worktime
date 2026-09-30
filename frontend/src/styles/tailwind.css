@@ -2,6 +2,8 @@
 @layer theme, legacy, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme) prefix(tw);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
+@import "./event-palette.css";
+@import "./team-grid.css";
 @source "../";
 @custom-variant dark (&:where([data-bs-theme="dark"], [data-bs-theme="dark"] *));
 
@@ -119,4 +121,27 @@
   --radius-sm: var(--bs-border-radius-sm);
   --radius-md: var(--bs-border-radius);
   --radius-lg: var(--bs-border-radius-lg);
+}
+
+@theme inline {
+  --color-tooltip: var(--bs-black);
+  --color-tooltip-foreground: var(--bs-white);
+  --z-index-tooltip: 1080;
+  --z-index-popover: 1070;
+  --container-popover: 276px;
+}
+
+@theme inline {
+  --breakpoint-team: 576px;
+  --color-team-header: var(--bs-primary);
+  --color-team-header-foreground: var(--bs-white);
+  --color-team-header-divider: color-mix(in srgb, var(--bs-white) 20%, transparent);
+  --color-team-day-divider: color-mix(in srgb, var(--bs-white) 10%, transparent);
+  --color-team-header-weekend: color-mix(in srgb, var(--bs-primary) 60%, var(--bs-black));
+  --color-team-today: var(--bs-warning);
+  --color-team-today-foreground: var(--bs-black);
+  --text-team-half: 0.625rem;
+  --text-team-stripe: 0.6rem;
+  --shadow-team-name: 2px 0 4px color-mix(in srgb, var(--bs-black) 10%, transparent);
+  --shadow-team-today: inset 0 0 0 2px var(--wt-team-cal-today-ring);
 }

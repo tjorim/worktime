@@ -1,4 +1,9 @@
 import path from "node:path";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { compile } from "tailwindcss";
+import postcss from "postcss";
+import { getEventColorUtilities } from "@/lib/hday/presentation";
 import * as sass from "sass";
 import { describe, expect, it } from "vitest";
 import { getEventColor, getEventColorClass, getEventTextColor, type EventFlag } from "@/lib/hday";
@@ -10,7 +15,7 @@ import {
 } from "@tests/utils/eventPalette";
 
 /**
- * The palette is defined once, in `src/styles/_variables.scss`. These tests read the compiled
+ * The palette is defined once, in `src/styles/event-palette.css`. These tests read the
  * values from there, so they guard the real colors rather than a copy.
  */
 const TYPES = [
@@ -121,6 +126,42 @@ describe("palette wiring", () => {
       const bg = variableName(getEventColor(flags, eventType))!.replace(/-bg$/, "");
       const fg = variableName(getEventTextColor(flags, eventType))!.replace(/-fg$/, "");
       expect(bg).toBe(fg);
+    }
+  });
+
+  it("compiles event utilities using only declared palette variables", async () => {
+    const file = path.resolve(__dirname, "../../src/styles/tailwind.css");
+    const require = createRequire(import.meta.url);
+    const compiler = await compile(readFileSync(file, "utf8"), {
+      base: path.dirname(file),
+      loadStylesheet: async (id, base) => {
+        const resolved = id.startsWith(".") ? path.resolve(base, id) : require.resolve(id);
+        return {
+          path: resolved,
+          base: path.dirname(resolved),
+          content: readFileSync(resolved, "utf8"),
+        };
+      },
+    });
+    const classes = combos.flatMap(({ flags, eventType }) =>
+      getEventColorUtilities(flags, eventType).split(" "),
+    );
+    const css = postcss.parse(compiler.build(classes));
+    for (const { flags, eventType } of combos) {
+      const [bg, fg] = getEventColorUtilities(flags, eventType).split(" ");
+      for (const [className, property, expected] of [
+        [bg!, "background-color", getEventColor(flags, eventType)],
+        [fg!, "color", getEventTextColor(flags, eventType)],
+      ] as const) {
+        const values: string[] = [];
+        css.walkRules(`.${className!.replace(":", "\\:")}`, (rule) => {
+          rule.walkDecls(property, (decl) => {
+            values.push(decl.value);
+          });
+        });
+        expect(values, className).toEqual([expected]);
+        expect(declaredVariables).toContain(variableName(expected!));
+      }
     }
   });
 

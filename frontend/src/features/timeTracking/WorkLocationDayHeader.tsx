@@ -1,7 +1,6 @@
 import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
 import { IconButton } from "@/components/shared/IconButton";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -76,9 +75,9 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           {m.tt_other_location()}
         </Button>
         {stored && (
-          <OverlayTrigger
+          <Hint
             placement="top"
-            overlay={<Tooltip id={clearTooltipId}>{m.tt_clear_work_location()}</Tooltip>}
+            content={<div id={clearTooltipId}>{m.tt_clear_work_location()}</div>}
           >
             <IconButton
               size="sm"
@@ -87,7 +86,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
               icon="bi-x"
               label={m.tt_clear_work_location()}
             />
-          </OverlayTrigger>
+          </Hint>
         )}
       </div>
       <OtherLocationModal
