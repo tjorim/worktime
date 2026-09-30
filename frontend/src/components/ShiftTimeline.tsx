@@ -1,12 +1,12 @@
 import { Clock as ClockIcon, Radio as RadioIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
-import Badge from "react-bootstrap/Badge";
+import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/tooltip";
 import clsx from "clsx";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { shiftColors, ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import type { ScheduleOption } from "@/data/rosters";
 import { getAllTeamsShifts } from "@/utils/shiftCalculations";
@@ -168,27 +168,37 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
   const timelineHeaderId = "shift-timeline-header";
   return (
     <div
-      className="card-timeline timeline-container"
+      className=" tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4 tw:mt-2"
       role="region"
       aria-labelledby={timelineHeaderId}
     >
-      <div className="timeline-header text-center" id={timelineHeaderId}>
-        <Icon icon={ClockIcon} className="me-2" />
+      <div className="tw:font-semibold tw:text-base tw:mb-3 tw:text-center" id={timelineHeaderId}>
+        <Icon icon={ClockIcon} className="tw:mr-2" />
         {m.shift_timeline_title()}
       </div>
-      <div className="d-flex timeline-flow flex-wrap">
+      <div
+        data-timeline-flow
+        className="tw:flex tw:gap-4 tw:items-center tw:justify-center tw:flex-wrap"
+      >
         {prevShift && (
-          <div className="timeline-team">
-            <Badge bg="secondary" className="timeline-badge">
+          <div data-timeline-team className="tw:flex tw:flex-col tw:items-center tw:gap-2">
+            <Badge
+              variant="secondary"
+              className="tw:min-w-10 tw:h-auto tw:text-sm tw:font-semibold tw:rounded-md"
+            >
               T{prevShift.teamNumber}
             </Badge>
-            <div className="timeline-code">
+            <div className="tw:text-sm tw:font-semibold tw:text-muted-foreground">
               <ShiftBadge shift={prevShift.shift} size="sm" />
             </div>
           </div>
         )}
-        {prevShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
-        <div className="timeline-team">
+        {prevShift && !hasParallelShifts && (
+          <span data-timeline-arrow className="tw:text-muted-foreground tw:text-xl tw:font-bold">
+            →
+          </span>
+        )}
+        <div data-timeline-team className="tw:flex tw:flex-col tw:items-center tw:gap-2">
           <Hint
             placement="bottom"
             content={
@@ -202,16 +212,17 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             }
           >
             <Badge
+              data-current-team
               className={clsx(
-                currentWorkingTeam.shift.className,
-                "timeline-current-badge",
-                "timeline-badge",
+                shiftColors[currentWorkingTeam.shift.className],
+                "tw:cursor-help tw:text-base tw:font-semibold tw:shadow-sm",
+                "tw:min-w-10 tw:h-auto tw:text-sm tw:font-semibold tw:rounded-md",
               )}
             >
               T{currentWorkingTeam.teamNumber}
             </Badge>
           </Hint>
-          <div className="timeline-code">
+          <div className="tw:text-sm tw:font-semibold tw:text-muted-foreground">
             <ShiftBadge shift={currentWorkingTeam.shift} size="sm" showTooltip={false} />
             <Hint
               placement="bottom"
@@ -223,25 +234,35 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
                 </div>
               }
             >
-              <Icon icon={RadioIcon} className="text-success live-indicator ms-1" />
+              <Icon
+                icon={RadioIcon}
+                className="tw:text-success tw:motion-safe:animate-pulse tw:ml-1"
+              />
             </Hint>
           </div>
         </div>
-        {nextShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
+        {nextShift && !hasParallelShifts && (
+          <span data-timeline-arrow className="tw:text-muted-foreground tw:text-xl tw:font-bold">
+            →
+          </span>
+        )}
         {nextShift && (
-          <div className="timeline-team">
-            <Badge bg="secondary" className="timeline-badge">
+          <div data-timeline-team className="tw:flex tw:flex-col tw:items-center tw:gap-2">
+            <Badge
+              variant="secondary"
+              className="tw:min-w-10 tw:h-auto tw:text-sm tw:font-semibold tw:rounded-md"
+            >
               T{nextShift.teamNumber}
             </Badge>
-            <div className="timeline-code">
+            <div className="tw:text-sm tw:font-semibold tw:text-muted-foreground">
               <ShiftBadge shift={nextShift.shift} size="sm" />
             </div>
           </div>
         )}
       </div>
       {hasParallelShifts && (
-        <div className="text-center mt-2">
-          <small className="text-muted">{m.shift_timeline_parallel_note()}</small>
+        <div className="tw:text-center tw:mt-2">
+          <small className="tw:text-muted-foreground">{m.shift_timeline_parallel_note()}</small>
         </div>
       )}
     </div>

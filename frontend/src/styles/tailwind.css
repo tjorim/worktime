@@ -1,11 +1,29 @@
 /* Bootstrap owns reboot. Prefix prevents collisions with legacy utilities. */
-@layer theme, legacy, base, components, utilities;
+@layer theme, legacy, base, calendar, components, utilities;
 @import "tailwindcss/theme.css" layer(theme) prefix(tw);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
 @import "./event-palette.css";
 @import "./team-grid.css";
 @source "../";
 @custom-variant dark (&:where([data-bs-theme="dark"], [data-bs-theme="dark"] *));
+
+/* Runtime semantic tokens are also consumed by vendor styles outside Tailwind utilities. */
+@layer theme {
+  :root {
+    --wt-theme-primary: var(--wt-primary-color);
+    --wt-theme-primary-foreground: var(--bs-white);
+    --wt-theme-accent: var(--bs-tertiary-bg);
+    --wt-theme-accent-foreground: var(--bs-body-color);
+    --wt-theme-secondary: var(--bs-secondary-bg);
+    --wt-theme-secondary-foreground: var(--bs-body-color);
+    --wt-theme-info: var(--bs-info-text-emphasis);
+    --wt-theme-foreground: var(--bs-body-color);
+    --wt-theme-info-bg: var(--bs-info-bg-subtle);
+    --wt-theme-background: var(--bs-body-bg);
+    --wt-theme-muted: var(--bs-tertiary-bg);
+    --wt-theme-border: var(--bs-border-color);
+  }
+}
 
 @theme inline {
   --color-*: initial;
@@ -100,22 +118,22 @@
   --color-wt-team-cal-today-ring: var(--wt-team-cal-today-ring);
   --color-wt-team-cal-weekend-cell: var(--wt-team-cal-weekend-cell);
   --color-wt-team-name-col: var(--wt-team-name-col);
-  --color-background: var(--bs-body-bg);
-  --color-foreground: var(--bs-body-color);
+  --color-background: var(--wt-theme-background);
+  --color-foreground: var(--wt-theme-foreground);
   --color-card: var(--wt-surface-2, var(--bs-body-bg));
   --color-card-foreground: var(--bs-body-color);
   --color-popover: var(--wt-surface-2, var(--bs-body-bg));
   --color-popover-foreground: var(--bs-body-color);
-  --color-primary: var(--wt-primary-color);
-  --color-primary-foreground: var(--bs-white);
-  --color-secondary: var(--bs-secondary-bg);
-  --color-secondary-foreground: var(--bs-body-color);
-  --color-muted: var(--bs-tertiary-bg);
+  --color-primary: var(--wt-theme-primary);
+  --color-primary-foreground: var(--wt-theme-primary-foreground);
+  --color-secondary: var(--wt-theme-secondary);
+  --color-secondary-foreground: var(--wt-theme-secondary-foreground);
+  --color-muted: var(--wt-theme-muted);
   --color-muted-foreground: var(--bs-secondary-color);
-  --color-accent: var(--bs-tertiary-bg);
-  --color-accent-foreground: var(--bs-body-color);
+  --color-accent: var(--wt-theme-accent);
+  --color-accent-foreground: var(--wt-theme-accent-foreground);
   --color-destructive: var(--bs-danger);
-  --color-border: var(--bs-border-color);
+  --color-border: var(--wt-theme-border);
   --color-input: var(--bs-border-color);
   --color-ring: var(--wt-primary-color);
   --radius-sm: var(--bs-border-radius-sm);
@@ -152,8 +170,8 @@
   --color-success-bg: var(--bs-success-bg-subtle);
   --color-warning: var(--bs-warning-text-emphasis);
   --color-warning-bg: var(--bs-warning-bg-subtle);
-  --color-info: var(--bs-info-text-emphasis);
-  --color-info-bg: var(--bs-info-bg-subtle);
+  --color-info: var(--wt-theme-info);
+  --color-info-bg: var(--wt-theme-info-bg);
   --color-overlay: var(--bs-black);
   --z-index-dialog-overlay: 1050;
   --z-index-dialog: 1055;

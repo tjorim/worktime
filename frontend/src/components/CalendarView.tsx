@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useRef, useState } from "react";
-import Card from "react-bootstrap/Card";
-import Button from "react-bootstrap/Button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { Dayjs } from "dayjs";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
@@ -44,16 +44,16 @@ import {
   serializeEventFormStateFromEntry,
 } from "@/utils/eventFormState";
 import { useEventForm } from "@/hooks/useEventForm";
-import { MonthCalendar } from "./calendar/MonthCalendar";
-import { CalendarLegend } from "./calendar/CalendarLegend";
-import { LongWeekendModal } from "./calendar/LongWeekendModal";
-import { LocationYearSummary } from "./calendar/LocationYearSummary";
-import { OtherLocationModal } from "./calendar/OtherLocationModal";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import { CalendarLegend } from "@/components/calendar/CalendarLegend";
+import { LongWeekendModal } from "@/components/calendar/LongWeekendModal";
+import { LocationYearSummary } from "@/components/calendar/LocationYearSummary";
+import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
 import * as m from "@/paraglide/messages.js";
-import { EventModal } from "./EventModal";
-import { ConfirmationDialog } from "./ConfirmationDialog";
-import { EmptyState } from "./shared/EmptyState";
-import { SetupActionButton } from "./shared/SetupActionButton";
+import { EventModal } from "@/components/EventModal";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { SetupActionButton } from "@/components/shared/SetupActionButton";
 import {
   getTypeFlagOptions,
   getTimeLocationFlagOptions,
@@ -412,50 +412,50 @@ export function CalendarView({
   });
 
   return (
-    <div className="py-3">
+    <div className="tw:py-4">
       <Card>
-        <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <span className="fw-semibold">
-            <Icon icon={CalendarIcon} className="me-2" />
+        <CardHeader className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+          <span className="tw:font-semibold">
+            <Icon icon={CalendarIcon} className="tw:mr-2" />
             {m.calendar_heading()}
           </span>
           {!getShiftForDate ? (
-            <small className="text-muted">
-              <Icon icon={InfoIcon} className="me-1" />
+            <small className="tw:text-muted-foreground">
+              <Icon icon={InfoIcon} className="tw:mr-1" />
               {m.calendar_select_schedule_hint()}
             </small>
           ) : (
-            <div className="d-flex align-items-center gap-2">
+            <div className="tw:flex tw:items-center tw:gap-2">
               {crossBorderEnabled && (
                 <Button
                   size="sm"
-                  variant={showAnnualSummary ? "secondary" : "outline-secondary"}
+                  variant={showAnnualSummary ? "secondary" : "outline"}
                   onClick={() => setShowAnnualSummary((prev) => !prev)}
                   aria-pressed={showAnnualSummary}
                   title={m.calendar_annual_summary_toggle_title()}
                 >
-                  <Icon icon={Columns3Icon} className="me-1" />
+                  <Icon icon={Columns3Icon} className="tw:mr-1" />
                   {m.calendar_annual_summary()}
                 </Button>
               )}
               {isNineToFive && (
                 <Button
                   size="sm"
-                  variant="outline-secondary"
+                  variant="outline"
                   onClick={() => setShowLongWeekendModal(true)}
                   title={m.long_weekend_btn()}
                 >
                   <span aria-hidden="true">🏖️</span>
-                  <span className="ms-1">{m.long_weekend_btn()}</span>
+                  <span className="tw:ml-1">{m.long_weekend_btn()}</span>
                 </Button>
               )}
               <CalendarLegend showEventTypes={timeOffEnabled} shifts={shiftLegendEntries} />
             </div>
           )}
-        </Card.Header>
-        <Card.Body>
+        </CardHeader>
+        <CardContent>
           {!getShiftForDate ? (
-            <div className="text-center">
+            <div className="tw:text-center">
               <EmptyState
                 icon={CalendarIcon}
                 title={m.calendar_welcome_title()}
@@ -464,7 +464,7 @@ export function CalendarView({
                     {m.calendar_empty_state_description({
                       timeOff: timeOffEnabled ? m.calendar_empty_state_with_timeoff() : "",
                     })}
-                    <span className="d-block mt-2">
+                    <span className="tw:block tw:mt-2">
                       {!scheduleType
                         ? m.calendar_empty_state_pick_schedule()
                         : m.calendar_empty_state_pick_team()}
@@ -473,11 +473,13 @@ export function CalendarView({
                 }
               />
               <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
-              <p className="text-muted mt-4 mb-3 small">{m.calendar_empty_state_footer()}</p>
+              <p className="tw:text-muted-foreground tw:mt-6 tw:mb-4 tw:text-sm">
+                {m.calendar_empty_state_footer()}
+              </p>
               {onOpenScheduleTab && (
                 <div>
-                  <Button size="sm" variant="outline-secondary" onClick={onOpenScheduleTab}>
-                    <Icon icon={CalendarDaysIcon} className="me-2" />
+                  <Button size="sm" variant="outline" onClick={onOpenScheduleTab}>
+                    <Icon icon={CalendarDaysIcon} className="tw:mr-2" />
                     {m.calendar_view_schedule_btn()}
                   </Button>
                 </div>
@@ -486,7 +488,7 @@ export function CalendarView({
           ) : (
             <>
               {crossBorderEnabled && showAnnualSummary && (
-                <div className="mb-3">
+                <div className="tw:mb-4">
                   <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
                 </div>
               )}
@@ -512,7 +514,7 @@ export function CalendarView({
               />
             </>
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
 
       {crossBorderEnabled && (

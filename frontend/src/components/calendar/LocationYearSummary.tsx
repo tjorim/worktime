@@ -1,9 +1,17 @@
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Clipboard as ClipboardIcon, Columns3 as Columns3Icon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import Table from "react-bootstrap/Table";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import {
   columnFilteringFeature,
   columnVisibilityFeature,
@@ -113,12 +121,6 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       locationSummaryColumnHelper.columns([
         locationSummaryColumnHelper.accessor("locationLabel", {
           header: m.location_col_location({}, { locale }),
-          cell: (context) => (
-            <>
-              <Icon icon={WORK_LOCATION_ICONS[context.row.original.location]} className="me-1" />
-              {context.getValue()}
-            </>
-          ),
         }),
         locationSummaryColumnHelper.accessor("countryCode", {
           header: m.location_col_country({}, { locale }),
@@ -126,14 +128,10 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
         locationSummaryColumnHelper.accessor("days", {
           header: m.location_col_days({}, { locale }),
           meta: { align: "end" } satisfies LocationSummaryColumnMeta,
-          cell: (context) => <span className="text-end d-block">{context.getValue()}</span>,
         }),
         locationSummaryColumnHelper.accessor("percentage", {
           header: "%",
           meta: { align: "end" } satisfies LocationSummaryColumnMeta,
-          cell: (context) => (
-            <span className="text-end text-muted d-block">{context.getValue()}%</span>
-          ),
         }),
       ]),
     [locale],
@@ -193,30 +191,33 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   };
 
   if (rows.length === 0) {
-    return <div className="text-muted small fst-italic py-2">{m.location_no_data({ year })}</div>;
+    return (
+      <div className="tw:text-muted-foreground tw:text-sm tw:italic tw:py-2">
+        {m.location_no_data({ year })}
+      </div>
+    );
   }
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <span className="fw-semibold small">
-          <Icon icon={Columns3Icon} className="me-1" />
+      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
+        <span className="tw:font-semibold tw:text-sm">
+          <Icon icon={Columns3Icon} className="tw:mr-1" />
           {m.location_summary_title({ year })}
         </span>
         <Button
           size="sm"
-          variant="outline-secondary"
+          variant="outline"
           onClick={handleCopy}
           aria-label={m.location_copy_aria()}
         >
-          <Icon icon={ClipboardIcon} className="me-1" />
+          <Icon icon={ClipboardIcon} className="tw:mr-1" />
           {m.location_copy_btn()}
         </Button>
       </div>
-      <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
-        <Form.Control
-          size="sm"
-          style={{ maxWidth: "240px" }}
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mb-2">
+        <Input
+          className="tw:max-w-60"
           placeholder={`${m.location_col_country()} / ${m.location_col_location()}`}
           value={countryFilter}
           onChange={(event) => setCountryFilter(event.target.value)}
@@ -236,59 +237,82 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
               return null;
             }
             return (
-              <Form.Check
-                key={column.id}
-                type="switch"
-                id={`location-column-${column.id}`}
-                label={label}
-                checked={column.getIsVisible()}
-                onChange={column.getToggleVisibilityHandler()}
-              />
+              <label key={column.id} className="tw:flex tw:items-center tw:gap-2">
+                <Switch
+                  id={`location-column-${column.id}`}
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(checked) => column.toggleVisibility(checked)}
+                />
+                {label}
+              </label>
             );
           })}
       </div>
-      <Table size="sm" bordered hover className="mb-0">
-        <thead>
+      <Table className="tw:mb-0">
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
+            <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 const sorted = header.column.getIsSorted();
                 const meta = header.column.columnDef.meta;
                 const ariaSort =
                   sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none";
                 return (
-                  <th
+                  <TableHead
                     key={header.id}
-                    className={meta?.align === "end" ? "text-end" : undefined}
+                    className={meta?.align === "end" ? "tw:text-right" : undefined}
                     aria-sort={header.column.getCanSort() ? ariaSort : undefined}
                   >
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
-                        className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
+                        className="tw:border-0 tw:bg-transparent tw:p-0 tw:text-foreground tw:font-semibold tw:focus-visible:outline-2 tw:focus-visible:outline-ring"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {sorted === "asc" ? " ↑" : sorted === "desc" ? " ↓" : ""}
                       </button>
                     )}
-                  </th>
+                  </TableHead>
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </thead>
-        <tbody>
+        </TableHeader>
+        <TableBody>
           {table.getRowModel().rows.map((tableRow) => {
             return (
-              <tr key={tableRow.id}>
+              <TableRow key={tableRow.id}>
                 {tableRow.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  <TableCell
+                    key={cell.id}
+                    className={
+                      cell.column.id === "days" || cell.column.id === "percentage"
+                        ? "tw:text-right"
+                        : undefined
+                    }
+                  >
+                    {cell.column.id === "locationLabel" ? (
+                      <>
+                        <Icon
+                          icon={WORK_LOCATION_ICONS[tableRow.original.location]}
+                          className="tw:mr-1"
+                        />
+                        {tableRow.original.locationLabel}
+                      </>
+                    ) : cell.column.id === "countryCode" ? (
+                      tableRow.original.countryCode
+                    ) : cell.column.id === "days" ? (
+                      tableRow.original.days
+                    ) : (
+                      `${tableRow.original.percentage}%`
+                    )}
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             );
           })}
-        </tbody>
+        </TableBody>
       </Table>
     </div>
   );

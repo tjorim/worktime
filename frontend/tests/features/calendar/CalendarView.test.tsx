@@ -39,7 +39,7 @@ describe("CalendarView (unified calendar) roster warning", () => {
       </TestProviders>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Close alert" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}")).toMatchObject({
       dismissedHints: { unifiedCalendar: true },
     });

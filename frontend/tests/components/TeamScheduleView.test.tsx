@@ -344,12 +344,12 @@ describe("TeamScheduleView", () => {
       ) {
         if (this.matches('th[aria-current="date"]')) return rect(2000, 28);
         if (this.matches("[data-team-name]")) return rect(0, 200);
-        if (this.classList.contains("table-responsive")) return rect(0, 1000);
+        if (this.classList.contains("tw:overflow-x-auto")) return rect(0, 1000);
         return rect(0, 0);
       });
       try {
         await renderGrid([]);
-        const scroller = document.querySelector(".table-responsive") as HTMLElement;
+        const scroller = document.querySelector('[class~="tw:overflow-x-auto"]') as HTMLElement;
         // 2000 - 200 (sticky) - (800 - 28) / 2 = 1414
         expect(scroller.scrollLeft).toBe(1414);
       } finally {
@@ -434,10 +434,10 @@ describe("TeamScheduleView", () => {
 
     it("keeps the team ID form and the grid in one card, so the grid isn't pushed down", async () => {
       const grid = await renderGrid([]);
-      const card = grid.closest(".card")!;
+      const card = grid.closest('[data-slot="card"]')!;
       // The form lives in this card's header, not in a separate card above it.
-      expect(card.querySelector(".card-header #team-id-input")).not.toBeNull();
-      expect(document.querySelectorAll(".team-schedule-view > .card")).toHaveLength(2); // grid + legend
+      expect(card.querySelector('[data-slot="card-header"] #team-id-input')).not.toBeNull();
+      expect(document.querySelectorAll('.team-schedule-view > [data-slot="card"]')).toHaveLength(2); // grid + legend
     });
 
     it("gives every month a sticky label and long names an ellipsis-ready wrapper", async () => {

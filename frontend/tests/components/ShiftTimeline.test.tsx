@@ -92,15 +92,15 @@ describe("ShiftTimeline", () => {
       <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />,
     );
     expect(screen.getByText("T3")).toBeInTheDocument();
-    const currentBadge = container.querySelector(".timeline-current-badge");
+    const currentBadge = container.querySelector("[data-current-team]");
     expect(currentBadge).toBeInTheDocument();
     expect(currentBadge?.textContent).toBe("T3");
   });
 
-  it("applies timeline-current-badge class to current team", () => {
+  it("identifies the current team badge to current team", () => {
     const currentWorkingTeam = createMockShiftResult(2, "N", today);
     renderWithProviders(<ShiftTimeline currentWorkingTeam={currentWorkingTeam} />);
-    const currentBadge = document.querySelector(".timeline-current-badge");
+    const currentBadge = document.querySelector("[data-current-team]");
     expect(currentBadge).toBeInTheDocument();
     expect(currentBadge).toHaveTextContent("T2");
   });
@@ -109,8 +109,8 @@ describe("ShiftTimeline", () => {
     const morningTeam = createMockShiftResult(1, "M", today);
     renderWithProviders(<ShiftTimeline currentWorkingTeam={morningTeam} />);
     const badge = screen.getByText("T1");
-    expect(badge).toHaveClass("timeline-current-badge");
-    expect(badge).toHaveClass("timeline-badge");
+    expect(badge).toHaveClass("tw:bg-wt-shift-morning", "tw:text-wt-shift-morning-text");
+    expect(badge).toHaveClass("tw:min-w-10");
   });
 
   it("renders timeline flow structure", () => {
@@ -118,15 +118,15 @@ describe("ShiftTimeline", () => {
     const { container } = renderWithProviders(
       <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />,
     );
-    expect(container.querySelector(".timeline-flow")).toBeInTheDocument();
-    expect(container.querySelector(".timeline-team")).toBeInTheDocument();
+    expect(container.querySelector("[data-timeline-flow]")).toBeInTheDocument();
+    expect(container.querySelector("[data-timeline-team]")).toBeInTheDocument();
   });
 
   it("handles different shift codes correctly", () => {
     const nightTeam = createMockShiftResult(5, "N", today);
     const { container } = renderWithProviders(<ShiftTimeline currentWorkingTeam={nightTeam} />);
     expect(screen.getByText("T5")).toBeInTheDocument();
-    const currentBadge = container.querySelector(".timeline-current-badge");
+    const currentBadge = container.querySelector("[data-current-team]");
     expect(currentBadge).toBeInTheDocument();
     expect(currentBadge?.textContent).toBe("T5");
   });
@@ -173,7 +173,7 @@ describe("ShiftTimeline", () => {
       const { container } = renderWithProviders(
         <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />,
       );
-      expect(container.querySelector(".card-timeline")).not.toBeInTheDocument();
+      expect(container.querySelector("[data-timeline-flow]")).not.toBeInTheDocument();
     });
 
     it("shows arrows for sequential shifts", () => {
@@ -188,7 +188,7 @@ describe("ShiftTimeline", () => {
         <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />,
       );
 
-      expect(container.querySelectorAll(".timeline-arrow").length).toBeGreaterThan(0);
+      expect(container.querySelectorAll("[data-timeline-arrow]").length).toBeGreaterThan(0);
     });
 
     it("hides arrows when parallel shifts are detected", () => {
@@ -204,8 +204,8 @@ describe("ShiftTimeline", () => {
       );
 
       // Should render timeline but without arrows
-      expect(container.querySelector(".card-timeline")).toBeInTheDocument();
-      expect(container.querySelector(".timeline-arrow")).not.toBeInTheDocument();
+      expect(container.querySelector("[data-timeline-flow]")).toBeInTheDocument();
+      expect(container.querySelector("[data-timeline-arrow]")).not.toBeInTheDocument();
       expect(screen.getByText("Multiple teams share this shift start time.")).toBeInTheDocument();
     });
 

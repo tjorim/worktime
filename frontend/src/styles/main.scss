@@ -12,7 +12,7 @@
 
 @use "sass:meta";
 
-@layer theme, legacy, base, components, utilities;
+@layer theme, legacy, base, calendar, components, utilities;
 
 @import "../../node_modules/frappe-gantt/dist/frappe-gantt.css" layer(legacy);
 

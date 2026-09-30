@@ -218,18 +218,6 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
   }
 }
 
-@keyframes wt-status-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.992);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 /* Shared motion language: short feedback on controls and a restrained entrance
    when the user deliberately switches app views. */
 .btn,
@@ -260,11 +248,6 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
   animation: wt-view-enter var(--wt-motion-base) var(--wt-motion-ease) both;
 }
 
-.current-status-card {
-  transform-origin: top center;
-  animation: wt-status-enter var(--wt-motion-slow) var(--wt-motion-ease) both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .nav-link,
@@ -275,8 +258,7 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
   }
 
   .tab-pane.active,
-  .app-view-enter,
-  .current-status-card {
+  .app-view-enter {
     animation: none !important;
   }
 
@@ -311,5 +293,27 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
     font-size: 0.65rem;
     line-height: 1;
     overflow-wrap: anywhere;
+  }
+}
+
+/* Shared with the navigation header until its migration. */
+.header-icon {
+  font-size: 1.25rem;
+}
+
+/* Preserve compact spacing for Bootstrap consumers during the staged migration. */
+@media (width <= 768px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .card-body,
+  .card-header {
+    padding: 0.75rem;
+  }
+
+  .btn-sm {
+    font-size: 0.75rem;
   }
 }

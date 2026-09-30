@@ -12,8 +12,8 @@ import {
 import { createDragAndDropPlugin } from "@/features/calendar/dragAndDropAdapter";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
 import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
@@ -271,37 +271,45 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
   };
 
   return (
-    <section className="unified-calendar px-0 py-3 px-sm-3" aria-label="Unified calendar">
+    <section className="unified-calendar tw:px-0 tw:py-4 tw:sm:px-4" aria-label="Unified calendar">
       {showHelp ? (
-        <Alert variant="info" className="py-2" dismissible onClose={dismissHelp}>
+        <Alert variant="info" className="tw:py-2">
           {m.unified_calendar_help()}
+          <Button variant="ghost" size="sm" onClick={dismissHelp} aria-label={m.close()}>
+            {m.close()}
+          </Button>
         </Alert>
       ) : (
-        <div className="d-flex justify-content-end mb-2">
-          <Button variant="link" size="sm" className="text-muted p-0" onClick={restoreHelp}>
-            <Icon icon={InfoIcon} className="me-1" />
+        <div className="tw:flex tw:justify-end tw:mb-2">
+          <Button
+            variant="link"
+            size="sm"
+            className="tw:text-muted-foreground tw:p-0"
+            onClick={restoreHelp}
+          >
+            <Icon icon={InfoIcon} className="tw:mr-1" />
             {m.unified_calendar_show_help()}
           </Button>
         </div>
       )}
       {effectiveTeam === null && (
-        <Alert variant="warning" className="d-flex align-items-center gap-2 py-2">
+        <Alert variant="warning" className="tw:flex tw:items-center tw:gap-2 tw:py-2">
           <Icon icon={TriangleAlertIcon} />
           <span>
             No roster configured — no shifts will appear.
             {onChangeSchedule && (
               <>
                 {" "}
-                <Alert.Link as="button" onClick={onChangeSchedule}>
+                <Button variant="link" className="tw:p-0" onClick={onChangeSchedule}>
                   Pick a schedule
-                </Alert.Link>
+                </Button>
                 {onChangeTeam && " or "}
               </>
             )}
             {onChangeTeam && (
-              <Alert.Link as="button" onClick={onChangeTeam}>
+              <Button variant="link" className="tw:p-0" onClick={onChangeTeam}>
                 Pick a team
-              </Alert.Link>
+              </Button>
             )}
           </span>
         </Alert>
@@ -364,7 +372,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
             <DialogTitle>Time-off details</DialogTitle>
           </DialogHeader>
           <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-            <dl className="mb-0">
+            <dl className="tw:mb-0">
               <dt>Title</dt>
               <dd>{timeOffEvent?.title}</dd>
               <dt>Dates</dt>
