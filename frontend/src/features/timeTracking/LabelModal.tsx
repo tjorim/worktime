@@ -7,8 +7,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import * as m from "@/paraglide/messages.js";
 
 type LabelForm = {
@@ -67,9 +66,9 @@ export function LabelModal({
             <Form.Group controlId="labelColor">
               <Form.Label>{m.form_label_color()}</Form.Label>
               <div className="d-flex gap-2 align-items-center">
-                <OverlayTrigger
+                <Hint
                   placement="top"
-                  overlay={<Tooltip id="label-color-picker">{m.tt_select_label_color()}</Tooltip>}
+                  content={<div id="label-color-picker">{m.tt_select_label_color()}</div>}
                 >
                   <Form.Control
                     type="color"
@@ -79,7 +78,7 @@ export function LabelModal({
                     aria-required="true"
                     required
                   />
-                </OverlayTrigger>
+                </Hint>
                 <Form.Control
                   value={value.color}
                   onChange={(event) => onChange({ ...value, color: event.target.value })}

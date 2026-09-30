@@ -2,8 +2,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
@@ -154,10 +153,10 @@ export function CurrentStatus({
             <div className="d-flex align-items-center gap-3">
               <Card.Title className="mb-0">{m.schedule_current_status()}</Card.Title>
               <div className="text-muted">
-                <OverlayTrigger
+                <Hint
                   placement="bottom"
-                  overlay={
-                    <Tooltip id={dateTooltipId}>
+                  content={
+                    <div id={dateTooltipId}>
                       <strong>{m.current_status_date_format()}</strong>
                       <br />
                       {m.current_status_yy_help()}
@@ -171,7 +170,7 @@ export function CurrentStatus({
                         <br />
                         {m.current_status_shift_day_code({ code: formatYYWWD(currentShiftDay) })}
                       </em>
-                    </Tooltip>
+                    </div>
                   }
                 >
                   <small className="help-underline">
@@ -179,7 +178,7 @@ export function CurrentStatus({
                     {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
-                </OverlayTrigger>
+                </Hint>
               </div>
             </div>
             <div className="d-flex align-items-center gap-2">

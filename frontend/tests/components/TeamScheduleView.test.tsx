@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { delay, http, HttpResponse } from "msw";
@@ -181,12 +181,12 @@ describe("TeamScheduleView", () => {
         </TestProviders>,
       );
       await screen.findByText("Engineering");
-      return document.querySelector(".team-calendar-grid") as HTMLElement;
+      return document.querySelector("[data-team-grid]") as HTMLElement;
     }
 
     const cellFor = (grid: HTMLElement, d: dayjs.Dayjs) =>
       grid.querySelector<HTMLElement>(
-        `tbody tr.calendar-member-row td[data-date="${d.format("YYYY-MM-DD")}"]`,
+        `tbody tr[data-team-member] td[data-date="${d.format("YYYY-MM-DD")}"]`,
       )!;
 
     it("marks today's column header so it can be scrolled into view", async () => {
@@ -204,10 +204,10 @@ describe("TeamScheduleView", () => {
       ]);
 
       const cell = cellFor(grid, today);
-      const segments = cell.querySelectorAll(".calendar-cell-segment");
+      const segments = cell.querySelectorAll("[data-team-event-segment]");
       expect(segments).toHaveLength(2);
-      expect(segments[0]).toHaveClass("event-holiday-full");
-      expect(segments[1]).toHaveClass("event-ill-full");
+      expect(segments[0]).toHaveClass("tw:bg-wt-event-holiday-full-bg");
+      expect(segments[1]).toHaveClass("tw:bg-wt-event-ill-full-bg");
       // Screen readers get every event, not just the first.
       expect(cell).toHaveAttribute("aria-label", expect.stringContaining("Holiday"));
       expect(cell).toHaveAttribute("aria-label", expect.stringContaining("Sick"));
@@ -221,9 +221,9 @@ describe("TeamScheduleView", () => {
 
       const cell = cellFor(grid, today);
       // Full color (the fill is split by CSS), not the lighter "-half" color.
-      expect(cell).toHaveClass("event-holiday-full", "calendar-half-am");
-      expect(cell).not.toHaveClass("event-holiday-half");
-      expect(cell.querySelector(".calendar-cell-stack")).toBeNull();
+      expect(cell).toHaveClass("tw:bg-wt-event-holiday-full-bg", "tw:team-half-am");
+      expect(cell).not.toHaveClass("tw:bg-wt-event-holiday-half-bg");
+      expect(cell.querySelector("[data-team-event-stack]")).toBeNull();
       expect(cell).toHaveTextContent("◐");
     });
 
@@ -234,7 +234,7 @@ describe("TeamScheduleView", () => {
       ]);
 
       const cell = cellFor(grid, today);
-      expect(cell).toHaveClass("calendar-half-pm");
+      expect(cell).toHaveClass("tw:team-half-pm");
       expect(cell).toHaveTextContent("◑");
     });
 
@@ -252,12 +252,12 @@ describe("TeamScheduleView", () => {
       const first = cellFor(grid, today.subtract(1, "day"));
       const middle = cellFor(grid, today);
       const last = cellFor(grid, today.add(1, "day"));
-      expect(first).toHaveClass("range-start");
-      expect(first).not.toHaveClass("range-end");
-      expect(middle).not.toHaveClass("range-start");
-      expect(middle).not.toHaveClass("range-end");
-      expect(last).toHaveClass("range-end");
-      expect(last).not.toHaveClass("range-start");
+      expect(first).toHaveClass("tw:team-range-start");
+      expect(first).not.toHaveClass("tw:team-range-end");
+      expect(middle).not.toHaveClass("tw:team-range-start");
+      expect(middle).not.toHaveClass("tw:team-range-end");
+      expect(last).toHaveClass("tw:team-range-end");
+      expect(last).not.toHaveClass("tw:team-range-start");
     });
 
     it("caps a one-day range at both ends", async () => {
@@ -265,7 +265,7 @@ describe("TeamScheduleView", () => {
       const grid = await renderGrid([{ type: "range", start: day, end: day, flags: [] }]);
 
       const cell = cellFor(grid, today);
-      expect(cell).toHaveClass("range-start", "range-end");
+      expect(cell).toHaveClass("tw:team-range-start", "tw:team-range-end");
     });
 
     it("treats a range that continues past the visible edge as continuing", async () => {
@@ -279,16 +279,20 @@ describe("TeamScheduleView", () => {
         },
       ]);
 
-      expect(grid.querySelectorAll(".range-start, .range-end")).toHaveLength(0);
+      expect(
+        grid.querySelectorAll('[class~="tw:team-range-start"], [class~="tw:team-range-end"]'),
+      ).toHaveLength(0);
     });
 
     it("styles today's and weekend header cells through classes, not inline styles", async () => {
       const grid = await renderGrid([]);
       const todayHeader = grid.querySelector('th[aria-current="date"]') as HTMLElement;
-      expect(todayHeader).toHaveClass("is-today");
+      expect(todayHeader).toHaveClass("tw:bg-team-today");
       expect(todayHeader).not.toHaveAttribute("style");
       // Any weekend day header (Sat/Sun) that isn't today carries is-weekend.
-      expect(grid.querySelectorAll("th.calendar-day-header.is-weekend").length).toBeGreaterThan(0);
+      expect(
+        grid.querySelectorAll('th[class~="tw:bg-team-header-weekend"]').length,
+      ).toBeGreaterThan(0);
     });
 
     it("shows a legend entry for every look the grid can produce", async () => {
@@ -314,12 +318,12 @@ describe("TeamScheduleView", () => {
 
     it("renders legend swatches with the same classes the grid cells use", async () => {
       await renderGrid([]);
-      const swatches = document.querySelectorAll(".legend-color-box");
+      const swatches = document.querySelectorAll("[data-team-swatch]");
       const classes = Array.from(swatches).map((el) => el.className);
-      expect(classes.some((c) => c.includes("calendar-available"))).toBe(true);
-      expect(classes.some((c) => c.includes("calendar-weekend"))).toBe(true);
+      expect(classes.some((c) => c.includes("tw:bg-wt-team-cal-available"))).toBe(true);
+      expect(classes.some((c) => c.includes("tw:bg-wt-team-cal-weekend-cell"))).toBe(true);
       expect(classes.some((c) => c.includes("event-other-full"))).toBe(true);
-      expect(classes.some((c) => c.includes("calendar-half-am"))).toBe(true);
+      expect(classes.some((c) => c.includes("tw:team-half-am"))).toBe(true);
     });
 
     it("scrolls today into view when the grid appears", async () => {
@@ -339,7 +343,7 @@ describe("TeamScheduleView", () => {
         this: Element,
       ) {
         if (this.matches('th[aria-current="date"]')) return rect(2000, 28);
-        if (this.matches(".calendar-name-cell")) return rect(0, 200);
+        if (this.matches("[data-team-name]")) return rect(0, 200);
         if (this.classList.contains("table-responsive")) return rect(0, 1000);
         return rect(0, 0);
       });
@@ -387,7 +391,7 @@ describe("TeamScheduleView", () => {
       const user = userEvent.setup();
 
       await user.tab(); // reach the first focusable element…
-      cellFor(grid, today).focus(); // …then land on the cell itself
+      act(() => cellFor(grid, today).focus()); // …then land on the cell itself
       const popover = await screen.findByRole("tooltip");
 
       expect(popover).toHaveTextContent("Alice");
@@ -396,6 +400,26 @@ describe("TeamScheduleView", () => {
       expect(popover).toHaveTextContent(m.team_legend_sick());
       expect(popover).toHaveTextContent(m.team_legend_half_am());
       expect(popover).toHaveTextContent("Cold");
+      expect(cellFor(grid, today)).toHaveFocus();
+      await user.tab();
+      expect(cellFor(grid, today)).not.toHaveFocus();
+      await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    });
+
+    it("opens the same event details on hover and dismisses them with Escape", async () => {
+      const day = isoSlash(today);
+      const grid = await renderGrid([
+        { type: "range", start: day, end: day, flags: ["business"], title: "Client visit" },
+      ]);
+      const user = userEvent.setup();
+      const cell = cellFor(grid, today);
+      await user.hover(cell);
+      const popover = await screen.findByRole("tooltip");
+      expect(popover).toHaveTextContent("Client visit");
+      expect(popover).toHaveTextContent(m.team_legend_business());
+      expect(cell).toHaveAttribute("aria-label", expect.stringContaining("Client visit"));
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
     });
 
     it("labels a weekly pattern as such", async () => {
@@ -418,10 +442,8 @@ describe("TeamScheduleView", () => {
 
     it("gives every month a sticky label and long names an ellipsis-ready wrapper", async () => {
       const grid = await renderGrid([]);
-      expect(
-        grid.querySelectorAll(".calendar-month-header .calendar-month-label").length,
-      ).toBeGreaterThan(0);
-      expect(grid.querySelector(".calendar-member-row .member-name")).toHaveAttribute(
+      expect(grid.querySelectorAll("[data-team-month-label]").length).toBeGreaterThan(0);
+      expect(grid.querySelector("[data-team-member] [data-team-member-name]")).toHaveAttribute(
         "tabindex",
         "0",
       );

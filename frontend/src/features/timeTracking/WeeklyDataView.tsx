@@ -1,10 +1,9 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import { Hint } from "@/components/ui/tooltip";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
-import Tooltip from "react-bootstrap/Tooltip";
 import { WORK_LOCATION_ICON_CLASS } from "@/components/calendar/workLocationConstants";
 import type { WorkLocationMap } from "@/types/workLocation";
 import * as m from "@/paraglide/messages.js";
@@ -149,12 +148,12 @@ export function WeeklyDataView({
 
             return (
               <div key={day.iso} className="col">
-                <OverlayTrigger
-                  trigger={onSwitchToDaily ? ["hover", "focus"] : []}
-                  overlay={
-                    <Tooltip id={`weekly-day-${day.iso}`}>
+                <Hint
+                  disabled={!onSwitchToDaily}
+                  content={
+                    <div id={`weekly-day-${day.iso}`}>
                       {m.tt_open_daily_log_title({ day: day.label })}
-                    </Tooltip>
+                    </div>
                   }
                 >
                   <div
@@ -227,7 +226,7 @@ export function WeeklyDataView({
                       </div>
                     )}
                   </div>
-                </OverlayTrigger>
+                </Hint>
               </div>
             );
           })}

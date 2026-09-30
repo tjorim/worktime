@@ -1,7 +1,6 @@
 import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import clsx from "clsx";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
@@ -188,16 +187,16 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
         )}
         {prevShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
         <div className="timeline-team">
-          <OverlayTrigger
+          <Hint
             placement="bottom"
-            overlay={
-              <Tooltip id={timelineTooltipId}>
+            content={
+              <div id={timelineTooltipId}>
                 <strong>{m.timeline_currently_active()}</strong>
                 <br />
                 {currentWorkingTeam.shift.name}
                 <br />
                 {formattedShiftTime}
-              </Tooltip>
+              </div>
             }
           >
             <Badge
@@ -209,21 +208,21 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             >
               T{currentWorkingTeam.teamNumber}
             </Badge>
-          </OverlayTrigger>
+          </Hint>
           <div className="timeline-code">
             <ShiftBadge shift={currentWorkingTeam.shift} size="sm" showTooltip={false} />
-            <OverlayTrigger
+            <Hint
               placement="bottom"
-              overlay={
-                <Tooltip id={`${timelineTooltipId}-live`}>
+              content={
+                <div id={`${timelineTooltipId}-live`}>
                   <strong>{m.shift_timeline_live_updates_title()}</strong>
                   <br />
                   {m.shift_timeline_live_updates_desc()}
-                </Tooltip>
+                </div>
               }
             >
               <i className="bi bi-broadcast text-success live-indicator ms-1"></i>
-            </OverlayTrigger>
+            </Hint>
           </div>
         </div>
         {nextShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}

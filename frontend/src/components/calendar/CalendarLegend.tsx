@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Popover from "react-bootstrap/Popover";
+import { DetailsPopover, PopoverHeader, PopoverBody } from "@/components/ui/popover";
 import * as m from "@/paraglide/messages.js";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { Shift } from "@/utils/shiftCalculations";
@@ -40,9 +39,9 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
   ];
 
   const legendPopover = (
-    <Popover id="calendar-legend-popover">
-      <Popover.Header as="h3">{m.team_legend_heading()}</Popover.Header>
-      <Popover.Body>
+    <>
+      <PopoverHeader>{m.team_legend_heading()}</PopoverHeader>
+      <PopoverBody>
         {shifts && shifts.length > 0 && (
           <div className="mb-2">
             <strong className="small">{m.calendar_legend_shift_types_heading()}</strong>
@@ -77,16 +76,16 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
             ))}
           </div>
         </div>
-      </Popover.Body>
-    </Popover>
+      </PopoverBody>
+    </>
   );
 
   return (
-    <OverlayTrigger trigger="click" placement="left-end" overlay={legendPopover} rootClose>
+    <DetailsPopover placement="left-end" content={legendPopover}>
       <Button variant="link" size="sm" className="text-muted p-0 text-decoration-none">
         <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
         {m.calendar_legend_btn_label()}
       </Button>
-    </OverlayTrigger>
+    </DetailsPopover>
   );
 }

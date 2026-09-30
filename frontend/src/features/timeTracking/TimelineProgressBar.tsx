@@ -1,8 +1,8 @@
 import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
-import Overlay from "react-bootstrap/Overlay";
+import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
-import Tooltip from "react-bootstrap/Tooltip";
+import { TooltipContent } from "@/components/ui/tooltip";
 import * as m from "@/paraglide/messages.js";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
@@ -341,9 +341,11 @@ export function TimelineProgressBar({
             })}
           </BootstrapProgressBar>
 
-          <Overlay show={tooltipInfo !== null} target={tooltipInfo?.target ?? null} placement="top">
-            <Tooltip id="progress-bar-tooltip">{tooltipInfo?.label}</Tooltip>
-          </Overlay>
+          <TooltipPrimitive.Root open={tooltipInfo !== null}>
+            <TooltipContent anchor={tooltipInfo?.target ?? null}>
+              {tooltipInfo?.label}
+            </TooltipContent>
+          </TooltipPrimitive.Root>
 
           {nowPct !== null && liveTime && (
             <div

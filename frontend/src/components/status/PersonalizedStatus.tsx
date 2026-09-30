@@ -1,10 +1,9 @@
 import { useId, useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import { Hint } from "@/components/ui/tooltip";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
-import Tooltip from "react-bootstrap/Tooltip";
 import type { ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
 import { getScheduleConfig, isValidScheduleType } from "@/utils/scheduleUtils";
@@ -238,10 +237,10 @@ export function PersonalizedStatusContent({
                   {m.personalized_status_team({ team: String(myTeam) })}
                 </span>
               )}
-              <OverlayTrigger
+              <Hint
                 placement="bottom"
-                overlay={
-                  <Tooltip id={teamTooltipId}>
+                content={
+                  <div id={teamTooltipId}>
                     <strong>{m.personalized_status_your_team_today()}</strong>
                     <br />
                     {m.personalized_status_code_label()}{" "}
@@ -250,7 +249,7 @@ export function PersonalizedStatusContent({
                     {shiftTooltipDetails}
                     <br />
                     <em>{m.personalized_status_full_code({ code: currentShift.code })}</em>
-                  </Tooltip>
+                  </div>
                 }
               >
                 <ShiftBadge
@@ -260,7 +259,7 @@ export function PersonalizedStatusContent({
                   showTooltip={false}
                   className="cursor-help"
                 />
-              </OverlayTrigger>
+              </Hint>
               {currentShift.shift.start != null &&
                 currentShift.shift.end != null &&
                 !isFlexShift && (

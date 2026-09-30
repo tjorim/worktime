@@ -39,6 +39,33 @@ export function getEventTextColor(flags?: EventFlag[], eventType?: HdayEvent["ty
   return `var(--wt-event-${type}-${variant}-fg)`;
 }
 
+const EVENT_COLOR_UTILITIES = {
+  "holiday-full": "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg",
+  "holiday-half": "tw:bg-wt-event-holiday-half-bg tw:text-wt-event-holiday-half-fg",
+  "business-full": "tw:bg-wt-event-business-full-bg tw:text-wt-event-business-full-fg",
+  "business-half": "tw:bg-wt-event-business-half-bg tw:text-wt-event-business-half-fg",
+  "course-full": "tw:bg-wt-event-course-full-bg tw:text-wt-event-course-full-fg",
+  "course-half": "tw:bg-wt-event-course-half-bg tw:text-wt-event-course-half-fg",
+  "in-full": "tw:bg-wt-event-in-full-bg tw:text-wt-event-in-full-fg",
+  "in-half": "tw:bg-wt-event-in-half-bg tw:text-wt-event-in-half-fg",
+  "weekend-full": "tw:bg-wt-event-weekend-full-bg tw:text-wt-event-weekend-full-fg",
+  "weekend-half": "tw:bg-wt-event-weekend-half-bg tw:text-wt-event-weekend-half-fg",
+  "recurring-full": "tw:bg-wt-event-recurring-full-bg tw:text-wt-event-recurring-full-fg",
+  "recurring-half": "tw:bg-wt-event-recurring-half-bg tw:text-wt-event-recurring-half-fg",
+  "birthday-full": "tw:bg-wt-event-birthday-full-bg tw:text-wt-event-birthday-full-fg",
+  "birthday-half": "tw:bg-wt-event-birthday-half-bg tw:text-wt-event-birthday-half-fg",
+  "ill-full": "tw:bg-wt-event-ill-full-bg tw:text-wt-event-ill-full-fg",
+  "ill-half": "tw:bg-wt-event-ill-half-bg tw:text-wt-event-ill-half-fg",
+  "other-full": "tw:bg-wt-event-other-full-bg tw:text-wt-event-other-full-fg",
+  "other-half": "tw:bg-wt-event-other-half-bg tw:text-wt-event-other-half-fg",
+} as const;
+
+/** Tailwind event colors are written out so the scanner includes every palette variant. */
+export function getEventColorUtilities(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
+  const { type, variant } = getEventPaletteKey(flags, eventType);
+  return EVENT_COLOR_UTILITIES[`${type}-${variant}`];
+}
+
 export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
   const { type, variant } = getEventPaletteKey(flags, eventType);
   return `event-${type}-${variant}`;

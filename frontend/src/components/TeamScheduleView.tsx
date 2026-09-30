@@ -6,15 +6,14 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Popover from "react-bootstrap/Popover";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
+import { DetailsHeader, PopoverBody } from "@/components/ui/popover";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getPrimaryTypeFlag } from "@/lib/hday/flags";
-import { getEventColorClass } from "@/lib/hday/presentation";
+import { getEventColorUtilities } from "@/lib/hday/presentation";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
+import { MonthNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
@@ -52,7 +51,7 @@ interface TeamHdayResponse {
 /** Full-day color class for an event: the half-day look comes from the split fill, not a lighter color. */
 function getGridColorClass(event: HdayEvent): string {
   const typeFlags = event.flags?.filter((flag) => flag !== "half_am" && flag !== "half_pm");
-  return getEventColorClass(typeFlags, event.type);
+  return getEventColorUtilities(typeFlags, event.type);
 }
 
 const HALF_DAY_GLYPH: Record<HalfDay, string> = { am: "◐", pm: "◑" };
@@ -100,24 +99,53 @@ function describeEvent(event: HdayEvent) {
 // classes, so the legend can't drift from what the cells actually show.
 function getLegendItems() {
   return [
-    { swatchClass: "calendar-available", label: m.team_legend_available() },
-    { swatchClass: "calendar-weekend", label: m.team_legend_weekend() },
-    { swatchClass: "event-holiday-full", label: m.team_legend_vacation() },
-    { swatchClass: "event-ill-full", label: m.team_legend_sick() },
-    { swatchClass: "event-business-full", label: m.team_legend_business() },
-    { swatchClass: "event-course-full", label: m.team_legend_training() },
-    { swatchClass: "event-recurring-full", label: m.team_legend_weekly_off() },
-    { swatchClass: "event-birthday-full", label: m.team_legend_birthday() },
-    { swatchClass: "event-in-full", label: m.team_legend_in_office() },
-    { swatchClass: "event-other-full", label: m.team_legend_other() },
-    { swatchClass: "event-weekend-full", label: m.team_legend_weekend_event() },
+    { swatchClass: "tw:bg-wt-team-cal-available", label: m.team_legend_available() },
+    { swatchClass: "tw:bg-wt-team-cal-weekend-cell", label: m.team_legend_weekend() },
     {
-      swatchClass: "event-holiday-full calendar-half-am",
+      swatchClass: "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg",
+      label: m.team_legend_vacation(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-ill-full-bg tw:text-wt-event-ill-full-fg",
+      label: m.team_legend_sick(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-business-full-bg tw:text-wt-event-business-full-fg",
+      label: m.team_legend_business(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-course-full-bg tw:text-wt-event-course-full-fg",
+      label: m.team_legend_training(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-recurring-full-bg tw:text-wt-event-recurring-full-fg",
+      label: m.team_legend_weekly_off(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-birthday-full-bg tw:text-wt-event-birthday-full-fg",
+      label: m.team_legend_birthday(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-in-full-bg tw:text-wt-event-in-full-fg",
+      label: m.team_legend_in_office(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-other-full-bg tw:text-wt-event-other-full-fg",
+      label: m.team_legend_other(),
+    },
+    {
+      swatchClass: "tw:bg-wt-event-weekend-full-bg tw:text-wt-event-weekend-full-fg",
+      label: m.team_legend_weekend_event(),
+    },
+    {
+      swatchClass:
+        "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg tw:team-half-am",
       glyph: HALF_DAY_GLYPH.am,
       label: m.team_legend_half_am(),
     },
     {
-      swatchClass: "event-holiday-full calendar-half-pm",
+      swatchClass:
+        "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg tw:team-half-pm",
       glyph: HALF_DAY_GLYPH.pm,
       label: m.team_legend_half_pm(),
     },
@@ -323,7 +351,7 @@ export function TeamScheduleView() {
     const container = gridScrollRef.current;
     if (!container) return;
     const todayHeader = container.querySelector<HTMLElement>('th[aria-current="date"]');
-    const nameColumn = container.querySelector<HTMLElement>(".calendar-name-cell");
+    const nameColumn = container.querySelector<HTMLElement>("[data-team-name]");
     if (!todayHeader) {
       container.scrollLeft = 0;
       return;
@@ -367,7 +395,10 @@ export function TeamScheduleView() {
               {teamData ? teamData.name : m.team_viewer_title()}
             </h5>
 
-            <Form onSubmit={handleSubmit} className="d-flex gap-2 flex-grow-1 team-id-form">
+            <Form
+              onSubmit={handleSubmit}
+              className="d-flex gap-2 flex-grow-1 tw:min-w-56 tw:max-w-md"
+            >
               <Form.Group className="flex-grow-1">
                 <Form.Label htmlFor="team-id-input" className="visually-hidden">
                   {m.team_id_label()}
@@ -444,28 +475,46 @@ export function TeamScheduleView() {
               </h6>
 
               <div className="table-responsive" ref={gridScrollRef}>
-                <table className="team-calendar-grid" cellSpacing="0" cellPadding="1">
+                <table
+                  data-team-grid
+                  className="tw:team-grid tw:w-full tw:border-collapse tw:text-sm"
+                  cellSpacing="0"
+                  cellPadding="1"
+                >
                   <thead>
                     {/* Month header row */}
-                    <tr className="calendar-header">
-                      <th className="calendar-name-cell" rowSpan={2}>
+                    <tr className="tw:bg-team-header tw:text-team-header-foreground">
+                      <th
+                        data-team-name
+                        className="tw:team-name-width tw:sticky tw:left-0 tw:z-11 tw:box-border tw:truncate tw:border tw:border-border tw:bg-team-header tw:px-4 tw:py-2 tw:text-left tw:shadow-team-name"
+                        rowSpan={2}
+                      >
                         {m.team_calendar_name_header()}
                       </th>
                       {monthGroups.map((group, idx) => (
-                        <th key={idx} className="calendar-month-header" colSpan={group.colspan}>
-                          <span className="calendar-month-label">{group.month}</span>
+                        <th
+                          key={idx}
+                          className="tw:border-l tw:border-team-header-divider tw:p-1.5 tw:text-center tw:font-semibold"
+                          colSpan={group.colspan}
+                        >
+                          <span
+                            data-team-month-label
+                            className="tw:team-month-label tw:inline-block tw:sticky"
+                          >
+                            {group.month}
+                          </span>
                         </th>
                       ))}
                     </tr>
                     {/* Day header row */}
-                    <tr className="calendar-header">
+                    <tr className="tw:bg-team-header tw:text-team-header-foreground">
                       {dateRange.map((date) => {
                         const isWeekend = date.day() === 0 || date.day() === 6;
                         const isToday = date.isSame(dayjs(), "day");
                         return (
                           <th
                             key={date.format("YYYY-MM-DD")}
-                            className={`calendar-day-header${isToday ? " is-today" : isWeekend ? " is-weekend" : ""}`}
+                            className={`tw:min-w-7 tw:border-l tw:border-team-day-divider tw:p-1 tw:text-center tw:text-xs${isToday ? " tw:bg-team-today tw:text-team-today-foreground tw:font-bold" : isWeekend ? " tw:bg-team-header-weekend tw:font-medium" : " tw:font-medium"}`}
                             title={date.format("ddd, MMM D")}
                             aria-current={isToday ? "date" : undefined}
                           >
@@ -480,16 +529,19 @@ export function TeamScheduleView() {
                       <Fragment key={`section-${sectionIndex}`}>
                         {/* Section header row (if multiple sections with titles) */}
                         {section.title && teamData.sections.length > 1 && (
-                          <tr className="section-header-row">
-                            <td className="section-header">
-                              <i className="bi bi-people-fill me-2" aria-hidden="true"></i>
+                          <tr className="">
+                            <td className="tw:team-name-width tw:sticky tw:left-0 tw:z-5 tw:box-border tw:truncate tw:border-t-2 tw:border-b tw:border-r-2 tw:border-border tw:bg-secondary tw:px-2 tw:team:px-4 tw:py-2 tw:text-foreground tw:font-semibold">
+                              <i
+                                className="bi bi-people-fill tw:hidden tw:team:inline tw:mr-2"
+                                aria-hidden="true"
+                              ></i>
                               {section.title}
                             </td>
                             {/* Empty cells for date columns */}
                             {dateRange.map((date) => (
                               <td
                                 key={date.format("YYYY-MM-DD")}
-                                className="section-header-spacer"
+                                className="tw:h-9 tw:border-t-2 tw:border-b tw:border-border tw:bg-secondary tw:p-0"
                               ></td>
                             ))}
                           </tr>
@@ -497,7 +549,7 @@ export function TeamScheduleView() {
                         {/* Member rows */}
                         {section.members.map((member) => {
                           const tooltip = (
-                            <Tooltip id={`tooltip-${member.username}`}>
+                            <div id={`tooltip-${member.username}`}>
                               <div className="text-start">
                                 <strong>{member.display_name}</strong>
                                 <br />
@@ -524,17 +576,24 @@ export function TeamScheduleView() {
                                   </span>
                                 )}
                               </div>
-                            </Tooltip>
+                            </div>
                           );
 
                           return (
-                            <tr key={member.username} className="calendar-member-row">
-                              <td className="calendar-name-cell">
-                                <OverlayTrigger placement="right" overlay={tooltip}>
-                                  <span className="member-name" tabIndex={0}>
+                            <tr data-team-member key={member.username} className="tw:group">
+                              <td
+                                data-team-name
+                                className="tw:team-name-width tw:sticky tw:left-0 tw:z-5 tw:box-border tw:truncate tw:border tw:border-r-2 tw:border-border tw:bg-background tw:group-hover:bg-muted tw:px-2 tw:team:px-4 tw:py-1 tw:text-left tw:text-foreground tw:shadow-team-name"
+                              >
+                                <Hint placement="right" content={tooltip}>
+                                  <span
+                                    data-team-member-name
+                                    className="tw:block tw:truncate tw:font-medium tw:focus-visible:outline-2 tw:focus-visible:outline-ring tw:focus-visible:outline-offset-2"
+                                    tabIndex={0}
+                                  >
                                     {member.display_name}
                                   </span>
-                                </OverlayTrigger>
+                                </Hint>
                               </td>
                               {dateRange.map((date) => {
                                 const memberEvents = eventsByMember.get(member);
@@ -542,8 +601,9 @@ export function TeamScheduleView() {
                                 const isWeekend = date.day() === 0 || date.day() === 6;
                                 const isToday = date.isSame(dayjs(), "day");
 
-                                let cellClass = "calendar-day-cell";
-                                if (isWeekend) cellClass += " on-weekend";
+                                let cellClass =
+                                  "tw:team-day tw:relative tw:min-w-7 tw:h-6 tw:border tw:border-border tw:font-mono tw:hover:opacity-85 tw:hover:cursor-pointer tw:focus-visible:outline-2 tw:focus-visible:outline-ring tw:focus-visible:-outline-offset-2 tw:focus-visible:z-1";
+                                if (isWeekend) cellClass += " tw:team-weekend-rest";
                                 let content: ReactNode = "\u00A0"; // Non-breaking space
 
                                 if (events.length === 1) {
@@ -552,7 +612,10 @@ export function TeamScheduleView() {
                                     cellClass += ` ${getGridColorClass(event)}`;
                                     const half = getHalfDay(event);
                                     if (half) {
-                                      cellClass += ` calendar-half-${half}`;
+                                      cellClass +=
+                                        half === "am"
+                                          ? " tw:team-half-am tw:py-0 tw:pr-0"
+                                          : " tw:team-half-pm tw:py-0 tw:pl-0";
                                       content = HALF_DAY_GLYPH[half];
                                     }
                                     // Cap the first and last day of a range so it reads as one
@@ -564,34 +627,42 @@ export function TeamScheduleView() {
                                       const next = memberEvents?.get(
                                         date.add(1, "day").format("YYYY-MM-DD"),
                                       );
-                                      if (!previous?.includes(event)) cellClass += " range-start";
-                                      if (!next?.includes(event)) cellClass += " range-end";
+                                      if (!previous?.includes(event))
+                                        cellClass += " tw:team-range-start";
+                                      if (!next?.includes(event)) cellClass += " tw:team-range-end";
                                     }
                                   }
                                 } else if (events.length > 1) {
                                   // Several events on one day: a stripe each, so none is hidden.
-                                  cellClass += " calendar-multi";
                                   content = (
-                                    <span className="calendar-cell-stack">
+                                    <span
+                                      data-team-event-stack
+                                      className="tw:flex tw:flex-col tw:h-full tw:min-h-6"
+                                    >
                                       {events.map((event, index) => {
                                         const half = getHalfDay(event);
                                         return (
                                           <span
                                             key={index}
-                                            className={`calendar-cell-segment ${getGridColorClass(event)}${half ? ` calendar-half-${half}` : ""}`}
+                                            data-team-event-segment
+                                            className={`tw:flex-1 tw:min-h-0 tw:leading-none tw:text-team-stripe ${getGridColorClass(event)}${half ? (half === "am" ? " tw:team-half-am" : " tw:team-half-pm") : ""}`}
                                           />
                                         );
                                       })}
                                     </span>
                                   );
                                 } else if (isWeekend) {
-                                  cellClass += " calendar-weekend";
+                                  cellClass += " tw:bg-wt-team-cal-weekend-cell";
                                 } else {
-                                  cellClass += " calendar-available";
+                                  cellClass += " tw:bg-wt-team-cal-available";
+                                }
+
+                                if (events.length !== 1 || !getHalfDay(events[0]!)) {
+                                  cellClass += " tw:p-0 tw:text-center tw:font-bold tw:text-xs";
                                 }
 
                                 if (isToday) {
-                                  cellClass += " calendar-today";
+                                  cellClass += " tw:brightness-120 tw:shadow-team-today";
                                 }
 
                                 const dateKey = date.format("YYYY-MM-DD");
@@ -614,26 +685,27 @@ export function TeamScheduleView() {
                                 const described = events.map(describeEvent);
                                 const dateLabel = date.format("ddd, MMM D YYYY");
                                 return (
-                                  <OverlayTrigger
+                                  <Hint
                                     key={dateKey}
+                                    variant="details"
+                                    openOnClick
                                     placement="top"
-                                    trigger={["hover", "focus"]}
-                                    overlay={
-                                      <Popover id={`cell-${member.username}-${dateKey}`}>
-                                        <Popover.Header as="h6">
+                                    content={
+                                      <>
+                                        <DetailsHeader>
                                           {member.display_name}
                                           <span className="d-block fw-normal text-muted small">
                                             {dateLabel}
                                           </span>
-                                        </Popover.Header>
-                                        <Popover.Body>
+                                        </DetailsHeader>
+                                        <PopoverBody>
                                           {described.map((item, index) => (
                                             <div
                                               key={index}
                                               className="d-flex align-items-start gap-2 mb-1"
                                             >
                                               <span
-                                                className={`team-popover-chip ${item.colorClass}`}
+                                                className={`tw:shrink-0 tw:size-3.5 tw:mt-0.75 tw:rounded-xs tw:border tw:border-border ${item.colorClass}`}
                                                 aria-hidden="true"
                                               ></span>
                                               <span>
@@ -652,8 +724,8 @@ export function TeamScheduleView() {
                                               </span>
                                             </div>
                                           ))}
-                                        </Popover.Body>
-                                      </Popover>
+                                        </PopoverBody>
+                                      </>
                                     }
                                   >
                                     <td
@@ -664,7 +736,7 @@ export function TeamScheduleView() {
                                     >
                                       {content}
                                     </td>
-                                  </OverlayTrigger>
+                                  </Hint>
                                 );
                               })}
                             </tr>
@@ -698,7 +770,11 @@ export function TeamScheduleView() {
               {legendItems.map((item) => (
                 <div key={item.swatchClass} className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className={`legend-color-box ${item.swatchClass}`} aria-hidden="true">
+                    <div
+                      data-team-swatch
+                      className={`tw:flex tw:items-center tw:shrink-0 tw:size-7 tw:rounded tw:border tw:border-border ${item.swatchClass}`}
+                      aria-hidden="true"
+                    >
                       {item.glyph}
                     </div>
                     <span>{item.label}</span>

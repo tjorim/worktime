@@ -6,8 +6,7 @@ import Carousel from "react-bootstrap/Carousel";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import clsx from "clsx";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
@@ -100,10 +99,10 @@ function TeamCard({
         {shift.isWorking ? shiftTimeLabel : m.schedule_not_working_today()}
       </div>
       <div className="text-muted small mt-1">
-        <OverlayTrigger
+        <Hint
           placement="bottom"
-          overlay={
-            <Tooltip id={`code-tooltip-${shiftResult.teamNumber}`}>
+          content={
+            <div id={`code-tooltip-${shiftResult.teamNumber}`}>
               <strong>{m.shift_full_code_title()}</strong>
               <br />
               {m.shift_code_format()}
@@ -117,11 +116,11 @@ function TeamCard({
                 ),
                 shift: shift.name,
               })}
-            </Tooltip>
+            </div>
           }
         >
           <span className="help-underline">{shiftResult.code}</span>
-        </OverlayTrigger>
+        </Hint>
       </div>
     </>
   );

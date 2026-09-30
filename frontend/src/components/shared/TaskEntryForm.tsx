@@ -2,9 +2,8 @@ import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import { Hint } from "@/components/ui/tooltip";
 import Row from "react-bootstrap/Row";
-import Tooltip from "react-bootstrap/Tooltip";
 import type { ReactElement } from "react";
 import ReactSelect from "react-select";
 import type { Label } from "@/lib/timeTracking/constants";
@@ -98,14 +97,11 @@ export function TaskEntryForm({
 
     const tooltipId = `${buttonKey}-tooltip`;
     return (
-      <OverlayTrigger
-        trigger={["hover", "focus"]}
-        overlay={<Tooltip id={tooltipId}>{reason}</Tooltip>}
-      >
+      <Hint content={<div id={tooltipId}>{reason}</div>}>
         <span className="w-100 d-inline-block" tabIndex={0} aria-describedby={tooltipId}>
           {button}
         </span>
-      </OverlayTrigger>
+      </Hint>
     );
   };
 

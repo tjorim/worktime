@@ -1,6 +1,5 @@
 import Badge from "react-bootstrap/Badge";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { useId } from "react";
 import clsx from "clsx";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
@@ -99,10 +98,10 @@ export function ShiftBadge({
 
   if (showTooltip) {
     return (
-      <OverlayTrigger
+      <Hint
         placement="top"
-        overlay={
-          <Tooltip id={tooltipId}>
+        content={
+          <div id={tooltipId}>
             {shift.emoji} {shift.name}
             {shift.isWorking && (
               <>
@@ -110,11 +109,11 @@ export function ShiftBadge({
                 {formattedTime}
               </>
             )}
-          </Tooltip>
+          </div>
         }
       >
         {badge}
-      </OverlayTrigger>
+      </Hint>
     );
   }
 

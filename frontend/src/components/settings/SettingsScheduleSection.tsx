@@ -1,7 +1,6 @@
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { hasMultipleTeams } from "@/utils/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
@@ -58,13 +57,13 @@ export function SettingsScheduleSection({
           return schedule.isAvailable ? (
             item
           ) : (
-            <OverlayTrigger
+            <Hint
               key={schedule.value}
               placement="top"
-              overlay={<Tooltip>{m.wizard_schedule_coming_soon_tooltip()}</Tooltip>}
+              content={<div>{m.wizard_schedule_coming_soon_tooltip()}</div>}
             >
               <span>{item}</span>
-            </OverlayTrigger>
+            </Hint>
           );
         })}
       </ListGroup>

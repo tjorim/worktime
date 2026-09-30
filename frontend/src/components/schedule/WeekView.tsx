@@ -2,9 +2,8 @@ import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import { Hint } from "@/components/ui/tooltip";
 import Table from "react-bootstrap/Table";
-import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import type { ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -223,10 +222,10 @@ export function WeekView({
                     >
                       <div className="fw-semibold">{formatShortWeekday(day)}</div>
                       <div className="small text-muted">
-                        <OverlayTrigger
+                        <Hint
                           placement="bottom"
-                          overlay={
-                            <Tooltip id={`date-tooltip-${day.format("YYYY-MM-DD")}`}>
+                          content={
+                            <div id={`date-tooltip-${day.format("YYYY-MM-DD")}`}>
                               <strong>{m.week_view_date_code({ code: formatYYWWD(day) })}</strong>
                               <br />
                               {m.week_view_date_code_format()}
@@ -239,11 +238,11 @@ export function WeekView({
                                 day: String(day.isoWeekday()),
                                 weekday: formatShortWeekday(day),
                               })}
-                            </Tooltip>
+                            </div>
                           }
                         >
                           <span className="help-underline">{formatYYWWD(day)}</span>
-                        </OverlayTrigger>
+                        </Hint>
                       </div>
                     </th>
                   );

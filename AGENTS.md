@@ -90,13 +90,14 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
 - `frontend/src/data/changelog.ts` for release notes input
-- `frontend/src/styles/_variables.scss` (the `$event-palette-*` maps) for event colors, in both themes.
-  It is the only place they are defined: it emits `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
+- `frontend/src/styles/event-palette.css` for event colors, in both themes.
+  It is the only place they are defined: it defines `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
   `.event-*` classes in `_shifts.scss` are generated from them, and `getEventColor()` /
   `getEventTextColor()` in `lib/hday/presentation.ts` return `var(--wt-event-…)` references instead of hex.
   Change a color there and update the table in `docs/hday-format-spec.md`; nothing else.
-  `tests/lib/eventPalette.test.ts` compiles the SCSS and pins WCAG AA text contrast, that no two full-day
-  colors are near-identical, and that the helpers and generated classes only use declared colors
+  `tests/lib/eventPalette.test.ts` reads the CSS tokens and pins WCAG AA text contrast, that no two full-day
+  colors are near-identical, and that the helpers, generated classes and compiled Tailwind utilities
+  only use declared colors
 - User-facing event type names come from the `event_type_*` messages via `getEventTypeLabel()` in
   `lib/hday/presentation.ts`, so they are translated; don't reintroduce English strings there
 
@@ -242,7 +243,7 @@ configured for the prefix). Do not run init over our existing palette or bulk-ge
 Use `tw:` utilities (for example `tw:px-2`, `tw:text-muted-foreground`), with prefixed variants such as
 `tw:dark:bg-background`. The dark variant matches `[data-bs-theme="dark"]`. Theme tokens in
 `src/styles/tailwind.css` reference existing `--bs-*` and `--wt-*` variables, including every event
-palette entry; keep palette values in `_variables.scss` and update aliases if entries are added.
+palette entry; keep palette values in `event-palette.css` and update aliases if entries are added.
 Do not add raw colour literals, arbitrary values or new inline styles.
 
 `main.scss` establishes `theme, legacy, base, components, utilities` order and loads the configured

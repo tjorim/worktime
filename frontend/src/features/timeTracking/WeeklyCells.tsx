@@ -1,6 +1,5 @@
 import Card from "react-bootstrap/Card";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
+import { Hint } from "@/components/ui/tooltip";
 import * as m from "@/paraglide/messages.js";
 
 export function MetricCard({
@@ -38,10 +37,7 @@ export function CopyableHoursCell({
   className?: string;
 }) {
   return (
-    <OverlayTrigger
-      show={copiedCellId === cellId}
-      overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
-    >
+    <Hint open={copiedCellId === cellId} content={<div id={`copy-${cellId}`}>{m.tt_copied()}</div>}>
       <td
         className={className}
         onClick={cellValue ? () => onCopyCell(cellId, cellValue) : undefined}
@@ -49,6 +45,6 @@ export function CopyableHoursCell({
       >
         {cellValue ?? "-"}
       </td>
-    </OverlayTrigger>
+    </Hint>
   );
 }
