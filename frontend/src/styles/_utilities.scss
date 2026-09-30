@@ -300,3 +300,20 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
 .header-icon {
   font-size: 1.25rem;
 }
+
+/* Preserve compact spacing for Bootstrap consumers during the staged migration. */
+@media (width <= 768px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .card-body,
+  .card-header {
+    padding: 0.75rem;
+  }
+
+  .btn-sm {
+    font-size: 0.75rem;
+  }
+}

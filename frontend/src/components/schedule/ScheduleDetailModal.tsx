@@ -547,11 +547,26 @@ export function ScheduleDetailModal({
                         })}
                       </small>
                     </div>
-                    <Progress
-                      indicatorClassName="tw:bg-success"
-                      value={(stats.workingDays / 7) * 100}
-                      aria-label={m.schedule_working_vs_rest()}
-                    />
+                    <div className="tw:space-y-2">
+                      <Progress
+                        indicatorClassName="tw:bg-success"
+                        value={(stats.workingDays / 7) * 100}
+                        aria-label={m.schedule_working_label({ count: String(stats.workingDays) })}
+                      >
+                        <span className="tw:text-sm">
+                          {m.schedule_working_label({ count: String(stats.workingDays) })}
+                        </span>
+                      </Progress>
+                      <Progress
+                        indicatorClassName="tw:bg-muted-foreground"
+                        value={(stats.offDays / 7) * 100}
+                        aria-label={m.schedule_rest_label({ count: String(stats.offDays) })}
+                      >
+                        <span className="tw:text-sm">
+                          {m.schedule_rest_label({ count: String(stats.offDays) })}
+                        </span>
+                      </Progress>
+                    </div>
                   </div>
                   <ul className="tw:list-none tw:pl-0 tw:mb-0 tw:divide-y tw:divide-border">
                     <li className="tw:px-0 tw:py-2 tw:flex tw:justify-between">

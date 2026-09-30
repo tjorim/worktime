@@ -64,6 +64,16 @@ describe("ScheduleDetailModal", () => {
 
     expect(screen.getByLabelText("Personal 7-day schedule table")).toBeInTheDocument();
     expect(screen.getByText("Working vs Rest Days")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "5 working" })).toHaveAttribute(
+      "aria-valuenow",
+      String((5 / 7) * 100),
+    );
+    expect(screen.getByRole("progressbar", { name: "2 rest" })).toHaveAttribute(
+      "aria-valuenow",
+      String((2 / 7) * 100),
+    );
+    expect(screen.getByText("5 working")).toBeVisible();
+    expect(screen.getByText("2 rest")).toBeVisible();
     expect(screen.getByText("Total Weekly Hours")).toBeInTheDocument();
     expect(screen.getByText(/40h/)).toBeInTheDocument();
     expect(screen.getByText(/5\/7 \(71%\)/)).toBeInTheDocument();
