@@ -5,9 +5,7 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo } from "react";
-import Button from "react-bootstrap/Button";
-import Container from "react-bootstrap/Container";
-import Navbar from "react-bootstrap/Navbar";
+import { Button } from "@/components/ui/button";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAppShellContext } from "@/contexts/AppShellContext";
@@ -51,28 +49,30 @@ export function Header() {
 
   return (
     <>
-      <a href="#main-content" className="visually-hidden-focusable">
+      <a href="#main-content" className="tw:sr-only tw:focus:not-sr-only">
         {m.skip_to_content()}
       </a>
-      <Navbar fixed="top" data-bs-theme="dark" className="shadow-sm navbar-worktime">
-        <Container fluid>
-          <Navbar.Brand
-            as="button"
+      <header className="tw:fixed tw:inset-x-0 tw:top-0 tw:z-header tw:h-header tw:bg-wt-navbar-bg tw:text-header-foreground tw:shadow-sm">
+        <nav
+          aria-label="Worktime"
+          className="tw:flex tw:h-full tw:items-center tw:justify-between tw:px-2 tw:md:px-3"
+        >
+          <button
             type="button"
             onClick={handleNavigateHome}
             onMouseEnter={handlePreloadHome}
             onFocus={handlePreloadHome}
-            className="d-flex align-items-center border-0 bg-transparent"
+            className="tw:flex tw:items-center tw:gap-2 tw:border-0 tw:bg-transparent tw:text-inherit tw:rounded tw:focus-visible:ring-3 tw:focus-visible:ring-ring"
           >
-            <Icon icon={HistoryIcon} className="me-2 header-icon" />
-            <span className="fw-bold">Worktime</span>
-          </Navbar.Brand>
-          <div className="d-flex align-items-center gap-3 ms-auto">
+            <Icon icon={HistoryIcon} className="tw:size-5" />
+            <span className="tw:font-bold">Worktime</span>
+          </button>
+          <div className="tw:flex tw:items-center tw:gap-3 tw:ml-auto">
             <SyncStatusIndicator />
             <Button
-              variant={isSettingsPage ? "light" : "outline-light"}
+              variant="ghost"
               size="sm"
-              className="tw:px-2"
+              className="tw:px-2 tw:text-header-foreground tw:hover:bg-header-foreground/10 tw:hover:text-header-foreground"
               onClick={handleToggleSettings}
               onMouseEnter={isSettingsPage ? handlePreloadHome : undefined}
               onFocus={isSettingsPage ? handlePreloadHome : undefined}
@@ -87,13 +87,13 @@ export function Header() {
               aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
             >
               <Icon icon={isSettingsPage ? ArrowLeftIcon : SettingsIcon} />
-              <span className="d-none d-lg-inline ms-1">
+              <span className="tw:hidden tw:lg:inline tw:ml-1">
                 {isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
               </span>
             </Button>
           </div>
-        </Container>
-      </Navbar>
+        </nav>
+      </header>
     </>
   );
 }

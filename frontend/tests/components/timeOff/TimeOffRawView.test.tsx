@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as renderView, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -8,6 +8,12 @@ import { ToastProvider } from "@/contexts/ToastContext";
 const toastWrapper = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>{children}</ToastProvider>
 );
+
+const render = (ui: React.ReactNode, options?: import("@testing-library/react").RenderOptions) => {
+  const result = renderView(ui, options);
+  fireEvent.click(screen.getByRole("button", { name: /Raw \.hday Editor/i }));
+  return result;
+};
 
 describe("TimeOffRawView", () => {
   const defaultProps = {
@@ -21,6 +27,21 @@ describe("TimeOffRawView", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("starts collapsed and supports keyboard expansion and collapse", async () => {
+    const user = userEvent.setup();
+    renderView(<TimeOffRawView {...defaultProps} />, { wrapper: toastWrapper });
+    const trigger = screen.getByRole("button", { name: /Raw \.hday Editor/i });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("textbox", { name: /Raw \.hday content/i })).not.toBeInTheDocument();
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("textbox", { name: /Raw \.hday content/i })).toBeVisible();
+    await user.keyboard(" ");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
   });
 
   it("should render the card with accordion header", () => {

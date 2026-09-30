@@ -81,6 +81,20 @@ describe("MainTabs", () => {
   });
 
   describe("Tab navigation", () => {
+    it("supports arrow-key focus and keyboard tab activation", async () => {
+      const user = userEvent.setup();
+      const onTabChange = vi.fn();
+      renderWithProviders(<MainTabs {...defaultProps} onTabChange={onTabChange} />);
+      screen.getByRole("tab", { name: "Schedule" }).focus();
+      await user.keyboard("{ArrowRight}{Enter}");
+      expect(screen.getByRole("tab", { name: "Time Off" })).toHaveFocus();
+      expect(screen.getByRole("tab", { name: "Time Off" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      expect(onTabChange).toHaveBeenCalledWith("timeoff");
+    });
+
     it("switches to Time Off tab when clicked", async () => {
       const user = userEvent.setup();
       const mockOnTabChange = vi.fn() as (tab: TabKey) => void;

@@ -8,19 +8,18 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
-import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
-import Spinner from "react-bootstrap/Spinner";
-import Tab from "react-bootstrap/Tab";
-import Tabs from "react-bootstrap/Tabs";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
 import type { TabKey } from "@/contexts/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
-import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
-import { ScheduleTabView } from "./ScheduleTabView";
-import { MobileQuickActions } from "./MobileQuickActions";
+import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
+import { ScheduleTabView } from "@/components/ScheduleTabView";
+import { MobileQuickActions } from "@/components/MobileQuickActions";
 
 const CalendarView = lazy(() =>
   import("@/components/CalendarView").then((module) => ({
@@ -91,7 +90,6 @@ export function MainTabs({
   onRequestTaskEdit,
   onClearPendingTaskEdit,
 }: MainTabsProps) {
-  const tabsId = useId();
   const { settings } = useSettings();
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
   const [showTeamDetail, setShowTeamDetail] = useState(false);
@@ -162,9 +160,9 @@ export function MainTabs({
 
   const loadingFallback = useMemo(
     () => (
-      <div className="d-flex justify-content-center py-4" aria-live="polite">
-        <Spinner animation="border" role="status" size="sm">
-          <span className="visually-hidden">{m.loading()}</span>
+      <div className="tw:flex tw:justify-center tw:py-4" aria-live="polite">
+        <Spinner role="status" size="sm">
+          <span className="tw:sr-only">{m.loading()}</span>
         </Spinner>
       </div>
     ),
@@ -183,25 +181,42 @@ export function MainTabs({
   return (
     <>
       <div>
-        <Tabs
-          activeKey={activeKey}
-          onSelect={(k) => {
-            const newKey = (k || "calendar") as TabKey;
-            setActiveTab(newKey);
-          }}
-          id={tabsId}
-          className="main-tabs"
-        >
-          <Tab
-            eventKey="calendar"
-            title={
-              <>
-                <Icon icon={CalendarIcon} />
-                <span className="main-tab-label">{m.tab_calendar()}</span>
-              </>
-            }
-            tabAttrs={{ "aria-label": m.tab_calendar() }}
+        <Tabs value={activeKey} onValueChange={(value) => setActiveTab(value as TabKey)}>
+          <TabsList
+            className="tw:w-full tw:h-auto tw:justify-start tw:overflow-x-auto"
+            aria-label="Worktime"
           >
+            {availableTabs.map((key) => {
+              const labels = {
+                calendar: m.tab_calendar(),
+                "unified-calendar": m.tab_unified_calendar(),
+                schedule: m.tab_schedule(),
+                timeoff: m.tab_time_off(),
+                timetracking: m.tab_time_tracking(),
+                gantt: m.tab_gantt(),
+              };
+              const icons = {
+                calendar: CalendarIcon,
+                "unified-calendar": LayersIcon,
+                schedule: ListIcon,
+                timeoff: PlaneIcon,
+                timetracking: TimerIcon,
+                gantt: ChartGanttIcon,
+              };
+              return (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className="tw:min-h-11 tw:min-w-0 tw:flex-col tw:sm:flex-row tw:flex-1 tw:sm:flex-none tw:whitespace-normal tw:px-1 tw:sm:px-3"
+                  aria-label={labels[key]}
+                >
+                  <Icon icon={icons[key]} />
+                  <span className="tw:text-xs tw:sm:text-sm tw:wrap-anywhere">{labels[key]}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+          <TabsContent value="calendar" keepMounted>
             {activeKey === "calendar" && (
               <Suspense fallback={loadingFallback}>
                 <CalendarView
@@ -212,19 +227,10 @@ export function MainTabs({
                 />
               </Suspense>
             )}
-          </Tab>
+          </TabsContent>
 
           {unifiedCalendarEnabled && (
-            <Tab
-              eventKey="unified-calendar"
-              title={
-                <>
-                  <Icon icon={LayersIcon} />
-                  <span className="main-tab-label">{m.tab_unified_calendar()}</span>
-                </>
-              }
-              tabAttrs={{ "aria-label": m.tab_unified_calendar() }}
-            >
+            <TabsContent value="unified-calendar" keepMounted>
               {activeKey === "unified-calendar" && (
                 <Suspense fallback={loadingFallback}>
                   <UnifiedCalendarView
@@ -233,19 +239,10 @@ export function MainTabs({
                   />
                 </Suspense>
               )}
-            </Tab>
+            </TabsContent>
           )}
 
-          <Tab
-            eventKey="schedule"
-            title={
-              <>
-                <Icon icon={ListIcon} />
-                <span className="main-tab-label">{m.tab_schedule()}</span>
-              </>
-            }
-            tabAttrs={{ "aria-label": m.tab_schedule() }}
-          >
+          <TabsContent value="schedule" keepMounted>
             <ScheduleTabView
               myTeam={myTeam}
               currentDate={currentDate}
@@ -255,39 +252,21 @@ export function MainTabs({
               onChangeTeam={onChangeTeam}
               isActive={activeKey === "schedule"}
             />
-          </Tab>
+          </TabsContent>
 
           {timeOffEnabled && (
-            <Tab
-              eventKey="timeoff"
-              title={
-                <>
-                  <Icon icon={PlaneIcon} />
-                  <span className="main-tab-label">{m.tab_time_off()}</span>
-                </>
-              }
-              tabAttrs={{ "aria-label": m.tab_time_off() }}
-            >
+            <TabsContent value="timeoff" keepMounted>
               <Suspense fallback={loadingFallback}>
                 <TimeOffView
                   isActive={activeKey === "timeoff"}
                   addEventRequest={timeOffAddRequest}
                 />
               </Suspense>
-            </Tab>
+            </TabsContent>
           )}
 
           {timeTrackingEnabled && (
-            <Tab
-              eventKey="timetracking"
-              title={
-                <>
-                  <Icon icon={TimerIcon} />
-                  <span className="main-tab-label">{m.tab_time_tracking()}</span>
-                </>
-              }
-              tabAttrs={{ "aria-label": m.tab_time_tracking() }}
-            >
+            <TabsContent value="timetracking" keepMounted>
               {activeKey === "timetracking" && (
                 <Suspense fallback={loadingFallback}>
                   <TimeTrackingView
@@ -296,26 +275,17 @@ export function MainTabs({
                   />
                 </Suspense>
               )}
-            </Tab>
+            </TabsContent>
           )}
 
           {ganttEnabled && (
-            <Tab
-              eventKey="gantt"
-              title={
-                <>
-                  <Icon icon={ChartGanttIcon} />
-                  <span className="main-tab-label">{m.tab_gantt()}</span>
-                </>
-              }
-              tabAttrs={{ "aria-label": m.tab_gantt() }}
-            >
+            <TabsContent value="gantt" keepMounted>
               {activeKey === "gantt" && (
                 <Suspense fallback={loadingFallback}>
                   <GanttView onNavigateToEntry={handleNavigateToEntry} />
                 </Suspense>
               )}
-            </Tab>
+            </TabsContent>
           )}
         </Tabs>
       </div>

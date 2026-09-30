@@ -155,18 +155,16 @@ describe("App", () => {
       expect(errorBoundaries.length).toBeGreaterThan(0);
     });
 
-    it("has proper layout structure", () => {
+    it("has proper layout structure", async () => {
       render(<App />);
 
-      // Should have Bootstrap container structure
-      const container = document.querySelector(".container-fluid");
-      expect(container).toBeInTheDocument();
+      const header = await screen.findByTestId("header");
+      expect(screen.getByRole("main")).toBeInTheDocument();
 
-      // Should have React Bootstrap components rendered
-      // Note: Row components are rendered conditionally based on state
-      // so we check for the overall layout structure instead
-      const appContainer = document.querySelector(".min-vh-100");
-      expect(appContainer).toBeInTheDocument();
+      // The fixed header is offset by the layout wrapper's top padding.
+      const layout = header.closest(".tw\\:pt-header");
+      expect(layout).not.toBeNull();
+      expect(layout).toContainElement(screen.getByRole("main"));
     });
   });
 

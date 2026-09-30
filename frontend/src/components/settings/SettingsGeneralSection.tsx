@@ -5,8 +5,7 @@ import {
   Sun as SunIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import * as m from "@/paraglide/messages.js";
@@ -45,22 +44,28 @@ export function SettingsGeneralSection({
               <div className="fw-medium">{m.time_format_label()}</div>
               <small className="text-muted">{m.time_format_description()}</small>
             </div>
-            <ButtonGroup size="sm" aria-label={m.time_format_label()}>
+            <div
+              role="group"
+              className="tw:flex tw:flex-wrap tw:gap-1"
+              aria-label={m.time_format_label()}
+            >
               <Button
-                variant={timeFormat === "24h" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={timeFormat === "24h" ? "default" : "outline"}
                 aria-pressed={timeFormat === "24h"}
                 onClick={() => onTimeFormatChange("24h")}
               >
                 24h
               </Button>
               <Button
-                variant={timeFormat === "12h" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={timeFormat === "12h" ? "default" : "outline"}
                 aria-pressed={timeFormat === "12h"}
                 onClick={() => onTimeFormatChange("12h")}
               >
                 12h
               </Button>
-            </ButtonGroup>
+            </div>
           </div>
         </ListGroup.Item>
         <ListGroup.Item>
@@ -69,32 +74,39 @@ export function SettingsGeneralSection({
               <div className="fw-medium">{m.theme_label()}</div>
               <small className="text-muted">{m.theme_description()}</small>
             </div>
-            <ButtonGroup size="sm" aria-label={m.theme_label()}>
+            <div
+              role="group"
+              className="tw:flex tw:flex-wrap tw:gap-1"
+              aria-label={m.theme_label()}
+            >
               <Button
-                variant={theme === "auto" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={theme === "auto" ? "default" : "outline"}
                 aria-pressed={theme === "auto"}
                 onClick={() => onThemeChange("auto")}
               >
-                <Icon icon={ContrastIcon} className="me-1" />
+                <Icon icon={ContrastIcon} className="tw:mr-1" />
                 {m.theme_auto()}
               </Button>
               <Button
-                variant={theme === "light" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={theme === "light" ? "default" : "outline"}
                 aria-pressed={theme === "light"}
                 onClick={() => onThemeChange("light")}
               >
-                <Icon icon={SunIcon} className="me-1" />
+                <Icon icon={SunIcon} className="tw:mr-1" />
                 {m.theme_light()}
               </Button>
               <Button
-                variant={theme === "dark" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={theme === "dark" ? "default" : "outline"}
                 aria-pressed={theme === "dark"}
                 onClick={() => onThemeChange("dark")}
               >
-                <Icon icon={MoonIcon} className="me-1" />
+                <Icon icon={MoonIcon} className="tw:mr-1" />
                 {m.theme_dark()}
               </Button>
-            </ButtonGroup>
+            </div>
           </div>
         </ListGroup.Item>
         <ListGroup.Item>
@@ -103,22 +115,28 @@ export function SettingsGeneralSection({
               <div className="fw-medium">{m.language_label()}</div>
               <small className="text-muted">{m.language_description()}</small>
             </div>
-            <ButtonGroup size="sm" aria-label={m.language_label()}>
+            <div
+              role="group"
+              className="tw:flex tw:flex-wrap tw:gap-1"
+              aria-label={m.language_label()}
+            >
               <Button
-                variant={locale === "en" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={locale === "en" ? "default" : "outline"}
                 aria-pressed={locale === "en"}
                 onClick={() => onLocaleChange("en")}
               >
                 EN
               </Button>
               <Button
-                variant={locale === "nl" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={locale === "nl" ? "default" : "outline"}
                 aria-pressed={locale === "nl"}
                 onClick={() => onLocaleChange("nl")}
               >
                 NL
               </Button>
-            </ButtonGroup>
+            </div>
           </div>
         </ListGroup.Item>
         <ListGroup.Item>

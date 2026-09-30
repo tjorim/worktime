@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -616,9 +616,9 @@ describe("TransferView", () => {
         const next30Header = screen.getByRole("button", { name: /Next 30 Days/i });
         const furtherHeader = screen.getByRole("button", { name: /Further Ahead/i });
 
-        const next7Item = next7Header.closest(".accordion-item");
-        const next30Item = next30Header.closest(".accordion-item");
-        const furtherItem = furtherHeader.closest(".accordion-item");
+        const next7Item = next7Header.closest('[data-slot="accordion-item"]');
+        const next30Item = next30Header.closest('[data-slot="accordion-item"]');
+        const furtherItem = furtherHeader.closest('[data-slot="accordion-item"]');
 
         expect(next7Item).toBeInstanceOf(HTMLElement);
         expect(next30Item).toBeInstanceOf(HTMLElement);
@@ -638,6 +638,11 @@ describe("TransferView", () => {
         expect(within(furtherItemElement).getByText("Handover")).toBeInTheDocument();
         expect(within(furtherItemElement).getByText(/Night/)).toBeInTheDocument();
         expect(within(furtherItemElement).getByText(/Morning/)).toBeInTheDocument();
+        expect(next7Header).toHaveAttribute("aria-expanded", "true");
+        expect(next30Header).toHaveAttribute("aria-expanded", "true");
+        fireEvent.click(next7Header);
+        expect(next7Header).toHaveAttribute("aria-expanded", "false");
+        expect(next30Header).toHaveAttribute("aria-expanded", "true");
       } finally {
         vi.useRealTimers();
       }

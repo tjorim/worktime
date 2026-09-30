@@ -26,7 +26,12 @@ import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
-import Accordion from "react-bootstrap/Accordion";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
@@ -844,26 +849,26 @@ export function TransferView({
                       <>
                         <ErrorBoundary>
                           <Accordion
-                            defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
-                            alwaysOpen
+                            defaultValue={nonEmptyGroupedTransfers.map((group) => group.key)}
+                            multiple
                           >
                             {nonEmptyGroupedTransfers.map((group) => (
-                              <Accordion.Item eventKey={group.key} key={group.key}>
-                                <Accordion.Header>
+                              <AccordionItem value={group.key} key={group.key}>
+                                <AccordionTrigger>
                                   {group.title}
                                   <Badge bg="secondary" pill className="ms-2">
                                     {group.items.length}
                                   </Badge>
-                                </Accordion.Header>
-                                <Accordion.Body>
+                                </AccordionTrigger>
+                                <AccordionContent>
                                   <TransferItemsList
                                     transfers={group.items}
                                     myTeam={myTeam}
                                     scheduleType={scheduleType}
                                     timeOffEvents={timeOffEvents}
                                   />
-                                </Accordion.Body>
-                              </Accordion.Item>
+                                </AccordionContent>
+                              </AccordionItem>
                             ))}
                           </Accordion>
                         </ErrorBoundary>
@@ -906,18 +911,18 @@ export function TransferView({
                     <p className="text-muted small">{m.transfer_overlaps_help()}</p>
                     <ErrorBoundary>
                       <Accordion
-                        defaultActiveKey={nonEmptyGroupedOverlaps.map((group) => group.key)}
-                        alwaysOpen
+                        defaultValue={nonEmptyGroupedOverlaps.map((group) => group.key)}
+                        multiple
                       >
                         {nonEmptyGroupedOverlaps.map((group) => (
-                          <Accordion.Item eventKey={group.key} key={group.key}>
-                            <Accordion.Header>
+                          <AccordionItem value={group.key} key={group.key}>
+                            <AccordionTrigger>
                               {group.title}
                               <Badge bg="secondary" pill className="ms-2">
                                 {group.items.length}
                               </Badge>
-                            </Accordion.Header>
-                            <Accordion.Body>
+                            </AccordionTrigger>
+                            <AccordionContent>
                               <OverlapItemsList
                                 overlaps={group.items}
                                 myLabel={myOverlapLabel}
@@ -925,8 +930,8 @@ export function TransferView({
                                 timeFormat={timeFormat}
                                 timeOffEvents={timeOffEvents}
                               />
-                            </Accordion.Body>
-                          </Accordion.Item>
+                            </AccordionContent>
+                          </AccordionItem>
                         ))}
                       </Accordion>
                     </ErrorBoundary>
