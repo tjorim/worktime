@@ -1,7 +1,9 @@
 import { useMemo } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -9,11 +11,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ReactSelect from "react-select";
+import { DialogSelect } from "@/components/shared/DialogSelect";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Label } from "@/lib/timeTracking/constants";
 import { BREAK_DURATION_MINUTES } from "@/lib/timeTracking/timeUtils";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { selectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import {
   useSelectedGanttTaskOption,
@@ -87,9 +89,9 @@ export function TaskEditModal({
         <DialogHeader>
           <DialogTitle>{m.tt_edit_task_title()}</DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           {error && (
-            <Alert variant="danger" aria-live="polite">
+            <Alert variant="destructive" aria-live="polite">
               {error}
             </Alert>
           )}
@@ -98,24 +100,24 @@ export function TaskEditModal({
               {info}
             </Alert>
           )}
-          <Form
-            as="form"
+          <form
             id="taskEditForm"
             onSubmit={(event) => {
               event.preventDefault();
               onSubmit();
             }}
           >
-            <Form.Group controlId="editTaskName" className="mb-3">
-              <Form.Label>{m.form_task()}</Form.Label>
-              <Form.Control
+            <Field className="tw:mb-4">
+              <FieldLabel htmlFor="editTaskName">{m.form_task()}</FieldLabel>
+              <Input
+                id="editTaskName"
                 value={value.text}
                 onChange={(event) => onChange({ ...value, text: event.target.value })}
               />
-            </Form.Group>
-            <Form.Group controlId="editTaskLabel" className="mb-3">
-              <Form.Label>{m.form_label()}</Form.Label>
-              <ReactSelect<LabelOption>
+            </Field>
+            <Field className="tw:mb-4">
+              <FieldLabel htmlFor="editTaskLabel">{m.form_label()}</FieldLabel>
+              <DialogSelect<LabelOption>
                 unstyled
                 isClearable
                 isSearchable
@@ -124,13 +126,13 @@ export function TaskEditModal({
                 options={labels.map((l) => ({ value: l.id, label: l.name }))}
                 value={selectedLabelOption}
                 onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
-                classNames={bootstrapSelectClassNames}
+                classNames={selectClassNames}
               />
-            </Form.Group>
+            </Field>
             {showGanttPicker && (
-              <Form.Group controlId="editTaskGanttTask" className="mb-3">
-                <Form.Label>{m.tt_gantt_task()}</Form.Label>
-                <ReactSelect<GanttTaskOption>
+              <Field className="tw:mb-4">
+                <FieldLabel htmlFor="editTaskGanttTask">{m.tt_gantt_task()}</FieldLabel>
+                <DialogSelect<GanttTaskOption>
                   unstyled
                   isClearable
                   isSearchable
@@ -139,49 +141,56 @@ export function TaskEditModal({
                   options={ganttTaskOptions}
                   value={selectedGanttTaskOption}
                   onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value })}
-                  classNames={bootstrapSelectClassNames}
+                  classNames={selectClassNames}
                 />
-              </Form.Group>
+              </Field>
             )}
-            <div className="d-flex gap-3 mb-3">
-              <Form.Group controlId="editTaskStart" className="flex-fill">
-                <Form.Label>{m.form_start()}</Form.Label>
-                <Form.Control
+            <div className="tw:flex tw:gap-4 tw:mb-4">
+              <Field className="tw:flex-1">
+                <FieldLabel htmlFor="editTaskStart">{m.form_start()}</FieldLabel>
+                <Input
+                  id="editTaskStart"
                   type="time"
                   value={value.start}
                   onChange={(event) => onChange({ ...value, start: event.target.value })}
                 />
-              </Form.Group>
-              <Form.Group controlId="editTaskStop" className="flex-fill">
-                <Form.Label>{m.form_stop()}</Form.Label>
-                <Form.Control
+              </Field>
+              <Field className="tw:flex-1">
+                <FieldLabel htmlFor="editTaskStop">{m.form_stop()}</FieldLabel>
+                <Input
+                  id="editTaskStop"
                   type="time"
                   value={value.stop}
                   onChange={(event) => onChange({ ...value, stop: event.target.value })}
                 />
-                <Form.Text className="text-muted">{m.tt_stop_empty_hint()}</Form.Text>
-              </Form.Group>
+                <FieldDescription className="tw:text-muted-foreground">
+                  {m.tt_stop_empty_hint()}
+                </FieldDescription>
+              </Field>
             </div>
-            <Form.Check
-              id="editTaskBreak"
-              type="checkbox"
-              label={m.tt_includes_break({ minutes: BREAK_DURATION_MINUTES })}
-              checked={value.includesBreak}
-              onChange={(event) => onChange({ ...value, includesBreak: event.target.checked })}
-              disabled={!value.includesBreak && isTooShortForBreak}
-            />
+            <Field orientation="horizontal">
+              <Checkbox
+                id="editTaskBreak"
+                checked={value.includesBreak}
+                onCheckedChange={(checked) => onChange({ ...value, includesBreak: checked })}
+                disabled={!value.includesBreak && isTooShortForBreak}
+              />
+              <FieldLabel htmlFor="editTaskBreak">
+                {m.tt_includes_break({ minutes: BREAK_DURATION_MINUTES })}
+              </FieldLabel>
+            </Field>
             {isTooShortForBreak && !value.includesBreak && (
-              <Form.Text className="text-danger" data-testid="break-too-short-help">
+              <FieldDescription className="tw:text-danger-text" data-testid="break-too-short-help">
                 {m.tt_task_too_short_break()}
-              </Form.Text>
+              </FieldDescription>
             )}
-          </Form>
+          </form>
         </div>
         <DialogFooter>
-          <Button variant="outline-secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {m.cancel()}
           </Button>
-          <Button variant="primary" type="submit" form="taskEditForm" disabled={!canSubmit}>
+          <Button variant="default" type="submit" form="taskEditForm" disabled={!canSubmit}>
             {m.tt_save_changes()}
           </Button>
         </DialogFooter>

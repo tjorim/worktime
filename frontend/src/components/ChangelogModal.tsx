@@ -10,10 +10,15 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
-import Accordion from "react-bootstrap/Accordion";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -43,11 +48,11 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
   const getStatusBadge = (status: ChangelogVersion["status"]) => {
     switch (status) {
       case "current":
-        return <Badge bg="primary">{m.changelog_status_current()}</Badge>;
+        return <Badge variant="default">{m.changelog_status_current()}</Badge>;
       case "planned":
-        return <Badge bg="secondary">{m.changelog_status_planned()}</Badge>;
+        return <Badge variant="secondary">{m.changelog_status_planned()}</Badge>;
       case "released":
-        return <Badge bg="success">{m.changelog_status_released()}</Badge>;
+        return <Badge variant="success">{m.changelog_status_released()}</Badge>;
       default:
         return null;
     }
@@ -78,18 +83,18 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     const seen = new Map<string, number>();
 
     return (
-      <div className="mb-3">
-        <h6 className={clsx(textClass, "mb-2")}>
-          <Icon icon={getIconForSection(key)} className="me-2" />
+      <div className="tw:mb-4">
+        <h6 className={clsx(textClass, "tw:mb-2")}>
+          <Icon icon={getIconForSection(key)} className="tw:me-2" />
           {label}
         </h6>
-        <ul className="list-unstyled">
+        <ul className="tw:list-none tw:pl-0">
           {items.map((item) => {
             const occurrence = (seen.get(item) ?? 0) + 1;
             seen.set(item, occurrence);
             return (
-              <li key={`${key}-${item}-${occurrence}`} className="mb-1">
-                <small className="text-muted">•</small> {item}
+              <li key={`${key}-${item}-${occurrence}`} className="tw:mb-1">
+                <small className="tw:text-muted-foreground">•</small> {item}
               </li>
             );
           })}
@@ -108,89 +113,83 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
       <DialogContent size="lg" scrollable position="top">
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={NotebookTextIcon} className="me-2" />
+            <Icon icon={NotebookTextIcon} className="tw:me-2" />
             {m.changelog_modal_title()}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
-          <div className="mb-3">
-            <p className="text-muted">{m.changelog_modal_description()}</p>
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+          <div className="tw:mb-4">
+            <p className="tw:text-muted-foreground">{m.changelog_modal_description()}</p>
           </div>
 
           <Accordion
-            activeKey={activeKey}
-            onSelect={(key) => {
-              if (Array.isArray(key)) {
-                setActiveKey(key[0] ?? "");
-                return;
-              }
-              setActiveKey(key ?? "");
-            }}
+            value={activeKey ? [activeKey] : []}
+            onValueChange={(keys) => setActiveKey(String(keys[0] ?? ""))}
           >
             {changelogData.map((version, index) => (
-              <Accordion.Item eventKey={index.toString()} key={version.version}>
-                <Accordion.Header>
-                  <div className="d-flex justify-content-between align-items-center w-100 me-2">
+              <AccordionItem value={index.toString()} key={version.version}>
+                <AccordionTrigger>
+                  <div className="tw:flex tw:justify-between tw:items-center tw:w-full tw:me-2">
                     <div>
                       <strong>{m.changelog_version_label({ version: version.version })}</strong>
-                      <small className="text-muted ms-2">{version.date}</small>
+                      <small className="tw:text-muted-foreground tw:ms-2">{version.date}</small>
                     </div>
                     {getStatusBadge(version.status)}
                   </div>
-                </Accordion.Header>
-                <Accordion.Body>
+                </AccordionTrigger>
+                <AccordionContent>
                   {renderChangeSection(
                     "added",
                     m.changelog_section_added(),
                     version.added,
-                    "text-success",
+                    "tw:text-success",
                   )}
                   {renderChangeSection(
                     "changed",
                     m.changelog_section_changed(),
                     version.changed,
-                    "text-info",
+                    "tw:text-info",
                   )}
                   {renderChangeSection(
                     "fixed",
                     m.changelog_section_fixed(),
                     version.fixed,
-                    "text-warning",
+                    "tw:text-warning",
                   )}
                   {version.planned &&
                     renderChangeSection(
                       "planned",
                       m.changelog_section_planned(),
                       version.planned,
-                      "text-secondary",
+                      "tw:text-muted-foreground",
                     )}
 
                   {version.technicalDetails && (
-                    <Card className="mt-3 border-0 bg-body-secondary">
-                      <Card.Body className="py-2">
-                        <small className="text-muted">
-                          <Icon icon={InfoIcon} className="me-1" />
+                    <Card className="tw:mt-4 tw:border-0 tw:bg-secondary">
+                      <CardContent className="tw:py-2">
+                        <small className="tw:text-muted-foreground">
+                          <Icon icon={InfoIcon} className="tw:me-1" />
                           <strong>{version.technicalDetails.title}:</strong>{" "}
                           {version.technicalDetails.description}
                         </small>
-                      </Card.Body>
+                      </CardContent>
                     </Card>
                   )}
-                </Accordion.Body>
-              </Accordion.Item>
+                </AccordionContent>
+              </AccordionItem>
             ))}
           </Accordion>
 
-          <div className="mt-4 p-3 bg-body-secondary rounded">
-            <h6 className="text-primary mb-2">
-              <Icon icon={RocketIcon} className="me-2" />
+          <div className="tw:mt-6 tw:p-4 tw:bg-secondary tw:rounded-md">
+            <h6 className="tw:text-primary tw:mb-2">
+              <Icon icon={RocketIcon} className="tw:me-2" />
               {m.changelog_coming_soon_heading()}
             </h6>
-            <p className="mb-0 small text-muted">{futurePlans.join(", ")}</p>
+            <p className="tw:mb-0 tw:text-sm tw:text-muted-foreground">{futurePlans.join(", ")}</p>
           </div>
         </div>
         <DialogFooter>
-          <small className="text-muted me-auto">
+          <small className="tw:text-muted-foreground tw:me-auto">
             {m.changelog_versioning_text()}{" "}
             <a href="https://calver.org/" target="_blank" rel="noopener noreferrer">
               {m.changelog_versioning_link()}

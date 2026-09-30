@@ -162,9 +162,9 @@ describe("DailyTaskList", () => {
       fireEvent.contextMenu(taskItem);
 
       const menuItem = screen.getByText("Too short for 30min break");
-      const buttonAncestor = menuItem.closest("button");
+      const buttonAncestor = menuItem.closest("[role=menuitem]");
       expect(buttonAncestor).not.toBeNull(); // Fail clearly if missing
-      expect(buttonAncestor).toBeDisabled();
+      expect(buttonAncestor).toHaveAttribute("aria-disabled", "true");
     });
 
     it("allows break toggle on running tasks (no stopTime)", () => {
@@ -176,7 +176,10 @@ describe("DailyTaskList", () => {
 
       expect(screen.getByText("Includes 30min break")).toBeInTheDocument();
       // Should not be disabled
-      expect(screen.getByText("Includes 30min break").closest("button")).not.toBeDisabled();
+      expect(screen.getByRole("menuitem", { name: "Includes 30min break" })).not.toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
     });
 
     it("toggles break on via context menu", async () => {

@@ -88,7 +88,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           >
             <IconButton
               size="sm"
-              variant="outline-danger"
+              variant="destructive"
               onClick={handleClear}
               icon={XIcon}
               label={m.tt_clear_work_location()}

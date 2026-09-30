@@ -1,5 +1,5 @@
 import { Star as StarIcon } from "lucide-react";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
 
@@ -239,11 +239,38 @@ describe("ToastContext", () => {
       successButton.click();
     });
 
-    const toastContainer = document.querySelector(".toast-container");
+    const toastContainer = document.querySelector("[data-slot=toast-viewport]");
     expect(toastContainer).toBeInTheDocument();
-    expect(toastContainer).toHaveClass("toast-container");
-    expect(toastContainer).toHaveClass("top-0");
-    expect(toastContainer).toHaveClass("end-0");
-    expect(toastContainer).toHaveClass("p-3");
+    expect(toastContainer).toHaveClass("tw:fixed");
+    expect(toastContainer).toHaveClass("tw:top-0");
+    expect(toastContainer).toHaveClass("tw:right-0");
+    expect(toastContainer).toHaveClass("tw:p-3");
+  });
+  it("keeps autohide paused while keyboard focus remains after the pointer leaves", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ToastProvider>
+          <TestComponent />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByText("Show Success"));
+      const toast = screen.getByText("Success message").closest('[data-slot="toast"]')!;
+      const close = screen.getByRole("button", { name: "Close notification" });
+      fireEvent.mouseEnter(toast);
+      fireEvent.focus(close);
+      fireEvent.mouseLeave(toast);
+      act(() => {
+        vi.advanceTimersByTime(8000);
+      });
+      expect(screen.getByText("Success message")).toBeInTheDocument();
+      fireEvent.blur(close, { relatedTarget: document.body });
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.queryByText("Success message")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

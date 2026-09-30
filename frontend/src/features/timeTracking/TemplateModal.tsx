@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ReactSelect from "react-select";
+import { DialogSelect } from "@/components/shared/DialogSelect";
 import { useForm, useSelector } from "@tanstack/react-form";
 import type { Label } from "@/lib/timeTracking/constants";
 import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
@@ -64,7 +64,7 @@ export function TemplateModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           <Form
             id="templateForm"
             onSubmit={(event) => {
@@ -98,7 +98,7 @@ export function TemplateModal({
               {(field) => (
                 <Form.Group controlId="templateLabel" className="mb-3">
                   <Form.Label>{m.form_label()}</Form.Label>
-                  <ReactSelect<LabelOption>
+                  <DialogSelect<LabelOption>
                     unstyled
                     isClearable
                     isSearchable

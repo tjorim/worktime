@@ -16,10 +16,10 @@ import {
   useRef,
   useState,
 } from "react";
-import Button from "react-bootstrap/Button";
-import CloseButton from "react-bootstrap/CloseButton";
-import Toast from "react-bootstrap/Toast";
-import ToastContainer from "react-bootstrap/ToastContainer";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 import * as m from "@/paraglide/messages.js";
 
 /** Default autohide delay for info/success/warning toasts (ms). */
@@ -89,15 +89,15 @@ interface ToastItemProps {
 /**
  * Renders a single toast and manages its autohide countdown.
  *
- * The timer is implemented manually (rather than relying on React Bootstrap's
- * built-in `autohide`) so it can pause while the toast is hovered or focused —
+ * The timer can pause while the toast is hovered or focused —
  * giving the user time to reach an action button such as "Undo".
  */
 function ToastItem({ toast, onClose }: ToastItemProps) {
   const isError = toast.variant === "danger";
-  const isLight = toast.variant === "warning";
 
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const paused = hovered || focused;
   const remainingRef = useRef(toast.delay ?? DEFAULT_TOAST_DELAY);
   const startedAtRef = useRef<number | null>(null);
   // Keep the latest onClose without re-arming the timer when it changes.
@@ -126,50 +126,46 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
     };
   }, [paused, toast.autohide, toast.id]);
 
-  const pause = useCallback(() => setPaused(true), []);
-  const resume = useCallback(() => setPaused(false), []);
-
   return (
-    <Toast
-      onClose={() => onClose(toast.id)}
-      show={true}
-      // Autohide is handled manually above so it can pause on hover/focus.
-      autohide={false}
-      bg={toast.variant}
-      onMouseEnter={pause}
-      onMouseLeave={resume}
-      onFocus={pause}
-      onBlur={resume}
-      // Errors interrupt (assertive); other toasts announce politely.
+    <div
+      data-slot="toast"
+      className={cn(
+        "tw:pointer-events-auto tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-popover tw:p-3 tw:text-popover-foreground tw:shadow-lg",
+        isError && "tw:border-destructive",
+        toast.variant === "warning" && "tw:border-warning",
+        toast.variant === "success" && "tw:border-success",
+      )}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
       role={isError ? "alert" : "status"}
       aria-live={isError ? "assertive" : "polite"}
+      aria-atomic="true"
     >
-      <Toast.Body className="d-flex align-items-center">
-        {toast.icon && <Icon icon={toast.icon} className="me-2" />}
-        <span className={`${isLight ? "text-dark" : "text-white"} me-2`}>{toast.message}</span>
-        {toast.action && (
-          <Button
-            size="sm"
-            variant={isLight ? "outline-dark" : "outline-light"}
-            className="ms-auto me-2 py-0 flex-shrink-0"
-            onClick={toast.action.onClick}
-          >
-            {toast.action.label}
-          </Button>
-        )}
-        <CloseButton
-          className={toast.action ? "flex-shrink-0" : "ms-auto flex-shrink-0"}
-          variant={isLight ? undefined : "white"}
-          onClick={() => onClose(toast.id)}
-          aria-label={m.toast_close_aria()}
-        />
-      </Toast.Body>
-    </Toast>
+      {toast.icon && <Icon icon={toast.icon} />}
+      <span className="tw:min-w-0 tw:grow tw:text-sm">{toast.message}</span>
+      {toast.action && (
+        <Button size="sm" variant="outline" onClick={toast.action.onClick}>
+          {toast.action.label}
+        </Button>
+      )}
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={() => onClose(toast.id)}
+        aria-label={m.toast_close_aria()}
+      >
+        <Icon icon={X} />
+      </Button>
+    </div>
   );
 }
 
 /**
- * Provides a toast notification context and renders a ToastContainer that displays active toasts.
+ * Provides a toast notification context and renders a toast viewport that displays active toasts.
  *
  * The provider supplies context methods to add and remove toasts and to show success, error,
  * warning and info messages with optional icons.
@@ -271,11 +267,14 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      <ToastContainer position="top-end" className="p-3 position-fixed" style={{ zIndex: 1100 }}>
+      <div
+        data-slot="toast-viewport"
+        className="tw:pointer-events-none tw:fixed tw:top-0 tw:right-0 tw:z-feedback tw:flex tw:w-full tw:max-w-sm tw:flex-col tw:gap-2 tw:p-3"
+      >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onClose={removeToast} />
         ))}
-      </ToastContainer>
+      </div>
     </ToastContext.Provider>
   );
 }

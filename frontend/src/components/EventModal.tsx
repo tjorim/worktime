@@ -296,7 +296,7 @@ export function EventModal({
                 : m.event_modal_new_event()}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body" ref={formRef} tabIndex={-1}>
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" ref={formRef} tabIndex={-1}>
           <Form>
             <Row className="g-3">
               {mode !== "view" && (

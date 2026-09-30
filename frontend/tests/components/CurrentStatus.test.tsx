@@ -891,13 +891,11 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       const shiftBadges = screen.getAllByText("Morning");
-      const mainShiftBadge = shiftBadges.find((badge) =>
-        badge.classList.contains("shift-badge-lg"),
-      );
+      const mainShiftBadge = shiftBadges.find((badge) => badge.classList.contains("tw:text-base"));
       expect(mainShiftBadge).toBeTruthy();
-      expect(mainShiftBadge).toHaveClass("badge");
-      expect(mainShiftBadge).toHaveClass("shift-code");
-      expect(mainShiftBadge).toHaveClass("shift-badge-lg");
+      expect(mainShiftBadge).toHaveAttribute("data-slot", "badge");
+      expect(mainShiftBadge).toHaveClass("tw:font-semibold");
+      expect(mainShiftBadge).toHaveClass("tw:text-base");
       expect(screen.getByText("Team 1:")).toBeInTheDocument();
     });
   });

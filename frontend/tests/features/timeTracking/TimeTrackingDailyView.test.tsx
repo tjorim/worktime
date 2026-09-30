@@ -85,7 +85,9 @@ describe("TimeTrackingDailyView", () => {
         screen.getByText("Start a task now and stop it when you're done."),
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Start Now · Idle/i })).toBeInTheDocument();
-      expect(screen.queryByText("Idle", { selector: ".badge" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Idle", { selector: ".badge, [data-slot=running-status]" }),
+      ).not.toBeInTheDocument();
     });
 
     it("starts a timer when a task name is provided", async () => {
@@ -144,10 +146,16 @@ describe("TimeTrackingDailyView", () => {
       renderView({ tasks: [runningTask], selectedDate: "2025-01-01" });
 
       expect(screen.getAllByText("On call")).toHaveLength(2);
-      expect(screen.getAllByText("Support", { selector: ".time-tracking-label" })).toHaveLength(2);
+      expect(
+        screen.getAllByText("Support", {
+          selector: ".time-tracking-label, [data-slot=task-label]",
+        }),
+      ).toHaveLength(2);
       expect(screen.queryByText(/Started 2025-01-01 10:00/)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Stop Timer · 00:00:05/i })).toBeInTheDocument();
-      expect(screen.getByText("Running", { selector: ".badge" })).toBeInTheDocument();
+      expect(
+        screen.getByText("Running", { selector: ".badge, [data-slot=running-status]" }),
+      ).toBeInTheDocument();
     });
 
     it("identifies a running task started on another date", () => {
@@ -163,7 +171,9 @@ describe("TimeTrackingDailyView", () => {
       renderView({ tasks: [runningTask], selectedDate: "2025-01-02" });
 
       expect(screen.getByText("Night handover")).toBeInTheDocument();
-      expect(screen.getByText("Support", { selector: ".time-tracking-label" })).toBeInTheDocument();
+      expect(
+        screen.getByText("Support", { selector: ".time-tracking-label, [data-slot=task-label]" }),
+      ).toBeInTheDocument();
       expect(screen.getByText("Started 2025-01-01 23:30")).toBeInTheDocument();
       expect(
         screen.queryByText("Night handover", { selector: ".list-group-item *" }),

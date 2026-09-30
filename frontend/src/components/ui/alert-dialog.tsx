@@ -1,6 +1,7 @@
 import * as m from "@/paraglide/messages";
 
 import * as React from "react";
+import { XIcon } from "lucide-react";
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,10 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
   return (
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
-      className={cn("dialog-backdrop", className)}
+      className={cn(
+        "tw:fixed tw:inset-0 tw:z-dialog-overlay tw:bg-overlay/50 tw:data-closed:hidden",
+        className,
+      )}
       {...props}
     />
   );
@@ -46,12 +50,22 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
         data-size={size}
-        className={cn("dialog-popup", className)}
+        className={cn(
+          "tw:dialog-viewport tw:fixed tw:top-1/2 tw:left-1/2 tw:z-dialog tw:max-w-dialog tw:-translate-x-1/2 tw:-translate-y-1/2 tw:overflow-y-auto tw:rounded-lg tw:border tw:border-border tw:bg-background tw:text-foreground tw:outline-none tw:data-closed:hidden",
+          className,
+        )}
         {...props}
       >
         {children}
         {showCloseButton && (
-          <AlertDialogPrimitive.Close className="dialog-close btn-close" aria-label={m.close()} />
+          <AlertDialogPrimitive.Close
+            render={
+              <Button variant="ghost" size="icon-sm" className="tw:absolute tw:top-3 tw:right-3" />
+            }
+            aria-label={m.close()}
+          >
+            <XIcon />
+          </AlertDialogPrimitive.Close>
         )}
       </AlertDialogPrimitive.Popup>
     </AlertDialogPortal>
@@ -60,13 +74,27 @@ function AlertDialogContent({
 
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="alert-dialog-header" className={cn("modal-header", className)} {...props} />
+    <div
+      data-slot="alert-dialog-header"
+      className={cn(
+        "tw:flex tw:shrink-0 tw:items-center tw:border-b tw:border-border tw:p-4 tw:pr-14",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
 function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="alert-dialog-footer" className={cn("modal-footer", className)} {...props} />
+    <div
+      data-slot="alert-dialog-footer"
+      className={cn(
+        "tw:flex tw:shrink-0 tw:flex-wrap tw:justify-end tw:gap-2 tw:border-t tw:border-border tw:p-4",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -81,7 +109,7 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("modal-title", className)}
+      className={cn("tw:m-0 tw:text-xl tw:font-medium tw:leading-normal", className)}
       {...props}
     />
   );

@@ -1,15 +1,21 @@
-import Badge from "react-bootstrap/Badge";
+import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/tooltip";
 import { useId } from "react";
 import clsx from "clsx";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 
-// Helper: Determine size class
-const getSizeClass = (size: "sm" | "md" | "lg"): string => {
-  if (size === "lg") return "shift-badge-lg";
-  if (size === "sm") return "shift-badge-sm";
-  return "";
+const shiftColors: Record<string, string> = {
+  "shift-morning": "tw:bg-wt-shift-morning tw:text-wt-shift-morning-text",
+  "shift-late": "tw:bg-wt-shift-late tw:text-wt-shift-late-text",
+  "shift-night": "tw:bg-wt-shift-night tw:text-wt-shift-night-text",
+  "shift-day": "tw:bg-wt-shift-day tw:text-wt-shift-day-text",
+  "shift-off": "tw:bg-wt-shift-off tw:text-wt-shift-off-text",
+};
+const sizes = {
+  sm: "tw:px-2 tw:py-0.5 tw:text-xs",
+  md: "tw:px-2 tw:py-1 tw:text-sm",
+  lg: "tw:px-4 tw:py-2 tw:text-base",
 };
 
 // Helper: Build badge content from boolean flags
@@ -69,7 +75,7 @@ export function ShiftBadge({
   const tooltipId = useId();
   const formattedTime = useFormattedShiftTime(shift);
 
-  const sizeClass = getSizeClass(size);
+  const sizeClass = sizes[size];
   const content = getBadgeContent(shift, showEmoji, showCode, showName);
   // shift.className reflects the roster's shift code (e.g. "shift-day"),
   // independent of shift.isWorking — callers like CalendarView override
@@ -81,15 +87,15 @@ export function ShiftBadge({
 
   const badge = (
     <Badge
-      bg=""
+      variant="outline"
       className={clsx(
-        "shift-code",
+        "tw:h-auto tw:min-w-8 tw:font-semibold",
+        pill ? "tw:rounded-full" : "tw:rounded-md",
         sizeClass,
-        showTooltip && "cursor-help",
-        badgeClassName,
+        showTooltip && "tw:cursor-help",
+        shiftColors[badgeClassName] ?? shiftColors["shift-off"],
         className,
       )}
-      pill={pill}
       title={title}
     >
       {content}

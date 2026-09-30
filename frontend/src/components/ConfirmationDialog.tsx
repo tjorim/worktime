@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { ReactNode } from "react";
 import { useId } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -77,18 +77,23 @@ export function ConfirmationDialog({
       >
         <Header>
           <Title>
-            {icon && <Icon icon={icon} className="me-2" />}
+            {icon && <Icon icon={icon} className="tw:me-2" />}
             {title}
           </Title>
         </Header>
-        <div className="modal-body" id={bodyId}>
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" id={bodyId}>
           {message}
         </div>
         <Footer>
-          <Button variant="outline-secondary" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant={variant} onClick={onConfirm}>
+          <Button
+            variant={
+              variant === "danger" ? "destructive" : variant === "warning" ? "warning" : "default"
+            }
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </Footer>

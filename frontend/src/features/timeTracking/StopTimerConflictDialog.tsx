@@ -60,7 +60,7 @@ export function StopTimerConflictDialog({
         <DialogHeader>
           <DialogTitle>{m.tt_stop_conflict_title()}</DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           <p>{m.tt_stop_conflict_intro()}</p>
           <Form.Group controlId="stopTimerConflictTime" className="mb-3">
             <Form.Label>{m.tt_stop_time()}</Form.Label>

@@ -1,4 +1,8 @@
-import Alert from "react-bootstrap/Alert";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
+import * as m from "@/paraglide/messages";
+import { Alert } from "@/components/ui/alert";
 
 interface Feature {
   name: string;
@@ -16,21 +20,27 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
   }
 
   return (
-    <Alert
-      variant="info"
-      dismissible
-      onClose={onDismiss}
-      className="rounded-0 mb-0 border-start-0 border-end-0"
-    >
-      <strong>New since your last visit:</strong>{" "}
-      {features.map((f, i) => (
-        <span key={`${f.name}-${i}`}>
-          {i > 0 && " · "}
-          <strong>{f.name}</strong> — {f.detail}
-        </span>
-      ))}
-      {". "}
-      Enable in <strong>Settings</strong> <span aria-hidden="true">⚙</span>.
+    <Alert variant="info" className="tw:rounded-none tw:mb-0 tw:border-l-0 tw:border-r-0 tw:pr-12">
+      <div>
+        <strong>New since your last visit:</strong>{" "}
+        {features.map((f, i) => (
+          <span key={`${f.name}-${i}`}>
+            {i > 0 && " · "}
+            <strong>{f.name}</strong> — {f.detail}
+          </span>
+        ))}
+        {". "}
+        Enable in <strong>Settings</strong> <span aria-hidden="true">⚙</span>.
+      </div>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="tw:absolute tw:top-2 tw:right-2"
+        onClick={onDismiss}
+        aria-label={m.close()}
+      >
+        <Icon icon={X} />
+      </Button>
     </Alert>
   );
 }

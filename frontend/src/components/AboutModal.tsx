@@ -20,9 +20,9 @@ import {
   Users as UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Row from "react-bootstrap/Row";
+import { Grid, GridItem } from "@/components/ui/grid";
 import { Link } from "@tanstack/react-router";
 import { useSettings } from "@/contexts/SettingsContext";
 import { CONFIG } from "@/utils/config";
@@ -64,38 +64,42 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
       <DialogContent size="lg" scrollable>
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={InfoIcon} className="me-2" />
+            <Icon icon={InfoIcon} className="tw:me-2" />
             {m.about_modal_title()}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           {/* App Title & Version */}
-          <div className="text-center mb-4">
-            <div className="mb-2">
-              <Icon icon={HistoryIcon} className="text-primary icon-lg" />
+          <div className="tw:text-center tw:mb-6">
+            <div className="tw:mb-2">
+              <Icon icon={HistoryIcon} className="tw:text-primary tw:text-3xl" />
             </div>
-            <h5 className="mb-2">{m.about_app_subtitle()}</h5>
-            <div className="mb-2">
-              <Badge bg="primary">
-                <Icon icon={TagIcon} className="me-1" />
+            <h5 className="tw:mb-2">{m.about_app_subtitle()}</h5>
+            <div className="tw:mb-2">
+              <Badge variant="default">
+                <Icon icon={TagIcon} className="tw:me-1" />
                 {m.about_version_badge({ version: CONFIG.VERSION })}
               </Badge>
             </div>
           </div>
 
           {/* Author Section */}
-          <div className="text-center mb-4">
-            <div className="d-flex justify-content-center align-items-center gap-2 mb-2">
-              <Icon icon={CircleUserIcon} className="text-muted" />
-              <span className="fw-semibold">{m.about_created_by()}</span>
+          <div className="tw:text-center tw:mb-6">
+            <div className="tw:flex tw:justify-center tw:items-center tw:gap-2 tw:mb-2">
+              <Icon icon={CircleUserIcon} className="tw:text-muted-foreground" />
+              <span className="tw:font-semibold">{m.about_created_by()}</span>
             </div>
             <a
               href="https://github.com/tjorim"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline-primary btn-sm"
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline",
+              })}
             >
-              <Icon icon={CodeXmlIcon} className="me-1" />
+              <Icon icon={CodeXmlIcon} className="tw:me-1" />
               {m.about_github_profile_btn()}
             </a>
           </div>
@@ -103,141 +107,166 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <hr />
 
           {/* Features List with Icons */}
-          <div className="mb-4">
-            <h6 className="mb-3">
-              <Icon icon={StarIcon} className="me-2 text-warning" />
+          <div className="tw:mb-6">
+            <h6 className="tw:mb-4">
+              <Icon icon={StarIcon} className="tw:me-2 tw:text-warning" />
               {m.about_key_features_heading()}
             </h6>
-            <Row className="g-2">
-              <Col xs={6}>
-                <div className="d-flex align-items-center small">
+            <Grid className="tw:gap-2">
+              <GridItem span={6}>
+                <div className="tw:flex tw:items-center tw:text-sm">
                   {isFiveShift ? (
                     <>
-                      <Icon icon={UsersIcon} className="text-primary me-2" />
+                      <Icon icon={UsersIcon} className="tw:text-primary tw:me-2" />
                       <span>{m.about_feature_5shift()}</span>
                     </>
                   ) : (
                     <>
-                      <Icon icon={CalendarDaysIcon} className="text-primary me-2" />
+                      <Icon icon={CalendarDaysIcon} className="tw:text-primary tw:me-2" />
                       <span>
                         {m.about_feature_schedule_type({ scheduleTitle: scheduleConfig.title })}
                       </span>
                     </>
                   )}
                 </div>
-              </Col>
-              <Col xs={6}>
-                <div className="d-flex align-items-center small">
-                  <Icon icon={FileTextIcon} className="text-success me-2" />
+              </GridItem>
+              <GridItem span={6}>
+                <div className="tw:flex tw:items-center tw:text-sm">
+                  <Icon icon={FileTextIcon} className="tw:text-success tw:me-2" />
                   <span>{m.about_feature_hday()}</span>
                 </div>
-              </Col>
+              </GridItem>
               {isFiveShift && (
-                <Col xs={6}>
-                  <div className="d-flex align-items-center small">
-                    <Icon icon={ArrowLeftRightIcon} className="text-info me-2" />
+                <GridItem span={6}>
+                  <div className="tw:flex tw:items-center tw:text-sm">
+                    <Icon icon={ArrowLeftRightIcon} className="tw:text-info tw:me-2" />
                     <span>{m.about_feature_transfers()}</span>
                   </div>
-                </Col>
+                </GridItem>
               )}
-              <Col xs={6}>
-                <div className="d-flex align-items-center small">
-                  <Icon icon={CalendarDaysIcon} className="text-secondary me-2" />
+              <GridItem span={6}>
+                <div className="tw:flex tw:items-center tw:text-sm">
+                  <Icon icon={CalendarDaysIcon} className="tw:text-muted-foreground tw:me-2" />
                   <span>{m.about_feature_date_format()}</span>
                 </div>
-              </Col>
-            </Row>
+              </GridItem>
+            </Grid>
           </div>
 
           <hr />
 
           {/* Quick Links */}
-          <div className="mb-4">
-            <h6 className="mb-3">
-              <Icon icon={LinkIcon} className="me-2 text-info" />
+          <div className="tw:mb-6">
+            <h6 className="tw:mb-4">
+              <Icon icon={LinkIcon} className="tw:me-2 tw:text-info" />
               {m.about_quick_links_heading()}
             </h6>
-            <div className="d-grid gap-2">
-              <Row className="g-2">
-                <Col xs={4}>
+            <div className="tw:grid tw:gap-2">
+              <Grid className="tw:gap-2">
+                <GridItem span={12} desktopSpan={4}>
                   <a
                     href="https://github.com/tjorim/worktime#readme"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-outline-secondary btn-sm w-100"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className:
+                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                    })}
                   >
-                    <Icon icon={BookIcon} className="me-1" />
+                    <Icon icon={BookIcon} className="tw:me-1" />
                     {m.about_documentation_btn()}
                   </a>
-                </Col>
-                <Col xs={4}>
+                </GridItem>
+                <GridItem span={12} desktopSpan={4}>
                   <a
                     href="https://github.com/tjorim/worktime"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-outline-secondary btn-sm w-100"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className:
+                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                    })}
                   >
-                    <Icon icon={CodeIcon} className="me-1" />
+                    <Icon icon={CodeIcon} className="tw:me-1" />
                     {m.about_source_code_btn()}
                   </a>
-                </Col>
-                <Col xs={4}>
+                </GridItem>
+                <GridItem span={12} desktopSpan={4}>
                   <Link
                     to="/privacy"
                     onClick={onHide}
-                    className="btn btn-outline-secondary btn-sm w-100"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className:
+                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                    })}
                   >
-                    <Icon icon={ShieldIcon} className="me-1" />
+                    <Icon icon={ShieldIcon} className="tw:me-1" />
                     {m.about_privacy_policy_btn()}
                   </Link>
-                </Col>
-              </Row>
+                </GridItem>
+              </Grid>
             </div>
           </div>
 
           {/* Support Section */}
-          <div className="mb-4">
-            <h6 className="mb-3">
-              <Icon icon={HeadsetIcon} className="me-2 text-success" />
+          <div className="tw:mb-6">
+            <h6 className="tw:mb-4">
+              <Icon icon={HeadsetIcon} className="tw:me-2 tw:text-success" />
               {m.about_support_heading()}
             </h6>
-            <div className="d-grid gap-2">
-              <Row className="g-2">
-                <Col xs={6}>
+            <div className="tw:grid tw:gap-2">
+              <Grid className="tw:gap-2">
+                <GridItem span={6}>
                   <a
                     href="https://github.com/tjorim/worktime/issues/new?template=bug_report.yml"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-outline-danger btn-sm w-100"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className:
+                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                    })}
                   >
-                    <Icon icon={BugIcon} className="me-1" />
+                    <Icon icon={BugIcon} className="tw:me-1" />
                     {m.about_report_bug_btn()}
                   </a>
-                </Col>
-                <Col xs={6}>
+                </GridItem>
+                <GridItem span={6}>
                   <a
                     href="https://github.com/tjorim/worktime/issues/new?template=feature_request.yml"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-outline-success btn-sm w-100"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className:
+                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                    })}
                   >
-                    <Icon icon={LightbulbIcon} className="me-1" />
+                    <Icon icon={LightbulbIcon} className="tw:me-1" />
                     {m.about_request_feature_btn()}
                   </a>
-                </Col>
-              </Row>
+                </GridItem>
+              </Grid>
             </div>
           </div>
 
           {/* Footer Info */}
-          <div className="text-center">
-            <div className="d-flex justify-content-center align-items-center gap-3 small text-muted">
+          <div className="tw:text-center">
+            <div className="tw:flex tw:justify-center tw:items-center tw:gap-4 tw:text-sm tw:text-muted-foreground">
               <span>
-                <Icon icon={ShieldCheckIcon} className="me-1" />
+                <Icon icon={ShieldCheckIcon} className="tw:me-1" />
                 Apache 2.0
               </span>
               <span>
-                <Icon icon={SquareCodeIcon} className="me-1" />
+                <Icon icon={SquareCodeIcon} className="tw:me-1" />
                 React + TypeScript
               </span>
             </div>

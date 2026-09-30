@@ -1,5 +1,5 @@
 import { Icon } from "@/components/shared/Icon";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { useSetupAction } from "@/hooks/useSetupAction";
 import * as m from "@/paraglide/messages.js";
 
@@ -21,7 +21,7 @@ interface SetupActionButtonProps {
    */
   mode?: "auto" | "team";
   /**
-   * Button size (Bootstrap size prop).
+   * Button size.
    */
   size?: "sm" | "lg";
 }
@@ -52,12 +52,12 @@ export function SetupActionButton({
   if (needsSchedule && onChangeSchedule) {
     return (
       <Button
-        variant="primary"
+        variant="default"
         size={size}
         onClick={onChangeSchedule}
         title={m.setup_btn_select_schedule_title()}
       >
-        <Icon icon={buttonIcon} className="me-1" />
+        <Icon icon={buttonIcon} className="tw:me-1" />
         {buttonText}
       </Button>
     );
@@ -67,12 +67,12 @@ export function SetupActionButton({
   if (needsTeam && onChangeTeam) {
     return (
       <Button
-        variant="primary"
+        variant="default"
         size={size}
         onClick={onChangeTeam}
         title={m.setup_btn_select_team_title()}
       >
-        <Icon icon={buttonIcon} className="me-1" />
+        <Icon icon={buttonIcon} className="tw:me-1" />
         {buttonText}
       </Button>
     );

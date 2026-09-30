@@ -1,6 +1,6 @@
 const TWO_HOURS_IN_SECONDS = 7200;
 const ONE_DAY_IN_SECONDS = 86400;
-import Badge from "react-bootstrap/Badge";
+import { Badge } from "@/components/ui/badge";
 import type { Dayjs } from "dayjs";
 import type { CountdownResult } from "@/hooks/useCountdown";
 
@@ -20,10 +20,10 @@ interface CountdownBadgeProps {
  * @param countdown - Countdown result from useCountdown hook
  * @param startTime - The target time
  * @param label - Text label before the countdown (default: "Starts in")
- * @param variant - Bootstrap badge variant (default: "info")
+ * @param variant - Semantic badge variant (default: "info")
  * @param urgency - Auto-select variant based on remaining time (overrides variant)
  * @param showIcon - Whether to show clock icon (default: true)
- * @param className - Additional CSS classes (default: "mt-2")
+ * @param className - Additional CSS classes (default: "tw:mt-2")
  * @returns Badge with countdown or null if countdown expired/invalid
  */
 export function CountdownBadge({
@@ -33,7 +33,7 @@ export function CountdownBadge({
   variant = "info",
   urgency = false,
   showIcon = true,
-  className = "mt-2",
+  className = "tw:mt-2",
 }: CountdownBadgeProps) {
   // Only show if we have valid countdown data
   if (!countdown || countdown.isExpired || !startTime) {
@@ -52,7 +52,7 @@ export function CountdownBadge({
   }
 
   return (
-    <Badge bg={resolvedVariant} className={className}>
+    <Badge variant={resolvedVariant} className={className}>
       {showIcon && <span aria-hidden="true">⏰ </span>}
       {label} {countdown.formatted}
     </Badge>

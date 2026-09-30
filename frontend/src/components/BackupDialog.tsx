@@ -1,8 +1,10 @@
 import { Download as DownloadIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -85,73 +87,83 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       <DialogContent aria-labelledby={titleId}>
         <DialogHeader>
           <DialogTitle id={titleId}>
-            <Icon icon={DownloadIcon} className="me-2" />
+            <Icon icon={DownloadIcon} className="tw:me-2" />
             {m.backup_app_data_label()}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
-          <p className="fw-medium mb-2">{m.backup_include_label()}</p>
-          <div className="d-flex flex-column gap-2">
-            <Form.Check
-              type="checkbox"
-              id="backup-user-state"
-              label={m.backup_include_settings()}
-              checked={includeUserState}
-              onChange={(e) => setIncludeUserState(e.target.checked)}
-            />
-            {presence?.hasTimeOff && (
-              <Form.Check
-                type="checkbox"
-                id="backup-time-off"
-                label={m.backup_include_time_off()}
-                checked={includeTimeOff}
-                onChange={(e) => setIncludeTimeOff(e.target.checked)}
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+          <p className="tw:font-medium tw:mb-2">{m.backup_include_label()}</p>
+          <div className="tw:flex tw:flex-col tw:gap-2">
+            <Field orientation="horizontal">
+              <Checkbox
+                id="backup-user-state"
+                checked={includeUserState}
+                onCheckedChange={(checked) => setIncludeUserState(checked)}
               />
+              <FieldLabel htmlFor="backup-user-state">{m.backup_include_settings()}</FieldLabel>
+            </Field>
+            {presence?.hasTimeOff && (
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="backup-time-off"
+                  checked={includeTimeOff}
+                  onCheckedChange={(checked) => setIncludeTimeOff(checked)}
+                />
+                <FieldLabel htmlFor="backup-time-off">{m.backup_include_time_off()}</FieldLabel>
+              </Field>
             )}
             {presence?.hasWorkLocations && (
-              <Form.Check
-                type="checkbox"
-                id="backup-work-locations"
-                label={m.backup_include_work_locations()}
-                checked={includeWorkLocations}
-                onChange={(e) => setIncludeWorkLocations(e.target.checked)}
-              />
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="backup-work-locations"
+                  checked={includeWorkLocations}
+                  onCheckedChange={(checked) => setIncludeWorkLocations(checked)}
+                />
+                <FieldLabel htmlFor="backup-work-locations">
+                  {m.backup_include_work_locations()}
+                </FieldLabel>
+              </Field>
             )}
             {presence?.hasTasks && (
-              <Form.Check
-                type="checkbox"
-                id="backup-tasks"
-                label={m.backup_include_tasks()}
-                checked={includeTasks}
-                onChange={(e) => setIncludeTasks(e.target.checked)}
-              />
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="backup-tasks"
+                  checked={includeTasks}
+                  onCheckedChange={(checked) => setIncludeTasks(checked)}
+                />
+                <FieldLabel htmlFor="backup-tasks">{m.backup_include_tasks()}</FieldLabel>
+              </Field>
             )}
             {(presence?.hasTemplates || presence?.hasLabels) && (
-              <Form.Check
-                type="checkbox"
-                id="backup-templates-labels"
-                label={m.backup_include_templates()}
-                checked={includeTemplatesAndLabels}
-                onChange={(e) => setIncludeTemplatesAndLabels(e.target.checked)}
-              />
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="backup-templates-labels"
+                  checked={includeTemplatesAndLabels}
+                  onCheckedChange={(checked) => setIncludeTemplatesAndLabels(checked)}
+                />
+                <FieldLabel htmlFor="backup-templates-labels">
+                  {m.backup_include_templates()}
+                </FieldLabel>
+              </Field>
             )}
             {presence?.hasGanttTasks && (
-              <Form.Check
-                type="checkbox"
-                id="backup-gantt-tasks"
-                label={m.backup_include_gantt()}
-                checked={includeGanttTasks}
-                onChange={(e) => setIncludeGanttTasks(e.target.checked)}
-              />
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="backup-gantt-tasks"
+                  checked={includeGanttTasks}
+                  onCheckedChange={(checked) => setIncludeGanttTasks(checked)}
+                />
+                <FieldLabel htmlFor="backup-gantt-tasks">{m.backup_include_gantt()}</FieldLabel>
+              </Field>
             )}
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline-secondary" onClick={onHide}>
+          <Button variant="outline" onClick={onHide}>
             {m.cancel()}
           </Button>
-          <Button variant="primary" onClick={handleExport} disabled={nothingSelected}>
-            <Icon icon={DownloadIcon} className="me-1" />
+          <Button variant="default" onClick={handleExport} disabled={nothingSelected}>
+            <Icon icon={DownloadIcon} className="tw:me-1" />
             {m.backup_export_btn()}
           </Button>
         </DialogFooter>

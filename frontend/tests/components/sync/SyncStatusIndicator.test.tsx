@@ -47,7 +47,7 @@ describe("SyncStatusIndicator offline state", () => {
     render(<SyncStatusIndicator />);
 
     expect(screen.getByLabelText("Sync status: Offline · 3 queued")).toHaveClass(
-      "sync-indicator--warning",
+      "tw:bg-warning-bg",
     );
     expect(screen.queryByLabelText(/Sync failed/)).not.toBeInTheDocument();
   });
@@ -108,7 +108,7 @@ describe("SyncStatusIndicator spin state", () => {
     render(<SyncStatusIndicator />);
 
     const indicator = screen.getByLabelText("Sync status: Syncing…");
-    expect(indicator.querySelector("svg")).toHaveClass("sync-spin");
+    expect(indicator.querySelector("svg")).toHaveClass("tw:animate-spin");
   });
 
   it("does not spin the static pending icon once syncing has stopped", () => {
@@ -118,6 +118,6 @@ describe("SyncStatusIndicator spin state", () => {
     render(<SyncStatusIndicator />);
 
     const indicator = screen.getByLabelText("Sync status: 2 pending");
-    expect(indicator.querySelector("svg")).not.toHaveClass("sync-spin");
+    expect(indicator.querySelector("svg")).not.toHaveClass("tw:animate-spin");
   });
 });

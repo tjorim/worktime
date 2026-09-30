@@ -71,7 +71,7 @@ export function LongWeekendModal({
             {m.long_weekend_modal_title({ year: String(year) })}
           </DialogTitle>
         </DialogHeader>
-        <div className="modal-body">
+        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           <div className="d-flex align-items-center gap-2 mb-3">
             <Form.Label htmlFor="lw-bridge-days" className="mb-0 text-nowrap">
               {m.long_weekend_bridge_days_label()}

@@ -27,8 +27,8 @@ const dayShift: Shift = {
 describe("ShiftBadge", () => {
   it("uses the shift's own color class while actually working", () => {
     renderBadge(dayShift);
-    expect(screen.getByText("D")).toHaveClass("shift-day");
-    expect(screen.getByText("D")).not.toHaveClass("shift-off");
+    expect(screen.getByText("D")).toHaveClass("tw:bg-wt-shift-day");
+    expect(screen.getByText("D")).not.toHaveClass("tw:bg-wt-shift-off");
   });
 
   it("falls back to the muted off style when isWorking is overridden to false", () => {
@@ -38,8 +38,8 @@ describe("ShiftBadge", () => {
     // this day isn't actually worked rather than showing it as a normal
     // vividly-colored working shift.
     renderBadge({ ...dayShift, isWorking: false, name: "Time Off" });
-    expect(screen.getByText("D")).toHaveClass("shift-off");
-    expect(screen.getByText("D")).not.toHaveClass("shift-day");
+    expect(screen.getByText("D")).toHaveClass("tw:bg-wt-shift-off");
+    expect(screen.getByText("D")).not.toHaveClass("tw:bg-wt-shift-day");
   });
 
   it("keeps the off style for a genuinely scheduled-off day", () => {
@@ -54,6 +54,6 @@ describe("ShiftBadge", () => {
       className: "shift-off",
     };
     renderBadge(offShift);
-    expect(screen.getByText("O")).toHaveClass("shift-off");
+    expect(screen.getByText("O")).toHaveClass("tw:bg-wt-shift-off");
   });
 });

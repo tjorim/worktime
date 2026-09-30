@@ -25,8 +25,10 @@ describe("TaskEntryForm timer controls", () => {
   it("keeps the start and stop fields side by side on mobile", () => {
     render(<TaskEntryForm {...baseProps} />);
 
-    expect(screen.getByLabelText("Start").closest(".col-6")).toBeInTheDocument();
-    expect(screen.getByLabelText("Stop").closest(".col-6")).toBeInTheDocument();
+    expect(screen.getByLabelText("Start").parentElement?.parentElement).toHaveClass(
+      "tw:col-span-6",
+    );
+    expect(screen.getByLabelText("Stop").parentElement?.parentElement).toHaveClass("tw:col-span-6");
   });
 
   it("keeps Stop available without a running-task summary and never calls Start", () => {

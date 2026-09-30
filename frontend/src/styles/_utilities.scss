@@ -41,21 +41,6 @@ body {
   text-decoration: underline dotted;
 }
 
-.date-picker-auto {
-  width: auto;
-}
-
-.app-icon {
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.125em;
-  flex-shrink: 0;
-}
-
-.toast-icon {
-  font-size: 1.2em;
-}
-
 .icon-display {
   font-size: 3rem;
 }
@@ -93,11 +78,6 @@ body {
 .time-tracking-codeblock {
   background-color: var(--bs-tertiary-bg);
   color: var(--bs-body-color);
-}
-
-.error-stack-trace {
-  max-height: var(--wt-error-stack-max-height);
-  overflow-y: auto;
 }
 
 /* ============================================================================
@@ -331,163 +311,5 @@ body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) .mobi
     font-size: 0.65rem;
     line-height: 1;
     overflow-wrap: anywhere;
-  }
-}
-
-/* ============================================================================
-   SYNC STATUS INDICATOR
-   ========================================================================= */
-
-@keyframes sync-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.sync-spin {
-  display: inline-block;
-  animation: sync-spin 1s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
-.sync-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  min-height: 2rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1;
-  background: rgb(255 255 255 / 12%);
-  color: rgb(255 255 255 / 92%);
-  border: 1px solid rgb(255 255 255 / 14%);
-}
-
-.sync-indicator--success {
-  background: rgb(25 135 84 / 20%);
-  color: #d8f7e8;
-  border-color: rgb(110 231 183 / 25%);
-}
-
-.sync-indicator--warning {
-  background: rgb(255 193 7 / 20%);
-  color: #fff1c2;
-  border-color: rgb(255 224 102 / 26%);
-}
-
-.sync-indicator--danger {
-  background: rgb(220 53 69 / 22%);
-  color: #ffd8dd;
-  border-color: rgb(255 140 150 / 26%);
-}
-
-.sync-indicator--info {
-  background: rgb(13 202 240 / 20%);
-  color: #d7f8ff;
-  border-color: rgb(110 231 255 / 26%);
-}
-
-.sync-indicator--neutral {
-  background: rgb(255 255 255 / 10%);
-  color: rgb(255 255 255 / 88%);
-  border-color: rgb(255 255 255 / 12%);
-}
-
-/* The base and neutral pills above are translucent white and were tuned
-   against the fully-saturated --bs-primary navbar. Now that dark mode uses a
-   deeper --wt-navbar-bg (THM-2), bump their opacity so they still read as a
-   distinct pill against the darker ground. Scoped to :root specifically —
-   see the comment on the equivalent selector in _variables.scss for why a
-   bare [data-bs-theme="dark"] selector would be wrong here. */
-:root[data-bs-theme="dark"] {
-  .sync-indicator {
-    background: rgb(255 255 255 / 16%);
-    border-color: rgb(255 255 255 / 20%);
-  }
-
-  .sync-indicator--neutral {
-    background: rgb(255 255 255 / 14%);
-    border-color: rgb(255 255 255 / 18%);
-  }
-}
-
-// Base UI owns focus management, inertness and scroll locking.
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1050;
-  background: var(--bs-black);
-  opacity: 0.5;
-}
-.dialog-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1055;
-  width: calc(100% - 1rem);
-  max-width: 500px;
-  max-height: calc(100dvh - 2rem);
-  overflow-y: auto;
-  background: var(--bs-body-bg);
-  color: var(--bs-body-color);
-  border: var(--bs-border-width) solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius-lg);
-  outline: none;
-  .modal-header {
-    padding-right: 3.5rem;
-  }
-}
-.dialog-popup-lg {
-  max-width: 800px;
-}
-.dialog-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-}
-.dialog-popup {
-  --bs-modal-header-padding: 1rem;
-  --bs-modal-header-border-width: var(--bs-border-width);
-  --bs-modal-header-border-color: var(--bs-border-color);
-  --bs-modal-footer-gap: 0.5rem;
-  --bs-modal-padding: 1rem;
-  --bs-modal-footer-border-width: var(--bs-border-width);
-  --bs-modal-footer-border-color: var(--bs-border-color);
-  --bs-modal-title-line-height: 1.5;
-  --bs-modal-inner-border-radius: var(--bs-border-radius-lg);
-  .modal-title {
-    font-size: 1.25rem;
-    margin: 0;
-  }
-}
-.dialog-popup[data-closed],
-.dialog-backdrop[data-closed] {
-  display: none;
-}
-
-.dialog-popup-top {
-  top: 1.75rem;
-  transform: translateX(-50%);
-}
-.dialog-popup-scrollable {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  .modal-header,
-  .modal-footer {
-    flex-shrink: 0;
-  }
-  .modal-body {
-    overflow-y: auto;
-    min-height: 0;
   }
 }

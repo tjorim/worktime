@@ -1,10 +1,10 @@
 import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Container from "react-bootstrap/Container";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 
@@ -61,55 +61,57 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <Container className="mt-4">
+        <div className="tw:mx-auto tw:mt-6 tw:max-w-6xl tw:px-3">
           <Card>
-            <Card.Header className="text-bg-danger fw-semibold">
-              <Icon icon={TriangleAlertIcon} className="me-2" />
+            <CardHeader className="tw:bg-destructive tw:text-primary-foreground tw:font-semibold">
+              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
               {m.error_boundary_heading()}
-            </Card.Header>
-            <Card.Body>
-              <Alert variant="danger">
-                <Alert.Heading>{m.error_boundary_heading()}</Alert.Heading>
+            </CardHeader>
+            <CardContent>
+              <Alert variant="destructive">
+                <AlertTitle>{m.error_boundary_heading()}</AlertTitle>
                 <p>{m.error_boundary_fallback_message()}</p>
                 <hr />
-                <div className="d-flex gap-2">
-                  <Button variant="outline-danger" onClick={this.handleReset}>
+                <div className="tw:flex tw:gap-2">
+                  <Button variant="destructive" onClick={this.handleReset}>
                     {m.error_boundary_try_again()}
                   </Button>
-                  <Button variant="outline-secondary" onClick={() => window.location.reload()}>
+                  <Button variant="outline" onClick={() => window.location.reload()}>
                     {m.error_boundary_reload()}
                   </Button>
                 </div>
               </Alert>
 
               {import.meta.env.DEV && this.state.error && (
-                <Card className="mt-3">
-                  <Card.Header>
-                    <small className="text-muted">{m.error_boundary_debug_information()}</small>
-                  </Card.Header>
-                  <Card.Body>
+                <Card className="tw:mt-4">
+                  <CardHeader>
+                    <small className="tw:text-muted-foreground">
+                      {m.error_boundary_debug_information()}
+                    </small>
+                  </CardHeader>
+                  <CardContent>
                     <details>
-                      <summary className="text-danger fw-bold mb-2">
+                      <summary className="tw:text-danger-text tw:font-bold tw:mb-2">
                         {this.state.error.name}: {this.state.error.message}
                       </summary>
-                      <pre className="small text-muted error-stack-trace">
+                      <pre className="tw:text-sm tw:text-muted-foreground tw:max-h-80 tw:overflow-auto">
                         {this.state.error.stack}
                       </pre>
                       {this.state.errorInfo && (
-                        <div className="mt-2">
+                        <div className="tw:mt-2">
                           <strong>{m.error_boundary_component_stack()}</strong>
-                          <pre className="small text-muted error-stack-trace">
+                          <pre className="tw:text-sm tw:text-muted-foreground tw:max-h-80 tw:overflow-auto">
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </div>
                       )}
                     </details>
-                  </Card.Body>
+                  </CardContent>
                 </Card>
               )}
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Container>
+        </div>
       );
     }
 

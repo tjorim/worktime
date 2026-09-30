@@ -459,7 +459,6 @@ export function CalendarView({
               <EmptyState
                 icon={CalendarIcon}
                 title={m.calendar_welcome_title()}
-                iconSize="2.5rem"
                 description={
                   <>
                     {m.calendar_empty_state_description({

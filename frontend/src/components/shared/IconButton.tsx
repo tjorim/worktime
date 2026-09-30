@@ -1,11 +1,11 @@
 import { type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 
-type BootstrapButtonProps = ComponentPropsWithoutRef<typeof Button>;
+type ButtonProps = ComponentPropsWithoutRef<typeof Button>;
 
-interface IconButtonProps extends Omit<BootstrapButtonProps, "aria-label" | "children"> {
+interface IconButtonProps extends Omit<ButtonProps, "aria-label" | "children"> {
   icon: LucideIcon;
   label: string;
   iconClassName?: string;

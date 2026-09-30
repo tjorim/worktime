@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 describe("ConfirmationDialog", () => {
-  it.each(["primary", "danger"] as const)(
+  it.each(["primary", "danger", "warning"] as const)(
     "labels a %s confirmation and invokes its actions",
     (variant) => {
       const onCancel = vi.fn();
@@ -24,7 +24,15 @@ describe("ConfirmationDialog", () => {
         name: "Confirm change",
       });
       expect(dialog).toHaveAccessibleDescription("Review this change");
-      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+      const confirm = screen.getByRole("button", { name: "Confirm" });
+      expect(confirm).toHaveClass(
+        variant === "danger"
+          ? "tw:text-danger-text"
+          : variant === "warning"
+            ? "tw:text-warning"
+            : "tw:text-primary-foreground",
+      );
+      fireEvent.click(confirm);
       expect(onConfirm).toHaveBeenCalledOnce();
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
       expect(onCancel).toHaveBeenCalledOnce();
