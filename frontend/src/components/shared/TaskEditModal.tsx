@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ReactSelect from "react-select";
+import { DialogSelect } from "@/components/shared/DialogSelect";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Label } from "@/lib/timeTracking/constants";
 import { BREAK_DURATION_MINUTES } from "@/lib/timeTracking/timeUtils";
@@ -117,7 +117,7 @@ export function TaskEditModal({
             </Field>
             <Field className="tw:mb-4">
               <FieldLabel htmlFor="editTaskLabel">{m.form_label()}</FieldLabel>
-              <ReactSelect<LabelOption>
+              <DialogSelect<LabelOption>
                 unstyled
                 isClearable
                 isSearchable
@@ -132,7 +132,7 @@ export function TaskEditModal({
             {showGanttPicker && (
               <Field className="tw:mb-4">
                 <FieldLabel htmlFor="editTaskGanttTask">{m.tt_gantt_task()}</FieldLabel>
-                <ReactSelect<GanttTaskOption>
+                <DialogSelect<GanttTaskOption>
                   unstyled
                   isClearable
                   isSearchable

@@ -88,7 +88,12 @@ export function ConfirmationDialog({
           <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant={variant === "danger" ? "destructive" : "default"} onClick={onConfirm}>
+          <Button
+            variant={
+              variant === "danger" ? "destructive" : variant === "warning" ? "warning" : "default"
+            }
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </Footer>
