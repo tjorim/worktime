@@ -94,7 +94,7 @@
   /* --- Navbar Surface --- */
   /* Kept equal to Bootstrap's primary in light mode; overridden below for dark.
      Separate from --wt-primary-color, which stays pinned across themes for
-     .team-btn.selected contrast (see the dark-mode comment on that variable). */
+     white-on-primary contrast (see the dark-mode comment on that variable). */
   --wt-navbar-bg: #0d6efd;
 }
 
@@ -157,7 +157,7 @@
   --wt-shift-off-text: #ffffff;
 
   /* --- Application Theme --- */
-  /* Keep same as light mode: used as background in .team-btn.selected with white text,
+  /* Keep same as light mode: used as a background with white text (primary buttons),
      where #90caf9 would fail WCAG AA contrast (1.75:1 vs required 4.5:1) */
   --wt-primary-color: #0d6efd;
 

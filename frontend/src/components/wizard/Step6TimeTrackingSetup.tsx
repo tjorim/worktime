@@ -5,10 +5,10 @@ import {
   Timer as TimerIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import type { RefObject } from "react";
+import { WizardActions, WizardToggle } from "./WizardParts";
 import * as m from "@/paraglide/messages.js";
 
 interface Step6TimeTrackingSetupProps {
@@ -30,46 +30,38 @@ export function Step6TimeTrackingSetup({
 }: Step6TimeTrackingSetupProps) {
   return (
     <>
-      <div className="text-center mb-4">
-        <Icon icon={TimerIcon} className="display-4 text-success" />
-        <h4 className="mt-3">{m.wizard_tracking_heading()}</h4>
-        <p className="text-muted">{m.wizard_tracking_subtitle()}</p>
+      <div className="tw:mb-4 tw:text-center">
+        <Icon icon={TimerIcon} className="tw:text-5xl tw:text-success" />
+        <h4 className="tw:mt-3 tw:text-2xl tw:font-medium">{m.wizard_tracking_heading()}</h4>
+        <p className="tw:text-muted-foreground">{m.wizard_tracking_subtitle()}</p>
       </div>
 
-      <Alert variant="info" className="mt-3">
-        {m.wizard_tracking_info()}
+      <Alert variant="info" className="tw:mt-3">
+        <AlertDescription className="tw:text-current">{m.wizard_tracking_info()}</AlertDescription>
       </Alert>
 
-      <Form className="mt-3">
-        <Form.Check
-          type="switch"
-          id="enable-timetracking"
-          label={m.wizard_tracking_enable()}
-          checked={isEnabled}
-          onChange={(event) => onToggle(event.target.checked)}
-        />
+      <WizardToggle
+        id="enable-timetracking"
+        label={m.wizard_tracking_enable()}
+        hint={m.wizard_tracking_disable_hint()}
+        checked={isEnabled}
+        onCheckedChange={onToggle}
+      />
 
-        {!isEnabled && (
-          <Form.Text className="text-muted d-block mt-2">
-            {m.wizard_tracking_disable_hint()}
-          </Form.Text>
-        )}
-      </Form>
-
-      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4">
-        <Button
-          variant="outline-secondary"
-          onClick={onPrev}
-          ref={firstButtonRef}
-          className="order-2 order-sm-1"
-        >
-          <Icon icon={ArrowLeftIcon} className="me-1" /> {m.back()}
-        </Button>
-        <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
-          {isLastStep ? m.wizard_finish_setup() : m.continue()}
-          <Icon icon={isLastStep ? CheckIcon : ArrowRightIcon} className="ms-1" />
-        </Button>
-      </div>
+      <WizardActions
+        className="tw:mt-4"
+        start={
+          <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
+            <Icon icon={ArrowLeftIcon} /> {m.back()}
+          </Button>
+        }
+        end={
+          <Button size="lg" onClick={onComplete}>
+            {isLastStep ? m.wizard_finish_setup() : m.continue()}
+            <Icon icon={isLastStep ? CheckIcon : ArrowRightIcon} />
+          </Button>
+        }
+      />
     </>
   );
 }

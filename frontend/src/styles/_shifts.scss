@@ -13,22 +13,6 @@
   color: var(--wt-event-unknown-fg);
 }
 
-/* ============================================================================
-   BUTTONS & TEAM SELECTION
-   ========================================================================= */
-
-/* Team selection buttons */
-.team-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-}
-
-.team-btn.selected {
-  background-color: var(--wt-primary-color);
-  color: white;
-  border-color: var(--wt-primary-color);
-}
-
 /* Connection status */
 .connection-offline {
   background-color: var(--bs-danger) !important;

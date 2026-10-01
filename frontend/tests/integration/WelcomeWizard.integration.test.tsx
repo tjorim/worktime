@@ -404,7 +404,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       // Disable time-off by unchecking the switch
-      const timeOffSwitch = screen.getByLabelText(/Enable time off/i);
+      const timeOffSwitch = screen.getByRole("switch", { name: /Enable time off/i });
       await user.click(timeOffSwitch);
 
       // Disabling time off should keep this step visible so users can still continue explicitly

@@ -11,11 +11,11 @@ import {
   WifiOff as WifiOffIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
-import Row from "react-bootstrap/Row";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Grid, GridItem } from "@/components/ui/grid";
 import type { RefObject } from "react";
+import { WizardActions } from "./WizardParts";
 import * as m from "@/paraglide/messages.js";
 
 interface Step2FeaturesProps {
@@ -36,91 +36,122 @@ export function Step2Features({
 }: Step2FeaturesProps) {
   return (
     <>
-      <div className="mb-4">
-        <h5 className="text-center mb-4">{m.wizard_features_heading()}</h5>
-        <Row className="g-3">
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={TimerIcon} className="text-success me-3 mt-1 icon-feature" />
+      <div className="tw:mb-4">
+        <h5 className="tw:mb-4 tw:text-center tw:text-xl tw:font-medium">
+          {m.wizard_features_heading()}
+        </h5>
+        <Grid className="tw:gap-3">
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={TimerIcon} className="tw:mt-1 tw:text-2xl tw:text-success" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_countdown_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_countdown_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_countdown_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_countdown_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={WifiOffIcon} className="text-info me-3 mt-1 icon-feature" />
+          </GridItem>
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={WifiOffIcon} className="tw:mt-1 tw:text-2xl tw:text-info" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_local_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_local_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_local_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_local_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={UsersIcon} className="text-warning me-3 mt-1 icon-feature" />
+          </GridItem>
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={UsersIcon} className="tw:mt-1 tw:text-2xl tw:text-warning" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_team_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_team_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_team_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_team_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={CalendarCheckIcon} className="text-primary me-3 mt-1 icon-feature" />
+          </GridItem>
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={CalendarCheckIcon} className="tw:mt-1 tw:text-2xl tw:text-primary" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_timeoff_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_timeoff_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_timeoff_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_timeoff_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={HistoryIcon} className="text-success me-3 mt-1 icon-feature" />
+          </GridItem>
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={HistoryIcon} className="tw:mt-1 tw:text-2xl tw:text-success" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_tracking_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_tracking_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_tracking_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_tracking_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={ChartGanttIcon} className="text-warning me-3 mt-1 icon-feature" />
+          </GridItem>
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={ChartGanttIcon} className="tw:mt-1 tw:text-2xl tw:text-warning" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_gantt_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_gantt_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_gantt_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_gantt_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <Icon icon={GlobeIcon} className="text-primary me-3 mt-1 icon-feature" />
+          </GridItem>
+          <GridItem desktopSpan={6}>
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <Icon icon={GlobeIcon} className="tw:mt-1 tw:text-2xl tw:text-primary" />
               <div>
-                <h6 className="mb-1">{m.wizard_feature_crossborder_title()}</h6>
-                <small className="text-muted">{m.wizard_feature_crossborder_desc()}</small>
+                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                  {m.wizard_feature_crossborder_title()}
+                </h6>
+                <small className="tw:text-sm tw:text-muted-foreground">
+                  {m.wizard_feature_crossborder_desc()}
+                </small>
               </div>
             </div>
-          </Col>
-        </Row>
-        <Alert variant="info" className="mt-4">
-          <Icon icon={SettingsIcon} className="me-2" />
-          {m.wizard_features_tip_full({ settingsLocation: settingsLocationText })}
+          </GridItem>
+        </Grid>
+        <Alert variant="info" className="tw:mt-4">
+          <Icon icon={SettingsIcon} />
+          <AlertDescription className="tw:text-current">
+            {m.wizard_features_tip_full({ settingsLocation: settingsLocationText })}
+          </AlertDescription>
         </Alert>
       </div>
-      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-        <Button
-          variant="outline-secondary"
-          onClick={onPrev}
-          ref={firstButtonRef}
-          className="order-2 order-sm-1"
-        >
-          <Icon icon={ArrowLeftIcon} className="me-1" /> {m.back()}
-        </Button>
-        <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {m.wizard_choose_schedule_btn()} <Icon icon={ArrowRightIcon} className="ms-1" />
-        </Button>
-      </div>
+      <WizardActions
+        start={
+          <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
+            <Icon icon={ArrowLeftIcon} /> {m.back()}
+          </Button>
+        }
+        end={
+          <Button size="lg" onClick={onNext}>
+            {m.wizard_choose_schedule_btn()} <Icon icon={ArrowRightIcon} />
+          </Button>
+        }
+      />
     </>
   );
 }

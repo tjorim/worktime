@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import ProgressBar from "react-bootstrap/ProgressBar";
-import Spinner from "react-bootstrap/Spinner";
+import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSyncedState } from "@/hooks/useSyncedState";
@@ -260,18 +260,16 @@ export function WelcomeWizard({
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           {/* Progress bar */}
-          <div className="mb-4">
-            <ProgressBar
-              now={getProgressPercentage()}
+          <div className="tw:mb-4">
+            <Progress
+              value={getProgressPercentage()}
               aria-label={m.wizard_onboarding_progress({
                 step: String(getStepIndex(effectiveStep, wizardContext)),
                 total: String(getTotalSteps(wizardContext)),
               })}
-              variant="primary"
-              style={{ height: "4px" }}
-              className="mb-2"
+              className="tw:mb-2"
             />
-            <div className="small text-muted">
+            <div className="tw:text-sm tw:text-muted-foreground">
               {m.wizard_step_of({
                 step: String(getStepIndex(effectiveStep, wizardContext)),
                 total: String(getTotalSteps(wizardContext)),
@@ -279,9 +277,9 @@ export function WelcomeWizard({
             </div>
           </div>
           {isLoading ? (
-            <div className="text-center py-5" role="status">
-              <Spinner animation="border" aria-hidden="true" />
-              <div className="mt-3 text-muted">{m.wizard_setting_up()}</div>
+            <div className="tw:py-10 tw:text-center" role="status">
+              <Spinner className="tw:text-primary" />
+              <div className="tw:mt-3 tw:text-muted-foreground">{m.wizard_setting_up()}</div>
             </div>
           ) : (
             <>

@@ -346,7 +346,7 @@ describe("WelcomeWizard", () => {
 
       // Should be on time off setup step
       expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument();
-      expect(screen.getByLabelText(/Enable time off/i)).toBeInTheDocument();
+      expect(screen.getByRole("switch", { name: /Enable time off/i })).toBeInTheDocument();
       expect(mockOnHide).not.toHaveBeenCalled(); // Not completed yet
     });
 
@@ -362,7 +362,62 @@ describe("WelcomeWizard", () => {
       );
 
       expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument();
-      expect(screen.getByLabelText(/Enable time off/i)).not.toBeChecked();
+      expect(screen.getByRole("switch", { name: /Enable time off/i })).not.toBeChecked();
+    });
+
+    it("toggles the time off switch and shows the opt-out hint only while it is off", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={vi.fn()}
+          startStep="timeoff-setup"
+        />,
+        { settings: { enableTimeOff: false } },
+      );
+
+      const toggle = screen.getByRole("switch", { name: /Enable time off/i });
+      expect(toggle).toHaveAccessibleDescription(/./);
+
+      await user.click(toggle);
+      expect(toggle).toBeChecked();
+      expect(toggle).not.toHaveAccessibleDescription();
+
+      await user.click(toggle);
+      expect(toggle).not.toBeChecked();
+      expect(toggle).toHaveAccessibleDescription(/./);
+    });
+
+    it("exposes wizard progress as a labelled progressbar", () => {
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={vi.fn()}
+          startStep="timeoff-setup"
+        />,
+      );
+
+      const progress = screen.getByRole("progressbar", { name: /Step 5 of 9/i });
+      expect(progress).toHaveAttribute("aria-valuenow", "55.6");
+    });
+
+    it("labels the work location country pickers once cross-border tracking is enabled", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={vi.fn()}
+          startStep="work-location-setup"
+        />,
+      );
+
+      expect(screen.queryByLabelText(/Home country/i)).not.toBeInTheDocument();
+      await user.click(screen.getByRole("switch"));
+      expect(screen.getByLabelText(/Home country/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Office country/i)).toBeInTheDocument();
     });
 
     it("should allow navigating back from time off setup", async () => {
@@ -807,8 +862,9 @@ describe("WelcomeWizard", () => {
       const fiveShiftButton = screen.getByRole("button", { name: /5-shift/i });
       await user.click(fiveShiftButton);
 
-      // Verify button is now highlighted/selected
-      expect(fiveShiftButton).toHaveClass("btn-primary");
+      // Verify button is now exposed as selected
+      expect(fiveShiftButton).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: /9-5/i })).toHaveAttribute("aria-pressed", "false");
 
       // Continue button should be enabled
       const continueButton = screen.getByRole("button", { name: /Continue/i });
