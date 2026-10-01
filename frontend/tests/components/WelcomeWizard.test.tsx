@@ -387,6 +387,10 @@ describe("WelcomeWizard", () => {
       await user.click(toggle);
       expect(toggle).not.toBeChecked();
       expect(toggle).toHaveAccessibleDescription(/./);
+
+      // The visible label text is also a click target.
+      await user.click(screen.getByText("Enable time off"));
+      expect(toggle).toBeChecked();
     });
 
     it("exposes wizard progress as a labelled progressbar", () => {
