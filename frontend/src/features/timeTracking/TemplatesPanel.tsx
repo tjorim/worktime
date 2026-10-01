@@ -1,13 +1,12 @@
 import { ClipboardCheck as ClipboardCheckIcon, FileText as FileTextIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/contexts/ToastContext";
-import ListGroup from "react-bootstrap/ListGroup";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { RawJsonEditor } from "./RawJsonEditor";
+import { JsonExample, RawJsonEditor } from "./RawJsonEditor";
 import { buildLabelNameMap, type Label } from "@/lib/timeTracking/constants";
 import { TemplateModal, type TemplateForm } from "./TemplateModal";
 import { isValidRange, isValidTimeString } from "@/lib/timeTracking/timeUtils";
@@ -207,15 +206,15 @@ export function TemplatesPanel({
   };
 
   return (
-    <div className="border rounded p-3">
+    <div className="tw:rounded-lg tw:border tw:border-border tw:p-3">
       {error && (
-        <Alert variant="danger" aria-live="polite">
+        <Alert variant="destructive" aria-live="polite" className="tw:mb-3">
           {error}
         </Alert>
       )}
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h5 className="mb-0">
-          <Icon icon={ClipboardCheckIcon} className="me-2" />
+      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+        <h5 className="tw:mb-0 tw:text-xl">
+          <Icon icon={ClipboardCheckIcon} className="tw:mr-2" />
           {m.tt_templates_heading()}
         </h5>
         <Button
@@ -230,9 +229,9 @@ export function TemplatesPanel({
           {m.tt_add_template_btn()}
         </Button>
       </div>
-      <div className="d-flex flex-column gap-3">
+      <div className="tw:flex tw:flex-col tw:gap-3">
         {templates.length === 0 ? (
-          <div className="border rounded bg-body-tertiary">
+          <div className="tw:rounded-lg tw:border tw:border-border tw:bg-muted">
             <EmptyState
               icon={FileTextIcon}
               title={m.tt_no_templates_title()}
@@ -249,16 +248,16 @@ export function TemplatesPanel({
             />
           </div>
         ) : (
-          <ListGroup>
+          <div className="tw:divide-y tw:divide-border tw:rounded-lg tw:border tw:border-border">
             {templates.map((template) => (
-              <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
-                <span className="me-auto">
+              <div key={template.id} className="tw:flex tw:flex-wrap tw:gap-2 tw:px-3 tw:py-2">
+                <span className="tw:mr-auto">
                   {template.text} ({template.start}-{template.stop}) [
                   {labelNameById[template.label] ?? m.tt_unknown_label()}]
                 </span>
                 <Button
                   size="sm"
-                  variant="outline-secondary"
+                  variant="outline"
                   aria-label={m.edit_with_name({ name: template.text })}
                   onClick={() => handleEdit(template)}
                 >
@@ -266,15 +265,15 @@ export function TemplatesPanel({
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline-danger"
+                  variant="destructive"
                   aria-label={m.delete_with_name({ name: template.text })}
                   onClick={() => setPendingDeleteTemplate(template)}
                 >
                   {m.delete()}
                 </Button>
-              </ListGroup.Item>
+              </div>
             ))}
-          </ListGroup>
+          </div>
         )}
 
         <RawJsonEditor
@@ -290,12 +289,7 @@ export function TemplatesPanel({
           onCopy={handleCopy}
           onApply={handleApplyJson}
         >
-          <details className="mt-3">
-            <summary className="small text-muted">{m.tt_example_templates_json()}</summary>
-            <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
-              <code>{EXAMPLE_TEMPLATES_JSON}</code>
-            </pre>
-          </details>
+          <JsonExample summaryLabel={m.tt_example_templates_json()} json={EXAMPLE_TEMPLATES_JSON} />
         </RawJsonEditor>
       </div>
 

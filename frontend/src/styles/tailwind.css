@@ -168,6 +168,8 @@
   --color-danger-text: var(--bs-danger-text-emphasis);
   --color-success: var(--bs-success-text-emphasis);
   --color-success-bg: var(--bs-success-bg-subtle);
+  --color-success-solid: var(--bs-success);
+  --color-warning-solid: var(--bs-warning);
   --color-warning: var(--bs-warning-text-emphasis);
   --color-warning-bg: var(--bs-warning-bg-subtle);
   --color-info: var(--wt-theme-info);
@@ -188,6 +190,31 @@
 }
 @utility grid-cols-card {
   grid-template-columns: 1fr auto;
+}
+/* Planned (not yet worked) time, drawn over the segment's own colour. */
+@utility progress-stripes {
+  background-image: linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--bs-white) 15%, transparent) 25%,
+    transparent 25%,
+    transparent 50%,
+    color-mix(in srgb, var(--bs-white) 15%, transparent) 50%,
+    color-mix(in srgb, var(--bs-white) 15%, transparent) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+}
+/* Daily total ring; --ring-pct is a clamped percentage set by the component. */
+@utility progress-ring {
+  --ring-color: var(--wt-theme-primary);
+  background: conic-gradient(
+    var(--ring-color) var(--ring-pct),
+    var(--wt-theme-secondary) var(--ring-pct)
+  );
+  &[data-complete="true"] {
+    --ring-color: var(--bs-success);
+  }
 }
 @utility icon-em {
   width: 1em;

@@ -1,5 +1,7 @@
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Hint } from "@/components/ui/tooltip";
+import { TableCell } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
 
 export function MetricCard({
@@ -12,14 +14,12 @@ export function MetricCard({
   truncate?: boolean;
 }) {
   return (
-    <div className="col-sm-6 col-lg-3">
-      <Card className="text-center h-100">
-        <Card.Body>
-          <div className="text-muted small text-uppercase mb-1">{label}</div>
-          <div className={`h4 mb-0${truncate ? " text-truncate" : ""}`}>{value}</div>
-        </Card.Body>
-      </Card>
-    </div>
+    <Card className="tw:h-full tw:text-center">
+      <CardContent>
+        <div className="tw:mb-1 tw:text-sm tw:text-muted-foreground tw:uppercase">{label}</div>
+        <div className={cn("tw:text-2xl tw:font-medium", truncate && "tw:truncate")}>{value}</div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -38,13 +38,12 @@ export function CopyableHoursCell({
 }) {
   return (
     <Hint open={copiedCellId === cellId} content={<div id={`copy-${cellId}`}>{m.tt_copied()}</div>}>
-      <td
-        className={className}
+      <TableCell
+        className={cn(cellValue && "tw:cursor-copy", className)}
         onClick={cellValue ? () => onCopyCell(cellId, cellValue) : undefined}
-        style={cellValue ? { cursor: "copy" } : undefined}
       >
         {cellValue ?? "-"}
-      </td>
+      </TableCell>
     </Hint>
   );
 }

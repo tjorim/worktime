@@ -1,8 +1,8 @@
 import { ChartColumn as ChartColumnIcon, CirclePlus as CirclePlusIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Badge from "react-bootstrap/Badge";
-import Card from "react-bootstrap/Card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -85,11 +85,11 @@ export function TimeTrackingWeeklyView({
       : 0;
 
   return (
-    <Card className="shadow-sm">
-      <Card.Header>
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
-          <span className="fw-semibold">
-            <Icon icon={ChartColumnIcon} className="me-2" />
+    <Card className="tw:overflow-visible tw:shadow-sm">
+      <CardHeader className="tw:border-b tw:border-border">
+        <div className="tw:mb-2 tw:flex tw:flex-col tw:items-stretch tw:justify-between tw:gap-2 tw:sm:flex-row tw:sm:items-center">
+          <span className="tw:font-semibold">
+            <Icon icon={ChartColumnIcon} className="tw:mr-2" />
             {m.tt_weekly_heading()}
           </span>
           <WeekNavigationButtonGroup
@@ -104,18 +104,18 @@ export function TimeTrackingWeeklyView({
             onSelectorChange={onSelectedDateChange}
           />
         </div>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-          <div className="text-muted small">
+        <div className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:md:flex-row tw:md:items-center">
+          <div className="tw:text-sm tw:text-muted-foreground">
             {m.week_label({ week: weekStart.isoWeek(), year: weekStart.isoWeekYear() })}
             {isWeeklyCurrent && (
-              <Badge bg="success" className="ms-2" aria-label={m.tt_current_week_aria()}>
+              <Badge variant="success" className="tw:ml-2" aria-label={m.tt_current_week_aria()}>
                 {m.this_week()}
               </Badge>
             )}
           </div>
         </div>
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {summary.rows.length === 0 && (
           <EmptyState
             icon={ChartColumnIcon}
@@ -148,7 +148,7 @@ export function TimeTrackingWeeklyView({
             onCopyCell={handleCopyCell}
           />
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

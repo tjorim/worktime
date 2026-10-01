@@ -71,12 +71,12 @@ export function WeeklyHoursChart({
   });
 
   return (
-    <div className="mb-4">
-      <h6 className="text-uppercase text-muted mb-3">
-        <Icon icon={ChartNoAxesColumnIncreasingIcon} className="me-2" />
+    <div className="tw:mb-4">
+      <h6 className="tw:mb-3 tw:text-base tw:font-medium tw:text-muted-foreground tw:uppercase">
+        <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-2" />
         {m.tt_daily_hours_chart_heading()}
       </h6>
-      <div style={{ minWidth: 0 }}>
+      <div className="tw:min-w-0">
         <Chart
           definition={definition}
           renderer={chartRenderer}
@@ -85,16 +85,10 @@ export function WeeklyHoursChart({
         />
       </div>
       {targetDaily > 0 && (
-        <div className="text-muted small mt-1">
+        <div className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
           <span
             aria-hidden="true"
-            style={{
-              display: "inline-block",
-              width: "12px",
-              borderTop: "2px dashed var(--bs-success)",
-              marginRight: "4px",
-              verticalAlign: "middle",
-            }}
+            className="tw:mr-1 tw:inline-block tw:w-3 tw:border-0 tw:border-t-2 tw:border-dashed tw:border-success-solid tw:align-middle"
           />
           {m.tt_target_label()}: {targetDaily.toFixed(1)} {m.tt_hours_unit()}
         </div>

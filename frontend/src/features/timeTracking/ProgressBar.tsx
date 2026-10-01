@@ -1,4 +1,4 @@
-import BootstrapProgressBar from "react-bootstrap/ProgressBar";
+import { Progress } from "@/components/ui/progress";
 
 type ProgressBarProps = {
   hours: number;
@@ -20,13 +20,18 @@ export function ProgressBar({ hours, targetHours = 8 }: ProgressBarProps) {
   const percentage = (rawHours / sanitizedTargetHours) * 100;
   const clampedPercentage = (sanitizedHours / sanitizedTargetHours) * 100;
 
-  // Derive variant from raw percentage to allow overtime state
-  const variant = percentage > 100 ? "warning" : "success";
+  // Overtime switches the indicator to the warning colour
+  const isOvertime = percentage > 100;
 
   return (
-    <div className="my-3">
-      <BootstrapProgressBar now={clampedPercentage} variant={variant} />
-      <div className="text-muted mt-2">
+    <div className="tw:my-3">
+      <Progress
+        value={clampedPercentage}
+        trackClassName="tw:h-4"
+        indicatorClassName={isOvertime ? "tw:bg-warning-solid" : "tw:bg-success-solid"}
+        data-overtime={isOvertime}
+      />
+      <div className="tw:mt-2 tw:text-muted-foreground">
         {rawHours.toFixed(2)}h ({percentage.toFixed(1)}%)
       </div>
     </div>

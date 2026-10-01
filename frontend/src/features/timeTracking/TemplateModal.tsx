@@ -1,6 +1,7 @@
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,7 @@ import {
 import { DialogSelect } from "@/components/shared/DialogSelect";
 import { useForm, useSelector } from "@tanstack/react-form";
 import type { Label } from "@/lib/timeTracking/constants";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { selectClassNames } from "@/utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
 
@@ -65,8 +66,9 @@ export function TemplateModal({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <Form
+          <form
             id="templateForm"
+            className="tw:flex tw:flex-col tw:gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               if (isSubmitDisabled) {
@@ -76,28 +78,29 @@ export function TemplateModal({
             }}
           >
             {error && (
-              <Alert variant="danger" aria-live="polite" className="mb-3">
+              <Alert variant="destructive" aria-live="polite">
                 {error}
               </Alert>
             )}
             <form.Field name="text">
               {(field) => (
-                <Form.Group controlId="templateName" className="mb-3">
-                  <Form.Label>{m.form_task_name()}</Form.Label>
-                  <Form.Control
+                <Field>
+                  <FieldLabel htmlFor="templateName">{m.form_task_name()}</FieldLabel>
+                  <Input
+                    id="templateName"
                     value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     placeholder={m.form_task_name_placeholder()}
                     aria-required="true"
                     required
                   />
-                </Form.Group>
+                </Field>
               )}
             </form.Field>
             <form.Field name="label">
               {(field) => (
-                <Form.Group controlId="templateLabel" className="mb-3">
-                  <Form.Label>{m.form_label()}</Form.Label>
+                <Field>
+                  <FieldLabel htmlFor="templateLabel">{m.form_label()}</FieldLabel>
                   <DialogSelect<LabelOption>
                     unstyled
                     isClearable
@@ -111,53 +114,55 @@ export function TemplateModal({
                     options={labels.map((l) => ({ value: l.id, label: l.name }))}
                     value={selectedLabelOption}
                     onChange={(selected) => field.handleChange(selected?.value ?? "")}
-                    classNames={bootstrapSelectClassNames}
+                    classNames={selectClassNames}
                   />
                   {isLabelSelectionDisabled ? (
-                    <Form.Text id="templateLabelHelp" muted>
+                    <FieldDescription id="templateLabelHelp">
                       {m.tt_add_labels_first_help()}
-                    </Form.Text>
+                    </FieldDescription>
                   ) : null}
-                </Form.Group>
+                </Field>
               )}
             </form.Field>
-            <div className="d-flex gap-3">
+            <div className="tw:flex tw:gap-3">
               <form.Field name="start">
                 {(field) => (
-                  <Form.Group controlId="templateStart" className="flex-fill">
-                    <Form.Label>{m.form_start()}</Form.Label>
-                    <Form.Control
+                  <Field className="tw:flex-1">
+                    <FieldLabel htmlFor="templateStart">{m.form_start()}</FieldLabel>
+                    <Input
+                      id="templateStart"
                       type="time"
                       value={field.value}
                       onChange={(event) => field.handleChange(event.target.value)}
                       aria-required="true"
                       required
                     />
-                  </Form.Group>
+                  </Field>
                 )}
               </form.Field>
               <form.Field name="stop">
                 {(field) => (
-                  <Form.Group controlId="templateStop" className="flex-fill">
-                    <Form.Label>{m.form_stop()}</Form.Label>
-                    <Form.Control
+                  <Field className="tw:flex-1">
+                    <FieldLabel htmlFor="templateStop">{m.form_stop()}</FieldLabel>
+                    <Input
+                      id="templateStop"
                       type="time"
                       value={field.value}
                       onChange={(event) => field.handleChange(event.target.value)}
                       aria-required="true"
                       required
                     />
-                  </Form.Group>
+                  </Field>
                 )}
               </form.Field>
             </div>
-          </Form>
+          </form>
         </div>
         <DialogFooter>
-          <Button variant="outline-secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {m.cancel()}
           </Button>
-          <Button type="submit" form="templateForm" variant="primary" disabled={isSubmitDisabled}>
+          <Button type="submit" form="templateForm" disabled={isSubmitDisabled}>
             {submitLabel}
           </Button>
         </DialogFooter>

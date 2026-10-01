@@ -53,7 +53,7 @@ describe("TimelineProgressBar", () => {
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       const breakBar = screen.getByTestId("break-segment-task-1");
-      expect(breakBar).toHaveStyle("opacity: 0.3");
+      expect(breakBar).toHaveClass("tw:opacity-30");
     });
 
     it("has an aria-label on the break segment", () => {
@@ -112,7 +112,10 @@ describe("TimelineProgressBar", () => {
 
       expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("2.00h (25.0%)");
       expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 2.00h");
-      expect(screen.getByLabelText("Prepare report: 2.00h")).toHaveClass("progress-bar-striped");
+      expect(screen.getByLabelText("Prepare report: 2.00h")).toHaveAttribute(
+        "data-planned",
+        "true",
+      );
     });
 
     it("shows the known gap from now until the first planned task", () => {
@@ -160,7 +163,10 @@ describe("TimelineProgressBar", () => {
 
       expect(screen.getByLabelText("60 minutes until next task")).toBeInTheDocument();
       expect(screen.getByLabelText("Current work: 0.17h")).toBeInTheDocument();
-      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveClass("progress-bar-striped");
+      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveAttribute(
+        "data-planned",
+        "true",
+      );
     });
 
     it("keeps an overrun plan separate from worked time while the timer is running", () => {
@@ -188,12 +194,15 @@ describe("TimelineProgressBar", () => {
 
       expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("1.25h");
       expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 1.00h");
-      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveClass("progress-bar-striped");
+      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveAttribute(
+        "data-planned",
+        "true",
+      );
     });
   });
 
   describe("Now line", () => {
-    const getNowLineLeft = () => screen.getByTestId("now-line").style.left;
+    const getNowLineLeft = () => screen.getByTestId("now-line").style.getPropertyValue("--now-pos");
 
     it("does not render when isToday is false", () => {
       const liveTime = dayjs("2026-02-07T12:00");
@@ -288,6 +297,26 @@ describe("TimelineProgressBar", () => {
 
       // 4.5h elapsed from 08:00 to 12:30 on an 8h visual timeline => 56.25%.
       expect(getNowLineLeft()).toBe("56.25%");
+    });
+  });
+
+  describe("runtime geometry", () => {
+    it("sizes and colours segments through custom properties", () => {
+      render(<TimelineProgressBar tasks={[makeTask()]} labels={TEST_LABELS} />);
+
+      const segment = screen.getByLabelText(/Morning work: \d+\.\d+h/);
+      expect(segment).toHaveAttribute("role", "progressbar");
+      expect(segment.style.getPropertyValue("--seg-w")).toBe("100%");
+      expect(segment.style.getPropertyValue("--label-bg")).toBe("#c82333");
+      expect(segment).toHaveClass("tw:w-(--seg-w)");
+      expect(segment).not.toHaveAttribute("data-planned");
+    });
+
+    it("renders an empty track when there are no tasks", () => {
+      const { container } = render(<TimelineProgressBar tasks={[]} labels={TEST_LABELS} />);
+
+      expect(container.querySelector("[role=progressbar]")).toBeNull();
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("0.00h (0.0%)");
     });
   });
 });

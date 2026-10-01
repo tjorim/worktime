@@ -158,7 +158,7 @@ describe("DailyTaskList", () => {
       });
       const { container } = renderList([shortTask]);
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
 
       const menuItem = screen.getByText("Too short for 30min break");
@@ -171,7 +171,7 @@ describe("DailyTaskList", () => {
       const runningTask = makeTask({ stopTime: undefined });
       const { container } = renderList([runningTask]);
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
 
       expect(screen.getByText("Includes 30min break")).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe("DailyTaskList", () => {
       const user = userEvent.setup();
       const { container } = renderList([makeTask()]);
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
       await user.click(screen.getByText("Includes 30min break"));
 
@@ -197,7 +197,7 @@ describe("DailyTaskList", () => {
       const user = userEvent.setup();
       const { container } = renderList([makeTask({ includesBreak: true })]);
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
       await user.click(screen.getByText("Remove break deduction"));
 
@@ -218,7 +218,7 @@ describe("DailyTaskList", () => {
       const { container } = renderList([taskA, taskB]);
 
       // Right-click on task B
-      const taskItems = container.querySelectorAll(".list-group-item");
+      const taskItems = container.querySelectorAll("[data-slot=task-row]");
       fireEvent.contextMenu(taskItems[1]!);
       await user.click(screen.getByText("Includes 30min break"));
 
@@ -238,7 +238,7 @@ describe("DailyTaskList", () => {
       });
       const { container } = renderList([taskA, taskB]);
 
-      const taskItems = container.querySelectorAll(".list-group-item");
+      const taskItems = container.querySelectorAll("[data-slot=task-row]");
       fireEvent.contextMenu(taskItems[1]!);
       await user.click(screen.getByText("Includes 30min break"));
       await user.click(screen.getByText("Move Break"));
@@ -259,7 +259,7 @@ describe("DailyTaskList", () => {
       });
       const { container } = renderList([taskA, taskB]);
 
-      const taskItems = container.querySelectorAll(".list-group-item");
+      const taskItems = container.querySelectorAll("[data-slot=task-row]");
       fireEvent.contextMenu(taskItems[1]!);
       await user.click(screen.getByText("Includes 30min break"));
       await user.click(screen.getByText("Cancel"));
@@ -450,8 +450,8 @@ describe("DailyTaskList", () => {
       const { container } = renderList([task1, task2], TEST_LABELS, { liveTime, isToday: true });
       const indicator = container.querySelector("[data-testid='now-indicator']");
       expect(indicator).not.toBeNull();
-      // Indicator should be before any list-group-item
-      const listGroup = container.querySelector(".list-group")!;
+      // Indicator should be before any task row
+      const listGroup = container.querySelector("[data-slot=task-list]")!;
       expect(listGroup.firstChild).toBe(indicator);
     });
 
@@ -461,7 +461,7 @@ describe("DailyTaskList", () => {
       const indicator = container.querySelector("[data-testid='now-indicator']");
       expect(indicator).not.toBeNull();
       // The indicator should not be the first child (task1 comes first)
-      const listGroup = container.querySelector(".list-group")!;
+      const listGroup = container.querySelector("[data-slot=task-list]")!;
       expect(listGroup.firstChild).not.toBe(indicator);
     });
 
@@ -471,7 +471,7 @@ describe("DailyTaskList", () => {
       const indicator = container.querySelector("[data-testid='now-indicator']");
       expect(indicator).not.toBeNull();
       // Indicator should be the last child of the list group
-      const listGroup = container.querySelector(".list-group")!;
+      const listGroup = container.querySelector("[data-slot=task-list]")!;
       expect(listGroup.lastChild).toBe(indicator);
     });
 
@@ -486,6 +486,51 @@ describe("DailyTaskList", () => {
       const liveTime = dayjs(`${DATE}T12:00`);
       renderList([task1, task2], TEST_LABELS, { liveTime, isToday: true });
       expect(screen.getByText("12:00")).toBeInTheDocument();
+    });
+  });
+
+  describe("label colours", () => {
+    it("passes the label colour through validated custom properties", () => {
+      renderList([makeTask()]);
+
+      const chip = screen.getByText("Support");
+      expect(chip).toHaveAttribute("data-slot", "task-label");
+      expect(chip.style.getPropertyValue("--label-bg")).toBe("#c82333");
+      expect(chip.style.getPropertyValue("--label-fg")).toBe("#fff");
+      expect(chip.style.backgroundColor).toBe("");
+    });
+
+    it("uses the theme default for a task whose label no longer exists", () => {
+      renderList([makeTask({ label: "Deleted" })]);
+
+      const chip = screen.getByText("Unknown label");
+      expect(chip.style.getPropertyValue("--label-bg")).not.toBe("");
+    });
+
+    it("marks the current and planned rows", () => {
+      const liveTime = dayjs("2026-02-07T10:00");
+      renderList(
+        [
+          makeTask({
+            id: "now",
+            text: "Now task",
+            startTime: "2026-02-07T09:00",
+            stopTime: "2026-02-07T11:00",
+          }),
+          makeTask({
+            id: "later",
+            text: "Later task",
+            startTime: "2026-02-07T14:00",
+            stopTime: "2026-02-07T15:00",
+          }),
+        ],
+        TEST_LABELS,
+        { liveTime, isToday: true },
+      );
+
+      const [current, later] = Array.from(document.querySelectorAll("[data-slot=task-row]"));
+      expect(current).toHaveClass("tw:border-l-destructive");
+      expect(later).toHaveClass("tw:bg-muted");
     });
   });
 });

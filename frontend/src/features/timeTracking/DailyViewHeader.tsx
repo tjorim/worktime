@@ -1,6 +1,6 @@
 import { Clock as ClockIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Badge from "react-bootstrap/Badge";
+import { Badge } from "@/components/ui/badge";
 import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
@@ -22,9 +22,9 @@ export function DailyViewHeader({
 
   return (
     <>
-      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
-        <span className="fw-semibold">
-          <Icon icon={ClockIcon} className="me-2" />
+      <div className="tw:mb-2 tw:flex tw:flex-col tw:items-stretch tw:justify-between tw:gap-2 tw:sm:flex-row tw:sm:items-center">
+        <span className="tw:font-semibold">
+          <Icon icon={ClockIcon} className="tw:mr-2" />
           {m.tt_daily_heading()}
         </span>
         <DayNavigationButtonGroup
@@ -37,11 +37,11 @@ export function DailyViewHeader({
           onSelectorChange={onSelectedDateChange}
         />
       </div>
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-        <div className="text-muted small">
+      <div className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:md:flex-row tw:md:items-center">
+        <div className="tw:text-sm tw:text-muted-foreground">
           {dailyDate.format("dddd, MMMM D, YYYY")}
           {isDailyCurrent && (
-            <Badge bg="success" className="ms-2" aria-label={m.today()}>
+            <Badge variant="success" className="tw:ml-2" aria-label={m.today()}>
               {m.today()}
             </Badge>
           )}

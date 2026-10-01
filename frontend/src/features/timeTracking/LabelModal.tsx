@@ -1,5 +1,6 @@
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -46,40 +47,43 @@ export function LabelModal({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <Form
+          <form
             id="labelForm"
+            className="tw:flex tw:flex-col tw:gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               onSubmit();
             }}
           >
-            <Form.Group controlId="labelName" className="mb-3">
-              <Form.Label>{m.form_label_name()}</Form.Label>
-              <Form.Control
+            <Field>
+              <FieldLabel htmlFor="labelName">{m.form_label_name()}</FieldLabel>
+              <Input
+                id="labelName"
                 value={value.name}
                 onChange={(event) => onChange({ ...value, name: event.target.value })}
                 placeholder={m.form_label_name_placeholder()}
                 aria-required="true"
                 required
               />
-            </Form.Group>
-            <Form.Group controlId="labelColor">
-              <Form.Label>{m.form_label_color()}</Form.Label>
-              <div className="d-flex gap-2 align-items-center">
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="labelColor">{m.form_label_color()}</FieldLabel>
+              <div className="tw:flex tw:items-center tw:gap-2">
                 <Hint
                   placement="top"
                   content={<div id="label-color-picker">{m.tt_select_label_color()}</div>}
                 >
-                  <Form.Control
+                  <Input
+                    id="labelColor"
                     type="color"
                     value={value.color}
                     onChange={(event) => onChange({ ...value, color: event.target.value })}
-                    className="form-control-color"
+                    className="tw:w-12 tw:shrink-0 tw:p-1"
                     aria-required="true"
                     required
                   />
                 </Hint>
-                <Form.Control
+                <Input
                   value={value.color}
                   onChange={(event) => onChange({ ...value, color: event.target.value })}
                   placeholder="#3B82F6"
@@ -88,14 +92,14 @@ export function LabelModal({
                   required
                 />
               </div>
-            </Form.Group>
-          </Form>
+            </Field>
+          </form>
         </div>
         <DialogFooter>
-          <Button variant="outline-secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {m.cancel()}
           </Button>
-          <Button type="submit" form="labelForm" variant="primary">
+          <Button type="submit" form="labelForm">
             {submitLabel}
           </Button>
         </DialogFooter>

@@ -1,8 +1,7 @@
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
 import ReactSelect from "react-select";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { selectClassNames } from "@/utils/reactSelectStyles";
 import * as m from "@/paraglide/messages.js";
 
 export type TemplateOption = { value: string; label: string };
@@ -25,9 +24,11 @@ export function DailyTemplatePicker({
   }
 
   return (
-    <Form.Group className="mb-2" controlId="timeTrackerTemplate">
-      <Form.Label className="visually-hidden">{m.tt_template()}</Form.Label>
-      <InputGroup>
+    <Field className="tw:mb-2">
+      <FieldLabel htmlFor="timeTrackerTemplate" className="tw:sr-only">
+        {m.tt_template()}
+      </FieldLabel>
+      <div className="tw:flex tw:gap-2">
         <ReactSelect<TemplateOption>
           unstyled
           isClearable
@@ -37,13 +38,13 @@ export function DailyTemplatePicker({
           options={options}
           value={value}
           onChange={(selected) => onChange(selected?.value ?? "")}
-          classNames={bootstrapSelectClassNames}
-          className="flex-fill"
+          classNames={selectClassNames}
+          className="tw:min-w-0 tw:flex-1"
         />
-        <Button variant="outline-secondary" onClick={onApply}>
+        <Button variant="outline" className="tw:h-auto" onClick={onApply}>
           {m.tt_use_template()}
         </Button>
-      </InputGroup>
-    </Form.Group>
+      </div>
+    </Field>
   );
 }

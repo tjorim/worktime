@@ -1,8 +1,8 @@
 import { CalendarX as CalendarXIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Card from "react-bootstrap/Card";
+import { Alert } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -457,23 +457,23 @@ export function TimeTrackingDailyView({
   };
 
   return (
-    <Card className="shadow-sm">
-      <Card.Header>
+    <Card className="tw:overflow-visible tw:shadow-sm">
+      <CardHeader className="tw:border-b tw:border-border">
         <DailyViewHeader
           date={date}
           crossBorderEnabled={settings.enableCrossBorderTracking}
           onSelectedDateChange={onSelectedDateChange}
         />
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {isDayOff && (
-          <Alert variant="info" className="d-flex align-items-center gap-2">
+          <Alert variant="info" className="tw:mb-3">
             <Icon icon={CalendarXIcon} />
-            {m.tt_day_off_notice()}
+            <div>{m.tt_day_off_notice()}</div>
           </Alert>
         )}
         {error && (
-          <Alert variant="danger" aria-live="polite">
+          <Alert variant="destructive" aria-live="polite" className="tw:mb-3">
             {error}
           </Alert>
         )}
@@ -549,7 +549,7 @@ export function TimeTrackingDailyView({
           liveTime={liveTime}
           isToday={isDailyCurrent}
         />
-      </Card.Body>
+      </CardContent>
 
       <DailyDiscardConfirmation
         isOpen={showDiscardConfirm}

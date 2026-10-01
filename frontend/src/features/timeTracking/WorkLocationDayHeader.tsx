@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/tooltip";
 import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
 import { IconButton } from "@/components/shared/IconButton";
@@ -49,36 +49,36 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
 
   return (
     <>
-      <div className="d-flex align-items-center gap-2 flex-wrap">
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
         {settings.homeCountry && (
           <Button
             size="sm"
-            variant={stored?.location === "home" ? "primary" : "outline-secondary"}
+            variant={stored?.location === "home" ? "default" : "outline"}
             onClick={handleHome}
             aria-pressed={stored?.location === "home"}
           >
-            <Icon icon={HouseIcon} className="me-1" />
+            <Icon icon={HouseIcon} className="tw:mr-1" />
             {m.work_location_home()}
           </Button>
         )}
         {settings.officeCountry && (
           <Button
             size="sm"
-            variant={stored?.location === "office" ? "primary" : "outline-secondary"}
+            variant={stored?.location === "office" ? "default" : "outline"}
             onClick={handleOffice}
             aria-pressed={stored?.location === "office"}
           >
-            <Icon icon={BuildingIcon} className="me-1" />
+            <Icon icon={BuildingIcon} className="tw:mr-1" />
             {m.work_location_office()}
           </Button>
         )}
         <Button
           size="sm"
-          variant={stored?.location === "other" ? "primary" : "outline-secondary"}
+          variant={stored?.location === "other" ? "default" : "outline"}
           onClick={() => setShowOtherModal(true)}
           aria-pressed={stored?.location === "other"}
         >
-          <Icon icon={MapPinIcon} className="me-1" />
+          <Icon icon={MapPinIcon} className="tw:mr-1" />
           {m.tt_other_location()}
         </Button>
         {stored && (

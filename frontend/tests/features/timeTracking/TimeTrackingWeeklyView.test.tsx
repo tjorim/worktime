@@ -272,7 +272,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       const { container } = renderPanel({ tasks: weekTasks });
 
-      const dailyTotalCells = container.querySelectorAll("td.fw-semibold");
+      const dailyTotalCells = container.querySelectorAll("td[class~='tw:font-semibold']");
       expect(dailyTotalCells.length).toBeGreaterThan(0);
     });
 
@@ -331,18 +331,56 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       const { container } = renderPanel({ tasks: weekTasks });
 
-      const responsiveWrapper = container.querySelector(".table-responsive");
+      const responsiveWrapper = container.querySelector("[data-slot=table-container]");
       expect(responsiveWrapper).toBeInTheDocument();
       expect(responsiveWrapper?.querySelector("table")).toBeInTheDocument();
     });
 
-    it("uses bordered table style for clarity", () => {
+    it("renders the owned table with row separators", () => {
       const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];
 
       const { container } = renderPanel({ tasks: weekTasks });
 
       const table = container.querySelector("table");
-      expect(table).toHaveClass("table-bordered");
+      expect(table).toHaveAttribute("data-slot", "table");
+      expect(table?.querySelector("tbody tr")).toHaveClass("tw:border-b");
+    });
+  });
+
+  describe("runtime styling", () => {
+    it("draws each day ring from a clamped percentage variable", () => {
+      const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "17:00")];
+
+      renderPanel({ tasks: weekTasks, weeklyTargetHours: 40, weeklyWorkingDays: 5 });
+
+      const rings = Array.from(document.querySelectorAll<HTMLElement>("[data-complete]"));
+      const monday = rings[0]!;
+      expect(monday.style.getPropertyValue("--ring-pct")).toBe("100%");
+      expect(monday).toHaveAttribute("data-complete", "true");
+      expect(rings[1]!.style.getPropertyValue("--ring-pct")).toBe("0%");
+      expect(rings[1]).toHaveAttribute("data-complete", "false");
+    });
+
+    it("only offers the copy cursor on cells that hold a value", () => {
+      const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];
+
+      const { container } = renderPanel({ tasks: weekTasks });
+
+      const cells = Array.from(container.querySelectorAll("tbody tr:first-child td"));
+      const filled = cells.filter((cell) => cell.textContent !== "-");
+      const empty = cells.filter((cell) => cell.textContent === "-");
+      expect(filled.length).toBeGreaterThan(0);
+      filled.forEach((cell) => expect(cell).toHaveClass("tw:cursor-copy"));
+      empty.forEach((cell) => expect(cell).not.toHaveClass("tw:cursor-copy"));
+    });
+
+    it("tints each category with its label colour", () => {
+      const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];
+
+      const { container } = renderPanel({ tasks: weekTasks });
+
+      const tinted = container.querySelector<HTMLElement>("[style*='--label-bg']");
+      expect(tinted?.style.getPropertyValue("--label-bg")).toBe("#c82333");
     });
   });
 });
