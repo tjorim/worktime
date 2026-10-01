@@ -1,8 +1,6 @@
 {
   "src/components/TransferView.tsx": ["backgroundColor", "color", "fontSize", "minHeight"],
-  "src/components/WelcomeWizard.tsx": ["height"],
   "src/components/settings/SettingsFeaturesSection.tsx": ["minWidth"],
   "src/components/settings/SettingsScheduleSection.tsx": ["fontSize"],
-  "src/components/wizard/Step9AccountSetup.tsx": ["fontSize"],
   "src/pages/SettingsPage.tsx": ["maxWidth"]
 }

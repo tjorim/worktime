@@ -42,8 +42,8 @@ Selectors still shared with another area remain:
 - `.shift-*` and event palette classes: schedule, status and calendar consumers.
 - `.cursor-help`: the personalised status component.
 - `.time-tracking-label` and code-block helpers: time-tracking views.
-- `.icon-display`, `.icon-feature`, `.icon-lg` and `.progress-thin`: wizard,
-  settings and other product-area consumers.
+- `.icon-lg` and `.progress-thin`: settings and other product-area consumers
+  (`.icon-display` and `.icon-feature` went with the wizard migration, #1396).
 - Global Bootstrap layout/control selectors: other migration groups still use
   them. Package removal, global token/prefix changes and baseline deletion belong
   to #1384.

@@ -5,10 +5,10 @@ import {
   Check as CheckIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import type { RefObject } from "react";
+import { WizardActions, WizardToggle } from "./WizardParts";
 import * as m from "@/paraglide/messages.js";
 
 interface Step7GanttSetupProps {
@@ -30,44 +30,38 @@ export function Step7GanttSetup({
 }: Step7GanttSetupProps) {
   return (
     <>
-      <div className="text-center mb-4">
-        <Icon icon={ChartGanttIcon} className="display-4 text-warning" />
-        <h4 className="mt-3">{m.wizard_gantt_heading()}</h4>
-        <p className="text-muted">{m.wizard_gantt_subtitle()}</p>
+      <div className="tw:mb-4 tw:text-center">
+        <Icon icon={ChartGanttIcon} className="tw:text-5xl tw:text-warning" />
+        <h4 className="tw:mt-3 tw:text-2xl tw:font-medium">{m.wizard_gantt_heading()}</h4>
+        <p className="tw:text-muted-foreground">{m.wizard_gantt_subtitle()}</p>
       </div>
 
-      <Alert variant="info" className="mt-3">
-        {m.wizard_gantt_info()}
+      <Alert variant="info" className="tw:mt-3">
+        <AlertDescription className="tw:text-current">{m.wizard_gantt_info()}</AlertDescription>
       </Alert>
 
-      <Form className="mt-3">
-        <Form.Check
-          type="switch"
-          id="enable-gantt"
-          label={m.wizard_gantt_enable()}
-          checked={isEnabled}
-          onChange={(event) => onToggle(event.target.checked)}
-        />
+      <WizardToggle
+        id="enable-gantt"
+        label={m.wizard_gantt_enable()}
+        hint={m.wizard_gantt_disable_hint()}
+        checked={isEnabled}
+        onCheckedChange={onToggle}
+      />
 
-        {!isEnabled && (
-          <Form.Text className="text-muted d-block mt-2">{m.wizard_gantt_disable_hint()}</Form.Text>
-        )}
-      </Form>
-
-      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4">
-        <Button
-          variant="outline-secondary"
-          onClick={onPrev}
-          ref={firstButtonRef}
-          className="order-2 order-sm-1"
-        >
-          <Icon icon={ArrowLeftIcon} className="me-1" /> {m.back()}
-        </Button>
-        <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {isLastStep ? m.wizard_finish_setup() : m.continue()}
-          <Icon icon={isLastStep ? CheckIcon : ArrowRightIcon} className="ms-1" />
-        </Button>
-      </div>
+      <WizardActions
+        className="tw:mt-4"
+        start={
+          <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
+            <Icon icon={ArrowLeftIcon} /> {m.back()}
+          </Button>
+        }
+        end={
+          <Button size="lg" onClick={onNext}>
+            {isLastStep ? m.wizard_finish_setup() : m.continue()}
+            <Icon icon={isLastStep ? CheckIcon : ArrowRightIcon} />
+          </Button>
+        }
+      />
     </>
   );
 }
