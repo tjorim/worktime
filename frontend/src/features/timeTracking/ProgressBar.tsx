@@ -20,7 +20,7 @@ export function ProgressBar({ hours, targetHours = 8 }: ProgressBarProps) {
   const percentage = (rawHours / sanitizedTargetHours) * 100;
   const clampedPercentage = (sanitizedHours / sanitizedTargetHours) * 100;
 
-  // Overtime switches the indicator to the warning colour
+  // Overtime switches the indicator to the warning color
   const isOvertime = percentage > 100;
 
   return (

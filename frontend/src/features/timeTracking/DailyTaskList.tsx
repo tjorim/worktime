@@ -555,7 +555,11 @@ export function DailyTaskList({
                     "tw:px-3 tw:py-2",
                     isPlanned && "tw:bg-muted",
                     isCurrentTask && "tw:border-l-3 tw:border-l-destructive",
-                    !isCurrentTask && isPlanned && "tw:border-l-3 tw:border-l-muted-foreground",
+                    // Dashed edge on a pseudo-element: `border-dashed` on the row would also dash
+                    // its divider, and without preflight it needs `border-0` that removes the divider
+                    !isCurrentTask &&
+                      isPlanned &&
+                      "tw:relative tw:before:absolute tw:before:inset-y-0 tw:before:left-0 tw:before:border-0 tw:before:border-l-3 tw:before:border-dashed tw:before:border-l-muted-foreground",
                   )}
                 >
                   <div className="tw:flex tw:items-start tw:justify-between tw:gap-2">

@@ -6,12 +6,12 @@ import {
 
 /**
  * Runtime values reach the DOM as custom properties (read by `tw:bg-label`,
- * `tw:w-(--seg-w)` and friends) so user-defined colours and computed geometry never
+ * `tw:w-(--seg-w)` and friends) so user-defined colors and computed geometry never
  * become free-form inline declarations. These helpers validate the values; the
  * components spell out the `--*` keys inline so lint can check them.
  */
 
-/** Background and readable foreground for a user-defined label; invalid colours use the theme default. */
+/** Background and readable foreground for a user-defined label; invalid colors use the theme default. */
 export function resolveLabelColors(color: string | undefined): {
   background: string;
   foreground: string;

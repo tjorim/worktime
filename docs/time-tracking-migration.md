@@ -20,7 +20,9 @@ utilities; no react-bootstrap imports or Bootstrap layout/control classes remain
 - WeeklyHoursChart keeps its chart library; only its legend and wrapper lost inline styles.
 - No search or pagination was added to the weekly table.
 - Without Tailwind preflight, `tw:border-dashed` alone draws default-width dashed borders on
-  every side. Pair it with `tw:border-0` before a single-side width.
+  every side. Pair it with `tw:border-0` before a single-side width. Planned task rows draw
+  their dashed left edge on a `before:` pseudo-element: `border-0` on the row itself would
+  remove the `divide-y` divider, and `border-dashed` would dash it.
 
 ## Legacy cleanup
 

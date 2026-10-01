@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { resolveLabelColors } from "./cssVars";
 
-/** A user-coloured label; the colour arrives as validated `--label-*` custom properties. */
+/** A user-colored label; the color arrives as validated `--label-*` custom properties. */
 export function LabelChip({ color, children }: { color: string | undefined; children: ReactNode }) {
   const { background, foreground } = resolveLabelColors(color);
   return (

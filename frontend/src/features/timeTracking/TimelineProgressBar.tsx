@@ -76,7 +76,7 @@ type SegmentProps = {
   onLeave: () => void;
 };
 
-/** One interval of the day bar; geometry and colour are runtime values passed as custom properties. */
+/** One interval of the day bar; geometry and color are runtime values passed as custom properties. */
 function Segment({
   width,
   label,
