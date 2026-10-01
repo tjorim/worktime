@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -62,27 +63,29 @@ export function StopTimerConflictDialog({
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
           <p>{m.tt_stop_conflict_intro()}</p>
-          <Form.Group controlId="stopTimerConflictTime" className="mb-3">
-            <Form.Label>{m.tt_stop_time()}</Form.Label>
-            <Form.Control
+          <Field className="tw:mb-3">
+            <FieldLabel htmlFor="stopTimerConflictTime">{m.tt_stop_time()}</FieldLabel>
+            <Input
+              id="stopTimerConflictTime"
               type="time"
               value={stopTime}
               min={startTime}
               max={initialStopTime}
               onChange={(event) => setStopTime(event.target.value)}
-              isInvalid={Boolean(stopTime) && !isValid}
+              aria-invalid={Boolean(stopTime) && !isValid}
+              aria-describedby="stopTimerConflictRange"
             />
-            <Form.Text muted>
+            <FieldDescription id="stopTimerConflictRange">
               {m.tt_stop_conflict_range({ start: startTime, now: initialStopTime })}
-            </Form.Text>
-          </Form.Group>
+            </FieldDescription>
+          </Field>
 
           <div aria-live="polite">
             {effects.map(({ task, taskStart, taskStop, outcome }) => (
               <Alert
                 key={task.id}
-                variant={outcome === "removed" ? "warning" : "secondary"}
-                className="py-2 mb-2"
+                variant={outcome === "removed" ? "warning" : "default"}
+                className="tw:mb-2"
               >
                 {outcome === "unchanged"
                   ? m.tt_plan_unchanged({ task: task.text, start: taskStart, stop: taskStop })
@@ -102,7 +105,7 @@ export function StopTimerConflictDialog({
           <Button variant="secondary" onClick={onClose}>
             {m.cancel()}
           </Button>
-          <Button variant="danger" disabled={!isValid} onClick={() => onConfirm(stopTime)}>
+          <Button variant="destructive" disabled={!isValid} onClick={() => onConfirm(stopTime)}>
             {m.tt_stop_adjust_plan()}
           </Button>
         </DialogFooter>

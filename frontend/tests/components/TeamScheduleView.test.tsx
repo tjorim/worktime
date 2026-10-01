@@ -351,7 +351,7 @@ describe("TeamScheduleView", () => {
         await renderGrid([]);
         const scroller = document.querySelector('[class~="tw:overflow-x-auto"]') as HTMLElement;
         // 2000 - 200 (sticky) - (800 - 28) / 2 = 1414
-        expect(scroller.scrollLeft).toBe(1414);
+        await waitFor(() => expect(scroller.scrollLeft).toBe(1414));
       } finally {
         spy.mockRestore();
       }

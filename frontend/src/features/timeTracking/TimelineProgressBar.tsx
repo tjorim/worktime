@@ -1,8 +1,9 @@
 import type { Dayjs } from "dayjs";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
-import BootstrapProgressBar from "react-bootstrap/ProgressBar";
+import { Badge } from "@/components/ui/badge";
 import { TooltipContent } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
@@ -11,6 +12,7 @@ import {
   getDefaultLabelColor,
   type Label,
 } from "@/lib/timeTracking/constants";
+import { percent } from "./cssVars";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import {
   BREAK_DURATION_MINUTES,
@@ -58,14 +60,63 @@ type GapSegment = {
 
 type RenderSegment = TaskSegment | GapSegment;
 
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: "0.7rem",
-  fontWeight: 600,
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  textOverflow: "ellipsis",
-  padding: "0 0.25rem",
+const SEGMENT_BASE =
+  "tw:flex tw:h-full tw:shrink-0 tw:items-center tw:justify-center tw:overflow-hidden tw:w-(--seg-w)";
+const SEGMENT_LABEL = "tw:truncate tw:px-1 tw:text-xs tw:font-semibold";
+
+type SegmentProps = {
+  width: number;
+  label: string;
+  color?: string;
+  planned?: boolean;
+  dim?: boolean;
+  text?: string;
+  testId?: string;
+  onEnter: (event: React.MouseEvent<HTMLElement>) => void;
+  onLeave: () => void;
 };
+
+/** One interval of the day bar; geometry and color are runtime values passed as custom properties. */
+function Segment({
+  width,
+  label,
+  color,
+  planned,
+  dim,
+  text,
+  testId,
+  onEnter,
+  onLeave,
+}: SegmentProps) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(width)}
+      aria-label={label}
+      data-testid={testId}
+      data-planned={planned ? "true" : undefined}
+      className={cn(
+        SEGMENT_BASE,
+        color ? "tw:bg-label tw:text-label-foreground" : "tw:bg-secondary",
+        planned && "tw:progress-stripes",
+        dim && "tw:opacity-30",
+      )}
+      style={
+        {
+          "--seg-w": percent(width),
+          "--label-bg": color,
+          "--label-fg": color ? getContrastingTextColor(color) : undefined,
+        } as CSSProperties
+      }
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+    >
+      {text ? <span className={SEGMENT_LABEL}>{text}</span> : null}
+    </div>
+  );
+}
 
 export function TimelineProgressBar({
   tasks,
@@ -234,153 +285,137 @@ export function TimelineProgressBar({
   }, [isToday, liveTime, tasks, sanitizedTargetHours, normalizationFactor]);
 
   return (
-    <div className="my-3">
-      {renderSegments.length > 0 ? (
-        <div style={{ position: "relative" }}>
-          <BootstrapProgressBar>
-            {renderSegments.map((rs) => {
-              if (rs.type === "gap") {
-                const minutes = Math.round(rs.durationHours * 60);
-                const gapLabel = rs.untilNext
-                  ? m.tt_until_next_aria({ minutes })
-                  : m.tt_gap_aria({ minutes });
-                return (
-                  <BootstrapProgressBar
-                    key={rs.id}
-                    now={rs.percentage * normalizationFactor}
-                    style={{ backgroundColor: "var(--bs-secondary-bg-subtle, #e9ecef)" }}
-                    aria-label={gapLabel}
-                    onMouseEnter={showTooltip(gapLabel)}
-                    onMouseLeave={hideTooltip}
-                  />
-                );
-              }
-
-              const tooltipText = `${rs.text}: ${rs.durationHours.toFixed(2)}h`;
-
-              if (
-                rs.includesBreak &&
-                rs.breakHours != null &&
-                rs.beforeBreakHours != null &&
-                rs.afterBreakHours != null
-              ) {
-                const beforePct =
-                  (rs.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-                const breakPct = (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-                const afterPct =
-                  (rs.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-                const breakTooltipText = m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES });
-
-                const showLabelOnBefore = beforePct >= afterPct;
-                const labelOnBefore = showLabelOnBefore && beforePct > 10;
-                const labelOnAfter = !showLabelOnBefore && afterPct > 10;
-
-                const parts: React.ReactNode[] = [];
-
-                if (beforePct > 0) {
-                  parts.push(
-                    <BootstrapProgressBar
-                      key={rs.id}
-                      now={beforePct}
-                      style={{ backgroundColor: rs.color, color: rs.textColor }}
-                      striped={rs.isPlanned}
-                      aria-label={tooltipText}
-                      label={labelOnBefore ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined}
-                      onMouseEnter={showTooltip(tooltipText)}
-                      onMouseLeave={hideTooltip}
-                    />,
-                  );
-                }
-
-                parts.push(
-                  <BootstrapProgressBar
-                    key={`${rs.id}-break`}
-                    now={breakPct}
-                    style={{ backgroundColor: rs.color, opacity: 0.3 }}
-                    striped={rs.isPlanned}
-                    aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
-                    data-testid={`break-segment-${rs.id}`}
-                    onMouseEnter={showTooltip(breakTooltipText)}
-                    onMouseLeave={hideTooltip}
-                  />,
-                );
-
-                if (afterPct > 0) {
-                  parts.push(
-                    <BootstrapProgressBar
-                      key={`${rs.id}-after`}
-                      now={afterPct}
-                      style={{ backgroundColor: rs.color, color: rs.textColor }}
-                      striped={rs.isPlanned}
-                      aria-label={tooltipText}
-                      label={labelOnAfter ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined}
-                      onMouseEnter={showTooltip(tooltipText)}
-                      onMouseLeave={hideTooltip}
-                    />,
-                  );
-                }
-
-                return parts;
-              }
-
-              const normalizedPercent = rs.percentage * normalizationFactor;
+    <div className="tw:my-3">
+      <div className="tw:relative">
+        <div className="tw:flex tw:h-4 tw:w-full tw:overflow-hidden tw:rounded-full tw:bg-muted">
+          {renderSegments.map((rs) => {
+            if (rs.type === "gap") {
+              const minutes = Math.round(rs.durationHours * 60);
+              const gapLabel = rs.untilNext
+                ? m.tt_until_next_aria({ minutes })
+                : m.tt_gap_aria({ minutes });
               return (
-                <BootstrapProgressBar
+                <Segment
                   key={rs.id}
-                  now={normalizedPercent}
-                  style={{ backgroundColor: rs.color, color: rs.textColor }}
-                  striped={rs.isPlanned}
-                  aria-label={tooltipText}
-                  label={
-                    normalizedPercent > 10 ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined
-                  }
-                  onMouseEnter={showTooltip(tooltipText)}
-                  onMouseLeave={hideTooltip}
+                  width={rs.percentage * normalizationFactor}
+                  label={gapLabel}
+                  onEnter={showTooltip(gapLabel)}
+                  onLeave={hideTooltip}
                 />
               );
-            })}
-          </BootstrapProgressBar>
+            }
 
-          <TooltipPrimitive.Root open={tooltipInfo !== null}>
-            <TooltipContent anchor={tooltipInfo?.target ?? null}>
-              {tooltipInfo?.label}
-            </TooltipContent>
-          </TooltipPrimitive.Root>
+            const tooltipText = `${rs.text}: ${rs.durationHours.toFixed(2)}h`;
 
-          {nowPct !== null && liveTime && (
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: `${nowPct}%`,
-                width: "2px",
-                backgroundColor: "var(--bs-danger)",
-                transform: "translateX(-50%)",
-                pointerEvents: "none",
-              }}
-              data-testid="now-line"
-              aria-label={`Current time: ${liveTime.format("HH:mm")}`}
-            />
-          )}
+            if (
+              rs.includesBreak &&
+              rs.breakHours != null &&
+              rs.beforeBreakHours != null &&
+              rs.afterBreakHours != null
+            ) {
+              const beforePct =
+                (rs.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const breakPct = (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const afterPct =
+                (rs.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const breakTooltipText = m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES });
+
+              const showLabelOnBefore = beforePct >= afterPct;
+              const labelOnBefore = showLabelOnBefore && beforePct > 10;
+              const labelOnAfter = !showLabelOnBefore && afterPct > 10;
+
+              const parts: React.ReactNode[] = [];
+
+              if (beforePct > 0) {
+                parts.push(
+                  <Segment
+                    key={rs.id}
+                    width={beforePct}
+                    color={rs.color}
+                    planned={rs.isPlanned}
+                    label={tooltipText}
+                    text={labelOnBefore ? rs.text : undefined}
+                    onEnter={showTooltip(tooltipText)}
+                    onLeave={hideTooltip}
+                  />,
+                );
+              }
+
+              parts.push(
+                <Segment
+                  key={`${rs.id}-break`}
+                  width={breakPct}
+                  color={rs.color}
+                  planned={rs.isPlanned}
+                  dim
+                  label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
+                  testId={`break-segment-${rs.id}`}
+                  onEnter={showTooltip(breakTooltipText)}
+                  onLeave={hideTooltip}
+                />,
+              );
+
+              if (afterPct > 0) {
+                parts.push(
+                  <Segment
+                    key={`${rs.id}-after`}
+                    width={afterPct}
+                    color={rs.color}
+                    planned={rs.isPlanned}
+                    label={tooltipText}
+                    text={labelOnAfter ? rs.text : undefined}
+                    onEnter={showTooltip(tooltipText)}
+                    onLeave={hideTooltip}
+                  />,
+                );
+              }
+
+              return parts;
+            }
+
+            const normalizedPercent = rs.percentage * normalizationFactor;
+            return (
+              <Segment
+                key={rs.id}
+                width={normalizedPercent}
+                color={rs.color}
+                planned={rs.isPlanned}
+                label={tooltipText}
+                text={normalizedPercent > 10 ? rs.text : undefined}
+                onEnter={showTooltip(tooltipText)}
+                onLeave={hideTooltip}
+              />
+            );
+          })}
         </div>
-      ) : (
-        <BootstrapProgressBar now={0} />
-      )}
 
-      <div className="text-muted mt-2 d-flex justify-content-between align-items-center">
+        <TooltipPrimitive.Root open={tooltipInfo !== null}>
+          <TooltipContent anchor={tooltipInfo?.target ?? null}>{tooltipInfo?.label}</TooltipContent>
+        </TooltipPrimitive.Root>
+
+        {nowPct !== null && liveTime && (
+          <div
+            className="tw:pointer-events-none tw:absolute tw:top-0 tw:bottom-0 tw:left-(--now-pos) tw:w-0.5 tw:-translate-x-1/2 tw:bg-destructive"
+            style={{ "--now-pos": percent(nowPct) } as CSSProperties}
+            data-testid="now-line"
+            aria-label={`Current time: ${liveTime.format("HH:mm")}`}
+          />
+        )}
+      </div>
+
+      <div className="tw:mt-2 tw:flex tw:items-center tw:justify-between tw:text-muted-foreground">
         <span data-testid="timeline-total-duration">
           {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
         </span>
         {plannedHours > 0 && (
-          <span className="small" data-testid="timeline-planned-duration">
+          <span className="tw:text-sm" data-testid="timeline-planned-duration">
             {m.tt_planned_total({ hours: plannedHours.toFixed(2) })}
           </span>
         )}
         {isOvertime && (
-          <span className="badge bg-warning text-dark">
+          <Badge variant="warning">
             Overtime: +{(totalHours - sanitizedTargetHours).toFixed(2)}h
-          </span>
+          </Badge>
         )}
       </div>
     </div>

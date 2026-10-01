@@ -86,7 +86,7 @@ describe("TimeTrackingDailyView", () => {
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Start Now · Idle/i })).toBeInTheDocument();
       expect(
-        screen.queryByText("Idle", { selector: ".badge, [data-slot=running-status]" }),
+        screen.queryByText("Idle", { selector: "[data-slot=badge], [data-slot=running-status]" }),
       ).not.toBeInTheDocument();
     });
 
@@ -148,13 +148,13 @@ describe("TimeTrackingDailyView", () => {
       expect(screen.getAllByText("On call")).toHaveLength(2);
       expect(
         screen.getAllByText("Support", {
-          selector: ".time-tracking-label, [data-slot=task-label]",
+          selector: "[data-slot=task-label]",
         }),
       ).toHaveLength(2);
       expect(screen.queryByText(/Started 2025-01-01 10:00/)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Stop Timer · 00:00:05/i })).toBeInTheDocument();
       expect(
-        screen.getByText("Running", { selector: ".badge, [data-slot=running-status]" }),
+        screen.getByText("Running", { selector: "[data-slot=badge], [data-slot=running-status]" }),
       ).toBeInTheDocument();
     });
 
@@ -172,11 +172,11 @@ describe("TimeTrackingDailyView", () => {
 
       expect(screen.getByText("Night handover")).toBeInTheDocument();
       expect(
-        screen.getByText("Support", { selector: ".time-tracking-label, [data-slot=task-label]" }),
+        screen.getByText("Support", { selector: "[data-slot=task-label]" }),
       ).toBeInTheDocument();
       expect(screen.getByText("Started 2025-01-01 23:30")).toBeInTheDocument();
       expect(
-        screen.queryByText("Night handover", { selector: ".list-group-item *" }),
+        screen.queryByText("Night handover", { selector: "[data-slot=task-row] *" }),
       ).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Stop Timer · 10:30:00/i })).toBeInTheDocument();
     });
@@ -736,8 +736,8 @@ describe("TimeTrackingDailyView", () => {
       ];
 
       const { container } = renderView({ tasks });
-      // TimelineProgressBar uses React Bootstrap .progress class
-      expect(container.querySelector(".progress")).toBeInTheDocument();
+      // TimelineProgressBar uses progressbar segments
+      expect(container.querySelector("[role=progressbar]")).toBeInTheDocument();
     });
   });
 
@@ -755,7 +755,7 @@ describe("TimeTrackingDailyView", () => {
       ];
 
       const { container } = renderView({ tasks });
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
       expect(screen.getByText("Remove")).toBeInTheDocument();
     });
@@ -774,7 +774,7 @@ describe("TimeTrackingDailyView", () => {
       ];
 
       const { container } = renderView({ tasks });
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
       await user.click(screen.getByText("Remove"));
 
@@ -797,7 +797,7 @@ describe("TimeTrackingDailyView", () => {
 
       const { container } = renderView({ tasks, onUpdateTaskTimes });
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
       await user.click(screen.getByText("Edit"));
 
@@ -838,7 +838,7 @@ describe("TimeTrackingDailyView", () => {
         selectedDate: "2025-01-01",
         onUpdateTaskTimes,
       });
-      fireEvent.contextMenu(container.querySelector(".list-group-item")!);
+      fireEvent.contextMenu(container.querySelector("[data-slot=task-row]")!);
       fireEvent.click(screen.getByText("Edit"));
 
       const dialog = screen.getByRole("dialog");

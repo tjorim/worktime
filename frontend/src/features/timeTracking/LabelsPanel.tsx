@@ -1,16 +1,15 @@
 import { Tags as TagsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/contexts/ToastContext";
-import ListGroup from "react-bootstrap/ListGroup";
 import { Hint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { RawJsonEditor } from "./RawJsonEditor";
+import { JsonExample, RawJsonEditor } from "./RawJsonEditor";
+import { LabelChip } from "./LabelChip";
 import {
-  getContrastingTextColor,
   isHexColor,
   normalizeLabelName,
   sanitizeLabels,
@@ -191,15 +190,15 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
   };
 
   return (
-    <div className="border rounded p-3">
+    <div className="tw:rounded-lg tw:border tw:border-border tw:p-3">
       {error && (
-        <Alert variant="danger" aria-live="polite">
+        <Alert variant="destructive" aria-live="polite" className="tw:mb-3">
           {error}
         </Alert>
       )}
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h5 className="mb-0">
-          <Icon icon={TagsIcon} className="me-2" />
+      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+        <h5 className="tw:mb-0 tw:text-xl">
+          <Icon icon={TagsIcon} className="tw:mr-2" />
           {m.tt_labels_heading()}
         </h5>
         <Button
@@ -214,9 +213,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           {m.tt_add_label_btn()}
         </Button>
       </div>
-      <div className="d-flex flex-column gap-3">
+      <div className="tw:flex tw:flex-col tw:gap-3">
         {labels.length > 0 && (
-          <div className="small text-muted">
+          <div className="tw:text-sm tw:text-muted-foreground">
             {pluralRules.select(labels.length) === "one"
               ? m.tt_labels_configured_one({ count: labels.length })
               : m.tt_labels_configured_other({ count: labels.length })}
@@ -224,7 +223,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         {labels.length === 0 ? (
-          <div className="border rounded bg-body-tertiary">
+          <div className="tw:rounded-lg tw:border tw:border-border tw:bg-muted">
             <EmptyState
               icon={TagsIcon}
               title={m.tt_no_labels_title()}
@@ -241,7 +240,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
             />
           </div>
         ) : (
-          <ListGroup>
+          <div className="tw:divide-y tw:divide-border tw:rounded-lg tw:border tw:border-border">
             {labels.map((label) => {
               const usage = usageByLabelId[label.id];
               const usageParts: string[] = [];
@@ -261,28 +260,20 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               }
               const isInUse = usageParts.length > 0;
               return (
-                <ListGroup.Item
+                <div
                   key={label.id}
-                  className="d-flex flex-wrap gap-2 align-items-center"
+                  className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:px-3 tw:py-2"
                 >
-                  <span
-                    className="time-tracking-label"
-                    style={{
-                      backgroundColor: label.color,
-                      color: getContrastingTextColor(label.color),
-                    }}
-                  >
-                    {label.name}
-                  </span>
+                  <LabelChip color={label.color}>{label.name}</LabelChip>
                   {isInUse && (
-                    <span className="small text-muted">
+                    <span className="tw:text-sm tw:text-muted-foreground">
                       {m.tt_label_used_by({ context: usageParts.join(` ${m.tt_and()} `) })}
                     </span>
                   )}
-                  <div className="ms-auto d-flex gap-2">
+                  <div className="tw:ml-auto tw:flex tw:gap-2">
                     <Button
                       size="sm"
-                      variant="outline-secondary"
+                      variant="outline"
                       aria-label={m.tt_edit_label_aria({ name: label.name })}
                       onClick={() => handleEdit(label)}
                     >
@@ -298,13 +289,12 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                           </div>
                         }
                       >
-                        <span className="d-inline-block" tabIndex={0}>
+                        <span className="tw:inline-block" tabIndex={0}>
                           <Button
                             size="sm"
-                            variant="outline-danger"
+                            variant="destructive"
                             aria-label={m.tt_delete_label_aria({ name: label.name })}
                             disabled
-                            style={{ pointerEvents: "none" }}
                           >
                             {m.delete()}
                           </Button>
@@ -313,7 +303,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                     ) : (
                       <Button
                         size="sm"
-                        variant="outline-danger"
+                        variant="destructive"
                         aria-label={m.tt_delete_label_aria({ name: label.name })}
                         onClick={() => setPendingDeleteLabel(label)}
                       >
@@ -321,10 +311,10 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       </Button>
                     )}
                   </div>
-                </ListGroup.Item>
+                </div>
               );
             })}
-          </ListGroup>
+          </div>
         )}
 
         <RawJsonEditor
@@ -340,12 +330,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           onCopy={handleCopy}
           onApply={handleApplyJson}
         >
-          <details className="mt-3">
-            <summary className="small text-muted">{m.tt_example_labels_json()}</summary>
-            <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
-              <code>{EXAMPLE_LABELS_JSON}</code>
-            </pre>
-          </details>
+          <JsonExample summaryLabel={m.tt_example_labels_json()} json={EXAMPLE_LABELS_JSON} />
         </RawJsonEditor>
       </div>
 

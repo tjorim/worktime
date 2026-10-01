@@ -206,7 +206,7 @@ describe("TimeTrackingView", () => {
     it("should use semantic Card structure", () => {
       const { container } = renderWithSettings();
 
-      const card = container.querySelector(".card");
+      const card = container.querySelector("[data-slot=card]");
       expect(card).toBeInTheDocument();
     });
 
@@ -222,7 +222,7 @@ describe("TimeTrackingView", () => {
       const { container } = renderWithSettings();
 
       const viewContainer = container.querySelector(".time-tracking-view");
-      expect(viewContainer).toHaveClass("d-flex", "flex-column", "gap-3");
+      expect(viewContainer).toHaveClass("tw:flex", "tw:flex-col", "tw:gap-3");
     });
 
     it("should render buttons in a ButtonGroup", () => {

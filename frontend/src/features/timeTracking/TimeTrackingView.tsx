@@ -111,8 +111,8 @@ export function TimeTrackingView({
   );
 
   return (
-    <div className="time-tracking-view py-3 d-flex flex-column gap-3">
-      <div className="d-flex align-items-center gap-2 flex-wrap">
+    <div className="time-tracking-view tw:flex tw:flex-col tw:gap-3 tw:py-3">
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
         <div
           role="group"
           className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"

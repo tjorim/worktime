@@ -4,54 +4,5 @@
   "src/components/settings/SettingsFeaturesSection.tsx": ["minWidth"],
   "src/components/settings/SettingsScheduleSection.tsx": ["fontSize"],
   "src/components/wizard/Step9AccountSetup.tsx": ["fontSize"],
-  "src/features/timeTracking/DailyTaskList.tsx": [
-    "backgroundColor",
-    "borderLeft",
-    "borderTop",
-    "color",
-    "fontSize"
-  ],
-  "src/features/timeTracking/LabelsPanel.tsx": ["backgroundColor", "color", "pointerEvents"],
-  "src/features/timeTracking/TimelineProgressBar.tsx": [
-    "backgroundColor",
-    "bottom",
-    "color",
-    "fontSize",
-    "fontWeight",
-    "left",
-    "opacity",
-    "overflow",
-    "padding",
-    "pointerEvents",
-    "position",
-    "textOverflow",
-    "top",
-    "transform",
-    "whiteSpace",
-    "width"
-  ],
-  "src/features/timeTracking/WeeklyCells.tsx": ["cursor"],
-  "src/features/timeTracking/WeeklyDataView.tsx": [
-    "alignItems",
-    "background",
-    "backgroundColor",
-    "borderRadius",
-    "cursor",
-    "display",
-    "fontSize",
-    "height",
-    "justifyContent",
-    "marginRight",
-    "opacity",
-    "width"
-  ],
-  "src/features/timeTracking/WeeklyHoursChart.tsx": [
-    "borderTop",
-    "display",
-    "marginRight",
-    "minWidth",
-    "verticalAlign",
-    "width"
-  ],
   "src/pages/SettingsPage.tsx": ["maxWidth"]
 }
