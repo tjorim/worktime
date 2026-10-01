@@ -12,8 +12,10 @@ import {
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -91,63 +93,62 @@ export function SettingsPage() {
   }, [activeSection]);
 
   return (
-    <main id="main-content" className="py-4">
-      <div className="mx-auto" style={{ maxWidth: "1080px" }}>
-        <div className="rounded-4 border bg-body-tertiary px-3 py-3 px-md-5 py-md-4 mb-3 mb-md-4">
-          <div>
-            <div>
-              <div className="text-uppercase small text-muted fw-semibold mb-1 mb-md-2">
-                {m.settings_title()}
-              </div>
-              <h1 className="h3 mb-0 mb-md-2">{sectionMeta.label()}</h1>
-              <p className="text-muted mb-0 d-none d-md-block">{m.settings_page_description()}</p>
-            </div>
+    <main id="main-content" className="tw:py-6">
+      <div className="tw:mx-auto tw:max-w-settings">
+        <div className="tw:mb-3 tw:rounded-2xl tw:border tw:border-border tw:bg-muted tw:px-4 tw:py-3 tw:md:mb-4 tw:md:px-8 tw:md:py-4">
+          <div className="tw:mb-1 tw:text-sm tw:font-semibold tw:text-muted-foreground tw:uppercase tw:md:mb-2">
+            {m.settings_title()}
           </div>
+          <h1 className="tw:m-0 tw:text-2xl tw:font-medium tw:md:mb-2 tw:md:text-3xl">
+            {sectionMeta.label()}
+          </h1>
+          <p className="tw:m-0 tw:hidden tw:text-muted-foreground tw:md:block">
+            {m.settings_page_description()}
+          </p>
         </div>
 
-        <div className="row gx-0 gx-lg-4 gy-3 gy-lg-4 align-items-start">
-          <div className="col-12 d-lg-none">
-            <div className="rounded-4 border bg-body shadow-sm p-3">
-              <Form.Label
-                htmlFor="settings-section-select"
-                className="small text-uppercase text-muted fw-semibold"
-              >
-                {m.settings_page_nav_title()}
-              </Form.Label>
-              <Form.Select
-                id="settings-section-select"
-                value={activeSection}
-                onChange={(event) =>
-                  void navigate({
-                    to: "/settings",
-                    search: { section: event.target.value as SettingsSection },
-                  })
-                }
-              >
-                {visibleSections.map((section) => (
-                  <option key={section.key} value={section.key}>
-                    {section.label()}
-                  </option>
-                ))}
-              </Form.Select>
-            </div>
-          </div>
+        <div className="tw:grid tw:grid-cols-1 tw:items-start tw:gap-3 tw:lg:grid-cols-12 tw:lg:gap-4">
+          <Card className="tw:gap-2 tw:p-3 tw:shadow-sm tw:lg:hidden">
+            <Label
+              htmlFor="settings-section-select"
+              className="tw:text-sm tw:font-semibold tw:text-muted-foreground tw:uppercase"
+            >
+              {m.settings_page_nav_title()}
+            </Label>
+            <NativeSelect
+              id="settings-section-select"
+              className="tw:h-10 tw:w-full"
+              value={activeSection}
+              onChange={(event) =>
+                void navigate({
+                  to: "/settings",
+                  search: { section: event.target.value as SettingsSection },
+                })
+              }
+            >
+              {visibleSections.map((section) => (
+                <option key={section.key} value={section.key}>
+                  {section.label()}
+                </option>
+              ))}
+            </NativeSelect>
+          </Card>
 
-          <div className="d-none d-lg-block col-lg-4 col-xl-3">
-            <div className="rounded-4 border bg-body shadow-sm overflow-hidden">
-              <div className="px-3 py-3 border-bottom bg-body-tertiary">
-                <div className="small text-uppercase text-muted fw-semibold">
-                  {m.settings_page_nav_title()}
-                </div>
+          <Card className="tw:hidden tw:gap-0 tw:py-0 tw:shadow-sm tw:lg:col-span-4 tw:lg:block tw:xl:col-span-3">
+            <nav aria-label={m.settings_page_nav_title()}>
+              <div className="tw:border-b tw:border-border tw:bg-muted tw:px-4 tw:py-3 tw:text-sm tw:font-semibold tw:text-muted-foreground tw:uppercase">
+                {m.settings_page_nav_title()}
               </div>
-              <div className="p-2 d-grid gap-2">
+              <div className="tw:grid tw:gap-2 tw:p-2">
                 {visibleSections.map((section) => {
                   const isActive = section.key === activeSection;
                   return (
                     <Button
                       key={section.key}
-                      variant={isActive ? "primary" : "outline-secondary"}
-                      className="text-start d-flex align-items-center gap-2 justify-content-start"
+                      variant={isActive ? "default" : "outline"}
+                      size="lg"
+                      className="tw:justify-start tw:gap-2 tw:text-left"
+                      aria-current={isActive ? "page" : undefined}
                       onClick={() =>
                         void navigate({
                           to: "/settings",
@@ -161,10 +162,10 @@ export function SettingsPage() {
                   );
                 })}
               </div>
-            </div>
-          </div>
+            </nav>
+          </Card>
 
-          <div className="col-12 col-lg-8 col-xl-9">
+          <div className="tw:min-w-0 tw:lg:col-span-8 tw:xl:col-span-9">
             <SettingsContent
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
@@ -589,17 +590,15 @@ export function SettingsContent({
 
   return (
     <>
-      <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
+      <Card className="tw:gap-0 tw:py-0 tw:shadow-sm">
         <div key={activeSection} className="app-view-enter">
           {sectionContent}
         </div>
-        <div className="px-4 py-3 text-center border-top">
-          <span className="text-muted d-block">
-            {m.footer_version({ version: CONFIG.VERSION })}
-          </span>
-          <small className="text-muted">{m.footer_built_by()}</small>
+        <div className="tw:border-t tw:border-border tw:px-4 tw:py-3 tw:text-center tw:text-muted-foreground">
+          <span className="tw:block">{m.footer_version({ version: CONFIG.VERSION })}</span>
+          <small>{m.footer_built_by()}</small>
         </div>
-      </section>
+      </Card>
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={() => setShowChangelog(false)} />
@@ -612,8 +611,8 @@ export function SettingsContent({
         ref={restoreFileInputRef}
         type="file"
         accept="application/json"
-        className="d-none"
-        aria-label="Restore backup file"
+        className="tw:hidden"
+        aria-label={m.restore_backup_label()}
         onChange={handleRestoreFileChange}
       />
 

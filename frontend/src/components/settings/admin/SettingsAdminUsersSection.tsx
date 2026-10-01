@@ -1,9 +1,12 @@
 import { Trash2 as Trash2Icon, Users as UsersIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Alert } from "@/components/ui/alert";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import {
+  SettingsHint,
+  SettingsLoading,
+  SettingsSection,
+} from "@/components/settings/SettingsParts";
 import { AdminUsersTable } from "./AdminUsersTable";
 import * as m from "@/paraglide/messages.js";
 
@@ -36,50 +39,29 @@ export function SettingsAdminUsersSection({
   const pendingDeleteUser = adminUsers.find((user) => user.id === pendingDeleteUserId) ?? null;
 
   return (
-    <div className="border-bottom">
-      <div className="p-3">
-        <h6 className="text-muted mb-3">
-          <Icon icon={UsersIcon} className="me-2" />
-          {m.account_admin_users_title()}
-        </h6>
-        <ListGroup variant="flush">
-          <ListGroup.Item>
-            <p className="text-muted small mb-2">{m.account_admin_users_description()}</p>
-            {isAdminUsersLoading ? (
-              <div className="d-flex align-items-center gap-2 text-muted small">
-                <span
-                  className="spinner-border spinner-border-sm"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                <span>{m.account_admin_users_loading()}</span>
-              </div>
-            ) : adminUsersError ? (
-              <Alert variant="warning" className="mb-0 py-2">
-                {adminUsersError}
-              </Alert>
-            ) : (
-              <>
-                {adminUsersDeleteError ? (
-                  <Alert variant="danger" className="mb-2 py-2">
-                    {adminUsersDeleteError}
-                  </Alert>
-                ) : null}
-                {adminUsers.length === 0 ? (
-                  <p className="text-muted small mb-0">{m.account_admin_users_empty()}</p>
-                ) : (
-                  <AdminUsersTable
-                    users={adminUsers}
-                    currentAccountId={currentAccountId}
-                    deletingAdminUserId={deletingAdminUserId}
-                    onRequestDelete={setPendingDeleteUserId}
-                  />
-                )}
-              </>
-            )}
-          </ListGroup.Item>
-        </ListGroup>
-      </div>
+    <SettingsSection icon={UsersIcon} title={m.account_admin_users_title()}>
+      <SettingsHint className="tw:mb-2">{m.account_admin_users_description()}</SettingsHint>
+      {isAdminUsersLoading ? (
+        <SettingsLoading>{m.account_admin_users_loading()}</SettingsLoading>
+      ) : adminUsersError ? (
+        <Alert variant="warning">{adminUsersError}</Alert>
+      ) : (
+        <div className="tw:flex tw:flex-col tw:gap-2">
+          {adminUsersDeleteError ? (
+            <Alert variant="destructive">{adminUsersDeleteError}</Alert>
+          ) : null}
+          {adminUsers.length === 0 ? (
+            <SettingsHint>{m.account_admin_users_empty()}</SettingsHint>
+          ) : (
+            <AdminUsersTable
+              users={adminUsers}
+              currentAccountId={currentAccountId}
+              deletingAdminUserId={deletingAdminUserId}
+              onRequestDelete={setPendingDeleteUserId}
+            />
+          )}
+        </div>
+      )}
       <ConfirmationDialog
         isOpen={pendingDeleteUser !== null}
         title={m.account_admin_users_delete_confirm_title()}
@@ -104,6 +86,6 @@ export function SettingsAdminUsersSection({
         variant="danger"
         icon={Trash2Icon}
       />
-    </div>
+    </SettingsSection>
   );
 }

@@ -84,7 +84,9 @@ describe("Settings integration clients", () => {
     renderHarness(fetchFn, true);
     await screen.findByText("No integration clients yet.");
     await user.type(screen.getByLabelText("Client name"), "Home hub");
-    await user.click(screen.getByLabelText("worktime:admin (team-wide administration)"));
+    await user.click(
+      screen.getByRole("checkbox", { name: "worktime:admin (team-wide administration)" }),
+    );
     await user.click(screen.getByRole("button", { name: "Create client" }));
     expect(await screen.findByText("wtic_secret")).toBeInTheDocument();
     expect(fetchFn).toHaveBeenCalledWith(

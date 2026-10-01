@@ -1,11 +1,12 @@
 import { FileText as FileTextIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { SettingsHeading, SettingsHint } from "@/components/settings/SettingsParts";
 import { useHdayHelper, type HdayHelperStatus } from "@/contexts/HdayHelperContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
@@ -14,13 +15,13 @@ import * as m from "@/paraglide/messages.js";
 function statusBadge(status: HdayHelperStatus) {
   switch (status) {
     case "connected":
-      return <Badge bg="success">{m.dev_connected()}</Badge>;
+      return <Badge variant="success">{m.dev_connected()}</Badge>;
     case "connecting":
-      return <Badge bg="info">{m.dev_connecting()}</Badge>;
+      return <Badge variant="info">{m.dev_connecting()}</Badge>;
     case "error":
-      return <Badge bg="danger">{m.error()}</Badge>;
+      return <Badge variant="destructive">{m.error()}</Badge>;
     default:
-      return <Badge bg="secondary">{m.dev_disconnected()}</Badge>;
+      return <Badge variant="secondary">{m.dev_disconnected()}</Badge>;
   }
 }
 
@@ -89,20 +90,19 @@ export function SettingsHdayHelper() {
   };
 
   return (
-    <div>
-      <div className="d-flex align-items-center gap-2 mb-1">
-        <h6 className="text-muted mb-0">
-          <Icon icon={FileTextIcon} className="me-2" />
+    <div className="tw:flex tw:flex-col tw:gap-3">
+      <div>
+        <SettingsHeading icon={FileTextIcon} aside={statusBadge(helperConnectionStatus)}>
           {m.hday_helper_heading()}
-        </h6>
-        {statusBadge(helperConnectionStatus)}
+        </SettingsHeading>
+        <SettingsHint className="tw:-mt-1">{m.hday_helper_desc()}</SettingsHint>
       </div>
-      <p className="text-muted small mb-3">{m.hday_helper_desc()}</p>
 
-      <Form.Group controlId="hday-helper-url" className="mb-2">
-        <Form.Label className="small fw-medium">{m.hday_helper_url_label()}</Form.Label>
-        <div className="d-flex flex-column flex-sm-row gap-2">
-          <Form.Control
+      <Field>
+        <FieldLabel htmlFor="hday-helper-url">{m.hday_helper_url_label()}</FieldLabel>
+        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row">
+          <Input
+            id="hday-helper-url"
             type="url"
             placeholder="http://127.0.0.1:8080"
             value={urlDraft}
@@ -111,64 +111,56 @@ export function SettingsHdayHelper() {
               setTestSucceeded(null);
               setUrlIsInvalid(false);
             }}
-            isInvalid={urlIsInvalid}
-            size="sm"
+            aria-invalid={urlIsInvalid}
+            aria-describedby={urlIsInvalid ? "hday-helper-url-error" : "hday-helper-url-help"}
           />
           <Button
-            variant="outline-secondary"
-            size="sm"
+            variant="outline"
             onClick={handleSave}
             disabled={normalizedUrl === (options.hdayHelperUrl ?? "")}
           >
             {m.hday_helper_save_url()}
           </Button>
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={handleTest}
-            disabled={isTesting || !normalizedUrl}
-          >
-            {isTesting && <Spinner animation="border" size="sm" className="me-1" />}
+          <Button variant="secondary" onClick={handleTest} disabled={isTesting || !normalizedUrl}>
+            {isTesting && <Spinner size="sm" aria-hidden="true" />}
             {m.hday_helper_test()}
           </Button>
         </div>
         {urlIsInvalid && (
-          <Form.Control.Feedback type="invalid" className="d-block">
-            {m.hday_helper_url_invalid()}
-          </Form.Control.Feedback>
+          <FieldError id="hday-helper-url-error">{m.hday_helper_url_invalid()}</FieldError>
         )}
-        <Form.Text className="text-muted">{m.hday_helper_url_help()}</Form.Text>
-      </Form.Group>
+        <FieldDescription id="hday-helper-url-help" className="tw:mb-0">
+          {m.hday_helper_url_help()}
+        </FieldDescription>
+      </Field>
 
-      <Form.Group controlId="hday-username" className="mb-2">
-        <Form.Label className="small fw-medium">{m.hday_username_label()}</Form.Label>
-        <div className="d-flex flex-column flex-sm-row gap-2">
-          <Form.Control
+      <Field>
+        <FieldLabel htmlFor="hday-username">{m.hday_username_label()}</FieldLabel>
+        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row">
+          <Input
+            id="hday-username"
             type="text"
             placeholder={m.hday_username_placeholder()}
             value={usernameDraft}
             onChange={(event) => setUsernameDraft(event.target.value)}
-            size="sm"
+            aria-describedby="hday-username-help"
           />
           <Button
-            variant="outline-secondary"
-            size="sm"
+            variant="outline"
             onClick={handleSaveUsername}
             disabled={normalizedUsername === (settings.hdayUsername ?? "")}
           >
             {m.hday_username_save()}
           </Button>
         </div>
-        <Form.Text className="text-muted">{m.hday_username_help()}</Form.Text>
-      </Form.Group>
+        <FieldDescription id="hday-username-help" className="tw:mb-0">
+          {m.hday_username_help()}
+        </FieldDescription>
+      </Field>
 
-      {mixedContentRisk && (
-        <Alert variant="warning" className="mb-2 py-2 small">
-          {m.hday_helper_mixed_content_warning()}
-        </Alert>
-      )}
+      {mixedContentRisk && <Alert variant="warning">{m.hday_helper_mixed_content_warning()}</Alert>}
       {testSucceeded !== null && (
-        <Alert variant={testSucceeded ? "success" : "danger"} className="mb-0 py-2 small">
+        <Alert variant={testSucceeded ? "success" : "destructive"}>
           {testSucceeded ? m.hday_helper_connected() : m.hday_helper_failed()}
         </Alert>
       )}

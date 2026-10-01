@@ -1,8 +1,13 @@
 import { History as HistoryIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  SettingsHint,
+  SettingsItem,
+  SettingsList,
+  SettingsLoading,
+  SettingsSection,
+} from "@/components/settings/SettingsParts";
 import type { AuditEntry } from "@/pages/settings/hooks/useSettingsAuditTrail";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -38,88 +43,67 @@ export function SettingsAuditTrailSection({
   onLoadMore,
 }: SettingsAuditTrailSectionProps) {
   return (
-    <div className="border-bottom">
-      <div className="p-3">
-        <h6 className="text-muted mb-3">
-          <Icon icon={HistoryIcon} className="me-2" />
-          {teamWide ? m.audit_trail_admin_title() : m.audit_trail_title()}
-        </h6>
-        <ListGroup variant="flush">
-          <ListGroup.Item>
-            <p className="text-muted small mb-2">
-              {teamWide ? m.audit_trail_admin_description() : m.audit_trail_description()}
-            </p>
-            {isLoading ? (
-              <div className="d-flex align-items-center gap-2 text-muted small">
-                <span
-                  className="spinner-border spinner-border-sm"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                <span>{m.audit_trail_loading()}</span>
-              </div>
-            ) : error && entries.length === 0 ? (
-              <Alert variant="warning" className="mb-0 py-2">
-                {error}
-              </Alert>
-            ) : entries.length === 0 ? (
-              <p className="text-muted small mb-0">{m.audit_trail_empty()}</p>
-            ) : (
-              <>
-                <ListGroup className="mb-2">
-                  {entries.map((entry) => {
-                    const hasDetails = Object.keys(entry.details).length > 0;
-                    return (
-                      <ListGroup.Item key={entry.id} className="px-3 py-2">
-                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 gap-md-3">
-                          <div className="small">
-                            <div className="fw-medium text-capitalize">
-                              {humanize(entry.action)} · {humanize(entry.resource_type)}{" "}
-                              {entry.resource_id}
-                            </div>
-                            <div className="text-muted">
-                              {entry.actor_label} ({humanize(entry.auth_source)})
-                            </div>
-                            {hasDetails ? (
-                              <details className="mt-1">
-                                <summary className="text-muted">{m.audit_trail_details()}</summary>
-                                <code className="small text-break">
-                                  {JSON.stringify(entry.details)}
-                                </code>
-                              </details>
-                            ) : null}
-                          </div>
-                          <time
-                            className="small text-muted text-nowrap"
-                            dateTime={entry.created_at}
-                          >
-                            {formatTimestamp(entry.created_at)}
-                          </time>
-                        </div>
-                      </ListGroup.Item>
-                    );
-                  })}
-                </ListGroup>
-                {error ? (
-                  <Alert variant="warning" className="py-2">
-                    {error}
-                  </Alert>
-                ) : null}
-                {hasMore ? (
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    disabled={isLoadingMore}
-                    onClick={onLoadMore}
+    <SettingsSection
+      icon={HistoryIcon}
+      title={teamWide ? m.audit_trail_admin_title() : m.audit_trail_title()}
+    >
+      <SettingsHint className="tw:mb-2">
+        {teamWide ? m.audit_trail_admin_description() : m.audit_trail_description()}
+      </SettingsHint>
+      {isLoading ? (
+        <SettingsLoading>{m.audit_trail_loading()}</SettingsLoading>
+      ) : error && entries.length === 0 ? (
+        <Alert variant="warning">{error}</Alert>
+      ) : entries.length === 0 ? (
+        <SettingsHint>{m.audit_trail_empty()}</SettingsHint>
+      ) : (
+        <div className="tw:flex tw:flex-col tw:gap-2">
+          <SettingsList className="tw:rounded-lg tw:border tw:border-border">
+            {entries.map((entry) => {
+              const hasDetails = Object.keys(entry.details).length > 0;
+              return (
+                <SettingsItem
+                  key={entry.id}
+                  className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:px-3 tw:py-2 tw:first:pt-2 tw:last:pb-2 tw:md:flex-row tw:md:gap-3"
+                >
+                  <div className="tw:min-w-0 tw:text-sm">
+                    <div className="tw:font-medium tw:capitalize">
+                      {humanize(entry.action)} · {humanize(entry.resource_type)} {entry.resource_id}
+                    </div>
+                    <div className="tw:text-muted-foreground">
+                      {entry.actor_label} ({humanize(entry.auth_source)})
+                    </div>
+                    {hasDetails ? (
+                      <details className="tw:mt-1">
+                        <summary className="tw:cursor-pointer tw:text-muted-foreground">
+                          {m.audit_trail_details()}
+                        </summary>
+                        <code className="tw:text-sm tw:break-all">
+                          {JSON.stringify(entry.details)}
+                        </code>
+                      </details>
+                    ) : null}
+                  </div>
+                  <time
+                    className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground"
+                    dateTime={entry.created_at}
                   >
-                    {isLoadingMore ? m.audit_trail_loading_more() : m.audit_trail_load_more()}
-                  </Button>
-                ) : null}
-              </>
-            )}
-          </ListGroup.Item>
-        </ListGroup>
-      </div>
-    </div>
+                    {formatTimestamp(entry.created_at)}
+                  </time>
+                </SettingsItem>
+              );
+            })}
+          </SettingsList>
+          {error ? <Alert variant="warning">{error}</Alert> : null}
+          {hasMore ? (
+            <div>
+              <Button variant="outline" size="sm" disabled={isLoadingMore} onClick={onLoadMore}>
+                {isLoadingMore ? m.audit_trail_loading_more() : m.audit_trail_load_more()}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </SettingsSection>
   );
 }

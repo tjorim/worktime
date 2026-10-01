@@ -1,10 +1,9 @@
 import { CloudCheck as CloudCheckIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useState } from "react";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import ListGroup from "react-bootstrap/ListGroup";
-import Spinner from "react-bootstrap/Spinner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { SettingsRow } from "@/components/settings/SettingsParts";
 import * as m from "@/paraglide/messages.js";
 
 type BackendStatus = "checking" | "available" | "unavailable";
@@ -33,38 +32,32 @@ export function SettingsBackendStatus() {
   useEffect(() => void checkHealth(), [checkHealth]);
 
   return (
-    <ListGroup.Item>
-      <div className="d-flex justify-content-between align-items-center gap-3">
-        <div>
-          <div className="fw-medium">
-            <Icon icon={CloudCheckIcon} className="me-2" />
-            {m.backend_status_label()}
-          </div>
-          <small className="text-muted">{m.backend_status_description()}</small>
-        </div>
-        <div className="d-flex align-items-center gap-2">
-          {status === "checking" ? (
-            <Badge bg="info">
-              <Spinner animation="border" size="sm" className="me-1" />
-              {m.backend_status_checking()}
-            </Badge>
-          ) : (
-            <Badge bg={status === "available" ? "success" : "danger"}>
-              {status === "available"
-                ? m.backend_status_available()
-                : m.backend_status_unavailable()}
-            </Badge>
-          )}
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={() => void checkHealth()}
-            disabled={status === "checking"}
-          >
-            {m.backend_status_refresh()}
-          </Button>
-        </div>
+    <SettingsRow
+      icon={CloudCheckIcon}
+      title={m.backend_status_label()}
+      description={m.backend_status_description()}
+      className="tw:px-2.5"
+    >
+      <div className="tw:flex tw:items-center tw:gap-2">
+        {status === "checking" ? (
+          <Badge variant="info" role="status">
+            <Spinner size="sm" aria-hidden="true" />
+            {m.backend_status_checking()}
+          </Badge>
+        ) : (
+          <Badge variant={status === "available" ? "success" : "destructive"} role="status">
+            {status === "available" ? m.backend_status_available() : m.backend_status_unavailable()}
+          </Badge>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void checkHealth()}
+          disabled={status === "checking"}
+        >
+          {m.backend_status_refresh()}
+        </Button>
       </div>
-    </ListGroup.Item>
+    </SettingsRow>
   );
 }
