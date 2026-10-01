@@ -130,7 +130,7 @@ export function SettingsApiTokensSection({
           {apiTokens.map((token) => (
             <SettingsItem
               key={token.id}
-              className="tw:flex tw:items-start tw:justify-between tw:gap-3"
+              className="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-3"
             >
               <div className="tw:min-w-0">
                 <div className="tw:font-medium">{token.name}</div>

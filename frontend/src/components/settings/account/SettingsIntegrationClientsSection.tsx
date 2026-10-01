@@ -150,7 +150,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
           {props.clients.map((client) => (
             <SettingsItem
               key={client.id}
-              className="tw:flex tw:items-start tw:justify-between tw:gap-3"
+              className="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-3"
             >
               <div className="tw:min-w-0">
                 <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:font-medium">

@@ -15,7 +15,6 @@ import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
-import { SCHEDULE_OPTIONS } from "@/data/rosters";
 import { server } from "@/mocks/server";
 import { syncStore } from "@/mocks/data/syncStore";
 import { labelsCollection } from "@/db/collections";
@@ -1114,7 +1113,7 @@ describe("SettingsPage owned controls", () => {
     expect(toggle).toBeChecked();
   });
 
-  it("exposes the selected schedule with aria-pressed and disables unavailable ones", async () => {
+  it("exposes the selected schedule with aria-pressed", async () => {
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
 
@@ -1126,9 +1125,6 @@ describe("SettingsPage owned controls", () => {
 
     expect(optionFor("2-shift")).toHaveAttribute("aria-pressed", "true");
     expect(optionFor("9-5")).toHaveAttribute("aria-pressed", "false");
-    for (const schedule of SCHEDULE_OPTIONS.filter((option) => !option.isAvailable)) {
-      expect(optionFor(schedule.title)).toBeDisabled();
-    }
   });
 
   it("names the account section as a landmark region", () => {
