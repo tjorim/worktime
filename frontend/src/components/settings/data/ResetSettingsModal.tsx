@@ -1,6 +1,7 @@
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -40,38 +41,43 @@ export function ResetSettingsModal({
         <DialogHeader>
           <DialogTitle>{m.reset_settings_modal_title()}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <p className="mb-3">{m.reset_settings_modal_body()}</p>
-          <Form>
-            <Form.Check
-              id="reset-clear-time-tracking"
-              type="checkbox"
-              label={m.reset_also_clear_time_tracking()}
-              checked={clearTimeTrackingData}
-              onChange={(event) => onChangeClearTimeTrackingData(event.target.checked)}
-            />
-            <Form.Check
-              id="reset-clear-time-off"
-              type="checkbox"
-              className="mt-2"
-              label={m.reset_also_clear_time_off()}
-              checked={clearTimeOffData}
-              onChange={(event) => onChangeClearTimeOffData(event.target.checked)}
-            />
-          </Form>
+        <div className="tw:flex tw:min-h-0 tw:flex-col tw:gap-3 tw:overflow-y-auto tw:p-4">
+          <p className="tw:m-0">{m.reset_settings_modal_body()}</p>
+          <FieldGroup className="tw:gap-2">
+            <Field orientation="horizontal">
+              <Checkbox
+                id="reset-clear-time-tracking"
+                checked={clearTimeTrackingData}
+                onCheckedChange={onChangeClearTimeTrackingData}
+              />
+              <FieldLabel htmlFor="reset-clear-time-tracking">
+                {m.reset_also_clear_time_tracking()}
+              </FieldLabel>
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id="reset-clear-time-off"
+                checked={clearTimeOffData}
+                onCheckedChange={onChangeClearTimeOffData}
+              />
+              <FieldLabel htmlFor="reset-clear-time-off">
+                {m.reset_also_clear_time_off()}
+              </FieldLabel>
+            </Field>
+          </FieldGroup>
           {(clearTimeTrackingData || clearTimeOffData) && (
-            <Alert variant="warning" className="mt-3 mb-0">
-              <div className="fw-semibold mb-1">{m.reset_warning()}</div>
+            <Alert variant="warning">
+              <div className="tw:font-semibold">{m.reset_warning()}</div>
               {clearTimeTrackingData && <div>{m.reset_warning_time_tracking()}</div>}
               {clearTimeOffData && <div>{m.reset_warning_time_off()}</div>}
             </Alert>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline-secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {m.cancel()}
           </Button>
-          <Button variant="danger" onClick={onConfirm}>
+          <Button variant="destructive" onClick={onConfirm}>
             {m.reset_now()}
           </Button>
         </DialogFooter>

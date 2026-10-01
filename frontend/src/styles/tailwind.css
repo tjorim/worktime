@@ -180,6 +180,7 @@
   --z-index-feedback: 1100;
   --container-dialog: 500px;
   --container-dialog-lg: 800px;
+  --container-settings: 1080px;
 }
 @utility grid-cols-alert {
   grid-template-columns: auto 1fr;

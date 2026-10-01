@@ -152,7 +152,10 @@ export function AdminUsersTable({
         <TableBody>
           {visibleRows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="text-center text-muted py-3">
+              <TableCell
+                colSpan={columns.length}
+                className="tw:py-3 tw:text-center tw:text-muted-foreground"
+              >
                 {m.account_admin_users_no_results()}
               </TableCell>
             </TableRow>

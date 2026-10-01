@@ -3,11 +3,16 @@ import {
   Moon as MoonIcon,
   SlidersHorizontal as SlidersHorizontalIcon,
   Sun as SunIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Button } from "@/components/ui/button";
-import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import {
+  SettingsList,
+  SettingsRow,
+  SettingsSection,
+  SettingsSwitchRow,
+} from "@/components/settings/SettingsParts";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsGeneralSectionProps {
@@ -32,129 +37,77 @@ export function SettingsGeneralSection({
   onNotificationsChange,
 }: SettingsGeneralSectionProps) {
   return (
-    <div className="p-3">
-      <h6 className="text-muted mb-3">
-        <Icon icon={SlidersHorizontalIcon} className="me-2" />
-        {m.preferences_title()}
-      </h6>
-      <ListGroup variant="flush">
-        <ListGroup.Item>
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <div className="fw-medium">{m.time_format_label()}</div>
-              <small className="text-muted">{m.time_format_description()}</small>
-            </div>
-            <div
-              role="group"
-              className="tw:flex tw:flex-wrap tw:gap-1"
-              aria-label={m.time_format_label()}
-            >
-              <Button
-                size="sm"
-                variant={timeFormat === "24h" ? "default" : "outline"}
-                aria-pressed={timeFormat === "24h"}
-                onClick={() => onTimeFormatChange("24h")}
-              >
-                24h
-              </Button>
-              <Button
-                size="sm"
-                variant={timeFormat === "12h" ? "default" : "outline"}
-                aria-pressed={timeFormat === "12h"}
-                onClick={() => onTimeFormatChange("12h")}
-              >
-                12h
-              </Button>
-            </div>
-          </div>
-        </ListGroup.Item>
-        <ListGroup.Item>
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <div className="fw-medium">{m.theme_label()}</div>
-              <small className="text-muted">{m.theme_description()}</small>
-            </div>
-            <div
-              role="group"
-              className="tw:flex tw:flex-wrap tw:gap-1"
-              aria-label={m.theme_label()}
-            >
-              <Button
-                size="sm"
-                variant={theme === "auto" ? "default" : "outline"}
-                aria-pressed={theme === "auto"}
-                onClick={() => onThemeChange("auto")}
-              >
-                <Icon icon={ContrastIcon} className="tw:mr-1" />
-                {m.theme_auto()}
-              </Button>
-              <Button
-                size="sm"
-                variant={theme === "light" ? "default" : "outline"}
-                aria-pressed={theme === "light"}
-                onClick={() => onThemeChange("light")}
-              >
-                <Icon icon={SunIcon} className="tw:mr-1" />
-                {m.theme_light()}
-              </Button>
-              <Button
-                size="sm"
-                variant={theme === "dark" ? "default" : "outline"}
-                aria-pressed={theme === "dark"}
-                onClick={() => onThemeChange("dark")}
-              >
-                <Icon icon={MoonIcon} className="tw:mr-1" />
-                {m.theme_dark()}
-              </Button>
-            </div>
-          </div>
-        </ListGroup.Item>
-        <ListGroup.Item>
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <div className="fw-medium">{m.language_label()}</div>
-              <small className="text-muted">{m.language_description()}</small>
-            </div>
-            <div
-              role="group"
-              className="tw:flex tw:flex-wrap tw:gap-1"
-              aria-label={m.language_label()}
-            >
-              <Button
-                size="sm"
-                variant={locale === "en" ? "default" : "outline"}
-                aria-pressed={locale === "en"}
-                onClick={() => onLocaleChange("en")}
-              >
-                EN
-              </Button>
-              <Button
-                size="sm"
-                variant={locale === "nl" ? "default" : "outline"}
-                aria-pressed={locale === "nl"}
-                onClick={() => onLocaleChange("nl")}
-              >
-                NL
-              </Button>
-            </div>
-          </div>
-        </ListGroup.Item>
-        <ListGroup.Item>
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <div className="fw-medium">{m.notifications_label()}</div>
-              <small className="text-muted">{m.notifications_description()}</small>
-            </div>
-            <Form.Check
-              type="switch"
-              id="toggle-notifications"
-              checked={notificationsEnabled}
-              onChange={(event) => onNotificationsChange(event.target.checked)}
-              aria-label={m.notifications_label()}
-            />
-          </div>
-        </ListGroup.Item>
-      </ListGroup>
+    <SettingsSection icon={SlidersHorizontalIcon} title={m.preferences_title()}>
+      <SettingsList>
+        <SettingsRow title={m.time_format_label()} description={m.time_format_description()}>
+          <ChoiceGroup
+            label={m.time_format_label()}
+            value={timeFormat}
+            onChange={onTimeFormatChange}
+            options={[
+              { value: "24h", label: "24h" },
+              { value: "12h", label: "12h" },
+            ]}
+          />
+        </SettingsRow>
+        <SettingsRow title={m.theme_label()} description={m.theme_description()}>
+          <ChoiceGroup
+            label={m.theme_label()}
+            value={theme}
+            onChange={onThemeChange}
+            options={[
+              { value: "auto", label: m.theme_auto(), icon: ContrastIcon },
+              { value: "light", label: m.theme_light(), icon: SunIcon },
+              { value: "dark", label: m.theme_dark(), icon: MoonIcon },
+            ]}
+          />
+        </SettingsRow>
+        <SettingsRow title={m.language_label()} description={m.language_description()}>
+          <ChoiceGroup
+            label={m.language_label()}
+            value={locale}
+            onChange={onLocaleChange}
+            options={[
+              { value: "en", label: "EN" },
+              { value: "nl", label: "NL" },
+            ]}
+          />
+        </SettingsRow>
+        <SettingsSwitchRow
+          id="toggle-notifications"
+          title={m.notifications_label()}
+          description={m.notifications_description()}
+          checked={notificationsEnabled}
+          onCheckedChange={onNotificationsChange}
+        />
+      </SettingsList>
+    </SettingsSection>
+  );
+}
+
+interface ChoiceGroupProps<T extends string> {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string; icon?: LucideIcon }>;
+}
+
+/** Row of toggle buttons where exactly one option is pressed. */
+function ChoiceGroup<T extends string>({ label, value, onChange, options }: ChoiceGroupProps<T>) {
+  return (
+    <div role="group" className="tw:flex tw:flex-wrap tw:gap-1" aria-label={label}>
+      {options.map((option) => (
+        <Button
+          key={option.value}
+          size="sm"
+          variant={value === option.value ? "default" : "outline"}
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.icon ? <Icon icon={option.icon} className="tw:mr-1" /> : null}
+          {option.label}
+        </Button>
+      ))}
     </div>
   );
 }

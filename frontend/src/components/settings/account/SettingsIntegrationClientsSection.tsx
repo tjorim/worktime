@@ -1,11 +1,20 @@
 import { Plug as PlugIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import {
+  SettingsHint,
+  SettingsItem,
+  SettingsList,
+  SettingsLoading,
+  SettingsSection,
+  SettingsSecret,
+} from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
 import type {
   CreatedIntegrationClient,
@@ -62,131 +71,131 @@ export function SettingsIntegrationClientsSection(props: Props) {
     }
   };
 
+  const formLocked = mutationInFlight || props.createdClient !== null;
+
   return (
-    <div className="p-3">
-      <h6 className="text-muted mb-3">
-        <Icon icon={PlugIcon} className="me-2" />
-        {m.integration_clients_section_title()}
-      </h6>
-      <p className="text-muted small mb-3">{m.integration_clients_description()}</p>
+    <SettingsSection icon={PlugIcon} title={m.integration_clients_section_title()}>
+      <SettingsHint className="tw:mb-3">{m.integration_clients_description()}</SettingsHint>
       {props.createdClient ? (
-        <Alert variant="success" className="d-flex flex-column gap-2">
-          <div className="fw-medium">{m.integration_clients_created_title()}</div>
-          <div className="small">{m.integration_clients_created_warning()}</div>
-          <code className="user-select-all d-block p-2 bg-body-secondary rounded text-break">
-            {props.createdClient.key}
-          </code>
-          <div className="d-flex gap-2">
-            <Button variant="outline-success" size="sm" onClick={() => void copyKey()}>
+        <Alert variant="success" className="tw:mb-3 tw:gap-2">
+          <div className="tw:font-medium">{m.integration_clients_created_title()}</div>
+          <div>{m.integration_clients_created_warning()}</div>
+          <SettingsSecret>{props.createdClient.key}</SettingsSecret>
+          <div className="tw:flex tw:gap-2">
+            <Button variant="outline" size="sm" onClick={() => void copyKey()}>
               {m.api_tokens_copy_btn()}
             </Button>
-            <Button variant="success" size="sm" onClick={props.onDismissCreatedClient}>
+            <Button size="sm" onClick={props.onDismissCreatedClient}>
               {m.api_tokens_done_btn()}
             </Button>
           </div>
         </Alert>
       ) : null}
-      <Form.Group className="mb-2" controlId="integration-client-name">
-        <Form.Label className="fw-medium mb-1">{m.integration_clients_name_label()}</Form.Label>
-        <Form.Control
-          size="sm"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder={m.integration_clients_name_placeholder()}
-          disabled={mutationInFlight || props.createdClient !== null}
-        />
-      </Form.Group>
-      <Form.Check
-        className="mb-3"
-        id="integration-client-mcp-scope"
-        checked
-        readOnly
-        label="worktime:mcp"
-      />
-      {props.isAdmin ? (
-        <Form.Check
-          className="mb-3"
-          id="integration-client-admin-scope"
-          checked={adminScope}
-          disabled={mutationInFlight || props.createdClient !== null}
-          onChange={(event) => setAdminScope(event.target.checked)}
-          label={m.integration_clients_admin_scope_label()}
-        />
-      ) : null}
-      <Button
-        className="mb-3"
-        size="sm"
-        disabled={mutationInFlight || props.createdClient !== null || !name.trim()}
-        onClick={() =>
-          props.onCreateClient(
-            name,
-            adminScope ? ["worktime:mcp", "worktime:admin"] : ["worktime:mcp"],
-          )
-        }
-      >
-        {props.isCreating
-          ? m.integration_clients_creating_btn()
-          : m.integration_clients_create_btn()}
-      </Button>
+      <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-3">
+        <Field>
+          <FieldLabel htmlFor="integration-client-name">
+            {m.integration_clients_name_label()}
+          </FieldLabel>
+          <Input
+            id="integration-client-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={m.integration_clients_name_placeholder()}
+            disabled={formLocked}
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <Checkbox id="integration-client-mcp-scope" checked readOnly />
+          <FieldLabel htmlFor="integration-client-mcp-scope">worktime:mcp</FieldLabel>
+        </Field>
+        {props.isAdmin ? (
+          <Field orientation="horizontal">
+            <Checkbox
+              id="integration-client-admin-scope"
+              checked={adminScope}
+              disabled={formLocked}
+              onCheckedChange={setAdminScope}
+            />
+            <FieldLabel htmlFor="integration-client-admin-scope">
+              {m.integration_clients_admin_scope_label()}
+            </FieldLabel>
+          </Field>
+        ) : null}
+        <div>
+          <Button
+            size="sm"
+            disabled={formLocked || !name.trim()}
+            onClick={() =>
+              props.onCreateClient(
+                name,
+                adminScope ? ["worktime:mcp", "worktime:admin"] : ["worktime:mcp"],
+              )
+            }
+          >
+            {props.isCreating
+              ? m.integration_clients_creating_btn()
+              : m.integration_clients_create_btn()}
+          </Button>
+        </div>
+      </div>
       {props.error ? (
-        <Alert variant="danger" className="py-2">
+        <Alert variant="destructive" className="tw:mb-3">
           {props.error}
         </Alert>
       ) : null}
       {props.isLoading ? (
-        <div className="text-muted small">{m.loading()}</div>
+        <SettingsLoading>{m.loading()}</SettingsLoading>
       ) : props.clients?.length ? (
-        <ListGroup variant="flush">
+        <SettingsList>
           {props.clients.map((client) => (
-            <ListGroup.Item key={client.id} className="px-0">
-              <div className="d-flex justify-content-between align-items-start gap-3">
-                <div>
-                  <div className="fw-medium">
-                    {client.name}{" "}
-                    {!client.is_active ? (
-                      <span className="badge text-bg-secondary">
-                        {m.integration_clients_revoked()}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="text-muted small">
-                    •••• {client.key_preview} · {m.api_tokens_created_at_label()}{" "}
-                    {formatDate(client.created_at)} · {m.api_tokens_last_used_label()}{" "}
-                    {client.last_used_at
-                      ? formatDate(client.last_used_at)
-                      : m.api_tokens_last_used_never()}
-                  </div>
-                  <div className="text-muted small">
-                    {m.api_tokens_scopes_label()}: {client.scopes.join(", ")} ·{" "}
-                    {m.integration_clients_rate_limit({ count: client.rate_limit_per_minute })}
-                  </div>
+            <SettingsItem
+              key={client.id}
+              className="tw:flex tw:items-start tw:justify-between tw:gap-3"
+            >
+              <div className="tw:min-w-0">
+                <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:font-medium">
+                  {client.name}
+                  {!client.is_active ? (
+                    <Badge variant="secondary">{m.integration_clients_revoked()}</Badge>
+                  ) : null}
                 </div>
-                {client.is_active ? (
-                  <div className="d-flex gap-2">
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      disabled={mutationInFlight || props.createdClient !== null}
-                      onClick={() => setConfirmation({ action: "rotate", client })}
-                    >
-                      {m.integration_clients_rotate_btn()}
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      disabled={mutationInFlight}
-                      onClick={() => setConfirmation({ action: "revoke", client })}
-                    >
-                      {m.api_tokens_revoke_btn()}
-                    </Button>
-                  </div>
-                ) : null}
+                <div className="tw:text-sm tw:text-muted-foreground">
+                  •••• {client.key_preview} · {m.api_tokens_created_at_label()}{" "}
+                  {formatDate(client.created_at)} · {m.api_tokens_last_used_label()}{" "}
+                  {client.last_used_at
+                    ? formatDate(client.last_used_at)
+                    : m.api_tokens_last_used_never()}
+                </div>
+                <div className="tw:text-sm tw:text-muted-foreground">
+                  {m.api_tokens_scopes_label()}: {client.scopes.join(", ")} ·{" "}
+                  {m.integration_clients_rate_limit({ count: client.rate_limit_per_minute })}
+                </div>
               </div>
-            </ListGroup.Item>
+              {client.is_active ? (
+                <div className="tw:flex tw:gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={formLocked}
+                    onClick={() => setConfirmation({ action: "rotate", client })}
+                  >
+                    {m.integration_clients_rotate_btn()}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={mutationInFlight}
+                    onClick={() => setConfirmation({ action: "revoke", client })}
+                  >
+                    {m.api_tokens_revoke_btn()}
+                  </Button>
+                </div>
+              ) : null}
+            </SettingsItem>
           ))}
-        </ListGroup>
+        </SettingsList>
       ) : (
-        <p className="text-muted small mb-0">{m.integration_clients_empty()}</p>
+        <SettingsHint>{m.integration_clients_empty()}</SettingsHint>
       )}
       <ConfirmationDialog
         isOpen={confirmation !== null}
@@ -217,6 +226,6 @@ export function SettingsIntegrationClientsSection(props: Props) {
         variant={confirmation?.action === "revoke" ? "danger" : "primary"}
         icon={PlugIcon}
       />
-    </div>
+    </SettingsSection>
   );
 }

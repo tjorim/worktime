@@ -8,10 +8,13 @@ import {
   Smartphone as SmartphoneIcon,
   Sparkles as SparklesIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
-import ListGroup from "react-bootstrap/ListGroup";
 import * as m from "@/paraglide/messages.js";
 import { SettingsBackendStatus } from "@/components/settings/SettingsBackendStatus";
+import {
+  SettingsActionRow,
+  SettingsList,
+  SettingsSection,
+} from "@/components/settings/SettingsParts";
 
 interface SettingsAboutSectionProps {
   onShareApp: () => void;
@@ -33,86 +36,53 @@ export function SettingsAboutSection({
   onShowShortcuts,
 }: SettingsAboutSectionProps) {
   return (
-    <div className="border-bottom">
-      <div className="p-3">
-        <h6 className="tw:text-muted-foreground mb-3">
-          <Icon icon={InfoIcon} className="me-2" />
-          {m.information_title()}
-        </h6>
-        <ListGroup variant="flush">
-          <ListGroup.Item action onClick={onShowChangelog}>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <div className="fw-medium">
-                  <Icon icon={SparklesIcon} className="me-2" />
-                  {m.whats_new_label()}
-                </div>
-                <small className="text-muted">{m.whats_new_description()}</small>
-              </div>
-              <Icon icon={ChevronRightIcon} className="text-muted" />
-            </div>
-          </ListGroup.Item>
-          <ListGroup.Item action onClick={onShowAboutHelp}>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <div className="fw-medium">
-                  <Icon icon={CircleHelpIcon} className="me-2" />
-                  {m.about_help_label()}
-                </div>
-                <small className="text-muted">{m.about_help_description()}</small>
-              </div>
-              <Icon icon={ChevronRightIcon} className="text-muted" />
-            </div>
-          </ListGroup.Item>
-          <ListGroup.Item action onClick={onShowShortcuts}>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <div className="fw-medium">
-                  <Icon icon={KeyboardIcon} className="me-2" />
-                  {m.keyboard_shortcuts_label()}
-                </div>
-                <small className="text-muted">{m.keyboard_shortcuts_description()}</small>
-              </div>
-              <Icon icon={ChevronRightIcon} className="text-muted" />
-            </div>
-          </ListGroup.Item>
-          <ListGroup.Item action onClick={onShareApp}>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <div className="fw-medium">
-                  <Icon icon={ShareIcon} className="me-2" />
-                  {m.share_app_label()}
-                </div>
-                <small className="text-muted">{m.share_app_description()}</small>
-              </div>
-              <Icon icon={ShareIcon} className="text-muted" />
-            </div>
-          </ListGroup.Item>
-          <ListGroup.Item action onClick={onInstallApp} disabled={!canInstallApp}>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <div className="fw-medium">
-                  <Icon icon={SmartphoneIcon} className="me-2" />
-                  {isAppInstalled ? m.pwa_install_installed_label() : m.pwa_install_app_label()}
-                </div>
-                <small className="text-muted">
-                  {isAppInstalled
-                    ? m.pwa_install_installed_description()
-                    : canInstallApp
-                      ? m.pwa_install_app_description()
-                      : m.pwa_install_unavailable_description()}
-                </small>
-              </div>
-              {isAppInstalled ? (
-                <Icon icon={CircleCheckIcon} className="text-success" />
-              ) : (
-                <Icon icon={ChevronRightIcon} className="text-muted" />
-              )}
-            </div>
-          </ListGroup.Item>
-          <SettingsBackendStatus />
-        </ListGroup>
-      </div>
-    </div>
+    <SettingsSection icon={InfoIcon} title={m.information_title()}>
+      <SettingsList>
+        <SettingsActionRow
+          icon={SparklesIcon}
+          title={m.whats_new_label()}
+          description={m.whats_new_description()}
+          trailingIcon={ChevronRightIcon}
+          onClick={onShowChangelog}
+        />
+        <SettingsActionRow
+          icon={CircleHelpIcon}
+          title={m.about_help_label()}
+          description={m.about_help_description()}
+          trailingIcon={ChevronRightIcon}
+          onClick={onShowAboutHelp}
+        />
+        <SettingsActionRow
+          icon={KeyboardIcon}
+          title={m.keyboard_shortcuts_label()}
+          description={m.keyboard_shortcuts_description()}
+          trailingIcon={ChevronRightIcon}
+          onClick={onShowShortcuts}
+        />
+        <SettingsActionRow
+          icon={ShareIcon}
+          title={m.share_app_label()}
+          description={m.share_app_description()}
+          trailingIcon={ShareIcon}
+          onClick={onShareApp}
+        />
+        <SettingsActionRow
+          icon={SmartphoneIcon}
+          title={isAppInstalled ? m.pwa_install_installed_label() : m.pwa_install_app_label()}
+          description={
+            isAppInstalled
+              ? m.pwa_install_installed_description()
+              : canInstallApp
+                ? m.pwa_install_app_description()
+                : m.pwa_install_unavailable_description()
+          }
+          trailingIcon={isAppInstalled ? CircleCheckIcon : ChevronRightIcon}
+          trailingIconClassName={isAppInstalled ? "tw:text-success" : undefined}
+          onClick={onInstallApp}
+          disabled={!canInstallApp}
+        />
+        <SettingsBackendStatus />
+      </SettingsList>
+    </SettingsSection>
   );
 }

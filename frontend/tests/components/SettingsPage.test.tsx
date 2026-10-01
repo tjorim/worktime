@@ -15,6 +15,7 @@ import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
+import { SCHEDULE_OPTIONS } from "@/data/rosters";
 import { server } from "@/mocks/server";
 import { syncStore } from "@/mocks/data/syncStore";
 import { labelsCollection } from "@/db/collections";
@@ -935,10 +936,7 @@ describe("SettingsPage About Section", () => {
     const installButton = screen.getByRole("button", {
       name: new RegExp(`^${m.pwa_install_app_label()}`),
     });
-    // ListGroup.Item's `disabled` sets aria-disabled + blocks its onClick handler
-    // internally rather than the native `disabled` attribute, so toBeDisabled() (which
-    // checks the native attribute) doesn't apply here.
-    expect(installButton).toHaveAttribute("aria-disabled", "true");
+    expect(installButton).toBeDisabled();
 
     const promptSpy = vi.fn().mockResolvedValue(undefined);
     act(() => {
@@ -951,7 +949,7 @@ describe("SettingsPage About Section", () => {
       window.dispatchEvent(event);
     });
 
-    await waitFor(() => expect(installButton).not.toHaveAttribute("aria-disabled"));
+    await waitFor(() => expect(installButton).toBeEnabled());
 
     await user.click(installButton);
 
@@ -960,7 +958,7 @@ describe("SettingsPage About Section", () => {
       await screen.findByRole("button", {
         name: new RegExp(`^${m.pwa_install_installed_label()}`),
       }),
-    ).toHaveAttribute("aria-disabled", "true");
+    ).toBeDisabled();
     expect(await screen.findByText(m.pwa_install_success())).toBeInTheDocument();
   });
 
@@ -982,10 +980,10 @@ describe("SettingsPage About Section", () => {
       window.dispatchEvent(event);
     });
 
-    await waitFor(() => expect(installButton).not.toHaveAttribute("aria-disabled"));
+    await waitFor(() => expect(installButton).toBeEnabled());
     await user.click(installButton);
 
-    await waitFor(() => expect(installButton).toHaveAttribute("aria-disabled", "true"));
+    await waitFor(() => expect(installButton).toBeDisabled());
     expect(screen.queryByText(m.pwa_install_success())).not.toBeInTheDocument();
   });
 });
@@ -1014,7 +1012,7 @@ describe("SettingsPage General Section", () => {
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
 
-    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    const toggle = screen.getByRole("switch", { name: m.notifications_label() });
     expect(toggle).not.toBeChecked();
 
     await user.click(toggle);
@@ -1033,7 +1031,7 @@ describe("SettingsPage General Section", () => {
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
 
-    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    const toggle = screen.getByRole("switch", { name: m.notifications_label() });
     await user.click(toggle);
 
     expect(await screen.findByText(m.notifications_permission_denied())).toBeInTheDocument();
@@ -1046,7 +1044,7 @@ describe("SettingsPage General Section", () => {
     vi.stubGlobal("Notification", { permission: "granted", requestPermission });
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="general" />);
-    const toggle = screen.getByRole("checkbox", { name: m.notifications_label() });
+    const toggle = screen.getByRole("switch", { name: m.notifications_label() });
 
     await user.click(toggle);
     expect(requestPermission).not.toHaveBeenCalled();
@@ -1075,11 +1073,11 @@ describe("SettingsPage Features Section", () => {
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="features" />);
 
-    const timeOffToggle = screen.getByRole("checkbox", { name: "Toggle time off" });
-    const timeTrackingToggle = screen.getByRole("checkbox", { name: "Toggle time tracking" });
-    const ganttToggle = screen.getByRole("checkbox", { name: "Toggle personal gantt" });
-    const crossBorderToggle = screen.getByRole("checkbox", {
-      name: "Toggle cross-border tracking",
+    const timeOffToggle = screen.getByRole("switch", { name: m.time_off_label() });
+    const timeTrackingToggle = screen.getByRole("switch", { name: m.time_tracking_label() });
+    const ganttToggle = screen.getByRole("switch", { name: m.personal_gantt_label() });
+    const crossBorderToggle = screen.getByRole("switch", {
+      name: m.cross_border_tracking_label(),
     });
 
     expect(timeOffToggle).not.toBeChecked();
@@ -1100,5 +1098,43 @@ describe("SettingsPage Features Section", () => {
     expect(screen.getByText(m.cross_border_setup_label())).toBeInTheDocument();
     expect(screen.getByLabelText(m.home_country_label())).toBeInTheDocument();
     expect(screen.getByLabelText(m.office_country_label())).toBeInTheDocument();
+  });
+});
+
+describe("SettingsPage owned controls", () => {
+  it("labels each feature switch with its title, describes it, and toggles from the label text", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="features" />);
+
+    const toggle = screen.getByRole("switch", { name: m.time_off_label() });
+    expect(toggle).toHaveAccessibleDescription(m.time_off_description());
+    expect(toggle).not.toBeChecked();
+
+    await user.click(screen.getByText(m.time_off_description()));
+    expect(toggle).toBeChecked();
+  });
+
+  it("exposes the selected schedule with aria-pressed and disables unavailable ones", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
+
+    const optionFor = (title: string) =>
+      screen.getByRole("button", { name: new RegExp(`^${title}`) });
+    expect(optionFor("2-shift")).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(optionFor("2-shift"));
+
+    expect(optionFor("2-shift")).toHaveAttribute("aria-pressed", "true");
+    expect(optionFor("9-5")).toHaveAttribute("aria-pressed", "false");
+    for (const schedule of SCHEDULE_OPTIONS.filter((option) => !option.isAvailable)) {
+      expect(optionFor(schedule.title)).toBeDisabled();
+    }
+  });
+
+  it("names the account section as a landmark region", () => {
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+
+    expect(screen.getByRole("region", { name: m.account_section_title() })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: m.account_sign_in_btn() })).toBeEnabled();
   });
 });

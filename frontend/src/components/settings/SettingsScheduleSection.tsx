@@ -1,12 +1,15 @@
 import { CalendarDays as CalendarDaysIcon, Check as CheckIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import Badge from "react-bootstrap/Badge";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Hint } from "@/components/ui/tooltip";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { cn } from "@/lib/utils";
 import { hasMultipleTeams } from "@/utils/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
 import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
+import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";
 import { TeamSelector } from "@/components/shared/TeamSelector";
 
 interface SettingsScheduleSectionProps {
@@ -23,55 +26,56 @@ export function SettingsScheduleSection({
   onTeamChange,
 }: SettingsScheduleSectionProps) {
   return (
-    <div className="p-3">
-      <h6 className="text-muted mb-3">
-        <Icon icon={CalendarDaysIcon} className="me-2" />
-        {m.select_schedule_label()}
-      </h6>
-      <ListGroup variant="flush" className="mb-3">
+    <SettingsSection icon={CalendarDaysIcon} title={m.select_schedule_label()}>
+      <ul className="tw:m-0 tw:mb-4 tw:flex tw:list-none tw:flex-col tw:gap-2 tw:p-0">
         {SCHEDULE_OPTIONS.map((schedule) => {
           const isSelected = scheduleType === schedule.value;
-          const item = (
-            <ListGroup.Item
-              key={schedule.value}
-              action
-              active={isSelected}
+          const option = (
+            <Button
+              variant={isSelected ? "default" : "outline"}
+              aria-pressed={isSelected}
               disabled={!schedule.isAvailable}
               onClick={() => schedule.isAvailable && onScheduleChange(schedule.value)}
-              className="d-flex justify-content-between align-items-center"
+              className="tw:h-auto tw:w-full tw:justify-between tw:gap-2 tw:py-2 tw:text-left tw:whitespace-normal"
             >
-              <div>
-                <div className="fw-semibold d-flex align-items-center gap-2">
+              <span className="tw:flex tw:flex-col">
+                <span className="tw:flex tw:items-center tw:gap-2 tw:font-semibold">
                   {schedule.title}
                   {!schedule.isAvailable && (
-                    <Badge bg="secondary" className="fw-normal" style={{ fontSize: "0.65em" }}>
-                      {m.wizard_coming_soon_badge()}
-                    </Badge>
+                    <Badge variant="secondary">{m.wizard_coming_soon_badge()}</Badge>
                   )}
-                </div>
-                <small className={isSelected ? "text-white-50" : "text-muted"}>
+                </span>
+                <span
+                  className={cn(
+                    "tw:text-sm tw:font-normal",
+                    isSelected ? "tw:text-primary-foreground/80" : "tw:text-muted-foreground",
+                  )}
+                >
                   {schedule.description}
-                </small>
-              </div>
-              {isSelected && <Icon icon={CheckIcon} className="ms-2 flex-shrink-0" />}
-            </ListGroup.Item>
+                </span>
+              </span>
+              {isSelected && <Icon icon={CheckIcon} />}
+            </Button>
           );
-          return schedule.isAvailable ? (
-            item
-          ) : (
-            <Hint
-              key={schedule.value}
-              placement="top"
-              content={<div>{m.wizard_schedule_coming_soon_tooltip()}</div>}
-            >
-              <span>{item}</span>
-            </Hint>
+          return (
+            <li key={schedule.value}>
+              {schedule.isAvailable ? (
+                option
+              ) : (
+                <Hint
+                  placement="top"
+                  content={<div>{m.wizard_schedule_coming_soon_tooltip()}</div>}
+                >
+                  <span className="tw:block">{option}</span>
+                </Hint>
+              )}
+            </li>
           );
         })}
-      </ListGroup>
+      </ul>
 
       {scheduleType && hasMultipleTeams(scheduleType) && (
-        <div className="mb-3">
+        <div className="tw:mb-4">
           <TeamSelector
             scheduleType={scheduleType}
             selectedTeam={myTeam}
@@ -79,12 +83,12 @@ export function SettingsScheduleSection({
             label={m.select_team_label()}
             ariaLabel={m.select_team_label()}
           />
-          {myTeam === null && <small className="text-muted">{m.settings_no_team_selected()}</small>}
+          {myTeam === null && <SettingsHint>{m.settings_no_team_selected()}</SettingsHint>}
         </div>
       )}
 
-      <hr className="my-4" />
+      <Separator className="tw:my-4" />
       <SettingsHdayHelper />
-    </div>
+    </SettingsSection>
   );
 }

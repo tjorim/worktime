@@ -12,11 +12,17 @@ import {
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import {
+  SettingsLoading,
+  SettingsRowText,
+  SettingsSection,
+  SettingsHint,
+} from "@/components/settings/SettingsParts";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsAccountSectionProps {
@@ -65,166 +71,136 @@ export function SettingsAccountSection({
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
 
   return (
-    <div className="border-bottom">
-      <div className="p-3">
-        <h6 className="text-muted mb-3">
-          <Icon icon={CircleUserIcon} className="me-2" />
-          {m.account_section_title()}
-        </h6>
-        <ListGroup variant="flush">
-          {isValidating ? (
-            <ListGroup.Item>
-              <div className="d-flex align-items-center gap-2 text-muted small">
-                <span
-                  className="spinner-border spinner-border-sm"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                <span>{m.loading()}</span>
-              </div>
-            </ListGroup.Item>
-          ) : isAuthenticated ? (
-            <ListGroup.Item>
-              <div className="d-flex flex-column gap-3">
-                <div className="d-flex justify-content-between align-items-start gap-3">
-                  <div>
-                    <div className="fw-medium">
-                      <Icon icon={UserCheckIcon} className="me-2 text-success" />
-                      {resolvedDisplayName
-                        ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
-                        : m.account_signed_in()}
-                    </div>
-                    {username ? <small className="text-muted">@{username}</small> : null}
-                  </div>
-                  <Button variant="outline-secondary" size="sm" onClick={onLogout}>
-                    <Icon icon={LogOutIcon} className="me-1" />
-                    {m.auth_logout()}
-                  </Button>
-                </div>
+    <SettingsSection icon={CircleUserIcon} title={m.account_section_title()}>
+      {isValidating ? (
+        <SettingsLoading>{m.loading()}</SettingsLoading>
+      ) : isAuthenticated ? (
+        <div className="tw:flex tw:flex-col tw:gap-4">
+          <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
+            <SettingsRowText
+              icon={UserCheckIcon}
+              iconClassName="tw:text-success"
+              title={
+                resolvedDisplayName
+                  ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
+                  : m.account_signed_in()
+              }
+              description={username ? `@${username}` : null}
+            />
+            <Button variant="outline" size="sm" onClick={onLogout}>
+              <Icon icon={LogOutIcon} />
+              {m.auth_logout()}
+            </Button>
+          </div>
 
-                {profileError ? (
-                  <Alert variant="warning" className="mb-0 py-2">
-                    {profileError}
-                  </Alert>
-                ) : null}
+          {profileError ? <Alert variant="warning">{profileError}</Alert> : null}
 
-                <Alert variant="info" className="mb-0 py-2">
-                  <div className="small">
-                    {m.account_privacy_notice_body()}{" "}
-                    <Link to="/privacy" className="alert-link">
-                      {m.account_privacy_notice_link()}
-                    </Link>
-                  </div>
-                </Alert>
+          <Alert variant="info">
+            <div>
+              {m.account_privacy_notice_body()}{" "}
+              <Link to="/privacy" className="tw:font-medium tw:underline tw:underline-offset-3">
+                {m.account_privacy_notice_link()}
+              </Link>
+            </div>
+          </Alert>
 
-                {isProfileLoading && accountId === null ? (
-                  <div className="d-flex align-items-center gap-2 text-muted small">
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                    <span>{m.loading()}</span>
-                  </div>
-                ) : (
-                  <>
-                    <Form.Group controlId="account-display-name">
-                      <Form.Label className="fw-medium mb-1">
-                        {m.account_profile_display_name_label()}
-                      </Form.Label>
-                      <Form.Control
-                        size="sm"
-                        type="text"
-                        value={profileDraft}
-                        onChange={(event) => onProfileDraftChange(event.target.value)}
-                        placeholder={m.account_profile_display_name_placeholder()}
-                        disabled={accountId === null || isProfileSaving}
-                      />
-                      <Form.Text className="text-muted">
-                        {m.account_profile_display_name_description()}
-                      </Form.Text>
-                    </Form.Group>
-
-                    <div className="small text-muted d-flex flex-column gap-1">
-                      <div>
-                        <span className="fw-medium">{m.account_profile_username_label()}:</span>{" "}
-                        {username ?? "—"}
-                      </div>
-                      <div>
-                        <span className="fw-medium">{m.account_profile_user_id_label()}:</span>{" "}
-                        {accountId ?? userId ?? "—"}
-                      </div>
-                      <div>
-                        <span className="fw-medium">{m.account_profile_role_label()}:</span>{" "}
-                        {isAdmin ? m.account_profile_role_admin() : m.account_profile_role_member()}
-                      </div>
-                    </div>
-
-                    <div className="d-flex gap-2 flex-wrap">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={onSaveProfile}
-                        disabled={!hasProfileChanges || isProfileSaving || accountId === null}
-                      >
-                        <Icon icon={SaveIcon} className="me-1" />
-                        {isProfileSaving
-                          ? m.account_profile_saving_btn()
-                          : m.account_profile_save_btn()}
-                      </Button>
-                    </div>
-
-                    <div className="pt-2 border-top">
-                      <h6 className="mb-2 text-danger">{m.account_delete_section_title()}</h6>
-                      <p className="text-muted small mb-2">{m.account_delete_description()}</p>
-                      {deleteAccountError ? (
-                        <Alert variant="danger" className="mb-2 py-2">
-                          {deleteAccountError}
-                        </Alert>
-                      ) : null}
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        disabled={isDeletingAccount}
-                        onClick={() => setShowDeleteAccountConfirm(true)}
-                      >
-                        <Icon icon={Trash2Icon} className="me-1" />
-                        {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </ListGroup.Item>
+          {isProfileLoading && accountId === null ? (
+            <SettingsLoading>{m.loading()}</SettingsLoading>
           ) : (
-            <ListGroup.Item>
-              <div className="mb-2">
-                <div className="fw-medium mb-1">
-                  <Icon icon={UserXIcon} className="me-2 text-muted" />
-                  {m.account_not_signed_in()}
+            <>
+              <Field>
+                <FieldLabel htmlFor="account-display-name">
+                  {m.account_profile_display_name_label()}
+                </FieldLabel>
+                <Input
+                  id="account-display-name"
+                  type="text"
+                  value={profileDraft}
+                  onChange={(event) => onProfileDraftChange(event.target.value)}
+                  placeholder={m.account_profile_display_name_placeholder()}
+                  disabled={accountId === null || isProfileSaving}
+                  aria-describedby="account-display-name-help"
+                />
+                <FieldDescription id="account-display-name-help" className="tw:mb-0">
+                  {m.account_profile_display_name_description()}
+                </FieldDescription>
+              </Field>
+
+              <div className="tw:flex tw:flex-col tw:gap-1 tw:text-sm tw:text-muted-foreground">
+                <div>
+                  <span className="tw:font-medium">{m.account_profile_username_label()}:</span>{" "}
+                  {username ?? "—"}
                 </div>
-                <small className="text-muted d-block mb-2">{m.account_sync_benefits()}</small>
-                <div className="d-flex flex-wrap gap-2 mb-3">
-                  <small className="text-muted">
-                    <Icon icon={CloudCheckIcon} className="text-success me-1" />
-                    {m.account_sync_benefit_backup()}
-                  </small>
-                  <small className="text-muted">
-                    <Icon icon={SmartphoneIcon} className="text-success me-1" />
-                    {m.account_sync_benefit_crossdevice()}
-                  </small>
+                <div>
+                  <span className="tw:font-medium">{m.account_profile_user_id_label()}:</span>{" "}
+                  {accountId ?? userId ?? "—"}
+                </div>
+                <div>
+                  <span className="tw:font-medium">{m.account_profile_role_label()}:</span>{" "}
+                  {isAdmin ? m.account_profile_role_admin() : m.account_profile_role_member()}
                 </div>
               </div>
-              <div className="d-flex gap-2 flex-wrap">
-                <Button variant="primary" size="sm" onClick={onLogin}>
-                  <Icon icon={LogInIcon} className="me-1" />
-                  {m.account_sign_in_btn()}
+
+              <div className="tw:flex tw:flex-wrap tw:gap-2">
+                <Button
+                  size="sm"
+                  onClick={onSaveProfile}
+                  disabled={!hasProfileChanges || isProfileSaving || accountId === null}
+                >
+                  <Icon icon={SaveIcon} />
+                  {isProfileSaving ? m.account_profile_saving_btn() : m.account_profile_save_btn()}
                 </Button>
               </div>
-            </ListGroup.Item>
+
+              <div className="tw:flex tw:flex-col tw:gap-2 tw:border-t tw:border-border tw:pt-4">
+                <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-danger-text">
+                  {m.account_delete_section_title()}
+                </h3>
+                <SettingsHint>{m.account_delete_description()}</SettingsHint>
+                {deleteAccountError ? (
+                  <Alert variant="destructive">{deleteAccountError}</Alert>
+                ) : null}
+                <div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isDeletingAccount}
+                    onClick={() => setShowDeleteAccountConfirm(true)}
+                  >
+                    <Icon icon={Trash2Icon} />
+                    {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
-        </ListGroup>
-      </div>
+        </div>
+      ) : (
+        <div className="tw:flex tw:flex-col tw:gap-3">
+          <SettingsRowText
+            icon={UserXIcon}
+            iconClassName="tw:text-muted-foreground"
+            title={m.account_not_signed_in()}
+            description={m.account_sync_benefits()}
+          />
+          <div className="tw:flex tw:flex-wrap tw:gap-3 tw:text-sm tw:text-muted-foreground">
+            <span>
+              <Icon icon={CloudCheckIcon} className="tw:mr-1 tw:text-success" />
+              {m.account_sync_benefit_backup()}
+            </span>
+            <span>
+              <Icon icon={SmartphoneIcon} className="tw:mr-1 tw:text-success" />
+              {m.account_sync_benefit_crossdevice()}
+            </span>
+          </div>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <Button size="sm" onClick={onLogin}>
+              <Icon icon={LogInIcon} />
+              {m.account_sign_in_btn()}
+            </Button>
+          </div>
+        </div>
+      )}
       <ConfirmationDialog
         isOpen={showDeleteAccountConfirm}
         title={m.account_delete_confirm_title()}
@@ -239,6 +215,6 @@ export function SettingsAccountSection({
         variant="danger"
         icon={Trash2Icon}
       />
-    </div>
+    </SettingsSection>
   );
 }

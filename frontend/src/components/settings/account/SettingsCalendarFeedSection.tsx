@@ -1,10 +1,14 @@
 import { Calendar as CalendarIcon, RefreshCw as RefreshCwIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useEffect, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import {
+  SettingsHint,
+  SettingsLoading,
+  SettingsSection,
+} from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -101,91 +105,68 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     window.location.assign(url.replace(/^https?:/, "webcal:"));
   };
 
+  const regenerateButton = (
+    <Button variant="outline" size="sm" disabled={busy} onClick={() => setConfirmRegenerate(true)}>
+      {m.calendar_feed_regenerate()}
+    </Button>
+  );
+  const revokeButton = (
+    <Button variant="destructive" size="sm" disabled={busy} onClick={() => void revoke()}>
+      {m.calendar_feed_revoke()}
+    </Button>
+  );
+
   return (
-    <div className="border-top p-3">
-      <h6 className="text-muted mb-2">
-        <Icon icon={CalendarIcon} className="me-2" />
-        {m.calendar_feed_title()}
-      </h6>
-      <p className="text-muted small">{m.calendar_feed_description()}</p>
-      <p className="text-muted small">{m.calendar_feed_client_guidance()}</p>
-      <Alert variant="warning" className="small py-2">
-        {m.calendar_feed_warning()}
-      </Alert>
-      {error ? (
-        <Alert variant="danger" className="small py-2">
-          {error}
-        </Alert>
-      ) : null}
-      {url ? (
-        <>
-          <Form.Control size="sm" readOnly value={url} aria-label={m.calendar_feed_url_label()} />
-          <div className="d-flex gap-2 mt-2">
-            <Button size="sm" onClick={() => void copy()}>
-              {m.calendar_feed_copy()}
-            </Button>
-            <Button size="sm" variant="outline-primary" onClick={openCalendarApp}>
-              {m.calendar_feed_open_app()}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-secondary"
-              disabled={busy}
-              onClick={() => setConfirmRegenerate(true)}
-            >
-              {m.calendar_feed_regenerate()}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-danger"
-              disabled={busy}
-              onClick={() => void revoke()}
-            >
-              {m.calendar_feed_revoke()}
-            </Button>
-          </div>
-        </>
-      ) : loading ? (
-        <div className="text-muted small">{m.loading()}</div>
-      ) : configured ? (
-        <div className="d-flex flex-column align-items-start gap-2">
-          <Alert variant="success" className="small py-2 mb-0">
-            <div>{m.calendar_feed_configured()}</div>
-            <div className="mt-1 fw-medium">
-              {lastFetchedAt
-                ? m.calendar_feed_last_fetched({
-                    date: new Intl.DateTimeFormat(getLocale(), {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }).format(new Date(lastFetchedAt)),
-                  })
-                : m.calendar_feed_never_fetched()}
+    <SettingsSection icon={CalendarIcon} title={m.calendar_feed_title()}>
+      <div className="tw:flex tw:flex-col tw:gap-2">
+        <SettingsHint>{m.calendar_feed_description()}</SettingsHint>
+        <SettingsHint>{m.calendar_feed_client_guidance()}</SettingsHint>
+        <Alert variant="warning">{m.calendar_feed_warning()}</Alert>
+        {error ? <Alert variant="destructive">{error}</Alert> : null}
+        {url ? (
+          <>
+            <Input readOnly value={url} aria-label={m.calendar_feed_url_label()} />
+            <div className="tw:flex tw:flex-wrap tw:gap-2">
+              <Button size="sm" onClick={() => void copy()}>
+                {m.calendar_feed_copy()}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={openCalendarApp}>
+                {m.calendar_feed_open_app()}
+              </Button>
+              {regenerateButton}
+              {revokeButton}
             </div>
-          </Alert>
-          <div className="d-flex gap-2">
-            <Button
-              size="sm"
-              variant="outline-secondary"
-              disabled={busy}
-              onClick={() => setConfirmRegenerate(true)}
-            >
-              {m.calendar_feed_regenerate()}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-danger"
-              disabled={busy}
-              onClick={() => void revoke()}
-            >
-              {m.calendar_feed_revoke()}
+          </>
+        ) : loading ? (
+          <SettingsLoading>{m.loading()}</SettingsLoading>
+        ) : configured ? (
+          <div className="tw:flex tw:flex-col tw:items-start tw:gap-2">
+            <Alert variant="success">
+              <div>{m.calendar_feed_configured()}</div>
+              <div className="tw:font-medium">
+                {lastFetchedAt
+                  ? m.calendar_feed_last_fetched({
+                      date: new Intl.DateTimeFormat(getLocale(), {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(new Date(lastFetchedAt)),
+                    })
+                  : m.calendar_feed_never_fetched()}
+              </div>
+            </Alert>
+            <div className="tw:flex tw:flex-wrap tw:gap-2">
+              {regenerateButton}
+              {revokeButton}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Button size="sm" disabled={busy} onClick={() => void rotate()}>
+              {busy ? m.calendar_feed_generating() : m.calendar_feed_generate()}
             </Button>
           </div>
-        </div>
-      ) : (
-        <Button size="sm" disabled={busy} onClick={() => void rotate()}>
-          {busy ? m.calendar_feed_generating() : m.calendar_feed_generate()}
-        </Button>
-      )}
+        )}
+      </div>
       <ConfirmationDialog
         isOpen={confirmRegenerate}
         title={m.calendar_feed_regenerate_confirm_title()}
@@ -200,6 +181,6 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
         variant="warning"
         icon={RefreshCwIcon}
       />
-    </div>
+    </SettingsSection>
   );
 }
