@@ -1,5 +1,5 @@
 /* Bootstrap owns reboot. Prefix prevents collisions with legacy utilities. */
-@layer theme, legacy, base, calendar, components, utilities;
+@layer theme, legacy, base, calendar, gantt, components, utilities;
 @import "tailwindcss/theme.css" layer(theme) prefix(tw);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
 @import "./event-palette.css";
@@ -19,6 +19,8 @@
     --wt-theme-info: var(--bs-info-text-emphasis);
     --wt-theme-foreground: var(--bs-body-color);
     --wt-theme-info-bg: var(--bs-info-bg-subtle);
+    --wt-theme-warning-bg: var(--bs-warning-bg-subtle);
+    --wt-theme-muted-foreground: var(--bs-secondary-color);
     --wt-theme-background: var(--bs-body-bg);
     --wt-theme-muted: var(--bs-tertiary-bg);
     --wt-theme-border: var(--bs-border-color);
@@ -31,7 +33,7 @@
   --color-label-foreground: var(--label-fg);
   --color-event: var(--event-bg);
   --color-event-foreground: var(--event-fg);
-  --color-wt-warning-bg: var(--bs-warning-bg-subtle);
+  --color-wt-warning-bg: var(--wt-theme-warning-bg);
   --color-wt-calendar-time-off-bg: var(--wt-calendar-time-off-bg);
   --color-wt-context-menu-bg: var(--wt-context-menu-bg);
   --color-wt-context-menu-border: var(--wt-context-menu-border);
@@ -131,7 +133,7 @@
   --color-secondary: var(--wt-theme-secondary);
   --color-secondary-foreground: var(--wt-theme-secondary-foreground);
   --color-muted: var(--wt-theme-muted);
-  --color-muted-foreground: var(--bs-secondary-color);
+  --color-muted-foreground: var(--wt-theme-muted-foreground);
   --color-accent: var(--wt-theme-accent);
   --color-accent-foreground: var(--wt-theme-accent-foreground);
   --color-destructive: var(--bs-danger);

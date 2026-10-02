@@ -5,7 +5,6 @@ import legacyClasses from "./legacy-classes.json" with { type: "json" };
 // DOM hooks used by tests/integrations; these intentionally have no CSS.
 const legacyHooks = [
   "time-tracking-view",
-  "gantt-view",
   "hover-highlight",
   "month-calendar-work-location",
   "schedule-tab-view",

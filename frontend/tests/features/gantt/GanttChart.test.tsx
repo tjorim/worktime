@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GanttChart } from "@/features/gantt/GanttChart";
@@ -62,6 +62,24 @@ describe("GanttChart", () => {
     MockFrappeGantt.reset();
   });
 
+  it("scopes the vendor styling to a token-based scroll container", () => {
+    render(
+      <GanttChart
+        tasks={[
+          { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 },
+        ]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    const container = screen.getByTestId("gantt-scroll-container");
+    expect(container).toHaveAttribute("data-slot", "gantt-scroll");
+    expect(container).toHaveClass("tw:overflow-x-auto", "tw:overflow-y-hidden", "tw:bg-background");
+    expect(container).not.toHaveClass("gantt-scroll-container", "border", "bg-body");
+  });
+
   it("passes time-off dates to frappe-gantt as a separate holiday color", async () => {
     render(
       <GanttChart
@@ -81,8 +99,8 @@ describe("GanttChart", () => {
     });
 
     expect(mockInstances[0]!.options.holidays).toEqual({
-      "var(--bs-secondary-bg)": "weekend",
-      "var(--bs-warning-bg-subtle)": ["2026-01-01"],
+      "var(--wt-theme-secondary)": "weekend",
+      "var(--wt-theme-warning-bg)": ["2026-01-01"],
       "var(--wt-gantt-time-off-bg)": ["2026-03-03"],
     });
   });

@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TableSearchInput } from "@/components/shared/TableSearchInput";
-import ProgressBar from "react-bootstrap/ProgressBar";
+import { Progress } from "@/components/ui/progress";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
@@ -285,7 +285,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
               {link.name}
             </Button>
           ) : (
-            <span key={link.id} className="text-muted me-1">
+            <span key={link.id} className="tw:mr-1 tw:text-muted-foreground">
               {link.name}
             </span>
           ),
@@ -328,7 +328,10 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
         <TableBody>
           {visibleRows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="text-center text-muted py-4">
+              <TableCell
+                colSpan={columns.length}
+                className="tw:py-4 tw:text-center tw:text-muted-foreground"
+              >
                 {isFiltering ? m.gantt_table_no_results() : m.gantt_table_empty()}
               </TableCell>
             </TableRow>
@@ -377,12 +380,19 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     )}
                   </TableCell>
                   <TableCell className="tw:min-w-32">
-                    <div className="d-flex align-items-center gap-2">
-                      <ProgressBar now={task.progress} className="border flex-grow-1" />
-                      <span className="small text-muted text-nowrap">{task.progress}%</span>
+                    <div className="tw:flex tw:items-center tw:gap-2">
+                      <Progress
+                        value={task.progress}
+                        aria-label={m.gantt_table_progress()}
+                        className="tw:flex-1"
+                        trackClassName="tw:h-2 tw:border tw:border-border"
+                      />
+                      <span className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground">
+                        {task.progress}%
+                      </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-nowrap">
+                  <TableCell className="tw:whitespace-nowrap">
                     {loggedMinutes > 0 ? formatLoggedDuration(loggedMinutes) : "—"}
                   </TableCell>
                   <TableCell>{renderTaskLinks(dependsOn)}</TableCell>

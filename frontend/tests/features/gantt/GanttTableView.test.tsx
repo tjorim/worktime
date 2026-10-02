@@ -98,6 +98,19 @@ describe("GanttTableView", () => {
     expect(screen.getByRole("table", { name: "Gantt tasks" })).toHaveTextContent("0%");
   });
 
+  it("exposes each task's progress as a named progress bar", () => {
+    render(
+      <GanttTableView
+        tasks={[{ ...tasks[1]!, id: "task-half", progress: 40 } satisfies GanttTask]}
+        onTaskClick={vi.fn()}
+        onDeleteTask={vi.fn()}
+      />,
+    );
+
+    const bar = screen.getByRole("progressbar", { name: "Progress" });
+    expect(bar).toHaveAttribute("aria-valuenow", "40");
+  });
+
   it("renders malformed dependency data safely", () => {
     const malformedTask = { ...tasks[0], dependencies: ["task-earlier"] } as unknown as GanttTask;
 

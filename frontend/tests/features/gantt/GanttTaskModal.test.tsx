@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -26,6 +26,57 @@ describe("GanttTaskModal", () => {
 
     expect(screen.getByText("Task name is required.")).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("links the required-name error to the invalid input and clears it once fixed", async () => {
+    const user = userEvent.setup();
+
+    render(<GanttTaskModal show onHide={vi.fn()} onSave={vi.fn()} existingTasks={[]} />);
+
+    const name = screen.getByLabelText("Name");
+    expect(name).not.toHaveAttribute("aria-invalid", "true");
+
+    await user.click(screen.getByRole("button", { name: "Add Task" }));
+
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("Task name is required.");
+    expect(name).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+
+    await user.type(name, "Ship it");
+
+    expect(name).toHaveAttribute("aria-invalid", "false");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("flags an end date before the start date", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(<GanttTaskModal show onHide={vi.fn()} onSave={onSave} existingTasks={[]} />);
+
+    await user.type(screen.getByLabelText("Name"), "Backwards");
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-03-10" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-03-01" } });
+    await user.click(screen.getByRole("button", { name: "Add Task" }));
+
+    expect(screen.getByLabelText("End date")).toHaveAttribute("aria-invalid", "true");
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("submits the progress chosen on the labelled slider", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(<GanttTaskModal show onHide={vi.fn()} onSave={onSave} existingTasks={[]} />);
+
+    await user.type(screen.getByLabelText("Name"), "Halfway");
+    const slider = screen.getByLabelText(/^Progress/);
+    expect(slider).toHaveAttribute("type", "range");
+    fireEvent.change(slider, { target: { value: "50" } });
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add Task" }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ progress: 50 }));
   });
 
   it("submits with selected dependencies", async () => {
