@@ -140,6 +140,16 @@ describe("palette wiring", () => {
       unknown,
     );
     expect(resolveEventPaletteVars("var(--wt-event-ill-full-bg)", "url(x)")).toEqual(unknown);
+    // An undeclared entry, a mismatched pair and swapped bg/fg roles all fall back too.
+    expect(
+      resolveEventPaletteVars("var(--wt-event-nope-full-bg)", "var(--wt-event-nope-full-fg)"),
+    ).toEqual(unknown);
+    expect(
+      resolveEventPaletteVars("var(--wt-event-ill-full-bg)", "var(--wt-event-other-full-fg)"),
+    ).toEqual(unknown);
+    expect(
+      resolveEventPaletteVars("var(--wt-event-ill-full-fg)", "var(--wt-event-ill-full-bg)"),
+    ).toEqual(unknown);
   });
 
   it("returns a color and a text color from the same palette entry", () => {
