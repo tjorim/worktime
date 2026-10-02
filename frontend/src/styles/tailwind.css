@@ -29,6 +29,8 @@
   --color-*: initial;
   --color-label: var(--label-bg);
   --color-label-foreground: var(--label-fg);
+  --color-event: var(--event-bg);
+  --color-event-foreground: var(--event-fg);
   --color-wt-warning-bg: var(--bs-warning-bg-subtle);
   --color-wt-calendar-time-off-bg: var(--wt-calendar-time-off-bg);
   --color-wt-context-menu-bg: var(--wt-context-menu-bg);

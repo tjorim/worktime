@@ -1,4 +1,4 @@
-/* Event palette classes shared with time-off and other unmigrated views. */
+/* Event palette classes still used by the calendar day cells and legend. */
 @each $type in (holiday, business, course, in, weekend, recurring, birthday, ill, other) {
   @each $variant in (full, half) {
     .event-#{$type}-#{$variant} {

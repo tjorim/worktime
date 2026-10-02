@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { compile } from "tailwindcss";
 import postcss from "postcss";
-import { getEventColorUtilities } from "@/lib/hday/presentation";
+import { getEventColorUtilities, resolveEventPaletteVars } from "@/lib/hday/presentation";
 import * as sass from "sass";
 import { describe, expect, it } from "vitest";
 import { getEventColor, getEventColorClass, getEventTextColor, type EventFlag } from "@/lib/hday";
@@ -119,6 +119,37 @@ describe("palette wiring", () => {
       expect(declaredVariables, label).toContain(variableName(getEventColor(flags, eventType)));
       expect(declaredVariables, label).toContain(variableName(getEventTextColor(flags, eventType)));
     }
+  });
+
+  it("passes the palette's own references through and refuses any other CSS value", () => {
+    for (const { flags, eventType } of combos) {
+      const color = getEventColor(flags, eventType);
+      const textColor = getEventTextColor(flags, eventType);
+      expect(resolveEventPaletteVars(color, textColor)).toEqual({
+        background: color,
+        foreground: textColor,
+      });
+    }
+
+    const unknown = {
+      background: "var(--wt-event-unknown-bg)",
+      foreground: "var(--wt-event-unknown-fg)",
+    };
+    expect(resolveEventPaletteVars("#fca5a5", "#7f1d1d")).toEqual(unknown);
+    expect(resolveEventPaletteVars("red; position: fixed", "var(--wt-event-ill-full-fg)")).toEqual(
+      unknown,
+    );
+    expect(resolveEventPaletteVars("var(--wt-event-ill-full-bg)", "url(x)")).toEqual(unknown);
+    // An undeclared entry, a mismatched pair and swapped bg/fg roles all fall back too.
+    expect(
+      resolveEventPaletteVars("var(--wt-event-nope-full-bg)", "var(--wt-event-nope-full-fg)"),
+    ).toEqual(unknown);
+    expect(
+      resolveEventPaletteVars("var(--wt-event-ill-full-bg)", "var(--wt-event-other-full-fg)"),
+    ).toEqual(unknown);
+    expect(
+      resolveEventPaletteVars("var(--wt-event-ill-full-fg)", "var(--wt-event-ill-full-bg)"),
+    ).toEqual(unknown);
   });
 
   it("returns a color and a text color from the same palette entry", () => {

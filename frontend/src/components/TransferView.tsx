@@ -17,15 +17,17 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
-import Row from "react-bootstrap/Row";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Grid, GridItem } from "@/components/ui/grid";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Separator } from "@/components/ui/separator";
 import {
   Accordion,
   AccordionItem,
@@ -36,6 +38,7 @@ import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
+import { resolveEventPaletteVars } from "@/lib/hday/presentation";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
 import {
   dayjs,
@@ -80,17 +83,18 @@ function findTimeOffOnDate(events: CalendarEvent[], date: Dayjs): CalendarEvent 
 function TimeOffIndicator({ event }: { event: CalendarEvent | undefined }) {
   if (!event || event.type !== "holiday") return null;
   const { color, textColor, typeLabel } = event.meta;
+  const { background, foreground } = resolveEventPaletteVars(color, textColor);
   const label = m.transfer_you_on_leave({ label: typeLabel });
 
   return (
-    <span
-      className="badge rounded-pill d-inline-flex align-items-center gap-1"
-      style={{ backgroundColor: color, color: textColor }}
+    <Badge
+      className="tw:bg-event tw:text-event-foreground"
+      style={{ "--event-bg": background, "--event-fg": foreground } as CSSProperties}
       title={label}
     >
       <Icon icon={PlaneIcon} />
-      <span className="visually-hidden">{label}</span>
-    </span>
+      <span className="tw:sr-only">{label}</span>
+    </Badge>
   );
 }
 
@@ -131,6 +135,12 @@ function formatOverlapDuration(overlap: ShiftWindow): string {
     : m.transfer_overlap_duration_h({ hours: String(hours) });
 }
 
+/** Muted caption above a column; only shown from the desktop breakpoint, where the grid has columns. */
+const COLUMN_HEADING = "tw:mb-1 tw:hidden tw:text-muted-foreground tw:uppercase tw:md:block";
+
+const LOAD_MORE_ROW =
+  "tw:mt-3 tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:sm:flex-row tw:sm:items-center";
+
 interface TransferItemsListProps {
   transfers: TransferInfo[];
   scheduleType: ScheduleOption;
@@ -145,59 +155,48 @@ function TransferItemsList({
   timeOffEvents,
 }: TransferItemsListProps) {
   return (
-    <ListGroup variant="flush">
+    <ul className="tw:m-0 tw:list-none tw:divide-y tw:divide-border tw:p-0">
       {transfers.map((transfer, index) => {
         const fromShift = getShift(transfer.fromShiftType, scheduleType);
         const toShift = getShift(transfer.toShiftType, scheduleType);
-        const isLast = index === transfers.length - 1;
 
         return (
-          <ListGroup.Item
+          <li
             key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}-${transfer.fromShiftType}-${transfer.toShiftType}-${transfer.type}-${index}`}
-            className={`px-0 py-2 border-0 border-bottom${isLast ? " border-bottom-0" : ""}`}
+            className="tw:py-2"
           >
-            <Row className="g-2 align-items-center">
-              <Col xs={4} md={3}>
-                <div className="fw-semibold d-flex align-items-center gap-2">
+            <Grid className="tw:items-center tw:gap-2">
+              <GridItem span={4} desktopSpan={3}>
+                <div className="tw:flex tw:items-center tw:gap-2 tw:font-semibold">
                   <Icon
                     icon={transfer.type === "handover" ? CircleArrowRightIcon : CircleArrowLeftIcon}
-                    className={`${transfer.type === "handover" ? "text-success" : "text-info"}`}
+                    className={transfer.type === "handover" ? "tw:text-success" : "tw:text-info"}
                   />
                   {formatYYWWD(transfer.date)}
                 </div>
-                <small className="text-muted d-flex align-items-center gap-1">
+                <small className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground">
                   {formatDisplayDate(transfer.date.toDate())}
                   <TimeOffIndicator event={findTimeOffOnDate(timeOffEvents, transfer.date)} />
                 </small>
-              </Col>
-              <Col xs={8} md={4}>
-                <small className="text-muted text-uppercase mb-1 d-none d-md-block">
-                  {m.transfer_teams_column()}
-                </small>
-                <div className="d-flex align-items-center gap-1 flex-nowrap">
-                  <Badge
-                    bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
-                    className="text-nowrap"
-                    pill
-                  >
+              </GridItem>
+              <GridItem span={8} desktopSpan={4}>
+                <small className={COLUMN_HEADING}>{m.transfer_teams_column()}</small>
+                <div className="tw:flex tw:flex-nowrap tw:items-center tw:gap-1">
+                  <Badge variant={transfer.fromTeam === myTeam ? "default" : "secondary"}>
                     {transfer.fromTeam === myTeam ? (
                       <>
-                        <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
+                        <span className="tw:hidden tw:md:inline">{m.transfer_your_prefix()}</span>
                         {m.team_label({ team: String(transfer.fromTeam) })}
                       </>
                     ) : (
                       m.team_label({ team: String(transfer.fromTeam) })
                     )}
                   </Badge>
-                  <Icon icon={ArrowRightIcon} className="text-muted" />
-                  <Badge
-                    bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
-                    className="text-nowrap"
-                    pill
-                  >
+                  <Icon icon={ArrowRightIcon} className="tw:text-muted-foreground" />
+                  <Badge variant={transfer.toTeam === myTeam ? "default" : "secondary"}>
                     {transfer.toTeam === myTeam ? (
                       <>
-                        <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
+                        <span className="tw:hidden tw:md:inline">{m.transfer_your_prefix()}</span>
                         {m.team_label({ team: String(transfer.toTeam) })}
                       </>
                     ) : (
@@ -205,23 +204,19 @@ function TransferItemsList({
                     )}
                   </Badge>
                 </div>
-              </Col>
-              <Col xs={4} md={2}>
-                <div className="d-flex flex-column align-items-start align-items-md-center">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">
-                    {m.transfer_type_column()}
-                  </small>
-                  <Badge bg={transfer.type === "handover" ? "success" : "info"} pill>
+              </GridItem>
+              <GridItem span={4} desktopSpan={2}>
+                <div className="tw:flex tw:flex-col tw:items-start tw:md:items-center">
+                  <small className={COLUMN_HEADING}>{m.transfer_type_column()}</small>
+                  <Badge variant={transfer.type === "handover" ? "success" : "info"}>
                     {transfer.type === "handover" ? m.transfer_handover() : m.transfer_takeover()}
                   </Badge>
                 </div>
-              </Col>
-              <Col xs={8} md={3}>
-                <div className="d-flex flex-column align-items-start align-items-md-end">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">
-                    {m.transfer_shift_column()}
-                  </small>
-                  <div className="d-flex align-items-center gap-2 flex-nowrap justify-content-md-end">
+              </GridItem>
+              <GridItem span={8} desktopSpan={3}>
+                <div className="tw:flex tw:flex-col tw:items-start tw:md:items-end">
+                  <small className={COLUMN_HEADING}>{m.transfer_shift_column()}</small>
+                  <div className="tw:flex tw:flex-nowrap tw:items-center tw:gap-2 tw:md:justify-end">
                     <ShiftBadge
                       shift={fromShift}
                       showEmoji
@@ -230,7 +225,7 @@ function TransferItemsList({
                       size="sm"
                       showTooltip={false}
                     />
-                    <Icon icon={ArrowRightIcon} className="text-muted" />
+                    <Icon icon={ArrowRightIcon} className="tw:text-muted-foreground" />
                     <ShiftBadge
                       shift={toShift}
                       showEmoji
@@ -241,12 +236,12 @@ function TransferItemsList({
                     />
                   </div>
                 </div>
-              </Col>
-            </Row>
-          </ListGroup.Item>
+              </GridItem>
+            </Grid>
+          </li>
         );
       })}
-    </ListGroup>
+    </ul>
   );
 }
 
@@ -266,62 +261,50 @@ function OverlapItemsList({
   timeOffEvents,
 }: OverlapItemsListProps) {
   return (
-    <ListGroup variant="flush">
-      {overlaps.map((overlap, index) => {
-        const isLast = index === overlaps.length - 1;
-
-        return (
-          <ListGroup.Item
-            key={`${overlap.start.toISOString()}-${overlap.end.toISOString()}-${index}`}
-            className={`px-0 py-2 border-0 border-bottom${isLast ? " border-bottom-0" : ""}`}
-          >
-            <Row className="g-2 align-items-center">
-              <Col xs={5} md={3}>
-                <div className="fw-semibold d-flex align-items-center gap-2">
-                  <Icon icon={UsersIcon} className="text-primary" />
-                  {formatYYWWD(overlap.start)}
+    <ul className="tw:m-0 tw:list-none tw:divide-y tw:divide-border tw:p-0">
+      {overlaps.map((overlap, index) => (
+        <li
+          key={`${overlap.start.toISOString()}-${overlap.end.toISOString()}-${index}`}
+          className="tw:py-2"
+        >
+          <Grid className="tw:items-center tw:gap-2">
+            <GridItem span={5} desktopSpan={3}>
+              <div className="tw:flex tw:items-center tw:gap-2 tw:font-semibold">
+                <Icon icon={UsersIcon} className="tw:text-primary" />
+                {formatYYWWD(overlap.start)}
+              </div>
+              <small className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground">
+                {formatDisplayDate(overlap.start.toDate())}
+                <TimeOffIndicator event={findTimeOffOnDate(timeOffEvents, overlap.start)} />
+              </small>
+            </GridItem>
+            <GridItem span={7} desktopSpan={4}>
+              <small className={COLUMN_HEADING}>{m.transfer_teams_column()}</small>
+              <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-1">
+                <Badge>
+                  <span className="tw:hidden tw:md:inline">{m.transfer_your_prefix()}</span>
+                  {myLabel}
+                </Badge>
+                <Icon icon={ArrowLeftRightIcon} className="tw:text-muted-foreground" />
+                <Badge variant="secondary">{otherLabel}</Badge>
+              </div>
+            </GridItem>
+            <GridItem span={12} desktopSpan={5}>
+              <div className="tw:flex tw:flex-col tw:items-start tw:md:items-end">
+                <small className={COLUMN_HEADING}>{m.transfer_shift_column()}</small>
+                <div className="tw:flex tw:flex-nowrap tw:items-center tw:gap-2">
+                  <span className="tw:font-semibold">
+                    {formatTimeByPreference(overlap.start, timeFormat)}–
+                    {formatTimeByPreference(overlap.end, timeFormat)}
+                  </span>
+                  <Badge variant="outline">{formatOverlapDuration(overlap)}</Badge>
                 </div>
-                <small className="text-muted d-flex align-items-center gap-1">
-                  {formatDisplayDate(overlap.start.toDate())}
-                  <TimeOffIndicator event={findTimeOffOnDate(timeOffEvents, overlap.start)} />
-                </small>
-              </Col>
-              <Col xs={7} md={4}>
-                <small className="text-muted text-uppercase mb-1 d-none d-md-block">
-                  {m.transfer_teams_column()}
-                </small>
-                <div className="d-flex align-items-center gap-1 flex-wrap">
-                  <Badge bg="primary" className="text-nowrap" pill>
-                    <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
-                    {myLabel}
-                  </Badge>
-                  <Icon icon={ArrowLeftRightIcon} className="text-muted" />
-                  <Badge bg="secondary" className="text-nowrap" pill>
-                    {otherLabel}
-                  </Badge>
-                </div>
-              </Col>
-              <Col xs={12} md={5}>
-                <div className="d-flex flex-column align-items-start align-items-md-end">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">
-                    {m.transfer_shift_column()}
-                  </small>
-                  <div className="d-flex align-items-center gap-2 flex-nowrap">
-                    <span className="fw-semibold">
-                      {formatTimeByPreference(overlap.start, timeFormat)}–
-                      {formatTimeByPreference(overlap.end, timeFormat)}
-                    </span>
-                    <Badge bg="light" text="dark" pill>
-                      {formatOverlapDuration(overlap)}
-                    </Badge>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          </ListGroup.Item>
-        );
-      })}
-    </ListGroup>
+              </div>
+            </GridItem>
+          </Grid>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -576,14 +559,14 @@ export function TransferView({
   }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
 
   const comparisonScheduleSelector = onOtherScheduleTypeChange && (
-    <>
-      <Form.Label htmlFor={compareScheduleSelectId} className="fw-semibold">
-        <Icon icon={ClipboardListIcon} className="me-1" />
+    <Field className="tw:mb-3">
+      <FieldLabel htmlFor={compareScheduleSelectId} className="tw:font-semibold">
+        <Icon icon={ClipboardListIcon} className="tw:mr-1" />
         {m.schedule_compare_label()}
-      </Form.Label>
-      <Form.Select
+      </FieldLabel>
+      <NativeSelect
         id={compareScheduleSelectId}
-        className="mb-3"
+        className="tw:w-full"
         value={otherScheduleType || ""}
         onChange={(e) => {
           const value = e.target.value;
@@ -599,8 +582,8 @@ export function TransferView({
             {schedule.value === scheduleType ? ` ${m.schedule_your_schedule_suffix()}` : ""}
           </option>
         ))}
-      </Form.Select>
-    </>
+      </NativeSelect>
+    </Field>
   );
 
   const groupedTransfers = useMemo(
@@ -633,29 +616,34 @@ export function TransferView({
 
   return (
     <Card>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <span className="fw-semibold">
-          <Icon icon={ArrowLeftRightIcon} className="me-2" />
+      <CardHeader className="tw:flex tw:items-center tw:justify-between tw:border-b tw:border-border">
+        <span className="tw:font-semibold">
+          <Icon icon={ArrowLeftRightIcon} className="tw:mr-2" />
           {m.transfer_team_transfers()}
         </span>
         {myTeam && myScheduleTeamCount > 1 && (
-          <Badge bg="primary" pill>
-            <Icon icon={UserCheckIcon} className="me-1" />
+          <Badge>
+            <Icon icon={UserCheckIcon} />
             {m.transfer_your_team({ team: String(myTeam) })}
           </Badge>
         )}
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {!scheduleType ? (
-          <div className="text-center py-4">
-            <Icon icon={CalendarPlusIcon} className="text-muted mb-3 icon-lg" />
-            <p className="text-muted mb-3">{m.transfer_select_schedule_prompt()}</p>
+          <div className="tw:py-4 tw:text-center">
+            <Icon
+              icon={CalendarPlusIcon}
+              className="tw:mb-3 tw:text-3xl tw:text-muted-foreground"
+            />
+            <p className="tw:mb-3 tw:text-muted-foreground">
+              {m.transfer_select_schedule_prompt()}
+            </p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </div>
         ) : !myTeam ? (
-          <div className="text-center py-4">
-            <Icon icon={UserPlusIcon} className="text-muted mb-3 icon-lg" />
-            <p className="text-muted mb-3">{m.transfer_select_team_prompt()}</p>
+          <div className="tw:py-4 tw:text-center">
+            <Icon icon={UserPlusIcon} className="tw:mb-3 tw:text-3xl tw:text-muted-foreground" />
+            <p className="tw:mb-3 tw:text-muted-foreground">{m.transfer_select_team_prompt()}</p>
             <SetupActionButton
               onChangeSchedule={onChangeSchedule}
               onChangeTeam={onChangeTeam}
@@ -665,9 +653,11 @@ export function TransferView({
         ) : availableOtherTeams.length === 0 ? (
           <>
             {comparisonScheduleSelector && (
-              <Row className="mb-3">
-                <Col md={4}>{comparisonScheduleSelector}</Col>
-              </Row>
+              <Grid className="tw:mb-3">
+                <GridItem span={12} desktopSpan={4}>
+                  {comparisonScheduleSelector}
+                </GridItem>
+              </Grid>
             )}
             <EmptyState
               icon={UsersIcon}
@@ -678,8 +668,8 @@ export function TransferView({
         ) : (
           <>
             {/* Controls */}
-            <Row className="mb-3 gy-3">
-              <Col md={4}>
+            <Grid className="tw:mb-3">
+              <GridItem span={12} desktopSpan={4}>
                 {comparisonScheduleSelector}
 
                 {otherScheduleTeamCount > 1 && effectiveOtherScheduleType && (
@@ -692,7 +682,7 @@ export function TransferView({
                     ariaLabel={m.transfer_select_team_aria()}
                     label={
                       <>
-                        <Icon icon={UsersIcon} className="me-1" />
+                        <Icon icon={UsersIcon} className="tw:mr-1" />
                         {sameSchedule
                           ? m.transfer_view_with_team_label()
                           : m.transfer_view_overlaps_with_team_label()}
@@ -702,119 +692,122 @@ export function TransferView({
                 )}
 
                 {showTransfers && transferStats && (
-                  <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-                    <span className="text-muted small text-uppercase">
+                  <div className="tw:mt-3 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                    <span className="tw:text-sm tw:text-muted-foreground tw:uppercase">
                       {m.transfer_flow_label()}
                     </span>
-                    <Badge bg="success" pill className="d-inline-flex align-items-center gap-1">
+                    <Badge variant="success">
                       <Icon icon={CircleArrowRightIcon} />
                       {m.transfer_handovers_count({ count: String(transferStats.handovers) })}
                     </Badge>
-                    <Badge bg="info" pill className="d-inline-flex align-items-center gap-1">
+                    <Badge variant="info">
                       <Icon icon={CircleArrowLeftIcon} />
                       {m.transfer_takeovers_count({ count: String(transferStats.takeovers) })}
                     </Badge>
                   </div>
                 )}
                 {(showOverlapsList || showOverlapsEmptyState) && (
-                  <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-                    <span className="text-muted small text-uppercase">
+                  <div className="tw:mt-3 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                    <span className="tw:text-sm tw:text-muted-foreground tw:uppercase">
                       {m.transfer_overlaps_section_title()}
                     </span>
-                    <Badge bg="primary" pill className="d-inline-flex align-items-center gap-1">
+                    <Badge>
                       <Icon icon={UsersIcon} />
                       {overlaps.length}
                     </Badge>
                   </div>
                 )}
-              </Col>
-              <Col md={8}>
-                <Card className="h-100">
-                  <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">
+              </GridItem>
+              <GridItem span={12} desktopSpan={8}>
+                <Card className="tw:h-full">
+                  <CardContent>
+                    <div className="tw:mb-1 tw:text-sm tw:text-muted-foreground tw:uppercase">
                       {m.transfer_displayed_date_range()}
                     </div>
-                    <div className="fw-semibold">{displayedDateRangeValue}</div>
-                    <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                    <div className="tw:font-semibold">{displayedDateRangeValue}</div>
+                    <div className="tw:text-xs tw:text-muted-foreground">
                       {m.transfer_displayed_range_help()}
                     </div>
                     {useCustomRange ? (
-                      <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                      <div className="tw:text-xs tw:text-muted-foreground">
                         {m.transfer_selected_filter_range()}
                       </div>
                     ) : hasMoreTransfers ? (
-                      <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                      <div className="tw:text-xs tw:text-muted-foreground">
                         {m.transfer_visible_only()}
                       </div>
                     ) : null}
-                    <hr className="my-3" />
-                    <Form.Check
-                      type="checkbox"
-                      id={showPastCheckboxId}
-                      label={m.transfer_filter_label()}
-                      checked={useCustomRange}
-                      onChange={(e) => setUseCustomRange(e.target.checked)}
-                    />
+                    <Separator className="tw:my-3" />
+                    <Field orientation="horizontal">
+                      <Checkbox
+                        id={showPastCheckboxId}
+                        checked={useCustomRange}
+                        onCheckedChange={setUseCustomRange}
+                      />
+                      <FieldLabel htmlFor={showPastCheckboxId} className="tw:font-normal">
+                        {m.transfer_filter_label()}
+                      </FieldLabel>
+                    </Field>
                     {useCustomRange && (
-                      <>
-                        <Row className="g-2 mt-1">
-                          <Col md={5}>
-                            <Form.Label htmlFor={startDateId} className="fw-semibold">
-                              <Icon icon={CalendarRangeIcon} className="me-1" />
+                      <Grid className="tw:mt-1 tw:gap-2">
+                        <GridItem span={12} desktopSpan={5}>
+                          <Field data-invalid={isDateRangeInvalid}>
+                            <FieldLabel htmlFor={startDateId} className="tw:font-semibold">
+                              <Icon icon={CalendarRangeIcon} className="tw:mr-1" />
                               {m.transfer_start_date_label()}
-                            </Form.Label>
-                            <Form.Control
+                            </FieldLabel>
+                            <Input
                               type="date"
                               id={startDateId}
                               value={customStartDate}
                               onChange={(e) => setCustomStartDate(e.target.value)}
-                              isInvalid={isDateRangeInvalid}
+                              aria-invalid={isDateRangeInvalid}
                             />
-                            <Form.Control.Feedback type="invalid">
-                              {m.transfer_start_date_invalid()}
-                            </Form.Control.Feedback>
-                          </Col>
-                          <Col md={5}>
-                            <Form.Label htmlFor={endDateId} className="fw-semibold">
+                            {isDateRangeInvalid && (
+                              <FieldError>{m.transfer_start_date_invalid()}</FieldError>
+                            )}
+                          </Field>
+                        </GridItem>
+                        <GridItem span={12} desktopSpan={5}>
+                          <Field data-invalid={isDateRangeInvalid}>
+                            <FieldLabel htmlFor={endDateId} className="tw:font-semibold">
                               {m.transfer_end_date_label()}
-                            </Form.Label>
-                            <Form.Control
+                            </FieldLabel>
+                            <Input
                               type="date"
                               id={endDateId}
                               value={customEndDate}
                               onChange={(e) => setCustomEndDate(e.target.value)}
-                              isInvalid={isDateRangeInvalid}
+                              aria-invalid={isDateRangeInvalid}
                             />
-                            <Form.Control.Feedback type="invalid">
-                              {m.transfer_end_date_invalid()}
-                            </Form.Control.Feedback>
-                          </Col>
-                          <Col md={2} className="d-flex align-items-end">
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              className="w-100"
-                              style={{ minHeight: "38px" }}
-                              onClick={() => {
-                                setCustomStartDate("");
-                                setCustomEndDate("");
-                              }}
-                              disabled={!customStartDate && !customEndDate}
-                            >
-                              <Icon icon={CircleXIcon} className="me-1" />
-                              {m.timeoff_clear_selection_btn()}
-                            </Button>
-                          </Col>
-                        </Row>
-                      </>
+                            {isDateRangeInvalid && (
+                              <FieldError>{m.transfer_end_date_invalid()}</FieldError>
+                            )}
+                          </Field>
+                        </GridItem>
+                        <GridItem span={12} desktopSpan={2} className="tw:flex tw:items-end">
+                          <Button
+                            variant="destructive"
+                            className="tw:w-full"
+                            onClick={() => {
+                              setCustomStartDate("");
+                              setCustomEndDate("");
+                            }}
+                            disabled={!customStartDate && !customEndDate}
+                          >
+                            <Icon icon={CircleXIcon} className="tw:mr-1" />
+                            {m.timeoff_clear_selection_btn()}
+                          </Button>
+                        </GridItem>
+                      </Grid>
                     )}
-                  </Card.Body>
+                  </CardContent>
                 </Card>
-              </Col>
-            </Row>
+              </GridItem>
+            </Grid>
 
             {!sameSchedule && otherScheduleTitle && (
-              <Alert variant="secondary" className="d-flex align-items-center gap-2 py-2 mb-3">
+              <Alert className="tw:mb-3 tw:flex tw:items-center tw:gap-2">
                 <Icon icon={InfoIcon} />
                 {m.transfer_comparing_schedule_note({ scheduleTitle: otherScheduleTitle })}
               </Alert>
@@ -822,9 +815,7 @@ export function TransferView({
 
             {/* Results */}
             {isDateRangeInvalid ? (
-              <Alert variant="warning" className="mb-0">
-                {m.transfer_date_range_invalid()}
-              </Alert>
+              <Alert variant="warning">{m.transfer_date_range_invalid()}</Alert>
             ) : (
               <>
                 {showTransfers && myTeam && (
@@ -856,7 +847,7 @@ export function TransferView({
                               <AccordionItem value={group.key} key={group.key}>
                                 <AccordionTrigger>
                                   {group.title}
-                                  <Badge bg="secondary" pill className="ms-2">
+                                  <Badge variant="secondary" className="tw:ml-2">
                                     {group.items.length}
                                   </Badge>
                                 </AccordionTrigger>
@@ -873,8 +864,8 @@ export function TransferView({
                           </Accordion>
                         </ErrorBoundary>
 
-                        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
-                          <small className="text-muted">
+                        <div className={LOAD_MORE_ROW}>
+                          <small className="tw:text-muted-foreground">
                             {transferCountCategory === "one"
                               ? m.transfer_showing_count_one({ count: String(transfers.length) })
                               : m.transfer_showing_count_other({ count: String(transfers.length) })}
@@ -882,11 +873,11 @@ export function TransferView({
                           </small>
                           {hasMoreTransfers && (
                             <Button
-                              variant="outline-primary"
+                              variant="outline"
                               size="sm"
                               onClick={() => setTransfersToShow((prev) => prev + 10)}
                             >
-                              <Icon icon={CirclePlusIcon} className="me-1" />
+                              <Icon icon={CirclePlusIcon} className="tw:mr-1" />
                               {m.transfer_load_more()}
                             </Button>
                           )}
@@ -897,7 +888,7 @@ export function TransferView({
                 )}
 
                 {showOverlapsEmptyState && (
-                  <div className={showTransfers ? "mt-4" : undefined}>
+                  <div className={showTransfers ? "tw:mt-4" : undefined}>
                     <EmptyState
                       icon={CalendarXIcon}
                       title={m.transfer_no_overlaps_title()}
@@ -907,8 +898,10 @@ export function TransferView({
                 )}
 
                 {showOverlapsList && (
-                  <div className={showTransfers ? "mt-4" : undefined}>
-                    <p className="text-muted small">{m.transfer_overlaps_help()}</p>
+                  <div className={showTransfers ? "tw:mt-4" : undefined}>
+                    <p className="tw:text-sm tw:text-muted-foreground">
+                      {m.transfer_overlaps_help()}
+                    </p>
                     <ErrorBoundary>
                       <Accordion
                         defaultValue={nonEmptyGroupedOverlaps.map((group) => group.key)}
@@ -918,7 +911,7 @@ export function TransferView({
                           <AccordionItem value={group.key} key={group.key}>
                             <AccordionTrigger>
                               {group.title}
-                              <Badge bg="secondary" pill className="ms-2">
+                              <Badge variant="secondary" className="tw:ml-2">
                                 {group.items.length}
                               </Badge>
                             </AccordionTrigger>
@@ -936,8 +929,8 @@ export function TransferView({
                       </Accordion>
                     </ErrorBoundary>
 
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
-                      <small className="text-muted">
+                    <div className={LOAD_MORE_ROW}>
+                      <small className="tw:text-muted-foreground">
                         {overlapCountCategory === "one"
                           ? m.transfer_showing_overlap_count_one({ count: String(overlaps.length) })
                           : m.transfer_showing_overlap_count_other({
@@ -947,11 +940,11 @@ export function TransferView({
                       </small>
                       {hasMoreOverlaps && (
                         <Button
-                          variant="outline-primary"
+                          variant="outline"
                           size="sm"
                           onClick={() => setTransfersToShow((prev) => prev + 10)}
                         >
-                          <Icon icon={CirclePlusIcon} className="me-1" />
+                          <Icon icon={CirclePlusIcon} className="tw:mr-1" />
                           {m.transfer_load_more_overlaps()}
                         </Button>
                       )}
@@ -962,7 +955,7 @@ export function TransferView({
             )}
           </>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

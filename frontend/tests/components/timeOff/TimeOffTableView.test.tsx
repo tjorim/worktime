@@ -132,6 +132,30 @@ describe("TimeOffTableView", () => {
     expect(onSetSelection).toHaveBeenCalledWith(["date"], true);
   });
 
+  it("shows the header checkbox as mixed while only some visible rows are selected", () => {
+    renderTable({ selectedIds: new Set(["date"]) });
+    expect(screen.getByRole("checkbox", { name: /select all/i })).toHaveAttribute(
+      "aria-checked",
+      "mixed",
+    );
+    expect(screen.getByRole("checkbox", { name: /select conference/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /select ski trip/i })).not.toBeChecked();
+  });
+
+  it("checks the header checkbox once every visible row is selected", () => {
+    renderTable({ selectedIds: new Set(entries.map((entry) => entry.id)) });
+    expect(screen.getByRole("checkbox", { name: /select all/i })).toBeChecked();
+  });
+
+  it("colours each type badge from its own palette entry", () => {
+    renderTable();
+    const classes = (label: string) =>
+      screen.getByText(label, { selector: "[data-event-type-badge]" }).className;
+    expect(classes("Holiday")).toContain("tw:bg-wt-event-holiday-full-bg");
+    expect(classes("Business trip")).toContain("tw:bg-wt-event-business-full-bg");
+    expect(classes("In office")).toContain("tw:bg-wt-event-in-full-bg");
+  });
+
   describe("pagination", () => {
     it("shows 20 rows per page and pages through the rest", async () => {
       renderTable({ entries: manyEntries, eventCount: manyEntries.length });
@@ -201,7 +225,7 @@ describe("TimeOffTableView", () => {
       renderTable();
 
       // "range" is a vacation, "date" is business, "weekly" is "in office" in the fixture data.
-      const badges = Array.from(document.querySelectorAll(".event-type-badge")).map((el) =>
+      const badges = Array.from(document.querySelectorAll("[data-event-type-badge]")).map((el) =>
         el.textContent?.trim(),
       );
       expect(badges.join(" ")).toContain("Vakantie");
@@ -213,7 +237,7 @@ describe("TimeOffTableView", () => {
       await setLocale("en", { reload: false });
       renderTable();
 
-      const badges = Array.from(document.querySelectorAll(".event-type-badge")).map((el) =>
+      const badges = Array.from(document.querySelectorAll("[data-event-type-badge]")).map((el) =>
         el.textContent?.trim(),
       );
       expect(badges.join(" ")).toContain("Holiday");

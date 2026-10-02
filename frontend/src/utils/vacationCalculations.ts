@@ -56,17 +56,6 @@ export const EVENT_TYPE_ICONS: Record<EventTypeKey, LucideIcon> = {
   other: EllipsisIcon,
 };
 
-export const EVENT_TYPE_COLORS: Record<EventTypeKey, string> = {
-  holiday: "primary",
-  business: "info",
-  course: "success",
-  in: "secondary",
-  weekend: "secondary",
-  birthday: "warning",
-  ill: "danger",
-  other: "secondary",
-};
-
 export interface VacationTypeTotals {
   key: EventTypeKey;
   label: string;

@@ -303,10 +303,10 @@ describe("TimeOffView Integration Tests", () => {
       await user.type(titleInput, "Conference");
 
       // Select business trip type
-      await user.click(screen.getByLabelText(/Business trip/i));
+      await user.click(screen.getByRole("radio", { name: /Business trip/i }));
 
       // Select onsite flag
-      await user.click(screen.getByLabelText(/Onsite/i));
+      await user.click(screen.getByRole("radio", { name: /Onsite/i }));
 
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 

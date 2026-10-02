@@ -13,8 +13,10 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 import * as m from "@/paraglide/messages.js";
 
 type TimeOffRawViewProps = {
@@ -51,53 +53,51 @@ export function TimeOffRawView({
     <Accordion>
       <AccordionItem value="raw-editor">
         <AccordionTrigger>
-          <Icon icon={SquareCodeIcon} className="me-2" />
+          <Icon icon={SquareCodeIcon} className="tw:mr-2" />
           {m.timeoff_raw_editor_heading()}
           {isDirty && (
-            <span className="badge bg-warning text-dark ms-2" title={m.timeoff_unsaved_changes()}>
+            <Badge variant="warning" className="tw:ml-2" title={m.timeoff_unsaved_changes()}>
               •
-            </span>
+            </Badge>
           )}
         </AccordionTrigger>
         <AccordionContent>
-          <p className="text-muted">{m.timeoff_raw_help()}</p>
-          <Form.Group controlId="hdayText" className="mb-3">
-            <Form.Label className="visually-hidden">{m.timeoff_raw_content_label()}</Form.Label>
-            <Form.Control
-              as="textarea"
+          <FieldDescription className="tw:mb-3">{m.timeoff_raw_help()}</FieldDescription>
+          <Field className="tw:mb-3" data-invalid={!!error}>
+            <FieldLabel htmlFor="hdayText" className="tw:sr-only">
+              {m.timeoff_raw_content_label()}
+            </FieldLabel>
+            <Textarea
+              id="hdayText"
               rows={20}
               value={rawText}
               onChange={(event) => onChangeRawText(event.target.value)}
               placeholder={m.timeoff_raw_placeholder()}
-              className="textarea-mono"
+              className="tw:field-sizing-fixed tw:font-mono"
               aria-describedby={
                 [error ? errorId : null, skippedLines?.length ? skippedId : null]
                   .filter(Boolean)
                   .join(" ") || undefined
               }
-              isInvalid={!!error}
+              aria-invalid={!!error}
             />
-            {error && (
-              <Form.Control.Feedback type="invalid" id={errorId} role="alert">
-                {error}
-              </Form.Control.Feedback>
-            )}
+            {error && <FieldError id={errorId}>{error}</FieldError>}
             {skippedLines && skippedLines.length > 0 && (
-              <div id={skippedId} className="mt-2 text-warning-emphasis" role="alert">
+              <div id={skippedId} className="tw:text-warning" role="alert">
                 <small>
                   <strong>{m.timeoff_hday_skipped_lines_heading()}</strong>
                 </small>
-                <ul className="mb-0 font-monospace small">
+                <ul className="tw:m-0 tw:font-mono tw:text-sm">
                   {skippedLines.map((line, i) => (
                     <li key={i}>{line}</li>
                   ))}
                 </ul>
               </div>
             )}
-          </Form.Group>
-          <div className="d-flex flex-wrap gap-2">
+          </Field>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
             <Button
-              variant="outline-secondary"
+              variant="outline"
               onClick={() => {
                 void handleCopy();
               }}
@@ -105,15 +105,15 @@ export function TimeOffRawView({
               aria-label={m.timeoff_copy_raw_aria()}
               title={m.timeoff_copy_raw_aria()}
             >
-              <Icon icon={ClipboardIcon} className="me-1" />
+              <Icon icon={ClipboardIcon} className="tw:mr-1" />
               {m.timeoff_copy_raw()}
             </Button>
-            <Button variant="primary" onClick={onApply}>
-              <Icon icon={CircleCheckIcon} className="me-1" />
+            <Button onClick={onApply}>
+              <Icon icon={CircleCheckIcon} className="tw:mr-1" />
               {m.timeoff_apply_raw()}
             </Button>
-            <Button variant="outline-secondary" onClick={onReset} disabled={!isDirty}>
-              <Icon icon={RotateCcwIcon} className="me-1" />
+            <Button variant="outline" onClick={onReset} disabled={!isDirty}>
+              <Icon icon={RotateCcwIcon} className="tw:mr-1" />
               {m.timeoff_reset_btn()}
             </Button>
           </div>

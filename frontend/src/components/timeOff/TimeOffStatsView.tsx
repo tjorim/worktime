@@ -1,13 +1,13 @@
 import { TrendingUp as TrendingUpIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
-import Badge from "react-bootstrap/Badge";
-import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { NativeSelect } from "@/components/ui/native-select";
+import { getEventColorUtilities } from "@/lib/hday/presentation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
-  EVENT_TYPE_COLORS,
   EVENT_TYPE_ICONS,
   calculateVacationStats,
   formatVacationValue,
@@ -41,62 +41,64 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
   const filteredTypes = useMemo(() => stats.byType.filter((type) => type.days > 0), [stats.byType]);
 
   return (
-    <Card className="mb-3 shadow-sm">
-      <Card.Header>
-        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <span className="fw-semibold">
-            <Icon icon={TrendingUpIcon} className="me-2" />
+    <Card className="tw:mb-3">
+      <CardHeader className="tw:border-b tw:border-border">
+        <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+          <span className="tw:font-semibold">
+            <Icon icon={TrendingUpIcon} className="tw:mr-2" />
             {m.timeoff_vacation_stats()}
           </span>
-          <div className="d-flex align-items-center gap-2">
-            <small className="text-muted">{m.timeoff_year_label()}</small>
-            <Form.Select
-              size="sm"
+          <div className="tw:flex tw:items-center tw:gap-2">
+            <small className="tw:text-muted-foreground">{m.timeoff_year_label()}</small>
+            <NativeSelect
               aria-label={m.timeoff_select_year_aria()}
               value={selectedYear}
               onChange={(event) => setSelectedYear(Number(event.target.value))}
-              className="w-auto"
             >
               {years.map((year) => (
                 <option key={year} value={year}>
                   {year}
                 </option>
               ))}
-            </Form.Select>
+            </NativeSelect>
           </div>
         </div>
-      </Card.Header>
-      <Card.Body>
-        <div className="d-flex align-items-baseline gap-2 mb-4">
-          <span className="fs-3 fw-bold">{formatVacationValue(stats.totalDays)}</span>
-          <span className="text-muted small">
+      </CardHeader>
+      <CardContent>
+        <div className="tw:mb-4 tw:flex tw:items-baseline tw:gap-2">
+          <span className="tw:text-2xl tw:font-bold">{formatVacationValue(stats.totalDays)}</span>
+          <span className="tw:text-sm tw:text-muted-foreground">
             {m.timeoff_days_logged_in({ year: selectedYear })}
           </span>
         </div>
 
         {filteredTypes.length === 0 ? (
-          <p className="text-muted text-center mb-0">
+          <p className="tw:m-0 tw:text-center tw:text-muted-foreground">
             {m.timeoff_no_time_off_year({ year: selectedYear })}
           </p>
         ) : (
-          <div className="d-flex flex-column gap-2">
-            {filteredTypes.map((type) => (
-              <div key={type.key} className="d-flex justify-content-between align-items-center">
-                <div className="d-flex align-items-center gap-2">
-                  <Icon
-                    icon={EVENT_TYPE_ICONS[type.key]}
-                    className={`text-${EVENT_TYPE_COLORS[type.key]}`}
-                  />
-                  <span>{type.label}</span>
+          <div className="tw:flex tw:flex-col tw:gap-2">
+            {filteredTypes.map((type) => {
+              const colors = getEventColorUtilities([type.key]);
+              return (
+                <div key={type.key} className="tw:flex tw:items-center tw:justify-between">
+                  <div className="tw:flex tw:items-center tw:gap-2">
+                    <span
+                      className={`tw:inline-flex tw:size-6 tw:items-center tw:justify-center tw:rounded-full ${colors}`}
+                    >
+                      <Icon icon={EVENT_TYPE_ICONS[type.key]} />
+                    </span>
+                    <span>{type.label}</span>
+                  </div>
+                  <Badge className={colors}>
+                    {formatVacationValue(type.days)} {m.timeoff_days_unit()}
+                  </Badge>
                 </div>
-                <Badge bg={EVENT_TYPE_COLORS[type.key]} pill>
-                  {formatVacationValue(type.days)} {m.timeoff_days_unit()}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }
