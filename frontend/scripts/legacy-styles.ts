@@ -14,6 +14,7 @@ export function legacyClasses() {
   for (const source of [
     css,
     readFileSync(resolve(root, "src/features/calendar/calendar.css"), "utf8"),
+    readFileSync(resolve(root, "src/features/gantt/gantt.css"), "utf8"),
     ...["frappe-gantt/dist/frappe-gantt.css", "@schedule-x/theme-default/dist/index.css"].map(
       (file) => readFileSync(resolve(root, "node_modules", file), "utf8"),
     ),

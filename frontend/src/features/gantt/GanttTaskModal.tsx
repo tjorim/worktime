@@ -1,8 +1,11 @@
 import { CircleX as CircleXIcon, Pencil as PencilIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { DialogSelect } from "@/components/shared/DialogSelect";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +13,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ListGroup from "react-bootstrap/ListGroup";
-import ReactSelect from "react-select";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
-import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { selectClassNames } from "@/utils/reactSelectStyles";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
 import { getLoggedMinutes, formatLoggedDuration } from "@/utils/ganttLoggedTime";
@@ -211,10 +212,10 @@ export function GanttTaskModal({
           <DialogTitle>{modalTitle}</DialogTitle>
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <Form
-            as="form"
+          <form
             id="ganttTaskForm"
             noValidate
+            className="tw:flex tw:flex-col tw:gap-4"
             onSubmit={(event) => {
               event.preventDefault();
               setWasValidated(true);
@@ -230,28 +231,35 @@ export function GanttTaskModal({
                 },
               ]}
             >
-              {(field) => (
-                <Form.Group className="mb-3" controlId="ganttTaskName">
-                  <Form.Label>{m.gantt_task_name_label()}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    required
-                    value={field.value}
-                    isInvalid={wasValidated && field.errors.length > 0}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {m.gantt_task_name_required()}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              )}
+              {(field) => {
+                const invalid = wasValidated && field.errors.length > 0;
+                return (
+                  <Field data-invalid={invalid}>
+                    <FieldLabel htmlFor="ganttTaskName">{m.gantt_task_name_label()}</FieldLabel>
+                    <Input
+                      id="ganttTaskName"
+                      type="text"
+                      required
+                      value={field.value}
+                      aria-invalid={invalid}
+                      aria-describedby={invalid ? "ganttTaskName-error" : undefined}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                    />
+                    {invalid && (
+                      <FieldError id="ganttTaskName-error">
+                        {m.gantt_task_name_required()}
+                      </FieldError>
+                    )}
+                  </Field>
+                );
+              }}
             </form.Field>
 
             <form.Field name="label">
               {(field) => (
-                <Form.Group className="mb-3" controlId="ganttTaskLabel">
-                  <Form.Label>{m.form_label()}</Form.Label>
-                  <ReactSelect<LabelOption>
+                <Field>
+                  <FieldLabel htmlFor="ganttTaskLabel">{m.form_label()}</FieldLabel>
+                  <DialogSelect<LabelOption>
                     unstyled
                     isClearable
                     isSearchable
@@ -264,18 +272,18 @@ export function GanttTaskModal({
                     options={labelOptions}
                     value={selectedLabelOption}
                     onChange={(selected) => field.handleChange(selected?.value ?? "")}
-                    classNames={bootstrapSelectClassNames}
+                    classNames={selectClassNames}
                   />
                   {isLabelSelectionDisabled ? (
-                    <Form.Text id="ganttTaskLabelHelp" muted>
+                    <FieldDescription id="ganttTaskLabelHelp">
                       {m.tt_add_labels_first_help()}
-                    </Form.Text>
+                    </FieldDescription>
                   ) : null}
-                </Form.Group>
+                </Field>
               )}
             </form.Field>
 
-            <div className="d-flex gap-3 mb-3">
+            <div className="tw:flex tw:gap-3">
               <form.Field
                 name="start"
                 validators={[
@@ -286,21 +294,28 @@ export function GanttTaskModal({
                   },
                 ]}
               >
-                {(field) => (
-                  <Form.Group className="flex-fill" controlId="ganttTaskStart">
-                    <Form.Label>{m.gantt_task_start_label()}</Form.Label>
-                    <Form.Control
-                      type="date"
-                      required
-                      value={field.value}
-                      isInvalid={wasValidated && field.errors.length > 0}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      {m.gantt_task_start_invalid()}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                )}
+                {(field) => {
+                  const invalid = wasValidated && field.errors.length > 0;
+                  return (
+                    <Field className="tw:min-w-0 tw:flex-1" data-invalid={invalid}>
+                      <FieldLabel htmlFor="ganttTaskStart">{m.gantt_task_start_label()}</FieldLabel>
+                      <Input
+                        id="ganttTaskStart"
+                        type="date"
+                        required
+                        value={field.value}
+                        aria-invalid={invalid}
+                        aria-describedby={invalid ? "ganttTaskStart-error" : undefined}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                      />
+                      {invalid && (
+                        <FieldError id="ganttTaskStart-error">
+                          {m.gantt_task_start_invalid()}
+                        </FieldError>
+                      )}
+                    </Field>
+                  );
+                }}
               </form.Field>
               <form.Field
                 name="end"
@@ -318,44 +333,57 @@ export function GanttTaskModal({
                   },
                 ]}
               >
-                {(field) => (
-                  <Form.Group className="flex-fill" controlId="ganttTaskEnd">
-                    <Form.Label>{m.gantt_task_end_label()}</Form.Label>
-                    <Form.Control
-                      type="date"
-                      required
-                      value={field.value}
-                      isInvalid={wasValidated && field.errors.length > 0}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      {m.gantt_task_end_invalid()}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                )}
+                {(field) => {
+                  const invalid = wasValidated && field.errors.length > 0;
+                  return (
+                    <Field className="tw:min-w-0 tw:flex-1" data-invalid={invalid}>
+                      <FieldLabel htmlFor="ganttTaskEnd">{m.gantt_task_end_label()}</FieldLabel>
+                      <Input
+                        id="ganttTaskEnd"
+                        type="date"
+                        required
+                        value={field.value}
+                        aria-invalid={invalid}
+                        aria-describedby={invalid ? "ganttTaskEnd-error" : undefined}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                      />
+                      {invalid && (
+                        <FieldError id="ganttTaskEnd-error">
+                          {m.gantt_task_end_invalid()}
+                        </FieldError>
+                      )}
+                    </Field>
+                  );
+                }}
               </form.Field>
             </div>
 
             <form.Field name="progress">
               {(field) => (
-                <Form.Group className="mb-3" controlId="ganttTaskProgress">
-                  <Form.Label className="d-flex justify-content-between align-items-center">
+                <Field>
+                  <FieldLabel
+                    htmlFor="ganttTaskProgress"
+                    className="tw:flex tw:items-center tw:justify-between"
+                  >
                     <span>{m.gantt_task_progress_label()}</span>
-                    <span className="text-muted small">{field.value ?? 0}%</span>
-                  </Form.Label>
-                  <Form.Range
+                    <span className="tw:text-sm tw:text-muted-foreground">{field.value ?? 0}%</span>
+                  </FieldLabel>
+                  <input
+                    id="ganttTaskProgress"
+                    type="range"
                     min={0}
                     max={100}
+                    className="tw:w-full tw:accent-primary"
                     value={field.value ?? 0}
                     onChange={(event) => field.handleChange(Number(event.target.value))}
                   />
-                </Form.Group>
+                </Field>
               )}
             </form.Field>
 
-            <Form.Group className="mb-3" controlId="ganttTaskDependencies">
-              <Form.Label>{m.gantt_task_deps_label()}</Form.Label>
-              <ReactSelect<DepOption, true>
+            <Field>
+              <FieldLabel htmlFor="ganttTaskDependencies">{m.gantt_task_deps_label()}</FieldLabel>
+              <DialogSelect<DepOption, true>
                 isMulti
                 unstyled
                 inputId="ganttTaskDependencies"
@@ -364,90 +392,95 @@ export function GanttTaskModal({
                 value={depValue}
                 onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
                 classNames={{
-                  ...bootstrapSelectClassNames,
-                  control: () => "form-control d-flex flex-wrap h-auto gap-1 py-1",
+                  ...selectClassNames,
+                  control: (state) => `${selectClassNames.control(state)} tw:gap-1`,
                 }}
               />
-            </Form.Group>
+            </Field>
 
             <form.Field name="notes">
               {(field) => (
-                <Form.Group className="mb-1" controlId="ganttTaskNotes">
-                  <Form.Label>{m.gantt_task_notes_label()}</Form.Label>
-                  <Form.Control
-                    as="textarea"
+                <Field>
+                  <FieldLabel htmlFor="ganttTaskNotes">{m.gantt_task_notes_label()}</FieldLabel>
+                  <Textarea
+                    id="ganttTaskNotes"
                     rows={3}
                     value={field.value ?? ""}
                     onChange={(event) => field.handleChange(event.target.value)}
                   />
-                </Form.Group>
+                </Field>
               )}
             </form.Field>
-          </Form>
+          </form>
           {task && (
-            <section className="border-top mt-3 pt-3" aria-labelledby="ganttLoggedTimeHeading">
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <h6 id="ganttLoggedTimeHeading" className="mb-0">
+            <section
+              className="tw:mt-4 tw:border-t tw:border-border tw:pt-4"
+              aria-labelledby="ganttLoggedTimeHeading"
+            >
+              <div className="tw:mb-2 tw:flex tw:items-center tw:justify-between tw:gap-2">
+                <h3 id="ganttLoggedTimeHeading" className="tw:m-0 tw:text-base tw:font-medium">
                   {m.gantt_logged_time_heading()}
-                </h6>
-                <span className="text-muted small">
+                </h3>
+                <span className="tw:text-sm tw:text-muted-foreground">
                   {m.gantt_logged_total({ duration: formatLoggedDuration(totalLoggedMinutes) })}
                 </span>
               </div>
               {loggedEntries.length === 0 ? (
-                <p className="text-muted small mb-0">{m.gantt_logged_empty()}</p>
+                <p className="tw:m-0 tw:text-sm tw:text-muted-foreground">
+                  {m.gantt_logged_empty()}
+                </p>
               ) : (
-                <ListGroup variant="flush">
+                <ul className="tw:m-0 tw:list-none tw:divide-y tw:divide-border tw:p-0">
                   {loggedEntries.map((entry) => (
-                    <ListGroup.Item
+                    <li
                       key={entry.id}
-                      className="px-0 py-2 d-flex justify-content-between align-items-center gap-3"
+                      className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:py-2"
                     >
-                      <span>
-                        <span className="d-block">{entry.text}</span>
-                        <span className="text-muted small">
+                      <span className="tw:min-w-0">
+                        <span className="tw:block tw:break-words">{entry.text}</span>
+                        <span className="tw:text-sm tw:text-muted-foreground">
                           {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} ·{" "}
                           {dayjs(entry.startTime).format("YYYY-MM-DD")}
                         </span>
                       </span>
-                      <span className="d-flex align-items-center gap-2 flex-shrink-0">
-                        <span className="text-nowrap">
+                      <span className="tw:flex tw:shrink-0 tw:items-center tw:gap-2">
+                        <span className="tw:whitespace-nowrap">
                           {formatLoggedDuration(entry.loggedMinutes)}
                         </span>
                         <Button
-                          variant="outline-secondary"
-                          size="sm"
+                          variant="outline"
+                          size="icon-sm"
                           aria-label={m.gantt_logged_edit_entry_aria({ name: entry.text })}
                           onClick={() => handleEditEntry(entry.id)}
                         >
                           <Icon icon={PencilIcon} />
                         </Button>
                         <Button
-                          variant="outline-secondary"
-                          size="sm"
+                          variant="outline"
+                          size="icon-sm"
                           aria-label={m.gantt_logged_unlink_entry_aria({ name: entry.text })}
                           onClick={() => handleUnlinkEntry(entry)}
                         >
                           <Icon icon={CircleXIcon} />
                         </Button>
                       </span>
-                    </ListGroup.Item>
+                    </li>
                   ))}
-                </ListGroup>
+                </ul>
               )}
             </section>
           )}
         </div>
         <DialogFooter>
           {task && onDelete && (
-            <Button variant="outline-danger" onClick={onDelete} className="me-auto">
+            <Button variant="destructive" onClick={onDelete} className="tw:mr-auto">
               {m.gantt_task_delete_btn()}
             </Button>
           )}
-          <Button variant="outline-secondary" onClick={onHide}>
+          <Button variant="outline" onClick={onHide}>
             {m.cancel()}
           </Button>
-          <Button variant="primary" type="submit" form="ganttTaskForm">
+          <Button type="submit" form="ganttTaskForm">
             {submitLabel}
           </Button>
         </DialogFooter>
