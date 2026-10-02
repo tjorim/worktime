@@ -12,12 +12,13 @@ import {
   TriangleAlert as TriangleAlertIcon,
   Upload as UploadIcon,
   Users as UsersIcon,
+  X as XIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import { Button as ToggleButton } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/shared/IconButton";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
 import {
@@ -811,35 +812,42 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   });
 
   return (
-    <div className="time-off-view py-3 d-flex flex-column gap-3">
+    <div className="tw:flex tw:flex-col tw:gap-3 tw:py-3">
       {viewMode === "table" && hdayChangedRemotely && (
         <Alert
           variant="info"
-          className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0"
-          onClose={() => setHdayChangedRemotely(false)}
-          dismissible
+          className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2"
         >
           <span>
-            <Icon icon={CloudDownloadIcon} className="me-2" />
+            <Icon icon={CloudDownloadIcon} className="tw:mr-2" />
             {m.timeoff_hday_changed_remotely()}
           </span>
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={handlePullFromHelper}
-            disabled={isPullingFromHelper || isPushingToHelper}
-          >
-            {m.timeoff_pull_btn()}
-          </Button>
+          <div className="tw:flex tw:items-center tw:gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePullFromHelper}
+              disabled={isPullingFromHelper || isPushingToHelper}
+            >
+              {m.timeoff_pull_btn()}
+            </Button>
+            <IconButton
+              icon={XIcon}
+              label={m.close()}
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setHdayChangedRemotely(false)}
+            />
+          </div>
         </Alert>
       )}
-      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+      <div className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:md:flex-row tw:md:items-center">
         <div
           role="group"
           className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
           aria-label={m.timeoff_toggle_view_aria()}
         >
-          <ToggleButton
+          <Button
             className="tw:flex-1"
             variant={viewMode === "table" ? "default" : "outline"}
             size="sm"
@@ -848,8 +856,8 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           >
             <Icon icon={TableIcon} className="tw:mr-1" />
             {m.timeoff_view_table()}
-          </ToggleButton>
-          <ToggleButton
+          </Button>
+          <Button
             className="tw:flex-1"
             variant={viewMode === "stats" ? "default" : "outline"}
             size="sm"
@@ -858,9 +866,9 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           >
             <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-1" />
             {m.timeoff_view_statistics()}
-          </ToggleButton>
+          </Button>
           {helperConnectionStatus === "connected" && (
-            <ToggleButton
+            <Button
               className="tw:flex-1"
               variant={viewMode === "team" ? "default" : "outline"}
               size="sm"
@@ -869,11 +877,11 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             >
               <Icon icon={UsersIcon} className="tw:mr-1" />
               {m.timeoff_view_team()}
-            </ToggleButton>
+            </Button>
           )}
         </div>
         {(viewMode !== "table" || entries.length > 0) && (
-          <span className="text-muted small">
+          <span className="tw:text-sm tw:text-muted-foreground">
             {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
           </span>
         )}
@@ -926,7 +934,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         ref={fileInputRef}
         type="file"
         accept=".hday,text/plain"
-        className="d-none"
+        className="tw:hidden"
         aria-label={m.timeoff_import_file_aria()}
         onChange={handleFileChange}
       />

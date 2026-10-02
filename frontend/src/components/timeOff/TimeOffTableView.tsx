@@ -5,10 +5,11 @@ import {
   Trash2 as Trash2Icon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import clsx from "clsx";
 import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TableSearchInput } from "@/components/shared/TableSearchInput";
 import {
   Table,
@@ -29,7 +30,7 @@ import {
   useDataTable,
 } from "@/hooks/useDataTable";
 import {
-  getEventColorClass,
+  getEventColorUtilities,
   getEventTypeLabel,
   getTimeLocationSymbol,
 } from "@/lib/hday/presentation";
@@ -247,7 +248,7 @@ export function TimeOffTableView({
           onAddEvent={onAddEvent}
           viewMode={viewMode}
         />
-        <Card.Body>
+        <CardContent>
           {entries.length === 0 ? (
             <EmptyState
               icon={CalendarXIcon}
@@ -279,20 +280,11 @@ export function TimeOffTableView({
                           if (header.column.id === "select") {
                             return (
                               <TableHead key={header.id} scope="col">
-                                <input
-                                  ref={(element) => {
-                                    if (element) {
-                                      element.indeterminate =
-                                        selectedVisibleCount > 0 && !allVisibleSelected;
-                                    }
-                                  }}
-                                  type="checkbox"
-                                  className="form-check-input"
+                                <Checkbox
+                                  indeterminate={selectedVisibleCount > 0 && !allVisibleSelected}
                                   aria-label={m.timeoff_select_all_events_aria()}
                                   checked={allVisibleSelected}
-                                  onChange={(event) =>
-                                    onSetSelection(visibleIds, event.target.checked)
-                                  }
+                                  onCheckedChange={(checked) => onSetSelection(visibleIds, checked)}
                                 />
                               </TableHead>
                             );
@@ -306,7 +298,7 @@ export function TimeOffTableView({
                   <TableBody>
                     {visibleRows.map((tableRow) => {
                       const { entry, flags, title, typeLabel } = tableRow.original;
-                      const eventColorClass = getEventColorClass(
+                      const eventColors = getEventColorUtilities(
                         flags,
                         isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
                       );
@@ -315,29 +307,29 @@ export function TimeOffTableView({
                       return (
                         <TableRow key={entry.id}>
                           <TableCell>
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
+                            <Checkbox
                               aria-label={m.timeoff_select_event_aria({ name: title })}
                               checked={selectedIds.has(entry.id)}
-                              onChange={() => onToggleSelection(entry.id)}
+                              onCheckedChange={() => onToggleSelection(entry.id)}
                             />
                           </TableCell>
                           <TableCell>
-                            <span className={clsx("badge", "event-type-badge", eventColorClass)}>
+                            <Badge data-event-type-badge className={eventColors}>
                               {symbol && `${symbol} `}
                               {typeLabel}
-                            </span>
+                            </Badge>
                           </TableCell>
                           <TableCell>{renderEntryDisplayDate(entry)}</TableCell>
                           <TableCell>
-                            {entry.note || <span className="text-muted">—</span>}
+                            {entry.note || <span className="tw:text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell>
                             {flags.length ? (
-                              <span className="text-muted small">{flags.join(", ")}</span>
+                              <span className="tw:text-sm tw:text-muted-foreground">
+                                {flags.join(", ")}
+                              </span>
                             ) : (
-                              <span className="text-muted">—</span>
+                              <span className="tw:text-muted-foreground">—</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -377,7 +369,7 @@ export function TimeOffTableView({
               />
             </>
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
 
       <TimeOffRawView

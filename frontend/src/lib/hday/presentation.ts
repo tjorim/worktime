@@ -39,6 +39,23 @@ export function getEventTextColor(flags?: EventFlag[], eventType?: HdayEvent["ty
   return `var(--wt-event-${type}-${variant}-fg)`;
 }
 
+const EVENT_PALETTE_VAR = /^var\(--wt-event-[a-z]+(?:-(?:full|half))?-(?:bg|fg)\)$/;
+
+/**
+ * Colors for an event whose palette references travel as metadata. Only the palette's own
+ * `var(--wt-event-…)` references are accepted; anything else falls back to the "unknown" pair, so a
+ * stray value can never become free-form CSS. Components hand the result to the `--event-bg` and
+ * `--event-fg` custom properties that `tw:bg-event` / `tw:text-event-foreground` read.
+ */
+export function resolveEventPaletteVars(
+  color: string,
+  textColor: string,
+): { background: string; foreground: string } {
+  return EVENT_PALETTE_VAR.test(color) && EVENT_PALETTE_VAR.test(textColor)
+    ? { background: color, foreground: textColor }
+    : { background: "var(--wt-event-unknown-bg)", foreground: "var(--wt-event-unknown-fg)" };
+}
+
 const EVENT_COLOR_UTILITIES = {
   "holiday-full": "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg",
   "holiday-half": "tw:bg-wt-event-holiday-half-bg tw:text-wt-event-holiday-half-fg",

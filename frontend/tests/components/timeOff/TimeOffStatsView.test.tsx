@@ -90,6 +90,18 @@ describe("TimeOffStatsView", () => {
       expect(daysBadges.length).toBeGreaterThanOrEqual(2);
     });
 
+    it("colours each category's day badge from the shared event palette", () => {
+      const entries = [
+        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`),
+        dateEntry(`${currentYear}-02-10`, `${currentYear}-02-12`, "business"),
+      ];
+      render(<TimeOffStatsView entries={entries} />);
+
+      const badges = screen.getAllByText(/\d+ days/);
+      expect(badges[0]!.className).toContain("tw:bg-wt-event-holiday-full-bg");
+      expect(badges[1]!.className).toContain("tw:bg-wt-event-business-full-bg");
+    });
+
     it("handles half-day entries", () => {
       const entries = [
         dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", "half_am"),

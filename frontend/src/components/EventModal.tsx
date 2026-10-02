@@ -6,49 +6,41 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { RefObject } from "react";
-import { Badge, Button, Card, Col, Form, Row } from "react-bootstrap";
+import { useId } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldError, FieldLabel, FieldTitle } from "@/components/ui/field";
+import { Grid, GridItem } from "@/components/ui/grid";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
 import { getWeekdayName } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
-type FlagCheckboxProps = {
+type FlagRadioProps = {
   id: string;
   label: string;
-  checked: boolean;
-  onChange: () => void;
-  name: string;
-  type?: "checkbox" | "radio";
+  value: string;
 };
 
 /**
- * Render a labelled checkbox or radio input using React-Bootstrap's Form.Check.
+ * Render one labelled radio option inside a flag `RadioGroup`.
  *
- * @param id - DOM id for the input element
- * @param label - Visible label text for the control
- * @param checked - Whether the control is selected
- * @param onChange - Change event handler for the input
- * @param name - Name attribute used to group related controls
- * @param type - Input type; `"checkbox"` or `"radio"` (defaults to `"checkbox"`)
- * @returns The configured Form.Check element
+ * @param id - DOM id for the radio, referenced by the label
+ * @param label - Visible label text for the option
+ * @param value - Value the group reports when this option is selected
  */
-function FlagCheckbox({
-  id,
-  label,
-  checked,
-  onChange,
-  name,
-  type = "checkbox",
-}: FlagCheckboxProps) {
+function FlagRadio({ id, label, value }: FlagRadioProps) {
   return (
-    <Form.Check
-      id={id}
-      name={name}
-      type={type}
-      label={label}
-      checked={checked}
-      onChange={onChange}
-    />
+    <Field orientation="horizontal">
+      <RadioGroupItem id={id} value={value} />
+      <FieldLabel htmlFor={id} className="tw:font-normal">
+        {label}
+      </FieldLabel>
+    </Field>
   );
 }
 
@@ -113,54 +105,57 @@ function FlagSection<Flag extends EventFlag | "none">({
   flagGroup,
   onFlagChange,
 }: FlagSectionProps<Flag>) {
+  const legendId = useId();
+  const groupName = title.toLowerCase().replace(/\s+/g, "-");
+
   if (mode !== "view") {
     // Edit/Add mode: Show all radio buttons
+    const selected =
+      flagOptions.find(
+        ([flag]) => flag !== "none" && eventFlags.includes(flag as EventFlag),
+      )?.[0] ?? "none";
+
     return (
-      <Col xs={12}>
-        <fieldset className="border rounded p-3">
-          <legend className="float-none w-auto px-2 fs-6">{fieldsetTitle || title}</legend>
-          <Row className="g-2">
+      <GridItem span={12}>
+        <div className="tw:rounded-lg tw:border tw:border-border tw:p-3">
+          <div id={legendId} className="tw:mb-2 tw:text-sm tw:font-medium">
+            {fieldsetTitle || title}
+          </div>
+          <RadioGroup
+            name={`${groupName}-flag`}
+            aria-labelledby={legendId}
+            value={selected}
+            onValueChange={(value) => onFlagChange(value as Flag)}
+            className="tw:sm:grid-cols-2 tw:lg:grid-cols-3"
+          >
             {flagOptions.map(([flag, label]) => (
-              <Col sm={6} lg={4} key={flag}>
-                <FlagCheckbox
-                  id={`${title.toLowerCase().replace(/\s+/g, "-")}-flag-${flag}`}
-                  name={`${title.toLowerCase().replace(/\s+/g, "-")}-flag`}
-                  type="radio"
-                  label={label}
-                  checked={
-                    flag === "none"
-                      ? !eventFlags.some((flagValue) => flagGroup.includes(flagValue))
-                      : eventFlags.includes(flag as EventFlag)
-                  }
-                  onChange={() => onFlagChange(flag)}
-                />
-              </Col>
+              <FlagRadio key={flag} id={`${groupName}-flag-${flag}`} label={label} value={flag} />
             ))}
-          </Row>
-        </fieldset>
-      </Col>
+          </RadioGroup>
+        </div>
+      </GridItem>
     );
   }
 
   // View mode: Show only active flags as badges
   return (
-    <Col xs={12}>
-      <Form.Group>
-        <Form.Label>{title}</Form.Label>
-        <div className="d-flex gap-2 align-items-center">
+    <GridItem span={12}>
+      <Field>
+        <FieldTitle>{title}</FieldTitle>
+        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
           {eventFlags
             .filter((f) => flagGroup.includes(f))
             .map((flag) => (
-              <Badge key={flag} bg="secondary">
+              <Badge key={flag} variant="secondary">
                 {getFlagLabel(flag)}
               </Badge>
             ))}
           {!eventFlags.some((f) => flagGroup.includes(f)) && (
-            <span className="text-muted">{m.event_modal_none_label()}</span>
+            <span className="tw:text-muted-foreground">{m.event_modal_none_label()}</span>
           )}
         </div>
-      </Form.Group>
-    </Col>
+      </Field>
+    </GridItem>
   );
 }
 
@@ -205,13 +200,13 @@ type EventModalProps = {
  *
  * Accessibility Features:
  * - DialogHeader closeButton provides keyboard-accessible close (Escape key, X button)
- * - All form inputs have associated <Form.Label> elements for screen readers
+ * - All form inputs have associated <FieldLabel> elements for screen readers
  * - Required fields marked with aria-required="true" and visual * indicator
  * - Form validation errors use aria-describedby to link error messages to inputs
  * - Live preview section provides immediate feedback on event formatting
- * - Form.Check components (checkboxes/radios) have proper label associations
+ * - Flag radios are Base UI radio groups with proper label associations
  * - Semantic HTML structure with proper heading hierarchy
- * - Focus trap built into React Bootstrap Modal component
+ * - Focus trap built into the Base UI dialog
  * - Modal backdrop click and Escape key both trigger onHide for flexibility
  *
  * @param show - Whether the modal is visible
@@ -243,7 +238,7 @@ type EventModalProps = {
  * @param onSubmit - Submits the form to add or update the event
  * @param onSwitchToEdit - Optional callback when Edit button is clicked in view mode to switch to edit mode
  * @param onCancelEditMode - Optional callback used in edit mode to return to view mode without closing the modal
- * @returns The rendered EventModal component (a Bootstrap Modal containing the editor)
+ * @returns The rendered EventModal component (a dialog containing the editor)
  */
 export function EventModal({
   show,
@@ -297,16 +292,16 @@ export function EventModal({
           </DialogTitle>
         </DialogHeader>
         <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" ref={formRef} tabIndex={-1}>
-          <Form>
-            <Row className="g-3">
+          <form onSubmit={(event) => event.preventDefault()}>
+            <Grid>
               {mode !== "view" && (
-                <Col xs={12}>
-                  <Card className="preview-card border-0 bg-body-secondary">
-                    <Card.Body className="py-2">
-                      <div className="small text-uppercase text-muted">
+                <GridItem span={12}>
+                  <Card className="tw:bg-muted tw:py-2 tw:ring-0">
+                    <CardContent>
+                      <div className="tw:text-xs tw:text-muted-foreground tw:uppercase">
                         {m.event_modal_preview_label()}
                       </div>
-                      <div className="fw-semibold">
+                      <div className="tw:font-semibold">
                         {getEventTypeLabel(eventFlags)}{" "}
                         {eventType === "weekly"
                           ? eventWeekday
@@ -318,31 +313,32 @@ export function EventModal({
                               : "· " + eventStart
                             : m.event_modal_select_date()}
                       </div>
-                      {eventTitle && <div className="text-muted">{eventTitle}</div>}
+                      {eventTitle && <div className="tw:text-muted-foreground">{eventTitle}</div>}
                       {eventFlags.length > 0 && (
-                        <div className="text-muted small">
+                        <div className="tw:text-sm tw:text-muted-foreground">
                           {m.event_modal_flags_label({
                             flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
                           })}
                         </div>
                       )}
-                      <div className="mt-2">
-                        <div className="small text-uppercase text-muted">
+                      <div className="tw:mt-2">
+                        <div className="tw:text-xs tw:text-muted-foreground tw:uppercase">
                           {m.event_modal_raw_line_label()}
                         </div>
-                        <div className="font-monospace">
+                        <div className="tw:font-mono">
                           {previewLine || m.event_modal_fill_required()}
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
-                </Col>
+                </GridItem>
               )}
-              <Col md={6}>
-                <Form.Group controlId="eventType">
-                  <Form.Label>{m.event_modal_event_type_label()}</Form.Label>
-                  <Form.Select
-                    aria-label={m.event_modal_event_type_label()}
+              <GridItem span={12} desktopSpan={6}>
+                <Field>
+                  <FieldLabel htmlFor="eventType">{m.event_modal_event_type_label()}</FieldLabel>
+                  <NativeSelect
+                    id="eventType"
+                    className="tw:w-full"
                     value={eventType}
                     onChange={(event) =>
                       onEventTypeChange(event.target.value as "range" | "weekly")
@@ -351,31 +347,32 @@ export function EventModal({
                   >
                     <option value="range">{m.event_modal_type_range()}</option>
                     <option value="weekly">{m.event_modal_type_weekly()}</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </NativeSelect>
+                </Field>
+              </GridItem>
 
-              <Col md={6}>
-                <Form.Group controlId="eventTitle">
-                  <Form.Label>{m.event_modal_comment_label()}</Form.Label>
-                  <Form.Control
-                    aria-label={m.event_modal_comment_label()}
+              <GridItem span={12} desktopSpan={6}>
+                <Field>
+                  <FieldLabel htmlFor="eventTitle">{m.event_modal_comment_label()}</FieldLabel>
+                  <Input
+                    id="eventTitle"
                     value={eventTitle}
                     onChange={(event) => onEventTitleChange(event.target.value)}
                     placeholder={m.event_modal_comment_placeholder()}
                     disabled={mode === "view"}
                   />
-                </Form.Group>
-              </Col>
+                </Field>
+              </GridItem>
 
               {eventType === "range" ? (
                 <>
-                  <Col md={6}>
-                    <Form.Group controlId="eventStart">
-                      <Form.Label>
-                        {m.event_modal_start_label()} <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Control
+                  <GridItem span={12} desktopSpan={6}>
+                    <Field data-invalid={!!startDateError}>
+                      <FieldLabel htmlFor="eventStart">
+                        {m.event_modal_start_label()} <span className="tw:text-danger-text">*</span>
+                      </FieldLabel>
+                      <Input
+                        id="eventStart"
                         type="date"
                         value={eventStart ? eventStart.replace(/\//g, "-") : ""}
                         onChange={(event) =>
@@ -383,22 +380,21 @@ export function EventModal({
                             event.target.value ? event.target.value.replace(/-/g, "/") : "",
                           )
                         }
-                        isInvalid={!!startDateError}
+                        aria-invalid={!!startDateError}
                         aria-required="true"
                         aria-describedby={startDateError ? "eventStart-error" : undefined}
                         disabled={mode === "view"}
                       />
                       {startDateError && (
-                        <Form.Control.Feedback type="invalid" id="eventStart-error">
-                          {startDateError}
-                        </Form.Control.Feedback>
+                        <FieldError id="eventStart-error">{startDateError}</FieldError>
                       )}
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="eventEnd">
-                      <Form.Label>{m.event_modal_end_label()}</Form.Label>
-                      <Form.Control
+                    </Field>
+                  </GridItem>
+                  <GridItem span={12} desktopSpan={6}>
+                    <Field data-invalid={!!endDateError}>
+                      <FieldLabel htmlFor="eventEnd">{m.event_modal_end_label()}</FieldLabel>
+                      <Input
+                        id="eventEnd"
                         type="date"
                         value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
                         onChange={(event) =>
@@ -406,24 +402,21 @@ export function EventModal({
                             event.target.value ? event.target.value.replace(/-/g, "/") : "",
                           )
                         }
-                        isInvalid={!!endDateError}
+                        aria-invalid={!!endDateError}
                         aria-describedby={endDateError ? "eventEnd-error" : undefined}
                         disabled={mode === "view"}
                       />
-                      {endDateError && (
-                        <Form.Control.Feedback type="invalid" id="eventEnd-error">
-                          {endDateError}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
-                  </Col>
+                      {endDateError && <FieldError id="eventEnd-error">{endDateError}</FieldError>}
+                    </Field>
+                  </GridItem>
                 </>
               ) : (
-                <Col md={6}>
-                  <Form.Group controlId="eventWeekday">
-                    <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
-                    <Form.Select
-                      aria-label={m.event_modal_weekday_label()}
+                <GridItem span={12} desktopSpan={6}>
+                  <Field>
+                    <FieldLabel htmlFor="eventWeekday">{m.event_modal_weekday_label()}</FieldLabel>
+                    <NativeSelect
+                      id="eventWeekday"
+                      className="tw:w-full"
                       value={String(eventWeekday)}
                       onChange={(event) => onEventWeekdayChange(Number(event.target.value))}
                       disabled={mode === "view"}
@@ -435,9 +428,9 @@ export function EventModal({
                       <option value="5">{m.weekday_fri()}</option>
                       <option value="6">{m.weekday_sat()}</option>
                       <option value="7">{m.weekday_sun()}</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
+                    </NativeSelect>
+                  </Field>
+                </GridItem>
               )}
 
               <FlagSection
@@ -459,8 +452,8 @@ export function EventModal({
                 flagGroup={timeLocationFlagsAsEventFlags}
                 onFlagChange={onTimeFlagChange}
               />
-            </Row>
-          </Form>
+            </Grid>
+          </form>
         </div>
         <DialogFooter>
           {mode === "view" ? (
@@ -468,11 +461,7 @@ export function EventModal({
               <Button variant="secondary" onClick={onHide}>
                 {m.close()}
               </Button>
-              {onSwitchToEdit && (
-                <Button variant="primary" onClick={onSwitchToEdit}>
-                  {m.edit()}
-                </Button>
-              )}
+              {onSwitchToEdit && <Button onClick={onSwitchToEdit}>{m.edit()}</Button>}
             </>
           ) : (
             <>
@@ -481,10 +470,10 @@ export function EventModal({
                   {m.cancel()}
                 </Button>
               )}
-              <Button variant="outline-secondary" onClick={onResetForm}>
+              <Button variant="outline" onClick={onResetForm}>
                 {m.event_modal_reset_form()}
               </Button>
-              <Button variant="primary" onClick={onSubmit}>
+              <Button onClick={onSubmit}>
                 {mode === "edit" ? m.event_modal_update_btn() : m.event_modal_add_btn()}
               </Button>
             </>

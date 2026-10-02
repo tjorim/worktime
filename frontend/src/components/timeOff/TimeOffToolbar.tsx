@@ -9,9 +9,9 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { memo } from "react";
-import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import Spinner from "react-bootstrap/Spinner";
+import { Button } from "@/components/ui/button";
+import { CardHeader } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import type { TimeOffViewMode } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
@@ -65,91 +65,86 @@ function TimeOffToolbarComponent({
   viewMode,
 }: TimeOffToolbarProps) {
   return (
-    <Card.Header>
-      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-        <span className="fw-semibold">
-          <Icon icon={CalendarCheckIcon} className="me-2" />
+    <CardHeader className="tw:border-b tw:border-border">
+      <div className="tw:mb-2 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+        <span className="tw:font-semibold">
+          <Icon icon={CalendarCheckIcon} className="tw:mr-2" />
           {m.timeoff_management_heading()}
         </span>
-        <div className="d-flex flex-wrap gap-2">
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
           {viewMode === "table" && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onAddEvent}
-              aria-label={m.timeoff_add_event_aria()}
-            >
-              <Icon icon={PlusIcon} className="me-1" />
+            <Button size="sm" onClick={onAddEvent} aria-label={m.timeoff_add_event_aria()}>
+              <Icon icon={PlusIcon} className="tw:mr-1" />
               {m.timeoff_add_event_btn()}
             </Button>
           )}
           <Button
-            variant="outline-primary"
+            variant="outline"
             size="sm"
             onClick={onImport}
             aria-label={m.timeoff_import_events_aria()}
           >
-            <Icon icon={DownloadIcon} className="me-1" />
+            <Icon icon={DownloadIcon} className="tw:mr-1" />
             {m.timeoff_import_btn()}
           </Button>
           {onPullFromHelper && (
             <Button
-              variant="outline-primary"
+              variant="outline"
               size="sm"
               onClick={onPullFromHelper}
               disabled={isPullingFromHelper || isPushingToHelper}
               aria-label={m.timeoff_pull_events_aria()}
             >
               {isPullingFromHelper ? (
-                <Spinner animation="border" size="sm" className="me-1" />
+                <Spinner size="sm" className="tw:mr-1" />
               ) : (
-                <Icon icon={CloudDownloadIcon} className="me-1" />
+                <Icon icon={CloudDownloadIcon} className="tw:mr-1" />
               )}
               {m.timeoff_pull_btn()}
             </Button>
           )}
           {onPushToHelper && (
             <Button
-              variant="outline-primary"
+              variant="outline"
               size="sm"
               onClick={onPushToHelper}
               disabled={isPushingToHelper || isPullingFromHelper}
               aria-label={m.timeoff_push_events_aria()}
             >
               {isPushingToHelper ? (
-                <Spinner animation="border" size="sm" className="me-1" />
+                <Spinner size="sm" className="tw:mr-1" />
               ) : (
-                <Icon icon={CloudUploadIcon} className="me-1" />
+                <Icon icon={CloudUploadIcon} className="tw:mr-1" />
               )}
               {m.timeoff_push_btn()}
             </Button>
           )}
           {eventCount > 0 && (
             <Button
-              variant="outline-primary"
+              variant="outline"
               size="sm"
               onClick={onExport}
               aria-label={m.timeoff_export_events_aria()}
             >
-              <Icon icon={UploadIcon} className="me-1" />
+              <Icon icon={UploadIcon} className="tw:mr-1" />
               {m.timeoff_export_btn()}
             </Button>
           )}
         </div>
       </div>
       {viewMode === "table" && selectedCount > 0 && (
-        <div className="d-flex flex-wrap gap-2">
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
           <Button
-            variant="outline-danger"
+            variant="destructive"
             size="sm"
             onClick={onBulkDelete}
             aria-label={m.timeoff_delete_selected_events_aria()}
           >
-            <Icon icon={Trash2Icon} className="me-1" />
+            <Icon icon={Trash2Icon} className="tw:mr-1" />
             {m.timeoff_delete_selected_btn()}
           </Button>
           <Button
-            variant="outline-secondary"
+            variant="outline"
             size="sm"
             onClick={onSelectAll}
             disabled={selectedCount >= (selectableCount ?? eventCount)}
@@ -160,7 +155,7 @@ function TimeOffToolbarComponent({
             {isFiltered ? m.timeoff_select_all_matching_btn() : m.timeoff_select_all_btn()}
           </Button>
           <Button
-            variant="outline-secondary"
+            variant="outline"
             size="sm"
             onClick={onClearSelection}
             aria-label={m.timeoff_clear_selection_aria()}
@@ -169,7 +164,7 @@ function TimeOffToolbarComponent({
           </Button>
         </div>
       )}
-    </Card.Header>
+    </CardHeader>
   );
 }
 

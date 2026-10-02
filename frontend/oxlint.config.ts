@@ -8,9 +8,6 @@ const legacyHooks = [
   "gantt-view",
   "hover-highlight",
   "month-calendar-work-location",
-  "preview-card",
-  "event-type-badge",
-  "time-off-view",
   "schedule-tab-view",
   "team-schedule-view",
 ];

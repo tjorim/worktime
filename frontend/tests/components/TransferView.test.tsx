@@ -164,7 +164,7 @@ const TEAM_TRANSFERS_HEADER = "Team Transfers";
 const getTeamBadgeRegex = (teamNumber: number) => new RegExp(`^Your Team:\\s*${teamNumber}$`);
 
 function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
-  const header = screen.getByText(TEAM_TRANSFERS_HEADER).closest(".card-header");
+  const header = screen.getByText(TEAM_TRANSFERS_HEADER).closest('[data-slot="card-header"]');
   expect(header).toBeInstanceOf(HTMLElement);
   expect(
     within(header as HTMLElement).getByText(getTeamBadgeRegex(teamNumber)),
@@ -264,7 +264,7 @@ describe("TransferView", () => {
     it("displays date range dropdown with options", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
+      const filterCheckbox = screen.getByRole("checkbox", { name: /Filter by custom date range/i });
       expect(filterCheckbox).toBeInTheDocument();
       expect(filterCheckbox).not.toBeChecked();
     });
@@ -273,7 +273,7 @@ describe("TransferView", () => {
       const user = userEvent.setup();
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
+      const filterCheckbox = screen.getByRole("checkbox", { name: /Filter by custom date range/i });
 
       // Initially unchecked
       expect(filterCheckbox).not.toBeChecked();
@@ -292,7 +292,7 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       // Enable custom range
-      const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
+      const filterCheckbox = screen.getByRole("checkbox", { name: /Filter by custom date range/i });
       await user.click(filterCheckbox);
 
       // Test start date input
@@ -311,7 +311,7 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       // Enable custom range
-      const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
+      const filterCheckbox = screen.getByRole("checkbox", { name: /Filter by custom date range/i });
       await user.click(filterCheckbox);
 
       // Set some dates
@@ -333,7 +333,7 @@ describe("TransferView", () => {
       const user = userEvent.setup();
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
+      const filterCheckbox = screen.getByRole("checkbox", { name: /Filter by custom date range/i });
       await user.click(filterCheckbox);
 
       const startDateInput = screen.getByLabelText(/Start Date/i);
@@ -341,8 +341,8 @@ describe("TransferView", () => {
       await user.type(startDateInput, "2025-02-01");
       await user.type(endDateInput, "2025-01-01");
 
-      expect(startDateInput).toHaveClass("is-invalid");
-      expect(endDateInput).toHaveClass("is-invalid");
+      expect(startDateInput).toBeInvalid();
+      expect(endDateInput).toBeInvalid();
       expect(
         screen.getByText(
           /Please select a valid date range\. Start date must be on or before end date\./i,
@@ -788,8 +788,10 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.queryByLabelText("View overlapping hours with Team:")).not.toBeInTheDocument();
-      expect(screen.getByText("9-5", { selector: ".badge" })).toBeInTheDocument();
-      expect(screen.queryByText("9-5 Team 1", { selector: ".badge" })).not.toBeInTheDocument();
+      expect(screen.getByText("9-5", { selector: '[data-slot="badge"]' })).toBeInTheDocument();
+      expect(
+        screen.queryByText("9-5 Team 1", { selector: '[data-slot="badge"]' }),
+      ).not.toBeInTheDocument();
     });
 
     it("does not show the comparing-schedule note for a same-schedule comparison", () => {
@@ -858,8 +860,8 @@ describe("TransferView", () => {
       type: "holiday",
       meta: {
         type: "holiday",
-        color: "#fca5a5",
-        textColor: "#7f1d1d",
+        color: "var(--wt-event-holiday-full-bg)",
+        textColor: "var(--wt-event-holiday-full-fg)",
         flags: [],
         typeLabel: "Vacation",
       },
@@ -887,6 +889,38 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
+    });
+
+    it("colours the time-off indicator through palette custom properties, not inline colours", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [
+          {
+            date: dayjs("2025-01-15"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M" as const,
+            toShiftType: "L" as const,
+            type: "handover" as TransferType,
+          },
+        ],
+      });
+      mockUseEventStore.mockReturnValue({
+        ...defaultEventStoreReturn,
+        getEventsInRange: () => [timeOffEvent],
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      const indicator = screen.getByTitle("You're on leave (Vacation)");
+      expect(indicator.style.getPropertyValue("--event-bg")).toBe(
+        "var(--wt-event-holiday-full-bg)",
+      );
+      expect(indicator.style.getPropertyValue("--event-fg")).toBe(
+        "var(--wt-event-holiday-full-fg)",
+      );
+      expect(indicator.style.backgroundColor).toBe("");
+      expect(indicator.style.color).toBe("");
     });
 
     it("flags an overlap row that falls on the user's own recorded time off", () => {

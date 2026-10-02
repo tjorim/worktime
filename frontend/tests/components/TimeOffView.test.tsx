@@ -334,7 +334,7 @@ describe("TimeOffView", () => {
       await user.type(startInput, "2025-01-15");
 
       // Select business trip type
-      await user.click(screen.getByLabelText(/Business trip/i));
+      await user.click(screen.getByRole("radio", { name: /Business trip/i }));
 
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -1282,7 +1282,7 @@ describe("TimeOffView", () => {
       const banner = await findHdayChangedBanner();
 
       await user.click(
-        within(banner.closest(".alert") as HTMLElement).getByRole("button", {
+        within(banner.closest('[data-slot="alert"]') as HTMLElement).getByRole("button", {
           name: m.timeoff_pull_btn(),
         }),
       );
@@ -1307,11 +1307,11 @@ describe("TimeOffView", () => {
       });
       const banner = await findHdayChangedBanner();
 
-      await userEvent
-        .setup()
-        .click(
-          within(banner.closest(".alert") as HTMLElement).getByRole("button", { name: /close/i }),
-        );
+      await userEvent.setup().click(
+        within(banner.closest('[data-slot="alert"]') as HTMLElement).getByRole("button", {
+          name: /close/i,
+        }),
+      );
 
       expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
     });
