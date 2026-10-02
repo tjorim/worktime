@@ -67,7 +67,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.23",
-    "eventsource-parser": "^4.1.0",
+    "eventsource-parser": "^4.1.1",
     "frappe-gantt": "^1.2.2",
     "idb-keyval": "6.3.0",
     "lucide-react": "^1.48.0",
