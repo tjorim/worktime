@@ -37,9 +37,9 @@ dev = [
   "httpx==0.28.1",
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
-  "ruff==0.16.8",
+  "ruff==0.16.9",
   "sentry-sdk[fastapi]==2.70.0",
-  "ty==0.0.83",
+  "ty==0.0.84",
 ]
 
 [tool.hatch.build.targets.wheel]
