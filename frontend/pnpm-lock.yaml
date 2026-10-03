@@ -12,20 +12,20 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@schedule-x/calendar':
-        specifier: ^4.8.0
-        version: 4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5)
+        specifier: ^4.9.1
+        version: 4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5)
       '@schedule-x/drag-and-drop':
         specifier: ^3.7.3
         version: 3.7.3
       '@schedule-x/event-modal':
-        specifier: ^4.8.0
-        version: 4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)
+        specifier: ^4.9.1
+        version: 4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)
       '@schedule-x/react':
         specifier: ^4.1.0
-        version: 4.1.0(@schedule-x/calendar@4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 4.1.0(@schedule-x/calendar@4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@schedule-x/theme-default':
-        specifier: ^4.8.0
-        version: 4.8.0
+        specifier: ^4.9.1
+        version: 4.9.1
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
@@ -2113,18 +2113,18 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@schedule-x/calendar@4.8.0':
-    resolution: {integrity: sha512-OuIQCmxe4p1XHkfNkmJTNeblOiNioUdBPs1tNd1NySj1PpDFtODFL9FsCfmtvSXbAQCfFYKrw8DyAGv2BbYS9w==}
+  '@schedule-x/calendar@4.9.1':
+    resolution: {integrity: sha512-/Zsn49BqOklOZmftsh2B5QyqF/hMf8tUqpcBbg+W0xv7FFrYd1qsYeJfdEVPVKTa42hybyswLJvtglnKgaqC+Q==}
     peerDependencies:
       '@preact/signals': ^2.0.2
       preact: ^10.19.2
-      temporal-polyfill: 0.3.0
+      temporal-polyfill: 0.3.2
 
   '@schedule-x/drag-and-drop@3.7.3':
     resolution: {integrity: sha512-nHwZKzdIKWNTdT5BEXy4vLlHOmOH3C3M744QUIU0EOXPAFZQR1bBTviGs2NhmvaLiGstnVx2/TZtdhocy60hgg==}
 
-  '@schedule-x/event-modal@4.8.0':
-    resolution: {integrity: sha512-YjyJM/ytyDszHiJ9GID5tb1114wvz3Gv7B5HUH0a76B9wX8fkCyA4ef1o5Kd3+xTtWUYudCGduVc9RI4y1vSFw==}
+  '@schedule-x/event-modal@4.9.1':
+    resolution: {integrity: sha512-1gzsGDWcL1uGxMlHmBqeC4z50TEBhplC/IoM0IIjF/pngTA/kBHvs2GDVM2uYdD8ZnRxQ3+ifiI7E4oST4VGFw==}
     peerDependencies:
       '@preact/signals': ^2.0.2
       preact: ^10.19.2
@@ -2136,8 +2136,8 @@ packages:
       react: ^16.7.0 || ^17 || ^18 || ^19
       react-dom: ^16.7.0 || ^17 || ^18 || ^19
 
-  '@schedule-x/theme-default@4.8.0':
-    resolution: {integrity: sha512-wXTqnVyfXXq0GVnllW0GHRWB3TsN+J6L9wj7zqmH+SOcVKVcSVyONRSlRmAI0n3ZZ5LRe4aS1BHeb3JRdTMe4A==}
+  '@schedule-x/theme-default@4.9.1':
+    resolution: {integrity: sha512-mCe0Ly9ZEBc1nsEDq2vTVvASSmM6oO5a4Nt+ogeYBnsZIBk3w9pk2IcaJHcXqHIS0uA1b8TzmjlpgvorvMtZ7w==}
 
   '@shadcn/lint@0.2.0':
     resolution: {integrity: sha512-DTYr427BR8cDc0J0Y++u1Uh12NAYGmdPiqgy4wKSogi7RNEhFanIcfBMPRPUvkunt9QiJUfI7B28TW39MrPCFA==}
@@ -6373,7 +6373,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.63.5':
     optional: true
 
-  '@schedule-x/calendar@4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5)':
+  '@schedule-x/calendar@4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5)':
     dependencies:
       '@preact/signals': 2.9.1(preact@10.29.2)
       preact: 10.29.2
@@ -6381,18 +6381,18 @@ snapshots:
 
   '@schedule-x/drag-and-drop@3.7.3': {}
 
-  '@schedule-x/event-modal@4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)':
+  '@schedule-x/event-modal@4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)':
     dependencies:
       '@preact/signals': 2.9.1(preact@10.29.2)
       preact: 10.29.2
 
-  '@schedule-x/react@4.1.0(@schedule-x/calendar@4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@schedule-x/react@4.1.0(@schedule-x/calendar@4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@schedule-x/calendar': 4.8.0(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5)
+      '@schedule-x/calendar': 4.9.1(@preact/signals@2.9.1(preact@10.29.2))(preact@10.29.2)(temporal-polyfill@1.0.5)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
 
-  '@schedule-x/theme-default@4.8.0': {}
+  '@schedule-x/theme-default@4.9.1': {}
 
   '@shadcn/lint@0.2.0':
     dependencies:
