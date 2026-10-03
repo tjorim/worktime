@@ -106,7 +106,7 @@
     "oxlint": "^1.86.0",
     "postcss": "^8.5.28",
     "postcss-selector-parser": "^7.1.6",
-    "sass": "^1.104.1",
+    "sass": "^1.105.1",
     "terser": "^5.51.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
