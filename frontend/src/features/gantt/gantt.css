@@ -1,0 +1,32 @@
+@import "../../../node_modules/frappe-gantt/dist/frappe-gantt.css" layer(gantt);
+
+@layer gantt {
+  /* Map frappe-gantt's palette onto the runtime semantic tokens so both themes follow the app. */
+  [data-slot="gantt-scroll"] {
+    --g-arrow-color: var(--wt-theme-foreground);
+    --g-bar-color: var(--wt-theme-secondary);
+    --g-bar-border: var(--wt-theme-border);
+    --g-tick-color-thick: var(--wt-theme-border);
+    --g-tick-color: var(--wt-theme-muted);
+    --g-actions-background: var(--wt-theme-muted);
+    --g-border-color: var(--wt-theme-border);
+    --g-text-muted: var(--wt-theme-muted-foreground);
+    --g-text-light: var(--wt-theme-primary-foreground);
+    --g-text-dark: var(--wt-theme-foreground);
+    --g-progress-color: color-mix(in srgb, var(--wt-theme-primary) 45%, transparent);
+    --g-handle-color: var(--wt-theme-foreground);
+    --g-weekend-label-color: var(--wt-theme-secondary);
+    --g-expected-progress: var(--wt-theme-accent);
+    --g-header-background: var(--wt-theme-background);
+    --g-row-color: var(--wt-theme-background);
+    --g-row-border-color: var(--wt-theme-border);
+    --g-today-highlight: var(--wt-theme-primary);
+    --g-popup-actions: var(--wt-theme-muted);
+    --g-weekend-highlight-color: var(--wt-theme-muted);
+  }
+
+  /* Keep frappe-gantt's horizontal scrolling but suppress the vertical scrollbar. */
+  [data-slot="gantt-scroll"] .gantt-container {
+    overflow-y: hidden;
+  }
+}

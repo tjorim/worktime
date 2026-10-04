@@ -1,4 +1,5 @@
 import { Network as NetworkIcon } from "lucide-react";
+import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
@@ -128,10 +129,10 @@ export function GanttChart({
 
       const currentHolidays = holidays;
       const holidaysObj: Record<string, string | string[]> = {
-        "var(--bs-secondary-bg)": "weekend",
+        "var(--wt-theme-secondary)": "weekend",
       };
       if (currentHolidays.length > 0) {
-        holidaysObj["var(--bs-warning-bg-subtle)"] = currentHolidays;
+        holidaysObj["var(--wt-theme-warning-bg)"] = currentHolidays;
       }
       if (timeOffDates.length > 0) {
         holidaysObj["var(--wt-gantt-time-off-bg)"] = timeOffDates;
@@ -278,7 +279,8 @@ export function GanttChart({
 
   return (
     <div
-      className="gantt-scroll-container border rounded bg-body overflow-x-auto overflow-y-hidden"
+      data-slot="gantt-scroll"
+      className="tw:overflow-x-auto tw:overflow-y-hidden tw:rounded-lg tw:border tw:border-border tw:bg-background"
       data-testid="gantt-scroll-container"
     >
       <div ref={containerRef} />

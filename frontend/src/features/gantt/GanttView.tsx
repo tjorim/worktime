@@ -6,8 +6,7 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
-import Button from "react-bootstrap/Button";
-import { Button as ToggleButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
@@ -134,14 +133,14 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   };
 
   return (
-    <div className="gantt-view py-3 d-flex flex-column gap-3">
-      <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+    <div className="tw:flex tw:flex-col tw:gap-3 tw:py-3">
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
         <div
           role="group"
           className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
           aria-label={m.gantt_toggle_view_aria()}
         >
-          <ToggleButton
+          <Button
             className="tw:flex-1"
             variant={view === "chart" ? "default" : "outline"}
             size="sm"
@@ -150,8 +149,8 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
           >
             <Icon icon={ChartColumnIcon} className="tw:mr-1" />
             {m.gantt_chart_view()}
-          </ToggleButton>
-          <ToggleButton
+          </Button>
+          <Button
             className="tw:flex-1"
             variant={view === "table" ? "default" : "outline"}
             size="sm"
@@ -160,10 +159,10 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
           >
             <Icon icon={TableIcon} className="tw:mr-1" />
             {m.gantt_table_view()}
-          </ToggleButton>
+          </Button>
         </div>
         <Button size="sm" onClick={handleAddTask}>
-          <Icon icon={CirclePlusIcon} className="me-1" />
+          <Icon icon={CirclePlusIcon} className="tw:mr-1" />
           {m.gantt_task_modal_add()}
         </Button>
       </div>
