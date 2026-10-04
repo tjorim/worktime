@@ -14,10 +14,10 @@ export function MetricCard({
   truncate?: boolean;
 }) {
   return (
-    <Card className="tw:h-full tw:text-center">
+    <Card className="h-full text-center">
       <CardContent>
-        <div className="tw:mb-1 tw:text-sm tw:text-muted-foreground tw:uppercase">{label}</div>
-        <div className={cn("tw:text-2xl tw:font-medium", truncate && "tw:truncate")}>{value}</div>
+        <div className="mb-1 text-sm text-muted-foreground uppercase">{label}</div>
+        <div className={cn("text-2xl font-medium", truncate && "truncate")}>{value}</div>
       </CardContent>
     </Card>
   );
@@ -39,7 +39,7 @@ export function CopyableHoursCell({
   return (
     <Hint open={copiedCellId === cellId} content={<div id={`copy-${cellId}`}>{m.tt_copied()}</div>}>
       <TableCell
-        className={cn(cellValue && "tw:cursor-copy", className)}
+        className={cn(cellValue && "cursor-copy", className)}
         onClick={cellValue ? () => onCopyCell(cellId, cellValue) : undefined}
       >
         {cellValue ?? "-"}

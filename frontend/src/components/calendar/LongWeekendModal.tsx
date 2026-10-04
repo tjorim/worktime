@@ -64,20 +64,20 @@ export function LongWeekendModal({
       <DialogContent scrollable>
         <DialogHeader>
           <DialogTitle>
-            <span className="tw:mr-2" aria-hidden="true">
+            <span className="mr-2" aria-hidden="true">
               🏖️
             </span>
             {m.long_weekend_modal_title({ year: String(year) })}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <div className="tw:flex tw:items-center tw:gap-2 tw:mb-4">
-            <label htmlFor="lw-bridge-days" className="tw:mb-0 tw:whitespace-nowrap">
+        <div className="min-h-0 overflow-y-auto p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <label htmlFor="lw-bridge-days" className="mb-0 whitespace-nowrap">
               {m.long_weekend_bridge_days_label()}
             </label>
             <NativeSelect
               id="lw-bridge-days"
-              className="tw:max-w-32"
+              className="max-w-32"
               value={bridgeDays}
               onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                 onBridgeDaysChange(Number(e.target.value))
@@ -93,43 +93,43 @@ export function LongWeekendModal({
           </div>
 
           {loading && (
-            <div className="tw:flex tw:justify-center tw:py-6">
+            <div className="flex justify-center py-6">
               <Spinner role="status">
-                <span className="tw:sr-only">{m.loading()}</span>
+                <span className="sr-only">{m.loading()}</span>
               </Spinner>
             </div>
           )}
 
           {!loading && error && (
-            <p className="tw:text-danger-text tw:text-sm tw:mb-0">
-              <Icon icon={TriangleAlertIcon} className="tw:mr-1" />
+            <p className="text-danger-text text-sm mb-0">
+              <Icon icon={TriangleAlertIcon} className="mr-1" />
               {error}
             </p>
           )}
 
           {!loading && !error && periods.length === 0 && (
-            <p className="tw:text-muted-foreground tw:text-sm tw:mb-0">
+            <p className="text-muted-foreground text-sm mb-0">
               {m.long_weekend_modal_empty({ year: String(year) })}
             </p>
           )}
 
           {!loading && !error && periods.length > 0 && (
-            <ul className="tw:list-none tw:pl-0 tw:mb-0 tw:divide-y tw:divide-border">
+            <ul className="list-none pl-0 mb-0 divide-y divide-border">
               {periods.map((period) => (
-                <li key={period.startDate} className="tw:px-0">
-                  <div className="tw:flex tw:items-start tw:gap-2">
-                    <span aria-hidden="true" className="tw:mt-1">
+                <li key={period.startDate} className="px-0">
+                  <div className="flex items-start gap-2">
+                    <span aria-hidden="true" className="mt-1">
                       {period.needBridgeDay ? "🌉" : "🏖️"}
                     </span>
-                    <div className="tw:grow">
-                      <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
-                        <span className="fw-medium">
+                    <div className="grow">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">
                           {formatDate(period.startDate)} – {formatDate(period.endDate)}
                         </span>
                         <Badge variant="secondary">{period.dayCount}d</Badge>
                       </div>
                       {period.needBridgeDay && period.bridgeDays.length > 0 && (
-                        <div className="tw:text-muted-foreground tw:text-sm tw:mt-1">
+                        <div className="text-muted-foreground text-sm mt-1">
                           {m.long_weekend_bridge_day_needed({
                             date: period.bridgeDays.map(formatDate).join(", "),
                           })}

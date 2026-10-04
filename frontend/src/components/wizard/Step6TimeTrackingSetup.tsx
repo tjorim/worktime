@@ -30,14 +30,14 @@ export function Step6TimeTrackingSetup({
 }: Step6TimeTrackingSetupProps) {
   return (
     <>
-      <div className="tw:mb-4 tw:text-center">
-        <Icon icon={TimerIcon} className="tw:text-5xl tw:text-success" />
-        <h4 className="tw:mt-3 tw:text-2xl tw:font-medium">{m.wizard_tracking_heading()}</h4>
-        <p className="tw:text-muted-foreground">{m.wizard_tracking_subtitle()}</p>
+      <div className="mb-4 text-center">
+        <Icon icon={TimerIcon} className="text-5xl text-success" />
+        <h4 className="mt-3 text-2xl font-medium">{m.wizard_tracking_heading()}</h4>
+        <p className="text-muted-foreground">{m.wizard_tracking_subtitle()}</p>
       </div>
 
-      <Alert variant="info" className="tw:mt-3">
-        <AlertDescription className="tw:text-current">{m.wizard_tracking_info()}</AlertDescription>
+      <Alert variant="info" className="mt-3">
+        <AlertDescription className="text-current">{m.wizard_tracking_info()}</AlertDescription>
       </Alert>
 
       <WizardToggle
@@ -49,7 +49,7 @@ export function Step6TimeTrackingSetup({
       />
 
       <WizardActions
-        className="tw:mt-4"
+        className="mt-4"
         start={
           <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
             <Icon icon={ArrowLeftIcon} /> {m.back()}

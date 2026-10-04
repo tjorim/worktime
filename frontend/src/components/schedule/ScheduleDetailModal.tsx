@@ -61,22 +61,22 @@ const SHIFT_DISPLAY_META: Partial<
 > = {
   M: {
     icon: SunIcon,
-    iconClassName: "tw:text-warning",
+    iconClassName: "text-warning",
     variant: "warning",
   },
   L: {
     icon: SunsetIcon,
-    iconClassName: "tw:text-info",
+    iconClassName: "text-info",
     variant: "info",
   },
   D: {
     icon: SunIcon,
-    iconClassName: "tw:text-primary",
+    iconClassName: "text-primary",
     variant: "default",
   },
   N: {
     icon: MoonIcon,
-    iconClassName: "tw:text-muted-foreground",
+    iconClassName: "text-muted-foreground",
     variant: "secondary",
   },
 };
@@ -198,7 +198,7 @@ export function ScheduleDetailModal({
         const count = weekSchedule.filter((day) => day.shift.code === code).length;
         const meta = SHIFT_DISPLAY_META[code] ?? {
           icon: CircleIcon,
-          iconClassName: "tw:text-muted-foreground",
+          iconClassName: "text-muted-foreground",
           variant: "secondary" as const,
         };
         return { key: code, ...meta, count };
@@ -233,44 +233,42 @@ export function ScheduleDetailModal({
           <DialogTitle>
             <Icon
               icon={hasTeams ? UsersIcon : CalendarDaysIcon}
-              className={clsx("tw:mr-2", "tw:text-primary")}
+              className={clsx("mr-2", "text-primary")}
             />
             {hasTeams
               ? m.schedule_detail_title_team({ team: String(teamNumber) })
               : m.schedule_detail_title_schedule()}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           {/* Current Status Card */}
-          <Card className="tw:mb-6">
+          <Card className="mb-6">
             <CardContent>
-              <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center">
+              <div className="flex flex-wrap gap-2 justify-between items-center">
                 <div>
-                  <h6 className="tw:mb-1">
-                    <Icon icon={ClockIcon} className="tw:mr-2" />
+                  <h6 className="mb-1">
+                    <Icon icon={ClockIcon} className="mr-2" />
                     {m.schedule_current_status()}
                   </h6>
-                  <div className="tw:flex tw:items-center tw:gap-2">
+                  <div className="flex items-center gap-2">
                     {currentStatus.shift.code === "O" ? (
                       <Badge variant="secondary">
-                        <Icon icon={HouseIcon} className="tw:mr-1" />
+                        <Icon icon={HouseIcon} className="mr-1" />
                         {m.schedule_off_duty()}
                       </Badge>
                     ) : (
                       <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
                     )}
-                    <small className="tw:text-muted-foreground">
+                    <small className="text-muted-foreground">
                       {currentStatus.date.format("dddd, MMM D")}
                     </small>
                   </div>
                 </div>
                 {nextShift && (
-                  <div className="tw:text-right">
-                    <small className="tw:text-muted-foreground tw:block">
-                      {m.schedule_next_shift()}
-                    </small>
+                  <div className="text-right">
+                    <small className="text-muted-foreground block">{m.schedule_next_shift()}</small>
                     <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
-                    <small className="tw:text-muted-foreground tw:block">
+                    <small className="text-muted-foreground block">
                       {nextShift.date.format("MMM D")}
                     </small>
                   </div>
@@ -279,25 +277,21 @@ export function ScheduleDetailModal({
             </CardContent>
           </Card>
 
-          <Card className="tw:mb-6">
+          <Card className="mb-6">
             <CardContent>
-              <h6 className="tw:mb-4">
-                <Icon icon={InfoIcon} className="tw:mr-2" />
+              <h6 className="mb-4">
+                <Icon icon={InfoIcon} className="mr-2" />
                 {m.schedule_info_heading()}
               </h6>
-              <Grid className="tw:gap-4">
+              <Grid className="gap-4">
                 <GridItem span={6} desktopSpan={3}>
-                  <small className="tw:text-muted-foreground tw:block">
-                    {m.schedule_info_type()}
-                  </small>
-                  <span className="tw:font-semibold">{scheduleMetadata.title}</span>
+                  <small className="text-muted-foreground block">{m.schedule_info_type()}</small>
+                  <span className="font-semibold">{scheduleMetadata.title}</span>
                 </GridItem>
                 {hasTeams ? (
                   <GridItem span={6} desktopSpan={3}>
-                    <small className="tw:text-muted-foreground tw:block">
-                      {m.schedule_info_team()}
-                    </small>
-                    <span className="tw:font-semibold">
+                    <small className="text-muted-foreground block">{m.schedule_info_team()}</small>
+                    <span className="font-semibold">
                       {m.schedule_info_team_value({
                         team: String(teamNumber),
                         total: String(teamCount),
@@ -306,34 +300,30 @@ export function ScheduleDetailModal({
                   </GridItem>
                 ) : null}
                 <GridItem span={6} desktopSpan={3}>
-                  <small className="tw:text-muted-foreground tw:block">
-                    {m.schedule_info_cycle()}
-                  </small>
-                  <span className="tw:font-semibold">
+                  <small className="text-muted-foreground block">{m.schedule_info_cycle()}</small>
+                  <span className="font-semibold">
                     {m.schedule_info_cycle_days({
                       days: String(scheduleConfig.shiftConfig.cycleLengthDays),
                     })}
                   </span>
                 </GridItem>
                 <GridItem span={6} desktopSpan={3}>
-                  <small className="tw:text-muted-foreground tw:block">
+                  <small className="text-muted-foreground block">
                     {m.schedule_info_shifts_per_day()}
                   </small>
-                  <span className="tw:font-semibold">
-                    {scheduleConfig.shiftConfig.shiftsPerDay}
-                  </span>
+                  <span className="font-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
                 </GridItem>
                 <GridItem span={12}>
-                  <small className="tw:text-muted-foreground tw:block tw:mb-2">
+                  <small className="text-muted-foreground block mb-2">
                     {m.schedule_info_available_shifts()}
                   </small>
-                  <div className="tw:flex tw:flex-wrap tw:gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {availableShifts.map(([code, definition]) => {
                       const meta = SHIFT_DISPLAY_META[code] ?? { variant: "secondary" };
                       return (
-                        <Badge key={code} variant={meta.variant} className="tw:font-normal">
+                        <Badge key={code} variant={meta.variant} className="font-normal">
                           {definition?.displayCode ?? code}
-                          <span className="tw:ml-1">
+                          <span className="ml-1">
                             {getLocalizedShiftTime(
                               definition?.start ?? null,
                               definition?.end ?? null,
@@ -346,7 +336,7 @@ export function ScheduleDetailModal({
                   </div>
                 </GridItem>
                 <GridItem span={12}>
-                  <small className="tw:text-muted-foreground tw:block">
+                  <small className="text-muted-foreground block">
                     {m.schedule_info_description()}
                   </small>
                   <span>{scheduleMetadata.description}</span>
@@ -356,17 +346,17 @@ export function ScheduleDetailModal({
           </Card>
 
           {/* 7-Day Schedule */}
-          <div className="tw:mb-6">
-            <h6 className="tw:mb-4">
-              <Icon icon={CalendarDaysIcon} className="tw:mr-2" />
+          <div className="mb-6">
+            <h6 className="mb-4">
+              <Icon icon={CalendarDaysIcon} className="mr-2" />
               {m.schedule_7day_heading()}
             </h6>
 
             {/* Desktop table view */}
-            <div className="tw:hidden tw:md:block">
-              <div className="tw:overflow-x-auto">
+            <div className="hidden md:block">
+              <div className="overflow-x-auto">
                 <Table
-                  className="tw:mb-0 tw:[&_th]:bg-muted tw:[&_th]:p-3 tw:[&_td]:p-3 tw:[&_tr]:border-b tw:[&_tr]:border-border tw:[&_tbody_tr]:hover:bg-muted/50"
+                  className="mb-0 [&_th]:bg-muted [&_th]:p-3 [&_td]:p-3 [&_tr]:border-b [&_tr]:border-border [&_tbody_tr]:hover:bg-muted/50"
                   aria-label={
                     hasTeams
                       ? m.schedule_7day_aria_team({ team: String(teamNumber) })
@@ -386,22 +376,18 @@ export function ScheduleDetailModal({
                     {weekSchedule.map((day) => (
                       <TableRow
                         key={day.date.format("YYYY-MM-DD")}
-                        className={clsx(day.isToday && "tw:bg-primary/10 tw:font-medium")}
+                        className={clsx(day.isToday && "bg-primary/10 font-medium")}
                       >
                         <TableCell>
                           <strong>{day.date.format("MMM D")}</strong>
                           {day.isToday && (
-                            <Badge variant="default" className="tw:ml-2">
-                              <Icon
-                                icon={CircleIcon}
-                                className="tw:mr-1 tw:size-2"
-                                fill="currentColor"
-                              />
+                            <Badge variant="default" className="ml-2">
+                              <Icon icon={CircleIcon} className="mr-1 size-2" fill="currentColor" />
                               {m.today()}
                             </Badge>
                           )}
                           {day.isTomorrow && (
-                            <Badge variant="info" className="tw:ml-2">
+                            <Badge variant="info" className="ml-2">
                               {m.schedule_tomorrow()}
                             </Badge>
                           )}
@@ -415,7 +401,7 @@ export function ScheduleDetailModal({
                           )}
                         </TableCell>
                         <TableCell>
-                          <small className="tw:text-muted-foreground">
+                          <small className="text-muted-foreground">
                             {day.shift.code === "O"
                               ? "—"
                               : (getLocalizedShiftTime(
@@ -427,13 +413,13 @@ export function ScheduleDetailModal({
                         </TableCell>
                         <TableCell>
                           {day.shift.code === "O" ? (
-                            <small className="tw:text-muted-foreground">
-                              <Icon icon={HouseIcon} className="tw:mr-1" />
+                            <small className="text-muted-foreground">
+                              <Icon icon={HouseIcon} className="mr-1" />
                               {m.schedule_rest_day()}
                             </small>
                           ) : (
-                            <small className="tw:text-success">
-                              <Icon icon={BriefcaseIcon} className="tw:mr-1" />
+                            <small className="text-success">
+                              <Icon icon={BriefcaseIcon} className="mr-1" />
                               {m.schedule_working()}
                             </small>
                           )}
@@ -446,38 +432,33 @@ export function ScheduleDetailModal({
             </div>
 
             {/* Mobile card view */}
-            <div className="tw:md:hidden">
+            <div className="md:hidden">
               {weekSchedule.map((day) => (
                 <Card
                   key={day.date.format("YYYY-MM-DD")}
                   className={clsx(
-                    "tw:mb-4",
-                    day.isToday &&
-                      "tw:border-primary tw:shadow-sm tw:ring-2 tw:ring-primary tw:bg-primary/10",
+                    "mb-4",
+                    day.isToday && "border-primary shadow-sm ring-2 ring-primary bg-primary/10",
                   )}
                 >
-                  <CardContent className="tw:py-4">
-                    <div className="tw:flex tw:justify-between tw:items-start tw:mb-2">
+                  <CardContent className="py-4">
+                    <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h6 className="tw:mb-1">
+                        <h6 className="mb-1">
                           {day.date.format("dddd")}
                           {day.isToday && (
-                            <Badge variant="default" className="tw:ml-2">
-                              <Icon
-                                icon={CircleIcon}
-                                className="tw:mr-1 tw:size-2"
-                                fill="currentColor"
-                              />
+                            <Badge variant="default" className="ml-2">
+                              <Icon icon={CircleIcon} className="mr-1 size-2" fill="currentColor" />
                               {m.today()}
                             </Badge>
                           )}
                           {day.isTomorrow && (
-                            <Badge variant="info" className="tw:ml-2">
+                            <Badge variant="info" className="ml-2">
                               {m.schedule_tomorrow()}
                             </Badge>
                           )}
                         </h6>
-                        <small className="tw:text-muted-foreground">
+                        <small className="text-muted-foreground">
                           {day.date.format("MMMM D, YYYY")}
                         </small>
                       </div>
@@ -489,13 +470,13 @@ export function ScheduleDetailModal({
                         )}
                       </div>
                     </div>
-                    <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center tw:pt-2 tw:border-t tw:border-border">
+                    <div className="flex flex-wrap gap-2 justify-between items-center pt-2 border-t border-border">
                       <div>
-                        <small className="tw:text-muted-foreground tw:block">
-                          <Icon icon={ClockIcon} className="tw:mr-1" />
+                        <small className="text-muted-foreground block">
+                          <Icon icon={ClockIcon} className="mr-1" />
                           {m.schedule_col_hours()}
                         </small>
-                        <span className="tw:text-foreground">
+                        <span className="text-foreground">
                           {day.shift.code === "O"
                             ? "—"
                             : (getLocalizedShiftTime(
@@ -505,18 +486,18 @@ export function ScheduleDetailModal({
                               ) ?? "—")}
                         </span>
                       </div>
-                      <div className="tw:text-right">
-                        <small className="tw:text-muted-foreground tw:block">
+                      <div className="text-right">
+                        <small className="text-muted-foreground block">
                           {m.schedule_col_status()}
                         </small>
                         {day.shift.code === "O" ? (
-                          <span className="tw:text-muted-foreground">
-                            <Icon icon={HouseIcon} className="tw:mr-1" />
+                          <span className="text-muted-foreground">
+                            <Icon icon={HouseIcon} className="mr-1" />
                             {m.schedule_rest_day()}
                           </span>
                         ) : (
-                          <span className="tw:text-success">
-                            <Icon icon={BriefcaseIcon} className="tw:mr-1" />
+                          <span className="text-success">
+                            <Icon icon={BriefcaseIcon} className="mr-1" />
                             {m.schedule_working()}
                           </span>
                         )}
@@ -529,49 +510,49 @@ export function ScheduleDetailModal({
           </div>
 
           {/* Team Statistics */}
-          <Grid className="tw:mb-6">
+          <Grid className="mb-6">
             <GridItem desktopSpan={6}>
               <Card>
                 <CardContent>
-                  <h6 className="tw:mb-4">
-                    <Icon icon={ChartColumnIcon} className="tw:mr-2" />
+                  <h6 className="mb-4">
+                    <Icon icon={ChartColumnIcon} className="mr-2" />
                     {m.schedule_weekly_stats()}
                   </h6>
-                  <div className="tw:mb-4">
-                    <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center tw:mb-2">
-                      <span className="tw:font-semibold">{m.schedule_working_vs_rest()}</span>
-                      <small className="tw:text-muted-foreground">
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-2 justify-between items-center mb-2">
+                      <span className="font-semibold">{m.schedule_working_vs_rest()}</span>
+                      <small className="text-muted-foreground">
                         {m.schedule_stats_summary({
                           working: String(stats.workingDays),
                           rest: String(stats.offDays),
                         })}
                       </small>
                     </div>
-                    <div className="tw:space-y-2">
+                    <div className="space-y-2">
                       <Progress
-                        indicatorClassName="tw:bg-success"
+                        indicatorClassName="bg-success"
                         value={(stats.workingDays / 7) * 100}
                         aria-label={m.schedule_working_label({ count: String(stats.workingDays) })}
                       >
-                        <span className="tw:text-sm">
+                        <span className="text-sm">
                           {m.schedule_working_label({ count: String(stats.workingDays) })}
                         </span>
                       </Progress>
                       <Progress
-                        indicatorClassName="tw:bg-muted-foreground"
+                        indicatorClassName="bg-muted-foreground"
                         value={(stats.offDays / 7) * 100}
                         aria-label={m.schedule_rest_label({ count: String(stats.offDays) })}
                       >
-                        <span className="tw:text-sm">
+                        <span className="text-sm">
                           {m.schedule_rest_label({ count: String(stats.offDays) })}
                         </span>
                       </Progress>
                     </div>
                   </div>
-                  <ul className="tw:list-none tw:pl-0 tw:mb-0 tw:divide-y tw:divide-border">
-                    <li className="tw:px-0 tw:py-2 tw:flex tw:justify-between">
+                  <ul className="list-none pl-0 mb-0 divide-y divide-border">
+                    <li className="px-0 py-2 flex justify-between">
                       <span>
-                        <Icon icon={ClockIcon} className="tw:mr-1" />
+                        <Icon icon={ClockIcon} className="mr-1" />
                         {m.schedule_total_weekly_hours()}
                       </span>
                       <Badge variant="default">
@@ -587,16 +568,16 @@ export function ScheduleDetailModal({
             <GridItem desktopSpan={6}>
               <Card>
                 <CardContent>
-                  <h6 className="tw:mb-4">
-                    <Icon icon={ChartPieIcon} className="tw:mr-2" />
+                  <h6 className="mb-4">
+                    <Icon icon={ChartPieIcon} className="mr-2" />
                     {m.schedule_shift_distribution()}
                   </h6>
-                  <div className="tw:mb-4 tw:space-y-2">
+                  <div className="mb-4 space-y-2">
                     {stats.shiftDistribution
                       .filter((item) => item.count > 0)
                       .map((item) => (
                         <div key={item.key}>
-                          <span className="tw:text-sm tw:text-muted-foreground">
+                          <span className="text-sm text-muted-foreground">
                             {getShiftLabel(item.key)}
                           </span>
                           <Progress
@@ -606,11 +587,11 @@ export function ScheduleDetailModal({
                         </div>
                       ))}
                   </div>
-                  <ul className="tw:list-none tw:pl-0 tw:mb-0 tw:divide-y tw:divide-border">
+                  <ul className="list-none pl-0 mb-0 divide-y divide-border">
                     {stats.shiftDistribution.map((item) => (
-                      <li key={item.key} className="tw:px-0 tw:py-2 tw:flex tw:justify-between">
+                      <li key={item.key} className="px-0 py-2 flex justify-between">
                         <span>
-                          <Icon icon={item.icon} className={clsx("tw:mr-1", item.iconClassName)} />
+                          <Icon icon={item.icon} className={clsx("mr-1", item.iconClassName)} />
                           {getShiftLabel(item.key)}
                         </span>
                         <Badge variant={item.variant}>

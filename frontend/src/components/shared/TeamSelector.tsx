@@ -43,7 +43,7 @@ export function TeamSelector({
 
   return (
     <Field className={className}>
-      <FieldLabel htmlFor={effectiveId} className="tw:font-semibold">
+      <FieldLabel htmlFor={effectiveId} className="font-semibold">
         {label}
       </FieldLabel>
       <ReactSelect<TeamOption>

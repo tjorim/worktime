@@ -5,8 +5,8 @@ import {
 } from "@/lib/timeTracking/constants";
 
 /**
- * Runtime values reach the DOM as custom properties (read by `tw:bg-label`,
- * `tw:w-(--seg-w)` and friends) so user-defined colors and computed geometry never
+ * Runtime values reach the DOM as custom properties (read by `bg-label`,
+ * `w-(--seg-w)` and friends) so user-defined colors and computed geometry never
  * become free-form inline declarations. These helpers validate the values; the
  * components spell out the `--*` keys inline so lint can check them.
  */

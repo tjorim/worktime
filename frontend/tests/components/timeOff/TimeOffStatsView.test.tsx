@@ -98,8 +98,8 @@ describe("TimeOffStatsView", () => {
       render(<TimeOffStatsView entries={entries} />);
 
       const badges = screen.getAllByText(/\d+ days/);
-      expect(badges[0]!.className).toContain("tw:bg-wt-event-holiday-full-bg");
-      expect(badges[1]!.className).toContain("tw:bg-wt-event-business-full-bg");
+      expect(badges[0]!.className).toContain("bg-wt-event-holiday-full-bg");
+      expect(badges[1]!.className).toContain("bg-wt-event-business-full-bg");
     });
 
     it("handles half-day entries", () => {

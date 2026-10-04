@@ -3,16 +3,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "tw:group/alert tw:relative tw:grid tw:w-full tw:gap-0.5 tw:rounded-lg tw:border tw:px-2.5 tw:py-2 tw:text-left tw:text-sm tw:has-data-[slot=alert-action]:relative tw:has-data-[slot=alert-action]:pr-18 tw:has-[>svg]:grid-cols-alert tw:has-[>svg]:gap-x-2 tw:*:[svg]:row-span-2 tw:*:[svg]:translate-y-0.5 tw:*:[svg]:text-current tw:*:[svg:not([class*=size-])]:size-4",
+  "group/alert relative grid w-full gap-0.5 rounded-lg border px-2.5 py-2 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-alert has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*=size-])]:size-4",
   {
     variants: {
       variant: {
-        success: "tw:bg-success-bg tw:text-success",
-        warning: "tw:bg-warning-bg tw:text-warning",
-        info: "tw:bg-info-bg tw:text-info",
-        default: "tw:bg-card tw:text-card-foreground",
+        success: "bg-success-bg text-success",
+        warning: "bg-warning-bg text-warning",
+        info: "bg-info-bg text-info",
+        default: "bg-card text-card-foreground",
         destructive:
-          "tw:bg-card tw:text-danger-text tw:*:data-[slot=alert-description]:text-danger-text/90 tw:*:[svg]:text-current",
+          "bg-card text-danger-text *:data-[slot=alert-description]:text-danger-text/90 *:[svg]:text-current",
       },
     },
     defaultVariants: {
@@ -41,7 +41,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="alert-title"
       className={cn(
-        "tw:font-medium tw:group-has-[>svg]/alert:col-start-2 tw:[&_a]:underline tw:[&_a]:underline-offset-3 tw:[&_a]:hover:text-foreground",
+        "font-medium group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground",
         className,
       )}
       {...props}
@@ -54,7 +54,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
     <div
       data-slot="alert-description"
       className={cn(
-        "tw:text-sm tw:text-balance tw:text-muted-foreground tw:md:text-pretty tw:[&_a]:underline tw:[&_a]:underline-offset-3 tw:[&_a]:hover:text-foreground tw:[&_p:not(:last-child)]:mb-4",
+        "text-sm text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
         className,
       )}
       {...props}
@@ -64,11 +64,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
 
 function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      data-slot="alert-action"
-      className={cn("tw:absolute tw:top-2 tw:right-2", className)}
-      {...props}
-    />
+    <div data-slot="alert-action" className={cn("absolute top-2 right-2", className)} {...props} />
   );
 }
 

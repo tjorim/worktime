@@ -53,7 +53,7 @@ describe("TimelineProgressBar", () => {
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       const breakBar = screen.getByTestId("break-segment-task-1");
-      expect(breakBar).toHaveClass("tw:opacity-30");
+      expect(breakBar).toHaveClass("opacity-30");
     });
 
     it("has an aria-label on the break segment", () => {
@@ -308,7 +308,7 @@ describe("TimelineProgressBar", () => {
       expect(segment).toHaveAttribute("role", "progressbar");
       expect(segment.style.getPropertyValue("--seg-w")).toBe("100%");
       expect(segment.style.getPropertyValue("--label-bg")).toBe("#c82333");
-      expect(segment).toHaveClass("tw:w-(--seg-w)");
+      expect(segment).toHaveClass("w-(--seg-w)");
       expect(segment).not.toHaveAttribute("data-planned");
     });
 

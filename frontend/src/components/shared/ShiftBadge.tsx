@@ -6,16 +6,16 @@ import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 
 export const shiftColors: Record<string, string> = {
-  "shift-morning": "tw:bg-wt-shift-morning tw:text-wt-shift-morning-text",
-  "shift-late": "tw:bg-wt-shift-late tw:text-wt-shift-late-text",
-  "shift-night": "tw:bg-wt-shift-night tw:text-wt-shift-night-text",
-  "shift-day": "tw:bg-wt-shift-day tw:text-wt-shift-day-text",
-  "shift-off": "tw:bg-wt-shift-off tw:text-wt-shift-off-text",
+  "shift-morning": "bg-wt-shift-morning text-wt-shift-morning-text",
+  "shift-late": "bg-wt-shift-late text-wt-shift-late-text",
+  "shift-night": "bg-wt-shift-night text-wt-shift-night-text",
+  "shift-day": "bg-wt-shift-day text-wt-shift-day-text",
+  "shift-off": "bg-wt-shift-off text-wt-shift-off-text",
 };
 const sizes = {
-  sm: "tw:px-2 tw:py-0.5 tw:text-xs",
-  md: "tw:px-2 tw:py-1 tw:text-sm",
-  lg: "tw:px-4 tw:py-2 tw:text-base",
+  sm: "px-2 py-0.5 text-xs",
+  md: "px-2 py-1 text-sm",
+  lg: "px-4 py-2 text-base",
 };
 
 // Helper: Build badge content from boolean flags
@@ -89,10 +89,10 @@ export function ShiftBadge({
     <Badge
       variant="outline"
       className={clsx(
-        "tw:h-auto tw:min-w-8 tw:font-semibold",
-        pill ? "tw:rounded-full" : "tw:rounded-md",
+        "h-auto min-w-8 font-semibold",
+        pill ? "rounded-full" : "rounded-md",
         sizeClass,
-        showTooltip && "tw:cursor-help",
+        showTooltip && "cursor-help",
         shiftColors[badgeClassName] ?? shiftColors["shift-off"],
         className,
       )}

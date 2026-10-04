@@ -75,11 +75,11 @@ export function SettingsAccountSection({
       {isValidating ? (
         <SettingsLoading>{m.loading()}</SettingsLoading>
       ) : isAuthenticated ? (
-        <div className="tw:flex tw:flex-col tw:gap-4">
-          <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
             <SettingsRowText
               icon={UserCheckIcon}
-              iconClassName="tw:text-success"
+              iconClassName="text-success"
               title={
                 resolvedDisplayName
                   ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
@@ -98,7 +98,7 @@ export function SettingsAccountSection({
           <Alert variant="info">
             <div>
               {m.account_privacy_notice_body()}{" "}
-              <Link to="/privacy" className="tw:font-medium tw:underline tw:underline-offset-3">
+              <Link to="/privacy" className="font-medium underline underline-offset-3">
                 {m.account_privacy_notice_link()}
               </Link>
             </div>
@@ -121,27 +121,27 @@ export function SettingsAccountSection({
                   disabled={accountId === null || isProfileSaving}
                   aria-describedby="account-display-name-help"
                 />
-                <FieldDescription id="account-display-name-help" className="tw:mb-0">
+                <FieldDescription id="account-display-name-help" className="mb-0">
                   {m.account_profile_display_name_description()}
                 </FieldDescription>
               </Field>
 
-              <div className="tw:flex tw:flex-col tw:gap-1 tw:text-sm tw:text-muted-foreground">
+              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                 <div>
-                  <span className="tw:font-medium">{m.account_profile_username_label()}:</span>{" "}
+                  <span className="font-medium">{m.account_profile_username_label()}:</span>{" "}
                   {username ?? "—"}
                 </div>
                 <div>
-                  <span className="tw:font-medium">{m.account_profile_user_id_label()}:</span>{" "}
+                  <span className="font-medium">{m.account_profile_user_id_label()}:</span>{" "}
                   {accountId ?? userId ?? "—"}
                 </div>
                 <div>
-                  <span className="tw:font-medium">{m.account_profile_role_label()}:</span>{" "}
+                  <span className="font-medium">{m.account_profile_role_label()}:</span>{" "}
                   {isAdmin ? m.account_profile_role_admin() : m.account_profile_role_member()}
                 </div>
               </div>
 
-              <div className="tw:flex tw:flex-wrap tw:gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   onClick={onSaveProfile}
@@ -152,8 +152,8 @@ export function SettingsAccountSection({
                 </Button>
               </div>
 
-              <div className="tw:flex tw:flex-col tw:gap-2 tw:border-t tw:border-border tw:pt-4">
-                <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-danger-text">
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <h3 className="m-0 text-base font-medium text-danger-text">
                   {m.account_delete_section_title()}
                 </h3>
                 <SettingsHint>{m.account_delete_description()}</SettingsHint>
@@ -176,24 +176,24 @@ export function SettingsAccountSection({
           )}
         </div>
       ) : (
-        <div className="tw:flex tw:flex-col tw:gap-3">
+        <div className="flex flex-col gap-3">
           <SettingsRowText
             icon={UserXIcon}
-            iconClassName="tw:text-muted-foreground"
+            iconClassName="text-muted-foreground"
             title={m.account_not_signed_in()}
             description={m.account_sync_benefits()}
           />
-          <div className="tw:flex tw:flex-wrap tw:gap-3 tw:text-sm tw:text-muted-foreground">
+          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span>
-              <Icon icon={CloudCheckIcon} className="tw:mr-1 tw:text-success" />
+              <Icon icon={CloudCheckIcon} className="mr-1 text-success" />
               {m.account_sync_benefit_backup()}
             </span>
             <span>
-              <Icon icon={SmartphoneIcon} className="tw:mr-1 tw:text-success" />
+              <Icon icon={SmartphoneIcon} className="mr-1 text-success" />
               {m.account_sync_benefit_crossdevice()}
             </span>
           </div>
-          <div className="tw:flex tw:flex-wrap tw:gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={onLogin}>
               <Icon icon={LogInIcon} />
               {m.account_sign_in_btn()}

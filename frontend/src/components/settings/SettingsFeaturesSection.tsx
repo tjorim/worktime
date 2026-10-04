@@ -87,10 +87,10 @@ export function SettingsFeaturesSection({
 
       {enableCrossBorderTracking && (
         <SettingsSection icon={GlobeIcon} title={m.cross_border_setup_label()}>
-          <SettingsHint className="tw:mb-3">{m.cross_border_setup_description()}</SettingsHint>
+          <SettingsHint className="mb-3">{m.cross_border_setup_description()}</SettingsHint>
           <SettingsList>
             <SettingsRow title={m.home_country_label()} description={m.home_country_description()}>
-              <div className="tw:w-full tw:sm:w-48">
+              <div className="w-full sm:w-48">
                 <CountrySelect
                   value={homeCountry}
                   onChange={onUpdateHomeCountry}
@@ -102,7 +102,7 @@ export function SettingsFeaturesSection({
               title={m.office_country_label()}
               description={m.office_country_description()}
             >
-              <div className="tw:w-full tw:sm:w-48">
+              <div className="w-full sm:w-48">
                 <CountrySelect
                   value={officeCountry}
                   onChange={onUpdateOfficeCountry}

@@ -66,22 +66,22 @@ export function KeyboardShortcutsModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={KeyboardIcon} className="tw:me-2" />
+            <Icon icon={KeyboardIcon} className="me-2" />
             {m.keyboard_shortcuts_label()}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           {categories.map(({ category, items }) => (
-            <div key={category} className="tw:mb-4">
-              <h6 className="tw:text-muted-foreground tw:mb-2">{category}</h6>
-              <div className="tw:grid tw:gap-2">
+            <div key={category} className="mb-4">
+              <h6 className="text-muted-foreground mb-2">{category}</h6>
+              <div className="grid gap-2">
                 {items.map(({ keys, description }) => (
-                  <div key={description} className="tw:flex tw:justify-between tw:items-center">
-                    <span className="tw:text-muted-foreground tw:text-sm">{description}</span>
+                  <div key={description} className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-sm">{description}</span>
                     <span>
                       {keys.map((key, i) => (
                         <span key={key}>
-                          {i > 0 && <span className="tw:text-muted-foreground tw:mx-1">+</span>}
+                          {i > 0 && <span className="text-muted-foreground mx-1">+</span>}
                           <kbd>{key}</kbd>
                         </span>
                       ))}

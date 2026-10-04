@@ -24,11 +24,11 @@ export function DailyTemplatePicker({
   }
 
   return (
-    <Field className="tw:mb-2">
-      <FieldLabel htmlFor="timeTrackerTemplate" className="tw:sr-only">
+    <Field className="mb-2">
+      <FieldLabel htmlFor="timeTrackerTemplate" className="sr-only">
         {m.tt_template()}
       </FieldLabel>
-      <div className="tw:flex tw:gap-2">
+      <div className="flex gap-2">
         <ReactSelect<TemplateOption>
           unstyled
           isClearable
@@ -39,9 +39,9 @@ export function DailyTemplatePicker({
           value={value}
           onChange={(selected) => onChange(selected?.value ?? "")}
           classNames={selectClassNames}
-          className="tw:min-w-0 tw:flex-1"
+          className="min-w-0 flex-1"
         />
-        <Button variant="outline" className="tw:h-auto" onClick={onApply}>
+        <Button variant="outline" className="h-auto" onClick={onApply}>
           {m.tt_use_template()}
         </Button>
       </div>

@@ -1,6 +1,6 @@
-@import "../../../node_modules/frappe-gantt/dist/frappe-gantt.css" layer(gantt);
+@import "../../../node_modules/frappe-gantt/dist/frappe-gantt.css" layer(vendor);
 
-@layer gantt {
+@layer vendor {
   /* Map frappe-gantt's palette onto the runtime semantic tokens so both themes follow the app. */
   [data-slot="gantt-scroll"] {
     --g-arrow-color: var(--wt-theme-foreground);

@@ -108,53 +108,51 @@ function describeEvent(event: HdayEvent) {
 // classes, so the legend can't drift from what the cells actually show.
 function getLegendItems() {
   return [
-    { swatchClass: "tw:bg-wt-team-cal-available", label: m.team_legend_available() },
-    { swatchClass: "tw:bg-wt-team-cal-weekend-cell", label: m.team_legend_weekend() },
+    { swatchClass: "bg-wt-team-cal-available", label: m.team_legend_available() },
+    { swatchClass: "bg-wt-team-cal-weekend-cell", label: m.team_legend_weekend() },
     {
-      swatchClass: "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg",
+      swatchClass: "bg-wt-event-holiday-full-bg text-wt-event-holiday-full-fg",
       label: m.team_legend_vacation(),
     },
     {
-      swatchClass: "tw:bg-wt-event-ill-full-bg tw:text-wt-event-ill-full-fg",
+      swatchClass: "bg-wt-event-ill-full-bg text-wt-event-ill-full-fg",
       label: m.team_legend_sick(),
     },
     {
-      swatchClass: "tw:bg-wt-event-business-full-bg tw:text-wt-event-business-full-fg",
+      swatchClass: "bg-wt-event-business-full-bg text-wt-event-business-full-fg",
       label: m.team_legend_business(),
     },
     {
-      swatchClass: "tw:bg-wt-event-course-full-bg tw:text-wt-event-course-full-fg",
+      swatchClass: "bg-wt-event-course-full-bg text-wt-event-course-full-fg",
       label: m.team_legend_training(),
     },
     {
-      swatchClass: "tw:bg-wt-event-recurring-full-bg tw:text-wt-event-recurring-full-fg",
+      swatchClass: "bg-wt-event-recurring-full-bg text-wt-event-recurring-full-fg",
       label: m.team_legend_weekly_off(),
     },
     {
-      swatchClass: "tw:bg-wt-event-birthday-full-bg tw:text-wt-event-birthday-full-fg",
+      swatchClass: "bg-wt-event-birthday-full-bg text-wt-event-birthday-full-fg",
       label: m.team_legend_birthday(),
     },
     {
-      swatchClass: "tw:bg-wt-event-in-full-bg tw:text-wt-event-in-full-fg",
+      swatchClass: "bg-wt-event-in-full-bg text-wt-event-in-full-fg",
       label: m.team_legend_in_office(),
     },
     {
-      swatchClass: "tw:bg-wt-event-other-full-bg tw:text-wt-event-other-full-fg",
+      swatchClass: "bg-wt-event-other-full-bg text-wt-event-other-full-fg",
       label: m.team_legend_other(),
     },
     {
-      swatchClass: "tw:bg-wt-event-weekend-full-bg tw:text-wt-event-weekend-full-fg",
+      swatchClass: "bg-wt-event-weekend-full-bg text-wt-event-weekend-full-fg",
       label: m.team_legend_weekend_event(),
     },
     {
-      swatchClass:
-        "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg tw:team-half-am",
+      swatchClass: "bg-wt-event-holiday-full-bg text-wt-event-holiday-full-fg team-half-am",
       glyph: HALF_DAY_GLYPH.am,
       label: m.team_legend_half_am(),
     },
     {
-      swatchClass:
-        "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg tw:team-half-pm",
+      swatchClass: "bg-wt-event-holiday-full-bg text-wt-event-holiday-full-fg team-half-pm",
       glyph: HALF_DAY_GLYPH.pm,
       label: m.team_legend_half_pm(),
     },
@@ -381,10 +379,10 @@ export function TeamScheduleView() {
   // after a helper is configured. Keep a guard for direct rendering and stale state.
   if (!helperBaseUrl) {
     return (
-      <Alert variant="info" className="tw:mt-4">
+      <Alert variant="info" className="mt-4">
         <h5>{m.team_helper_required_heading()}</h5>
         <p>{m.team_helper_required_body()}</p>
-        <p className="tw:mb-0 tw:text-sm">{m.team_helper_required_help()}</p>
+        <p className="mb-0 text-sm">{m.team_helper_required_help()}</p>
       </Alert>
     );
   }
@@ -392,21 +390,18 @@ export function TeamScheduleView() {
   const legendItems = getLegendItems();
 
   return (
-    <div className="team-schedule-view tw:py-4">
-      <Card className="tw:mb-4">
+    <div data-slot="team-schedule-view" className="py-4">
+      <Card className="mb-4">
         <CardHeader>
-          <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-            <h5 className="tw:mb-0">
-              <Icon icon={teamData ? BuildingIcon : UsersIcon} className="tw:mr-2" />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h5 className="mb-0">
+              <Icon icon={teamData ? BuildingIcon : UsersIcon} className="mr-2" />
               {teamData ? teamData.name : m.team_viewer_title()}
             </h5>
 
-            <form
-              onSubmit={handleSubmit}
-              className="tw:flex tw:gap-2 tw:grow tw:min-w-56 tw:max-w-md"
-            >
-              <div className="tw:grow">
-                <label htmlFor="team-id-input" className="tw:sr-only">
+            <form onSubmit={handleSubmit} className="flex gap-2 grow min-w-56 max-w-md">
+              <div className="grow">
+                <label htmlFor="team-id-input" className="sr-only">
                   {m.team_id_label()}
                 </label>
                 <Input
@@ -427,12 +422,12 @@ export function TeamScheduleView() {
               >
                 {isLoading ? (
                   <>
-                    <Spinner size="sm" className="tw:mr-2" />
+                    <Spinner size="sm" className="mr-2" />
                     {m.loading()}
                   </>
                 ) : (
                   <>
-                    <Icon icon={SearchIcon} className="tw:mr-1" />
+                    <Icon icon={SearchIcon} className="mr-1" />
                     {m.team_load_btn()}
                   </>
                 )}
@@ -466,7 +461,7 @@ export function TeamScheduleView() {
           {error && (
             <Alert variant="destructive">
               <h5>{m.error()}</h5>
-              <p className="tw:mb-0">{error}</p>
+              <p className="mb-0">{error}</p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -480,26 +475,26 @@ export function TeamScheduleView() {
 
           {teamData ? (
             <>
-              <h6 className="tw:mb-4">
+              <h6 className="mb-4">
                 {m.team_members_heading({ count: String(teamData.members.length) })}
-                <span className="tw:text-muted-foreground tw:text-sm tw:ml-2">
+                <span className="text-muted-foreground text-sm ml-2">
                   {m.team_id_display({ id: teamData.team_id })}
                 </span>
               </h6>
 
-              <div className="tw:overflow-x-auto" ref={gridScrollRef}>
+              <div className="overflow-x-auto" ref={gridScrollRef}>
                 <table
                   data-team-grid
-                  className="tw:team-grid tw:w-full tw:border-collapse tw:text-sm"
+                  className="team-grid w-full border-collapse text-sm"
                   cellSpacing="0"
                   cellPadding="1"
                 >
                   <thead>
                     {/* Month header row */}
-                    <tr className="tw:bg-team-header tw:text-team-header-foreground">
+                    <tr className="bg-team-header text-team-header-foreground">
                       <th
                         data-team-name
-                        className="tw:team-name-width tw:sticky tw:left-0 tw:z-11 tw:box-border tw:truncate tw:border tw:border-border tw:bg-team-header tw:px-4 tw:py-2 tw:text-left tw:shadow-team-name"
+                        className="team-name-width sticky left-0 z-11 box-border truncate border border-border bg-team-header px-4 py-2 text-left shadow-team-name"
                         rowSpan={2}
                       >
                         {m.team_calendar_name_header()}
@@ -507,12 +502,12 @@ export function TeamScheduleView() {
                       {monthGroups.map((group, idx) => (
                         <th
                           key={idx}
-                          className="tw:border-l tw:border-team-header-divider tw:p-1.5 tw:text-center tw:font-semibold"
+                          className="border-l border-team-header-divider p-1.5 text-center font-semibold"
                           colSpan={group.colspan}
                         >
                           <span
                             data-team-month-label
-                            className="tw:team-month-label tw:inline-block tw:sticky"
+                            className="team-month-label inline-block sticky"
                           >
                             {group.month}
                           </span>
@@ -520,14 +515,14 @@ export function TeamScheduleView() {
                       ))}
                     </tr>
                     {/* Day header row */}
-                    <tr className="tw:bg-team-header tw:text-team-header-foreground">
+                    <tr className="bg-team-header text-team-header-foreground">
                       {dateRange.map((date) => {
                         const isWeekend = date.day() === 0 || date.day() === 6;
                         const isToday = date.isSame(dayjs(), "day");
                         return (
                           <th
                             key={date.format("YYYY-MM-DD")}
-                            className={`tw:min-w-7 tw:border-l tw:border-team-day-divider tw:p-1 tw:text-center tw:text-xs${isToday ? " tw:bg-team-today tw:text-team-today-foreground tw:font-bold" : isWeekend ? " tw:bg-team-header-weekend tw:font-medium" : " tw:font-medium"}`}
+                            className={`min-w-7 border-l border-team-day-divider p-1 text-center text-xs${isToday ? " bg-team-today text-team-today-foreground font-bold" : isWeekend ? " bg-team-header-weekend font-medium" : " font-medium"}`}
                             title={date.format("ddd, MMM D")}
                             aria-current={isToday ? "date" : undefined}
                           >
@@ -543,15 +538,15 @@ export function TeamScheduleView() {
                         {/* Section header row (if multiple sections with titles) */}
                         {section.title && teamData.sections.length > 1 && (
                           <tr>
-                            <td className="tw:team-name-width tw:sticky tw:left-0 tw:z-5 tw:box-border tw:truncate tw:border-t-2 tw:border-b tw:border-r-2 tw:border-border tw:bg-secondary tw:px-2 tw:team:px-4 tw:py-2 tw:text-foreground tw:font-semibold">
-                              <Icon icon={UsersIcon} className="tw:hidden tw:team:inline tw:mr-2" />
+                            <td className="team-name-width sticky left-0 z-5 box-border truncate border-t-2 border-b border-r-2 border-border bg-secondary px-2 team:px-4 py-2 text-foreground font-semibold">
+                              <Icon icon={UsersIcon} className="hidden team:inline mr-2" />
                               {section.title}
                             </td>
                             {/* Empty cells for date columns */}
                             {dateRange.map((date) => (
                               <td
                                 key={date.format("YYYY-MM-DD")}
-                                className="tw:h-9 tw:border-t-2 tw:border-b tw:border-border tw:bg-secondary tw:p-0"
+                                className="h-9 border-t-2 border-b border-border bg-secondary p-0"
                               ></td>
                             ))}
                           </tr>
@@ -560,12 +555,10 @@ export function TeamScheduleView() {
                         {section.members.map((member) => {
                           const tooltip = (
                             <div id={`tooltip-${member.username}`}>
-                              <div className="tw:text-left">
+                              <div className="text-left">
                                 <strong>{member.display_name}</strong>
                                 <br />
-                                <code className="tw:text-primary-foreground">
-                                  {member.username}
-                                </code>
+                                <code className="text-primary-foreground">{member.username}</code>
                                 <br />
                                 {member.events.length === 1
                                   ? m.team_events_count_one({ count: String(member.events.length) })
@@ -574,13 +567,13 @@ export function TeamScheduleView() {
                                     })}
                                 <br />
                                 {member.etag ? (
-                                  <span className="tw:text-success">
-                                    <Icon icon={FileTextIcon} className="tw:mr-1" />
+                                  <span className="text-success">
+                                    <Icon icon={FileTextIcon} className="mr-1" />
                                     {m.team_hday_file()}
                                   </span>
                                 ) : (
-                                  <span className="tw:text-muted-foreground">
-                                    <Icon icon={FileXIcon} className="tw:mr-1" />
+                                  <span className="text-muted-foreground">
+                                    <Icon icon={FileXIcon} className="mr-1" />
                                     {m.team_no_hday_file()}
                                   </span>
                                 )}
@@ -589,15 +582,15 @@ export function TeamScheduleView() {
                           );
 
                           return (
-                            <tr data-team-member key={member.username} className="tw:group">
+                            <tr data-team-member key={member.username} className="group">
                               <td
                                 data-team-name
-                                className="tw:team-name-width tw:sticky tw:left-0 tw:z-5 tw:box-border tw:truncate tw:border tw:border-r-2 tw:border-border tw:bg-background tw:group-hover:bg-muted tw:px-2 tw:team:px-4 tw:py-1 tw:text-left tw:text-foreground tw:shadow-team-name"
+                                className="team-name-width sticky left-0 z-5 box-border truncate border border-r-2 border-border bg-background group-hover:bg-muted px-2 team:px-4 py-1 text-left text-foreground shadow-team-name"
                               >
                                 <Hint placement="right" content={tooltip}>
                                   <span
                                     data-team-member-name
-                                    className="tw:block tw:truncate tw:font-medium tw:focus-visible:outline-2 tw:focus-visible:outline-ring tw:focus-visible:outline-offset-2"
+                                    className="block truncate font-medium focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
                                     tabIndex={0}
                                   >
                                     {member.display_name}
@@ -611,8 +604,8 @@ export function TeamScheduleView() {
                                 const isToday = date.isSame(dayjs(), "day");
 
                                 let cellClass =
-                                  "tw:team-day tw:relative tw:min-w-7 tw:h-6 tw:border tw:border-border tw:font-mono tw:hover:opacity-85 tw:hover:cursor-pointer tw:focus-visible:outline-2 tw:focus-visible:outline-ring tw:focus-visible:-outline-offset-2 tw:focus-visible:z-1";
-                                if (isWeekend) cellClass += " tw:team-weekend-rest";
+                                  "team-day relative min-w-7 h-6 border border-border font-mono hover:opacity-85 hover:cursor-pointer focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 focus-visible:z-1";
+                                if (isWeekend) cellClass += " team-weekend-rest";
                                 let content: ReactNode = "\u00A0"; // Non-breaking space
 
                                 if (events.length === 1) {
@@ -623,8 +616,8 @@ export function TeamScheduleView() {
                                     if (half) {
                                       cellClass +=
                                         half === "am"
-                                          ? " tw:team-half-am tw:py-0 tw:pr-0"
-                                          : " tw:team-half-pm tw:py-0 tw:pl-0";
+                                          ? " team-half-am py-0 pr-0"
+                                          : " team-half-pm py-0 pl-0";
                                       content = HALF_DAY_GLYPH[half];
                                     }
                                     // Cap the first and last day of a range so it reads as one
@@ -637,8 +630,8 @@ export function TeamScheduleView() {
                                         date.add(1, "day").format("YYYY-MM-DD"),
                                       );
                                       if (!previous?.includes(event))
-                                        cellClass += " tw:team-range-start";
-                                      if (!next?.includes(event)) cellClass += " tw:team-range-end";
+                                        cellClass += " team-range-start";
+                                      if (!next?.includes(event)) cellClass += " team-range-end";
                                     }
                                   }
                                 } else if (events.length > 1) {
@@ -646,7 +639,7 @@ export function TeamScheduleView() {
                                   content = (
                                     <span
                                       data-team-event-stack
-                                      className="tw:flex tw:flex-col tw:h-full tw:min-h-6"
+                                      className="flex flex-col h-full min-h-6"
                                     >
                                       {events.map((event, index) => {
                                         const half = getHalfDay(event);
@@ -654,24 +647,24 @@ export function TeamScheduleView() {
                                           <span
                                             key={index}
                                             data-team-event-segment
-                                            className={`tw:flex-1 tw:min-h-0 tw:leading-none tw:text-team-stripe ${getGridColorClass(event)}${half ? (half === "am" ? " tw:team-half-am" : " tw:team-half-pm") : ""}`}
+                                            className={`flex-1 min-h-0 leading-none text-team-stripe ${getGridColorClass(event)}${half ? (half === "am" ? " team-half-am" : " team-half-pm") : ""}`}
                                           />
                                         );
                                       })}
                                     </span>
                                   );
                                 } else if (isWeekend) {
-                                  cellClass += " tw:bg-wt-team-cal-weekend-cell";
+                                  cellClass += " bg-wt-team-cal-weekend-cell";
                                 } else {
-                                  cellClass += " tw:bg-wt-team-cal-available";
+                                  cellClass += " bg-wt-team-cal-available";
                                 }
 
                                 if (events.length !== 1 || !getHalfDay(events[0]!)) {
-                                  cellClass += " tw:p-0 tw:text-center tw:font-bold tw:text-xs";
+                                  cellClass += " p-0 text-center font-bold text-xs";
                                 }
 
                                 if (isToday) {
-                                  cellClass += " tw:brightness-120 tw:shadow-team-today";
+                                  cellClass += " brightness-120 shadow-team-today";
                                 }
 
                                 const dateKey = date.format("YYYY-MM-DD");
@@ -703,7 +696,7 @@ export function TeamScheduleView() {
                                       <>
                                         <DetailsHeader>
                                           {member.display_name}
-                                          <span className="tw:block tw:font-normal tw:text-muted-foreground tw:text-sm">
+                                          <span className="block font-normal text-muted-foreground text-sm">
                                             {dateLabel}
                                           </span>
                                         </DetailsHeader>
@@ -711,22 +704,22 @@ export function TeamScheduleView() {
                                           {described.map((item, index) => (
                                             <div
                                               key={index}
-                                              className="tw:flex tw:items-start tw:gap-2 tw:mb-1"
+                                              className="flex items-start gap-2 mb-1"
                                             >
                                               <span
-                                                className={`tw:shrink-0 tw:size-3.5 tw:mt-0.75 tw:rounded-xs tw:border tw:border-border ${item.colorClass}`}
+                                                className={`shrink-0 size-3.5 mt-0.75 rounded-xs border border-border ${item.colorClass}`}
                                                 aria-hidden="true"
                                               ></span>
                                               <span>
                                                 <strong>{item.typeLabel}</strong>
                                                 {item.halfLabel && (
-                                                  <span className="tw:text-muted-foreground">
+                                                  <span className="text-muted-foreground">
                                                     {" "}
                                                     · {item.halfLabel}
                                                   </span>
                                                 )}
                                                 {item.title && (
-                                                  <span className="tw:block tw:text-muted-foreground tw:text-sm">
+                                                  <span className="block text-muted-foreground text-sm">
                                                     {item.title}
                                                   </span>
                                                 )}
@@ -760,12 +753,9 @@ export function TeamScheduleView() {
           ) : (
             !error &&
             !isLoading && (
-              <div className="tw:text-center tw:py-6">
-                <Icon
-                  icon={InboxIcon}
-                  className="tw:size-12 tw:text-muted-foreground tw:mb-2 tw:block"
-                />
-                <p className="tw:text-muted-foreground tw:mb-0">{m.team_empty_state()}</p>
+              <div className="text-center py-6">
+                <Icon icon={InboxIcon} className="size-12 text-muted-foreground mb-2 block" />
+                <p className="text-muted-foreground mb-0">{m.team_empty_state()}</p>
               </div>
             )
           )}
@@ -773,21 +763,18 @@ export function TeamScheduleView() {
       </Card>
 
       {teamData && (
-        <Card className="tw:mb-4">
+        <Card className="mb-4">
           <CardHeader>
-            <h6 className="tw:mb-0">{m.team_legend_heading()}</h6>
+            <h6 className="mb-0">{m.team_legend_heading()}</h6>
           </CardHeader>
           <CardContent>
-            <div className="tw:grid tw:grid-cols-12 tw:gap-4 tw:gap-2">
+            <div className="grid grid-cols-12 gap-4 gap-2">
               {legendItems.map((item) => (
-                <div
-                  key={item.swatchClass}
-                  className="tw:col-span-12 tw:md:col-span-6 tw:lg:col-span-4"
-                >
-                  <div className="tw:flex tw:items-center tw:gap-2">
+                <div key={item.swatchClass} className="col-span-12 md:col-span-6 lg:col-span-4">
+                  <div className="flex items-center gap-2">
                     <div
                       data-team-swatch
-                      className={`tw:flex tw:items-center tw:shrink-0 tw:size-7 tw:rounded tw:border tw:border-border ${item.swatchClass}`}
+                      className={`flex items-center shrink-0 size-7 rounded border border-border ${item.swatchClass}`}
                       aria-hidden="true"
                     >
                       {item.glyph}

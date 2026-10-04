@@ -53,10 +53,10 @@ export function FlexStartEditor({
       <Button
         variant="link"
         size="sm"
-        className="tw:p-0 tw:no-underline tw:align-baseline"
+        className="p-0 no-underline align-baseline"
         onClick={startEditing}
       >
-        <Icon icon={PencilIcon} className="tw:mr-1" />
+        <Icon icon={PencilIcon} className="mr-1" />
         {startTime ? m.edit() : m.personalized_status_flex_set_start()}
       </Button>
     );
@@ -64,7 +64,7 @@ export function FlexStartEditor({
 
   return (
     <form
-      className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap tw:mt-1"
+      className="flex items-center gap-2 flex-wrap mt-1"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
@@ -77,7 +77,7 @@ export function FlexStartEditor({
             value={field.value}
             onChange={(event) => field.handleChange(event.target.value)}
             aria-label={m.personalized_status_flex_start_label()}
-            className="tw:w-auto"
+            className="w-auto"
             autoFocus
           />
         )}
@@ -102,7 +102,7 @@ export function FlexStartEditor({
         type="button"
         variant="link"
         size="sm"
-        className="tw:p-0 tw:no-underline"
+        className="p-0 no-underline"
         onClick={() => setIsEditing(false)}
       >
         {m.cancel()}

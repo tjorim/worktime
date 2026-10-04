@@ -75,13 +75,13 @@ export function SettingsIntegrationClientsSection(props: Props) {
 
   return (
     <SettingsSection icon={PlugIcon} title={m.integration_clients_section_title()}>
-      <SettingsHint className="tw:mb-3">{m.integration_clients_description()}</SettingsHint>
+      <SettingsHint className="mb-3">{m.integration_clients_description()}</SettingsHint>
       {props.createdClient ? (
-        <Alert variant="success" className="tw:mb-3 tw:gap-2">
-          <div className="tw:font-medium">{m.integration_clients_created_title()}</div>
+        <Alert variant="success" className="mb-3 gap-2">
+          <div className="font-medium">{m.integration_clients_created_title()}</div>
           <div>{m.integration_clients_created_warning()}</div>
           <SettingsSecret>{props.createdClient.key}</SettingsSecret>
-          <div className="tw:flex tw:gap-2">
+          <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => void copyKey()}>
               {m.api_tokens_copy_btn()}
             </Button>
@@ -91,7 +91,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
           </div>
         </Alert>
       ) : null}
-      <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-3">
+      <div className="mb-3 flex flex-col gap-3">
         <Field>
           <FieldLabel htmlFor="integration-client-name">
             {m.integration_clients_name_label()}
@@ -139,7 +139,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
         </div>
       </div>
       {props.error ? (
-        <Alert variant="destructive" className="tw:mb-3">
+        <Alert variant="destructive" className="mb-3">
           {props.error}
         </Alert>
       ) : null}
@@ -150,29 +150,29 @@ export function SettingsIntegrationClientsSection(props: Props) {
           {props.clients.map((client) => (
             <SettingsItem
               key={client.id}
-              className="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-3"
+              className="flex flex-wrap items-start justify-between gap-3"
             >
-              <div className="tw:min-w-0">
-                <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:font-medium">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 font-medium">
                   {client.name}
                   {!client.is_active ? (
                     <Badge variant="secondary">{m.integration_clients_revoked()}</Badge>
                   ) : null}
                 </div>
-                <div className="tw:text-sm tw:text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   •••• {client.key_preview} · {m.api_tokens_created_at_label()}{" "}
                   {formatDate(client.created_at)} · {m.api_tokens_last_used_label()}{" "}
                   {client.last_used_at
                     ? formatDate(client.last_used_at)
                     : m.api_tokens_last_used_never()}
                 </div>
-                <div className="tw:text-sm tw:text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   {m.api_tokens_scopes_label()}: {client.scopes.join(", ")} ·{" "}
                   {m.integration_clients_rate_limit({ count: client.rate_limit_per_minute })}
                 </div>
               </div>
               {client.is_active ? (
-                <div className="tw:flex tw:gap-2">
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"

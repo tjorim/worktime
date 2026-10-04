@@ -93,12 +93,12 @@ describe("Header", () => {
   describe("Theme Integration", () => {
     beforeEach(() => {
       // Clear any existing theme attribute
-      document.documentElement.removeAttribute("data-bs-theme");
+      document.documentElement.removeAttribute("data-theme");
     });
 
     afterEach(() => {
       // Clean up theme attribute after each test
-      document.documentElement.removeAttribute("data-bs-theme");
+      document.documentElement.removeAttribute("data-theme");
     });
 
     it("applies dark theme to document.documentElement when theme is set to dark", async () => {
@@ -117,7 +117,7 @@ describe("Header", () => {
       await user.click(darkThemeButton);
 
       // Check that the theme is applied to the document element
-      expect(document.documentElement.getAttribute("data-bs-theme")).toBe("dark");
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     });
 
     it("applies light theme to document.documentElement when theme is set to light", async () => {
@@ -136,7 +136,7 @@ describe("Header", () => {
       await user.click(lightThemeButton);
 
       // Check that the theme is applied to the document element
-      expect(document.documentElement.getAttribute("data-bs-theme")).toBe("light");
+      expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     });
 
     it("resolves auto theme to system preference and applies to document.documentElement", async () => {
@@ -171,7 +171,7 @@ describe("Header", () => {
       await user.click(autoThemeButton);
 
       // Check that the resolved theme is applied to the document element
-      expect(document.documentElement.getAttribute("data-bs-theme")).toBe("dark");
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     });
 
     it("updates theme when system preference changes in auto mode", async () => {
@@ -209,7 +209,7 @@ describe("Header", () => {
       await user.click(autoThemeButton);
 
       // Check initial theme (light)
-      expect(document.documentElement.getAttribute("data-bs-theme")).toBe("light");
+      expect(document.documentElement.getAttribute("data-theme")).toBe("light");
 
       // Simulate system preference change to dark
       Object.defineProperty(window, "matchMedia", {
@@ -230,7 +230,7 @@ describe("Header", () => {
       mediaQueryChangeHandler({ matches: true });
 
       // Check that theme updated to dark
-      expect(document.documentElement.getAttribute("data-bs-theme")).toBe("dark");
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     });
   });
 });

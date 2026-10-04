@@ -162,11 +162,11 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
 
   if (compact) {
     return (
-      <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap ">
+      <div className="flex items-center gap-2 flex-wrap ">
         {currentWorkingTeam ? (
           <>
             {hasTeams && (
-              <span className="tw:font-semibold ">
+              <span className="font-semibold ">
                 {m.generic_status_team_label({ team: String(currentWorkingTeam.teamNumber) })}
               </span>
             )}
@@ -181,22 +181,20 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
             </span>
             <ShiftTimeDisplay
               shift={currentWorkingTeam.shift}
-              className="tw:text-sm tw:text-muted-foreground"
+              className="text-sm text-muted-foreground"
             />
             {shiftEndCountdown && !shiftEndCountdown.isExpired && (
-              <span className="tw:text-sm tw:text-warning">
+              <span className="text-sm text-warning">
                 {m.generic_status_ends_in()} {shiftEndCountdown.formatted}
               </span>
             )}
           </>
         ) : nextShiftAnyTeam && countdown && !countdown.isExpired ? (
-          <span className="tw:text-sm tw:text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             {m.current_status_next_in({ time: countdown.formatted })}
           </span>
         ) : (
-          <span className="tw:text-sm tw:text-muted-foreground">
-            {m.generic_status_no_teams_title()}
-          </span>
+          <span className="text-sm text-muted-foreground">{m.generic_status_no_teams_title()}</span>
         )}
       </div>
     );
@@ -205,17 +203,17 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
   return (
     <Grid>
       <GridItem desktopSpan={6}>
-        <Card className="tw:h-full">
-          <CardContent className="tw:flex tw:grow tw:flex-col">
-            <CardTitle className="tw:mb-2 tw:text-primary">
-              <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="tw:mr-1" />
+        <Card className="h-full">
+          <CardContent className="flex grow flex-col">
+            <CardTitle className="mb-2 text-primary">
+              <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="mr-1" />
               {m.schedule_current_status()}
             </CardTitle>
-            <div className="tw:grow">
+            <div className="grow">
               {currentWorkingTeam ? (
                 <div>
                   {hasTeams && (
-                    <span className="tw:font-semibold tw:mr-1">
+                    <span className="font-semibold mr-1">
                       {m.generic_status_team_label({ team: String(currentWorkingTeam.teamNumber) })}
                     </span>
                   )}
@@ -227,10 +225,10 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                   />
                   <ShiftTimeDisplay
                     shift={currentWorkingTeam.shift}
-                    className="tw:text-sm tw:text-muted-foreground tw:mt-1"
+                    className="text-sm text-muted-foreground mt-1"
                   />
-                  <div className="tw:text-sm tw:text-success tw:mt-2">
-                    <Icon icon={CircleCheckIcon} className="tw:mr-1" />
+                  <div className="text-sm text-success mt-2">
+                    <Icon icon={CircleCheckIcon} className="mr-1" />
                     {m.generic_status_currently_working()}
                   </div>
                   {shiftEndCountdown && !shiftEndCountdown.isExpired && (
@@ -242,8 +240,8 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                         variant="warning"
                       />
                       {shiftProgress && (
-                        <div className="tw:mt-2">
-                          <div className="tw:text-sm tw:text-muted-foreground tw:mb-1">
+                        <div className="mt-2">
+                          <div className="text-sm text-muted-foreground mb-1">
                             {shiftProgress.remainingHours > 0
                               ? m.generic_status_shift_progress_remaining({
                                   hours: String(shiftProgress.remainingHours),
@@ -254,7 +252,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                                 })}
                           </div>
                           <Progress
-                            indicatorClassName="tw:bg-warning"
+                            indicatorClassName="bg-warning"
                             value={shiftProgress.percentage}
 
                             aria-label={
@@ -281,7 +279,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                 />
               )}
               {teamsSummary && (
-                <div className="tw:mt-4">
+                <div className="mt-4">
                   <Badge variant="info">
                     {m.generic_status_working_off_summary({
                       working: teamsSummary.workingLabel,
@@ -295,16 +293,16 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
         </Card>
       </GridItem>
       <GridItem desktopSpan={6}>
-        <Card className="tw:h-full">
-          <CardContent className="tw:flex tw:grow tw:flex-col">
-            <CardTitle className="tw:mb-2 tw:text-success">
-              <Icon icon={CircleArrowRightIcon} className="tw:mr-1" />
+        <Card className="h-full">
+          <CardContent className="flex grow flex-col">
+            <CardTitle className="mb-2 text-success">
+              <Icon icon={CircleArrowRightIcon} className="mr-1" />
               {m.generic_status_next_activity()}
             </CardTitle>
-            <div className="tw:text-muted-foreground tw:grow">
+            <div className="text-muted-foreground grow">
               {nextShiftAnyTeam ? (
                 <div>
-                  <div className="tw:font-semibold">
+                  <div className="font-semibold">
                     {hasTeams
                       ? `${m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) })} `
                       : ""}
@@ -319,7 +317,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                   </div>
                   <ShiftTimeDisplay
                     shift={nextShiftAnyTeam.shift}
-                    className="tw:text-sm tw:text-muted-foreground"
+                    className="text-sm text-muted-foreground"
                   />
                   <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />
                 </div>
@@ -335,9 +333,9 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
         </Card>
       </GridItem>
       {hasTeams && (
-        <GridItem span={12} className="tw:mt-4">
-          <div className="tw:text-sm tw:text-muted-foreground tw:text-center">
-            <Icon icon={LightbulbIcon} className="tw:mr-1" />
+        <GridItem span={12} className="mt-4">
+          <div className="text-sm text-muted-foreground text-center">
+            <Icon icon={LightbulbIcon} className="mr-1" />
             {m.generic_status_select_team_hint()}
           </div>
         </GridItem>

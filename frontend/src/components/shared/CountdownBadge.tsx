@@ -23,7 +23,7 @@ interface CountdownBadgeProps {
  * @param variant - Semantic badge variant (default: "info")
  * @param urgency - Auto-select variant based on remaining time (overrides variant)
  * @param showIcon - Whether to show clock icon (default: true)
- * @param className - Additional CSS classes (default: "tw:mt-2")
+ * @param className - Additional CSS classes (default: "mt-2")
  * @returns Badge with countdown or null if countdown expired/invalid
  */
 export function CountdownBadge({
@@ -33,7 +33,7 @@ export function CountdownBadge({
   variant = "info",
   urgency = false,
   showIcon = true,
-  className = "tw:mt-2",
+  className = "mt-2",
 }: CountdownBadgeProps) {
   // Only show if we have valid countdown data
   if (!countdown || countdown.isExpired || !startTime) {

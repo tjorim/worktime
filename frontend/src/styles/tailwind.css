@@ -1,29 +1,33 @@
-/* Bootstrap owns reboot. Prefix prevents collisions with legacy utilities. */
-@layer theme, legacy, base, calendar, gantt, components, utilities;
-@import "tailwindcss/theme.css" layer(theme) prefix(tw);
-@import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
+@layer theme, base, vendor, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./tokens.css";
 @import "./event-palette.css";
+@import "./base.css";
+@import "./app.css";
+@import "./month-calendar.css";
 @import "./team-grid.css";
 @source "../";
-@custom-variant dark (&:where([data-bs-theme="dark"], [data-bs-theme="dark"] *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* Runtime semantic tokens are also consumed by vendor styles outside Tailwind utilities. */
 @layer theme {
   :root {
     --wt-theme-primary: var(--wt-primary-color);
-    --wt-theme-primary-foreground: var(--bs-white);
-    --wt-theme-accent: var(--bs-tertiary-bg);
-    --wt-theme-accent-foreground: var(--bs-body-color);
-    --wt-theme-secondary: var(--bs-secondary-bg);
-    --wt-theme-secondary-foreground: var(--bs-body-color);
-    --wt-theme-info: var(--bs-info-text-emphasis);
-    --wt-theme-foreground: var(--bs-body-color);
-    --wt-theme-info-bg: var(--bs-info-bg-subtle);
-    --wt-theme-warning-bg: var(--bs-warning-bg-subtle);
-    --wt-theme-muted-foreground: var(--bs-secondary-color);
-    --wt-theme-background: var(--bs-body-bg);
-    --wt-theme-muted: var(--bs-tertiary-bg);
-    --wt-theme-border: var(--bs-border-color);
+    --wt-theme-primary-foreground: var(--wt-white);
+    --wt-theme-accent: var(--wt-tertiary-bg);
+    --wt-theme-accent-foreground: var(--wt-body-color);
+    --wt-theme-secondary: var(--wt-secondary-bg);
+    --wt-theme-secondary-foreground: var(--wt-body-color);
+    --wt-theme-info: var(--wt-info-text-emphasis);
+    --wt-theme-foreground: var(--wt-body-color);
+    --wt-theme-info-bg: var(--wt-info-bg-subtle);
+    --wt-theme-warning-bg: var(--wt-warning-bg-subtle);
+    --wt-theme-muted-foreground: var(--wt-secondary-color);
+    --wt-theme-background: var(--wt-body-bg);
+    --wt-theme-muted: var(--wt-tertiary-bg);
+    --wt-theme-border: var(--wt-border-color);
   }
 }
 
@@ -115,19 +119,19 @@
   --color-wt-shift-night-text: var(--wt-shift-night-text);
   --color-wt-shift-off: var(--wt-shift-off);
   --color-wt-shift-off-text: var(--wt-shift-off-text);
-  --color-wt-surface-1: var(--wt-surface-1, var(--bs-body-bg));
-  --color-wt-surface-2: var(--wt-surface-2, var(--bs-body-bg));
-  --color-wt-surface-3: var(--wt-surface-3, var(--bs-tertiary-bg));
+  --color-wt-surface-1: var(--wt-surface-1);
+  --color-wt-surface-2: var(--wt-surface-2);
+  --color-wt-surface-3: var(--wt-surface-3);
   --color-wt-team-cal-available: var(--wt-team-cal-available);
   --color-wt-team-cal-today-ring: var(--wt-team-cal-today-ring);
   --color-wt-team-cal-weekend-cell: var(--wt-team-cal-weekend-cell);
   --color-wt-team-name-col: var(--wt-team-name-col);
   --color-background: var(--wt-theme-background);
   --color-foreground: var(--wt-theme-foreground);
-  --color-card: var(--wt-surface-2, var(--bs-body-bg));
-  --color-card-foreground: var(--bs-body-color);
-  --color-popover: var(--wt-surface-2, var(--bs-body-bg));
-  --color-popover-foreground: var(--bs-body-color);
+  --color-card: var(--wt-surface-2);
+  --color-card-foreground: var(--wt-body-color);
+  --color-popover: var(--wt-surface-2);
+  --color-popover-foreground: var(--wt-body-color);
   --color-primary: var(--wt-theme-primary);
   --color-primary-foreground: var(--wt-theme-primary-foreground);
   --color-secondary: var(--wt-theme-secondary);
@@ -136,18 +140,18 @@
   --color-muted-foreground: var(--wt-theme-muted-foreground);
   --color-accent: var(--wt-theme-accent);
   --color-accent-foreground: var(--wt-theme-accent-foreground);
-  --color-destructive: var(--bs-danger);
+  --color-destructive: var(--wt-danger);
   --color-border: var(--wt-theme-border);
-  --color-input: var(--bs-border-color);
+  --color-input: var(--wt-border-color);
   --color-ring: var(--wt-primary-color);
-  --radius-sm: var(--bs-border-radius-sm);
-  --radius-md: var(--bs-border-radius);
-  --radius-lg: var(--bs-border-radius-lg);
+  --radius-sm: var(--wt-border-radius-sm);
+  --radius-md: var(--wt-border-radius);
+  --radius-lg: var(--wt-border-radius-lg);
 }
 
 @theme inline {
-  --color-tooltip: var(--bs-black);
-  --color-tooltip-foreground: var(--bs-white);
+  --color-tooltip: var(--wt-black);
+  --color-tooltip-foreground: var(--wt-white);
   --z-index-tooltip: 1080;
   --z-index-popover: 1070;
   --container-popover: 276px;
@@ -155,30 +159,30 @@
 
 @theme inline {
   --breakpoint-team: 576px;
-  --color-team-header: var(--bs-primary);
-  --color-team-header-foreground: var(--bs-white);
-  --color-team-header-divider: color-mix(in srgb, var(--bs-white) 20%, transparent);
-  --color-team-day-divider: color-mix(in srgb, var(--bs-white) 10%, transparent);
-  --color-team-header-weekend: color-mix(in srgb, var(--bs-primary) 60%, var(--bs-black));
-  --color-team-today: var(--bs-warning);
-  --color-team-today-foreground: var(--bs-black);
+  --color-team-header: var(--wt-primary);
+  --color-team-header-foreground: var(--wt-white);
+  --color-team-header-divider: color-mix(in srgb, var(--wt-white) 20%, transparent);
+  --color-team-day-divider: color-mix(in srgb, var(--wt-white) 10%, transparent);
+  --color-team-header-weekend: color-mix(in srgb, var(--wt-primary) 60%, var(--wt-black));
+  --color-team-today: var(--wt-warning);
+  --color-team-today-foreground: var(--wt-black);
   --text-team-half: 0.625rem;
   --text-team-stripe: 0.6rem;
-  --shadow-team-name: 2px 0 4px color-mix(in srgb, var(--bs-black) 10%, transparent);
+  --shadow-team-name: 2px 0 4px color-mix(in srgb, var(--wt-black) 10%, transparent);
   --shadow-team-today: inset 0 0 0 2px var(--wt-team-cal-today-ring);
 }
 
 @theme inline {
-  --color-danger-text: var(--bs-danger-text-emphasis);
-  --color-success: var(--bs-success-text-emphasis);
-  --color-success-bg: var(--bs-success-bg-subtle);
-  --color-success-solid: var(--bs-success);
-  --color-warning-solid: var(--bs-warning);
-  --color-warning: var(--bs-warning-text-emphasis);
-  --color-warning-bg: var(--bs-warning-bg-subtle);
+  --color-danger-text: var(--wt-danger-text-emphasis);
+  --color-success: var(--wt-success-text-emphasis);
+  --color-success-bg: var(--wt-success-bg-subtle);
+  --color-success-solid: var(--wt-success);
+  --color-warning-solid: var(--wt-warning);
+  --color-warning: var(--wt-warning-text-emphasis);
+  --color-warning-bg: var(--wt-warning-bg-subtle);
   --color-info: var(--wt-theme-info);
   --color-info-bg: var(--wt-theme-info-bg);
-  --color-overlay: var(--bs-black);
+  --color-overlay: var(--wt-black);
   --z-index-dialog-overlay: 1050;
   --z-index-dialog: 1055;
   --z-index-feedback: 1100;
@@ -200,11 +204,11 @@
 @utility progress-stripes {
   background-image: linear-gradient(
     45deg,
-    color-mix(in srgb, var(--bs-white) 15%, transparent) 25%,
+    color-mix(in srgb, var(--wt-white) 15%, transparent) 25%,
     transparent 25%,
     transparent 50%,
-    color-mix(in srgb, var(--bs-white) 15%, transparent) 50%,
-    color-mix(in srgb, var(--bs-white) 15%, transparent) 75%,
+    color-mix(in srgb, var(--wt-white) 15%, transparent) 50%,
+    color-mix(in srgb, var(--wt-white) 15%, transparent) 75%,
     transparent 75%,
     transparent
   );
@@ -218,7 +222,7 @@
     var(--wt-theme-secondary) var(--ring-pct)
   );
   &[data-complete="true"] {
-    --ring-color: var(--bs-success);
+    --ring-color: var(--wt-success);
   }
 }
 @utility icon-em {
@@ -230,5 +234,5 @@
 @theme inline {
   --spacing-header: var(--wt-navbar-height);
   --z-index-header: 1030;
-  --color-header-foreground: var(--bs-white);
+  --color-header-foreground: var(--wt-white);
 }

@@ -5,7 +5,7 @@ import type { EventFlag, HdayEvent, TypeFlag } from "./types";
 /**
  * Palette key for an event: which color set it uses, and whether it is the full-day or half-day
  * look. The colors themselves are CSS custom properties (`--wt-event-<type>-<variant>-bg/-fg`)
- * defined once in `styles/_variables.scss` for both themes; nothing here repeats a hex value.
+ * defined once in `styles/tokens.css` for both themes; nothing here repeats a hex value.
  *
  * A weekly pattern with no type flag is the standing day off, not booked leave, so it gets its
  * own "recurring" colors instead of the holiday red.
@@ -46,8 +46,8 @@ const EVENT_PALETTE_VAR = /^var\(--wt-event-([a-z]+-(?:full|half))-(bg|fg)\)$/;
  * own matching `-bg`/`-fg` pair is accepted; anything else (other CSS, an undeclared entry, or a
  * background and text color from different entries) falls back to the "unknown" pair, so a stray
  * value can never become free-form CSS or lose its contrast pairing. Components hand the result to
- * the `--event-bg` and `--event-fg` custom properties that `tw:bg-event` /
- * `tw:text-event-foreground` read.
+ * the `--event-bg` and `--event-fg` custom properties that `bg-event` /
+ * `text-event-foreground` read.
  */
 export function resolveEventPaletteVars(
   color: string,
@@ -66,24 +66,24 @@ export function resolveEventPaletteVars(
 }
 
 const EVENT_COLOR_UTILITIES = {
-  "holiday-full": "tw:bg-wt-event-holiday-full-bg tw:text-wt-event-holiday-full-fg",
-  "holiday-half": "tw:bg-wt-event-holiday-half-bg tw:text-wt-event-holiday-half-fg",
-  "business-full": "tw:bg-wt-event-business-full-bg tw:text-wt-event-business-full-fg",
-  "business-half": "tw:bg-wt-event-business-half-bg tw:text-wt-event-business-half-fg",
-  "course-full": "tw:bg-wt-event-course-full-bg tw:text-wt-event-course-full-fg",
-  "course-half": "tw:bg-wt-event-course-half-bg tw:text-wt-event-course-half-fg",
-  "in-full": "tw:bg-wt-event-in-full-bg tw:text-wt-event-in-full-fg",
-  "in-half": "tw:bg-wt-event-in-half-bg tw:text-wt-event-in-half-fg",
-  "weekend-full": "tw:bg-wt-event-weekend-full-bg tw:text-wt-event-weekend-full-fg",
-  "weekend-half": "tw:bg-wt-event-weekend-half-bg tw:text-wt-event-weekend-half-fg",
-  "recurring-full": "tw:bg-wt-event-recurring-full-bg tw:text-wt-event-recurring-full-fg",
-  "recurring-half": "tw:bg-wt-event-recurring-half-bg tw:text-wt-event-recurring-half-fg",
-  "birthday-full": "tw:bg-wt-event-birthday-full-bg tw:text-wt-event-birthday-full-fg",
-  "birthday-half": "tw:bg-wt-event-birthday-half-bg tw:text-wt-event-birthday-half-fg",
-  "ill-full": "tw:bg-wt-event-ill-full-bg tw:text-wt-event-ill-full-fg",
-  "ill-half": "tw:bg-wt-event-ill-half-bg tw:text-wt-event-ill-half-fg",
-  "other-full": "tw:bg-wt-event-other-full-bg tw:text-wt-event-other-full-fg",
-  "other-half": "tw:bg-wt-event-other-half-bg tw:text-wt-event-other-half-fg",
+  "holiday-full": "bg-wt-event-holiday-full-bg text-wt-event-holiday-full-fg",
+  "holiday-half": "bg-wt-event-holiday-half-bg text-wt-event-holiday-half-fg",
+  "business-full": "bg-wt-event-business-full-bg text-wt-event-business-full-fg",
+  "business-half": "bg-wt-event-business-half-bg text-wt-event-business-half-fg",
+  "course-full": "bg-wt-event-course-full-bg text-wt-event-course-full-fg",
+  "course-half": "bg-wt-event-course-half-bg text-wt-event-course-half-fg",
+  "in-full": "bg-wt-event-in-full-bg text-wt-event-in-full-fg",
+  "in-half": "bg-wt-event-in-half-bg text-wt-event-in-half-fg",
+  "weekend-full": "bg-wt-event-weekend-full-bg text-wt-event-weekend-full-fg",
+  "weekend-half": "bg-wt-event-weekend-half-bg text-wt-event-weekend-half-fg",
+  "recurring-full": "bg-wt-event-recurring-full-bg text-wt-event-recurring-full-fg",
+  "recurring-half": "bg-wt-event-recurring-half-bg text-wt-event-recurring-half-fg",
+  "birthday-full": "bg-wt-event-birthday-full-bg text-wt-event-birthday-full-fg",
+  "birthday-half": "bg-wt-event-birthday-half-bg text-wt-event-birthday-half-fg",
+  "ill-full": "bg-wt-event-ill-full-bg text-wt-event-ill-full-fg",
+  "ill-half": "bg-wt-event-ill-half-bg text-wt-event-ill-half-fg",
+  "other-full": "bg-wt-event-other-full-bg text-wt-event-other-full-fg",
+  "other-half": "bg-wt-event-other-half-bg text-wt-event-other-half-fg",
 } as const;
 
 /** Tailwind event colors are written out so the scanner includes every palette variant. */

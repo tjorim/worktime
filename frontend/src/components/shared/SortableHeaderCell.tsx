@@ -41,7 +41,7 @@ export function SortableHeaderCell<TData extends RowData>({
         <Button
           type="button"
           variant="ghost"
-          className="tw:h-auto tw:p-0 tw:font-semibold"
+          className="h-auto p-0 font-semibold"
           onClick={column.getToggleSortingHandler()}
         >
           {content}

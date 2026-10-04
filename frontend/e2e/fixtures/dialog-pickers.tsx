@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import "@/styles/main.scss";
 import "@/styles/tailwind.css";
 import { TemplateModal } from "@/features/timeTracking/TemplateModal";
 import { TaskEditModal } from "@/components/shared/TaskEditModal";
@@ -12,7 +11,7 @@ const labels = Array.from({ length: 20 }, (_, index) => ({
   color: "#198754",
 }));
 const params = new URLSearchParams(location.search);
-document.documentElement.setAttribute("data-bs-theme", params.get("theme") ?? "light");
+document.documentElement.setAttribute("data-theme", params.get("theme") ?? "light");
 function Fixture() {
   const [open, setOpen] = useState(true);
   const [value, setValue] = useState({

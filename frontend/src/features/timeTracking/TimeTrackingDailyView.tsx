@@ -457,8 +457,8 @@ export function TimeTrackingDailyView({
   };
 
   return (
-    <Card className="tw:overflow-visible tw:shadow-sm">
-      <CardHeader className="tw:border-b tw:border-border">
+    <Card className="overflow-visible shadow-sm">
+      <CardHeader className="border-b border-border">
         <DailyViewHeader
           date={date}
           crossBorderEnabled={settings.enableCrossBorderTracking}
@@ -467,13 +467,13 @@ export function TimeTrackingDailyView({
       </CardHeader>
       <CardContent>
         {isDayOff && (
-          <Alert variant="info" className="tw:mb-3">
+          <Alert variant="info" className="mb-3">
             <Icon icon={CalendarXIcon} />
             <div>{m.tt_day_off_notice()}</div>
           </Alert>
         )}
         {error && (
-          <Alert variant="destructive" aria-live="polite" className="tw:mb-3">
+          <Alert variant="destructive" aria-live="polite" className="mb-3">
             {error}
           </Alert>
         )}

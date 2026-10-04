@@ -41,14 +41,14 @@ export function Step8WorkLocationSetup({
 }: Step8WorkLocationSetupProps) {
   return (
     <>
-      <div className="tw:mb-4 tw:text-center">
-        <Icon icon={GlobeIcon} className="tw:text-5xl tw:text-primary" />
-        <h4 className="tw:mt-3 tw:text-2xl tw:font-medium">{m.wizard_location_heading()}</h4>
-        <p className="tw:text-muted-foreground">{m.wizard_location_subtitle()}</p>
+      <div className="mb-4 text-center">
+        <Icon icon={GlobeIcon} className="text-5xl text-primary" />
+        <h4 className="mt-3 text-2xl font-medium">{m.wizard_location_heading()}</h4>
+        <p className="text-muted-foreground">{m.wizard_location_subtitle()}</p>
       </div>
 
-      <Alert variant="info" className="tw:mt-3">
-        <AlertDescription className="tw:text-current">{m.wizard_location_info()}</AlertDescription>
+      <Alert variant="info" className="mt-3">
+        <AlertDescription className="text-current">{m.wizard_location_info()}</AlertDescription>
       </Alert>
 
       <WizardToggle
@@ -60,7 +60,7 @@ export function Step8WorkLocationSetup({
       />
 
       {isEnabled && (
-        <div className="tw:mt-3 tw:flex tw:flex-col tw:gap-3">
+        <div className="mt-3 flex flex-col gap-3">
           {(
             [
               {
@@ -81,13 +81,13 @@ export function Step8WorkLocationSetup({
           ).map((field) => (
             <div
               key={field.id}
-              className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between tw:sm:gap-3"
+              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
               <div>
                 <FieldLabel htmlFor={field.id}>{field.label}</FieldLabel>
                 <FieldDescription>{field.description}</FieldDescription>
               </div>
-              <div className="tw:min-w-0 tw:sm:flex-1">
+              <div className="min-w-0 sm:flex-1">
                 <CountrySelect
                   inputId={field.id}
                   value={field.value}
@@ -101,7 +101,7 @@ export function Step8WorkLocationSetup({
       )}
 
       <WizardActions
-        className="tw:mt-4"
+        className="mt-4"
         start={
           <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
             <Icon icon={ArrowLeftIcon} /> {m.back()}

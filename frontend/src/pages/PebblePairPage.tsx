@@ -63,14 +63,14 @@ export function PebblePairPage() {
   const isSigningIn = !isValidating && !isAuthenticated;
 
   return (
-    <main className="tw:mx-auto tw:max-w-3xl tw:px-3 tw:py-12 tw:text-center">
-      <h1 className="tw:text-xl tw:mb-4">{m.pebble_pair_title()}</h1>
-      <p className="tw:text-muted-foreground tw:mb-6">{m.pebble_pair_description()}</p>
+    <main className="mx-auto max-w-3xl px-3 py-12 text-center">
+      <h1 className="text-xl mb-4">{m.pebble_pair_title()}</h1>
+      <p className="text-muted-foreground mb-6">{m.pebble_pair_description()}</p>
 
       {pairingError ? (
         <Alert variant="destructive" role="alert">
           <div>{pairingError}</div>
-          <Button className="tw:mt-4" variant="destructive" size="sm" onClick={retryPairing}>
+          <Button className="mt-4" variant="destructive" size="sm" onClick={retryPairing}>
             {m.pebble_pair_retry()}
           </Button>
         </Alert>
@@ -80,12 +80,12 @@ export function PebblePairPage() {
         </Alert>
       ) : (
         <div aria-live="polite">
-          <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Spinner size="sm" aria-hidden="true" />
             <span>{isSigningIn ? m.pebble_pair_signing_in() : m.pebble_pair_connecting()}</span>
           </div>
           {isSigningIn ? (
-            <Button className="tw:mt-4" variant="outline" size="sm" onClick={retrySignIn}>
+            <Button className="mt-4" variant="outline" size="sm" onClick={retrySignIn}>
               {m.account_sign_in_btn()}
             </Button>
           ) : null}

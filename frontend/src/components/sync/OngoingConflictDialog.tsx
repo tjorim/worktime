@@ -110,21 +110,21 @@ export function OngoingConflictDialog({
       <DialogContent aria-describedby={bodyId} showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={TriangleAlertIcon} className="tw:text-warning tw:me-2" />
+            <Icon icon={TriangleAlertIcon} className="text-warning me-2" />
             {conflictCount === 1
               ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
               : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" id={bodyId}>
-          <p className="tw:text-muted-foreground tw:text-sm tw:mb-4">
+        <div className="min-h-0 overflow-y-auto p-4" id={bodyId}>
+          <p className="text-muted-foreground text-sm mb-4">
             {conflictCount === 1
               ? m.ongoing_conflict_body_one({ count: String(conflictCount) })
               : m.ongoing_conflict_body_other({ count: String(conflictCount) })}
           </p>
 
           {entityCounts.length > 0 && (
-            <ul className="tw:text-sm tw:text-muted-foreground tw:mb-6 tw:ps-4">
+            <ul className="text-sm text-muted-foreground mb-6 ps-4">
               {entityCounts.map(([entity, count]) => (
                 <li key={entity}>
                   {count} {getEntityLabel(entity)}
@@ -133,30 +133,27 @@ export function OngoingConflictDialog({
             </ul>
           )}
 
-          <div className="tw:grid tw:gap-2">
+          <div className="grid gap-2">
             {/* Keep server version */}
             <button
               type="button"
-              className={`tw:rounded-lg tw:border tw:p-4 tw:text-left tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 ${selected === "keep-server" ? "tw:border-primary tw:bg-primary/5" : "tw:border-border tw:bg-background tw:hover:bg-muted"}`}
+              className={`rounded-lg border p-4 text-left focus-visible:ring-3 focus-visible:ring-ring/50 ${selected === "keep-server" ? "border-primary bg-primary/5" : "border-border bg-background hover:bg-muted"}`}
               onClick={() => setSelected("keep-server")}
               aria-pressed={selected === "keep-server"}
             >
-              <div className="tw:flex tw:items-start tw:gap-4">
+              <div className="flex items-start gap-4">
                 <Icon
                   icon={CloudDownloadIcon}
-                  className={`tw:text-lg tw:shrink-0 tw:mt-1 ${selected === "keep-server" ? "tw:text-primary" : "tw:text-muted-foreground"}`}
+                  className={`text-lg shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-muted-foreground"}`}
                 />
                 <div>
-                  <div className="tw:font-semibold">{m.ongoing_conflict_keep_server()}</div>
-                  <div className="tw:text-muted-foreground tw:text-sm">
+                  <div className="font-semibold">{m.ongoing_conflict_keep_server()}</div>
+                  <div className="text-muted-foreground text-sm">
                     {m.ongoing_conflict_keep_server_desc()}
                   </div>
                 </div>
                 {selected === "keep-server" && (
-                  <Icon
-                    icon={CircleCheckIcon}
-                    className="tw:text-primary tw:ms-auto tw:shrink-0 tw:mt-1"
-                  />
+                  <Icon icon={CircleCheckIcon} className="text-primary ms-auto shrink-0 mt-1" />
                 )}
               </div>
             </button>
@@ -164,26 +161,23 @@ export function OngoingConflictDialog({
             {/* Keep my version */}
             <button
               type="button"
-              className={`tw:rounded-lg tw:border tw:p-4 tw:text-left tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 ${selected === "keep-mine" ? "tw:border-primary tw:bg-primary/5" : "tw:border-border tw:bg-background tw:hover:bg-muted"}`}
+              className={`rounded-lg border p-4 text-left focus-visible:ring-3 focus-visible:ring-ring/50 ${selected === "keep-mine" ? "border-primary bg-primary/5" : "border-border bg-background hover:bg-muted"}`}
               onClick={() => setSelected("keep-mine")}
               aria-pressed={selected === "keep-mine"}
             >
-              <div className="tw:flex tw:items-start tw:gap-4">
+              <div className="flex items-start gap-4">
                 <Icon
                   icon={HardDriveIcon}
-                  className={`tw:text-lg tw:shrink-0 tw:mt-1 ${selected === "keep-mine" ? "tw:text-primary" : "tw:text-muted-foreground"}`}
+                  className={`text-lg shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-muted-foreground"}`}
                 />
                 <div>
-                  <div className="tw:font-semibold">{m.ongoing_conflict_keep_mine()}</div>
-                  <div className="tw:text-muted-foreground tw:text-sm">
+                  <div className="font-semibold">{m.ongoing_conflict_keep_mine()}</div>
+                  <div className="text-muted-foreground text-sm">
                     {m.ongoing_conflict_keep_mine_desc()}
                   </div>
                 </div>
                 {selected === "keep-mine" && (
-                  <Icon
-                    icon={CircleCheckIcon}
-                    className="tw:text-primary tw:ms-auto tw:shrink-0 tw:mt-1"
-                  />
+                  <Icon icon={CircleCheckIcon} className="text-primary ms-auto shrink-0 mt-1" />
                 )}
               </div>
             </button>

@@ -23,10 +23,7 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
   return (
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
-      className={cn(
-        "tw:fixed tw:inset-0 tw:z-dialog-overlay tw:bg-overlay/50 tw:data-closed:hidden",
-        className,
-      )}
+      className={cn("fixed inset-0 z-dialog-overlay bg-overlay/50 data-closed:hidden", className)}
       {...props}
     />
   );
@@ -51,7 +48,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "tw:dialog-viewport tw:fixed tw:top-1/2 tw:left-1/2 tw:z-dialog tw:max-w-dialog tw:-translate-x-1/2 tw:-translate-y-1/2 tw:overflow-y-auto tw:rounded-lg tw:border tw:border-border tw:bg-background tw:text-foreground tw:outline-none tw:data-closed:hidden",
+          "dialog-viewport fixed top-1/2 left-1/2 z-dialog max-w-dialog -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-background text-foreground outline-none data-closed:hidden",
           className,
         )}
         {...props}
@@ -59,9 +56,7 @@ function AlertDialogContent({
         {children}
         {showCloseButton && (
           <AlertDialogPrimitive.Close
-            render={
-              <Button variant="ghost" size="icon-sm" className="tw:absolute tw:top-3 tw:right-3" />
-            }
+            render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3" />}
             aria-label={m.close()}
           >
             <XIcon />
@@ -76,10 +71,7 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">)
   return (
     <div
       data-slot="alert-dialog-header"
-      className={cn(
-        "tw:flex tw:shrink-0 tw:items-center tw:border-b tw:border-border tw:p-4 tw:pr-14",
-        className,
-      )}
+      className={cn("flex shrink-0 items-center border-b border-border p-4 pr-14", className)}
       {...props}
     />
   );
@@ -90,7 +82,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "tw:flex tw:shrink-0 tw:flex-wrap tw:justify-end tw:gap-2 tw:border-t tw:border-border tw:p-4",
+        "flex shrink-0 flex-wrap justify-end gap-2 border-t border-border p-4",
         className,
       )}
       {...props}
@@ -109,7 +101,7 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("tw:m-0 tw:text-xl tw:font-medium tw:leading-normal", className)}
+      className={cn("m-0 text-xl font-medium leading-normal", className)}
       {...props}
     />
   );

@@ -151,9 +151,9 @@ describe("TimeOffTableView", () => {
     renderTable();
     const classes = (label: string) =>
       screen.getByText(label, { selector: "[data-event-type-badge]" }).className;
-    expect(classes("Holiday")).toContain("tw:bg-wt-event-holiday-full-bg");
-    expect(classes("Business trip")).toContain("tw:bg-wt-event-business-full-bg");
-    expect(classes("In office")).toContain("tw:bg-wt-event-in-full-bg");
+    expect(classes("Holiday")).toContain("bg-wt-event-holiday-full-bg");
+    expect(classes("Business trip")).toContain("bg-wt-event-business-full-bg");
+    expect(classes("In office")).toContain("bg-wt-event-in-full-bg");
   });
 
   describe("pagination", () => {
@@ -313,10 +313,10 @@ describe("TimeOffTableView", () => {
   it("sizes the search box and the page-size select with classes, not inline styles", () => {
     renderTable();
     const search = screen.getByRole("searchbox");
-    expect(search).toHaveClass("tw:max-w-80");
+    expect(search).toHaveClass("max-w-80");
     expect(search).not.toHaveAttribute("style");
     const pageSize = screen.getByRole("combobox", { name: /rows per page/i });
-    expect(pageSize).toHaveClass("tw:w-fit");
+    expect(pageSize).toHaveClass("w-fit");
     expect(pageSize).not.toHaveAttribute("style");
   });
 });

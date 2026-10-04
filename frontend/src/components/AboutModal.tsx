@@ -64,30 +64,30 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
       <DialogContent size="lg" scrollable>
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={InfoIcon} className="tw:me-2" />
+            <Icon icon={InfoIcon} className="me-2" />
             {m.about_modal_title()}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           {/* App Title & Version */}
-          <div className="tw:text-center tw:mb-6">
-            <div className="tw:mb-2">
-              <Icon icon={HistoryIcon} className="tw:text-primary tw:text-3xl" />
+          <div className="text-center mb-6">
+            <div className="mb-2">
+              <Icon icon={HistoryIcon} className="text-primary text-3xl" />
             </div>
-            <h5 className="tw:mb-2">{m.about_app_subtitle()}</h5>
-            <div className="tw:mb-2">
+            <h5 className="mb-2">{m.about_app_subtitle()}</h5>
+            <div className="mb-2">
               <Badge variant="default">
-                <Icon icon={TagIcon} className="tw:me-1" />
+                <Icon icon={TagIcon} className="me-1" />
                 {m.about_version_badge({ version: CONFIG.VERSION })}
               </Badge>
             </div>
           </div>
 
           {/* Author Section */}
-          <div className="tw:text-center tw:mb-6">
-            <div className="tw:flex tw:justify-center tw:items-center tw:gap-2 tw:mb-2">
-              <Icon icon={CircleUserIcon} className="tw:text-muted-foreground" />
-              <span className="tw:font-semibold">{m.about_created_by()}</span>
+          <div className="text-center mb-6">
+            <div className="flex justify-center items-center gap-2 mb-2">
+              <Icon icon={CircleUserIcon} className="text-muted-foreground" />
+              <span className="font-semibold">{m.about_created_by()}</span>
             </div>
             <a
               href="https://github.com/tjorim"
@@ -96,10 +96,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
               className={buttonVariants({
                 variant: "outline",
                 size: "sm",
-                className: "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline",
+                className: "h-auto py-1.5 whitespace-normal no-underline",
               })}
             >
-              <Icon icon={CodeXmlIcon} className="tw:me-1" />
+              <Icon icon={CodeXmlIcon} className="me-1" />
               {m.about_github_profile_btn()}
             </a>
           </div>
@@ -107,22 +107,22 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <hr />
 
           {/* Features List with Icons */}
-          <div className="tw:mb-6">
-            <h6 className="tw:mb-4">
-              <Icon icon={StarIcon} className="tw:me-2 tw:text-warning" />
+          <div className="mb-6">
+            <h6 className="mb-4">
+              <Icon icon={StarIcon} className="me-2 text-warning" />
               {m.about_key_features_heading()}
             </h6>
-            <Grid className="tw:gap-2">
+            <Grid className="gap-2">
               <GridItem span={6}>
-                <div className="tw:flex tw:items-center tw:text-sm">
+                <div className="flex items-center text-sm">
                   {isFiveShift ? (
                     <>
-                      <Icon icon={UsersIcon} className="tw:text-primary tw:me-2" />
+                      <Icon icon={UsersIcon} className="text-primary me-2" />
                       <span>{m.about_feature_5shift()}</span>
                     </>
                   ) : (
                     <>
-                      <Icon icon={CalendarDaysIcon} className="tw:text-primary tw:me-2" />
+                      <Icon icon={CalendarDaysIcon} className="text-primary me-2" />
                       <span>
                         {m.about_feature_schedule_type({ scheduleTitle: scheduleConfig.title })}
                       </span>
@@ -131,22 +131,22 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                 </div>
               </GridItem>
               <GridItem span={6}>
-                <div className="tw:flex tw:items-center tw:text-sm">
-                  <Icon icon={FileTextIcon} className="tw:text-success tw:me-2" />
+                <div className="flex items-center text-sm">
+                  <Icon icon={FileTextIcon} className="text-success me-2" />
                   <span>{m.about_feature_hday()}</span>
                 </div>
               </GridItem>
               {isFiveShift && (
                 <GridItem span={6}>
-                  <div className="tw:flex tw:items-center tw:text-sm">
-                    <Icon icon={ArrowLeftRightIcon} className="tw:text-info tw:me-2" />
+                  <div className="flex items-center text-sm">
+                    <Icon icon={ArrowLeftRightIcon} className="text-info me-2" />
                     <span>{m.about_feature_transfers()}</span>
                   </div>
                 </GridItem>
               )}
               <GridItem span={6}>
-                <div className="tw:flex tw:items-center tw:text-sm">
-                  <Icon icon={CalendarDaysIcon} className="tw:text-muted-foreground tw:me-2" />
+                <div className="flex items-center text-sm">
+                  <Icon icon={CalendarDaysIcon} className="text-muted-foreground me-2" />
                   <span>{m.about_feature_date_format()}</span>
                 </div>
               </GridItem>
@@ -156,13 +156,13 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <hr />
 
           {/* Quick Links */}
-          <div className="tw:mb-6">
-            <h6 className="tw:mb-4">
-              <Icon icon={LinkIcon} className="tw:me-2 tw:text-info" />
+          <div className="mb-6">
+            <h6 className="mb-4">
+              <Icon icon={LinkIcon} className="me-2 text-info" />
               {m.about_quick_links_heading()}
             </h6>
-            <div className="tw:grid tw:gap-2">
-              <Grid className="tw:gap-2">
+            <div className="grid gap-2">
+              <Grid className="gap-2">
                 <GridItem span={12} desktopSpan={4}>
                   <a
                     href="https://github.com/tjorim/worktime#readme"
@@ -171,11 +171,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className:
-                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                      className: "h-auto py-1.5 whitespace-normal no-underline w-full",
                     })}
                   >
-                    <Icon icon={BookIcon} className="tw:me-1" />
+                    <Icon icon={BookIcon} className="me-1" />
                     {m.about_documentation_btn()}
                   </a>
                 </GridItem>
@@ -187,11 +186,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className:
-                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                      className: "h-auto py-1.5 whitespace-normal no-underline w-full",
                     })}
                   >
-                    <Icon icon={CodeIcon} className="tw:me-1" />
+                    <Icon icon={CodeIcon} className="me-1" />
                     {m.about_source_code_btn()}
                   </a>
                 </GridItem>
@@ -202,11 +200,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className:
-                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                      className: "h-auto py-1.5 whitespace-normal no-underline w-full",
                     })}
                   >
-                    <Icon icon={ShieldIcon} className="tw:me-1" />
+                    <Icon icon={ShieldIcon} className="me-1" />
                     {m.about_privacy_policy_btn()}
                   </Link>
                 </GridItem>
@@ -215,13 +212,13 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           </div>
 
           {/* Support Section */}
-          <div className="tw:mb-6">
-            <h6 className="tw:mb-4">
-              <Icon icon={HeadsetIcon} className="tw:me-2 tw:text-success" />
+          <div className="mb-6">
+            <h6 className="mb-4">
+              <Icon icon={HeadsetIcon} className="me-2 text-success" />
               {m.about_support_heading()}
             </h6>
-            <div className="tw:grid tw:gap-2">
-              <Grid className="tw:gap-2">
+            <div className="grid gap-2">
+              <Grid className="gap-2">
                 <GridItem span={6}>
                   <a
                     href="https://github.com/tjorim/worktime/issues/new?template=bug_report.yml"
@@ -230,11 +227,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className:
-                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                      className: "h-auto py-1.5 whitespace-normal no-underline w-full",
                     })}
                   >
-                    <Icon icon={BugIcon} className="tw:me-1" />
+                    <Icon icon={BugIcon} className="me-1" />
                     {m.about_report_bug_btn()}
                   </a>
                 </GridItem>
@@ -246,11 +242,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className:
-                        "tw:h-auto tw:py-1.5 tw:whitespace-normal tw:no-underline tw:w-full",
+                      className: "h-auto py-1.5 whitespace-normal no-underline w-full",
                     })}
                   >
-                    <Icon icon={LightbulbIcon} className="tw:me-1" />
+                    <Icon icon={LightbulbIcon} className="me-1" />
                     {m.about_request_feature_btn()}
                   </a>
                 </GridItem>
@@ -259,14 +254,14 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           </div>
 
           {/* Footer Info */}
-          <div className="tw:text-center">
-            <div className="tw:flex tw:justify-center tw:items-center tw:gap-4 tw:text-sm tw:text-muted-foreground">
+          <div className="text-center">
+            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
               <span>
-                <Icon icon={ShieldCheckIcon} className="tw:me-1" />
+                <Icon icon={ShieldCheckIcon} className="me-1" />
                 Apache 2.0
               </span>
               <span>
-                <Icon icon={SquareCodeIcon} className="tw:me-1" />
+                <Icon icon={SquareCodeIcon} className="me-1" />
                 React + TypeScript
               </span>
             </div>

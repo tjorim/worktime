@@ -111,31 +111,31 @@ export function TimeTrackingView({
   );
 
   return (
-    <div className="time-tracking-view tw:flex tw:flex-col tw:gap-3 tw:py-3">
-      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+    <div data-slot="time-tracking-view" className="flex flex-col gap-3 py-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div
           role="group"
-          className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
+          className="flex w-full max-w-sm gap-1"
           aria-label={m.tt_toggle_view_aria()}
         >
           <ToggleButton
-            className="tw:flex-1"
+            className="flex-1"
             variant={viewMode === "daily" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "daily"}
             onClick={() => setViewMode("daily")}
           >
-            <Icon icon={ListChecksIcon} className="tw:mr-1" />
+            <Icon icon={ListChecksIcon} className="mr-1" />
             {m.tt_daily_log()}
           </ToggleButton>
           <ToggleButton
-            className="tw:flex-1"
+            className="flex-1"
             variant={viewMode === "weekly" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "weekly"}
             onClick={() => setViewMode("weekly")}
           >
-            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-1" />
+            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="mr-1" />
             {m.tt_weekly_summary()}
           </ToggleButton>
         </div>

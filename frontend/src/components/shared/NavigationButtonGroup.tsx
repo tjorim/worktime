@@ -69,7 +69,7 @@ function NavigationButtonGroup({
         disabled={isCurrent}
         aria-label={currentAriaLabel}
       >
-        <Icon icon={currentIcon} className="tw:me-1" />
+        <Icon icon={currentIcon} className="me-1" />
         {currentLabel}
       </Button>
       <IconButton
@@ -87,14 +87,11 @@ function NavigationButtonGroup({
   }
 
   return (
-    <div className="tw:flex tw:flex-col tw:sm:flex-row tw:items-stretch tw:sm:items-center tw:gap-2">
-      {displayLabel && <span className="tw:text-muted-foreground tw:text-sm">{displayLabel}</span>}
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+      {displayLabel && <span className="text-muted-foreground text-sm">{displayLabel}</span>}
       {selectorLabel && selectorValue !== undefined && onSelectorChange && (
-        <div className="tw:flex tw:items-center tw:justify-between tw:gap-2">
-          <FieldLabel
-            htmlFor={effectiveSelectorId}
-            className="tw:mb-0 tw:text-sm tw:text-muted-foreground"
-          >
+        <div className="flex items-center justify-between gap-2">
+          <FieldLabel htmlFor={effectiveSelectorId} className="mb-0 text-sm text-muted-foreground">
             {selectorLabel}
           </FieldLabel>
           <Input
@@ -102,11 +99,11 @@ function NavigationButtonGroup({
             id={effectiveSelectorId}
             value={selectorValue}
             onChange={(event) => onSelectorChange(event.target.value)}
-            className="tw:w-auto"
+            className="w-auto"
           />
         </div>
       )}
-      <div className="tw:flex tw:gap-2">{buttons}</div>
+      <div className="flex gap-2">{buttons}</div>
     </div>
   );
 }

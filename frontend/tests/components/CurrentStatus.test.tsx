@@ -409,7 +409,7 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Today")).toBeInTheDocument();
       expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
 
-      const todayCard = screen.getByText("Today").closest('[class~="tw:md:col-span-12"]');
+      const todayCard = screen.getByText("Today").closest('[class~="md:col-span-12"]');
       expect(todayCard).toBeInTheDocument();
     });
   });
@@ -442,7 +442,7 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Today")).toBeInTheDocument();
       expect(screen.queryByText("Up Next")).not.toBeInTheDocument();
 
-      const todayCard = screen.getByText("Today").closest('[class~="tw:md:col-span-12"]');
+      const todayCard = screen.getByText("Today").closest('[class~="md:col-span-12"]');
       expect(todayCard).toBeInTheDocument();
     });
 
@@ -904,11 +904,11 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       const shiftBadges = screen.getAllByText("Morning");
-      const mainShiftBadge = shiftBadges.find((badge) => badge.classList.contains("tw:text-base"));
+      const mainShiftBadge = shiftBadges.find((badge) => badge.classList.contains("text-base"));
       expect(mainShiftBadge).toBeTruthy();
       expect(mainShiftBadge).toHaveAttribute("data-slot", "badge");
-      expect(mainShiftBadge).toHaveClass("tw:font-semibold");
-      expect(mainShiftBadge).toHaveClass("tw:text-base");
+      expect(mainShiftBadge).toHaveClass("font-semibold");
+      expect(mainShiftBadge).toHaveClass("text-base");
       expect(screen.getByText("Team 1:")).toBeInTheDocument();
     });
   });

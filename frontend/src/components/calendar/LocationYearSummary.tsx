@@ -192,7 +192,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
 
   if (rows.length === 0) {
     return (
-      <div className="tw:text-muted-foreground tw:text-sm tw:italic tw:py-2">
+      <div className="text-muted-foreground text-sm italic py-2">
         {m.location_no_data({ year })}
       </div>
     );
@@ -200,9 +200,9 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
 
   return (
     <div>
-      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
-        <span className="tw:font-semibold tw:text-sm">
-          <Icon icon={Columns3Icon} className="tw:mr-1" />
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-semibold text-sm">
+          <Icon icon={Columns3Icon} className="mr-1" />
           {m.location_summary_title({ year })}
         </span>
         <Button
@@ -211,13 +211,13 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           onClick={handleCopy}
           aria-label={m.location_copy_aria()}
         >
-          <Icon icon={ClipboardIcon} className="tw:mr-1" />
+          <Icon icon={ClipboardIcon} className="mr-1" />
           {m.location_copy_btn()}
         </Button>
       </div>
-      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mb-2">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <Input
-          className="tw:max-w-60"
+          className="max-w-60"
           placeholder={`${m.location_col_country()} / ${m.location_col_location()}`}
           value={countryFilter}
           onChange={(event) => setCountryFilter(event.target.value)}
@@ -237,7 +237,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
               return null;
             }
             return (
-              <label key={column.id} className="tw:flex tw:items-center tw:gap-2">
+              <label key={column.id} className="flex items-center gap-2">
                 <Switch
                   id={`location-column-${column.id}`}
                   checked={column.getIsVisible()}
@@ -248,7 +248,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
             );
           })}
       </div>
-      <Table className="tw:mb-0">
+      <Table className="mb-0">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -260,13 +260,13 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
                 return (
                   <TableHead
                     key={header.id}
-                    className={meta?.align === "end" ? "tw:text-right" : undefined}
+                    className={meta?.align === "end" ? "text-right" : undefined}
                     aria-sort={header.column.getCanSort() ? ariaSort : undefined}
                   >
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
-                        className="tw:border-0 tw:bg-transparent tw:p-0 tw:text-foreground tw:font-semibold tw:focus-visible:outline-2 tw:focus-visible:outline-ring"
+                        className="border-0 bg-transparent p-0 text-foreground font-semibold focus-visible:outline-2 focus-visible:outline-ring"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -288,7 +288,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
                     key={cell.id}
                     className={
                       cell.column.id === "days" || cell.column.id === "percentage"
-                        ? "tw:text-right"
+                        ? "text-right"
                         : undefined
                     }
                   >
@@ -296,7 +296,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
                       <>
                         <Icon
                           icon={WORK_LOCATION_ICONS[tableRow.original.location]}
-                          className="tw:mr-1"
+                          className="mr-1"
                         />
                         {tableRow.original.locationLabel}
                       </>

@@ -44,7 +44,7 @@ export function WeeklyHoursChart({
       ...(targetDaily > 0
         ? [
             ruleY([targetDaily], {
-              stroke: "var(--bs-success)",
+              stroke: "var(--wt-success)",
               strokeOpacity: 0.7,
               strokeDasharray: "4 3",
             }),
@@ -54,7 +54,7 @@ export function WeeklyHoursChart({
         x: "label",
         y: "hours",
         radius: 4,
-        fill: (row) => (row.iso === todayIso ? "var(--bs-primary)" : "var(--bs-secondary)"),
+        fill: (row) => (row.iso === todayIso ? "var(--wt-primary)" : "var(--wt-secondary)"),
       }),
     ],
     scales: {
@@ -71,12 +71,12 @@ export function WeeklyHoursChart({
   });
 
   return (
-    <div className="tw:mb-4">
-      <h6 className="tw:mb-3 tw:text-base tw:font-medium tw:text-muted-foreground tw:uppercase">
-        <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-2" />
+    <div className="mb-4">
+      <h6 className="mb-3 text-base font-medium text-muted-foreground uppercase">
+        <Icon icon={ChartNoAxesColumnIncreasingIcon} className="mr-2" />
         {m.tt_daily_hours_chart_heading()}
       </h6>
-      <div className="tw:min-w-0">
+      <div className="min-w-0">
         <Chart
           definition={definition}
           renderer={chartRenderer}
@@ -85,10 +85,10 @@ export function WeeklyHoursChart({
         />
       </div>
       {targetDaily > 0 && (
-        <div className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
+        <div className="mt-1 text-sm text-muted-foreground">
           <span
             aria-hidden="true"
-            className="tw:mr-1 tw:inline-block tw:w-3 tw:border-0 tw:border-t-2 tw:border-dashed tw:border-success-solid tw:align-middle"
+            className="mr-1 inline-block w-3 border-0 border-t-2 border-dashed border-success-solid align-middle"
           />
           {m.tt_target_label()}: {targetDaily.toFixed(1)} {m.tt_hours_unit()}
         </div>

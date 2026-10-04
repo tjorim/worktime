@@ -1,9 +1,9 @@
 /* ============================================================================
-   WORKTIME CUSTOM CSS VARIABLES & BOOTSTRAP OVERRIDES
+   WORKTIME DESIGN TOKENS
    ============================================================================
-   All Worktime-specific CSS variables for components and styling.
-   Includes Worktime custom variables (prefixed --wt-*) and Bootstrap variable
-   overrides (--bs-*) used primarily for dark mode.
+   Every runtime token the app styles from, prefixed --wt-*. The light theme is
+   :root; the dark theme is [data-theme="dark"], set on <html> by App.tsx.
+   Event colors live in event-palette.css; Tailwind aliases live in tailwind.css.
    ========================================================================= */
 
 /* ============================================================================
@@ -11,6 +11,50 @@
    ========================================================================= */
 
 :root {
+  color-scheme: light;
+
+  /* --- Base palette --- */
+  --wt-white: #fff;
+  --wt-black: #000;
+  --wt-primary: #0d6efd;
+  --wt-secondary: #6c757d;
+  --wt-success: #198754;
+  --wt-warning: #ffc107;
+  --wt-danger: #dc3545;
+  --wt-link-color: #0d6efd;
+  --wt-link-hover-color: #0a58ca;
+  --wt-code-color: #d63384;
+
+  /* --- Surfaces and text --- */
+  --wt-body-bg: #fff;
+  --wt-body-color: #212529;
+  --wt-secondary-color: rgb(33 37 41 / 75%);
+  --wt-secondary-bg: #e9ecef;
+  --wt-tertiary-bg: #f8f9fa;
+  --wt-border-color: #dee2e6;
+  --wt-surface-1: #fff; /* page body */
+  --wt-surface-2: #fff; /* cards, dialogs, popovers */
+  --wt-surface-3: #f8f9fa; /* nested cards, tables */
+
+  /* --- Feedback tones --- */
+  --wt-danger-text-emphasis: #58151c;
+  --wt-success-text-emphasis: #0a3622;
+  --wt-success-bg-subtle: #d1e7dd;
+  --wt-warning-text-emphasis: #664d03;
+  --wt-warning-bg-subtle: #fff3cd;
+  --wt-info-text-emphasis: #055160;
+  --wt-info-bg-subtle: #cff4fc;
+
+  /* --- Shape and type --- */
+  --wt-border-radius-sm: 0.25rem;
+  --wt-border-radius: 0.375rem;
+  --wt-border-radius-lg: 0.5rem;
+  --wt-font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans",
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --wt-font-mono:
+    SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
   /* --- Motion --- */
   --wt-motion-fast: 120ms;
   --wt-motion-base: 180ms;
@@ -58,7 +102,7 @@
   --wt-context-menu-item-text: #212529;
 
   /* --- Shift Badge Colors --- */
-  /* See _shifts.scss for detailed contrast ratio documentation */
+  /* Each text color is chosen for WCAG AA contrast on its background. */
   --wt-shift-morning: #1976d2;
   --wt-shift-morning-text: #ffffff;
   --wt-shift-late: #bf360c;
@@ -77,7 +121,7 @@
   --wt-error-stack-max-height: 300px;
 
   /* --- Time Tracking --- */
-  /* Default label color for unlabeled tasks - matches Bootstrap's $gray-600/text-muted */
+  /* Default label color for unlabeled tasks - matches --wt-secondary */
   --wt-label-default: #6c757d;
 
   /* --- Time Off Calendar Highlighting --- */
@@ -86,13 +130,13 @@
 
   /* --- Team Calendar Grid --- */
   /* Neutral on purpose: most cells are "available", so a tint here drowns out the events. */
-  --wt-team-cal-available: var(--bs-body-bg);
+  --wt-team-cal-available: var(--wt-body-bg);
   --wt-team-cal-weekend-cell: #e0e0e0;
-  --wt-team-cal-today-ring: var(--bs-warning);
+  --wt-team-cal-today-ring: var(--wt-warning);
   --wt-navbar-height: 60px;
 
   /* --- Navbar Surface --- */
-  /* Kept equal to Bootstrap's primary in light mode; overridden below for dark.
+  /* Kept equal to --wt-primary in light mode; overridden below for dark.
      Separate from --wt-primary-color, which stays pinned across themes for
      white-on-primary contrast (see the dark-mode comment on that variable). */
   --wt-navbar-bg: #0d6efd;
@@ -102,7 +146,29 @@
    DARK MODE VARIABLES
    ========================================================================= */
 
-[data-bs-theme="dark"] {
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* --- Surfaces and text --- */
+  --wt-body-bg: #181a1b;
+  --wt-body-color: #e0e0e0;
+  --wt-secondary-color: rgb(224 224 224 / 75%);
+  --wt-secondary-bg: #23272b;
+  --wt-tertiary-bg: #1f242a;
+  --wt-border-color: #495057;
+  --wt-link-color: #6ea8fe;
+  --wt-link-hover-color: #8bb9fe;
+  --wt-code-color: #e685b5;
+
+  /* --- Feedback tones --- */
+  --wt-danger-text-emphasis: #ea868f;
+  --wt-success-text-emphasis: #75b798;
+  --wt-success-bg-subtle: #051b11;
+  --wt-warning-text-emphasis: #ffda6a;
+  --wt-warning-bg-subtle: #332701;
+  --wt-info-text-emphasis: #6edff6;
+  --wt-info-bg-subtle: #032830;
+
   /* --- Month Calendar Component --- */
   /* Background and borders */
   --wt-month-calendar-bg: #1f242a;
@@ -170,7 +236,7 @@
   --wt-gantt-time-off-bg: rgba(13, 202, 240, 0.3);
 
   /* --- Team Calendar Grid --- */
-  --wt-team-cal-available: var(--bs-body-bg);
+  --wt-team-cal-available: var(--wt-body-bg);
   --wt-team-cal-weekend-cell: #383838;
   --wt-team-cal-today-ring: #ffda6a;
 
@@ -179,48 +245,15 @@
      instead of collapsing into one dark field. Body-to-card and card-to-nested
      each get a bigger numeric jump than their light-theme counterparts need,
      since dark surfaces read as "flat" at deltas that look fine in light mode. */
-  --wt-surface-1: #181a1b; /* page body — matches $body-bg-dark in main.scss */
-  --wt-surface-2: #262b31; /* first-level cards, modals, dropdowns, offcanvas */
+  --wt-surface-1: #181a1b; /* page body — matches --wt-body-bg */
+  --wt-surface-2: #262b31; /* first-level cards, dialogs, popovers */
   --wt-surface-3: #333a42; /* nested cards, tables */
-
-  /* ==========================================================================
-     BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)
-     ==========================================================================
-     These override Bootstrap's default dark mode values to match Worktime's
-     dark theme design.
-
-     Why these overrides exist:
-     - Consistent card/modal/dropdown backgrounds across the app
-     - Match dark theme background colors used in Sass configuration
-     - Ensure proper contrast for table content in dark mode
-     - Customize tab navigation styling for better visibility
-     ======================================================================= */
-
-  /* Component backgrounds - surface-2 for top-level elevated surfaces */
-  --bs-card-bg: var(--wt-surface-2);
-  --bs-modal-bg: var(--wt-surface-2);
-  --bs-offcanvas-bg: var(--wt-surface-2);
-  --bs-dropdown-bg: var(--wt-surface-2);
-
-  /* Tables read as content nested inside a surface-2 container */
-  --bs-table-bg: var(--wt-surface-3);
-
-  /* Table text color - ensure readability on dark backgrounds */
-  --bs-table-color: #e0e0e0;
-
-  /* Tab navigation borders - match dark theme styling */
-  --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
-  --bs-nav-tabs-link-active-border-color: #495057 #495057 var(--wt-surface-2);
 }
 
-/* Scoped to :root specifically, not the bare [data-bs-theme="dark"] attribute
-   selector used above: Header.tsx also sets data-bs-theme="dark" locally on
-   the Navbar (for readable text on its colored background), so a bare
-   attribute selector would match that nested element too and always apply,
-   even while the app itself is in light mode. */
-:root[data-bs-theme="dark"] {
+/* Scoped to :root so a nested [data-theme="dark"] subtree does not pick up the page navbar tone. */
+:root[data-theme="dark"] {
   /* --- Navbar Surface (THM-2) --- */
-  /* A deep, desaturated blue instead of the fully-saturated --bs-primary band,
+  /* A deep, desaturated blue instead of the fully-saturated --wt-primary band,
      for an app whose users check it during night shifts. */
   --wt-navbar-bg: #1b3a5c;
 }

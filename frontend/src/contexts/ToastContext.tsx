@@ -130,10 +130,10 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
     <div
       data-slot="toast"
       className={cn(
-        "tw:pointer-events-auto tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-popover tw:p-3 tw:text-popover-foreground tw:shadow-lg",
-        isError && "tw:border-destructive",
-        toast.variant === "warning" && "tw:border-warning",
-        toast.variant === "success" && "tw:border-success",
+        "pointer-events-auto flex w-full items-center gap-2 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg",
+        isError && "border-destructive",
+        toast.variant === "warning" && "border-warning",
+        toast.variant === "success" && "border-success",
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -146,7 +146,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
       aria-atomic="true"
     >
       {toast.icon && <Icon icon={toast.icon} />}
-      <span className="tw:min-w-0 tw:grow tw:text-sm">{toast.message}</span>
+      <span className="min-w-0 grow text-sm">{toast.message}</span>
       {toast.action && (
         <Button size="sm" variant="outline" onClick={toast.action.onClick}>
           {toast.action.label}
@@ -269,7 +269,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
       {children}
       <div
         data-slot="toast-viewport"
-        className="tw:pointer-events-none tw:fixed tw:top-0 tw:right-0 tw:z-feedback tw:flex tw:w-full tw:max-w-sm tw:flex-col tw:gap-2 tw:p-3"
+        className="pointer-events-none fixed top-0 right-0 z-feedback flex w-full max-w-sm flex-col gap-2 p-3"
       >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onClose={removeToast} />

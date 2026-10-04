@@ -37,7 +37,7 @@ function FlagRadio({ id, label, value }: FlagRadioProps) {
   return (
     <Field orientation="horizontal">
       <RadioGroupItem id={id} value={value} />
-      <FieldLabel htmlFor={id} className="tw:font-normal">
+      <FieldLabel htmlFor={id} className="font-normal">
         {label}
       </FieldLabel>
     </Field>
@@ -117,8 +117,8 @@ function FlagSection<Flag extends EventFlag | "none">({
 
     return (
       <GridItem span={12}>
-        <div className="tw:rounded-lg tw:border tw:border-border tw:p-3">
-          <div id={legendId} className="tw:mb-2 tw:text-sm tw:font-medium">
+        <div className="rounded-lg border border-border p-3">
+          <div id={legendId} className="mb-2 text-sm font-medium">
             {fieldsetTitle || title}
           </div>
           <RadioGroup
@@ -126,7 +126,7 @@ function FlagSection<Flag extends EventFlag | "none">({
             aria-labelledby={legendId}
             value={selected}
             onValueChange={(value) => onFlagChange(value as Flag)}
-            className="tw:sm:grid-cols-2 tw:lg:grid-cols-3"
+            className="sm:grid-cols-2 lg:grid-cols-3"
           >
             {flagOptions.map(([flag, label]) => (
               <FlagRadio key={flag} id={`${groupName}-flag-${flag}`} label={label} value={flag} />
@@ -142,7 +142,7 @@ function FlagSection<Flag extends EventFlag | "none">({
     <GridItem span={12}>
       <Field>
         <FieldTitle>{title}</FieldTitle>
-        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {eventFlags
             .filter((f) => flagGroup.includes(f))
             .map((flag) => (
@@ -151,7 +151,7 @@ function FlagSection<Flag extends EventFlag | "none">({
               </Badge>
             ))}
           {!eventFlags.some((f) => flagGroup.includes(f)) && (
-            <span className="tw:text-muted-foreground">{m.event_modal_none_label()}</span>
+            <span className="text-muted-foreground">{m.event_modal_none_label()}</span>
           )}
         </div>
       </Field>
@@ -291,17 +291,17 @@ export function EventModal({
                 : m.event_modal_new_event()}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" ref={formRef} tabIndex={-1}>
+        <div className="min-h-0 overflow-y-auto p-4" ref={formRef} tabIndex={-1}>
           <form onSubmit={(event) => event.preventDefault()}>
             <Grid>
               {mode !== "view" && (
                 <GridItem span={12}>
-                  <Card className="tw:bg-muted tw:py-2 tw:ring-0">
+                  <Card className="bg-muted py-2 ring-0">
                     <CardContent>
-                      <div className="tw:text-xs tw:text-muted-foreground tw:uppercase">
+                      <div className="text-xs text-muted-foreground uppercase">
                         {m.event_modal_preview_label()}
                       </div>
-                      <div className="tw:font-semibold">
+                      <div className="font-semibold">
                         {getEventTypeLabel(eventFlags)}{" "}
                         {eventType === "weekly"
                           ? eventWeekday
@@ -313,19 +313,19 @@ export function EventModal({
                               : "· " + eventStart
                             : m.event_modal_select_date()}
                       </div>
-                      {eventTitle && <div className="tw:text-muted-foreground">{eventTitle}</div>}
+                      {eventTitle && <div className="text-muted-foreground">{eventTitle}</div>}
                       {eventFlags.length > 0 && (
-                        <div className="tw:text-sm tw:text-muted-foreground">
+                        <div className="text-sm text-muted-foreground">
                           {m.event_modal_flags_label({
                             flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
                           })}
                         </div>
                       )}
-                      <div className="tw:mt-2">
-                        <div className="tw:text-xs tw:text-muted-foreground tw:uppercase">
+                      <div className="mt-2">
+                        <div className="text-xs text-muted-foreground uppercase">
                           {m.event_modal_raw_line_label()}
                         </div>
-                        <div className="tw:font-mono">
+                        <div className="font-mono">
                           {previewLine || m.event_modal_fill_required()}
                         </div>
                       </div>
@@ -338,7 +338,7 @@ export function EventModal({
                   <FieldLabel htmlFor="eventType">{m.event_modal_event_type_label()}</FieldLabel>
                   <NativeSelect
                     id="eventType"
-                    className="tw:w-full"
+                    className="w-full"
                     value={eventType}
                     onChange={(event) =>
                       onEventTypeChange(event.target.value as "range" | "weekly")
@@ -369,7 +369,7 @@ export function EventModal({
                   <GridItem span={12} desktopSpan={6}>
                     <Field data-invalid={!!startDateError}>
                       <FieldLabel htmlFor="eventStart">
-                        {m.event_modal_start_label()} <span className="tw:text-danger-text">*</span>
+                        {m.event_modal_start_label()} <span className="text-danger-text">*</span>
                       </FieldLabel>
                       <Input
                         id="eventStart"
@@ -416,7 +416,7 @@ export function EventModal({
                     <FieldLabel htmlFor="eventWeekday">{m.event_modal_weekday_label()}</FieldLabel>
                     <NativeSelect
                       id="eventWeekday"
-                      className="tw:w-full"
+                      className="w-full"
                       value={String(eventWeekday)}
                       onChange={(event) => onEventWeekdayChange(Number(event.target.value))}
                       disabled={mode === "view"}

@@ -280,7 +280,7 @@ export function GanttChart({
   return (
     <div
       data-slot="gantt-scroll"
-      className="tw:overflow-x-auto tw:overflow-y-hidden tw:rounded-lg tw:border tw:border-border tw:bg-background"
+      className="overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-background"
       data-testid="gantt-scroll-container"
     >
       <div ref={containerRef} />

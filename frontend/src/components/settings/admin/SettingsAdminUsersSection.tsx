@@ -40,13 +40,13 @@ export function SettingsAdminUsersSection({
 
   return (
     <SettingsSection icon={UsersIcon} title={m.account_admin_users_title()}>
-      <SettingsHint className="tw:mb-2">{m.account_admin_users_description()}</SettingsHint>
+      <SettingsHint className="mb-2">{m.account_admin_users_description()}</SettingsHint>
       {isAdminUsersLoading ? (
         <SettingsLoading>{m.account_admin_users_loading()}</SettingsLoading>
       ) : adminUsersError ? (
         <Alert variant="warning">{adminUsersError}</Alert>
       ) : (
-        <div className="tw:flex tw:flex-col tw:gap-2">
+        <div className="flex flex-col gap-2">
           {adminUsersDeleteError ? (
             <Alert variant="destructive">{adminUsersDeleteError}</Alert>
           ) : null}

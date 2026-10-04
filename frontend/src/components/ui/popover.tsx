@@ -20,9 +20,9 @@ export function DetailsPopover({
           side={placement === "left-end" ? "left" : "top"}
           align={placement === "left-end" ? "end" : "center"}
           sideOffset={8}
-          className="tw:isolate tw:z-popover"
+          className="isolate z-popover"
         >
-          <PopoverPrimitive.Popup className="tw:max-w-popover tw:rounded-md tw:border tw:border-border tw:bg-popover tw:text-sm tw:text-popover-foreground tw:shadow-md tw:outline-none">
+          <PopoverPrimitive.Popup className="max-w-popover rounded-md border border-border bg-popover text-sm text-popover-foreground shadow-md outline-none">
             {content}
           </PopoverPrimitive.Popup>
         </PopoverPrimitive.Positioner>
@@ -36,7 +36,7 @@ export function PopoverHeader({ className, ...props }: ComponentProps<"div">) {
     <PopoverPrimitive.Title
       render={<div />}
       className={cn(
-        "tw:m-0 tw:border-b tw:border-border tw:bg-muted tw:px-4 tw:py-2 tw:text-sm tw:font-semibold",
+        "m-0 border-b border-border bg-muted px-4 py-2 text-sm font-semibold",
         className,
       )}
       {...props}
@@ -45,7 +45,7 @@ export function PopoverHeader({ className, ...props }: ComponentProps<"div">) {
 }
 
 export function PopoverBody({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("tw:px-4 tw:py-2", className)} {...props} />;
+  return <div className={cn("px-4 py-2", className)} {...props} />;
 }
 
 /** Header for descriptive detail cards without dialog focus management. */
@@ -53,7 +53,7 @@ export function DetailsHeader({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "tw:m-0 tw:border-b tw:border-border tw:bg-muted tw:px-4 tw:py-2 tw:text-sm tw:font-semibold",
+        "m-0 border-b border-border bg-muted px-4 py-2 text-sm font-semibold",
         className,
       )}
       {...props}

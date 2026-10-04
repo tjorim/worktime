@@ -46,7 +46,7 @@ interface TodayViewProps {
  * the card is rendered as interactive and invokes the callback with the team number on click or keyboard activation.
  *
  * @param shiftResult - ShiftResult containing team number, shift, date and full code to display
- * @param isMyTeam - Whether this card corresponds to the current user's team (applies "tw:ring-2 tw:ring-primary" styling)
+ * @param isMyTeam - Whether this card corresponds to the current user's team (applies "ring-2 ring-primary" styling)
  * @param isCurrentlyActive - Whether the team's shift is currently active (controls live overlay and badge)
  * @param onTeamClick - Optional callback invoked with the team number and schedule type when the card is activated
  * @returns The Card element for the given team and shift; interactive when `onTeamClick` is provided
@@ -74,10 +74,10 @@ function TeamCard({
     <>
       {isCurrentlyActive && (
         <>
-          <div className="tw:absolute tw:inset-0 tw:pointer-events-none tw:rounded-xl tw:bg-success-bg/50"></div>
+          <div className="absolute inset-0 pointer-events-none rounded-xl bg-success-bg/50"></div>
           <Badge
             variant="success"
-            className="tw:absolute tw:bottom-4 tw:right-4 tw:z-10 tw:text-xs"
+            className="absolute bottom-4 right-4 z-10 text-xs"
             aria-label={
               hasTeams
                 ? m.schedule_team_working_aria({ team: String(shiftResult.teamNumber) })
@@ -88,25 +88,25 @@ function TeamCard({
           </Badge>
         </>
       )}
-      <div className="tw:relative tw:z-10 tw:flex tw:justify-between tw:items-center tw:mb-2">
-        <div className="tw:flex tw:items-center tw:gap-2">
-          <h6 className="tw:mb-0">
+      <div className="relative z-10 flex justify-between items-center mb-2">
+        <div className="flex items-center gap-2">
+          <h6 className="mb-0">
             {hasTeams
               ? m.team_label({ team: String(shiftResult.teamNumber) })
               : m.week_view_schedule_label()}
           </h6>
           {onTeamClick && (
-            <Icon icon={ChevronRightIcon} className="tw:text-muted-foreground tw:text-sm" />
+            <Icon icon={ChevronRightIcon} className="text-muted-foreground text-sm" />
           )}
         </div>
         <ShiftBadge shift={shift} />
       </div>
-      <div className="tw:text-muted-foreground tw:text-sm">
+      <div className="text-muted-foreground text-sm">
         {shift.name}
         <br />
         {shift.isWorking ? shiftTimeLabel : m.schedule_not_working_today()}
       </div>
-      <div className="tw:text-muted-foreground tw:text-sm tw:mt-1">
+      <div className="text-muted-foreground text-sm mt-1">
         <Hint
           placement="bottom"
           content={
@@ -127,7 +127,7 @@ function TeamCard({
             </div>
           }
         >
-          <span className="help-underline">{shiftResult.code}</span>
+          <span className="cursor-help underline decoration-dotted">{shiftResult.code}</span>
         </Hint>
       </div>
     </>
@@ -137,9 +137,9 @@ function TeamCard({
     return (
       <Card
         className={clsx(
-          "tw:relative tw:cursor-pointer tw:transition tw:hover:bg-muted tw:focus-visible:outline-2 tw:focus-visible:outline-ring",
-          "tw:w-full",
-          isMyTeam && "tw:ring-2 tw:ring-primary",
+          "relative cursor-pointer transition hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring",
+          "w-full",
+          isMyTeam && "ring-2 ring-primary",
         )}
         onClick={() => onTeamClick(shiftResult.teamNumber, scheduleType)}
         role="button"
@@ -162,14 +162,14 @@ function TeamCard({
           }
         }}
       >
-        <CardContent className="tw:p-4">{cardContent}</CardContent>
+        <CardContent className="p-4">{cardContent}</CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className={clsx("tw:relative", isMyTeam && "tw:ring-2 tw:ring-primary")}>
-      <CardContent className="tw:p-4">{cardContent}</CardContent>
+    <Card className={clsx("relative", isMyTeam && "ring-2 ring-primary")}>
+      <CardContent className="p-4">{cardContent}</CardContent>
     </Card>
   );
 }
@@ -220,17 +220,14 @@ export function TodayView({
   return (
     <Card>
       <CardHeader>
-        <div className="tw:flex tw:flex-col tw:md:flex-row tw:justify-between tw:items-start tw:md:items-center tw:gap-2 tw:mb-2">
-          <span className="tw:font-semibold">
-            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="tw:mr-2" />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2">
+          <span className="font-semibold">
+            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="mr-2" />
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
-          <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
-            <label
-              htmlFor={scheduleSelectId}
-              className="tw:mb-0 tw:text-sm tw:text-muted-foreground"
-            >
-              <Icon icon={ClipboardListIcon} className="tw:mr-1" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <label htmlFor={scheduleSelectId} className="mb-0 text-sm text-muted-foreground">
+              <Icon icon={ClipboardListIcon} className="mr-1" />
               {m.schedule_view_label()}
             </label>
             <NativeSelect
@@ -240,7 +237,7 @@ export function TodayView({
                 const value = e.target.value;
                 onViewingScheduleTypeChange(isValidScheduleType(value) ? value : null);
               }}
-              className="tw:w-auto"
+              className="w-auto"
             >
               <option value="" disabled>
                 {m.schedule_select_placeholder()}
@@ -257,18 +254,14 @@ export function TodayView({
           </div>
         </div>
         {viewingScheduleType && (
-          <div className="tw:text-muted-foreground tw:text-sm">
+          <div className="text-muted-foreground text-sm">
             {new Intl.DateTimeFormat(getLocale(), {
               weekday: "long",
               month: "long",
               day: "numeric",
               year: "numeric",
             }).format(today.toDate())}
-            <Badge
-              variant="success"
-              className="tw:ml-2"
-              aria-label={m.today_view_current_day_aria()}
-            >
+            <Badge variant="success" className="ml-2" aria-label={m.today_view_current_day_aria()}>
               {m.today()}
             </Badge>
           </div>
@@ -282,8 +275,8 @@ export function TodayView({
         ) : (
           <>
             {todayShifts.length > 1 && (
-              <div className="tw:sm:hidden">
-                <div className="tw:flex tw:items-center tw:justify-between tw:mb-2">
+              <div className="sm:hidden">
+                <div className="flex items-center justify-between mb-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -296,7 +289,7 @@ export function TodayView({
                   >
                     <Icon icon={ChevronLeftIcon} />
                   </Button>
-                  <span className="tw:text-sm tw:text-muted-foreground" aria-live="polite">
+                  <span className="text-sm text-muted-foreground" aria-live="polite">
                     {m.today_view_team_position({
                       current: String(mobileTeamIndex + 1),
                       total: String(todayShifts.length),
@@ -330,12 +323,12 @@ export function TodayView({
             <div
               className={
                 todayShifts.length > 1
-                  ? "tw:hidden tw:sm:grid tw:sm:grid-cols-2 tw:md:grid-cols-3 tw:lg:grid-cols-5 tw:gap-2"
-                  : "tw:grid tw:gap-2"
+                  ? "hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2"
+                  : "grid gap-2"
               }
             >
               {todayShifts.map((shiftResult) => (
-                <div key={shiftResult.teamNumber} className="tw:min-w-0">
+                <div key={shiftResult.teamNumber} className="min-w-0">
                   <TeamCard
                     shiftResult={shiftResult}
                     isMyTeam={myTeam === shiftResult.teamNumber}

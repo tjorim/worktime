@@ -140,12 +140,6 @@ export default defineConfig({
         manualChunks(id) {
           const normalizedId = id.replaceAll("\\", "/");
           if (normalizedId.includes("/node_modules/")) {
-            if (
-              normalizedId.includes("/react-bootstrap/") ||
-              normalizedId.includes("/bootstrap/")
-            ) {
-              return "vendor-ui";
-            }
             if (/\/node_modules\/(react|react-dom|scheduler)\//.test(normalizedId)) {
               return "vendor-react";
             }

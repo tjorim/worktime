@@ -118,7 +118,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
 
   return (
     <SettingsSection icon={CalendarIcon} title={m.calendar_feed_title()}>
-      <div className="tw:flex tw:flex-col tw:gap-2">
+      <div className="flex flex-col gap-2">
         <SettingsHint>{m.calendar_feed_description()}</SettingsHint>
         <SettingsHint>{m.calendar_feed_client_guidance()}</SettingsHint>
         <Alert variant="warning">{m.calendar_feed_warning()}</Alert>
@@ -126,7 +126,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
         {url ? (
           <>
             <Input readOnly value={url} aria-label={m.calendar_feed_url_label()} />
-            <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={() => void copy()}>
                 {m.calendar_feed_copy()}
               </Button>
@@ -140,10 +140,10 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
         ) : loading ? (
           <SettingsLoading>{m.loading()}</SettingsLoading>
         ) : configured ? (
-          <div className="tw:flex tw:flex-col tw:items-start tw:gap-2">
+          <div className="flex flex-col items-start gap-2">
             <Alert variant="success">
               <div>{m.calendar_feed_configured()}</div>
-              <div className="tw:font-medium">
+              <div className="font-medium">
                 {lastFetchedAt
                   ? m.calendar_feed_last_fetched({
                       date: new Intl.DateTimeFormat(getLocale(), {
@@ -154,7 +154,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
                   : m.calendar_feed_never_fetched()}
               </div>
             </Alert>
-            <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <div className="flex flex-wrap gap-2">
               {regenerateButton}
               {revokeButton}
             </div>

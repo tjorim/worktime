@@ -76,7 +76,7 @@ describe("GanttChart", () => {
 
     const container = screen.getByTestId("gantt-scroll-container");
     expect(container).toHaveAttribute("data-slot", "gantt-scroll");
-    expect(container).toHaveClass("tw:overflow-x-auto", "tw:overflow-y-hidden", "tw:bg-background");
+    expect(container).toHaveClass("overflow-x-auto", "overflow-y-hidden", "bg-background");
     expect(container).not.toHaveClass("gantt-scroll-container", "border", "bg-body");
   });
 

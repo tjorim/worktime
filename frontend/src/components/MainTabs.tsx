@@ -160,9 +160,9 @@ export function MainTabs({
 
   const loadingFallback = useMemo(
     () => (
-      <div className="tw:flex tw:justify-center tw:py-4" aria-live="polite">
+      <div className="flex justify-center py-4" aria-live="polite">
         <Spinner role="status" size="sm">
-          <span className="tw:sr-only">{m.loading()}</span>
+          <span className="sr-only">{m.loading()}</span>
         </Spinner>
       </div>
     ),
@@ -182,10 +182,7 @@ export function MainTabs({
     <>
       <div>
         <Tabs value={activeKey} onValueChange={(value) => setActiveTab(value as TabKey)}>
-          <TabsList
-            className="tw:w-full tw:h-auto tw:justify-start tw:overflow-x-auto"
-            aria-label="Worktime"
-          >
+          <TabsList className="w-full h-auto justify-start overflow-x-auto" aria-label="Worktime">
             {availableTabs.map((key) => {
               const labels = {
                 calendar: m.tab_calendar(),
@@ -207,11 +204,11 @@ export function MainTabs({
                 <TabsTrigger
                   key={key}
                   value={key}
-                  className="tw:min-h-11 tw:min-w-0 tw:flex-col tw:sm:flex-row tw:flex-1 tw:sm:flex-none tw:whitespace-normal tw:px-1 tw:sm:px-3"
+                  className="min-h-11 min-w-0 flex-col sm:flex-row flex-1 sm:flex-none whitespace-normal px-1 sm:px-3"
                   aria-label={labels[key]}
                 >
                   <Icon icon={icons[key]} />
-                  <span className="tw:text-xs tw:sm:text-sm tw:wrap-anywhere">{labels[key]}</span>
+                  <span className="text-xs sm:text-sm wrap-anywhere">{labels[key]}</span>
                 </TabsTrigger>
               );
             })}

@@ -212,7 +212,7 @@ function AppContent() {
     }
   }
 
-  // Theme switching effect - following Bootstrap 5.3 best practices
+  // Mirror the resolved light/dark theme onto <html data-theme> (styles and vendor widgets key off it)
   useEffect(() => {
     if (typeof document === "undefined") return;
 
@@ -224,7 +224,7 @@ function AppContent() {
             : "light"
           : settings.theme;
 
-      document.documentElement.setAttribute("data-bs-theme", resolvedTheme);
+      document.documentElement.setAttribute("data-theme", resolvedTheme);
     };
 
     applyTheme();

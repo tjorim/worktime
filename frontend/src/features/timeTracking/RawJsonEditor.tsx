@@ -35,10 +35,10 @@ export function RawJsonEditor({
 }: RawJsonEditorProps) {
   return (
     <details className={className}>
-      <summary className="tw:text-sm tw:text-muted-foreground">{summaryLabel}</summary>
-      <div className="tw:my-2 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-        <div className="tw:font-semibold">{headingLabel}</div>
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
+      <summary className="text-sm text-muted-foreground">{summaryLabel}</summary>
+      <div className="my-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{headingLabel}</div>
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={onCopy}>
             {copyButtonLabel}
           </Button>
@@ -49,12 +49,12 @@ export function RawJsonEditor({
       </div>
       <Textarea
         rows={8}
-        className="tw:field-sizing-fixed tw:font-mono"
+        className="field-sizing-fixed font-mono"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-label={ariaLabel}
       />
-      <div className="tw:mt-2 tw:text-sm tw:text-muted-foreground">
+      <div className="mt-2 text-sm text-muted-foreground">
         {formatLabel}: <code>{formatHint}</code>
       </div>
       {children}
@@ -65,9 +65,9 @@ export function RawJsonEditor({
 /** Collapsible read-only JSON sample shown under a raw editor. */
 export function JsonExample({ summaryLabel, json }: { summaryLabel: string; json: string }) {
   return (
-    <details className="tw:mt-3">
-      <summary className="tw:text-sm tw:text-muted-foreground">{summaryLabel}</summary>
-      <pre className="tw:mt-2 tw:mb-0 tw:overflow-x-auto tw:rounded-lg tw:border tw:border-border tw:bg-muted tw:p-2 tw:font-mono tw:text-sm tw:text-foreground">
+    <details className="mt-3">
+      <summary className="text-sm text-muted-foreground">{summaryLabel}</summary>
+      <pre className="mt-2 mb-0 overflow-x-auto rounded-lg border border-border bg-muted p-2 font-mono text-sm text-foreground">
         <code>{json}</code>
       </pre>
     </details>

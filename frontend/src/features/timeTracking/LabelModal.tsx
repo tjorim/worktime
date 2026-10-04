@@ -46,10 +46,10 @@ export function LabelModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           <form
             id="labelForm"
-            className="tw:flex tw:flex-col tw:gap-3"
+            className="flex flex-col gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               onSubmit();
@@ -68,7 +68,7 @@ export function LabelModal({
             </Field>
             <Field>
               <FieldLabel htmlFor="labelColor">{m.form_label_color()}</FieldLabel>
-              <div className="tw:flex tw:items-center tw:gap-2">
+              <div className="flex items-center gap-2">
                 <Hint
                   placement="top"
                   content={<div id="label-color-picker">{m.tt_select_label_color()}</div>}
@@ -78,7 +78,7 @@ export function LabelModal({
                     type="color"
                     value={value.color}
                     onChange={(event) => onChange({ ...value, color: event.target.value })}
-                    className="tw:w-12 tw:shrink-0 tw:p-1"
+                    className="w-12 shrink-0 p-1"
                     aria-required="true"
                     required
                   />

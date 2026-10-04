@@ -278,14 +278,14 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
               key={link.id}
               variant="outline"
               size="sm"
-              className="tw:mr-1 tw:mb-1"
+              className="mr-1 mb-1"
               aria-label={m.gantt_table_go_to_task({ name: link.name })}
               onClick={() => handleJumpToTask(link.id)}
             >
               {link.name}
             </Button>
           ) : (
-            <span key={link.id} className="tw:mr-1 tw:text-muted-foreground">
+            <span key={link.id} className="mr-1 text-muted-foreground">
               {link.name}
             </span>
           ),
@@ -304,7 +304,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
       {tasks.length > 0 && (
         <TableSearchInput
           type="search"
-          className="tw:mb-3"
+          className="mb-3"
           placeholder={m.gantt_table_search_placeholder()}
           aria-label={m.gantt_table_search_aria()}
           value={search}
@@ -319,7 +319,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                 <SortableHeaderCell
                   key={header.id}
                   header={header}
-                  className={header.column.id === "actions" ? "tw:text-right" : undefined}
+                  className={header.column.id === "actions" ? "text-right" : undefined}
                 />
               ))}
             </TableRow>
@@ -330,7 +330,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="tw:py-4 tw:text-center tw:text-muted-foreground"
+                className="py-4 text-center text-muted-foreground"
               >
                 {isFiltering ? m.gantt_table_no_results() : m.gantt_table_empty()}
               </TableCell>
@@ -347,14 +347,14 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                   id={rowDomId(task.id)}
                   className={
                     highlightedId === task.id
-                      ? "tw:bg-wt-warning-bg tw:hover:bg-wt-warning-bg"
-                      : "tw:odd:bg-muted/30"
+                      ? "bg-wt-warning-bg hover:bg-wt-warning-bg"
+                      : "odd:bg-muted/30"
                   }
                 >
                   <TableCell>
                     <Button
                       variant="link"
-                      className="tw:h-auto tw:p-0 tw:text-left tw:font-semibold tw:text-foreground"
+                      className="h-auto p-0 text-left font-semibold text-foreground"
                       onClick={() => onTaskClick(task.id)}
                     >
                       {task.name}
@@ -365,7 +365,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                   <TableCell>
                     {labelBackground ? (
                       <span
-                        className="tw:inline-flex tw:items-center tw:rounded-md tw:border tw:border-border tw:px-2 tw:py-0.5 tw:text-xs tw:font-semibold tw:bg-label tw:text-label-foreground"
+                        className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-xs font-semibold bg-label text-label-foreground"
                         style={
                           {
                             "--label-bg": labelBackground,
@@ -379,30 +379,30 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                       "—"
                     )}
                   </TableCell>
-                  <TableCell className="tw:min-w-32">
-                    <div className="tw:flex tw:items-center tw:gap-2">
+                  <TableCell className="min-w-32">
+                    <div className="flex items-center gap-2">
                       <Progress
                         value={task.progress}
                         aria-label={m.gantt_table_progress()}
-                        className="tw:flex-1"
-                        trackClassName="tw:h-2 tw:border tw:border-border"
+                        className="flex-1"
+                        trackClassName="h-2 border border-border"
                       />
-                      <span className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground">
+                      <span className="text-sm whitespace-nowrap text-muted-foreground">
                         {task.progress}%
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="tw:whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     {loggedMinutes > 0 ? formatLoggedDuration(loggedMinutes) : "—"}
                   </TableCell>
                   <TableCell>{renderTaskLinks(dependsOn)}</TableCell>
                   <TableCell>{renderTaskLinks(requiredBy)}</TableCell>
                   <TableCell title={task.notes}>{task.notes || "—"}</TableCell>
-                  <TableCell className="tw:text-right tw:whitespace-nowrap">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Button
                       variant="link"
                       size="sm"
-                      className="tw:text-foreground"
+                      className="text-foreground"
                       aria-label={m.gantt_table_edit_aria({ name: task.name })}
                       onClick={() => onTaskClick(task.id)}
                     >
@@ -411,7 +411,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                     <Button
                       variant="link"
                       size="sm"
-                      className="tw:text-destructive"
+                      className="text-destructive"
                       aria-label={m.gantt_table_delete_aria({ name: task.name })}
                       onClick={(event) => {
                         event.stopPropagation();

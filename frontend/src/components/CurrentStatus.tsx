@@ -26,7 +26,7 @@ interface CurrentStatusProps {
   myTeam: number | null;
   onChangeTeam: () => void;
   onChangeSchedule?: () => void;
-  /** "compact" renders a summary strip; "responsive" does so only below Bootstrap's md breakpoint. */
+  /** "compact" renders a summary strip; "responsive" does so only below the md breakpoint. */
   variant?: "full" | "compact" | "responsive";
 }
 
@@ -108,11 +108,11 @@ export function CurrentStatus({
   // No schedule selected - show setup prompt
   if (!scheduleType) {
     return (
-      <div className="tw:mb-6">
+      <div className="mb-6">
         <Card>
-          <CardContent className="tw:text-center tw:py-6">
-            <Icon icon={CalendarPlusIcon} className="tw:text-muted-foreground tw:mb-4 tw:size-10" />
-            <p className="tw:text-muted-foreground tw:mb-4">
+          <CardContent className="text-center py-6">
+            <Icon icon={CalendarPlusIcon} className="text-muted-foreground mb-4 size-10" />
+            <p className="text-muted-foreground mb-4">
               {m.current_status_select_schedule_prompt()}
             </p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
@@ -124,9 +124,9 @@ export function CurrentStatus({
 
   if (isCompact) {
     return (
-      <div className="tw:mb-6">
+      <div className="mb-6">
         <Card>
-          <CardContent className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:py-2">
+          <CardContent className="flex items-center justify-between gap-2 py-2">
             {effectiveTeam ? (
               <PersonalizedStatusContent
                 myTeam={effectiveTeam}
@@ -139,7 +139,7 @@ export function CurrentStatus({
             <Button
               variant="link"
               size="sm"
-              className="tw:p-0 tw:text-muted-foreground tw:no-underline tw:shrink-0"
+              className="p-0 text-muted-foreground no-underline shrink-0"
               onClick={() => setExpanded(true)}
               aria-expanded={false}
               aria-label={m.current_status_expand()}
@@ -154,14 +154,14 @@ export function CurrentStatus({
   }
 
   return (
-    <div className="tw:mb-6">
+    <div className="mb-6">
       <Card>
         <CardContent>
           {/* Common Header Row */}
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center tw:mb-4">
-            <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-4">
-              <CardTitle className="tw:mb-0">{m.schedule_current_status()}</CardTitle>
-              <div className="tw:text-muted-foreground">
+          <div className="flex flex-wrap gap-2 justify-between items-center mb-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <CardTitle className="mb-0">{m.schedule_current_status()}</CardTitle>
+              <div className="text-muted-foreground">
                 <Hint
                   placement="bottom"
                   content={
@@ -182,20 +182,20 @@ export function CurrentStatus({
                     </div>
                   }
                 >
-                  <small className="help-underline">
-                    <Icon icon={CalendarIcon} className="tw:mr-1" />
+                  <small className="cursor-help underline decoration-dotted">
+                    <Icon icon={CalendarIcon} className="mr-1" />
                     {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
                 </Hint>
               </div>
             </div>
-            <div className="tw:flex tw:items-center tw:gap-2">
+            <div className="flex items-center gap-2">
               {canCollapse && (
                 <Button
                   variant="link"
                   size="sm"
-                  className="tw:p-0 tw:text-muted-foreground tw:no-underline"
+                  className="p-0 text-muted-foreground no-underline"
                   onClick={() => setExpanded(false)}
                   aria-expanded={true}
                   aria-label={m.current_status_collapse()}
@@ -214,7 +214,7 @@ export function CurrentStatus({
 
           {/* Timeline Row */}
           {currentWorkingTeam && (
-            <div className="tw:mb-4">
+            <div className="mb-4">
               <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />
             </div>
           )}

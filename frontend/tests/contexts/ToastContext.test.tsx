@@ -241,10 +241,10 @@ describe("ToastContext", () => {
 
     const toastContainer = document.querySelector("[data-slot=toast-viewport]");
     expect(toastContainer).toBeInTheDocument();
-    expect(toastContainer).toHaveClass("tw:fixed");
-    expect(toastContainer).toHaveClass("tw:top-0");
-    expect(toastContainer).toHaveClass("tw:right-0");
-    expect(toastContainer).toHaveClass("tw:p-3");
+    expect(toastContainer).toHaveClass("fixed");
+    expect(toastContainer).toHaveClass("top-0");
+    expect(toastContainer).toHaveClass("right-0");
+    expect(toastContainer).toHaveClass("p-3");
   });
   it("keeps autohide paused while keyboard focus remains after the pointer leaves", () => {
     vi.useFakeTimers();

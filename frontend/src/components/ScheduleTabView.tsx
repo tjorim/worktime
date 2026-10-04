@@ -95,19 +95,15 @@ export function ScheduleTabView({
   };
 
   return (
-    <div className="schedule-tab-view tw:py-4 tw:flex tw:flex-col tw:gap-4">
-      <div
-        role="group"
-        className="tw:flex tw:flex-wrap tw:gap-1"
-        aria-label={m.schedule_toggle_view_aria()}
-      >
+    <div data-slot="schedule-tab-view" className="py-4 flex flex-col gap-4">
+      <div role="group" className="flex flex-wrap gap-1" aria-label={m.schedule_toggle_view_aria()}>
         <Button
           variant={viewMode === "schedule" ? "default" : "outline"}
           size="sm"
           aria-pressed={viewMode === "schedule"}
           onClick={() => setViewMode("schedule")}
         >
-          <Icon icon={CalendarDaysIcon} className="tw:mr-1" />
+          <Icon icon={CalendarDaysIcon} className="mr-1" />
           {m.schedule_overview_tab()}
         </Button>
         <Button
@@ -116,13 +112,13 @@ export function ScheduleTabView({
           aria-pressed={viewMode === "transfer"}
           onClick={() => setViewMode("transfer")}
         >
-          <Icon icon={ArrowLeftRightIcon} className="tw:mr-1" />
+          <Icon icon={ArrowLeftRightIcon} className="mr-1" />
           {m.schedule_transfers_tab()}
         </Button>
       </div>
 
       {viewMode === "schedule" && (
-        <div className="tw:flex tw:flex-col tw:gap-4">
+        <div className="flex flex-col gap-4">
           <TodayView
             myTeam={myTeam}
             onTeamClick={onTeamClick}

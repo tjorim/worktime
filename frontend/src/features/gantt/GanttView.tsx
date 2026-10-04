@@ -133,36 +133,36 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   };
 
   return (
-    <div className="tw:flex tw:flex-col tw:gap-3 tw:py-3">
-      <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+    <div className="flex flex-col gap-3 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div
           role="group"
-          className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
+          className="flex w-full max-w-sm gap-1"
           aria-label={m.gantt_toggle_view_aria()}
         >
           <Button
-            className="tw:flex-1"
+            className="flex-1"
             variant={view === "chart" ? "default" : "outline"}
             size="sm"
             aria-pressed={view === "chart"}
             onClick={() => updateLastGanttView("chart")}
           >
-            <Icon icon={ChartColumnIcon} className="tw:mr-1" />
+            <Icon icon={ChartColumnIcon} className="mr-1" />
             {m.gantt_chart_view()}
           </Button>
           <Button
-            className="tw:flex-1"
+            className="flex-1"
             variant={view === "table" ? "default" : "outline"}
             size="sm"
             aria-pressed={view === "table"}
             onClick={() => updateLastGanttView("table")}
           >
-            <Icon icon={TableIcon} className="tw:mr-1" />
+            <Icon icon={TableIcon} className="mr-1" />
             {m.gantt_table_view()}
           </Button>
         </div>
         <Button size="sm" onClick={handleAddTask}>
-          <Icon icon={CirclePlusIcon} className="tw:mr-1" />
+          <Icon icon={CirclePlusIcon} className="mr-1" />
           {m.gantt_task_modal_add()}
         </Button>
       </div>

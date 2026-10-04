@@ -178,7 +178,7 @@ describe("WelcomeWizard Integration Tests", () => {
     vi.clearAllMocks();
     // Clean up DOM modifications
     document.body.className = "";
-    document.documentElement.removeAttribute("data-bs-theme");
+    document.documentElement.removeAttribute("data-theme");
   });
 
   // ==========================================================================

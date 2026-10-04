@@ -39,16 +39,16 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
           anchor={anchor}
           side="bottom"
           align="start"
-          className="tw:z-popover"
+          className="z-popover"
           collisionPadding={8}
         >
           <Menu.Popup
             finalFocus={triggerRef}
-            className="tw:min-w-40 tw:rounded-lg tw:border tw:border-wt-context-menu-border tw:bg-wt-context-menu-bg tw:p-1 tw:text-wt-context-menu-item-text tw:shadow-lg tw:outline-none"
+            className="min-w-40 rounded-lg border border-wt-context-menu-border bg-wt-context-menu-bg p-1 text-wt-context-menu-item-text shadow-lg outline-none"
           >
             {items.map((item, index) =>
               item.separator ? (
-                <Menu.Separator key={index} className="tw:my-1 tw:border-t tw:border-border" />
+                <Menu.Separator key={index} className="my-1 border-t border-border" />
               ) : (
                 <Menu.Item
                   key={`${index}-${item.label}`}
@@ -59,8 +59,8 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
                     item.onClick();
                   }}
                   className={cn(
-                    "tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-md tw:px-3 tw:py-2 tw:text-sm tw:outline-none tw:data-highlighted:bg-wt-context-menu-item-hover tw:data-disabled:opacity-50",
-                    item.variant === "danger" && "tw:text-danger-text",
+                    "flex cursor-default items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-wt-context-menu-item-hover data-disabled:opacity-50",
+                    item.variant === "danger" && "text-danger-text",
                   )}
                 >
                   {item.icon && <Icon icon={item.icon} />}

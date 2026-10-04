@@ -93,31 +93,29 @@ export function SettingsPage() {
   }, [activeSection]);
 
   return (
-    <main id="main-content" className="tw:py-6">
-      <div className="tw:mx-auto tw:max-w-settings">
-        <div className="tw:mb-3 tw:rounded-2xl tw:border tw:border-border tw:bg-muted tw:px-4 tw:py-3 tw:md:mb-4 tw:md:px-8 tw:md:py-4">
-          <div className="tw:mb-1 tw:text-sm tw:font-semibold tw:text-muted-foreground tw:uppercase tw:md:mb-2">
+    <main id="main-content" className="py-6">
+      <div className="mx-auto max-w-settings">
+        <div className="mb-3 rounded-2xl border border-border bg-muted px-4 py-3 md:mb-4 md:px-8 md:py-4">
+          <div className="mb-1 text-sm font-semibold text-muted-foreground uppercase md:mb-2">
             {m.settings_title()}
           </div>
-          <h1 className="tw:m-0 tw:text-2xl tw:font-medium tw:md:mb-2 tw:md:text-3xl">
-            {sectionMeta.label()}
-          </h1>
-          <p className="tw:m-0 tw:hidden tw:text-muted-foreground tw:md:block">
+          <h1 className="m-0 text-2xl font-medium md:mb-2 md:text-3xl">{sectionMeta.label()}</h1>
+          <p className="m-0 hidden text-muted-foreground md:block">
             {m.settings_page_description()}
           </p>
         </div>
 
-        <div className="tw:grid tw:grid-cols-1 tw:items-start tw:gap-3 tw:lg:grid-cols-12 tw:lg:gap-4">
-          <Card className="tw:gap-2 tw:p-3 tw:shadow-sm tw:lg:hidden">
+        <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-12 lg:gap-4">
+          <Card className="gap-2 p-3 shadow-sm lg:hidden">
             <Label
               htmlFor="settings-section-select"
-              className="tw:text-sm tw:font-semibold tw:text-muted-foreground tw:uppercase"
+              className="text-sm font-semibold text-muted-foreground uppercase"
             >
               {m.settings_page_nav_title()}
             </Label>
             <NativeSelect
               id="settings-section-select"
-              className="tw:h-10 tw:w-full"
+              className="h-10 w-full"
               value={activeSection}
               onChange={(event) =>
                 void navigate({
@@ -134,12 +132,12 @@ export function SettingsPage() {
             </NativeSelect>
           </Card>
 
-          <Card className="tw:hidden tw:gap-0 tw:py-0 tw:shadow-sm tw:lg:col-span-4 tw:lg:block tw:xl:col-span-3">
+          <Card className="hidden gap-0 py-0 shadow-sm lg:col-span-4 lg:block xl:col-span-3">
             <nav aria-label={m.settings_page_nav_title()}>
-              <div className="tw:border-b tw:border-border tw:bg-muted tw:px-4 tw:py-3 tw:text-sm tw:font-semibold tw:text-muted-foreground tw:uppercase">
+              <div className="border-b border-border bg-muted px-4 py-3 text-sm font-semibold text-muted-foreground uppercase">
                 {m.settings_page_nav_title()}
               </div>
-              <div className="tw:grid tw:gap-2 tw:p-2">
+              <div className="grid gap-2 p-2">
                 {visibleSections.map((section) => {
                   const isActive = section.key === activeSection;
                   return (
@@ -147,7 +145,7 @@ export function SettingsPage() {
                       key={section.key}
                       variant={isActive ? "default" : "outline"}
                       size="lg"
-                      className="tw:justify-start tw:gap-2 tw:text-left"
+                      className="justify-start gap-2 text-left"
                       aria-current={isActive ? "page" : undefined}
                       onClick={() =>
                         void navigate({
@@ -165,7 +163,7 @@ export function SettingsPage() {
             </nav>
           </Card>
 
-          <div className="tw:min-w-0 tw:lg:col-span-8 tw:xl:col-span-9">
+          <div className="min-w-0 lg:col-span-8 xl:col-span-9">
             <SettingsContent
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
@@ -590,12 +588,12 @@ export function SettingsContent({
 
   return (
     <>
-      <Card className="tw:gap-0 tw:py-0 tw:shadow-sm">
+      <Card className="gap-0 py-0 shadow-sm">
         <div key={activeSection} className="app-view-enter">
           {sectionContent}
         </div>
-        <div className="tw:border-t tw:border-border tw:px-4 tw:py-3 tw:text-center tw:text-muted-foreground">
-          <span className="tw:block">{m.footer_version({ version: CONFIG.VERSION })}</span>
+        <div className="border-t border-border px-4 py-3 text-center text-muted-foreground">
+          <span className="block">{m.footer_version({ version: CONFIG.VERSION })}</span>
           <small>{m.footer_built_by()}</small>
         </div>
       </Card>
@@ -611,7 +609,7 @@ export function SettingsContent({
         ref={restoreFileInputRef}
         type="file"
         accept="application/json"
-        className="tw:hidden"
+        className="hidden"
         aria-label={m.restore_backup_label()}
         onChange={handleRestoreFileChange}
       />

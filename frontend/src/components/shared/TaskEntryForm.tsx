@@ -107,7 +107,7 @@ export function TaskEntryForm({
     const tooltipId = `${buttonKey}-tooltip`;
     return (
       <Hint content={<div id={tooltipId}>{reason}</div>}>
-        <span className="tw:w-full tw:inline-block" tabIndex={0} aria-describedby={tooltipId}>
+        <span className="w-full inline-block" tabIndex={0} aria-describedby={tooltipId}>
           {button}
         </span>
       </Hint>
@@ -117,24 +117,21 @@ export function TaskEntryForm({
   return (
     <>
       {showTimerControls && isTimerRunning ? (
-        <div
-          className="tw:flex tw:items-center tw:gap-2 tw:mb-4 tw:p-2 tw:rounded-md tw:bg-muted"
-          aria-live="polite"
-        >
+        <div className="flex items-center gap-2 mb-4 p-2 rounded-md bg-muted" aria-live="polite">
           {runningTaskSummary && (
-            <div className="tw:flex tw:flex-col tw:gap-1 tw:grow tw:min-w-0">
-              <div className="tw:flex tw:items-center tw:flex-wrap tw:gap-2">
+            <div className="flex flex-col gap-1 grow min-w-0">
+              <div className="flex items-center flex-wrap gap-2">
                 <span
                   data-slot="running-status"
-                  className="tw:inline-flex tw:rounded-md tw:px-2 tw:py-1 tw:text-xs tw:font-semibold tw:bg-destructive tw:text-primary-foreground tw:inline-flex tw:items-center tw:gap-1"
+                  className="inline-flex rounded-md px-2 py-1 text-xs font-semibold bg-destructive text-primary-foreground inline-flex items-center gap-1"
                 >
                   <Icon icon={CircleIcon} fill="currentColor" />
                   {m.tt_running_status()}
                 </span>
-                <span className="tw:font-semibold tw:truncate">{runningTaskSummary.task}</span>
+                <span className="font-semibold truncate">{runningTaskSummary.task}</span>
                 <span
                   data-slot="task-label"
-                  className="tw:inline-flex tw:items-center tw:rounded-md tw:bg-label tw:px-2 tw:py-0.5 tw:text-xs tw:font-semibold tw:text-label-foreground"
+                  className="inline-flex items-center rounded-md bg-label px-2 py-0.5 text-xs font-semibold text-label-foreground"
                   style={
                     {
                       "--label-bg": isHexColor(runningTaskSummary.labelColor)
@@ -152,20 +149,20 @@ export function TaskEntryForm({
                 </span>
               </div>
               {runningTaskSummary.showDetails && (
-                <span className="tw:text-sm tw:text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {m.tt_started()} {runningTaskSummary.time}
                 </span>
               )}
             </div>
           )}
-          <Button size="sm" variant="destructive" className="tw:shrink-0" onClick={onStopNow}>
+          <Button size="sm" variant="destructive" className="shrink-0" onClick={onStopNow}>
             {m.tt_stop_timer()} · {timerElapsed}
           </Button>
         </div>
       ) : showTimerControls ? (
-        <p className="tw:text-sm tw:text-muted-foreground tw:mb-2">{m.tt_quick_timer_desc()}</p>
+        <p className="text-sm text-muted-foreground mb-2">{m.tt_quick_timer_desc()}</p>
       ) : null}
-      <Grid className="tw:gap-4 tw:items-end">
+      <Grid className="gap-4 items-end">
         <GridItem desktopSpan={primaryFieldWidth}>
           <Field>
             <FieldLabel htmlFor="timeTrackerTask">{m.form_task()}</FieldLabel>
@@ -194,13 +191,13 @@ export function TaskEntryForm({
               classNames={selectClassNames}
             />
             {labels.length === 0 && (
-              <FieldDescription id="timeTrackerLabelHelp" className="tw:block">
+              <FieldDescription id="timeTrackerLabelHelp" className="block">
                 {m.tt_add_labels_first_task_help()}
                 {onCreateLabel && (
                   <Button
                     variant="link"
                     size="sm"
-                    className="tw:p-0 tw:ms-1 tw:align-baseline"
+                    className="p-0 ms-1 align-baseline"
                     onClick={onCreateLabel}
                   >
                     {m.tt_create_label_action()}
@@ -253,7 +250,7 @@ export function TaskEntryForm({
           </Field>
         </GridItem>
         <GridItem desktopSpan={2}>
-          <div className="tw:grid tw:gap-2">
+          <div className="grid gap-2">
             {showTimerControls &&
               !isTimerRunning &&
               renderDisabledTooltipButton(
@@ -261,7 +258,7 @@ export function TaskEntryForm({
                 !canStartNow ? startDisabledReason : undefined,
                 <Button
                   variant="default"
-                  className="tw:w-full"
+                  className="w-full"
                   onClick={onStartNow}
                   disabled={!canStartNow}
                 >
@@ -272,7 +269,7 @@ export function TaskEntryForm({
             {renderDisabledTooltipButton(
               "add-task",
               !canSubmit ? addDisabledReason : undefined,
-              <Button className="tw:w-full" onClick={onSubmit} disabled={!canSubmit}>
+              <Button className="w-full" onClick={onSubmit} disabled={!canSubmit}>
                 {m.tt_add_task()}
               </Button>,
             )}

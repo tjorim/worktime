@@ -27,7 +27,7 @@ export function SettingsScheduleSection({
 }: SettingsScheduleSectionProps) {
   return (
     <SettingsSection icon={CalendarDaysIcon} title={m.select_schedule_label()}>
-      <ul className="tw:m-0 tw:mb-4 tw:flex tw:list-none tw:flex-col tw:gap-2 tw:p-0">
+      <ul className="m-0 mb-4 flex list-none flex-col gap-2 p-0">
         {SCHEDULE_OPTIONS.map((schedule) => {
           const isSelected = scheduleType === schedule.value;
           const option = (
@@ -36,10 +36,10 @@ export function SettingsScheduleSection({
               aria-pressed={isSelected}
               disabled={!schedule.isAvailable}
               onClick={() => schedule.isAvailable && onScheduleChange(schedule.value)}
-              className="tw:h-auto tw:w-full tw:justify-between tw:gap-2 tw:py-2 tw:text-left tw:whitespace-normal"
+              className="h-auto w-full justify-between gap-2 py-2 text-left whitespace-normal"
             >
-              <span className="tw:flex tw:flex-col">
-                <span className="tw:flex tw:items-center tw:gap-2 tw:font-semibold">
+              <span className="flex flex-col">
+                <span className="flex items-center gap-2 font-semibold">
                   {schedule.title}
                   {!schedule.isAvailable && (
                     <Badge variant="secondary">{m.wizard_coming_soon_badge()}</Badge>
@@ -47,8 +47,8 @@ export function SettingsScheduleSection({
                 </span>
                 <span
                   className={cn(
-                    "tw:text-sm tw:font-normal",
-                    isSelected ? "tw:text-primary-foreground/80" : "tw:text-muted-foreground",
+                    "text-sm font-normal",
+                    isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
                   )}
                 >
                   {schedule.description}
@@ -66,7 +66,7 @@ export function SettingsScheduleSection({
                   placement="top"
                   content={<div>{m.wizard_schedule_coming_soon_tooltip()}</div>}
                 >
-                  <span className="tw:block">{option}</span>
+                  <span className="block">{option}</span>
                 </Hint>
               )}
             </li>
@@ -75,7 +75,7 @@ export function SettingsScheduleSection({
       </ul>
 
       {scheduleType && hasMultipleTeams(scheduleType) && (
-        <div className="tw:mb-4">
+        <div className="mb-4">
           <TeamSelector
             scheduleType={scheduleType}
             selectedTeam={myTeam}
@@ -87,7 +87,7 @@ export function SettingsScheduleSection({
         </div>
       )}
 
-      <Separator className="tw:my-4" />
+      <Separator className="my-4" />
       <SettingsHdayHelper />
     </SettingsSection>
   );

@@ -16,10 +16,9 @@ export function DialogSelect<Option, IsMulti extends boolean = false>(
       // React-select emits an unlayered z-index; override it with our modal popover token.
       classNames={{
         ...props.classNames,
-        menuPortal: () => "tw:z-popover!",
+        menuPortal: () => "z-popover!",
         // Placement constrains the list height, so its wrapper must not add padding or borders.
-        menu: (state) =>
-          cn(props.classNames?.menu?.(state), "tw:border-0 tw:p-0 tw:ring-1 tw:ring-border"),
+        menu: (state) => cn(props.classNames?.menu?.(state), "border-0 p-0 ring-1 ring-border"),
       }}
     />
   );

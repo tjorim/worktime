@@ -61,10 +61,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div className="tw:mx-auto tw:mt-6 tw:max-w-6xl tw:px-3">
+        <div className="mx-auto mt-6 max-w-6xl px-3">
           <Card>
-            <CardHeader className="tw:bg-destructive tw:text-primary-foreground tw:font-semibold">
-              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+            <CardHeader className="bg-destructive text-primary-foreground font-semibold">
+              <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.error_boundary_heading()}
             </CardHeader>
             <CardContent>
@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertTitle>{m.error_boundary_heading()}</AlertTitle>
                 <p>{m.error_boundary_fallback_message()}</p>
                 <hr />
-                <div className="tw:flex tw:gap-2">
+                <div className="flex gap-2">
                   <Button variant="destructive" onClick={this.handleReset}>
                     {m.error_boundary_try_again()}
                   </Button>
@@ -83,24 +83,24 @@ export class ErrorBoundary extends Component<Props, State> {
               </Alert>
 
               {import.meta.env.DEV && this.state.error && (
-                <Card className="tw:mt-4">
+                <Card className="mt-4">
                   <CardHeader>
-                    <small className="tw:text-muted-foreground">
+                    <small className="text-muted-foreground">
                       {m.error_boundary_debug_information()}
                     </small>
                   </CardHeader>
                   <CardContent>
                     <details>
-                      <summary className="tw:text-danger-text tw:font-bold tw:mb-2">
+                      <summary className="text-danger-text font-bold mb-2">
                         {this.state.error.name}: {this.state.error.message}
                       </summary>
-                      <pre className="tw:text-sm tw:text-muted-foreground tw:max-h-80 tw:overflow-auto">
+                      <pre className="text-sm text-muted-foreground max-h-80 overflow-auto">
                         {this.state.error.stack}
                       </pre>
                       {this.state.errorInfo && (
-                        <div className="tw:mt-2">
+                        <div className="mt-2">
                           <strong>{m.error_boundary_component_stack()}</strong>
-                          <pre className="tw:text-sm tw:text-muted-foreground tw:max-h-80 tw:overflow-auto">
+                          <pre className="text-sm text-muted-foreground max-h-80 overflow-auto">
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </div>

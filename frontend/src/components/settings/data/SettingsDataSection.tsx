@@ -50,8 +50,8 @@ export function SettingsDataSection({
           title={m.reset_settings_label()}
           description={m.reset_settings_description()}
           trailingIcon={RotateCwIcon}
-          trailingIconClassName="tw:text-danger-text"
-          className="tw:text-danger-text"
+          trailingIconClassName="text-danger-text"
+          className="text-danger-text"
           onClick={onResetSettings}
         />
       </SettingsList>

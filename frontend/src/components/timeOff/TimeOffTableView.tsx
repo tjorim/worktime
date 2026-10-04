@@ -259,7 +259,7 @@ export function TimeOffTableView({
             <>
               <TableSearchInput
                 type="search"
-                className="tw:mb-3"
+                className="mb-3"
                 placeholder={m.timeoff_search_placeholder()}
                 aria-label={m.timeoff_search_aria()}
                 value={search}
@@ -321,15 +321,15 @@ export function TimeOffTableView({
                           </TableCell>
                           <TableCell>{renderEntryDisplayDate(entry)}</TableCell>
                           <TableCell>
-                            {entry.note || <span className="tw:text-muted-foreground">—</span>}
+                            {entry.note || <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell>
                             {flags.length ? (
-                              <span className="tw:text-sm tw:text-muted-foreground">
+                              <span className="text-sm text-muted-foreground">
                                 {flags.join(", ")}
                               </span>
                             ) : (
-                              <span className="tw:text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -337,7 +337,7 @@ export function TimeOffTableView({
                               variant="outline"
                               size="sm"
                               onClick={() => onEditEvent(entry.id)}
-                              className="tw:mr-2"
+                              className="mr-2"
                               aria-label={m.edit_with_name({ name: title })}
                             >
                               <Icon icon={PencilIcon} />

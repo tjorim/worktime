@@ -36,106 +36,92 @@ export function Step2Features({
 }: Step2FeaturesProps) {
   return (
     <>
-      <div className="tw:mb-4">
-        <h5 className="tw:mb-4 tw:text-center tw:text-xl tw:font-medium">
-          {m.wizard_features_heading()}
-        </h5>
-        <Grid className="tw:gap-3">
+      <div className="mb-4">
+        <h5 className="mb-4 text-center text-xl font-medium">{m.wizard_features_heading()}</h5>
+        <Grid className="gap-3">
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={TimerIcon} className="tw:mt-1 tw:text-2xl tw:text-success" />
+            <div className="flex items-start gap-3">
+              <Icon icon={TimerIcon} className="mt-1 text-2xl text-success" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
-                  {m.wizard_feature_countdown_title()}
-                </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <h6 className="mb-1 text-base font-medium">{m.wizard_feature_countdown_title()}</h6>
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_countdown_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={WifiOffIcon} className="tw:mt-1 tw:text-2xl tw:text-info" />
+            <div className="flex items-start gap-3">
+              <Icon icon={WifiOffIcon} className="mt-1 text-2xl text-info" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
-                  {m.wizard_feature_local_title()}
-                </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <h6 className="mb-1 text-base font-medium">{m.wizard_feature_local_title()}</h6>
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_local_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={UsersIcon} className="tw:mt-1 tw:text-2xl tw:text-warning" />
+            <div className="flex items-start gap-3">
+              <Icon icon={UsersIcon} className="mt-1 text-2xl text-warning" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
-                  {m.wizard_feature_team_title()}
-                </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <h6 className="mb-1 text-base font-medium">{m.wizard_feature_team_title()}</h6>
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_team_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={CalendarCheckIcon} className="tw:mt-1 tw:text-2xl tw:text-primary" />
+            <div className="flex items-start gap-3">
+              <Icon icon={CalendarCheckIcon} className="mt-1 text-2xl text-primary" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
-                  {m.wizard_feature_timeoff_title()}
-                </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <h6 className="mb-1 text-base font-medium">{m.wizard_feature_timeoff_title()}</h6>
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_timeoff_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={HistoryIcon} className="tw:mt-1 tw:text-2xl tw:text-success" />
+            <div className="flex items-start gap-3">
+              <Icon icon={HistoryIcon} className="mt-1 text-2xl text-success" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
-                  {m.wizard_feature_tracking_title()}
-                </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <h6 className="mb-1 text-base font-medium">{m.wizard_feature_tracking_title()}</h6>
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_tracking_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={ChartGanttIcon} className="tw:mt-1 tw:text-2xl tw:text-warning" />
+            <div className="flex items-start gap-3">
+              <Icon icon={ChartGanttIcon} className="mt-1 text-2xl text-warning" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
-                  {m.wizard_feature_gantt_title()}
-                </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <h6 className="mb-1 text-base font-medium">{m.wizard_feature_gantt_title()}</h6>
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_gantt_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
           <GridItem desktopSpan={6}>
-            <div className="tw:flex tw:items-start tw:gap-3">
-              <Icon icon={GlobeIcon} className="tw:mt-1 tw:text-2xl tw:text-primary" />
+            <div className="flex items-start gap-3">
+              <Icon icon={GlobeIcon} className="mt-1 text-2xl text-primary" />
               <div>
-                <h6 className="tw:mb-1 tw:text-base tw:font-medium">
+                <h6 className="mb-1 text-base font-medium">
                   {m.wizard_feature_crossborder_title()}
                 </h6>
-                <small className="tw:text-sm tw:text-muted-foreground">
+                <small className="text-sm text-muted-foreground">
                   {m.wizard_feature_crossborder_desc()}
                 </small>
               </div>
             </div>
           </GridItem>
         </Grid>
-        <Alert variant="info" className="tw:mt-4">
+        <Alert variant="info" className="mt-4">
           <Icon icon={SettingsIcon} />
-          <AlertDescription className="tw:text-current">
+          <AlertDescription className="text-current">
             {m.wizard_features_tip_full({ settingsLocation: settingsLocationText })}
           </AlertDescription>
         </Alert>

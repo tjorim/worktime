@@ -101,7 +101,7 @@ export function OtherLocationModal({
               })}
             </DialogTitle>
           </DialogHeader>
-          <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+          <div className="min-h-0 overflow-y-auto p-4">
             <form.Field
               name="countryCode"
               validators={[
@@ -112,7 +112,7 @@ export function OtherLocationModal({
               ]}
             >
               {(field) => (
-                <div className="tw:mb-4">
+                <div className="mb-4">
                   <label htmlFor="other-location-country">{m.other_location_country_code()}</label>
                   <Input
                     type="text"
@@ -128,15 +128,13 @@ export function OtherLocationModal({
                     aria-describedby="other-location-country-feedback"
                   />
                   <div
-                    className="tw:text-danger-text tw:text-sm"
+                    className="text-danger-text text-sm"
                     hidden={!field.meta.isTouched || field.errors.length === 0}
                     id="other-location-country-feedback"
                   >
                     {m.other_location_country_feedback()}
                   </div>
-                  <small className="tw:text-muted-foreground">
-                    {m.other_location_country_help()}
-                  </small>
+                  <small className="text-muted-foreground">{m.other_location_country_help()}</small>
                 </div>
               )}
             </form.Field>
@@ -145,7 +143,7 @@ export function OtherLocationModal({
                 <div>
                   <label htmlFor="other-location-label-input">
                     {m.form_label()}{" "}
-                    <span className="tw:text-muted-foreground tw:font-normal">
+                    <span className="text-muted-foreground font-normal">
                       {m.other_location_label_optional()}
                     </span>
                   </label>

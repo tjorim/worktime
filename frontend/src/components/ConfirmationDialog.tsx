@@ -77,11 +77,11 @@ export function ConfirmationDialog({
       >
         <Header>
           <Title>
-            {icon && <Icon icon={icon} className="tw:me-2" />}
+            {icon && <Icon icon={icon} className="me-2" />}
             {title}
           </Title>
         </Header>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4" id={bodyId}>
+        <div className="min-h-0 overflow-y-auto p-4" id={bodyId}>
           {message}
         </div>
         <Footer>

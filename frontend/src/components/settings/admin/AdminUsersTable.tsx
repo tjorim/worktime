@@ -129,7 +129,7 @@ export function AdminUsersTable({
     <>
       <TableSearchInput
         type="search"
-        className="tw:mb-2"
+        className="mb-2"
         placeholder={m.account_admin_users_search_placeholder()}
         aria-label={m.account_admin_users_search_aria()}
         value={search}
@@ -143,7 +143,7 @@ export function AdminUsersTable({
                 <SortableHeaderCell
                   key={header.id}
                   header={header}
-                  className={header.column.id === "actions" ? "tw:text-right" : undefined}
+                  className={header.column.id === "actions" ? "text-right" : undefined}
                 />
               ))}
             </TableRow>
@@ -154,7 +154,7 @@ export function AdminUsersTable({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="tw:py-3 tw:text-center tw:text-muted-foreground"
+                className="py-3 text-center text-muted-foreground"
               >
                 {m.account_admin_users_no_results()}
               </TableCell>
@@ -163,13 +163,13 @@ export function AdminUsersTable({
             visibleRows.map((tableRow) => {
               const user = tableRow.original;
               return (
-                <TableRow key={user.id} className="tw:odd:bg-muted/30">
+                <TableRow key={user.id} className="odd:bg-muted/30">
                   <TableCell>{user.id}</TableCell>
                   <TableCell>{user.username}</TableCell>
                   <TableCell>{user.display_name}</TableCell>
                   <TableCell>{formatTimestamp(user.created_at)}</TableCell>
                   <TableCell>{formatTimestamp(user.updated_at)}</TableCell>
-                  <TableCell className="tw:text-right">
+                  <TableCell className="text-right">
                     <Button
                       variant="destructive"
                       size="sm"

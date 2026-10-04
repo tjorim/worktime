@@ -32,18 +32,18 @@ export function Step3ScheduleSelection({
 
   return (
     <>
-      <div className="tw:mb-4 tw:text-center">
-        <h5 className="tw:mb-2 tw:text-xl tw:font-medium">{m.wizard_schedule_heading()}</h5>
-        <p className="tw:text-muted-foreground">{m.wizard_schedule_subtitle()}</p>
+      <div className="mb-4 text-center">
+        <h5 className="mb-2 text-xl font-medium">{m.wizard_schedule_heading()}</h5>
+        <p className="text-muted-foreground">{m.wizard_schedule_subtitle()}</p>
       </div>
 
-      <div className="tw:mb-4 tw:flex tw:flex-col tw:gap-2">
+      <div className="mb-4 flex flex-col gap-2">
         {SCHEDULE_OPTIONS.map((schedule) => {
           const isSelected = selectedSchedule === schedule.value;
 
           const buttonInner = (
             <>
-              <span className="tw:flex tw:items-center tw:gap-2 tw:font-semibold">
+              <span className="flex items-center gap-2 font-semibold">
                 <span>{schedule.title}</span>
                 {!schedule.isAvailable && (
                   <Badge variant="secondary">{m.wizard_coming_soon_badge()}</Badge>
@@ -51,8 +51,8 @@ export function Step3ScheduleSelection({
               </span>
               <small
                 className={cn(
-                  "tw:block tw:text-sm tw:font-normal",
-                  isSelected ? "tw:text-primary-foreground/70" : "tw:text-muted-foreground",
+                  "block text-sm font-normal",
+                  isSelected ? "text-primary-foreground/70" : "text-muted-foreground",
                 )}
               >
                 {schedule.description}
@@ -61,7 +61,7 @@ export function Step3ScheduleSelection({
           );
 
           const optionClassName =
-            "tw:h-auto tw:w-full tw:flex-col tw:items-start tw:gap-0 tw:py-2 tw:text-left tw:whitespace-normal";
+            "h-auto w-full flex-col items-start gap-0 py-2 text-left whitespace-normal";
 
           if (!schedule.isAvailable) {
             return (
@@ -74,7 +74,7 @@ export function Step3ScheduleSelection({
                   </div>
                 }
               >
-                <span className="tw:block" tabIndex={0}>
+                <span className="block" tabIndex={0}>
                   <Button variant="outline" className={optionClassName} disabled>
                     {buttonInner}
                   </Button>

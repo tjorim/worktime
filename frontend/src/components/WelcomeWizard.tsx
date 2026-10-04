@@ -258,18 +258,18 @@ export function WelcomeWizard({
         <DialogHeader>
           <DialogTitle>{getStepTitle()}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           {/* Progress bar */}
-          <div className="tw:mb-4">
+          <div className="mb-4">
             <Progress
               value={getProgressPercentage()}
               aria-label={m.wizard_onboarding_progress({
                 step: String(getStepIndex(effectiveStep, wizardContext)),
                 total: String(getTotalSteps(wizardContext)),
               })}
-              className="tw:mb-2"
+              className="mb-2"
             />
-            <div className="tw:text-sm tw:text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {m.wizard_step_of({
                 step: String(getStepIndex(effectiveStep, wizardContext)),
                 total: String(getTotalSteps(wizardContext)),
@@ -277,9 +277,9 @@ export function WelcomeWizard({
             </div>
           </div>
           {isLoading ? (
-            <div className="tw:py-10 tw:text-center" role="status">
-              <Spinner className="tw:text-primary" />
-              <div className="tw:mt-3 tw:text-muted-foreground">{m.wizard_setting_up()}</div>
+            <div className="py-10 text-center" role="status">
+              <Spinner className="text-primary" />
+              <div className="mt-3 text-muted-foreground">{m.wizard_setting_up()}</div>
             </div>
           ) : (
             <>

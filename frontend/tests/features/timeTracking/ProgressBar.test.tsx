@@ -47,28 +47,28 @@ describe("ProgressBar Component", () => {
       const { container } = render(<ProgressBar hours={7} targetHours={8.5} />);
 
       const progressElement = container.querySelector("[data-slot=progress-indicator]");
-      expect(progressElement).toHaveClass("tw:bg-success-solid");
+      expect(progressElement).toHaveClass("bg-success-solid");
     });
 
     it("uses success variant when exactly at target", () => {
       const { container } = render(<ProgressBar hours={8.5} targetHours={8.5} />);
 
       const progressElement = container.querySelector("[data-slot=progress-indicator]");
-      expect(progressElement).toHaveClass("tw:bg-success-solid");
+      expect(progressElement).toHaveClass("bg-success-solid");
     });
 
     it("switches to warning variant when exceeding target", () => {
       const { container } = render(<ProgressBar hours={9} targetHours={8.5} />);
 
       const progressElement = container.querySelector("[data-slot=progress-indicator]");
-      expect(progressElement).toHaveClass("tw:bg-warning-solid");
+      expect(progressElement).toHaveClass("bg-warning-solid");
     });
 
     it("shows warning for significantly over target", () => {
       const { container } = render(<ProgressBar hours={15} targetHours={8.5} />);
 
       const progressElement = container.querySelector("[data-slot=progress-indicator]");
-      expect(progressElement).toHaveClass("tw:bg-warning-solid");
+      expect(progressElement).toHaveClass("bg-warning-solid");
     });
   });
 
@@ -111,15 +111,15 @@ describe("ProgressBar Component", () => {
     it("applies vertical margin to container", () => {
       const { container } = render(<ProgressBar hours={4} />);
 
-      const wrapper = container.querySelector(".tw\\:my-3");
+      const wrapper = container.querySelector(".my-3");
       expect(wrapper).toBeInTheDocument();
     });
 
     it("adds top margin and muted styling to the hour display", () => {
       const { container } = render(<ProgressBar hours={4} />);
 
-      const textDisplay = container.querySelector(".tw\\:text-muted-foreground");
-      expect(textDisplay).toHaveClass("tw:mt-2");
+      const textDisplay = container.querySelector(".text-muted-foreground");
+      expect(textDisplay).toHaveClass("mt-2");
     });
   });
 
@@ -169,7 +169,7 @@ describe("ProgressBar Component", () => {
     it("provides textual hour information below bar", () => {
       const { container } = render(<ProgressBar hours={6.25} />);
 
-      const wrapper = container.querySelector(".tw\\:my-3");
+      const wrapper = container.querySelector(".my-3");
       expect(wrapper?.textContent).toContain("6.25h");
       expect(wrapper?.textContent).toContain("%");
     });

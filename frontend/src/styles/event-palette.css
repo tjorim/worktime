@@ -1,4 +1,4 @@
-/* Single source for event colors. Tailwind aliases and legacy event classes use these tokens. */
+/* Single source for event colors. Tailwind aliases and the .event-* classes below use these tokens. */
 @layer theme {
   :root {
     --wt-event-holiday-full-bg: #ec0000;
@@ -41,7 +41,7 @@
     --wt-event-unknown-fg: #000000;
   }
 
-  [data-bs-theme="dark"] {
+  [data-theme="dark"] {
     --wt-event-holiday-full-bg: #c62828;
     --wt-event-holiday-full-fg: #ffffff;
     --wt-event-holiday-half-bg: #e57373;
@@ -80,5 +80,103 @@
     --wt-event-other-half-fg: #000000;
     --wt-event-unknown-bg: #555555;
     --wt-event-unknown-fg: #cccccc;
+  }
+}
+
+/* Event color classes returned by getEventColorClass(); values come from the tokens above. */
+@layer components {
+  .event-holiday-full {
+    background-color: var(--wt-event-holiday-full-bg);
+    color: var(--wt-event-holiday-full-fg);
+  }
+
+  .event-holiday-half {
+    background-color: var(--wt-event-holiday-half-bg);
+    color: var(--wt-event-holiday-half-fg);
+  }
+
+  .event-business-full {
+    background-color: var(--wt-event-business-full-bg);
+    color: var(--wt-event-business-full-fg);
+  }
+
+  .event-business-half {
+    background-color: var(--wt-event-business-half-bg);
+    color: var(--wt-event-business-half-fg);
+  }
+
+  .event-course-full {
+    background-color: var(--wt-event-course-full-bg);
+    color: var(--wt-event-course-full-fg);
+  }
+
+  .event-course-half {
+    background-color: var(--wt-event-course-half-bg);
+    color: var(--wt-event-course-half-fg);
+  }
+
+  .event-in-full {
+    background-color: var(--wt-event-in-full-bg);
+    color: var(--wt-event-in-full-fg);
+  }
+
+  .event-in-half {
+    background-color: var(--wt-event-in-half-bg);
+    color: var(--wt-event-in-half-fg);
+  }
+
+  .event-weekend-full {
+    background-color: var(--wt-event-weekend-full-bg);
+    color: var(--wt-event-weekend-full-fg);
+  }
+
+  .event-weekend-half {
+    background-color: var(--wt-event-weekend-half-bg);
+    color: var(--wt-event-weekend-half-fg);
+  }
+
+  .event-recurring-full {
+    background-color: var(--wt-event-recurring-full-bg);
+    color: var(--wt-event-recurring-full-fg);
+  }
+
+  .event-recurring-half {
+    background-color: var(--wt-event-recurring-half-bg);
+    color: var(--wt-event-recurring-half-fg);
+  }
+
+  .event-birthday-full {
+    background-color: var(--wt-event-birthday-full-bg);
+    color: var(--wt-event-birthday-full-fg);
+  }
+
+  .event-birthday-half {
+    background-color: var(--wt-event-birthday-half-bg);
+    color: var(--wt-event-birthday-half-fg);
+  }
+
+  .event-ill-full {
+    background-color: var(--wt-event-ill-full-bg);
+    color: var(--wt-event-ill-full-fg);
+  }
+
+  .event-ill-half {
+    background-color: var(--wt-event-ill-half-bg);
+    color: var(--wt-event-ill-half-fg);
+  }
+
+  .event-other-full {
+    background-color: var(--wt-event-other-full-bg);
+    color: var(--wt-event-other-full-fg);
+  }
+
+  .event-other-half {
+    background-color: var(--wt-event-other-half-bg);
+    color: var(--wt-event-other-half-fg);
+  }
+
+  .event-unknown {
+    background-color: var(--wt-event-unknown-bg);
+    color: var(--wt-event-unknown-fg);
   }
 }

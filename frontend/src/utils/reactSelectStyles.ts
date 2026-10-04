@@ -1,19 +1,17 @@
 // Owned styles for unstyled react-select; retain search, clear and multi-select behaviour.
 export const selectClassNames = {
   control: ({ isFocused, isDisabled }: { isFocused: boolean; isDisabled: boolean }) =>
-    `tw:flex tw:min-h-8 tw:w-full tw:flex-wrap tw:items-center tw:rounded-lg tw:border tw:bg-background tw:px-2.5 tw:py-1 tw:text-sm ${isFocused ? "tw:border-ring tw:ring-3 tw:ring-ring/50" : "tw:border-input"} ${isDisabled ? "tw:opacity-50" : ""}`,
+    `flex min-h-8 w-full flex-wrap items-center rounded-lg border bg-background px-2.5 py-1 text-sm ${isFocused ? "border-ring ring-3 ring-ring/50" : "border-input"} ${isDisabled ? "opacity-50" : ""}`,
   menu: () =>
-    "tw:mt-1 tw:w-full tw:rounded-lg tw:border tw:border-border tw:bg-popover tw:p-1 tw:text-popover-foreground tw:shadow-md",
+    "mt-1 w-full rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md",
   option: ({ isFocused, isSelected }: { isFocused: boolean; isSelected: boolean }) =>
-    `tw:rounded-md tw:px-3 tw:py-2 tw:text-sm ${isSelected ? "tw:bg-primary tw:text-primary-foreground" : isFocused ? "tw:bg-muted" : ""}`,
-  input: () => "tw:m-0 tw:p-0",
-  placeholder: () => "tw:text-muted-foreground",
-  singleValue: () => "tw:text-foreground",
-  noOptionsMessage: () => "tw:px-3 tw:py-2 tw:text-sm tw:text-muted-foreground",
+    `rounded-md px-3 py-2 text-sm ${isSelected ? "bg-primary text-primary-foreground" : isFocused ? "bg-muted" : ""}`,
+  input: () => "m-0 p-0",
+  placeholder: () => "text-muted-foreground",
+  singleValue: () => "text-foreground",
+  noOptionsMessage: () => "px-3 py-2 text-sm text-muted-foreground",
   multiValue: () =>
-    "tw:flex tw:items-center tw:gap-1 tw:rounded-md tw:bg-secondary tw:px-1.5 tw:text-sm tw:text-secondary-foreground",
+    "flex items-center gap-1 rounded-md bg-secondary px-1.5 text-sm text-secondary-foreground",
   multiValueLabel: () => "",
-  multiValueRemove: () => "tw:rounded-sm tw:px-1 tw:hover:bg-muted",
+  multiValueRemove: () => "rounded-sm px-1 hover:bg-muted",
 };
-// Compatibility export until other product areas migrate their imports.
-export const bootstrapSelectClassNames = selectClassNames;

@@ -272,7 +272,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       const { container } = renderPanel({ tasks: weekTasks });
 
-      const dailyTotalCells = container.querySelectorAll("td[class~='tw:font-semibold']");
+      const dailyTotalCells = container.querySelectorAll("td[class~='font-semibold']");
       expect(dailyTotalCells.length).toBeGreaterThan(0);
     });
 
@@ -343,7 +343,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       const table = container.querySelector("table");
       expect(table).toHaveAttribute("data-slot", "table");
-      expect(table?.querySelector("tbody tr")).toHaveClass("tw:border-b");
+      expect(table?.querySelector("tbody tr")).toHaveClass("border-b");
     });
   });
 
@@ -370,8 +370,8 @@ describe("TimeTrackingWeeklyView Component", () => {
       const filled = cells.filter((cell) => cell.textContent !== "-");
       const empty = cells.filter((cell) => cell.textContent === "-");
       expect(filled.length).toBeGreaterThan(0);
-      filled.forEach((cell) => expect(cell).toHaveClass("tw:cursor-copy"));
-      empty.forEach((cell) => expect(cell).not.toHaveClass("tw:cursor-copy"));
+      filled.forEach((cell) => expect(cell).toHaveClass("cursor-copy"));
+      empty.forEach((cell) => expect(cell).not.toHaveClass("cursor-copy"));
     });
 
     it("tints each category with its label colour", () => {

@@ -412,20 +412,20 @@ export function CalendarView({
   });
 
   return (
-    <div className="tw:py-4">
+    <div className="py-4">
       <Card>
-        <CardHeader className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-          <span className="tw:font-semibold">
-            <Icon icon={CalendarIcon} className="tw:mr-2" />
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-semibold">
+            <Icon icon={CalendarIcon} className="mr-2" />
             {m.calendar_heading()}
           </span>
           {!getShiftForDate ? (
-            <small className="tw:text-muted-foreground">
-              <Icon icon={InfoIcon} className="tw:mr-1" />
+            <small className="text-muted-foreground">
+              <Icon icon={InfoIcon} className="mr-1" />
               {m.calendar_select_schedule_hint()}
             </small>
           ) : (
-            <div className="tw:flex tw:items-center tw:gap-2">
+            <div className="flex items-center gap-2">
               {crossBorderEnabled && (
                 <Button
                   size="sm"
@@ -434,7 +434,7 @@ export function CalendarView({
                   aria-pressed={showAnnualSummary}
                   title={m.calendar_annual_summary_toggle_title()}
                 >
-                  <Icon icon={Columns3Icon} className="tw:mr-1" />
+                  <Icon icon={Columns3Icon} className="mr-1" />
                   {m.calendar_annual_summary()}
                 </Button>
               )}
@@ -446,7 +446,7 @@ export function CalendarView({
                   title={m.long_weekend_btn()}
                 >
                   <span aria-hidden="true">🏖️</span>
-                  <span className="tw:ml-1">{m.long_weekend_btn()}</span>
+                  <span className="ml-1">{m.long_weekend_btn()}</span>
                 </Button>
               )}
               <CalendarLegend showEventTypes={timeOffEnabled} shifts={shiftLegendEntries} />
@@ -455,7 +455,7 @@ export function CalendarView({
         </CardHeader>
         <CardContent>
           {!getShiftForDate ? (
-            <div className="tw:text-center">
+            <div className="text-center">
               <EmptyState
                 icon={CalendarIcon}
                 title={m.calendar_welcome_title()}
@@ -464,7 +464,7 @@ export function CalendarView({
                     {m.calendar_empty_state_description({
                       timeOff: timeOffEnabled ? m.calendar_empty_state_with_timeoff() : "",
                     })}
-                    <span className="tw:block tw:mt-2">
+                    <span className="block mt-2">
                       {!scheduleType
                         ? m.calendar_empty_state_pick_schedule()
                         : m.calendar_empty_state_pick_team()}
@@ -473,13 +473,13 @@ export function CalendarView({
                 }
               />
               <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
-              <p className="tw:text-muted-foreground tw:mt-6 tw:mb-4 tw:text-sm">
+              <p className="text-muted-foreground mt-6 mb-4 text-sm">
                 {m.calendar_empty_state_footer()}
               </p>
               {onOpenScheduleTab && (
                 <div>
                   <Button size="sm" variant="outline" onClick={onOpenScheduleTab}>
-                    <Icon icon={CalendarDaysIcon} className="tw:mr-2" />
+                    <Icon icon={CalendarDaysIcon} className="mr-2" />
                     {m.calendar_view_schedule_btn()}
                   </Button>
                 </div>
@@ -488,7 +488,7 @@ export function CalendarView({
           ) : (
             <>
               {crossBorderEnabled && showAnnualSummary && (
-                <div className="tw:mb-4">
+                <div className="mb-4">
                   <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
                 </div>
               )}

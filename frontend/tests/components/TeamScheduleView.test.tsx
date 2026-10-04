@@ -206,8 +206,8 @@ describe("TeamScheduleView", () => {
       const cell = cellFor(grid, today);
       const segments = cell.querySelectorAll("[data-team-event-segment]");
       expect(segments).toHaveLength(2);
-      expect(segments[0]).toHaveClass("tw:bg-wt-event-holiday-full-bg");
-      expect(segments[1]).toHaveClass("tw:bg-wt-event-ill-full-bg");
+      expect(segments[0]).toHaveClass("bg-wt-event-holiday-full-bg");
+      expect(segments[1]).toHaveClass("bg-wt-event-ill-full-bg");
       // Screen readers get every event, not just the first.
       expect(cell).toHaveAttribute("aria-label", expect.stringContaining("Holiday"));
       expect(cell).toHaveAttribute("aria-label", expect.stringContaining("Sick"));
@@ -221,8 +221,8 @@ describe("TeamScheduleView", () => {
 
       const cell = cellFor(grid, today);
       // Full color (the fill is split by CSS), not the lighter "-half" color.
-      expect(cell).toHaveClass("tw:bg-wt-event-holiday-full-bg", "tw:team-half-am");
-      expect(cell).not.toHaveClass("tw:bg-wt-event-holiday-half-bg");
+      expect(cell).toHaveClass("bg-wt-event-holiday-full-bg", "team-half-am");
+      expect(cell).not.toHaveClass("bg-wt-event-holiday-half-bg");
       expect(cell.querySelector("[data-team-event-stack]")).toBeNull();
       expect(cell).toHaveTextContent("◐");
     });
@@ -234,7 +234,7 @@ describe("TeamScheduleView", () => {
       ]);
 
       const cell = cellFor(grid, today);
-      expect(cell).toHaveClass("tw:team-half-pm");
+      expect(cell).toHaveClass("team-half-pm");
       expect(cell).toHaveTextContent("◑");
     });
 
@@ -252,12 +252,12 @@ describe("TeamScheduleView", () => {
       const first = cellFor(grid, today.subtract(1, "day"));
       const middle = cellFor(grid, today);
       const last = cellFor(grid, today.add(1, "day"));
-      expect(first).toHaveClass("tw:team-range-start");
-      expect(first).not.toHaveClass("tw:team-range-end");
-      expect(middle).not.toHaveClass("tw:team-range-start");
-      expect(middle).not.toHaveClass("tw:team-range-end");
-      expect(last).toHaveClass("tw:team-range-end");
-      expect(last).not.toHaveClass("tw:team-range-start");
+      expect(first).toHaveClass("team-range-start");
+      expect(first).not.toHaveClass("team-range-end");
+      expect(middle).not.toHaveClass("team-range-start");
+      expect(middle).not.toHaveClass("team-range-end");
+      expect(last).toHaveClass("team-range-end");
+      expect(last).not.toHaveClass("team-range-start");
     });
 
     it("caps a one-day range at both ends", async () => {
@@ -265,7 +265,7 @@ describe("TeamScheduleView", () => {
       const grid = await renderGrid([{ type: "range", start: day, end: day, flags: [] }]);
 
       const cell = cellFor(grid, today);
-      expect(cell).toHaveClass("tw:team-range-start", "tw:team-range-end");
+      expect(cell).toHaveClass("team-range-start", "team-range-end");
     });
 
     it("treats a range that continues past the visible edge as continuing", async () => {
@@ -280,19 +280,19 @@ describe("TeamScheduleView", () => {
       ]);
 
       expect(
-        grid.querySelectorAll('[class~="tw:team-range-start"], [class~="tw:team-range-end"]'),
+        grid.querySelectorAll('[class~="team-range-start"], [class~="team-range-end"]'),
       ).toHaveLength(0);
     });
 
     it("styles today's and weekend header cells through classes, not inline styles", async () => {
       const grid = await renderGrid([]);
       const todayHeader = grid.querySelector('th[aria-current="date"]') as HTMLElement;
-      expect(todayHeader).toHaveClass("tw:bg-team-today");
+      expect(todayHeader).toHaveClass("bg-team-today");
       expect(todayHeader).not.toHaveAttribute("style");
       // Any weekend day header (Sat/Sun) that isn't today carries is-weekend.
-      expect(
-        grid.querySelectorAll('th[class~="tw:bg-team-header-weekend"]').length,
-      ).toBeGreaterThan(0);
+      expect(grid.querySelectorAll('th[class~="bg-team-header-weekend"]').length).toBeGreaterThan(
+        0,
+      );
     });
 
     it("shows a legend entry for every look the grid can produce", async () => {
@@ -320,10 +320,10 @@ describe("TeamScheduleView", () => {
       await renderGrid([]);
       const swatches = document.querySelectorAll("[data-team-swatch]");
       const classes = Array.from(swatches).map((el) => el.className);
-      expect(classes.some((c) => c.includes("tw:bg-wt-team-cal-available"))).toBe(true);
-      expect(classes.some((c) => c.includes("tw:bg-wt-team-cal-weekend-cell"))).toBe(true);
+      expect(classes.some((c) => c.includes("bg-wt-team-cal-available"))).toBe(true);
+      expect(classes.some((c) => c.includes("bg-wt-team-cal-weekend-cell"))).toBe(true);
       expect(classes.some((c) => c.includes("event-other-full"))).toBe(true);
-      expect(classes.some((c) => c.includes("tw:team-half-am"))).toBe(true);
+      expect(classes.some((c) => c.includes("team-half-am"))).toBe(true);
     });
 
     it("scrolls today into view when the grid appears", async () => {
@@ -344,12 +344,12 @@ describe("TeamScheduleView", () => {
       ) {
         if (this.matches('th[aria-current="date"]')) return rect(2000, 28);
         if (this.matches("[data-team-name]")) return rect(0, 200);
-        if (this.classList.contains("tw:overflow-x-auto")) return rect(0, 1000);
+        if (this.classList.contains("overflow-x-auto")) return rect(0, 1000);
         return rect(0, 0);
       });
       try {
         await renderGrid([]);
-        const scroller = document.querySelector('[class~="tw:overflow-x-auto"]') as HTMLElement;
+        const scroller = document.querySelector('[class~="overflow-x-auto"]') as HTMLElement;
         // 2000 - 200 (sticky) - (800 - 28) / 2 = 1414
         await waitFor(() => expect(scroller.scrollLeft).toBe(1414));
       } finally {
@@ -437,7 +437,9 @@ describe("TeamScheduleView", () => {
       const card = grid.closest('[data-slot="card"]')!;
       // The form lives in this card's header, not in a separate card above it.
       expect(card.querySelector('[data-slot="card-header"] #team-id-input')).not.toBeNull();
-      expect(document.querySelectorAll('.team-schedule-view > [data-slot="card"]')).toHaveLength(2); // grid + legend
+      expect(
+        document.querySelectorAll('[data-slot="team-schedule-view"] > [data-slot="card"]'),
+      ).toHaveLength(2); // grid + legend
     });
 
     it("gives every month a sticky label and long names an ellipsis-ready wrapper", async () => {

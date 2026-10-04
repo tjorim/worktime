@@ -47,7 +47,7 @@ export function SettingsAuditTrailSection({
       icon={HistoryIcon}
       title={teamWide ? m.audit_trail_admin_title() : m.audit_trail_title()}
     >
-      <SettingsHint className="tw:mb-2">
+      <SettingsHint className="mb-2">
         {teamWide ? m.audit_trail_admin_description() : m.audit_trail_description()}
       </SettingsHint>
       {isLoading ? (
@@ -57,35 +57,33 @@ export function SettingsAuditTrailSection({
       ) : entries.length === 0 ? (
         <SettingsHint>{m.audit_trail_empty()}</SettingsHint>
       ) : (
-        <div className="tw:flex tw:flex-col tw:gap-2">
-          <SettingsList className="tw:rounded-lg tw:border tw:border-border">
+        <div className="flex flex-col gap-2">
+          <SettingsList className="rounded-lg border border-border">
             {entries.map((entry) => {
               const hasDetails = Object.keys(entry.details).length > 0;
               return (
                 <SettingsItem
                   key={entry.id}
-                  className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:px-3 tw:py-2 tw:first:pt-2 tw:last:pb-2 tw:md:flex-row tw:md:gap-3"
+                  className="flex flex-col items-start justify-between gap-2 px-3 py-2 first:pt-2 last:pb-2 md:flex-row md:gap-3"
                 >
-                  <div className="tw:min-w-0 tw:text-sm">
-                    <div className="tw:font-medium tw:capitalize">
+                  <div className="min-w-0 text-sm">
+                    <div className="font-medium capitalize">
                       {humanize(entry.action)} · {humanize(entry.resource_type)} {entry.resource_id}
                     </div>
-                    <div className="tw:text-muted-foreground">
+                    <div className="text-muted-foreground">
                       {entry.actor_label} ({humanize(entry.auth_source)})
                     </div>
                     {hasDetails ? (
-                      <details className="tw:mt-1">
-                        <summary className="tw:cursor-pointer tw:text-muted-foreground">
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-muted-foreground">
                           {m.audit_trail_details()}
                         </summary>
-                        <code className="tw:text-sm tw:break-all">
-                          {JSON.stringify(entry.details)}
-                        </code>
+                        <code className="text-sm break-all">{JSON.stringify(entry.details)}</code>
                       </details>
                     ) : null}
                   </div>
                   <time
-                    className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground"
+                    className="text-sm whitespace-nowrap text-muted-foreground"
                     dateTime={entry.created_at}
                   >
                     {formatTimestamp(entry.created_at)}
