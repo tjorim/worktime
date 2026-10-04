@@ -5,7 +5,7 @@ import type { EventFlag, HdayEvent, TypeFlag } from "./types";
 /**
  * Palette key for an event: which color set it uses, and whether it is the full-day or half-day
  * look. The colors themselves are CSS custom properties (`--wt-event-<type>-<variant>-bg/-fg`)
- * defined once in `styles/tokens.css` for both themes; nothing here repeats a hex value.
+ * defined once in `styles/event-palette.css` for both themes; nothing here repeats a hex value.
  *
  * A weekly pattern with no type flag is the standing day off, not booked leave, so it gets its
  * own "recurring" colors instead of the holiday red.

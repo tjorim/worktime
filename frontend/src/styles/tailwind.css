@@ -86,8 +86,6 @@
   --color-wt-label-default: var(--wt-label-default);
   --color-wt-month-calendar-bg: var(--wt-month-calendar-bg);
   --color-wt-month-calendar-border: var(--wt-month-calendar-border);
-  --color-wt-month-calendar-bridge-day-bg: var(--wt-month-calendar-bridge-day-bg);
-  --color-wt-month-calendar-bridge-day-border: var(--wt-month-calendar-bridge-day-border);
   --color-wt-month-calendar-day-bg: var(--wt-month-calendar-day-bg);
   --color-wt-month-calendar-day-other: var(--wt-month-calendar-day-other);
   --color-wt-month-calendar-day-other-text: var(--wt-month-calendar-day-other-text);
@@ -96,8 +94,6 @@
   --color-wt-month-calendar-event-hover: var(--wt-month-calendar-event-hover);
   --color-wt-month-calendar-event-text: var(--wt-month-calendar-event-text);
   --color-wt-month-calendar-focus-outline: var(--wt-month-calendar-focus-outline);
-  --color-wt-month-calendar-long-weekend-bg: var(--wt-month-calendar-long-weekend-bg);
-  --color-wt-month-calendar-long-weekend-border: var(--wt-month-calendar-long-weekend-border);
   --color-wt-month-calendar-payday-bg: var(--wt-month-calendar-payday-bg);
   --color-wt-month-calendar-payday-border: var(--wt-month-calendar-payday-border);
   --color-wt-month-calendar-public-holiday-bg: var(--wt-month-calendar-public-holiday-bg);
