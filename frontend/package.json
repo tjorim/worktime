@@ -67,7 +67,7 @@
     "eventsource-parser": "^4.1.1",
     "frappe-gantt": "^1.2.2",
     "idb-keyval": "6.3.0",
-    "lucide-react": "^1.48.0",
+    "lucide-react": "^1.49.0",
     "oidc-client-ts": "^3.5.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
