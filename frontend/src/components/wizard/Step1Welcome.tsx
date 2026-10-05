@@ -24,12 +24,12 @@ export function Step1Welcome({
 }: Step1WelcomeProps) {
   return (
     <>
-      <div className="tw:mb-4 tw:text-center">
-        <div className="tw:mb-3">
-          <Icon icon={HistoryIcon} className="tw:text-5xl tw:text-primary" />
+      <div className="mb-4 text-center">
+        <div className="mb-3">
+          <Icon icon={HistoryIcon} className="text-5xl text-primary" />
         </div>
-        <p className="tw:mb-3 tw:text-xl tw:font-light">{m.wizard_welcome_lead()}</p>
-        <p className="tw:text-muted-foreground">{m.wizard_welcome_description()}</p>
+        <p className="mb-3 text-xl font-light">{m.wizard_welcome_lead()}</p>
+        <p className="text-muted-foreground">{m.wizard_welcome_description()}</p>
       </div>
       <WizardActions
         start={
@@ -55,15 +55,11 @@ export function Step1Welcome({
         }
       />
       {onSignIn && !isAuthenticated && (
-        <div className="tw:mt-3 tw:text-center">
-          <span className="tw:text-sm tw:text-muted-foreground">
+        <div className="mt-3 text-center">
+          <span className="text-sm text-muted-foreground">
             {m.wizard_welcome_returning_user_prompt()}
           </span>{" "}
-          <Button
-            variant="link"
-            className="tw:h-auto tw:p-0 tw:align-baseline tw:text-sm"
-            onClick={onSignIn}
-          >
+          <Button variant="link" className="h-auto p-0 align-baseline text-sm" onClick={onSignIn}>
             {m.wizard_welcome_returning_user_action()}
           </Button>
         </div>

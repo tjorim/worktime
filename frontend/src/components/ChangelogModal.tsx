@@ -83,18 +83,18 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     const seen = new Map<string, number>();
 
     return (
-      <div className="tw:mb-4">
-        <h6 className={clsx(textClass, "tw:mb-2")}>
-          <Icon icon={getIconForSection(key)} className="tw:me-2" />
+      <div className="mb-4">
+        <h6 className={clsx(textClass, "mb-2")}>
+          <Icon icon={getIconForSection(key)} className="me-2" />
           {label}
         </h6>
-        <ul className="tw:list-none tw:pl-0">
+        <ul className="list-none pl-0">
           {items.map((item) => {
             const occurrence = (seen.get(item) ?? 0) + 1;
             seen.set(item, occurrence);
             return (
-              <li key={`${key}-${item}-${occurrence}`} className="tw:mb-1">
-                <small className="tw:text-muted-foreground">•</small> {item}
+              <li key={`${key}-${item}-${occurrence}`} className="mb-1">
+                <small className="text-muted-foreground">•</small> {item}
               </li>
             );
           })}
@@ -113,13 +113,13 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
       <DialogContent size="lg" scrollable position="top">
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={NotebookTextIcon} className="tw:me-2" />
+            <Icon icon={NotebookTextIcon} className="me-2" />
             {m.changelog_modal_title()}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <div className="tw:mb-4">
-            <p className="tw:text-muted-foreground">{m.changelog_modal_description()}</p>
+        <div className="min-h-0 overflow-y-auto p-4">
+          <div className="mb-4">
+            <p className="text-muted-foreground">{m.changelog_modal_description()}</p>
           </div>
 
           <Accordion
@@ -129,10 +129,10 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
             {changelogData.map((version, index) => (
               <AccordionItem value={index.toString()} key={version.version}>
                 <AccordionTrigger>
-                  <div className="tw:flex tw:justify-between tw:items-center tw:w-full tw:me-2">
+                  <div className="flex justify-between items-center w-full me-2">
                     <div>
                       <strong>{m.changelog_version_label({ version: version.version })}</strong>
-                      <small className="tw:text-muted-foreground tw:ms-2">{version.date}</small>
+                      <small className="text-muted-foreground ms-2">{version.date}</small>
                     </div>
                     {getStatusBadge(version.status)}
                   </div>
@@ -142,33 +142,33 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                     "added",
                     m.changelog_section_added(),
                     version.added,
-                    "tw:text-success",
+                    "text-success",
                   )}
                   {renderChangeSection(
                     "changed",
                     m.changelog_section_changed(),
                     version.changed,
-                    "tw:text-info",
+                    "text-info",
                   )}
                   {renderChangeSection(
                     "fixed",
                     m.changelog_section_fixed(),
                     version.fixed,
-                    "tw:text-warning",
+                    "text-warning",
                   )}
                   {version.planned &&
                     renderChangeSection(
                       "planned",
                       m.changelog_section_planned(),
                       version.planned,
-                      "tw:text-muted-foreground",
+                      "text-muted-foreground",
                     )}
 
                   {version.technicalDetails && (
-                    <Card className="tw:mt-4 tw:border-0 tw:bg-secondary">
-                      <CardContent className="tw:py-2">
-                        <small className="tw:text-muted-foreground">
-                          <Icon icon={InfoIcon} className="tw:me-1" />
+                    <Card className="mt-4 border-0 bg-secondary">
+                      <CardContent className="py-2">
+                        <small className="text-muted-foreground">
+                          <Icon icon={InfoIcon} className="me-1" />
                           <strong>{version.technicalDetails.title}:</strong>{" "}
                           {version.technicalDetails.description}
                         </small>
@@ -180,16 +180,16 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
             ))}
           </Accordion>
 
-          <div className="tw:mt-6 tw:p-4 tw:bg-secondary tw:rounded-md">
-            <h6 className="tw:text-primary tw:mb-2">
-              <Icon icon={RocketIcon} className="tw:me-2" />
+          <div className="mt-6 p-4 bg-secondary rounded-md">
+            <h6 className="text-primary mb-2">
+              <Icon icon={RocketIcon} className="me-2" />
               {m.changelog_coming_soon_heading()}
             </h6>
-            <p className="tw:mb-0 tw:text-sm tw:text-muted-foreground">{futurePlans.join(", ")}</p>
+            <p className="mb-0 text-sm text-muted-foreground">{futurePlans.join(", ")}</p>
           </div>
         </div>
         <DialogFooter>
-          <small className="tw:text-muted-foreground tw:me-auto">
+          <small className="text-muted-foreground me-auto">
             {m.changelog_versioning_text()}{" "}
             <a href="https://calver.org/" target="_blank" rel="noopener noreferrer">
               {m.changelog_versioning_link()}

@@ -564,7 +564,7 @@ describe("WelcomeWizard", () => {
       vi.clearAllMocks();
       // Clean up any DOM modifications
       document.body.className = "";
-      document.documentElement.removeAttribute("data-bs-theme");
+      document.documentElement.removeAttribute("data-theme");
     });
 
     it("shows WelcomeWizard on first load and after reset", async () => {
@@ -1031,7 +1031,7 @@ describe("WelcomeWizard", () => {
       window.localStorage.clear?.();
       vi.clearAllMocks();
       document.body.className = "";
-      document.documentElement.removeAttribute("data-bs-theme");
+      document.documentElement.removeAttribute("data-theme");
     });
 
     it("should disable the continue button when no schedule is selected", async () => {

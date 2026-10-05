@@ -46,11 +46,11 @@ export function TablePagination({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:border-t tw:border-border tw:pt-2">
-      <span className="tw:text-sm tw:text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+      <span className="text-sm text-muted-foreground">
         {m.table_page_summary({ from: rangeFrom, to: rangeTo, total })}
       </span>
-      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           value={pageSize}
           onValueChange={(value) => {
@@ -71,7 +71,7 @@ export function TablePagination({
         <Button variant="outline" size="sm" disabled={!canPreviousPage} onClick={onPreviousPage}>
           {m.table_page_previous()}
         </Button>
-        <span className="tw:text-sm tw:text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {pageIndex + 1} / {pageCount}
         </span>
         <Button variant="outline" size="sm" disabled={!canNextPage} onClick={onNextPage}>

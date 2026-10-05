@@ -162,7 +162,7 @@ describe("App", () => {
       expect(screen.getByRole("main")).toBeInTheDocument();
 
       // The fixed header is offset by the layout wrapper's top padding.
-      const layout = header.closest(".tw\\:pt-header");
+      const layout = header.closest(".pt-header");
       expect(layout).not.toBeNull();
       expect(layout).toContainElement(screen.getByRole("main"));
     });

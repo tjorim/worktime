@@ -7,7 +7,7 @@ export function LabelChip({ color, children }: { color: string | undefined; chil
   return (
     <span
       data-slot="task-label"
-      className="tw:inline-flex tw:items-center tw:rounded-md tw:border tw:border-border tw:bg-label tw:px-2 tw:py-0.5 tw:text-xs tw:font-semibold tw:text-label-foreground"
+      className="inline-flex items-center rounded-md border border-border bg-label px-2 py-0.5 text-xs font-semibold text-label-foreground"
       style={{ "--label-bg": background, "--label-fg": foreground } as CSSProperties}
     >
       {children}

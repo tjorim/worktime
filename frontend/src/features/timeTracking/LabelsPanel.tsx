@@ -190,15 +190,15 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
   };
 
   return (
-    <div className="tw:rounded-lg tw:border tw:border-border tw:p-3">
+    <div className="rounded-lg border border-border p-3">
       {error && (
-        <Alert variant="destructive" aria-live="polite" className="tw:mb-3">
+        <Alert variant="destructive" aria-live="polite" className="mb-3">
           {error}
         </Alert>
       )}
-      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-        <h5 className="tw:mb-0 tw:text-xl">
-          <Icon icon={TagsIcon} className="tw:mr-2" />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h5 className="mb-0 text-xl">
+          <Icon icon={TagsIcon} className="mr-2" />
           {m.tt_labels_heading()}
         </h5>
         <Button
@@ -213,9 +213,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           {m.tt_add_label_btn()}
         </Button>
       </div>
-      <div className="tw:flex tw:flex-col tw:gap-3">
+      <div className="flex flex-col gap-3">
         {labels.length > 0 && (
-          <div className="tw:text-sm tw:text-muted-foreground">
+          <div className="text-sm text-muted-foreground">
             {pluralRules.select(labels.length) === "one"
               ? m.tt_labels_configured_one({ count: labels.length })
               : m.tt_labels_configured_other({ count: labels.length })}
@@ -223,7 +223,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         {labels.length === 0 ? (
-          <div className="tw:rounded-lg tw:border tw:border-border tw:bg-muted">
+          <div className="rounded-lg border border-border bg-muted">
             <EmptyState
               icon={TagsIcon}
               title={m.tt_no_labels_title()}
@@ -240,7 +240,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
             />
           </div>
         ) : (
-          <div className="tw:divide-y tw:divide-border tw:rounded-lg tw:border tw:border-border">
+          <div className="divide-y divide-border rounded-lg border border-border">
             {labels.map((label) => {
               const usage = usageByLabelId[label.id];
               const usageParts: string[] = [];
@@ -260,17 +260,14 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               }
               const isInUse = usageParts.length > 0;
               return (
-                <div
-                  key={label.id}
-                  className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:px-3 tw:py-2"
-                >
+                <div key={label.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
                   <LabelChip color={label.color}>{label.name}</LabelChip>
                   {isInUse && (
-                    <span className="tw:text-sm tw:text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {m.tt_label_used_by({ context: usageParts.join(` ${m.tt_and()} `) })}
                     </span>
                   )}
-                  <div className="tw:ml-auto tw:flex tw:gap-2">
+                  <div className="ml-auto flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -289,7 +286,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                           </div>
                         }
                       >
-                        <span className="tw:inline-block" tabIndex={0}>
+                        <span className="inline-block" tabIndex={0}>
                           <Button
                             size="sm"
                             variant="destructive"

@@ -26,12 +26,6 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
-      # Group React Bootstrap with Bootstrap (UI framework)
-      bootstrap:
-        patterns:
-          - "bootstrap"
-          - "bootstrap-icons"
-          - "react-bootstrap"
       # Group Vite with its React plugin (build tool + framework plugin)
       vite:
         patterns:

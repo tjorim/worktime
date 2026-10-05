@@ -23,8 +23,8 @@ export function AppLayout() {
   const { conflictCount, conflictedPayload, resolveOngoingConflicts } = useOngoingSyncContext();
 
   return (
-    <div className="tw:min-h-screen tw:pt-header">
-      <div className="tw:px-2 tw:md:px-3">
+    <div className="min-h-screen pt-header">
+      <div className="px-2 md:px-3">
         <Header />
         {shell.featureAnnouncements.length > 0 && (
           <FeatureIntroAlert

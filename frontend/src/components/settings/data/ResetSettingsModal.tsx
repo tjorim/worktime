@@ -41,9 +41,9 @@ export function ResetSettingsModal({
         <DialogHeader>
           <DialogTitle>{m.reset_settings_modal_title()}</DialogTitle>
         </DialogHeader>
-        <div className="tw:flex tw:min-h-0 tw:flex-col tw:gap-3 tw:overflow-y-auto tw:p-4">
-          <p className="tw:m-0">{m.reset_settings_modal_body()}</p>
-          <FieldGroup className="tw:gap-2">
+        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
+          <p className="m-0">{m.reset_settings_modal_body()}</p>
+          <FieldGroup className="gap-2">
             <Field orientation="horizontal">
               <Checkbox
                 id="reset-clear-time-tracking"
@@ -67,7 +67,7 @@ export function ResetSettingsModal({
           </FieldGroup>
           {(clearTimeTrackingData || clearTimeOffData) && (
             <Alert variant="warning">
-              <div className="tw:font-semibold">{m.reset_warning()}</div>
+              <div className="font-semibold">{m.reset_warning()}</div>
               {clearTimeTrackingData && <div>{m.reset_warning_time_tracking()}</div>}
               {clearTimeOffData && <div>{m.reset_warning_time_off()}</div>}
             </Alert>

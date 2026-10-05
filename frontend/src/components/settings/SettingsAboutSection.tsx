@@ -77,7 +77,7 @@ export function SettingsAboutSection({
                 : m.pwa_install_unavailable_description()
           }
           trailingIcon={isAppInstalled ? CircleCheckIcon : ChevronRightIcon}
-          trailingIconClassName={isAppInstalled ? "tw:text-success" : undefined}
+          trailingIconClassName={isAppInstalled ? "text-success" : undefined}
           onClick={onInstallApp}
           disabled={!canInstallApp}
         />

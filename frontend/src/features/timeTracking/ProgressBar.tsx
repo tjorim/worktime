@@ -24,14 +24,14 @@ export function ProgressBar({ hours, targetHours = 8 }: ProgressBarProps) {
   const isOvertime = percentage > 100;
 
   return (
-    <div className="tw:my-3">
+    <div className="my-3">
       <Progress
         value={clampedPercentage}
-        trackClassName="tw:h-4"
-        indicatorClassName={isOvertime ? "tw:bg-warning-solid" : "tw:bg-success-solid"}
+        trackClassName="h-4"
+        indicatorClassName={isOvertime ? "bg-warning-solid" : "bg-success-solid"}
         data-overtime={isOvertime}
       />
-      <div className="tw:mt-2 tw:text-muted-foreground">
+      <div className="mt-2 text-muted-foreground">
         {rawHours.toFixed(2)}h ({percentage.toFixed(1)}%)
       </div>
     </div>

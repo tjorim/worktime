@@ -433,11 +433,11 @@ export function MonthCalendar({
 
   return (
     <div className="month-calendar">
-      <div className="month-calendar-header tw:flex tw:items-center tw:justify-between tw:mb-4">
+      <div className="month-calendar-header flex items-center justify-between mb-4">
         <div className="month-calendar-title" data-testid="month-title" aria-live="polite">
           <span>{month.format("MMMM YYYY")}</span>
         </div>
-        <div className="tw:flex tw:gap-2">
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -453,7 +453,7 @@ export function MonthCalendar({
             disabled={isCurrentMonth}
             aria-label={m.calendar_nav_current_month_label()}
           >
-            <Icon icon={HouseIcon} className="tw:mr-1" />
+            <Icon icon={HouseIcon} className="mr-1" />
             {m.calendar_nav_current_month_text()}
           </Button>
           <Button

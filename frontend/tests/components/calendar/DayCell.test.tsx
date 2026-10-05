@@ -75,19 +75,19 @@ describe("DayCell", () => {
 
     it("should apply is-other-month class when not current month", () => {
       const { container } = render(<DayCell {...defaultProps} isCurrentMonth={false} />);
-      const gridcell = container.querySelector(".is-other-month");
+      const gridcell = container.querySelector("[data-other-month]");
       expect(gridcell).toBeInTheDocument();
     });
 
     it("should apply is-today class when today", () => {
       const { container } = render(<DayCell {...defaultProps} isToday={true} />);
-      const gridcell = container.querySelector(".is-today");
+      const gridcell = container.querySelector("[data-today]");
       expect(gridcell).toBeInTheDocument();
     });
 
     it("should apply is-weekend class on weekends", () => {
       const { container } = render(<DayCell {...defaultProps} isWeekend={true} />);
-      const gridcell = container.querySelector(".is-weekend");
+      const gridcell = container.querySelector("[data-weekend]");
       expect(gridcell).toBeInTheDocument();
     });
 
@@ -427,7 +427,7 @@ describe("DayCell", () => {
 
       const { container } = render(<DayCell {...defaultProps} publicHoliday={publicHoliday} />);
 
-      const gridcell = container.querySelector(".is-public-holiday");
+      const gridcell = container.querySelector("[data-public-holiday]");
       expect(gridcell).toBeInTheDocument();
     });
 

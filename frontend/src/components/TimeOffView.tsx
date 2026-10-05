@@ -75,7 +75,7 @@ import { getHdayHelperErrorMessage, resolveHdayHelperBaseUrl } from "@/utils/hda
  * - Proper form labels and ARIA attributes in EventModal (aria-required, aria-describedby)
  * - Keyboard navigation supported via standard HTML elements (buttons, inputs, table)
  * - Color contrast: Event badges use #000 text on colored backgrounds for readability
- * - Modal dialogs use React Bootstrap's built-in accessibility features (focus trap, Escape key)
+ * - Dialogs use Base UI's built-in accessibility features (focus trap, Escape key)
  * - Empty state provides helpful context for new users
  * - Import/Export buttons clearly labeled with icons and text
  * - Responsive table layout adapts to smaller screens
@@ -812,17 +812,14 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   });
 
   return (
-    <div className="tw:flex tw:flex-col tw:gap-3 tw:py-3">
+    <div className="flex flex-col gap-3 py-3">
       {viewMode === "table" && hdayChangedRemotely && (
-        <Alert
-          variant="info"
-          className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2"
-        >
+        <Alert variant="info" className="flex flex-wrap items-center justify-between gap-2">
           <span>
-            <Icon icon={CloudDownloadIcon} className="tw:mr-2" />
+            <Icon icon={CloudDownloadIcon} className="mr-2" />
             {m.timeoff_hday_changed_remotely()}
           </span>
-          <div className="tw:flex tw:items-center tw:gap-1">
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
@@ -841,47 +838,47 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           </div>
         </Alert>
       )}
-      <div className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:md:flex-row tw:md:items-center">
+      <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
         <div
           role="group"
-          className="tw:flex tw:w-full tw:max-w-sm tw:gap-1"
+          className="flex w-full max-w-sm gap-1"
           aria-label={m.timeoff_toggle_view_aria()}
         >
           <Button
-            className="tw:flex-1"
+            className="flex-1"
             variant={viewMode === "table" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "table"}
             onClick={() => setViewMode("table")}
           >
-            <Icon icon={TableIcon} className="tw:mr-1" />
+            <Icon icon={TableIcon} className="mr-1" />
             {m.timeoff_view_table()}
           </Button>
           <Button
-            className="tw:flex-1"
+            className="flex-1"
             variant={viewMode === "stats" ? "default" : "outline"}
             size="sm"
             aria-pressed={viewMode === "stats"}
             onClick={() => setViewMode("stats")}
           >
-            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="tw:mr-1" />
+            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="mr-1" />
             {m.timeoff_view_statistics()}
           </Button>
           {helperConnectionStatus === "connected" && (
             <Button
-              className="tw:flex-1"
+              className="flex-1"
               variant={viewMode === "team" ? "default" : "outline"}
               size="sm"
               aria-pressed={viewMode === "team"}
               onClick={() => setViewMode("team")}
             >
-              <Icon icon={UsersIcon} className="tw:mr-1" />
+              <Icon icon={UsersIcon} className="mr-1" />
               {m.timeoff_view_team()}
             </Button>
           )}
         </div>
         {(viewMode !== "table" || entries.length > 0) && (
-          <span className="tw:text-sm tw:text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
           </span>
         )}
@@ -934,7 +931,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         ref={fileInputRef}
         type="file"
         accept=".hday,text/plain"
-        className="tw:hidden"
+        className="hidden"
         aria-label={m.timeoff_import_file_aria()}
         onChange={handleFileChange}
       />

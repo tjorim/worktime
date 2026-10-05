@@ -1,0 +1,271 @@
+/* Month calendar grid, day cells and event chips. Day states are data attributes set by DayCell. */
+@utility month-calendar {
+  background: var(--wt-month-calendar-bg);
+  border-radius: 0.75rem;
+}
+@utility month-calendar-header {
+  gap: 1rem;
+}
+@utility month-calendar-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+@utility month-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+  @media (width <= 768px) {
+    gap: 0.35rem;
+  }
+  @media (width <= 360px) {
+    gap: 0.2rem;
+  }
+}
+@utility month-calendar-header-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+}
+@utility month-calendar-week-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+}
+@utility month-calendar-weekday {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: var(--wt-month-calendar-weekday-text);
+}
+@utility month-calendar-day {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--wt-month-calendar-border);
+  background: var(--wt-month-calendar-day-bg);
+  min-height: 4.5rem;
+  padding: 0.25rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  &[data-other-month] {
+    background: var(--wt-month-calendar-day-other);
+    color: var(--wt-month-calendar-day-other-text);
+  }
+  &[data-weekend] {
+    background: var(--wt-month-calendar-day-weekend);
+  }
+  &[data-public-holiday] {
+    border-color: var(--wt-month-calendar-public-holiday-border);
+    background: var(--wt-month-calendar-public-holiday-bg);
+  }
+  &[data-school-holiday] {
+    border-color: var(--wt-month-calendar-school-holiday-border);
+    background: var(--wt-month-calendar-school-holiday-bg);
+  }
+  &[data-public-holiday][data-school-holiday] {
+    background: linear-gradient(
+      135deg,
+      var(--wt-month-calendar-public-holiday-bg),
+      var(--wt-month-calendar-school-holiday-bg)
+    );
+  }
+  &[data-payday] {
+    border-color: var(--wt-month-calendar-payday-border);
+    background: var(--wt-month-calendar-payday-bg);
+  }
+  &[data-today] {
+    border-color: var(--wt-month-calendar-today-border);
+    background: var(--wt-month-calendar-today-bg);
+    border-width: 2px;
+    box-shadow: 0 0 0 3px var(--wt-month-calendar-today-shadow);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--wt-month-calendar-focus-outline);
+    outline-offset: -1px;
+  }
+  &:hover .month-calendar-add-btn {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  &:focus-within .month-calendar-add-btn {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  @media (width <= 768px) {
+    min-height: 3.5rem;
+  }
+  @media (width <= 360px) {
+    padding-inline: 0.125rem;
+  }
+}
+@utility month-calendar-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--wt-month-calendar-event-bg);
+  color: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s,
+    visibility 0.15s;
+  &:hover {
+    background: var(--wt-month-calendar-event-hover);
+  }
+  @media (hover: none), (pointer: coarse) {
+    position: relative;
+    opacity: 0.8;
+    visibility: visible;
+    box-shadow: 0 0 0 1px var(--wt-month-calendar-focus-outline);
+    box-shadow: 0 0 0 1px
+      color-mix(in srgb, var(--wt-month-calendar-focus-outline) 35%, transparent);
+    pointer-events: auto;
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 44px;
+      height: 44px;
+      transform: translate(-50%, -50%);
+    }
+    &:active {
+      opacity: 1;
+    }
+    &:focus-visible {
+      opacity: 1;
+    }
+  }
+  @media (width <= 360px) {
+    width: 1.1rem;
+    height: 1.1rem;
+    font-size: 0.75rem;
+  }
+}
+@utility month-calendar-day-header {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 600;
+  color: inherit;
+  min-width: 0;
+  @media (width <= 360px) {
+    padding-inline: 0;
+  }
+}
+@utility month-calendar-day-number {
+  font-size: 0.95rem;
+  @media (width <= 360px) {
+    font-size: 0.85rem;
+  }
+}
+@utility month-calendar-day-indicators {
+  font-size: 0.95rem;
+  display: inline-flex;
+  gap: 0.2rem;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+@utility month-calendar-day-indicator {
+  line-height: 1;
+}
+@utility month-calendar-events {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: 0.25rem 0.35rem 0.5rem;
+  flex: 1;
+  @media (width <= 768px) {
+    padding: 0.15rem 0.25rem 0.35rem;
+  }
+}
+@utility month-calendar-event {
+  border: none;
+  background: var(--wt-month-calendar-event-bg);
+  border-radius: 0.5rem;
+  padding: 0.2rem 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  text-align: left;
+  color: var(--wt-month-calendar-event-text);
+  cursor: pointer;
+  &:hover {
+    background: var(--wt-month-calendar-event-hover);
+  }
+  &:focus-visible {
+    background: var(--wt-month-calendar-event-hover);
+    outline: 2px solid var(--wt-month-calendar-focus-outline);
+    outline-offset: 1px;
+  }
+}
+@utility month-calendar-event-color {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+@utility month-calendar-event-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+@utility month-calendar-event-symbol {
+  font-size: 0.7rem;
+}
+@utility month-calendar-event-overflow {
+  font-size: 0.7rem;
+}
+@utility month-calendar-event-overflow-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--wt-secondary-color);
+  font: inherit;
+  line-height: inherit;
+  &:hover {
+    color: var(--wt-month-calendar-event-text);
+    text-decoration: underline;
+  }
+  &:focus-visible {
+    color: var(--wt-month-calendar-event-text);
+    text-decoration: underline;
+  }
+}
+@utility month-calendar-overflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 5.5rem;
+  overflow-y: auto;
+}
+@utility month-calendar-shift-badge {
+  margin-bottom: 0.25rem;
+}

@@ -25,7 +25,7 @@ export function SettingsTimeTrackingSection({
   onUpdateLabels,
 }: SettingsTimeTrackingSectionProps) {
   return (
-    <div className="tw:flex tw:flex-col tw:gap-4 tw:p-4">
+    <div className="flex flex-col gap-4 p-4">
       <LabelsPanel
         labels={labels}
         templates={templates}

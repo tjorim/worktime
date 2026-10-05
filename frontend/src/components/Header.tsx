@@ -49,30 +49,30 @@ export function Header() {
 
   return (
     <>
-      <a href="#main-content" className="tw:sr-only tw:focus:not-sr-only">
+      <a href="#main-content" className="sr-only focus:not-sr-only">
         {m.skip_to_content()}
       </a>
-      <header className="tw:fixed tw:inset-x-0 tw:top-0 tw:z-header tw:h-header tw:bg-wt-navbar-bg tw:text-header-foreground tw:shadow-sm">
+      <header className="fixed inset-x-0 top-0 z-header h-header bg-wt-navbar-bg text-header-foreground shadow-sm">
         <nav
           aria-label="Worktime"
-          className="tw:flex tw:h-full tw:items-center tw:justify-between tw:px-2 tw:md:px-3"
+          className="flex h-full items-center justify-between px-2 md:px-3"
         >
           <button
             type="button"
             onClick={handleNavigateHome}
             onMouseEnter={handlePreloadHome}
             onFocus={handlePreloadHome}
-            className="tw:flex tw:items-center tw:gap-2 tw:border-0 tw:bg-transparent tw:text-inherit tw:rounded tw:focus-visible:ring-3 tw:focus-visible:ring-ring"
+            className="flex items-center gap-2 border-0 bg-transparent text-inherit rounded focus-visible:ring-3 focus-visible:ring-ring"
           >
-            <Icon icon={HistoryIcon} className="tw:size-5" />
-            <span className="tw:font-bold">Worktime</span>
+            <Icon icon={HistoryIcon} className="size-5" />
+            <span className="font-bold">Worktime</span>
           </button>
-          <div className="tw:flex tw:items-center tw:gap-3 tw:ml-auto">
+          <div className="flex items-center gap-3 ml-auto">
             <SyncStatusIndicator />
             <Button
               variant="ghost"
               size="sm"
-              className="tw:px-2 tw:text-header-foreground tw:hover:bg-header-foreground/10 tw:hover:text-header-foreground"
+              className="px-2 text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground"
               onClick={handleToggleSettings}
               onMouseEnter={isSettingsPage ? handlePreloadHome : undefined}
               onFocus={isSettingsPage ? handlePreloadHome : undefined}
@@ -87,7 +87,7 @@ export function Header() {
               aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
             >
               <Icon icon={isSettingsPage ? ArrowLeftIcon : SettingsIcon} />
-              <span className="tw:hidden tw:lg:inline tw:ml-1">
+              <span className="hidden lg:inline ml-1">
                 {isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
               </span>
             </Button>

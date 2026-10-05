@@ -80,15 +80,15 @@ export function SettingsApiTokensSection({
 
   return (
     <SettingsSection icon={KeyIcon} title={m.api_tokens_section_title()}>
-      <SettingsHint className="tw:mb-3">{m.api_tokens_description()}</SettingsHint>
+      <SettingsHint className="mb-3">{m.api_tokens_description()}</SettingsHint>
 
       {createdApiToken ? (
-        <Alert variant="success" className="tw:mb-3 tw:gap-2">
-          <div className="tw:font-medium">{m.api_tokens_created_title()}</div>
+        <Alert variant="success" className="mb-3 gap-2">
+          <div className="font-medium">{m.api_tokens_created_title()}</div>
           <div>{m.api_tokens_created_warning()}</div>
           <div>{m.api_tokens_pebble_guidance()}</div>
           <SettingsSecret>{createdApiToken.token}</SettingsSecret>
-          <div className="tw:flex tw:gap-2">
+          <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
               <Icon icon={ClipboardIcon} />
               {m.api_tokens_copy_btn()}
@@ -100,9 +100,9 @@ export function SettingsApiTokensSection({
         </Alert>
       ) : null}
 
-      <Field className="tw:mb-3">
+      <Field className="mb-3">
         <FieldLabel htmlFor="api-token-name">{m.api_tokens_name_label()}</FieldLabel>
-        <div className="tw:flex tw:gap-2">
+        <div className="flex gap-2">
           <Input
             id="api-token-name"
             type="text"
@@ -117,7 +117,7 @@ export function SettingsApiTokensSection({
         </div>
       </Field>
 
-      <div className="tw:flex tw:flex-col tw:gap-2">
+      <div className="flex flex-col gap-2">
         {createApiTokenError ? <Alert variant="destructive">{createApiTokenError}</Alert> : null}
         {revokeApiTokenError ? <Alert variant="destructive">{revokeApiTokenError}</Alert> : null}
         {apiTokensError ? <Alert variant="warning">{apiTokensError}</Alert> : null}
@@ -130,18 +130,18 @@ export function SettingsApiTokensSection({
           {apiTokens.map((token) => (
             <SettingsItem
               key={token.id}
-              className="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-3"
+              className="flex flex-wrap items-start justify-between gap-3"
             >
-              <div className="tw:min-w-0">
-                <div className="tw:font-medium">{token.name}</div>
-                <div className="tw:text-sm tw:text-muted-foreground">
+              <div className="min-w-0">
+                <div className="font-medium">{token.name}</div>
+                <div className="text-sm text-muted-foreground">
                   •••• {token.token_preview} · {m.api_tokens_created_at_label()}{" "}
                   {formatTokenDate(token.created_at)} · {m.api_tokens_last_used_label()}{" "}
                   {token.last_used_at
                     ? formatTokenDate(token.last_used_at)
                     : m.api_tokens_last_used_never()}
                 </div>
-                <div className="tw:text-sm tw:text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   {m.api_tokens_scopes_label()}: {token.scopes.join(", ")}
                 </div>
               </div>

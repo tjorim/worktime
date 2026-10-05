@@ -36,9 +36,9 @@ export function SettingsBackendStatus() {
       icon={CloudCheckIcon}
       title={m.backend_status_label()}
       description={m.backend_status_description()}
-      className="tw:px-2.5"
+      className="px-2.5"
     >
-      <div className="tw:flex tw:items-center tw:gap-2">
+      <div className="flex items-center gap-2">
         {status === "checking" ? (
           <Badge variant="info" role="status">
             <Spinner size="sm" aria-hidden="true" />

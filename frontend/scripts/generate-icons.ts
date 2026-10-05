@@ -70,7 +70,7 @@ function createIcon(size: number, maskable = false) {
   // Background gradient
   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
   gradient.addColorStop(0, COLORS.gradientStart); // Blue-900
-  gradient.addColorStop(1, COLORS.gradientEnd); // Bootstrap primary
+  gradient.addColorStop(1, COLORS.gradientEnd); // Worktime primary (--wt-primary)
 
   ctx.fillStyle = gradient;
   ctx.beginPath();

@@ -394,15 +394,13 @@ export function DayCell({
       tabIndex={isFocusTarget ? 0 : -1}
       aria-label={ariaLabelParts.join(" - ")}
       aria-haspopup={onDayContextMenu ? "menu" : undefined}
-      className={clsx(
-        "month-calendar-day",
-        !isCurrentMonth && "is-other-month",
-        isToday && "is-today",
-        isWeekend && "is-weekend",
-        publicHoliday && "is-public-holiday",
-        schoolHoliday && "is-school-holiday",
-        paydayInfo && "is-payday",
-      )}
+      className="month-calendar-day"
+      data-other-month={!isCurrentMonth || undefined}
+      data-today={isToday || undefined}
+      data-weekend={isWeekend || undefined}
+      data-public-holiday={publicHoliday ? true : undefined}
+      data-school-holiday={schoolHoliday ? true : undefined}
+      data-payday={paydayInfo ? true : undefined}
       onContextMenu={(e) => {
         if (onDayContextMenu) {
           e.preventDefault();
@@ -446,10 +444,7 @@ export function DayCell({
             </span>
           ))}
           {workLocation && (
-            <span
-              className="month-calendar-day-indicator month-calendar-work-location"
-              title={workLocationLabel}
-            >
+            <span className="month-calendar-day-indicator" title={workLocationLabel}>
               <Icon icon={WORK_LOCATION_ICONS[workLocation.location]} />
             </span>
           )}

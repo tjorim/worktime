@@ -128,9 +128,9 @@ export function WeekView({
   if (!scheduleType) {
     return (
       <Card>
-        <CardContent className="tw:text-center tw:py-6">
-          <Icon icon={CalendarPlusIcon} className="tw:text-muted-foreground tw:mb-4 tw:size-10" />
-          <p className="tw:text-muted-foreground tw:mb-4">{m.week_view_no_schedule()}</p>
+        <CardContent className="text-center py-6">
+          <Icon icon={CalendarPlusIcon} className="text-muted-foreground mb-4 size-10" />
+          <p className="text-muted-foreground mb-4">{m.week_view_no_schedule()}</p>
         </CardContent>
       </Card>
     );
@@ -146,15 +146,15 @@ export function WeekView({
     myTeam = null;
   }
   const isMyTeam = (teamNumber: number) => {
-    return myTeam === teamNumber ? "tw:ring-2 tw:ring-primary" : "";
+    return myTeam === teamNumber ? "ring-2 ring-primary" : "";
   };
 
   return (
     <Card>
       <CardHeader>
-        <div className="tw:flex tw:flex-col tw:sm:flex-row tw:justify-between tw:items-stretch tw:sm:items-center tw:gap-2 tw:mb-2">
-          <span className="tw:font-semibold">
-            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="tw:mr-2" />
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-2">
+          <span className="font-semibold">
+            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="mr-2" />
             {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <WeekNavigationButtonGroup
@@ -167,49 +167,49 @@ export function WeekView({
             onSelectorChange={handleDateChange}
           />
         </div>
-        <div className="tw:flex tw:flex-col tw:md:flex-row tw:justify-between tw:items-start tw:md:items-center tw:gap-2">
-          <div className="tw:text-muted-foreground tw:text-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+          <div className="text-muted-foreground text-sm">
             {m.week_label({ week: String(selectedWeekNumber), year: String(selectedWeekYear) })}
             {isCurrentWeek && (
-              <Badge variant="success" className="tw:ml-2" aria-label={m.this_week()}>
+              <Badge variant="success" className="ml-2" aria-label={m.this_week()}>
                 {m.this_week()}
               </Badge>
             )}
           </div>
-          <div className="tw:text-sm tw:text-muted-foreground tw:hidden tw:lg:block">
-            <Icon icon={KeyboardIcon} className="tw:mr-1" />
+          <div className="text-sm text-muted-foreground hidden lg:block">
+            <Icon icon={KeyboardIcon} className="mr-1" />
             {m.week_view_keyboard_hint()}
           </div>
         </div>
       </CardHeader>
       <CardContent>
         {myTeam && hasTeams && (
-          <div className="tw:mb-4">
+          <div className="mb-4">
             <strong>
-              <Icon icon={UsersIcon} className="tw:mr-1" />
+              <Icon icon={UsersIcon} className="mr-1" />
               {m.week_view_team_schedule_heading({ team: String(myTeam) })}
             </strong>
-            <div className="tw:text-muted-foreground tw:text-sm">
+            <div className="text-muted-foreground text-sm">
               {m.week_number({ week: String(selectedWeekNumber) })}
             </div>
           </div>
         )}
 
         {!hasTeams && (
-          <div className="tw:mb-4">
+          <div className="mb-4">
             <strong>
-              <Icon icon={CalendarIcon} className="tw:mr-1" />
+              <Icon icon={CalendarIcon} className="mr-1" />
               {m.week_view_your_schedule_heading()}
             </strong>
-            <div className="tw:text-muted-foreground tw:text-sm">
+            <div className="text-muted-foreground text-sm">
               {m.week_number({ week: String(selectedWeekNumber) })}
             </div>
           </div>
         )}
 
-        <div className="tw:overflow-x-auto">
+        <div className="overflow-x-auto">
           <Table
-            className="tw:[&_th]:text-center tw:[&_td]:text-center tw:[&_th]:p-2 tw:[&_td]:p-2 tw:[&_td]:align-middle "
+            className="[&_th]:text-center [&_td]:text-center [&_th]:p-2 [&_td]:p-2 [&_td]:align-middle "
             aria-label={m.week_view_table_aria({
               startDate: formatShortDate(startOfWeek),
               endDate: formatShortDate(startOfWeek.add(6, "day")),
@@ -217,7 +217,7 @@ export function WeekView({
           >
             <TableHeader>
               <TableRow>
-                <TableHead className="tw:bg-muted tw:font-semibold">
+                <TableHead className="bg-muted font-semibold">
                   {hasTeams ? m.week_view_team_header() : m.week_view_schedule_label()}
                 </TableHead>
                 {weekDays.map((day, dayIndex) => {
@@ -225,14 +225,14 @@ export function WeekView({
                   return (
                     <TableHead
                       key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
-                      className={clsx("tw:text-center", isToday && "tw:bg-primary/10")}
+                      className={clsx("text-center", isToday && "bg-primary/10")}
                       aria-label={m.week_view_day_header_aria({
                         date: formatLongDate(day),
                         today: isToday ? m.daycell_today_label() : "",
                       })}
                     >
-                      <div className="tw:font-semibold">{formatShortWeekday(day)}</div>
-                      <div className="tw:text-sm tw:text-muted-foreground">
+                      <div className="font-semibold">{formatShortWeekday(day)}</div>
+                      <div className="text-sm text-muted-foreground">
                         <Hint
                           placement="bottom"
                           content={
@@ -252,7 +252,9 @@ export function WeekView({
                             </div>
                           }
                         >
-                          <span className="help-underline">{formatYYWWD(day)}</span>
+                          <span className="cursor-help underline decoration-dotted">
+                            {formatYYWWD(day)}
+                          </span>
                         </Hint>
                       </div>
                     </TableHead>
@@ -274,7 +276,7 @@ export function WeekView({
                       : m.week_view_schedule_label()
                   }
                 >
-                  <TableCell className="tw:bg-muted tw:font-semibold">
+                  <TableCell className="bg-muted font-semibold">
                     <strong>
                       {hasTeams
                         ? m.team_label({ team: String(teamNumber) })
@@ -288,7 +290,7 @@ export function WeekView({
                     return (
                       <TableCell
                         key={`team-${teamNumber}-day-${dayIndex}-${day.format("YYYY-MM-DD")}`}
-                        className={clsx("tw:text-center", isToday && "tw:bg-primary/10")}
+                        className={clsx("text-center", isToday && "bg-primary/10")}
                         aria-label={
                           hasTeams
                             ? m.week_view_team_day_shift_aria({

@@ -52,7 +52,7 @@ let cachedDefaultLabelColor: string | null = null;
 const colorChangeListeners = new Set<() => void>();
 
 /**
- * Observer to invalidate cache when data-bs-theme attribute changes.
+ * Observer to invalidate cache when data-theme attribute changes.
  * This ensures the color updates when users switch between light/dark/auto themes.
  * Guarded to prevent multiple observer registrations in test/HMR environments.
  */
@@ -62,7 +62,7 @@ if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
   if (!themeObserver) {
     themeObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
+        if (mutation.type === "attributes" && mutation.attributeName === "data-theme") {
           cachedDefaultLabelColor = null;
           // Notify all listeners
           colorChangeListeners.forEach((listener) => {
@@ -76,7 +76,7 @@ if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
     if (document.documentElement) {
       themeObserver.observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ["data-bs-theme"],
+        attributeFilter: ["data-theme"],
       });
     }
   }
@@ -84,10 +84,10 @@ if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
 
 /**
  * Get the default label color from CSS variables (theme-aware).
- * Falls back to Bootstrap's gray-600 (#6c757d) if CSS variable is not available.
+ * Falls back to #6c757d (the light-theme --wt-secondary) if CSS variable is not available.
  *
  * The result is cached to avoid repeated getComputedStyle calls, which can be expensive.
- * The cache is automatically invalidated when the theme changes (data-bs-theme attribute).
+ * The cache is automatically invalidated when the theme changes (data-theme attribute).
  */
 export function getDefaultLabelColor(): string {
   if (typeof window === "undefined" || !document.documentElement) {

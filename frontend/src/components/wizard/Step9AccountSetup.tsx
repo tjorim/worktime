@@ -36,55 +36,50 @@ export function Step9AccountSetup({
 }: Step9AccountSetupProps) {
   return (
     <>
-      <div className="tw:mb-3 tw:text-center">
-        <h4 className="tw:mb-1 tw:text-2xl tw:font-medium">{m.wizard_account_heading()}</h4>
-        <p className="tw:text-sm tw:text-muted-foreground">{m.wizard_account_subtitle()}</p>
+      <div className="mb-3 text-center">
+        <h4 className="mb-1 text-2xl font-medium">{m.wizard_account_heading()}</h4>
+        <p className="text-sm text-muted-foreground">{m.wizard_account_subtitle()}</p>
       </div>
 
       {isAuthenticated ? (
-        <div className="tw:py-3 tw:text-center">
-          <Icon
-            icon={UserCheckIcon}
-            className="tw:mx-auto tw:mb-3 tw:block tw:text-4xl tw:text-success"
-          />
-          <p className="tw:font-medium">
+        <div className="py-3 text-center">
+          <Icon icon={UserCheckIcon} className="mx-auto mb-3 block text-4xl text-success" />
+          <p className="font-medium">
             {displayName ? m.auth_logged_in_as({ displayName }) : m.account_signed_in()}
           </p>
-          <p className="tw:text-sm tw:text-muted-foreground">
-            {m.wizard_account_already_connected()}
-          </p>
+          <p className="text-sm text-muted-foreground">{m.wizard_account_already_connected()}</p>
         </div>
       ) : (
-        <Grid className="tw:mb-3">
+        <Grid className="mb-3">
           {/* Local Only card */}
           <GridItem desktopSpan={6}>
-            <Card className="tw:h-full tw:ring-secondary-foreground/40">
+            <Card className="h-full ring-secondary-foreground/40">
               <CardHeader>
-                <CardTitle className="tw:flex tw:items-center tw:gap-2 tw:font-semibold tw:text-muted-foreground">
+                <CardTitle className="flex items-center gap-2 font-semibold text-muted-foreground">
                   <Icon icon={HardDriveIcon} />
                   {m.wizard_account_local_card_title()}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="tw:flex tw:flex-1 tw:flex-col tw:gap-3">
-                <ul className="tw:flex tw:list-none tw:flex-col tw:gap-2 tw:p-0 tw:text-sm">
+              <CardContent className="flex flex-1 flex-col gap-3">
+                <ul className="flex list-none flex-col gap-2 p-0 text-sm">
                   <li>
-                    <Icon icon={CircleCheckIcon} className="tw:mr-2 tw:text-success" />
+                    <Icon icon={CircleCheckIcon} className="mr-2 text-success" />
                     {m.wizard_account_local_pro_1()}
                   </li>
                   <li>
-                    <Icon icon={CircleCheckIcon} className="tw:mr-2 tw:text-success" />
+                    <Icon icon={CircleCheckIcon} className="mr-2 text-success" />
                     {m.wizard_account_local_pro_2()}
                   </li>
-                  <li className="tw:text-muted-foreground">
-                    <Icon icon={CircleXIcon} className="tw:mr-2 tw:text-danger-text" />
+                  <li className="text-muted-foreground">
+                    <Icon icon={CircleXIcon} className="mr-2 text-danger-text" />
                     {m.wizard_account_local_con_1()}
                   </li>
-                  <li className="tw:text-muted-foreground">
-                    <Icon icon={CircleXIcon} className="tw:mr-2 tw:text-danger-text" />
+                  <li className="text-muted-foreground">
+                    <Icon icon={CircleXIcon} className="mr-2 text-danger-text" />
                     {m.wizard_account_local_con_2()}
                   </li>
                 </ul>
-                <Button variant="outline" className="tw:mt-auto tw:w-full" onClick={onSkip}>
+                <Button variant="outline" className="mt-auto w-full" onClick={onSkip}>
                   {m.skip()}
                 </Button>
               </CardContent>
@@ -93,30 +88,30 @@ export function Step9AccountSetup({
 
           {/* With Account card */}
           <GridItem desktopSpan={6}>
-            <Card className="tw:h-full tw:ring-primary">
+            <Card className="h-full ring-primary">
               <CardHeader>
-                <CardTitle className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:font-semibold tw:text-primary">
+                <CardTitle className="flex flex-wrap items-center gap-2 font-semibold text-primary">
                   <Icon icon={CloudIcon} />
                   {m.wizard_account_connected_card_title()}
                   <Badge>{m.wizard_account_recommended()}</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="tw:flex tw:flex-1 tw:flex-col tw:gap-3">
-                <ul className="tw:flex tw:list-none tw:flex-col tw:gap-2 tw:p-0 tw:text-sm">
+              <CardContent className="flex flex-1 flex-col gap-3">
+                <ul className="flex list-none flex-col gap-2 p-0 text-sm">
                   <li>
-                    <Icon icon={CircleCheckIcon} className="tw:mr-2 tw:text-success" />
+                    <Icon icon={CircleCheckIcon} className="mr-2 text-success" />
                     {m.wizard_account_connected_pro_1()}
                   </li>
                   <li>
-                    <Icon icon={CircleCheckIcon} className="tw:mr-2 tw:text-success" />
+                    <Icon icon={CircleCheckIcon} className="mr-2 text-success" />
                     {m.wizard_account_connected_pro_2()}
                   </li>
                   <li>
-                    <Icon icon={CircleCheckIcon} className="tw:mr-2 tw:text-success" />
+                    <Icon icon={CircleCheckIcon} className="mr-2 text-success" />
                     {m.wizard_account_connected_pro_3()}
                   </li>
                 </ul>
-                <Button className="tw:mt-auto tw:w-full" onClick={onConnectAccount}>
+                <Button className="mt-auto w-full" onClick={onConnectAccount}>
                   <Icon icon={UserPlusIcon} />
                   {m.account_connect_btn()}
                 </Button>
@@ -127,7 +122,7 @@ export function Step9AccountSetup({
       )}
 
       <WizardActions
-        className="tw:mt-2"
+        className="mt-2"
         start={
           <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
             <Icon icon={ArrowLeftIcon} /> {m.back()}

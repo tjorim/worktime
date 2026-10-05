@@ -1,0 +1,32 @@
+/* Application-level utilities that need more than a single Tailwind class. */
+
+@keyframes wt-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A restrained entrance when the user deliberately switches app views. */
+@utility app-view-enter {
+  animation: wt-view-enter var(--wt-motion-base) var(--wt-motion-ease) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Floating "+" button above the bottom safe area; hidden while a dialog is open. */
+@utility mobile-quick-actions {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  z-index: 1020;
+  body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) & {
+    display: none !important;
+  }
+}

@@ -109,8 +109,8 @@ describe("ShiftTimeline", () => {
     const morningTeam = createMockShiftResult(1, "M", today);
     renderWithProviders(<ShiftTimeline currentWorkingTeam={morningTeam} />);
     const badge = screen.getByText("T1");
-    expect(badge).toHaveClass("tw:bg-wt-shift-morning", "tw:text-wt-shift-morning-text");
-    expect(badge).toHaveClass("tw:min-w-10");
+    expect(badge).toHaveClass("bg-wt-shift-morning", "text-wt-shift-morning-text");
+    expect(badge).toHaveClass("min-w-10");
   });
 
   it("renders timeline flow structure", () => {

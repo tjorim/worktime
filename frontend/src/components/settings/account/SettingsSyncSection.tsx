@@ -10,11 +10,11 @@ import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
 
 const SYNC_STATUS_TEXT: Record<string, string> = {
-  muted: "tw:text-muted-foreground",
-  danger: "tw:text-danger-text",
-  warning: "tw:text-warning",
-  info: "tw:text-info",
-  success: "tw:text-success",
+  muted: "text-muted-foreground",
+  danger: "text-danger-text",
+  warning: "text-warning",
+  info: "text-info",
+  success: "text-success",
 };
 
 interface SyncStatusViewModel {
@@ -51,46 +51,41 @@ export function SettingsSyncSection({
   return (
     <SettingsSection icon={CloudCheckIcon} title={m.sync_section_title()}>
       {isAuthenticated ? (
-        <div className="tw:flex tw:flex-col tw:gap-3">
+        <div className="flex flex-col gap-3">
           <div
             className={cn(
-              "tw:font-medium",
+              "font-medium",
               SYNC_STATUS_TEXT[syncStatus.variant] ?? SYNC_STATUS_TEXT.muted,
             )}
           >
             <Icon
               icon={syncStatus.icon}
-              className={cn(
-                "tw:mr-2",
-                isSyncing && "tw:animate-spin tw:motion-reduce:animate-none",
-              )}
+              className={cn("mr-2", isSyncing && "animate-spin motion-reduce:animate-none")}
             />
             {syncStatus.label}
           </div>
-          <div className="tw:flex tw:flex-col tw:gap-1 tw:text-sm tw:text-muted-foreground">
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
             <div>
-              <span className="tw:font-medium">{m.sync_last_synced_label()}:</span>{" "}
-              {lastSyncedLabel}
+              <span className="font-medium">{m.sync_last_synced_label()}:</span> {lastSyncedLabel}
             </div>
             <div>
-              <span className="tw:font-medium">{m.sync_pending_changes_label()}:</span>{" "}
-              {outboxCount}
+              <span className="font-medium">{m.sync_pending_changes_label()}:</span> {outboxCount}
             </div>
             <div>
-              <span className="tw:font-medium">{m.sync_conflicts_label()}:</span> {conflictCount}
+              <span className="font-medium">{m.sync_conflicts_label()}:</span> {conflictCount}
             </div>
             <div>
-              <span className="tw:font-medium">{m.sync_backup_status_label()}:</span>{" "}
+              <span className="font-medium">{m.sync_backup_status_label()}:</span>{" "}
               {backupStatusLabel}
             </div>
             {hasSyncError && retryInSeconds !== null ? (
               <div>
-                <span className="tw:font-medium">{m.sync_retry_in_label()}:</span>{" "}
+                <span className="font-medium">{m.sync_retry_in_label()}:</span>{" "}
                 {m.sync_retry_in_seconds({ seconds: String(retryInSeconds) })}
               </div>
             ) : null}
           </div>
-          <div className="tw:flex tw:flex-wrap tw:gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={onTriggerPull} disabled={isSyncing}>
               <Icon icon={RefreshCwIcon} />
               {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}

@@ -529,8 +529,8 @@ describe("DailyTaskList", () => {
       );
 
       const [current, later] = Array.from(document.querySelectorAll("[data-slot=task-row]"));
-      expect(current).toHaveClass("tw:border-l-destructive");
-      expect(later).toHaveClass("tw:bg-muted");
+      expect(current).toHaveClass("border-l-destructive");
+      expect(later).toHaveClass("bg-muted");
     });
   });
 });

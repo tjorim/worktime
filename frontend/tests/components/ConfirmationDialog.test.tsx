@@ -27,10 +27,10 @@ describe("ConfirmationDialog", () => {
       const confirm = screen.getByRole("button", { name: "Confirm" });
       expect(confirm).toHaveClass(
         variant === "danger"
-          ? "tw:text-danger-text"
+          ? "text-danger-text"
           : variant === "warning"
-            ? "tw:text-warning"
-            : "tw:text-primary-foreground",
+            ? "text-warning"
+            : "text-primary-foreground",
       );
       fireEvent.click(confirm);
       expect(onConfirm).toHaveBeenCalledOnce();

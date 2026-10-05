@@ -49,7 +49,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
 
   return (
     <>
-      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {settings.homeCountry && (
           <Button
             size="sm"
@@ -57,7 +57,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             onClick={handleHome}
             aria-pressed={stored?.location === "home"}
           >
-            <Icon icon={HouseIcon} className="tw:mr-1" />
+            <Icon icon={HouseIcon} className="mr-1" />
             {m.work_location_home()}
           </Button>
         )}
@@ -68,7 +68,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             onClick={handleOffice}
             aria-pressed={stored?.location === "office"}
           >
-            <Icon icon={BuildingIcon} className="tw:mr-1" />
+            <Icon icon={BuildingIcon} className="mr-1" />
             {m.work_location_office()}
           </Button>
         )}
@@ -78,7 +78,7 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           onClick={() => setShowOtherModal(true)}
           aria-pressed={stored?.location === "other"}
         >
-          <Icon icon={MapPinIcon} className="tw:mr-1" />
+          <Icon icon={MapPinIcon} className="mr-1" />
           {m.tt_other_location()}
         </Button>
         {stored && (

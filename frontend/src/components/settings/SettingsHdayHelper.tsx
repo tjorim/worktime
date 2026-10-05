@@ -90,17 +90,17 @@ export function SettingsHdayHelper() {
   };
 
   return (
-    <div className="tw:flex tw:flex-col tw:gap-3">
+    <div className="flex flex-col gap-3">
       <div>
         <SettingsHeading icon={FileTextIcon} aside={statusBadge(helperConnectionStatus)}>
           {m.hday_helper_heading()}
         </SettingsHeading>
-        <SettingsHint className="tw:-mt-1">{m.hday_helper_desc()}</SettingsHint>
+        <SettingsHint className="-mt-1">{m.hday_helper_desc()}</SettingsHint>
       </div>
 
       <Field>
         <FieldLabel htmlFor="hday-helper-url">{m.hday_helper_url_label()}</FieldLabel>
-        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             id="hday-helper-url"
             type="url"
@@ -129,14 +129,14 @@ export function SettingsHdayHelper() {
         {urlIsInvalid && (
           <FieldError id="hday-helper-url-error">{m.hday_helper_url_invalid()}</FieldError>
         )}
-        <FieldDescription id="hday-helper-url-help" className="tw:mb-0">
+        <FieldDescription id="hday-helper-url-help" className="mb-0">
           {m.hday_helper_url_help()}
         </FieldDescription>
       </Field>
 
       <Field>
         <FieldLabel htmlFor="hday-username">{m.hday_username_label()}</FieldLabel>
-        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             id="hday-username"
             type="text"
@@ -153,7 +153,7 @@ export function SettingsHdayHelper() {
             {m.hday_username_save()}
           </Button>
         </div>
-        <FieldDescription id="hday-username-help" className="tw:mb-0">
+        <FieldDescription id="hday-username-help" className="mb-0">
           {m.hday_username_help()}
         </FieldDescription>
       </Field>

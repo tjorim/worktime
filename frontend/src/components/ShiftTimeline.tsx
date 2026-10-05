@@ -168,37 +168,31 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
   const timelineHeaderId = "shift-timeline-header";
   return (
     <div
-      className=" tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4 tw:mt-2"
+      className=" rounded-xl border border-border bg-card p-4 mt-2"
       role="region"
       aria-labelledby={timelineHeaderId}
     >
-      <div className="tw:font-semibold tw:text-base tw:mb-3 tw:text-center" id={timelineHeaderId}>
-        <Icon icon={ClockIcon} className="tw:mr-2" />
+      <div className="font-semibold text-base mb-3 text-center" id={timelineHeaderId}>
+        <Icon icon={ClockIcon} className="mr-2" />
         {m.shift_timeline_title()}
       </div>
-      <div
-        data-timeline-flow
-        className="tw:flex tw:gap-4 tw:items-center tw:justify-center tw:flex-wrap"
-      >
+      <div data-timeline-flow className="flex gap-4 items-center justify-center flex-wrap">
         {prevShift && (
-          <div data-timeline-team className="tw:flex tw:flex-col tw:items-center tw:gap-2">
-            <Badge
-              variant="secondary"
-              className="tw:min-w-10 tw:h-auto tw:text-sm tw:font-semibold tw:rounded-md"
-            >
+          <div data-timeline-team className="flex flex-col items-center gap-2">
+            <Badge variant="secondary" className="min-w-10 h-auto text-sm font-semibold rounded-md">
               T{prevShift.teamNumber}
             </Badge>
-            <div className="tw:text-sm tw:font-semibold tw:text-muted-foreground">
+            <div className="text-sm font-semibold text-muted-foreground">
               <ShiftBadge shift={prevShift.shift} size="sm" />
             </div>
           </div>
         )}
         {prevShift && !hasParallelShifts && (
-          <span data-timeline-arrow className="tw:text-muted-foreground tw:text-xl tw:font-bold">
+          <span data-timeline-arrow className="text-muted-foreground text-xl font-bold">
             →
           </span>
         )}
-        <div data-timeline-team className="tw:flex tw:flex-col tw:items-center tw:gap-2">
+        <div data-timeline-team className="flex flex-col items-center gap-2">
           <Hint
             placement="bottom"
             content={
@@ -215,14 +209,14 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
               data-current-team
               className={clsx(
                 shiftColors[currentWorkingTeam.shift.className],
-                "tw:cursor-help tw:text-base tw:font-semibold tw:shadow-sm",
-                "tw:min-w-10 tw:h-auto tw:text-sm tw:font-semibold tw:rounded-md",
+                "cursor-help text-base font-semibold shadow-sm",
+                "min-w-10 h-auto text-sm font-semibold rounded-md",
               )}
             >
               T{currentWorkingTeam.teamNumber}
             </Badge>
           </Hint>
-          <div className="tw:text-sm tw:font-semibold tw:text-muted-foreground">
+          <div className="text-sm font-semibold text-muted-foreground">
             <ShiftBadge shift={currentWorkingTeam.shift} size="sm" showTooltip={false} />
             <Hint
               placement="bottom"
@@ -234,35 +228,29 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
                 </div>
               }
             >
-              <Icon
-                icon={RadioIcon}
-                className="tw:text-success tw:motion-safe:animate-pulse tw:ml-1"
-              />
+              <Icon icon={RadioIcon} className="text-success motion-safe:animate-pulse ml-1" />
             </Hint>
           </div>
         </div>
         {nextShift && !hasParallelShifts && (
-          <span data-timeline-arrow className="tw:text-muted-foreground tw:text-xl tw:font-bold">
+          <span data-timeline-arrow className="text-muted-foreground text-xl font-bold">
             →
           </span>
         )}
         {nextShift && (
-          <div data-timeline-team className="tw:flex tw:flex-col tw:items-center tw:gap-2">
-            <Badge
-              variant="secondary"
-              className="tw:min-w-10 tw:h-auto tw:text-sm tw:font-semibold tw:rounded-md"
-            >
+          <div data-timeline-team className="flex flex-col items-center gap-2">
+            <Badge variant="secondary" className="min-w-10 h-auto text-sm font-semibold rounded-md">
               T{nextShift.teamNumber}
             </Badge>
-            <div className="tw:text-sm tw:font-semibold tw:text-muted-foreground">
+            <div className="text-sm font-semibold text-muted-foreground">
               <ShiftBadge shift={nextShift.shift} size="sm" />
             </div>
           </div>
         )}
       </div>
       {hasParallelShifts && (
-        <div className="tw:text-center tw:mt-2">
-          <small className="tw:text-muted-foreground">{m.shift_timeline_parallel_note()}</small>
+        <div className="text-center mt-2">
+          <small className="text-muted-foreground">{m.shift_timeline_parallel_note()}</small>
         </div>
       )}
     </div>

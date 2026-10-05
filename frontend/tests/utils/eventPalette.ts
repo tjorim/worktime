@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 /**
  * The event palette lives only in `src/styles/event-palette.css`, as `--wt-event-<type>-<variant>-bg/-fg`
- * custom properties for the light (`:root`) and dark (`[data-bs-theme="dark"]`) themes. Tests read it
+ * custom properties for the light (`:root`) and dark (`[data-theme="dark"]`) themes. Tests read it
  * by reading that file, so they check the real values instead of a second copy.
  */
 export type PaletteEntry = { bg: string; fg: string };
@@ -31,7 +31,7 @@ export function loadEventPalette(): { light: EventPalette; dark: EventPalette } 
     [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
   cached = {
     light: readVars(blockFor(":root")),
-    dark: readVars(blockFor('\\[data-bs-theme="dark"\\]')),
+    dark: readVars(blockFor('\\[data-theme="dark"\\]')),
   };
   return cached;
 }

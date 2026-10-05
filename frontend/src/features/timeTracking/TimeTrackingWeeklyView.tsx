@@ -85,11 +85,11 @@ export function TimeTrackingWeeklyView({
       : 0;
 
   return (
-    <Card className="tw:overflow-visible tw:shadow-sm">
-      <CardHeader className="tw:border-b tw:border-border">
-        <div className="tw:mb-2 tw:flex tw:flex-col tw:items-stretch tw:justify-between tw:gap-2 tw:sm:flex-row tw:sm:items-center">
-          <span className="tw:font-semibold">
-            <Icon icon={ChartColumnIcon} className="tw:mr-2" />
+    <Card className="overflow-visible shadow-sm">
+      <CardHeader className="border-b border-border">
+        <div className="mb-2 flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
+          <span className="font-semibold">
+            <Icon icon={ChartColumnIcon} className="mr-2" />
             {m.tt_weekly_heading()}
           </span>
           <WeekNavigationButtonGroup
@@ -104,11 +104,11 @@ export function TimeTrackingWeeklyView({
             onSelectorChange={onSelectedDateChange}
           />
         </div>
-        <div className="tw:flex tw:flex-col tw:items-start tw:justify-between tw:gap-2 tw:md:flex-row tw:md:items-center">
-          <div className="tw:text-sm tw:text-muted-foreground">
+        <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
+          <div className="text-sm text-muted-foreground">
             {m.week_label({ week: weekStart.isoWeek(), year: weekStart.isoWeekYear() })}
             {isWeeklyCurrent && (
-              <Badge variant="success" className="tw:ml-2" aria-label={m.tt_current_week_aria()}>
+              <Badge variant="success" className="ml-2" aria-label={m.tt_current_week_aria()}>
                 {m.this_week()}
               </Badge>
             )}

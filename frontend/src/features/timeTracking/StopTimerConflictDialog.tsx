@@ -61,9 +61,9 @@ export function StopTimerConflictDialog({
         <DialogHeader>
           <DialogTitle>{m.tt_stop_conflict_title()}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           <p>{m.tt_stop_conflict_intro()}</p>
-          <Field className="tw:mb-3">
+          <Field className="mb-3">
             <FieldLabel htmlFor="stopTimerConflictTime">{m.tt_stop_time()}</FieldLabel>
             <Input
               id="stopTimerConflictTime"
@@ -85,7 +85,7 @@ export function StopTimerConflictDialog({
               <Alert
                 key={task.id}
                 variant={outcome === "removed" ? "warning" : "default"}
-                className="tw:mb-2"
+                className="mb-2"
               >
                 {outcome === "unchanged"
                   ? m.tt_plan_unchanged({ task: task.text, start: taskStart, stop: taskStop })

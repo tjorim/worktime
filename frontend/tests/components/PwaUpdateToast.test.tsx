@@ -22,12 +22,12 @@ describe("PwaUpdateToast", () => {
   });
 
   it("renders nothing when no update is available", () => {
-    const { container } = render(
+    render(
       <ToastProvider>
         <PwaUpdateToast />
       </ToastProvider>,
     );
-    expect(container.querySelector(".toast")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reload/i })).not.toBeInTheDocument();
   });
 
   it("shows a persistent toast with a reload action when an update is available", async () => {

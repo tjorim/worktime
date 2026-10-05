@@ -211,11 +211,11 @@ export function GanttTaskModal({
         <DialogHeader>
           <DialogTitle>{modalTitle}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           <form
             id="ganttTaskForm"
             noValidate
-            className="tw:flex tw:flex-col tw:gap-4"
+            className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault();
               setWasValidated(true);
@@ -283,7 +283,7 @@ export function GanttTaskModal({
               )}
             </form.Field>
 
-            <div className="tw:flex tw:gap-3">
+            <div className="flex gap-3">
               <form.Field
                 name="start"
                 validators={[
@@ -297,7 +297,7 @@ export function GanttTaskModal({
                 {(field) => {
                   const invalid = wasValidated && field.errors.length > 0;
                   return (
-                    <Field className="tw:min-w-0 tw:flex-1" data-invalid={invalid}>
+                    <Field className="min-w-0 flex-1" data-invalid={invalid}>
                       <FieldLabel htmlFor="ganttTaskStart">{m.gantt_task_start_label()}</FieldLabel>
                       <Input
                         id="ganttTaskStart"
@@ -336,7 +336,7 @@ export function GanttTaskModal({
                 {(field) => {
                   const invalid = wasValidated && field.errors.length > 0;
                   return (
-                    <Field className="tw:min-w-0 tw:flex-1" data-invalid={invalid}>
+                    <Field className="min-w-0 flex-1" data-invalid={invalid}>
                       <FieldLabel htmlFor="ganttTaskEnd">{m.gantt_task_end_label()}</FieldLabel>
                       <Input
                         id="ganttTaskEnd"
@@ -363,17 +363,17 @@ export function GanttTaskModal({
                 <Field>
                   <FieldLabel
                     htmlFor="ganttTaskProgress"
-                    className="tw:flex tw:items-center tw:justify-between"
+                    className="flex items-center justify-between"
                   >
                     <span>{m.gantt_task_progress_label()}</span>
-                    <span className="tw:text-sm tw:text-muted-foreground">{field.value ?? 0}%</span>
+                    <span className="text-sm text-muted-foreground">{field.value ?? 0}%</span>
                   </FieldLabel>
                   <input
                     id="ganttTaskProgress"
                     type="range"
                     min={0}
                     max={100}
-                    className="tw:w-full tw:accent-primary"
+                    className="w-full accent-primary"
                     value={field.value ?? 0}
                     onChange={(event) => field.handleChange(Number(event.target.value))}
                   />
@@ -393,7 +393,7 @@ export function GanttTaskModal({
                 onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
                 classNames={{
                   ...selectClassNames,
-                  control: (state) => `${selectClassNames.control(state)} tw:gap-1`,
+                  control: (state) => `${selectClassNames.control(state)} gap-1`,
                 }}
               />
             </Field>
@@ -414,37 +414,32 @@ export function GanttTaskModal({
           </form>
           {task && (
             <section
-              className="tw:mt-4 tw:border-t tw:border-border tw:pt-4"
+              className="mt-4 border-t border-border pt-4"
               aria-labelledby="ganttLoggedTimeHeading"
             >
-              <div className="tw:mb-2 tw:flex tw:items-center tw:justify-between tw:gap-2">
-                <h3 id="ganttLoggedTimeHeading" className="tw:m-0 tw:text-base tw:font-medium">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 id="ganttLoggedTimeHeading" className="m-0 text-base font-medium">
                   {m.gantt_logged_time_heading()}
                 </h3>
-                <span className="tw:text-sm tw:text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {m.gantt_logged_total({ duration: formatLoggedDuration(totalLoggedMinutes) })}
                 </span>
               </div>
               {loggedEntries.length === 0 ? (
-                <p className="tw:m-0 tw:text-sm tw:text-muted-foreground">
-                  {m.gantt_logged_empty()}
-                </p>
+                <p className="m-0 text-sm text-muted-foreground">{m.gantt_logged_empty()}</p>
               ) : (
-                <ul className="tw:m-0 tw:list-none tw:divide-y tw:divide-border tw:p-0">
+                <ul className="m-0 list-none divide-y divide-border p-0">
                   {loggedEntries.map((entry) => (
-                    <li
-                      key={entry.id}
-                      className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:py-2"
-                    >
-                      <span className="tw:min-w-0">
-                        <span className="tw:block tw:break-words">{entry.text}</span>
-                        <span className="tw:text-sm tw:text-muted-foreground">
+                    <li key={entry.id} className="flex items-center justify-between gap-3 py-2">
+                      <span className="min-w-0">
+                        <span className="block break-words">{entry.text}</span>
+                        <span className="text-sm text-muted-foreground">
                           {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} ·{" "}
                           {dayjs(entry.startTime).format("YYYY-MM-DD")}
                         </span>
                       </span>
-                      <span className="tw:flex tw:shrink-0 tw:items-center tw:gap-2">
-                        <span className="tw:whitespace-nowrap">
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="whitespace-nowrap">
                           {formatLoggedDuration(entry.loggedMinutes)}
                         </span>
                         <Button
@@ -473,7 +468,7 @@ export function GanttTaskModal({
         </div>
         <DialogFooter>
           {task && onDelete && (
-            <Button variant="destructive" onClick={onDelete} className="tw:mr-auto">
+            <Button variant="destructive" onClick={onDelete} className="mr-auto">
               {m.gantt_task_delete_btn()}
             </Button>
           )}

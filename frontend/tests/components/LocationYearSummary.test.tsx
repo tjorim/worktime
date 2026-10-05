@@ -110,8 +110,8 @@ describe("LocationYearSummary", () => {
     expect(bodyRows[0]).toHaveTextContent("Office");
     expect(bodyRows[1]).toHaveTextContent("Other");
     expect(bodyRows[2]).toHaveTextContent("Home");
-    expect(screen.getByRole("columnheader", { name: /^Days/ })).toHaveClass("tw:text-right");
-    expect(screen.getByRole("columnheader", { name: "%" })).toHaveClass("tw:text-right");
+    expect(screen.getByRole("columnheader", { name: /^Days/ })).toHaveClass("text-right");
+    expect(screen.getByRole("columnheader", { name: "%" })).toHaveClass("text-right");
   });
 
   it("sorts rows by country when the country header is clicked", async () => {

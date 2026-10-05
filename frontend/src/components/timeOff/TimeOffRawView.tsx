@@ -53,18 +53,18 @@ export function TimeOffRawView({
     <Accordion>
       <AccordionItem value="raw-editor">
         <AccordionTrigger>
-          <Icon icon={SquareCodeIcon} className="tw:mr-2" />
+          <Icon icon={SquareCodeIcon} className="mr-2" />
           {m.timeoff_raw_editor_heading()}
           {isDirty && (
-            <Badge variant="warning" className="tw:ml-2" title={m.timeoff_unsaved_changes()}>
+            <Badge variant="warning" className="ml-2" title={m.timeoff_unsaved_changes()}>
               •
             </Badge>
           )}
         </AccordionTrigger>
         <AccordionContent>
-          <FieldDescription className="tw:mb-3">{m.timeoff_raw_help()}</FieldDescription>
-          <Field className="tw:mb-3" data-invalid={!!error}>
-            <FieldLabel htmlFor="hdayText" className="tw:sr-only">
+          <FieldDescription className="mb-3">{m.timeoff_raw_help()}</FieldDescription>
+          <Field className="mb-3" data-invalid={!!error}>
+            <FieldLabel htmlFor="hdayText" className="sr-only">
               {m.timeoff_raw_content_label()}
             </FieldLabel>
             <Textarea
@@ -73,7 +73,7 @@ export function TimeOffRawView({
               value={rawText}
               onChange={(event) => onChangeRawText(event.target.value)}
               placeholder={m.timeoff_raw_placeholder()}
-              className="tw:field-sizing-fixed tw:font-mono"
+              className="field-sizing-fixed font-mono"
               aria-describedby={
                 [error ? errorId : null, skippedLines?.length ? skippedId : null]
                   .filter(Boolean)
@@ -83,11 +83,11 @@ export function TimeOffRawView({
             />
             {error && <FieldError id={errorId}>{error}</FieldError>}
             {skippedLines && skippedLines.length > 0 && (
-              <div id={skippedId} className="tw:text-warning" role="alert">
+              <div id={skippedId} className="text-warning" role="alert">
                 <small>
                   <strong>{m.timeoff_hday_skipped_lines_heading()}</strong>
                 </small>
-                <ul className="tw:m-0 tw:font-mono tw:text-sm">
+                <ul className="m-0 font-mono text-sm">
                   {skippedLines.map((line, i) => (
                     <li key={i}>{line}</li>
                   ))}
@@ -95,7 +95,7 @@ export function TimeOffRawView({
               </div>
             )}
           </Field>
-          <div className="tw:flex tw:flex-wrap tw:gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -105,15 +105,15 @@ export function TimeOffRawView({
               aria-label={m.timeoff_copy_raw_aria()}
               title={m.timeoff_copy_raw_aria()}
             >
-              <Icon icon={ClipboardIcon} className="tw:mr-1" />
+              <Icon icon={ClipboardIcon} className="mr-1" />
               {m.timeoff_copy_raw()}
             </Button>
             <Button onClick={onApply}>
-              <Icon icon={CircleCheckIcon} className="tw:mr-1" />
+              <Icon icon={CircleCheckIcon} className="mr-1" />
               {m.timeoff_apply_raw()}
             </Button>
             <Button variant="outline" onClick={onReset} disabled={!isDirty}>
-              <Icon icon={RotateCcwIcon} className="tw:mr-1" />
+              <Icon icon={RotateCcwIcon} className="mr-1" />
               {m.timeoff_reset_btn()}
             </Button>
           </div>

@@ -30,15 +30,15 @@ export function Step5TimeOffSetup({
 }: Step5TimeOffSetupProps) {
   return (
     <>
-      <div className="tw:mb-4 tw:text-center">
-        <Icon icon={CalendarCheckIcon} className="tw:text-5xl tw:text-primary" />
-        <h4 className="tw:mt-3 tw:text-2xl tw:font-medium">{m.wizard_timeoff_heading()}</h4>
-        <p className="tw:text-muted-foreground">{m.wizard_timeoff_subtitle()}</p>
+      <div className="mb-4 text-center">
+        <Icon icon={CalendarCheckIcon} className="text-5xl text-primary" />
+        <h4 className="mt-3 text-2xl font-medium">{m.wizard_timeoff_heading()}</h4>
+        <p className="text-muted-foreground">{m.wizard_timeoff_subtitle()}</p>
       </div>
 
-      <Alert variant="info" className="tw:mt-3">
-        <AlertDescription className="tw:text-current">
-          <ul className="tw:list-disc tw:pl-5">
+      <Alert variant="info" className="mt-3">
+        <AlertDescription className="text-current">
+          <ul className="list-disc pl-5">
             <li>{m.wizard_timeoff_benefit1()}</li>
             <li>{m.wizard_timeoff_benefit2()}</li>
             <li>{m.wizard_timeoff_benefit3()}</li>
@@ -55,7 +55,7 @@ export function Step5TimeOffSetup({
       />
 
       <WizardActions
-        className="tw:mt-4"
+        className="mt-4"
         start={
           <Button variant="outline" size="lg" onClick={onPrev} ref={firstButtonRef}>
             <Icon icon={ArrowLeftIcon} /> {m.back()}

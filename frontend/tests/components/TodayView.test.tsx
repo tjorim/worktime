@@ -119,7 +119,7 @@ describe("TodayView", () => {
       renderWithProviders(<TodayView {...defaultProps} myTeam={1} />);
 
       // The my team should have my-team class on the div element
-      const team1Element = screen.getAllByText("Team 1")[0]?.closest('[class~="tw:ring-primary"]');
+      const team1Element = screen.getAllByText("Team 1")[0]?.closest('[class~="ring-primary"]');
       expect(team1Element).toBeInTheDocument();
     });
 
@@ -137,7 +137,7 @@ describe("TodayView", () => {
       const { container } = renderWithProviders(<TodayView {...defaultProps} />);
 
       expect(container.querySelector("[data-team-carousel]")).toBeInTheDocument();
-      expect(container.querySelector('[class~="tw:sm:grid"]')).toBeInTheDocument();
+      expect(container.querySelector('[class~="sm:grid"]')).toBeInTheDocument();
       expect(screen.getByText("Team 1 of 3")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Show next team" }));

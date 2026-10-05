@@ -4,7 +4,6 @@ import { createRequire } from "node:module";
 import { compile } from "tailwindcss";
 import postcss from "postcss";
 import { getEventColorUtilities, resolveEventPaletteVars } from "@/lib/hday/presentation";
-import * as sass from "sass";
 import { describe, expect, it } from "vitest";
 import { getEventColor, getEventColorClass, getEventTextColor, type EventFlag } from "@/lib/hday";
 import {
@@ -196,8 +195,8 @@ describe("palette wiring", () => {
     }
   });
 
-  it("has a generated .event-* class for every class the helpers can return", () => {
-    const css = sass.compile(path.resolve(__dirname, "../../src/styles/_shifts.scss")).css;
+  it("has an .event-* class for every class the helpers can return", () => {
+    const css = readFileSync(path.resolve(__dirname, "../../src/styles/event-palette.css"), "utf8");
     for (const { flags, eventType } of combos) {
       const className = getEventColorClass(flags, eventType);
       expect(css, className).toContain(`.${className} {`);

@@ -18,10 +18,10 @@ interface SettingsHeadingProps {
 /** Section heading with a decorative leading icon. */
 export function SettingsHeading({ icon, id, aside, children }: SettingsHeadingProps) {
   return (
-    <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+    <div className="mb-3 flex flex-wrap items-center gap-2">
       <h2
         id={id}
-        className="tw:m-0 tw:flex tw:items-center tw:gap-2 tw:text-base tw:font-medium tw:text-muted-foreground"
+        className="m-0 flex items-center gap-2 text-base font-medium text-muted-foreground"
       >
         <Icon icon={icon} />
         {children}
@@ -48,7 +48,7 @@ export function SettingsSection({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("tw:border-b tw:border-border tw:p-4 tw:last:border-b-0", className)}
+      className={cn("border-b border-border p-4 last:border-b-0", className)}
       {...props}
     >
       <SettingsHeading icon={icon} id={headingId}>
@@ -61,16 +61,11 @@ export function SettingsSection({
 
 /** Semantic list whose items are separated by a hairline. */
 export function SettingsList({ className, ...props }: ComponentProps<"ul">) {
-  return (
-    <ul
-      className={cn("tw:m-0 tw:list-none tw:divide-y tw:divide-border tw:p-0", className)}
-      {...props}
-    />
-  );
+  return <ul className={cn("m-0 list-none divide-y divide-border p-0", className)} {...props} />;
 }
 
 export function SettingsItem({ className, ...props }: ComponentProps<"li">) {
-  return <li className={cn("tw:py-3 tw:first:pt-0 tw:last:pb-0", className)} {...props} />;
+  return <li className={cn("py-3 first:pt-0 last:pb-0", className)} {...props} />;
 }
 
 interface SettingsRowTextProps {
@@ -92,13 +87,13 @@ export function SettingsRowText({
   descriptionId,
 }: SettingsRowTextProps) {
   return (
-    <div className="tw:min-w-0">
-      <div id={titleId} className="tw:font-medium">
-        {icon ? <Icon icon={icon} className={cn("tw:mr-2", iconClassName)} /> : null}
+    <div className="min-w-0">
+      <div id={titleId} className="font-medium">
+        {icon ? <Icon icon={icon} className={cn("mr-2", iconClassName)} /> : null}
         {title}
       </div>
       {description ? (
-        <div id={descriptionId} className="tw:text-sm tw:text-muted-foreground">
+        <div id={descriptionId} className="text-sm text-muted-foreground">
           {description}
         </div>
       ) : null}
@@ -115,9 +110,7 @@ interface SettingsRowProps extends SettingsRowTextProps {
 /** A list item with text on the left and a control on the right. */
 export function SettingsRow({ children, className, ...text }: SettingsRowProps) {
   return (
-    <SettingsItem
-      className={cn("tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3", className)}
-    >
+    <SettingsItem className={cn("flex flex-wrap items-center justify-between gap-3", className)}>
       <SettingsRowText {...text} />
       {children}
     </SettingsItem>
@@ -141,16 +134,16 @@ export function SettingsActionRow({
   title,
   description,
   trailingIcon,
-  trailingIconClassName = "tw:text-muted-foreground",
+  trailingIconClassName = "text-muted-foreground",
   className,
   ...props
 }: SettingsActionRowProps) {
   return (
-    <SettingsItem className="tw:py-1">
+    <SettingsItem className="py-1">
       <Button
         variant="ghost"
         className={cn(
-          "tw:h-auto tw:w-full tw:justify-between tw:gap-3 tw:py-2 tw:text-left tw:text-base tw:font-normal tw:whitespace-normal",
+          "h-auto w-full justify-between gap-3 py-2 text-left text-base font-normal whitespace-normal",
           className,
         )}
         {...props}
@@ -182,7 +175,7 @@ export function SettingsSwitchRow({
   const descriptionId = `${id}-description`;
   return (
     <SettingsItem>
-      <Label className="tw:cursor-pointer tw:justify-between tw:gap-3 tw:text-base tw:leading-normal tw:font-normal">
+      <Label className="cursor-pointer justify-between gap-3 text-base leading-normal font-normal">
         <SettingsRowText
           title={title}
           description={description}
@@ -204,10 +197,7 @@ export function SettingsSwitchRow({
 /** Inline loading indicator announced to assistive technology. */
 export function SettingsLoading({ children }: { children: ReactNode }) {
   return (
-    <div
-      role="status"
-      className="tw:flex tw:items-center tw:gap-2 tw:text-sm tw:text-muted-foreground"
-    >
+    <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
       <Spinner size="sm" aria-hidden="true" />
       <span>{children}</span>
     </div>
@@ -216,7 +206,7 @@ export function SettingsLoading({ children }: { children: ReactNode }) {
 
 /** Muted explanatory copy used for hints and empty states. */
 export function SettingsHint({ className, ...props }: ComponentProps<"p">) {
-  return <p className={cn("tw:m-0 tw:text-sm tw:text-muted-foreground", className)} {...props} />;
+  return <p className={cn("m-0 text-sm text-muted-foreground", className)} {...props} />;
 }
 
 /** A secret shown once, selectable in a single click. */
@@ -224,7 +214,7 @@ export function SettingsSecret({ className, ...props }: ComponentProps<"code">) 
   return (
     <code
       className={cn(
-        "tw:block tw:rounded-md tw:bg-muted tw:p-2 tw:break-all tw:text-foreground tw:select-all",
+        "block rounded-md bg-muted p-2 break-all text-foreground select-all",
         className,
       )}
       {...props}

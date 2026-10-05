@@ -206,15 +206,15 @@ export function TemplatesPanel({
   };
 
   return (
-    <div className="tw:rounded-lg tw:border tw:border-border tw:p-3">
+    <div className="rounded-lg border border-border p-3">
       {error && (
-        <Alert variant="destructive" aria-live="polite" className="tw:mb-3">
+        <Alert variant="destructive" aria-live="polite" className="mb-3">
           {error}
         </Alert>
       )}
-      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-        <h5 className="tw:mb-0 tw:text-xl">
-          <Icon icon={ClipboardCheckIcon} className="tw:mr-2" />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h5 className="mb-0 text-xl">
+          <Icon icon={ClipboardCheckIcon} className="mr-2" />
           {m.tt_templates_heading()}
         </h5>
         <Button
@@ -229,9 +229,9 @@ export function TemplatesPanel({
           {m.tt_add_template_btn()}
         </Button>
       </div>
-      <div className="tw:flex tw:flex-col tw:gap-3">
+      <div className="flex flex-col gap-3">
         {templates.length === 0 ? (
-          <div className="tw:rounded-lg tw:border tw:border-border tw:bg-muted">
+          <div className="rounded-lg border border-border bg-muted">
             <EmptyState
               icon={FileTextIcon}
               title={m.tt_no_templates_title()}
@@ -248,10 +248,10 @@ export function TemplatesPanel({
             />
           </div>
         ) : (
-          <div className="tw:divide-y tw:divide-border tw:rounded-lg tw:border tw:border-border">
+          <div className="divide-y divide-border rounded-lg border border-border">
             {templates.map((template) => (
-              <div key={template.id} className="tw:flex tw:flex-wrap tw:gap-2 tw:px-3 tw:py-2">
-                <span className="tw:mr-auto">
+              <div key={template.id} className="flex flex-wrap gap-2 px-3 py-2">
+                <span className="mr-auto">
                   {template.text} ({template.start}-{template.stop}) [
                   {labelNameById[template.label] ?? m.tt_unknown_label()}]
                 </span>

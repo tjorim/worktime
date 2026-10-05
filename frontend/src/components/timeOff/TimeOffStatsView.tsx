@@ -41,15 +41,15 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
   const filteredTypes = useMemo(() => stats.byType.filter((type) => type.days > 0), [stats.byType]);
 
   return (
-    <Card className="tw:mb-3">
-      <CardHeader className="tw:border-b tw:border-border">
-        <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-          <span className="tw:font-semibold">
-            <Icon icon={TrendingUpIcon} className="tw:mr-2" />
+    <Card className="mb-3">
+      <CardHeader className="border-b border-border">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-semibold">
+            <Icon icon={TrendingUpIcon} className="mr-2" />
             {m.timeoff_vacation_stats()}
           </span>
-          <div className="tw:flex tw:items-center tw:gap-2">
-            <small className="tw:text-muted-foreground">{m.timeoff_year_label()}</small>
+          <div className="flex items-center gap-2">
+            <small className="text-muted-foreground">{m.timeoff_year_label()}</small>
             <NativeSelect
               aria-label={m.timeoff_select_year_aria()}
               value={selectedYear}
@@ -65,26 +65,26 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="tw:mb-4 tw:flex tw:items-baseline tw:gap-2">
-          <span className="tw:text-2xl tw:font-bold">{formatVacationValue(stats.totalDays)}</span>
-          <span className="tw:text-sm tw:text-muted-foreground">
+        <div className="mb-4 flex items-baseline gap-2">
+          <span className="text-2xl font-bold">{formatVacationValue(stats.totalDays)}</span>
+          <span className="text-sm text-muted-foreground">
             {m.timeoff_days_logged_in({ year: selectedYear })}
           </span>
         </div>
 
         {filteredTypes.length === 0 ? (
-          <p className="tw:m-0 tw:text-center tw:text-muted-foreground">
+          <p className="m-0 text-center text-muted-foreground">
             {m.timeoff_no_time_off_year({ year: selectedYear })}
           </p>
         ) : (
-          <div className="tw:flex tw:flex-col tw:gap-2">
+          <div className="flex flex-col gap-2">
             {filteredTypes.map((type) => {
               const colors = getEventColorUtilities([type.key]);
               return (
-                <div key={type.key} className="tw:flex tw:items-center tw:justify-between">
-                  <div className="tw:flex tw:items-center tw:gap-2">
+                <div key={type.key} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`tw:inline-flex tw:size-6 tw:items-center tw:justify-center tw:rounded-full ${colors}`}
+                      className={`inline-flex size-6 items-center justify-center rounded-full ${colors}`}
                     >
                       <Icon icon={EVENT_TYPE_ICONS[type.key]} />
                     </span>

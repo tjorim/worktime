@@ -45,9 +45,9 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
       <PopoverHeader>{m.team_legend_heading()}</PopoverHeader>
       <PopoverBody>
         {shifts && shifts.length > 0 && (
-          <div className="tw:mb-2">
-            <strong className="tw:text-sm">{m.calendar_legend_shift_types_heading()}</strong>
-            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mt-1">
+          <div className="mb-2">
+            <strong className="text-sm">{m.calendar_legend_shift_types_heading()}</strong>
+            <div className="flex flex-wrap gap-2 mt-1">
               {shifts.map((shift) => (
                 <ShiftBadge key={shift.code} shift={shift} showEmoji showName size="sm" />
               ))}
@@ -55,11 +55,11 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
           </div>
         )}
         {showEventTypes && (
-          <div className="tw:mb-2">
-            <strong className="tw:text-sm">{m.calendar_legend_event_types_heading()}</strong>
-            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mt-1">
+          <div className="mb-2">
+            <strong className="text-sm">{m.calendar_legend_event_types_heading()}</strong>
+            <div className="flex flex-wrap gap-2 mt-1">
               {eventTypeLegend.map(({ colorClass, label }) => (
-                <span key={colorClass} className="tw:inline-flex tw:items-center tw:gap-1">
+                <span key={colorClass} className="inline-flex items-center gap-1">
                   <span className={clsx("month-calendar-event-color", colorClass)} />
                   <small>{label}</small>
                 </span>
@@ -68,11 +68,11 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
           </div>
         )}
         <div>
-          <strong className="tw:text-sm">{m.calendar_legend_day_indicators_heading()}</strong>
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mt-1">
+          <strong className="text-sm">{m.calendar_legend_day_indicators_heading()}</strong>
+          <div className="flex flex-wrap gap-2 mt-1">
             {indicatorLegend.map(({ emoji, label }) => (
-              <span key={emoji} className="tw:inline-flex tw:items-center tw:gap-1">
-                <span className="calendar-legend-emoji">{emoji}</span>
+              <span key={emoji} className="inline-flex items-center gap-1">
+                <span className="text-sm">{emoji}</span>
                 <small>{label}</small>
               </span>
             ))}
@@ -84,8 +84,8 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
 
   return (
     <DetailsPopover placement="left-end" content={legendPopover}>
-      <Button variant="link" size="sm" className="tw:text-muted-foreground tw:p-0 tw:no-underline">
-        <Icon icon={InfoIcon} className="tw:mr-1" />
+      <Button variant="link" size="sm" className="text-muted-foreground p-0 no-underline">
+        <Icon icon={InfoIcon} className="mr-1" />
         {m.calendar_legend_btn_label()}
       </Button>
     </DetailsPopover>

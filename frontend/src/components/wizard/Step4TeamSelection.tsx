@@ -23,18 +23,16 @@ export function Step4TeamSelection({
 }: Step4TeamSelectionProps) {
   return (
     <>
-      <div className="tw:mb-4 tw:text-center">
-        <h5 className="tw:mb-3 tw:text-xl tw:font-medium">{m.wizard_team_heading()}</h5>
-        <p className="tw:text-muted-foreground">{m.wizard_team_subtitle()}</p>
+      <div className="mb-4 text-center">
+        <h5 className="mb-3 text-xl font-medium">{m.wizard_team_heading()}</h5>
+        <p className="text-muted-foreground">{m.wizard_team_subtitle()}</p>
       </div>
 
-      <div className="tw:mb-4">
-        <h6 className="tw:mb-3 tw:text-base tw:font-medium">{m.wizard_team_option1_heading()}</h6>
-        <p className="tw:mb-3 tw:text-sm tw:text-muted-foreground">
-          {m.wizard_team_option1_desc()}
-        </p>
+      <div className="mb-4">
+        <h6 className="mb-3 text-base font-medium">{m.wizard_team_option1_heading()}</h6>
+        <p className="mb-3 text-sm text-muted-foreground">{m.wizard_team_option1_desc()}</p>
         <div
-          className="tw:grid tw:grid-cols-2 tw:gap-2 tw:sm:grid-cols-3"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           aria-label={m.wizard_team_select_aria()}
           role="group"
         >
@@ -56,15 +54,11 @@ export function Step4TeamSelection({
       {/* Only show Browse All Teams option if there are multiple teams */}
       {teams.length > 1 && (
         <>
-          <Separator className="tw:my-4" />
+          <Separator className="my-4" />
 
-          <div className="tw:flex tw:flex-col tw:items-center tw:text-center">
-            <h6 className="tw:mb-2 tw:text-base tw:font-medium">
-              {m.wizard_team_option2_heading()}
-            </h6>
-            <p className="tw:mb-3 tw:text-sm tw:text-muted-foreground">
-              {m.wizard_team_option2_desc()}
-            </p>
+          <div className="flex flex-col items-center text-center">
+            <h6 className="mb-2 text-base font-medium">{m.wizard_team_option2_heading()}</h6>
+            <p className="mb-3 text-sm text-muted-foreground">{m.wizard_team_option2_desc()}</p>
             <Button variant="outline" size="lg" onClick={onSkip}>
               <Icon icon={EyeIcon} />
               {m.wizard_team_browse_btn()}
@@ -73,7 +67,7 @@ export function Step4TeamSelection({
         </>
       )}
 
-      <div className="tw:mt-3 tw:flex tw:justify-start">
+      <div className="mt-3 flex justify-start">
         <Button variant="outline" size="sm" onClick={onPrev}>
           <Icon icon={isChangeFlow ? XIcon : ArrowLeftIcon} />
           {isChangeFlow ? m.cancel() : m.back()}

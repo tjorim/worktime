@@ -1,7 +1,7 @@
-@import "@schedule-x/theme-default/dist/index.css" layer(calendar);
+@import "@schedule-x/theme-default/dist/index.css" layer(vendor);
 
-@layer calendar {
-  .unified-calendar {
+@layer vendor {
+  [data-slot="unified-calendar"] {
     --sx-color-primary: var(--wt-theme-primary);
     --sx-color-on-primary: var(--wt-theme-primary-foreground);
     --sx-color-primary-container: var(--wt-theme-accent);
@@ -29,7 +29,7 @@
     --sx-color-surface-tint: var(--wt-theme-primary);
   }
 
-  .unified-calendar .sx-react-calendar-wrapper {
+  [data-slot="unified-calendar"] .sx-react-calendar-wrapper {
     min-height: 42rem;
   }
 }

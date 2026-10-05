@@ -25,15 +25,15 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon, title, description, ctaButton }: EmptyStateProps) {
   return (
-    <div className="tw:text-center tw:py-6">
-      <div className="tw:mb-4">
-        <Icon icon={icon} className="tw:size-12 tw:text-muted-foreground" />
+    <div className="text-center py-6">
+      <div className="mb-4">
+        <Icon icon={icon} className="size-12 text-muted-foreground" />
       </div>
-      <h6 className="tw:text-muted-foreground tw:mb-2">{title}</h6>
-      <p className="tw:text-muted-foreground tw:text-sm tw:mb-4">{description}</p>
+      <h6 className="text-muted-foreground mb-2">{title}</h6>
+      <p className="text-muted-foreground text-sm mb-4">{description}</p>
       {ctaButton && (
         <Button size="sm" variant={ctaButton.variant} onClick={ctaButton.onClick}>
-          <Icon icon={ctaButton.icon ?? CirclePlusIcon} className="tw:me-1" />
+          <Icon icon={ctaButton.icon ?? CirclePlusIcon} className="me-1" />
           {ctaButton.label}
         </Button>
       )}

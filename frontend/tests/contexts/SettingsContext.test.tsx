@@ -12,7 +12,7 @@ describe("SettingsContext unified user state", () => {
 
   afterEach(() => {
     window.localStorage.clear();
-    document.body.removeAttribute("data-bs-theme");
+    document.body.removeAttribute("data-theme");
     vi.restoreAllMocks();
   });
 
@@ -174,7 +174,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.settings.theme).toBe("light");
 
     // SettingsContext should not apply theme to DOM - that's App.tsx responsibility
-    expect(document.documentElement.getAttribute("data-bs-theme")).toBeNull();
+    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
 
   describe("Device-local settings (not synced across devices)", () => {

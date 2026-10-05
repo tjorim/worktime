@@ -66,17 +66,17 @@ type DailyTaskListProps = {
 function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
   return (
     <div
-      className="tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-1"
+      className="flex items-center gap-2 px-3 py-1"
       role="separator"
       aria-label={`Current time: ${liveTime.format("HH:mm")}`}
       data-testid="now-indicator"
     >
-      <div className="tw:grow tw:border-t-2 tw:border-destructive" />
-      <Badge variant="destructive" className="tw:shrink-0">
-        <Icon icon={ClockIcon} className="tw:mr-1" />
+      <div className="grow border-t-2 border-destructive" />
+      <Badge variant="destructive" className="shrink-0">
+        <Icon icon={ClockIcon} className="mr-1" />
         {liveTime.format("HH:mm")}
       </Badge>
-      <div className="tw:grow tw:border-t-2 tw:border-destructive" />
+      <div className="grow border-t-2 border-destructive" />
     </div>
   );
 }
@@ -97,19 +97,19 @@ function GapIndicator({
     : m.tt_gap_label({ minutes: durationMinutes });
   return (
     <div
-      className="tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-1"
+      className="flex items-center gap-2 px-3 py-1"
       role="separator"
       aria-label={ariaLabel}
       data-testid="gap-indicator"
     >
-      <div className="tw:grow tw:border-0 tw:border-t tw:border-dashed tw:border-warning" />
+      <div className="grow border-0 border-t border-dashed border-warning" />
       <Hint placement="top" content={<div id={tooltipId}>{ariaLabel}</div>}>
-        <Badge variant="warning" className="tw:shrink-0" tabIndex={0}>
-          <Icon icon={HourglassIcon} className="tw:mr-1" />
+        <Badge variant="warning" className="shrink-0" tabIndex={0}>
+          <Icon icon={HourglassIcon} className="mr-1" />
           {label}
         </Badge>
       </Hint>
-      <div className="tw:grow tw:border-0 tw:border-t tw:border-dashed tw:border-warning" />
+      <div className="grow border-0 border-t border-dashed border-warning" />
     </div>
   );
 }
@@ -517,7 +517,7 @@ export function DailyTaskList({
       {tasks.length === 0 ? null : (
         <div
           data-slot="task-list"
-          className="tw:mt-3 tw:divide-y tw:divide-border tw:rounded-lg tw:border tw:border-border"
+          className="mt-3 divide-y divide-border rounded-lg border border-border"
         >
           {nowPosition?.type === "separator" && nowPosition.insertBeforeIndex === 0 && liveTime && (
             <>
@@ -552,19 +552,19 @@ export function DailyTaskList({
                   data-slot="task-row"
                   onContextMenu={(e) => handleContextMenu(e, task.id)}
                   className={cn(
-                    "tw:px-3 tw:py-2",
-                    isPlanned && "tw:bg-muted",
-                    isCurrentTask && "tw:border-l-3 tw:border-l-destructive",
+                    "px-3 py-2",
+                    isPlanned && "bg-muted",
+                    isCurrentTask && "border-l-3 border-l-destructive",
                     // Dashed edge on a pseudo-element: `border-dashed` on the row would also dash
                     // its divider, and without preflight it needs `border-0` that removes the divider
                     !isCurrentTask &&
                       isPlanned &&
-                      "tw:relative tw:before:absolute tw:before:inset-y-0 tw:before:left-0 tw:before:border-0 tw:before:border-l-3 tw:before:border-dashed tw:before:border-l-muted-foreground",
+                      "relative before:absolute before:inset-y-0 before:left-0 before:border-0 before:border-l-3 before:border-dashed before:border-l-muted-foreground",
                   )}
                 >
-                  <div className="tw:flex tw:items-start tw:justify-between tw:gap-2">
-                    <div className="tw:grow">
-                      <div className="tw:font-semibold">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="grow">
+                      <div className="font-semibold">
                         {task.text}{" "}
                         <LabelChip color={labelColor}>
                           {labelNameById[task.label] ?? m.tt_unknown_label()}
@@ -572,16 +572,16 @@ export function DailyTaskList({
                         {isCurrentTask && (
                           <Badge
                             variant="destructive"
-                            className="tw:ml-2"
+                            className="ml-2"
                             aria-label={m.tt_now_aria()}
                           >
-                            <Icon icon={ClockIcon} className="tw:mr-1" />
+                            <Icon icon={ClockIcon} className="mr-1" />
                             {m.tt_now()}
                           </Badge>
                         )}
                         {isPlanned && (
-                          <Badge variant="secondary" className="tw:ml-2">
-                            <Icon icon={CalendarClockIcon} className="tw:mr-1" />
+                          <Badge variant="secondary" className="ml-2">
+                            <Icon icon={CalendarClockIcon} className="mr-1" />
                             {m.tt_planned_status()}
                           </Badge>
                         )}
@@ -596,12 +596,11 @@ export function DailyTaskList({
                           >
                             <Badge
                               variant="secondary"
-                              className="tw:ml-2"
+                              className="ml-2"
                               aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
                               tabIndex={0}
                             >
-                              <Icon icon={CoffeeIcon} className="tw:mr-1" />-
-                              {BREAK_DURATION_MINUTES}
+                              <Icon icon={CoffeeIcon} className="mr-1" />-{BREAK_DURATION_MINUTES}
                               min
                             </Badge>
                           </Hint>
@@ -617,24 +616,24 @@ export function DailyTaskList({
                           >
                             <Badge
                               variant="info"
-                              className="tw:ml-2"
+                              className="ml-2"
                               aria-label={m.tt_gantt_task_badge({ name: ganttTaskName })}
                               tabIndex={0}
                             >
-                              <Icon icon={ChartGanttIcon} className="tw:mr-1" />
+                              <Icon icon={ChartGanttIcon} className="mr-1" />
                               {ganttTaskName}
                             </Badge>
                           </Hint>
                         )}
                       </div>
-                      <div className="tw:text-sm tw:text-muted-foreground">
+                      <div className="text-sm text-muted-foreground">
                         {isPlanned && liveTime
                           ? formatPlannedStart(dayjs(task.startTime), liveTime)
                           : `${m.form_start()}: ${startDisplay}`}
                         {` · ${m.form_stop()}: ${stopDisplay}`}
                       </div>
                     </div>
-                    <div className="tw:hidden tw:shrink-0 tw:gap-1 tw:md:flex">
+                    <div className="hidden shrink-0 gap-1 md:flex">
                       <Button
                         variant="outline"
                         size="sm"

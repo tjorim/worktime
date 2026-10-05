@@ -11,7 +11,7 @@ export const CALENDAR_COLORS = {
 } as const;
 
 /**
- * Mirrors the --wt-shift-* custom properties in styles/_variables.scss so the
+ * Mirrors the --wt-shift-* custom properties in styles/tokens.css so the
  * Unified Calendar's shift blocks match the shift color language used
  * everywhere else (month calendar, shift timeline, schedule table). Schedule-X
  * bakes light/dark colors into its own theme config rather than resolving CSS

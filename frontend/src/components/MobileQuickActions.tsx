@@ -156,7 +156,7 @@ export function MobileQuickActions({
   return (
     <>
       <Button
-        className="mobile-quick-actions tw:md:hidden tw:rounded-full tw:shadow-lg tw:size-13"
+        className="mobile-quick-actions md:hidden rounded-full shadow-lg size-13"
         aria-label={m.mobile_quick_actions_open()}
         aria-haspopup="dialog"
         aria-expanded={show}
@@ -171,19 +171,19 @@ export function MobileQuickActions({
           if (!open) (() => setShow(false))();
         }}
       >
-        <DialogContent className="tw:md:hidden">
+        <DialogContent className="md:hidden">
           <DialogHeader>
             <DialogTitle>{m.mobile_quick_actions_title()}</DialogTitle>
           </DialogHeader>
-          <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4 tw:grid tw:gap-3 tw:pt-2">
+          <div className="min-h-0 overflow-y-auto p-4 grid gap-3 pt-2">
             {canTrackTime && (
-              <div className="tw:grid tw:gap-2">
+              <div className="grid gap-2">
                 {runningTask && (
-                  <div className="tw:rounded tw:bg-muted tw:p-2 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-                    <Icon icon={CircleIcon} className="tw:text-danger-text" fill="currentColor" />
-                    <div className="tw:min-w-0 tw:flex-1">
-                      <div className="tw:font-semibold tw:truncate">{runningTask.text}</div>
-                      <div className="tw:text-sm tw:text-muted-foreground">
+                  <div className="rounded bg-muted p-2 flex flex-wrap items-center gap-2">
+                    <Icon icon={CircleIcon} className="text-danger-text" fill="currentColor" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate">{runningTask.text}</div>
+                      <div className="text-sm text-muted-foreground">
                         {labels.find((label) => label.id === runningTask.label)?.name ??
                           m.tt_unknown_label()}
                         {" · "}
@@ -207,16 +207,16 @@ export function MobileQuickActions({
                 {timerError && (
                   <div
                     role="alert"
-                    className="tw:rounded tw:bg-destructive/10 tw:text-danger-text tw:p-2"
+                    className="rounded bg-destructive/10 text-danger-text p-2"
                     aria-live="polite"
                   >
                     {timerError}
                   </div>
                 )}
                 {(!runningTask || isSwitching) && (
-                  <div className="tw:grid tw:grid-cols-2 tw:gap-2">
-                    <div className="tw:min-w-0">
-                      <label className="tw:sr-only" htmlFor="mobileQuickTask">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="min-w-0">
+                      <label className="sr-only" htmlFor="mobileQuickTask">
                         {m.form_task()}
                       </label>
                       <Input
@@ -227,8 +227,8 @@ export function MobileQuickActions({
                         onChange={(event) => setTaskText(event.target.value)}
                       />
                     </div>
-                    <div className="tw:min-w-0">
-                      <label className="tw:sr-only" htmlFor="mobileQuickLabel">
+                    <div className="min-w-0">
+                      <label className="sr-only" htmlFor="mobileQuickLabel">
                         {m.form_label()}
                       </label>
                       <NativeSelect
@@ -255,22 +255,22 @@ export function MobileQuickActions({
                     disabled={Boolean((!runningTask && taskAtCurrentTime) || !labelId)}
                     onClick={() => void handleStartTimer()}
                   >
-                    <Icon icon={PlayIcon} className="tw:mr-1" />
+                    <Icon icon={PlayIcon} className="mr-1" />
                     {runningTask ? m.mobile_quick_actions_switch_now() : m.tt_start_now()}
                   </Button>
                 )}
               </div>
             )}
-            <div className="tw:flex tw:justify-between tw:border-t tw:border-border tw:pt-2 tw:gap-1">
+            <div className="flex justify-between border-t border-border pt-2 gap-1">
               {canTrackTime && (
                 <Button
                   variant="link"
                   size="sm"
-                  className="tw:flex-1 tw:px-1"
+                  className="flex-1 px-1"
                   aria-label={m.mobile_quick_actions_open_time_tracking()}
                   onClick={() => runAction(onTrackTime)}
                 >
-                  <Icon icon={TimerIcon} className="tw:mr-1" />
+                  <Icon icon={TimerIcon} className="mr-1" />
                   {m.mobile_quick_actions_time()}
                 </Button>
               )}
@@ -278,22 +278,22 @@ export function MobileQuickActions({
                 <Button
                   variant="link"
                   size="sm"
-                  className="tw:flex-1 tw:px-1"
+                  className="flex-1 px-1"
                   aria-label={m.mobile_quick_actions_add_time_off()}
                   onClick={() => runAction(onAddTimeOff)}
                 >
-                  <Icon icon={PlaneIcon} className="tw:mr-1" />
+                  <Icon icon={PlaneIcon} className="mr-1" />
                   {m.mobile_quick_actions_time_off()}
                 </Button>
               )}
               <Button
                 variant="link"
                 size="sm"
-                className="tw:flex-1 tw:px-1"
+                className="flex-1 px-1"
                 aria-label={m.mobile_quick_actions_open_calendar()}
                 onClick={() => runAction(onOpenCalendar)}
               >
-                <Icon icon={CalendarIcon} className="tw:mr-1" />
+                <Icon icon={CalendarIcon} className="mr-1" />
                 {m.mobile_quick_actions_calendar()}
               </Button>
             </div>

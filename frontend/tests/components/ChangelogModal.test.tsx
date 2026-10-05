@@ -162,12 +162,12 @@ describe("ChangelogModal", () => {
 
       // Check badge colors through semantic token classes
       const currentBadge = screen.getByText("Current");
-      expect(currentBadge).toHaveClass("tw:bg-primary");
+      expect(currentBadge).toHaveClass("bg-primary");
 
       const releasedBadges = screen.getAllByText("Released");
       expect(releasedBadges.length).toBeGreaterThan(0);
       releasedBadges.forEach((badge) => {
-        expect(badge).toHaveClass("tw:bg-success-bg");
+        expect(badge).toHaveClass("bg-success-bg");
       });
     });
   });

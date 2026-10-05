@@ -95,7 +95,7 @@ interface ChoiceGroupProps<T extends string> {
 /** Row of toggle buttons where exactly one option is pressed. */
 function ChoiceGroup<T extends string>({ label, value, onChange, options }: ChoiceGroupProps<T>) {
   return (
-    <div role="group" className="tw:flex tw:flex-wrap tw:gap-1" aria-label={label}>
+    <div role="group" className="flex flex-wrap gap-1" aria-label={label}>
       {options.map((option) => (
         <Button
           key={option.value}
@@ -104,7 +104,7 @@ function ChoiceGroup<T extends string>({ label, value, onChange, options }: Choi
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
         >
-          {option.icon ? <Icon icon={option.icon} className="tw:mr-1" /> : null}
+          {option.icon ? <Icon icon={option.icon} className="mr-1" /> : null}
           {option.label}
         </Button>
       ))}

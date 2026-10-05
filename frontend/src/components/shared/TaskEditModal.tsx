@@ -89,7 +89,7 @@ export function TaskEditModal({
         <DialogHeader>
           <DialogTitle>{m.tt_edit_task_title()}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           {error && (
             <Alert variant="destructive" aria-live="polite">
               {error}
@@ -107,7 +107,7 @@ export function TaskEditModal({
               onSubmit();
             }}
           >
-            <Field className="tw:mb-4">
+            <Field className="mb-4">
               <FieldLabel htmlFor="editTaskName">{m.form_task()}</FieldLabel>
               <Input
                 id="editTaskName"
@@ -115,7 +115,7 @@ export function TaskEditModal({
                 onChange={(event) => onChange({ ...value, text: event.target.value })}
               />
             </Field>
-            <Field className="tw:mb-4">
+            <Field className="mb-4">
               <FieldLabel htmlFor="editTaskLabel">{m.form_label()}</FieldLabel>
               <DialogSelect<LabelOption>
                 unstyled
@@ -130,7 +130,7 @@ export function TaskEditModal({
               />
             </Field>
             {showGanttPicker && (
-              <Field className="tw:mb-4">
+              <Field className="mb-4">
                 <FieldLabel htmlFor="editTaskGanttTask">{m.tt_gantt_task()}</FieldLabel>
                 <DialogSelect<GanttTaskOption>
                   unstyled
@@ -145,8 +145,8 @@ export function TaskEditModal({
                 />
               </Field>
             )}
-            <div className="tw:flex tw:gap-4 tw:mb-4">
-              <Field className="tw:flex-1">
+            <div className="flex gap-4 mb-4">
+              <Field className="flex-1">
                 <FieldLabel htmlFor="editTaskStart">{m.form_start()}</FieldLabel>
                 <Input
                   id="editTaskStart"
@@ -155,7 +155,7 @@ export function TaskEditModal({
                   onChange={(event) => onChange({ ...value, start: event.target.value })}
                 />
               </Field>
-              <Field className="tw:flex-1">
+              <Field className="flex-1">
                 <FieldLabel htmlFor="editTaskStop">{m.form_stop()}</FieldLabel>
                 <Input
                   id="editTaskStop"
@@ -163,7 +163,7 @@ export function TaskEditModal({
                   value={value.stop}
                   onChange={(event) => onChange({ ...value, stop: event.target.value })}
                 />
-                <FieldDescription className="tw:text-muted-foreground">
+                <FieldDescription className="text-muted-foreground">
                   {m.tt_stop_empty_hint()}
                 </FieldDescription>
               </Field>
@@ -180,7 +180,7 @@ export function TaskEditModal({
               </FieldLabel>
             </Field>
             {isTooShortForBreak && !value.includesBreak && (
-              <FieldDescription className="tw:text-danger-text" data-testid="break-too-short-help">
+              <FieldDescription className="text-danger-text" data-testid="break-too-short-help">
                 {m.tt_task_too_short_break()}
               </FieldDescription>
             )}

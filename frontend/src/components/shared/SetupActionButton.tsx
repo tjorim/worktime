@@ -57,7 +57,7 @@ export function SetupActionButton({
         onClick={onChangeSchedule}
         title={m.setup_btn_select_schedule_title()}
       >
-        <Icon icon={buttonIcon} className="tw:me-1" />
+        <Icon icon={buttonIcon} className="me-1" />
         {buttonText}
       </Button>
     );
@@ -72,7 +72,7 @@ export function SetupActionButton({
         onClick={onChangeTeam}
         title={m.setup_btn_select_team_title()}
       >
-        <Icon icon={buttonIcon} className="tw:me-1" />
+        <Icon icon={buttonIcon} className="me-1" />
         {buttonText}
       </Button>
     );

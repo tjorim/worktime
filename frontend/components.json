@@ -9,7 +9,7 @@
     "css": "src/styles/tailwind.css",
     "baseColor": "neutral",
     "cssVariables": true,
-    "prefix": "tw"
+    "prefix": ""
   },
   "aliases": {
     "components": "@/components",

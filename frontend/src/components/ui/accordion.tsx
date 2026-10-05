@@ -6,7 +6,7 @@ function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   return (
     <AccordionPrimitive.Root
       data-slot="accordion"
-      className={cn("tw:flex tw:w-full tw:flex-col", className)}
+      className={cn("flex w-full flex-col", className)}
       {...props}
     />
   );
@@ -16,7 +16,7 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("tw:border-border tw:not-last:border-b", className)}
+      className={cn("border-border not-last:border-b", className)}
       {...props}
     />
   );
@@ -24,11 +24,11 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
 
 function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.Trigger.Props) {
   return (
-    <AccordionPrimitive.Header className="tw:flex">
+    <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "tw:group/accordion-trigger tw:bg-transparent tw:text-foreground tw:relative tw:flex tw:flex-1 tw:items-start tw:justify-between tw:rounded-lg tw:border tw:border-transparent tw:py-2.5 tw:text-left tw:text-sm tw:font-medium tw:transition-all tw:outline-none tw:hover:underline tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:focus-visible:after:border-ring tw:aria-disabled:pointer-events-none tw:aria-disabled:opacity-50 tw:**:data-[slot=accordion-trigger-icon]:ml-auto tw:**:data-[slot=accordion-trigger-icon]:size-4 tw:**:data-[slot=accordion-trigger-icon]:text-muted-foreground",
+          "group/accordion-trigger bg-transparent text-foreground relative flex flex-1 items-start justify-between rounded-lg border border-transparent py-2.5 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 **:data-[slot=accordion-trigger-icon]:text-muted-foreground",
           className,
         )}
         {...props}
@@ -36,11 +36,11 @@ function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.
         {children}
         <ChevronDownIcon
           data-slot="accordion-trigger-icon"
-          className="tw:pointer-events-none tw:shrink-0 tw:group-aria-expanded/accordion-trigger:hidden"
+          className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
         />
         <ChevronUpIcon
           data-slot="accordion-trigger-icon"
-          className="tw:pointer-events-none tw:hidden tw:shrink-0 tw:group-aria-expanded/accordion-trigger:inline"
+          className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
         />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
@@ -51,12 +51,12 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className="tw:overflow-hidden tw:text-sm"
+      className="overflow-hidden text-sm"
       {...props}
     >
       <div
         className={cn(
-          "tw:pt-0 tw:pb-2.5 tw:[&_a]:underline tw:[&_a]:underline-offset-3 tw:[&_a]:hover:text-foreground tw:[&_p:not(:last-child)]:mb-4",
+          "pt-0 pb-2.5 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
           className,
         )}
       >

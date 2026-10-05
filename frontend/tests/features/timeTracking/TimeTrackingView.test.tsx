@@ -221,8 +221,8 @@ describe("TimeTrackingView", () => {
     it("should have flex layout with gap", () => {
       const { container } = renderWithSettings();
 
-      const viewContainer = container.querySelector(".time-tracking-view");
-      expect(viewContainer).toHaveClass("tw:flex", "tw:flex-col", "tw:gap-3");
+      const viewContainer = container.querySelector('[data-slot="time-tracking-view"]');
+      expect(viewContainer).toHaveClass("flex", "flex-col", "gap-3");
     });
 
     it("should render buttons in a ButtonGroup", () => {

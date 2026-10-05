@@ -60,9 +60,8 @@ type GapSegment = {
 
 type RenderSegment = TaskSegment | GapSegment;
 
-const SEGMENT_BASE =
-  "tw:flex tw:h-full tw:shrink-0 tw:items-center tw:justify-center tw:overflow-hidden tw:w-(--seg-w)";
-const SEGMENT_LABEL = "tw:truncate tw:px-1 tw:text-xs tw:font-semibold";
+const SEGMENT_BASE = "flex h-full shrink-0 items-center justify-center overflow-hidden w-(--seg-w)";
+const SEGMENT_LABEL = "truncate px-1 text-xs font-semibold";
 
 type SegmentProps = {
   width: number;
@@ -99,9 +98,9 @@ function Segment({
       data-planned={planned ? "true" : undefined}
       className={cn(
         SEGMENT_BASE,
-        color ? "tw:bg-label tw:text-label-foreground" : "tw:bg-secondary",
-        planned && "tw:progress-stripes",
-        dim && "tw:opacity-30",
+        color ? "bg-label text-label-foreground" : "bg-secondary",
+        planned && "progress-stripes",
+        dim && "opacity-30",
       )}
       style={
         {
@@ -285,9 +284,9 @@ export function TimelineProgressBar({
   }, [isToday, liveTime, tasks, sanitizedTargetHours, normalizationFactor]);
 
   return (
-    <div className="tw:my-3">
-      <div className="tw:relative">
-        <div className="tw:flex tw:h-4 tw:w-full tw:overflow-hidden tw:rounded-full tw:bg-muted">
+    <div className="my-3">
+      <div className="relative">
+        <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
           {renderSegments.map((rs) => {
             if (rs.type === "gap") {
               const minutes = Math.round(rs.durationHours * 60);
@@ -395,7 +394,7 @@ export function TimelineProgressBar({
 
         {nowPct !== null && liveTime && (
           <div
-            className="tw:pointer-events-none tw:absolute tw:top-0 tw:bottom-0 tw:left-(--now-pos) tw:w-0.5 tw:-translate-x-1/2 tw:bg-destructive"
+            className="pointer-events-none absolute top-0 bottom-0 left-(--now-pos) w-0.5 -translate-x-1/2 bg-destructive"
             style={{ "--now-pos": percent(nowPct) } as CSSProperties}
             data-testid="now-line"
             aria-label={`Current time: ${liveTime.format("HH:mm")}`}
@@ -403,12 +402,12 @@ export function TimelineProgressBar({
         )}
       </div>
 
-      <div className="tw:mt-2 tw:flex tw:items-center tw:justify-between tw:text-muted-foreground">
+      <div className="mt-2 flex items-center justify-between text-muted-foreground">
         <span data-testid="timeline-total-duration">
           {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
         </span>
         {plannedHours > 0 && (
-          <span className="tw:text-sm" data-testid="timeline-planned-duration">
+          <span className="text-sm" data-testid="timeline-planned-duration">
             {m.tt_planned_total({ hours: plannedHours.toFixed(2) })}
           </span>
         )}

@@ -87,13 +87,13 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       <DialogContent aria-labelledby={titleId}>
         <DialogHeader>
           <DialogTitle id={titleId}>
-            <Icon icon={DownloadIcon} className="tw:me-2" />
+            <Icon icon={DownloadIcon} className="me-2" />
             {m.backup_app_data_label()}
           </DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-          <p className="tw:font-medium tw:mb-2">{m.backup_include_label()}</p>
-          <div className="tw:flex tw:flex-col tw:gap-2">
+        <div className="min-h-0 overflow-y-auto p-4">
+          <p className="font-medium mb-2">{m.backup_include_label()}</p>
+          <div className="flex flex-col gap-2">
             <Field orientation="horizontal">
               <Checkbox
                 id="backup-user-state"
@@ -163,7 +163,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             {m.cancel()}
           </Button>
           <Button variant="default" onClick={handleExport} disabled={nothingSelected}>
-            <Icon icon={DownloadIcon} className="tw:me-1" />
+            <Icon icon={DownloadIcon} className="me-1" />
             {m.backup_export_btn()}
           </Button>
         </DialogFooter>

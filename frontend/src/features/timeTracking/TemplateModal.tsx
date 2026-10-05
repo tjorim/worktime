@@ -65,10 +65,10 @@ export function TemplateModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+        <div className="min-h-0 overflow-y-auto p-4">
           <form
             id="templateForm"
-            className="tw:flex tw:flex-col tw:gap-3"
+            className="flex flex-col gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               if (isSubmitDisabled) {
@@ -124,10 +124,10 @@ export function TemplateModal({
                 </Field>
               )}
             </form.Field>
-            <div className="tw:flex tw:gap-3">
+            <div className="flex gap-3">
               <form.Field name="start">
                 {(field) => (
-                  <Field className="tw:flex-1">
+                  <Field className="flex-1">
                     <FieldLabel htmlFor="templateStart">{m.form_start()}</FieldLabel>
                     <Input
                       id="templateStart"
@@ -142,7 +142,7 @@ export function TemplateModal({
               </form.Field>
               <form.Field name="stop">
                 {(field) => (
-                  <Field className="tw:flex-1">
+                  <Field className="flex-1">
                     <FieldLabel htmlFor="templateStop">{m.form_stop()}</FieldLabel>
                     <Input
                       id="templateStop"

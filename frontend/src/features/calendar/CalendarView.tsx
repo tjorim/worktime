@@ -222,13 +222,13 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
   useEffect(() => {
     if (!calendarApp) return;
     const updateTheme = () => {
-      calendarApp.setTheme(document.documentElement.dataset.bsTheme === "dark" ? "dark" : "light");
+      calendarApp.setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
     };
     updateTheme();
     const observer = new MutationObserver(updateTheme);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-bs-theme"],
+      attributeFilter: ["data-theme"],
     });
     return () => observer.disconnect();
   }, [calendarApp]);
@@ -271,43 +271,47 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
   };
 
   return (
-    <section className="unified-calendar tw:px-0 tw:py-4 tw:sm:px-4" aria-label="Unified calendar">
+    <section
+      data-slot="unified-calendar"
+      className="px-0 py-4 sm:px-4"
+      aria-label="Unified calendar"
+    >
       {showHelp ? (
-        <Alert variant="info" className="tw:py-2">
+        <Alert variant="info" className="py-2">
           {m.unified_calendar_help()}
           <Button variant="ghost" size="sm" onClick={dismissHelp} aria-label={m.close()}>
             {m.close()}
           </Button>
         </Alert>
       ) : (
-        <div className="tw:flex tw:justify-end tw:mb-2">
+        <div className="flex justify-end mb-2">
           <Button
             variant="link"
             size="sm"
-            className="tw:text-muted-foreground tw:p-0"
+            className="text-muted-foreground p-0"
             onClick={restoreHelp}
           >
-            <Icon icon={InfoIcon} className="tw:mr-1" />
+            <Icon icon={InfoIcon} className="mr-1" />
             {m.unified_calendar_show_help()}
           </Button>
         </div>
       )}
       {effectiveTeam === null && (
-        <Alert variant="warning" className="tw:flex tw:items-center tw:gap-2 tw:py-2">
+        <Alert variant="warning" className="flex items-center gap-2 py-2">
           <Icon icon={TriangleAlertIcon} />
           <span>
             No roster configured — no shifts will appear.
             {onChangeSchedule && (
               <>
                 {" "}
-                <Button variant="link" className="tw:p-0" onClick={onChangeSchedule}>
+                <Button variant="link" className="p-0" onClick={onChangeSchedule}>
                   Pick a schedule
                 </Button>
                 {onChangeTeam && " or "}
               </>
             )}
             {onChangeTeam && (
-              <Button variant="link" className="tw:p-0" onClick={onChangeTeam}>
+              <Button variant="link" className="p-0" onClick={onChangeTeam}>
                 Pick a team
               </Button>
             )}
@@ -336,7 +340,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
           <DialogHeader>
             <DialogTitle>Add time-tracking task</DialogTitle>
           </DialogHeader>
-          <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
+          <div className="min-h-0 overflow-y-auto p-4">
             <TaskEntryForm
               labels={labels}
               text={addText}
@@ -371,8 +375,8 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
           <DialogHeader>
             <DialogTitle>Time-off details</DialogTitle>
           </DialogHeader>
-          <div className="tw:min-h-0 tw:overflow-y-auto tw:p-4">
-            <dl className="tw:mb-0">
+          <div className="min-h-0 overflow-y-auto p-4">
+            <dl className="mb-0">
               <dt>Title</dt>
               <dd>{timeOffEvent?.title}</dd>
               <dt>Dates</dt>

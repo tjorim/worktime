@@ -194,7 +194,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.className = "";
-  document.documentElement.removeAttribute("data-bs-theme");
+  document.documentElement.removeAttribute("data-theme");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });

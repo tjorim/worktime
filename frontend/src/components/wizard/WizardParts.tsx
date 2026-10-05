@@ -15,12 +15,7 @@ interface WizardActionsProps {
 /** Shared back/next footer: stacks with the primary action on top below `sm`. */
 export function WizardActions({ start, end, className }: WizardActionsProps) {
   return (
-    <div
-      className={cn(
-        "tw:flex tw:flex-col-reverse tw:gap-2 tw:sm:flex-row tw:sm:justify-between",
-        className,
-      )}
-    >
+    <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-between", className)}>
       {start}
       {end}
     </div>
@@ -40,8 +35,8 @@ export function WizardToggle({ id, label, hint, checked, onCheckedChange }: Wiza
   const hintId = `${id}-hint`;
 
   return (
-    <div className="tw:mt-3">
-      <Label className="tw:text-base">
+    <div className="mt-3">
+      <Label className="text-base">
         <Switch
           id={id}
           checked={checked}
@@ -51,7 +46,7 @@ export function WizardToggle({ id, label, hint, checked, onCheckedChange }: Wiza
         {label}
       </Label>
       {!checked && (
-        <FieldDescription id={hintId} className="tw:mt-2">
+        <FieldDescription id={hintId} className="mt-2">
           {hint}
         </FieldDescription>
       )}

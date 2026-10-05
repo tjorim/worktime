@@ -20,7 +20,7 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
   }
 
   return (
-    <Alert variant="info" className="tw:rounded-none tw:mb-0 tw:border-l-0 tw:border-r-0 tw:pr-12">
+    <Alert variant="info" className="rounded-none mb-0 border-l-0 border-r-0 pr-12">
       <div>
         <strong>New since your last visit:</strong>{" "}
         {features.map((f, i) => (
@@ -35,7 +35,7 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
       <Button
         variant="ghost"
         size="icon-sm"
-        className="tw:absolute tw:top-2 tw:right-2"
+        className="absolute top-2 right-2"
         onClick={onDismiss}
         aria-label={m.close()}
       >

@@ -9,12 +9,12 @@ export function Spinner({
   ...props
 }: ComponentProps<"span"> & { size?: "sm" }) {
   return (
-    <span className={cn("tw:inline-flex tw:items-center", className)} {...props}>
+    <span className={cn("inline-flex items-center", className)} {...props}>
       <Icon
         icon={LoaderCircle}
         className={cn(
-          "tw:animate-spin tw:motion-reduce:animate-none",
-          size === "sm" ? "tw:size-4" : "tw:size-8",
+          "animate-spin motion-reduce:animate-none",
+          size === "sm" ? "size-4" : "size-8",
         )}
       />
       {children}

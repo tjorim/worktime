@@ -155,11 +155,11 @@ export function SyncStatusIndicator() {
   const indicator = (
     <span
       className={cn(
-        "tw:inline-flex tw:min-h-8 tw:items-center tw:gap-1.5 tw:rounded-full tw:border tw:border-border tw:bg-popover tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold",
-        tone === "success" && "tw:bg-success-bg tw:text-success",
-        tone === "warning" && "tw:bg-warning-bg tw:text-warning",
-        tone === "danger" && "tw:text-danger-text",
-        tone === "info" && "tw:bg-info-bg tw:text-info",
+        "inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border bg-popover px-2.5 py-1 text-xs font-semibold",
+        tone === "success" && "bg-success-bg text-success",
+        tone === "warning" && "bg-warning-bg text-warning",
+        tone === "danger" && "text-danger-text",
+        tone === "info" && "bg-info-bg text-info",
       )}
       aria-label={`${m.sync_indicator_aria_label()}: ${label}`}
       aria-live="polite"
@@ -169,9 +169,9 @@ export function SyncStatusIndicator() {
     >
       <Icon
         icon={icon}
-        className={shouldSpin ? "tw:animate-spin tw:motion-reduce:animate-none" : undefined}
+        className={shouldSpin ? "animate-spin motion-reduce:animate-none" : undefined}
       />
-      <span className="tw:hidden tw:sm:inline">{label}</span>
+      <span className="hidden sm:inline">{label}</span>
     </span>
   );
 

@@ -79,16 +79,16 @@ export function TooltipContent({
         side={side}
         sideOffset={6}
         anchor={anchor}
-        className="tw:isolate tw:z-tooltip"
+        className="isolate z-tooltip"
       >
         <TooltipPrimitive.Popup
           id={id}
           role="tooltip"
           className={cn(
-            "tw:w-fit tw:rounded-md tw:text-sm tw:shadow-md",
+            "w-fit rounded-md text-sm shadow-md",
             variant === "details"
-              ? "tw:max-w-popover tw:border tw:border-border tw:bg-popover tw:text-popover-foreground"
-              : "tw:max-w-xs tw:bg-tooltip tw:px-2 tw:py-1 tw:text-center tw:text-tooltip-foreground",
+              ? "max-w-popover border border-border bg-popover text-popover-foreground"
+              : "max-w-xs bg-tooltip px-2 py-1 text-center text-tooltip-foreground",
           )}
         >
           {children}

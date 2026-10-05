@@ -192,8 +192,8 @@ describe("OngoingConflictDialog", () => {
         />,
       );
 
-      // Escape and backdrop clicks are disabled, but even if react-bootstrap
-      // closes the modal some other way it must not silently pick a side —
+      // Escape and backdrop clicks are disabled, but even if the dialog
+      // closes some other way it must not silently pick a side —
       // onHide used to be wired straight to "keep-server", so a stray Escape
       // threw away the user's local version of every conflicted record.
       await userEvent.setup().keyboard("{Escape}");
