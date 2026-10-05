@@ -8,6 +8,12 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Weekly time-tracking summary (authenticated)", () => {
   test("lands straight on Weekly Summary with the seeded week's data", async ({ page }) => {
+    // The MSW seed only contains tasks that have already finished (see
+    // seedTimeTrackingWeek), so on a Monday morning the week is empty. Pin the
+    // clock to a mid-week afternoon so the spec doesn't depend on when CI runs.
+    // The date is in the past so the fake OIDC session from auth.setup.ts is
+    // still valid.
+    await page.clock.install({ time: new Date(2026, 8, 30, 15, 0, 0) });
     await page.goto("/");
 
     // No first-run wizard, no schedule prompt.
