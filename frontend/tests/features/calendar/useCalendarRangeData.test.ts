@@ -14,13 +14,9 @@ describe("useCalendarRangeData", () => {
   });
 
   afterEach(() => {
+    // Collections are reset by the global afterEach in tests/setup.ts after the hook
+    // unmounts; deleting rows here would update a still-mounted hook outside act().
     vi.useRealTimers();
-    for (const entry of timeOffCollection.toArray as { id: string }[]) {
-      timeOffCollection.delete(entry.id);
-    }
-    for (const task of tasksCollection.toArray as { id: string }[]) {
-      tasksCollection.delete(task.id);
-    }
   });
 
   it("merges range-filtered shifts, time-off entries, and tasks", async () => {
