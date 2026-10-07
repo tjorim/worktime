@@ -5,5 +5,5 @@ Restyle generated code with Worktime tokens and run lint before using it.
 Shared forms use `Field`, `FieldLabel` and `FieldDescription` with explicit input
 IDs; checkbox/switch values use Base UI `onCheckedChange`. `Grid` and `GridItem`
 provide responsive twelve-column layouts. Use semantic badge/alert variants and
-`buttonVariants` for links. `RadioGroup`/`RadioGroupItem` wrap Base UI radios. Dialog bodies use `tw:min-h-0 tw:overflow-y-auto tw:p-4`.
+`buttonVariants` for links. `RadioGroup`/`RadioGroupItem` wrap Base UI radios. Dialog bodies use `min-h-0 overflow-y-auto p-4`.
 See `docs/shared-controls-migration.md` for retained select and toast behaviour.
