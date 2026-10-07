@@ -2024,7 +2024,7 @@ class TestSyncEventsEndpoint:
         # is typed as a plain AsyncIterable by Starlette, which doesn't
         # guarantee aclose() at the type level even though it's always an
         # async generator here at runtime.
-        await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
+        await cast("AsyncGenerator[Any]", response.body_iterator).aclose()
 
     async def test_events_endpoint_rejects_past_the_per_user_cap(self) -> None:
         """A 429 is raised (not a StreamingResponse) once one user hits the
@@ -2049,7 +2049,7 @@ class TestSyncEventsEndpoint:
             assert exc_info.value.status_code == 429
         finally:
             for response in responses:
-                await cast("AsyncGenerator[Any, None]", response.body_iterator).aclose()
+                await cast("AsyncGenerator[Any]", response.body_iterator).aclose()
 
     def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
         """Push must succeed even if broadcast_sync_changed raises an exception."""

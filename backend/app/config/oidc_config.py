@@ -301,7 +301,7 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any], db_sess
                 subject,
             )
             return local_user
-        except (IntegrityError, ConflictError):
+        except IntegrityError, ConflictError:
             # Two possible races: a concurrent first-login for the *same*
             # subject won the INSERT, or a *different* new user claimed the
             # derived username between the availability check and the INSERT.

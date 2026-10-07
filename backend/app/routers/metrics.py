@@ -51,7 +51,7 @@ def _verify_token(token: str, secret: str) -> bool:
     try:
         ts_str, provided_sig = token.split(":", 1)
         ts = int(ts_str)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return False
 
     now = int(time.time())

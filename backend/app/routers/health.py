@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Health"])
 
 
-async def _get_db_if_enabled() -> AsyncGenerator[AsyncSession | None, None]:
+async def _get_db_if_enabled() -> AsyncGenerator[AsyncSession | None]:
     """Yield a DB session when DATABASE_ENABLED, otherwise yield None."""
     if settings.DATABASE_ENABLED:
         async for session in get_session():

@@ -6,7 +6,7 @@ is handled separately by `hday-helper/`, not by this backend.
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.14+
 - `uv`
 
 ## Installation

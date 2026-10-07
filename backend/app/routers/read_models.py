@@ -36,7 +36,7 @@ async def _load_dashboard(
 ) -> DashboardReadModel:
     try:
         ZoneInfo(timezone)
-    except (ZoneInfoNotFoundError, KeyError):
+    except ZoneInfoNotFoundError, KeyError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unknown timezone: {timezone!r}",
