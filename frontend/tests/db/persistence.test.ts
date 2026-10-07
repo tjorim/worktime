@@ -13,6 +13,7 @@ import {
   resetHydrationForTests,
   startPersistingSyncCollections,
   stopPersistingSyncCollections,
+  stripVirtualProps,
   whenHydrated,
   type PersistableCollection,
 } from "@/db/persistence";
@@ -75,9 +76,42 @@ describe("snapshot storage keys", () => {
   });
 });
 
+const virtualProps = {
+  $collectionId: "worktime/tasks",
+  $hasPendingWrites: true,
+  $key: "t1",
+  $origin: "local",
+  $synced: false,
+};
+
+describe("stripVirtualProps", () => {
+  it("removes the properties TanStack DB attaches and keeps the row's own", () => {
+    expect(stripVirtualProps({ id: "t1", text: "x", ...virtualProps })).toEqual({
+      id: "t1",
+      text: "x",
+    });
+  });
+
+  it("does not mutate its input and passes non-objects through", () => {
+    const row = { id: "t1", ...virtualProps };
+    stripVirtualProps(row);
+    expect(row.$synced).toBe(false);
+    expect(stripVirtualProps(null)).toBeNull();
+    expect(stripVirtualProps("x")).toBe("x");
+  });
+});
+
 describe("hydrateSyncCollections", () => {
   it("loads a stored snapshot so the queryFn can return it", async () => {
     await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
+  });
+
+  it("drops virtual props from snapshots stored before they were stripped", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1", ...virtualProps }] });
 
     await hydrateSyncCollections(["tasks"]);
 
@@ -137,6 +171,49 @@ describe("startPersistingSyncCollections", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(await get(snapshotKey("tasks"))).toEqual({ version: 1, items: [{ id: "t1" }] });
+  });
+
+  it("does not persist virtual props", async () => {
+    vi.useFakeTimers();
+    const tasks = fakeCollection<Record<string, unknown>>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    tasks.setItems([{ id: "t1", ...virtualProps }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({ version: 1, items: [{ id: "t1" }] });
+  });
+
+  it("treats a pending-write flip alone as no change to the row", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1", text: "stored" }] });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection<Record<string, unknown>>([
+      { id: "t1", text: "stored", ...virtualProps },
+    ]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+    // Another tab edits the row after this tab loaded it.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1", text: "other-tab" }] });
+
+    vi.useFakeTimers();
+    tasks.setItems([
+      { id: "t1", text: "stored", ...virtualProps, $hasPendingWrites: false, $synced: true },
+    ]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "t1", text: "other-tab" }],
+    });
   });
 
   it("coalesces a burst of changes into one write", async () => {

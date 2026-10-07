@@ -18,18 +18,12 @@ import {
   workLocationsCollection,
 } from "@/db/collections";
 import * as collectionsModule from "@/db/collections";
+import { stripVirtualProps } from "@/db/persistence";
 
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
 
 function plainCollectionItems<T extends object>(items: T[]): Array<Record<string, unknown>> {
-  return items.map((item) => {
-    const plain = { ...item } as Record<string, unknown>;
-    delete plain.$collectionId;
-    delete plain.$key;
-    delete plain.$origin;
-    delete plain.$synced;
-    return plain;
-  });
+  return items.map((item) => stripVirtualProps(item) as Record<string, unknown>);
 }
 
 describe("appBackup", () => {
