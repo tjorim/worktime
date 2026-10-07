@@ -251,7 +251,7 @@ class WorktimeMcpBackend:
         )
 
     @asynccontextmanager
-    async def _tool_context(self) -> AsyncGenerator[tuple[WorktimeMcpContext, AsyncSession], None]:
+    async def _tool_context(self) -> AsyncGenerator[tuple[WorktimeMcpContext, AsyncSession]]:
         db = self.session_factory()
         try:
             context = await self.resolve_context(db)

@@ -237,7 +237,7 @@ class SyncEventManager:
         """
         try:
             user_id = int(payload)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             logger.warning("SSE: received non-integer NOTIFY payload: %r", payload)
             return
         self._enqueue_local(user_id)

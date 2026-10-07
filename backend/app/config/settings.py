@@ -186,7 +186,7 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def validate_production_trusted_hosts(self) -> "Settings":
+    def validate_production_trusted_hosts(self) -> Settings:
         """Refuse to start in production without a real TRUSTED_HOSTS allowlist.
 
         A silently-wildcarded Host header check is worse than no deployment at
@@ -203,7 +203,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_production_no_dev_bypass(self) -> "Settings":
+    def validate_production_no_dev_bypass(self) -> Settings:
         """Refuse to start with DEV_AUTH_BYPASS_TOKEN set outside development.
 
         This makes it structurally impossible for the auth bypass to be both
@@ -216,7 +216,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_production_integration_key_hash_secret(self) -> "Settings":
+    def validate_production_integration_key_hash_secret(self) -> Settings:
         """Refuse to start in production without a real integration-key hash secret.
 
         The unset default is safe only for local dev (single-operator,

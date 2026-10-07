@@ -60,7 +60,7 @@ def _assert_test_database_url(url: str) -> None:
 
 
 @pytest.fixture(autouse=True)
-def reset_cache() -> Generator[None, None, None]:
+def reset_cache() -> Generator[None]:
     """Clear cache before each test to ensure test isolation."""
     cache = get_cache()
     cache._holiday_entries.clear()
@@ -68,7 +68,7 @@ def reset_cache() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def reset_rate_limiter() -> Generator[None, None, None]:
+def reset_rate_limiter() -> Generator[None]:
     """Clear the rate limiter's in-memory storage before each test.
 
     TestClient requests all share the same client IP, so without this every
@@ -79,7 +79,7 @@ def reset_rate_limiter() -> Generator[None, None, None]:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def _schema_engine() -> AsyncGenerator[AsyncEngine, None]:
+async def _schema_engine() -> AsyncGenerator[AsyncEngine]:
     """Session-scoped engine: create schema once, drop it after all tests."""
     _assert_test_database_url(_TEST_DATABASE_URL)
     engine = create_async_engine(_TEST_DATABASE_URL, poolclass=NullPool)
@@ -93,7 +93,7 @@ async def _schema_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture()
-async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine, None]:
+async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine]:
     """Per-test fixture: yields the shared engine and truncates all tables after each test."""
     yield _schema_engine
     async with _schema_engine.begin() as conn:
@@ -102,7 +102,7 @@ async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine, No
 
 
 @pytest_asyncio.fixture()
-async def db_session(test_db: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(test_db: AsyncEngine) -> AsyncGenerator[AsyncSession]:
     """Provide direct async session access to the isolated test database."""
     factory = async_sessionmaker(test_db, expire_on_commit=False)
     async with factory() as session:
@@ -167,11 +167,11 @@ def _test_auth_principal(
 
 
 @pytest.fixture()
-def db_client(test_db: AsyncEngine) -> Generator[TestClient, None, None]:
+def db_client(test_db: AsyncEngine) -> Generator[TestClient]:
     """Create a TestClient that uses a test-specific async database session."""
     factory = async_sessionmaker(test_db, expire_on_commit=False)
 
-    async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
+    async def override_get_session() -> AsyncGenerator[AsyncSession]:
         async with factory() as session:
             yield session
 

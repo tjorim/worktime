@@ -159,7 +159,7 @@ async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSessio
 
 
 @pytest_asyncio.fixture()
-async def without_running_task_index(test_db: AsyncEngine) -> AsyncGenerator[None, None]:
+async def without_running_task_index(test_db: AsyncEngine) -> AsyncGenerator[None]:
     """Drop uq_active_running_task_user for one test and always restore it.
 
     Uses test_db's own connection for both drop and restore, rather than the

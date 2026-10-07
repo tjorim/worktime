@@ -244,7 +244,7 @@ Behavior to note:
 
 Requirements:
 
-- Python 3.12+
+- Python 3.14+
 - `uv`
 - PostgreSQL when DB features are exercised (see AGENTS.md for the SQLite no-container shortcut)
 - No local Keycloak/IdP needed — use `DEV_AUTH_BYPASS_TOKEN` instead (see AGENTS.md)
@@ -279,7 +279,7 @@ The repo includes [Dockerfile](Dockerfile).
 
 Current Docker characteristics:
 
-- Python 3.12 slim base image
+- Python 3.14 slim base image
 - multi-stage build
 - dependency installation via `uv`
 - healthcheck via `GET /health`
