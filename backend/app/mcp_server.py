@@ -781,7 +781,11 @@ def create_mcp_server(
     server = FastMCP(
         "worktime",
         version=APP_VERSION,
-        instructions="Worktime assistant tools — read and personal write access",
+        instructions=(
+            "Worktime assistant tools — read and personal write access. Most tools are hidden: "
+            "describe what you need to search_tools, then run the tool it returns with call_tool "
+            "(name plus arguments)."
+        ),
         auth=_build_auth_provider(factory),
         transforms=[
             BM25SearchTransform(

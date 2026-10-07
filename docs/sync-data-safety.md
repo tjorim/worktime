@@ -193,3 +193,8 @@ These are real and not addressed here:
 - **Database backups are not configured in this repo.** Production hosting lives
   in a separate infra stack; soft deletes only help if the database itself
   survives.
+
+## Cross-app persistence alignment
+
+See [Browser persistence contract](browser-persistence-contract.md) for the shared
+ownership, schema, restore, logout and pending-edit policies.
