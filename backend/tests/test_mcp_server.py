@@ -128,6 +128,14 @@ async def test_search_transform_replaces_large_initial_catalog() -> None:
     }
 
 
+async def test_server_instructions_explain_search_then_call_flow() -> None:
+    server = create_mcp_server(session_factory=MagicMock())
+
+    assert server.instructions is not None
+    assert "search_tools" in server.instructions
+    assert "call_tool" in server.instructions
+
+
 async def test_search_tools_finds_time_summary() -> None:
     server = create_mcp_server(session_factory=MagicMock())
     result = await server.call_tool("search_tools", {"query": "summarize tracked working time"})
