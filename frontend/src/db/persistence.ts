@@ -72,6 +72,22 @@ export interface PersistableCollection<T> {
 
 export type SnapshotItemKey = (collectionName: string, item: unknown) => string;
 
+/**
+ * Properties TanStack DB adds to every row it hands out (`collection.toArray`,
+ * live queries). They describe the row's in-memory state, not its data, and
+ * `$hasPendingWrites` flips as soon as a write settles, so persisting them
+ * would store noise and make an otherwise unchanged row look modified.
+ */
+const VIRTUAL_PROPS = ["$collectionId", "$hasPendingWrites", "$key", "$origin", "$synced"] as const;
+
+/** A copy of `item` without the properties TanStack DB attaches to collection rows. */
+export function stripVirtualProps<T>(item: T): T {
+  if (item === null || typeof item !== "object" || Array.isArray(item)) return item;
+  const plain = { ...item } as Record<string, unknown>;
+  for (const prop of VIRTUAL_PROPS) delete plain[prop];
+  return plain as T;
+}
+
 let activeGeneration = DEFAULT_GENERATION;
 
 function snapshotKey(name: string, generation = activeGeneration): string {
@@ -91,7 +107,8 @@ async function readSnapshot(name: string): Promise<unknown[] | null> {
     if (!stored || stored.version !== SNAPSHOT_VERSION || !Array.isArray(stored.items)) {
       return null;
     }
-    return stored.items;
+    // Snapshots written before virtual props were stripped still carry them.
+    return stored.items.map(stripVirtualProps);
   } catch (err) {
     logger.error(`Failed to read the "${name}" snapshot:`, err);
     return null;
@@ -204,7 +221,9 @@ async function mergeSnapshotChanges(
   let mergedItems = items;
   await update<StoredSnapshot>(snapshotKey(name, generation), (stored) => {
     const persisted =
-      stored?.version === SNAPSHOT_VERSION && Array.isArray(stored.items) ? stored.items : [];
+      stored?.version === SNAPSHOT_VERSION && Array.isArray(stored.items)
+        ? stored.items.map(stripVirtualProps)
+        : [];
     const merged = new Map(persisted.map((item) => [getItemKey(name, item), item]));
     for (const key of deletions) merged.delete(key);
     for (const [key, item] of upserts) merged.set(key, item);
@@ -283,7 +302,7 @@ export function startPersistingSyncCollections(
     try {
       subscriptions.push(
         collection.subscribeChanges(() => {
-          scheduleSnapshot(name, () => collection.toArray, getItemKey);
+          scheduleSnapshot(name, () => collection.toArray.map(stripVirtualProps), getItemKey);
         }),
       );
     } catch (err) {
