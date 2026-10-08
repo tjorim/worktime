@@ -1,5 +1,5 @@
 Generate Base UI primitives here with `pnpm dlx shadcn@latest add <component>`.
-`components.json` pins the Base UI style, Lucide icons, the `tw` prefix and `@/lib/utils`.
+`components.json` pins the `base-nova` Base UI style, Lucide icons, no class prefix and `@/lib/utils`.
 Restyle generated code with Worktime tokens and run lint before using it.
 
 Shared forms use `Field`, `FieldLabel` and `FieldDescription` with explicit input
