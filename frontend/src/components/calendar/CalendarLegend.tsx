@@ -1,6 +1,6 @@
 import { Info as InfoIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DetailsPopover, PopoverHeader, PopoverBody } from "@/components/ui/popover";
 import * as m from "@/paraglide/messages.js";
@@ -60,7 +60,7 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
             <div className="flex flex-wrap gap-2 mt-1">
               {eventTypeLegend.map(({ colorClass, label }) => (
                 <span key={colorClass} className="inline-flex items-center gap-1">
-                  <span className={clsx("month-calendar-event-color", colorClass)} />
+                  <span className={cn("month-calendar-event-color", colorClass)} />
                   <small>{label}</small>
                 </span>
               ))}

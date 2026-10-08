@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { type ChangelogVersion, changelogData, futurePlans } from "@/data/changelog";
 import * as m from "@/paraglide/messages.js";
 
@@ -84,7 +84,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
 
     return (
       <div className="mb-4">
-        <h6 className={clsx(textClass, "mb-2")}>
+        <h6 className={cn(textClass, "mb-2")}>
           <Icon icon={getIconForSection(key)} className="me-2" />
           {label}
         </h6>

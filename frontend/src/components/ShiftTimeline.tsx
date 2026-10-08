@@ -3,7 +3,7 @@ import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/tooltip";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { shiftColors, ShiftBadge } from "@/components/shared/ShiftBadge";
@@ -207,7 +207,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
           >
             <Badge
               data-current-team
-              className={clsx(
+              className={cn(
                 shiftColors[currentWorkingTeam.shift.className],
                 "cursor-help text-base font-semibold shadow-sm",
                 "min-w-10 h-auto text-sm font-semibold rounded-md",

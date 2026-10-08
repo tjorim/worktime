@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/tooltip";
 import { useId } from "react";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 
@@ -88,7 +88,7 @@ export function ShiftBadge({
   const badge = (
     <Badge
       variant="outline"
-      className={clsx(
+      className={cn(
         "h-auto min-w-8 font-semibold",
         pill ? "rounded-full" : "rounded-md",
         sizeClass,
