@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TeamCarousel } from "@/components/shared/TeamCarousel";
 
 import { Hint } from "@/components/ui/tooltip";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import { hasMultipleTeams, isValidScheduleType } from "@/utils/scheduleUtils";
@@ -136,7 +136,7 @@ function TeamCard({
   if (onTeamClick) {
     return (
       <Card
-        className={clsx(
+        className={cn(
           "relative cursor-pointer transition hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring",
           "w-full",
           isMyTeam && "ring-2 ring-primary",
@@ -168,7 +168,7 @@ function TeamCard({
   }
 
   return (
-    <Card className={clsx("relative", isMyTeam && "ring-2 ring-primary")}>
+    <Card className={cn("relative", isMyTeam && "ring-2 ring-primary")}>
       <CardContent className="p-4">{cardContent}</CardContent>
     </Card>
   );

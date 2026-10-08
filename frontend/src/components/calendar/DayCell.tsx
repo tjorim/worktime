@@ -2,7 +2,7 @@ import { Plus as PlusIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
@@ -360,7 +360,7 @@ export function DayCell({
           onTouchMove={handleTouchMove}
           aria-label={m.daycell_view_event_aria({ label })}
         >
-          <span className={clsx("month-calendar-event-color", colorClass)} />
+          <span className={cn("month-calendar-event-color", colorClass)} />
           <span className="month-calendar-event-label">
             {symbol && (
               <span

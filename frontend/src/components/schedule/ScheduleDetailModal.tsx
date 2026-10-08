@@ -37,7 +37,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { ScheduleOption, ShiftCode } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -233,7 +233,7 @@ export function ScheduleDetailModal({
           <DialogTitle>
             <Icon
               icon={hasTeams ? UsersIcon : CalendarDaysIcon}
-              className={clsx("mr-2", "text-primary")}
+              className={cn("mr-2", "text-primary")}
             />
             {hasTeams
               ? m.schedule_detail_title_team({ team: String(teamNumber) })
@@ -376,7 +376,7 @@ export function ScheduleDetailModal({
                     {weekSchedule.map((day) => (
                       <TableRow
                         key={day.date.format("YYYY-MM-DD")}
-                        className={clsx(day.isToday && "bg-primary/10 font-medium")}
+                        className={cn(day.isToday && "bg-primary/10 font-medium")}
                       >
                         <TableCell>
                           <strong>{day.date.format("MMM D")}</strong>
@@ -436,7 +436,7 @@ export function ScheduleDetailModal({
               {weekSchedule.map((day) => (
                 <Card
                   key={day.date.format("YYYY-MM-DD")}
-                  className={clsx(
+                  className={cn(
                     "mb-4",
                     day.isToday && "border-primary shadow-sm ring-2 ring-primary bg-primary/10",
                   )}
@@ -591,7 +591,7 @@ export function ScheduleDetailModal({
                     {stats.shiftDistribution.map((item) => (
                       <li key={item.key} className="px-0 py-2 flex justify-between">
                         <span>
-                          <Icon icon={item.icon} className={clsx("mr-1", item.iconClassName)} />
+                          <Icon icon={item.icon} className={cn("mr-1", item.iconClassName)} />
                           {getShiftLabel(item.key)}
                         </span>
                         <Badge variant={item.variant}>

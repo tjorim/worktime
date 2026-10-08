@@ -18,7 +18,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import type { ScheduleOption } from "@/data/rosters";
 import { useSettings } from "@/contexts/SettingsContext";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
@@ -225,7 +225,7 @@ export function WeekView({
                   return (
                     <TableHead
                       key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
-                      className={clsx("text-center", isToday && "bg-primary/10")}
+                      className={cn("text-center", isToday && "bg-primary/10")}
                       aria-label={m.week_view_day_header_aria({
                         date: formatLongDate(day),
                         today: isToday ? m.daycell_today_label() : "",
@@ -290,7 +290,7 @@ export function WeekView({
                     return (
                       <TableCell
                         key={`team-${teamNumber}-day-${dayIndex}-${day.format("YYYY-MM-DD")}`}
-                        className={clsx("text-center", isToday && "bg-primary/10")}
+                        className={cn("text-center", isToday && "bg-primary/10")}
                         aria-label={
                           hasTeams
                             ? m.week_view_team_day_shift_aria({
