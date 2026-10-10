@@ -41,7 +41,7 @@
     "generate-changelog": "tsx scripts/generate-changelog.ts",
     "generate-icons": "tsx scripts/generate-icons.ts",
     "check-version-consistency": "tsx scripts/check-version-consistency.ts",
-    "check-message-parity": "tsx scripts/check-message-parity.ts",
+    "check-message-parity": "node scripts/check-message-parity.mjs",
     "sync-version": "tsx scripts/sync-version.ts",
     "generate-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/generate-roster-fixture.ts",
     "check-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts"
