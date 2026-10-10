@@ -4,6 +4,7 @@ import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
+import * as m from "@/paraglide/messages.js";
 
 export interface PublicHoliday {
   date: string;
@@ -42,10 +43,10 @@ export function usePublicHolidays(year: number, enabled: boolean = true) {
     endpoint: "public",
     params,
     enabled: isEnabled,
-    responseErrorPrefix: "Failed to fetch holidays",
-    timeoutError: "Request timeout: Unable to reach holiday API",
-    networkError: "Network error: Unable to connect to holiday API",
-    unknownError: "Failed to fetch holidays",
+    responseErrorPrefix: m.holidays_fetch_failed(),
+    timeoutError: m.holidays_timeout(),
+    networkError: m.holidays_network(),
+    unknownError: m.holidays_fetch_failed(),
   });
 
   const publicHolidayMap = useMemo(

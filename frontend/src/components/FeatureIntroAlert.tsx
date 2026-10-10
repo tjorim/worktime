@@ -22,7 +22,7 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
   return (
     <Alert variant="info" className="rounded-none mb-0 border-l-0 border-r-0 pr-12">
       <div>
-        <strong>New since your last visit:</strong>{" "}
+        <strong>{m.feature_intro_new()}</strong>{" "}
         {features.map((f, i) => (
           <span key={`${f.name}-${i}`}>
             {i > 0 && " · "}
@@ -30,7 +30,7 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
           </span>
         ))}
         {". "}
-        Enable in <strong>Settings</strong> <span aria-hidden="true">⚙</span>.
+        {m.feature_intro_enable({ settings: m.settings_title() })}
       </div>
       <Button
         variant="ghost"

@@ -123,7 +123,12 @@ export function TimeTrackingDailyView({
     () =>
       templates.map((template) => ({
         value: template.id,
-        label: `${template.text} (${template.start}-${template.stop}) [${labelNameById[template.label] ?? "Unknown label"}]`,
+        label: m.tt_template_option_label({
+          text: template.text,
+          start: template.start,
+          stop: template.stop,
+          label: labelNameById[template.label] ?? m.tt_unknown_label(),
+        }),
       })),
     [templates, labelNameById],
   );
@@ -259,7 +264,7 @@ export function TimeTrackingDailyView({
     if (!now.isSame(startDayjs, "day")) {
       setEditRequest({
         task: runningTask,
-        info: `This task started on ${startDate} and spans midnight. Set a stop time on ${startDate} to complete it.`,
+        info: m.tt_task_spans_midnight({ date: startDate }),
       });
       return;
     }

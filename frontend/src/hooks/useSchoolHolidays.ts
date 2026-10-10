@@ -4,6 +4,7 @@ import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
+import * as m from "@/paraglide/messages.js";
 
 export interface SchoolHolidayName {
   language: string;
@@ -35,7 +36,7 @@ export function getSchoolHolidayName(holiday: SchoolHoliday, language: string = 
   if (match?.text) {
     return match.text;
   }
-  return holiday.name[0]?.text ?? "School Holiday";
+  return holiday.name[0]?.text ?? m.calendar_legend_school_holiday();
 }
 
 const toSchoolHolidayMap = (
@@ -77,10 +78,10 @@ export function useSchoolHolidays(year: number, enabled: boolean = true) {
     endpoint: "school",
     params,
     enabled: isEnabled,
-    responseErrorPrefix: "Failed to fetch school holidays",
-    timeoutError: "Request timeout: Unable to reach school holiday API",
-    networkError: "Network error: Unable to connect to school holiday API",
-    unknownError: "Failed to fetch school holidays",
+    responseErrorPrefix: m.school_holidays_fetch_failed(),
+    timeoutError: m.school_holidays_timeout(),
+    networkError: m.school_holidays_network(),
+    unknownError: m.school_holidays_fetch_failed(),
   });
 
   const schoolHolidayMap = useMemo(

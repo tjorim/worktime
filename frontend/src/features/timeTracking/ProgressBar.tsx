@@ -1,4 +1,5 @@
 import { Progress } from "@/components/ui/progress";
+import * as m from "@/paraglide/messages.js";
 
 type ProgressBarProps = {
   hours: number;
@@ -32,7 +33,7 @@ export function ProgressBar({ hours, targetHours = 8 }: ProgressBarProps) {
         data-overtime={isOvertime}
       />
       <div className="mt-2 text-muted-foreground">
-        {rawHours.toFixed(2)}h ({percentage.toFixed(1)}%)
+        {m.tt_hours_percentage({ hours: rawHours.toFixed(2), percentage: percentage.toFixed(1) })}
       </div>
     </div>
   );

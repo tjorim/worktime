@@ -168,7 +168,11 @@ export function PersonalizedStatusContent({
   const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
 
   // Tooltip details for current shift badge
-  const shiftTooltipDetails = `${currentShift.shift.emoji} ${currentShift.shift.name} shift (${formattedShiftTime})`;
+  const shiftTooltipDetails = m.status_shift_tooltip({
+    emoji: currentShift.shift.emoji,
+    name: currentShift.shift.name,
+    time: formattedShiftTime,
+  });
 
   // Single-team schedules (e.g. 9-5) have nothing meaningful to show in "Up Next" —
   // it's the same shift every day. Drop that tile and let "Today" take the full width.

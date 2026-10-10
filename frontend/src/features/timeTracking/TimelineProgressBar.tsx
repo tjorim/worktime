@@ -347,7 +347,7 @@ export function TimelineProgressBar({
                   color={rs.color}
                   planned={rs.isPlanned}
                   dim
-                  label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
+                  label={m.tt_break_deduction_label({ minutes: BREAK_DURATION_MINUTES })}
                   testId={`break-segment-${rs.id}`}
                   onEnter={showTooltip(breakTooltipText)}
                   onLeave={hideTooltip}
@@ -397,14 +397,17 @@ export function TimelineProgressBar({
             className="pointer-events-none absolute top-0 bottom-0 left-(--now-pos) w-0.5 -translate-x-1/2 bg-destructive"
             style={{ "--now-pos": percent(nowPct) } as CSSProperties}
             data-testid="now-line"
-            aria-label={`Current time: ${liveTime.format("HH:mm")}`}
+            aria-label={m.tt_current_time_label({ time: liveTime.format("HH:mm") })}
           />
         )}
       </div>
 
       <div className="mt-2 flex items-center justify-between text-muted-foreground">
         <span data-testid="timeline-total-duration">
-          {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
+          {m.tt_hours_percentage({
+            hours: totalHours.toFixed(2),
+            percentage: totalPercentage.toFixed(1),
+          })}
         </span>
         {plannedHours > 0 && (
           <span className="text-sm" data-testid="timeline-planned-duration">
@@ -413,7 +416,7 @@ export function TimelineProgressBar({
         )}
         {isOvertime && (
           <Badge variant="warning">
-            Overtime: +{(totalHours - sanitizedTargetHours).toFixed(2)}h
+            {m.tt_overtime_badge({ hours: (totalHours - sanitizedTargetHours).toFixed(2) })}
           </Badge>
         )}
       </div>
