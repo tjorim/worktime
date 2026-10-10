@@ -4,11 +4,6 @@ import { selectClassNames } from "@/utils/reactSelectStyles";
 
 type CountryOption = { value: string; label: string };
 
-const COUNTRY_OPTIONS: CountryOption[] = SUPPORTED_COUNTRIES.map((c) => ({
-  value: c.code,
-  label: c.name,
-}));
-
 interface CountrySelectProps {
   value: CountryCode | null;
   onChange: (v: CountryCode | null) => void;
@@ -17,6 +12,10 @@ interface CountrySelectProps {
 }
 
 export function CountrySelect({ value, onChange, ariaLabel, inputId }: CountrySelectProps) {
+  const COUNTRY_OPTIONS: CountryOption[] = SUPPORTED_COUNTRIES.map((c) => ({
+    value: c.code,
+    label: c.name,
+  }));
   const selected = value ? (COUNTRY_OPTIONS.find((o) => o.value === value) ?? null) : null;
 
   return (

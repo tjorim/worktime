@@ -13,6 +13,7 @@ import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 import { IconButton } from "@/components/shared/IconButton";
+import * as m from "@/paraglide/messages.js";
 
 type NavigationButtonGroupProps = {
   isCurrent: boolean;
@@ -38,11 +39,11 @@ function NavigationButtonGroup({
   onPrevious,
   onCurrent,
   onNext,
-  currentLabel = "Today",
+  currentLabel = m.today(),
   currentIcon = CalendarCheckIcon,
-  previousAriaLabel = "Go to previous day",
-  currentAriaLabel = "Go to today",
-  nextAriaLabel = "Go to next day",
+  previousAriaLabel = m.nav_prev_day(),
+  currentAriaLabel = m.nav_today(),
+  nextAriaLabel = m.nav_next_day(),
   size = "sm",
   inline = false,
   selectorLabel,
@@ -113,10 +114,10 @@ export function DayNavigationButtonGroup(props: Omit<NavigationButtonGroupProps,
 }
 
 export function WeekNavigationButtonGroup({
-  currentLabel = "This Week",
-  previousAriaLabel = "Go to previous week",
-  currentAriaLabel = "Go to current week",
-  nextAriaLabel = "Go to next week",
+  currentLabel = m.nav_this_week(),
+  previousAriaLabel = m.nav_prev_week(),
+  currentAriaLabel = m.nav_current_week(),
+  nextAriaLabel = m.nav_next_week(),
   ...rest
 }: Omit<NavigationButtonGroupProps, "currentIcon">) {
   return (
@@ -132,10 +133,10 @@ export function WeekNavigationButtonGroup({
 }
 
 export function MonthNavigationButtonGroup({
-  currentLabel = "Reset",
-  previousAriaLabel = "Previous month",
-  currentAriaLabel = "Reset to default range",
-  nextAriaLabel = "Next month",
+  currentLabel = m.timeoff_reset_btn(),
+  previousAriaLabel = m.nav_prev_month(),
+  currentAriaLabel = m.nav_reset_range(),
+  nextAriaLabel = m.nav_next_month(),
   ...rest
 }: Omit<NavigationButtonGroupProps, "currentIcon">) {
   return (

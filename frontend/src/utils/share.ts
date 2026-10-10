@@ -1,3 +1,5 @@
+import * as m from "@/paraglide/messages.js";
+
 // src/utils/share.ts
 // Generic and context-aware sharing utility for Worktime
 
@@ -66,7 +68,7 @@ export function shareApp(onSuccess?: () => void, onError?: (err: unknown) => voi
   share(
     {
       title: "Worktime",
-      text: "Check out Worktime for 24/7 shift tracking and time-off management!",
+      text: m.share_app_text(),
       url: `${window.location.origin}${window.location.pathname}`,
     },
     onSuccess,

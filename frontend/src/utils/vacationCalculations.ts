@@ -12,6 +12,7 @@ import {
 import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { dayjs } from "./dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
 
 export type EventTypeKey =
   | "holiday"
@@ -23,15 +24,25 @@ export type EventTypeKey =
   | "ill"
   | "other";
 
-export const EVENT_TYPE_LABELS: Record<EventTypeKey, string> = {
-  holiday: "Holiday",
-  business: "Business trip",
-  course: "Training",
-  in: "In office",
-  weekend: "Weekend",
-  birthday: "Birthday",
-  ill: "Sick leave",
-  other: "Other",
+export const getEventTypeKeyLabel = (key: EventTypeKey): string => {
+  switch (key) {
+    case "holiday":
+      return m.event_type_holiday();
+    case "business":
+      return m.event_type_business();
+    case "course":
+      return m.event_type_course();
+    case "in":
+      return m.event_type_in();
+    case "weekend":
+      return m.event_type_weekend();
+    case "birthday":
+      return m.event_type_birthday();
+    case "ill":
+      return m.event_type_ill();
+    case "other":
+      return m.event_type_other();
+  }
 };
 
 export const EVENT_TYPE_ORDER: EventTypeKey[] = [
@@ -172,7 +183,7 @@ export const calculateVacationStats = (
       totalDays: 0,
       byType: EVENT_TYPE_ORDER.map((key) => ({
         key,
-        label: EVENT_TYPE_LABELS[key],
+        label: getEventTypeKeyLabel(key),
         days: 0,
       })),
     };
@@ -210,7 +221,7 @@ export const calculateVacationStats = (
     totalDays,
     byType: EVENT_TYPE_ORDER.map((key) => ({
       key,
-      label: EVENT_TYPE_LABELS[key],
+      label: getEventTypeKeyLabel(key),
       days: totals[key],
     })),
   };
@@ -223,4 +234,4 @@ export const formatVacationValue = (value: number): string => {
 };
 
 export const getHalfDayLabel = (flag?: TimeOffEntryFlag | null): string | null =>
-  isHalfDay(flag) ? "Half day" : null;
+  isHalfDay(flag) ? m.timeoff_half_day() : null;

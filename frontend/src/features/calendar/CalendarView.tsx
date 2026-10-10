@@ -165,7 +165,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
           if (!task || !startTime || !renderedStopTime) return;
           const stopTime = task.stopTime ? renderedStopTime : undefined;
           if (stopTime && !dayjs(startTime).isSame(dayjs(stopTime), "day")) {
-            toast.showError("A time-tracking task cannot span multiple days.");
+            toast.showError(m.calendar_task_spans_days());
             setTimeout(() => {
               calendarApp?.events.set(eventRef.current);
             }, 0);
@@ -235,11 +235,11 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
 
   const saveTaskEdit = () => {
     if (!selectedTask || !editForm.text.trim() || !editForm.label || !editForm.start) {
-      setEditError("Fill in the task, label, and start time.");
+      setEditError(m.calendar_task_fill_required());
       return;
     }
     if (editForm.stop && !isValidCompletedRange(editForm.start, editForm.stop)) {
-      setEditError("Stop time must be after start time.");
+      setEditError(m.calendar_task_stop_after_start());
       return;
     }
     updateTaskTimes({
@@ -274,7 +274,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
     <section
       data-slot="unified-calendar"
       className="px-0 py-4 sm:px-4"
-      aria-label="Unified calendar"
+      aria-label={m.calendar_unified_label()}
     >
       {showHelp ? (
         <Alert variant="info" className="py-2">
@@ -300,19 +300,19 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
         <Alert variant="warning" className="flex items-center gap-2 py-2">
           <Icon icon={TriangleAlertIcon} />
           <span>
-            No roster configured — no shifts will appear.
+            {m.calendar_no_roster()}
             {onChangeSchedule && (
               <>
                 {" "}
                 <Button variant="link" className="p-0" onClick={onChangeSchedule}>
-                  Pick a schedule
+                  {m.calendar_pick_schedule()}
                 </Button>
-                {onChangeTeam && " or "}
+                {onChangeTeam && ` ${m.calendar_pick_or()} `}
               </>
             )}
             {onChangeTeam && (
               <Button variant="link" className="p-0" onClick={onChangeTeam}>
-                Pick a team
+                {m.calendar_pick_team()}
               </Button>
             )}
           </span>
@@ -338,7 +338,7 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
       >
         <DialogContent size="lg">
           <DialogHeader>
-            <DialogTitle>Add time-tracking task</DialogTitle>
+            <DialogTitle>{m.calendar_add_task_title()}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 overflow-y-auto p-4">
             <TaskEntryForm
@@ -355,8 +355,8 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
               canStartNow={false}
               showTimerControls={false}
               isTimerRunning={false}
-              startDisabledReason="Use Time Tracking to start a live timer."
-              addDisabledReason="Enter a task, label, and valid time range."
+              startDisabledReason={m.calendar_start_disabled_reason()}
+              addDisabledReason={m.calendar_add_disabled_reason()}
               onSubmit={saveNewTask}
               onStartNow={() => undefined}
               onStopNow={() => undefined}
@@ -373,19 +373,19 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Time-off details</DialogTitle>
+            <DialogTitle>{m.calendar_time_off_details()}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 overflow-y-auto p-4">
             <dl className="mb-0">
-              <dt>Title</dt>
+              <dt>{m.calendar_detail_title()}</dt>
               <dd>{timeOffEvent?.title}</dd>
-              <dt>Dates</dt>
+              <dt>{m.calendar_detail_dates()}</dt>
               <dd>
                 {timeOffEvent
                   ? `${calendarDate(timeOffEvent.start)} – ${calendarDate(timeOffEvent.end)}`
                   : ""}
               </dd>
-              <dt>Type</dt>
+              <dt>{m.calendar_detail_type()}</dt>
               <dd>{String(timeOffEvent?.entryType ?? "")}</dd>
             </dl>
           </div>

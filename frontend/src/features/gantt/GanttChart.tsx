@@ -154,7 +154,7 @@ export function GanttChart({
           const dateRange = start && end ? `${start} – ${end}` : start || end;
           const duration =
             ctx.task.actual_duration != null
-              ? `${ctx.task.actual_duration} day${ctx.task.actual_duration === 1 ? "" : "s"}`
+              ? m.gantt_duration_days({ count: ctx.task.actual_duration })
               : "";
           const progress =
             typeof ctx.task.progress === "number" ? `${Math.floor(ctx.task.progress)}%` : "";
@@ -271,8 +271,8 @@ export function GanttChart({
     return (
       <EmptyState
         icon={NetworkIcon}
-        title="No tasks yet"
-        description="Add your first task to start building your personal timeline."
+        title={m.gantt_empty_title()}
+        description={m.gantt_empty_description()}
       />
     );
   }
