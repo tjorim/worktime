@@ -470,7 +470,7 @@ export function MonthCalendar({
       <div
         className="month-calendar-grid"
         role="grid"
-        aria-label={`Calendar for ${month.format("MMMM YYYY")}`}
+        aria-label={m.calendar_grid_label({ month: month.format("MMMM YYYY") })}
         onKeyDown={handleGridKeyDown}
       >
         {/* Weekday header row */}

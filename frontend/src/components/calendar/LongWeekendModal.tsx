@@ -126,7 +126,9 @@ export function LongWeekendModal({
                         <span className="font-medium">
                           {formatDate(period.startDate)} – {formatDate(period.endDate)}
                         </span>
-                        <Badge variant="secondary">{period.dayCount}d</Badge>
+                        <Badge variant="secondary">
+                          {m.long_weekend_days_short({ count: period.dayCount })}
+                        </Badge>
                       </div>
                       {period.needBridgeDay && period.bridgeDays.length > 0 && (
                         <div className="text-muted-foreground text-sm mt-1">

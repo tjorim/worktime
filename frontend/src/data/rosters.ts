@@ -1,3 +1,5 @@
+import * as m from "@/paraglide/messages.js";
+
 export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift";
 
 export type ShiftCode = "M" | "L" | "N" | "D" | "O";
@@ -173,8 +175,12 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
 export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   {
     value: "9-5",
-    title: "9-5",
-    description: "Standard weekday schedule with weekends off.",
+    get title() {
+      return m.roster_9_5_title();
+    },
+    get description() {
+      return m.roster_9_5_description();
+    },
     isAvailable: true,
     shiftConfig: {
       teamCount: 1,
@@ -210,9 +216,12 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   },
   {
     value: "2-shift",
-    title: "2-shift",
-    description:
-      "Alternating morning and evening shifts across 4 teams with rotating support weekends.",
+    get title() {
+      return m.roster_2_shift_title();
+    },
+    get description() {
+      return m.roster_2_shift_description();
+    },
     isAvailable: true,
     shiftConfig: {
       teamCount: 4,
@@ -282,8 +291,12 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   },
   {
     value: "weekend-shift",
-    title: "Weekend shift",
-    description: "Weekend-only teams rotating early one weekend, late the next.",
+    get title() {
+      return m.roster_weekend_shift_title();
+    },
+    get description() {
+      return m.roster_weekend_shift_description();
+    },
     isAvailable: true,
     shiftConfig: {
       teamCount: 2,
@@ -334,8 +347,12 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   },
   {
     value: "5-shift",
-    title: "5-shift",
-    description: "Continuous rotating shifts across multiple teams.",
+    get title() {
+      return m.roster_5_shift_title();
+    },
+    get description() {
+      return m.roster_5_shift_description();
+    },
     isAvailable: true,
     shiftConfig: {
       teamCount: 5,

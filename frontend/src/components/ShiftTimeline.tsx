@@ -180,7 +180,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
         {prevShift && (
           <div data-timeline-team className="flex flex-col items-center gap-2">
             <Badge variant="secondary" className="min-w-10 h-auto text-sm font-semibold rounded-md">
-              T{prevShift.teamNumber}
+              {m.shift_team_short({ team: prevShift.teamNumber })}
             </Badge>
             <div className="text-sm font-semibold text-muted-foreground">
               <ShiftBadge shift={prevShift.shift} size="sm" />
@@ -213,7 +213,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
                 "min-w-10 h-auto text-sm font-semibold rounded-md",
               )}
             >
-              T{currentWorkingTeam.teamNumber}
+              {m.shift_team_short({ team: currentWorkingTeam.teamNumber })}
             </Badge>
           </Hint>
           <div className="text-sm font-semibold text-muted-foreground">
@@ -240,7 +240,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
         {nextShift && (
           <div data-timeline-team className="flex flex-col items-center gap-2">
             <Badge variant="secondary" className="min-w-10 h-auto text-sm font-semibold rounded-md">
-              T{nextShift.teamNumber}
+              {m.shift_team_short({ team: nextShift.teamNumber })}
             </Badge>
             <div className="text-sm font-semibold text-muted-foreground">
               <ShiftBadge shift={nextShift.shift} size="sm" />

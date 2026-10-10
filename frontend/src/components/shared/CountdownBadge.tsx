@@ -3,6 +3,7 @@ const ONE_DAY_IN_SECONDS = 86400;
 import { Badge } from "@/components/ui/badge";
 import type { Dayjs } from "dayjs";
 import type { CountdownResult } from "@/hooks/useCountdown";
+import * as m from "@/paraglide/messages.js";
 
 interface CountdownBadgeProps {
   countdown: CountdownResult | null;
@@ -29,7 +30,7 @@ interface CountdownBadgeProps {
 export function CountdownBadge({
   countdown,
   startTime,
-  label = "Starts in",
+  label = m.countdown_starts_in(),
   variant = "info",
   urgency = false,
   showIcon = true,

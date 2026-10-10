@@ -75,6 +75,7 @@ import {
 } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 import { logger } from "@/utils/logger";
+import * as m from "@/paraglide/messages.js";
 
 export type NullableScheduleOption = ScheduleOption | null | undefined;
 
@@ -281,8 +282,8 @@ export function getFormattedShiftTime(
   shift: { start: number | null; end: number | null },
   timeFormat: "12h" | "24h",
 ): string {
-  if (shift.start == null || shift.end == null) return "Not working";
-  return getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? "Not working";
+  if (shift.start == null || shift.end == null) return m.shift_not_working();
+  return getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? m.shift_not_working();
 }
 
 /**

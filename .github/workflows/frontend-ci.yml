@@ -48,9 +48,9 @@ jobs:
         working-directory: frontend
         run: pnpm run check-version-consistency
 
-      - name: Validate translation message parity
+      - name: Audit interface strings and catalogues
         working-directory: frontend
-        run: pnpm run check-message-parity
+        run: pnpm run locale:audit
 
       - name: Validate roster golden fixture is up to date
         working-directory: frontend

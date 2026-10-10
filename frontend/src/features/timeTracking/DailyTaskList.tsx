@@ -68,7 +68,7 @@ function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
     <div
       className="flex items-center gap-2 px-3 py-1"
       role="separator"
-      aria-label={`Current time: ${liveTime.format("HH:mm")}`}
+      aria-label={m.tt_current_time_label({ time: liveTime.format("HH:mm") })}
       data-testid="now-indicator"
     >
       <div className="grow border-t-2 border-destructive" />
@@ -600,8 +600,8 @@ export function DailyTaskList({
                               aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
                               tabIndex={0}
                             >
-                              <Icon icon={CoffeeIcon} className="mr-1" />-{BREAK_DURATION_MINUTES}
-                              min
+                              <Icon icon={CoffeeIcon} className="mr-1" />
+                              {m.tt_break_minutes_short({ minutes: BREAK_DURATION_MINUTES })}
                             </Badge>
                           </Hint>
                         )}

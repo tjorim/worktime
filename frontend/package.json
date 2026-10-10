@@ -42,6 +42,7 @@
     "generate-icons": "tsx scripts/generate-icons.ts",
     "check-version-consistency": "tsx scripts/check-version-consistency.ts",
     "check-message-parity": "node scripts/check-message-parity.mjs",
+    "locale:audit": "node scripts/locale-audit.mjs",
     "sync-version": "tsx scripts/sync-version.ts",
     "generate-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/generate-roster-fixture.ts",
     "check-roster-fixture": "TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts"
@@ -97,6 +98,7 @@
     "happy-dom": "^20.14.5",
     "lightningcss": "^1.33.0",
     "msw": "^2.15.0",
+    "oxc-parser": "^0.153.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
     "postcss": "^8.5.29",

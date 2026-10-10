@@ -30,6 +30,7 @@ import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@
 import { calculateShift } from "./shiftCalculations";
 import { dayjs, formatHdayDate } from "./dateTimeUtils";
 import { logger } from "@/utils/logger";
+import * as m from "@/paraglide/messages.js";
 
 /**
  * Checks if a date matches any time-off event.
@@ -183,31 +184,33 @@ export function getNonWorkingReason(
   publicHolidays: Map<string, PublicHolidayInfo>,
 ): string | null {
   if (!teamNumber) {
-    return "No team selected";
+    return m.settings_no_team_selected();
   }
 
   try {
     // Check shift schedule first
     const shift = calculateShift(date, teamNumber, scheduleType);
     if (!shift.isWorking) {
-      return "Scheduled off day";
+      return m.nonworking_scheduled_off();
     }
 
     // Check for time-off events
     if (hasTimeOffEvent(date, entries)) {
-      return "Time off";
+      return m.nonworking_time_off();
     }
 
     // Check for public holidays
     if (isPublicHolidayForShift(date, teamNumber, scheduleType, publicHolidays)) {
       const holidayDate = shift.code === "N" ? date.add(1, "day") : date;
       const holiday = publicHolidays.get(formatHdayDate(holidayDate));
-      return holiday ? `Public holiday: ${holiday.name}` : "Public holiday";
+      return holiday
+        ? m.nonworking_public_holiday_named({ name: holiday.name })
+        : m.nonworking_public_holiday();
     }
 
     return null; // It's a working day
   } catch (error) {
     logger.warn("getNonWorkingReason error:", error);
-    return "Unable to determine";
+    return m.nonworking_unknown();
   }
 }
