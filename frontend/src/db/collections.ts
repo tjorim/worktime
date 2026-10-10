@@ -363,6 +363,52 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
   }
 }
 
+/**
+ * `pushAndQueue`, then fold the mutation into the collection's base state.
+ *
+ * A query collection drops a mutation's optimistic layer when its handler
+ * resolves, so something has to write the change into the synced rows or it
+ * would vanish (offline and signed-out edits have no server copy to refetch).
+ * TanStack DB used to refetch implicitly after every handler; that is
+ * deprecated, and a whole-snapshot refetch from inside a handler can apply a
+ * stale snapshot over a later mutation. Writing the mutation's own rows
+ * directly is exact; the server's view still arrives through the pull that
+ * `pushAndQueue` triggers. Returning `{ refetch: false }` skips the implicit
+ * refetch.
+ */
+async function pushAndCommit<TItem extends object>(
+  payload: SyncPushPayload,
+  {
+    collection,
+    transaction,
+  }: {
+    collection: {
+      utils: {
+        writeUpsert: (item: TItem) => Promise<void>;
+        writeDelete: (key: string | number) => Promise<void>;
+      };
+    };
+    transaction: {
+      mutations: ReadonlyArray<{ type: string; key: string | number; modified: TItem }>;
+    };
+  },
+): Promise<{ refetch: false }> {
+  await pushAndQueue(payload);
+  for (const m of transaction.mutations) {
+    if (m.type !== "delete") {
+      await collection.utils.writeUpsert(m.modified);
+      continue;
+    }
+    try {
+      await collection.utils.writeDelete(m.key);
+    } catch (err) {
+      // A pull may already have removed the row; the delete is then done.
+      if (!(err instanceof Error && err.name === "DeleteOperationItemNotFoundError")) throw err;
+    }
+  }
+  return { refetch: false };
+}
+
 // ---------------------------------------------------------------------------
 // Pull-response → local format converters
 // ---------------------------------------------------------------------------
@@ -750,7 +796,7 @@ export const labelsCollection = createCollection(
       syncQueryFn("labels", labelsCollection, (data) =>
         data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
       ),
-    onInsert: async ({ transaction }) => {
+    onInsert: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: transaction.mutations.map((m) => ({
@@ -766,9 +812,9 @@ export const labelsCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onUpdate: async ({ transaction }) => {
+    onUpdate: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: transaction.mutations.map((m) => ({
@@ -784,9 +830,9 @@ export const labelsCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onDelete: async ({ transaction }) => {
+    onDelete: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: transaction.mutations.map((m) => ({
@@ -800,7 +846,7 @@ export const labelsCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
   }),
 );
@@ -820,7 +866,7 @@ export const tasksCollection = createCollection(
       syncQueryFn("tasks", tasksCollection, (data) =>
         data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
       ),
-    onInsert: async ({ transaction }) => {
+    onInsert: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -840,9 +886,9 @@ export const tasksCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onUpdate: async ({ transaction }) => {
+    onUpdate: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -862,9 +908,9 @@ export const tasksCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onDelete: async ({ transaction }) => {
+    onDelete: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -878,7 +924,7 @@ export const tasksCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
   }),
 );
@@ -898,7 +944,7 @@ export const templatesCollection = createCollection(
       syncQueryFn("templates", templatesCollection, (data) =>
         data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
       ),
-    onInsert: async ({ transaction }) => {
+    onInsert: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -916,9 +962,9 @@ export const templatesCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onUpdate: async ({ transaction }) => {
+    onUpdate: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -936,9 +982,9 @@ export const templatesCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onDelete: async ({ transaction }) => {
+    onDelete: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -952,7 +998,7 @@ export const templatesCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
   }),
 );
@@ -972,7 +1018,7 @@ export const timeOffCollection = createCollection(
       syncQueryFn("time-off-entries", timeOffCollection, (data) =>
         _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
       ),
-    onInsert: async ({ transaction }) => {
+    onInsert: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -997,9 +1043,9 @@ export const timeOffCollection = createCollection(
         }),
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onUpdate: async ({ transaction }) => {
+    onUpdate: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1024,9 +1070,9 @@ export const timeOffCollection = createCollection(
         }),
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onDelete: async ({ transaction }) => {
+    onDelete: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1040,7 +1086,7 @@ export const timeOffCollection = createCollection(
         })),
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
   }),
 );
@@ -1060,7 +1106,7 @@ export const ganttTasksCollection = createCollection(
       syncQueryFn("gantt-tasks", ganttTasksCollection, (data) =>
         (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
       ),
-    onInsert: async ({ transaction }) => {
+    onInsert: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1081,9 +1127,9 @@ export const ganttTasksCollection = createCollection(
           notes: m.modified.notes ?? null,
         })),
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onUpdate: async ({ transaction }) => {
+    onUpdate: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1104,9 +1150,9 @@ export const ganttTasksCollection = createCollection(
           notes: m.modified.notes ?? null,
         })),
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onDelete: async ({ transaction }) => {
+    onDelete: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1120,7 +1166,7 @@ export const ganttTasksCollection = createCollection(
           client_updated_at: now,
         })),
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
   }),
 );
@@ -1145,7 +1191,7 @@ export const workLocationsCollection = createCollection(
       syncQueryFn("work-locations", workLocationsCollection, (data) =>
         data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
       ),
-    onInsert: async ({ transaction }) => {
+    onInsert: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1161,9 +1207,9 @@ export const workLocationsCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onUpdate: async ({ transaction }) => {
+    onUpdate: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1179,9 +1225,9 @@ export const workLocationsCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
-    onDelete: async ({ transaction }) => {
+    onDelete: async ({ transaction, collection }) => {
       const now = dayjs().toISOString();
       const payload: SyncPushPayload = {
         labels: [],
@@ -1195,7 +1241,7 @@ export const workLocationsCollection = createCollection(
         time_off_entries: [],
         gantt_tasks: [],
       };
-      await pushAndQueue(payload);
+      return pushAndCommit(payload, { collection, transaction });
     },
   }),
 );
