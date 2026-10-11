@@ -104,11 +104,6 @@ export default defineConfig({
   ],
   css: {
     transformer: "lightningcss",
-    preprocessorOptions: {
-      scss: {
-        quietDeps: true,
-      },
-    },
   },
   build: {
     outDir: "dist",
