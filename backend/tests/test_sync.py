@@ -140,6 +140,7 @@ class TestSyncPull:
         )
 
         assert response.status_code == 410
+        assert response.json()["code"] == "sync_cursor_expired"
         assert response.json()["detail"] == {
             "code": "sync_cursor_expired",
             "message": "Sync cursor is outside the supported offline window; perform a full resync.",
@@ -177,6 +178,7 @@ class TestSyncPull:
         )
 
         assert response.status_code == 410
+        assert response.json()["code"] == "sync_cursor_expired"
         assert response.json()["detail"]["code"] == "sync_cursor_expired"
         pull = db_client.get("/api/sync/pull", headers=auth_headers(user_id))
         assert all(label["id"] != label_id for label in pull.json()["labels"])
@@ -2047,6 +2049,7 @@ class TestSyncEventsEndpoint:
             with pytest.raises(HTTPException) as exc_info:
                 await events_endpoint(request=mock_request, authenticated_user_id=user_id)
             assert exc_info.value.status_code == 429
+            assert getattr(exc_info.value, "code", None) == "sync_stream_limit_reached"
         finally:
             for response in responses:
                 await cast("AsyncGenerator[Any]", response.body_iterator).aclose()
@@ -2364,6 +2367,7 @@ class TestSyncCorrectnessFixes:
             headers=headers,
         )
         assert bad_gantt_resp.status_code == 400
+        assert bad_gantt_resp.json()["code"] == "validation_failed"
 
     def test_push_task_create_rejects_stop_time_before_start_time(self, db_client: TestClient, auth_headers) -> None:
         """Sync push must reject an inverted time range, matching the REST create_task check.
@@ -3635,6 +3639,7 @@ class TestBulkDeleteGuard:
 
         resp = db_client.post("/api/sync/push", json=self._delete_payload(label_ids), headers=headers)
         assert resp.status_code == 409, resp.text
+        assert resp.json()["code"] == "bulk_delete_blocked"
 
         # Nothing was applied: the guard runs before any record is touched.
         pull = db_client.get("/api/sync/pull", headers=headers)

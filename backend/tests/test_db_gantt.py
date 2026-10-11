@@ -80,6 +80,7 @@ def test_gantt_task_crud_and_validation(
         headers=owner_headers,
     )
     assert bad_update_resp.status_code == 400
+    assert bad_update_resp.json()["code"] == "validation_failed"
     after_bad_update_resp = db_client.get(
         f"/api/gantt-tasks/{task_id}?user_id={owner_id}",
         headers=owner_headers,
@@ -115,6 +116,7 @@ def test_gantt_task_crud_and_validation(
         headers=owner_headers,
     )
     assert get_after_delete.status_code == 404
+    assert get_after_delete.json()["code"] == "not_found"
 
     # Cross-user 403: owner's user_id with other user's token
     create_resp2 = db_client.post(
@@ -155,6 +157,7 @@ def test_gantt_task_crud_and_validation(
         headers=owner_headers,
     )
     assert nonexistent_resp.status_code == 404
+    assert nonexistent_resp.json()["code"] == "not_found"
 
     # 422 for end_date < start_date at request validation time
     bad_dates_resp = db_client.post(

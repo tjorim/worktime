@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime as dt_datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.read_models import (
     CurrentStatusReadModel,
@@ -37,9 +38,10 @@ async def _load_dashboard(
     try:
         ZoneInfo(timezone)
     except ZoneInfoNotFoundError, KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unknown timezone: {timezone!r}",
+        raise api_error(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.UNKNOWN_TIMEZONE,
+            f"Unknown timezone: {timezone!r}",
         ) from None
     try:
         return await build_dashboard_read_model(
@@ -50,7 +52,7 @@ async def _load_dashboard(
             next_shift_limit=next_shift_limit,
         )
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
 
 
 @router.get("/dashboard", response_model=DashboardReadModel)

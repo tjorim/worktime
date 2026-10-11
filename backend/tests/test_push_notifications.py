@@ -113,6 +113,7 @@ class TestPushRouter:
 
         response = db_client.post("/api/push/subscribe", json=_subscribe_payload(), headers=headers)
         assert response.status_code == 503
+        assert response.json()["code"] == "push_not_configured"
 
     def test_subscribe_lifecycle_over_http(
         self,
@@ -160,6 +161,7 @@ class TestPushRouter:
             "/api/push/subscribe", params={"endpoint": "https://fcm.googleapis.com/fcm/send/ep1"}, headers=headers
         )
         assert deleted_again.status_code == 404
+        assert deleted_again.json()["code"] == "push_subscription_not_found"
 
     def test_cannot_unsubscribe_another_users_endpoint(
         self,
@@ -186,6 +188,7 @@ class TestPushRouter:
             headers=auth_headers(other_id),
         )
         assert response.status_code == 404
+        assert response.json()["code"] == "push_subscription_not_found"
 
 
 class TestPushSubscriptionService:

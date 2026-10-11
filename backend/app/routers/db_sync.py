@@ -6,10 +6,11 @@ import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ApiHTTPException, ErrorCode, api_error
 from app.database.engine import get_session
 from app.middleware.rate_limit import limiter
 from app.routers.auth import get_authenticated_user_id, get_authenticated_user_id_shortlived
@@ -31,6 +32,24 @@ from app.utils.sse_manager import notify_sync_changed, sync_event_manager
 from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
+
+
+def _cursor_expired_error() -> ApiHTTPException:
+    """410 for a cursor older than the offline window.
+
+    ``detail`` stays the structured object offline clients already parse; ``code`` is
+    the same stable value at the top level like every other API error.
+    """
+    return api_error(
+        status.HTTP_410_GONE,
+        ErrorCode.SYNC_CURSOR_EXPIRED,
+        {
+            "code": ErrorCode.SYNC_CURSOR_EXPIRED.value,
+            "message": "Sync cursor is outside the supported offline window; perform a full resync.",
+            "max_offline_days": MAX_SYNC_OFFLINE_PERIOD.days,
+        },
+    )
+
 
 router = APIRouter(prefix="/sync", tags=["Sync"])
 
@@ -64,14 +83,7 @@ async def push_endpoint(
     unexpected error rolls back the entire batch.
     """
     if sync_cursor is not None and as_utc(sync_cursor) < datetime.now(UTC) - MAX_SYNC_OFFLINE_PERIOD:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail={
-                "code": "sync_cursor_expired",
-                "message": "Sync cursor is outside the supported offline window; perform a full resync.",
-                "max_offline_days": MAX_SYNC_OFFLINE_PERIOD.days,
-            },
-        )
+        raise _cursor_expired_error()
     timings: dict[str, float] = {}
     try:
         with time_operation("sync", timings):
@@ -85,7 +97,7 @@ async def push_endpoint(
             authenticated_user_id,
             error,
         )
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise api_error(status.HTTP_409_CONFLICT, ErrorCode.BULK_DELETE_BLOCKED, str(error)) from error
     except (ValidationError, NotFoundError) as error:
         # NotFoundError surfaces from _validate_task_gantt_reference (a task
         # or template linking to a gantt_task_id that doesn't exist, or was
@@ -93,7 +105,7 @@ async def push_endpoint(
         # everyday race in a multi-device offline-first client, not just a
         # malformed-payload edge case, so it must map to 400 rather than
         # bubbling up as an unhandled 500.
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
 
     await notify_sync_changed(authenticated_user_id)
     if any(record.status == "ok" for record in result.results.get("tasks", [])):
@@ -126,14 +138,7 @@ async def pull_endpoint(
     """
     since_utc = as_utc(since)
     if since_utc != _EPOCH and since_utc < datetime.now(UTC) - MAX_SYNC_OFFLINE_PERIOD:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail={
-                "code": "sync_cursor_expired",
-                "message": "Sync cursor is outside the supported offline window; perform a full resync.",
-                "max_offline_days": MAX_SYNC_OFFLINE_PERIOD.days,
-            },
-        )
+        raise _cursor_expired_error()
 
     timings: dict[str, float] = {}
     with time_operation("sync", timings):
@@ -206,9 +211,10 @@ async def events_endpoint(
         # 30s gives the server enough time to notice a stale/disconnected
         # stream (via is_disconnected() polling, at most _SSE_KEEPALIVE_TIMEOUT
         # apart) and free a slot, without the client retrying immediately.
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many concurrent sync streams for this account",
+        raise api_error(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            ErrorCode.SYNC_STREAM_LIMIT_REACHED,
+            "Too many concurrent sync streams for this account",
             headers={"Retry-After": "30"},
         )
 

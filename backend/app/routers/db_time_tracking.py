@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
@@ -59,11 +60,11 @@ router = APIRouter(prefix="/time-tracking", tags=["Time Tracking"])
 
 def _handle_error(error: Exception) -> None:
     if isinstance(error, NotFoundError):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
     if isinstance(error, ConflictError):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise api_error(status.HTTP_409_CONFLICT, ErrorCode.CONFLICT, str(error)) from error
     if isinstance(error, ValidationError):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
     raise error
 
 

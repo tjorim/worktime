@@ -4,10 +4,11 @@ task starting soon, that fire even when the app is closed).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
 from app.schemas import FcmTokenCreate, FcmTokenRead, PushSubscriptionCreate, PushSubscriptionRead
@@ -39,9 +40,10 @@ async def subscribe_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> PushSubscriptionRead:
     if not settings.push_notifications_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Push notifications are not configured on this server",
+        raise api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ErrorCode.PUSH_NOT_CONFIGURED,
+            "Push notifications are not configured on this server",
         )
     subscription = await upsert_subscription(session, principal.user_id, payload)
     return PushSubscriptionRead.model_validate(subscription, from_attributes=True)
@@ -56,7 +58,7 @@ async def unsubscribe_endpoint(
     try:
         await delete_subscription(session, principal.user_id, endpoint)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.PUSH_SUBSCRIPTION_NOT_FOUND, str(error)) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -68,9 +70,10 @@ async def register_fcm_token_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> FcmTokenRead:
     if not settings.fcm_notifications_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="FCM push-wake is not configured on this server",
+        raise api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ErrorCode.FCM_NOT_CONFIGURED,
+            "FCM push-wake is not configured on this server",
         )
     device_token = await upsert_token(session, principal.user_id, payload)
     return FcmTokenRead.model_validate(device_token, from_attributes=True)
@@ -85,6 +88,6 @@ async def unregister_fcm_token_endpoint(
     try:
         await delete_token(session, principal.user_id, token)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.FCM_TOKEN_NOT_FOUND, str(error)) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

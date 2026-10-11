@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.database.models import TimeTrackingTask
 from app.read_models import CurrentStatusReadModel, NextShiftsReadModel
@@ -57,7 +58,7 @@ async def get_pebble_dashboard(
             next_shift_limit=1,
         )
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
     running_task = await get_running_task(session, principal.user_id)
     planned_task = await get_next_planned_task(session, principal.user_id)
     return PebbleDashboardRead(
@@ -85,7 +86,7 @@ async def pebble_clock_in(
             actor=audit_actor_for(principal),
         )
     except ConflictError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise api_error(status.HTTP_409_CONFLICT, ErrorCode.CONFLICT, str(error)) from error
     return _task_read(task)
 
 
@@ -96,9 +97,10 @@ async def pebble_clock_out(
 ) -> TaskRead:
     running_task = await get_running_task(session, principal.user_id)
     if running_task is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="No running task to clock out",
+        raise api_error(
+            status.HTTP_409_CONFLICT,
+            ErrorCode.NO_RUNNING_TASK,
+            "No running task to clock out",
         )
     try:
         task = await update_task(
@@ -109,5 +111,5 @@ async def pebble_clock_out(
             actor=audit_actor_for(principal),
         )
     except (NotFoundError, ConflictError, ValidationError) as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise api_error(status.HTTP_409_CONFLICT, ErrorCode.CONFLICT, str(error)) from error
     return _task_read(task)

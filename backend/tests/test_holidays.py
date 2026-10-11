@@ -323,7 +323,10 @@ class TestGetPublicHolidays:
         response = db_client.get("/api/holidays/public?country=BE&year=2026")
 
         assert response.status_code == 400
-        assert response.json() == {"detail": "Unsupported country code: BE. Only NL is supported."}
+        assert response.json() == {
+            "code": "unsupported_country",
+            "detail": "Unsupported country code: BE. Only NL is supported.",
+        }
 
     @pytest.mark.parametrize(
         "path", ["/api/holidays/public", "/api/holidays/school", "/api/holidays/longweekend", "/api/holidays/paydates"]

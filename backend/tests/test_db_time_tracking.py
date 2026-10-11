@@ -52,6 +52,7 @@ def test_label_crud_and_delete(
         headers=headers,
     )
     assert delete_label_response.status_code == 409
+    assert delete_label_response.json()["code"] == "conflict"
 
     # Remove the label from the task, then deletion succeeds
     db_client.put(
@@ -110,6 +111,7 @@ def test_task_constraints_and_filtering(
         headers=headers,
     )
     assert invalid_gantt_task.status_code == 404
+    assert invalid_gantt_task.json()["code"] == "not_found"
 
     invalid_label_task = db_client.post(
         f"/api/time-tracking/tasks?user_id={user_id}",
@@ -150,6 +152,7 @@ def test_task_constraints_and_filtering(
         headers=headers,
     )
     assert second_running_task.status_code == 409
+    assert second_running_task.json()["code"] == "conflict"
 
     stop_running_response = db_client.put(
         f"/api/time-tracking/tasks/{running_task_id}?user_id={user_id}",
