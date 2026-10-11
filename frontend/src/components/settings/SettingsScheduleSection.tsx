@@ -48,7 +48,7 @@ export function SettingsScheduleSection({
                 <span
                   className={cn(
                     "text-sm font-normal",
-                    isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
+                    isSelected ? "text-primary-foreground" : "text-muted-foreground",
                   )}
                 >
                   {schedule.description}

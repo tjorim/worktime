@@ -242,7 +242,7 @@ export function PersonalizedStatusContent({
       <GridItem desktopSpan={showUpNext ? 6 : 12}>
         <Card className="h-full">
           <CardContent className="flex grow flex-col">
-            <CardTitle className="mb-2 text-primary">
+            <CardTitle className="mb-2 text-link">
               <Icon icon={TagIcon} className="mr-1" />
               {m.personalized_status_today()}
             </CardTitle>

@@ -98,7 +98,7 @@ export function SettingsAccountSection({
           <Alert variant="info">
             <div>
               {m.account_privacy_notice_body()}{" "}
-              <Link to="/privacy" className="font-medium underline underline-offset-3">
+              <Link to="/privacy" className="font-medium text-inherit underline underline-offset-3">
                 {m.account_privacy_notice_link()}
               </Link>
             </div>
