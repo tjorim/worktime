@@ -14,6 +14,7 @@ import { getLocale } from "@/paraglide/runtime.js";
 import { useDefaultLabelColor, type Label } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import { WeeklyDataView } from "./WeeklyDataView";
+import { useRecentWeeks } from "./hooks/useRecentWeeks";
 import {
   getWeekDateRange,
   useWeeklyTimeTrackingSummary,
@@ -78,6 +79,8 @@ export function TimeTrackingWeeklyView({
     defaultLabelColor,
   });
 
+  const recentWeeks = useRecentWeeks(tasks, start, liveTime);
+
   const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
   const weeklyProgressPercent =
     weeklyTargetHours && weeklyTargetHours > 0
@@ -136,6 +139,7 @@ export function TimeTrackingWeeklyView({
         {summary.rows.length > 0 && (
           <WeeklyDataView
             {...summary}
+            recentWeeks={recentWeeks}
             weeklyTargetHours={weeklyTargetHours}
             weeklyProgressPercent={weeklyProgressPercent}
             todayIso={todayIso}

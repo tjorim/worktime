@@ -107,6 +107,28 @@ describe("TimeTrackingWeeklyView Component", () => {
       expect(screen.getByText("Wednesday")).toBeInTheDocument();
     });
 
+    it("shows the category and recent-weeks charts when the week has data", () => {
+      const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
+
+      renderPanel({ tasks: weekTasks });
+
+      expect(screen.getByRole("heading", { name: "Hours by Category" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Recent Weeks" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: /^Total hours worked in each of the last 8 weeks/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: /^Hours worked each day over the last 8 weeks/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not show the charts when the week is empty", () => {
+      renderPanel({ tasks: [] });
+
+      expect(screen.queryByRole("heading", { name: "Hours by Category" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Recent Weeks" })).not.toBeInTheDocument();
+    });
+
     it("aggregates hours by task category", () => {
       const weekTasks = [
         createTaskForDate(mondayDate, "Support", "09:00", "12:00"),
