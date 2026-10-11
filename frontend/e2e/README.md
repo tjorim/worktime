@@ -44,3 +44,13 @@ This is test/dev tooling only — `src/config/oidc.ts`,
 `src/contexts/AuthContext.tsx`, and `src/contexts/SettingsContext.tsx` are
 untouched, and a real first-time visitor sees exactly the same wizard as
 before.
+
+## Accessibility scans
+
+`accessibility.spec.ts` (public routes) and `accessibility.authenticated.spec.ts`
+(onboarded, signed-in routes) run `@axe-core/playwright` with the `wcag2a`,
+`wcag2aa`, `wcag21a` and `wcag21aa` tags in light, dark and a 390px-wide
+viewport, and fail on any violation. The shared helper and the (empty)
+allow-list live in `axe.ts`; an allow-list entry needs a reason. Add new routes
+to the route lists in those specs. Screen-reader behaviour and anything axe
+cannot compute still needs a manual review.

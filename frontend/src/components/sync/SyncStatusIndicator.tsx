@@ -161,6 +161,7 @@ export function SyncStatusIndicator() {
         tone === "danger" && "text-danger-text",
         tone === "info" && "bg-info-bg text-info",
       )}
+      role="status"
       aria-label={`${m.sync_indicator_aria_label()}: ${label}`}
       aria-live="polite"
       aria-atomic="true"
