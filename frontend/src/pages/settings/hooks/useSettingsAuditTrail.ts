@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
+import { ApiError } from "@/utils/apiError";
 
 export interface AuditEntry {
   id: number;
@@ -39,7 +40,7 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
       if (beforeId !== undefined) params.set("before_id", String(beforeId));
 
       const response = await fetchFn(`/api/audit?${params.toString()}`);
-      if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
+      if (!response.ok) throw await ApiError.fromResponse(response);
       const payload = (await response.json()) as { items?: AuditEntry[] };
       return payload.items ?? [];
     },

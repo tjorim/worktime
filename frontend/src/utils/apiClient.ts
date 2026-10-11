@@ -10,6 +10,8 @@
  * {@link getRequestId} to extract it from any Response for support/debugging.
  */
 
+import { ApiError } from "@/utils/apiError";
+
 export interface ApiClientOptions {
   /** Called when a 401 Unauthorized response is received. */
   onUnauthorized: () => void;
@@ -93,13 +95,21 @@ export async function apiFetch(
   if (response.status === 401) {
     const requestId = getRequestId(response);
     clientOptions.onUnauthorized();
-    throw new Error(requestId ? `Unauthorized (request-id: ${requestId})` : "Unauthorized");
+    throw new ApiError({
+      status: 401,
+      requestId,
+      message: requestId ? `Unauthorized (request-id: ${requestId})` : "Unauthorized",
+    });
   }
 
   if (response.status === 403) {
     const requestId = getRequestId(response);
     clientOptions.onForbidden();
-    throw new Error(requestId ? `Forbidden (request-id: ${requestId})` : "Forbidden");
+    throw new ApiError({
+      status: 403,
+      requestId,
+      message: requestId ? `Forbidden (request-id: ${requestId})` : "Forbidden",
+    });
   }
 
   return response;

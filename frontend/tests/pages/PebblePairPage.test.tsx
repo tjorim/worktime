@@ -13,6 +13,10 @@ vi.mock("@/paraglide/messages.js", () => ({
   pebble_pair_connecting: () => "Connecting your watch...",
   pebble_pair_retry: () => "Retry pairing",
   pebble_pair_close_instruction: () => "You can close this window.",
+  pebble_pair_failed: () => "Could not pair your watch right now.",
+  error_rate_limited: () => "Too many requests.",
+  auth_session_expired: () => "Your session has expired.",
+  auth_error_forbidden: () => "Access denied.",
 }));
 
 describe("PebblePairPage", () => {
@@ -44,10 +48,24 @@ describe("PebblePairPage", () => {
     const user = userEvent.setup();
     render(<PebblePairPage />);
 
-    expect(await screen.findByText("Pairing failed (503)")).toBeInTheDocument();
+    expect(await screen.findByText("Could not pair your watch right now.")).toBeInTheDocument();
+    expect(screen.queryByText(/503/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Retry pairing" }));
 
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("You can close this window.")).toBeInTheDocument();
+  });
+
+  it("shows a translated reason for a recognised status", async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: "Rate limit exceeded: 5 per 1 minute" }), {
+        status: 429,
+      }),
+    );
+
+    render(<PebblePairPage />);
+
+    expect(await screen.findByText("Too many requests.")).toBeInTheDocument();
+    expect(screen.queryByText(/Rate limit exceeded/)).not.toBeInTheDocument();
   });
 });

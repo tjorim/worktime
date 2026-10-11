@@ -5,6 +5,7 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import * as m from "@/paraglide/messages.js";
 import { appendToPendingSyncOutbox } from "@/utils/syncClient";
 import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
 
@@ -199,9 +200,9 @@ describe("AuthContext", () => {
 
       renderWithProviders(<AuthStatusDisplay />);
 
-      expect(
-        await screen.findByText("Sign-in failed: Invalid state parameter"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText(m.auth_error_oidc())).toBeInTheDocument();
+      // The provider's English diagnostic stays in the log, not the interface.
+      expect(screen.queryByText(/Invalid state parameter/)).not.toBeInTheDocument();
     });
 
     it("does not show duplicate toasts for the same OIDC error object", async () => {
@@ -215,7 +216,7 @@ describe("AuthContext", () => {
       };
 
       const { rerender } = renderWithProviders(<AuthStatusDisplay />);
-      expect(await screen.findByText("Sign-in failed: Consent was denied")).toBeInTheDocument();
+      expect(await screen.findByText(m.auth_error_oidc())).toBeInTheDocument();
 
       rerender(
         <ToastProvider>
@@ -225,7 +226,7 @@ describe("AuthContext", () => {
         </ToastProvider>,
       );
 
-      expect(screen.getAllByText("Sign-in failed: Consent was denied")).toHaveLength(1);
+      expect(screen.getAllByText(m.auth_error_oidc())).toHaveLength(1);
     });
 
     it("shows a toast again when the same OIDC error object recurs after being cleared", async () => {
@@ -239,7 +240,7 @@ describe("AuthContext", () => {
       };
 
       const { rerender } = renderWithProviders(<AuthStatusDisplay />);
-      expect(await screen.findByText("Sign-in failed: Silent renew failed")).toBeInTheDocument();
+      expect(await screen.findByText(m.auth_error_oidc())).toBeInTheDocument();
 
       mockOidcAuth = { ...mockOidcAuth, error: null };
       rerender(
@@ -259,7 +260,7 @@ describe("AuthContext", () => {
         </ToastProvider>,
       );
 
-      expect(screen.getAllByText("Sign-in failed: Silent renew failed")).toHaveLength(2);
+      expect(screen.getAllByText(m.auth_error_oidc())).toHaveLength(2);
     });
 
     it("stays silent while a token is merely approaching expiry", async () => {

@@ -547,6 +547,32 @@ describe("SettingsPage API Tokens Section", () => {
     expect(await screen.findByText("No API tokens yet.")).toBeInTheDocument();
   });
 
+  it.each([
+    ["an unrecognised failure", { detail: "Token limit reached" }, 500, "api_tokens_create_failed"],
+    ["a rate-limited request", { detail: "slow down" }, 429, "error_rate_limited"],
+  ] as const)(
+    "shows translated text, not the server's detail, for %s when creating a token",
+    async (_label, body, status, messageKey) => {
+      const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+        if (input === "/api/access-tokens" && init?.method === "POST") {
+          return jsonResponse(body, { status });
+        }
+        if (input === "/api/access-tokens") return jsonResponse({ items: [], total: 0 });
+        throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+      });
+
+      const user = userEvent.setup();
+      renderSettingsApiTokensHarness({ fetchFn });
+
+      await screen.findByText("No API tokens yet.");
+      await user.type(screen.getByLabelText("Token name"), "Pebble watch");
+      await user.click(screen.getByRole("button", { name: "Generate token" }));
+
+      expect(await screen.findByText(m[messageKey]())).toBeInTheDocument();
+      expect(screen.queryByText(body.detail)).not.toBeInTheDocument();
+    },
+  );
+
   it("generates a token, reveals it once, and copies it to the clipboard", async () => {
     let tokenCreated = false;
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
@@ -806,7 +832,8 @@ describe("SettingsPage Admin Section", () => {
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-    expect(await screen.findByText("Could not delete user.")).toBeInTheDocument();
+    expect(await screen.findByText(m.account_admin_users_delete_failed())).toBeInTheDocument();
+    expect(screen.queryByText("Could not delete user.")).not.toBeInTheDocument();
     expect(screen.getByText("member-user")).toBeInTheDocument();
   });
 

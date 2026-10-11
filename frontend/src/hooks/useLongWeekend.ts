@@ -2,7 +2,9 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { usePublicApiClient } from "@/hooks/usePublicApiClient";
+import * as m from "@/paraglide/messages.js";
 import type { LongWeekend, LongWeekendDayInfo } from "@/types/longWeekend";
+import { ApiError } from "@/utils/apiError";
 import { dayjs } from "@/utils/dateTimeUtils";
 
 function isValidLongWeekend(item: unknown): item is LongWeekend {
@@ -30,9 +32,7 @@ async function fetchLongWeekends(
     availableBridgeDays: String(availableBridgeDays),
   });
   const response = await apiFetch(`/api/holidays/longweekend?${params}`, { signal });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch long weekends: ${response.status} ${response.statusText}`);
-  }
+  if (!response.ok) throw await ApiError.fromResponse(response);
   const rawData = await response.json();
   if (!Array.isArray(rawData)) {
     throw new Error("Invalid response: expected an array");
@@ -101,6 +101,6 @@ export function useLongWeekend(year: number, maxBridgeDays: number, enabled: boo
     periods,
     longWeekendMap,
     loading: isLoading,
-    error: error ? error.message : null,
+    error: error ? m.long_weekend_load_failed() : null,
   };
 }

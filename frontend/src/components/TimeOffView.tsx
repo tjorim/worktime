@@ -61,7 +61,8 @@ import {
 } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
-import { getHdayHelperErrorMessage, resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
+import { ApiError, describeError } from "@/utils/apiError";
+import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -638,8 +639,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
             // same known-stale etag — that would just conflict again silently.
             toast.showWarning(m.timeoff_push_conflict(), FileLockIcon);
           } else if (!response.ok) {
-            const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
-            throw new Error(m.timeoff_push_failed({ error: errorMessage }));
+            throw await ApiError.fromResponse(response);
           } else {
             const data: { etag: string } = await response.json();
             rememberHdayEtag(hdayUsername, data.etag);
@@ -651,7 +651,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
           }
         } catch (error) {
           logger.error("Failed to push .hday content to helper:", error);
-          toast.showError(error instanceof Error ? error.message : m.timeoff_push_failed_generic());
+          const reason = describeError(error);
+          toast.showError(
+            reason ? m.timeoff_push_failed({ error: reason }) : m.timeoff_push_failed_generic(),
+          );
         } finally {
           setIsPushingToHelper(false);
           isHdaySyncInFlightRef.current = false;
@@ -693,8 +696,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       }
 
       if (!response.ok) {
-        const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
-        throw new Error(m.timeoff_pull_failed({ error: errorMessage }));
+        throw await ApiError.fromResponse(response);
       }
 
       const data: { raw: string; etag: string | null } = await response.json();
@@ -725,7 +727,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       }
     } catch (error) {
       logger.error("Failed to pull .hday content from helper:", error);
-      toast.showError(error instanceof Error ? error.message : m.timeoff_pull_failed_generic());
+      const reason = describeError(error);
+      toast.showError(
+        reason ? m.timeoff_pull_failed({ error: reason }) : m.timeoff_pull_failed_generic(),
+      );
     } finally {
       setIsPullingFromHelper(false);
       isHdaySyncInFlightRef.current = false;

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { apiFetch } from "@/utils/apiClient";
+import { isUnauthorizedError } from "@/utils/apiError";
 import * as m from "@/paraglide/messages.js";
 
 export interface AuthenticatedRequestInit extends RequestInit {
@@ -70,7 +71,7 @@ export function useApiClient() {
       try {
         return await attempt();
       } catch (error: unknown) {
-        if (!(error instanceof Error) || !error.message.startsWith("Unauthorized")) {
+        if (!isUnauthorizedError(error)) {
           throw error;
         }
 
@@ -79,7 +80,7 @@ export function useApiClient() {
           try {
             return await attempt(renewedToken);
           } catch (retryError: unknown) {
-            if (!(retryError instanceof Error) || !retryError.message.startsWith("Unauthorized")) {
+            if (!isUnauthorizedError(retryError)) {
               throw retryError;
             }
             // Renewal reported success but the retry still hit a 401 — fall through

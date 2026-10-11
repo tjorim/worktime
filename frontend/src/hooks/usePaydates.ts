@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import * as m from "@/paraglide/messages.js";
 import type { PaydayInfo } from "@/types/paydays";
+import { ApiError } from "@/utils/apiError";
 import { usePublicApiClient } from "./usePublicApiClient";
 
 async function fetchPaydates(
@@ -12,9 +13,7 @@ async function fetchPaydates(
 ): Promise<string[]> {
   const params = new URLSearchParams({ country: DEFAULT_COUNTRY, year: String(year) });
   const response = await apiFetch(`/api/holidays/paydates?${params}`, { signal });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch paydates: ${response.status} ${response.statusText}`);
-  }
+  if (!response.ok) throw await ApiError.fromResponse(response);
   return response.json() as Promise<string[]>;
 }
 
@@ -43,6 +42,6 @@ export function usePaydates(year: number, enabled: boolean = true) {
   return {
     paydayMap,
     loading: isLoading,
-    error: error ? error.message : null,
+    error: error ? m.paydates_load_failed() : null,
   };
 }

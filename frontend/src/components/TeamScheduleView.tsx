@@ -26,7 +26,8 @@ import { MonthNavigationButtonGroup } from "@/components/shared/NavigationButton
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
-import { getHdayHelperErrorMessage, resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
+import { ApiError, describeError } from "@/utils/apiError";
+import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
 import {
   getHalfDay,
   getScrollLeftForColumn,
@@ -257,8 +258,7 @@ export function TeamScheduleView() {
       );
 
       if (!response.ok) {
-        const errorMessage = await getHdayHelperErrorMessage(response, m.team_unknown_error());
-        throw new Error(m.team_fetch_failed({ error: errorMessage }));
+        throw await ApiError.fromResponse(response);
       }
 
       const data: TeamHdayResponse = await response.json();
@@ -274,7 +274,7 @@ export function TeamScheduleView() {
       }
 
       logger.error("Error fetching team data:", err);
-      setError(err instanceof Error ? err.message : m.team_unknown_error());
+      setError(m.team_fetch_failed({ error: describeError(err) ?? m.team_unknown_error() }));
       setTeamData(null);
     } finally {
       // Only update loading state if this request wasn't aborted

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
-import { readErrorDetail } from "@/utils/apiClient";
+import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { logger } from "@/utils/logger";
 
 export type IntegrationClientScope = "worktime:mcp" | "worktime:admin";
@@ -57,8 +57,7 @@ export function useSettingsIntegrationClients({
       setError(null);
       try {
         const response = await fetchFn("/api/integration-clients");
-        if (!response.ok)
-          throw new Error((await readErrorDetail(response)) ?? m.integration_clients_load_failed());
+        if (!response.ok) throw await ApiError.fromResponse(response);
         const payload = (await response.json()) as { items: IntegrationClient[] };
         if (
           sessionGeneration.current !== expectedSession ||
@@ -73,9 +72,7 @@ export function useSettingsIntegrationClients({
         )
           return;
         logger.error("Failed to load integration clients:", loadError);
-        setError(
-          loadError instanceof Error ? loadError.message : m.integration_clients_load_failed(),
-        );
+        setError(getErrorMessage(loadError, m.integration_clients_load_failed()));
       } finally {
         if (
           sessionGeneration.current === expectedSession &&
@@ -118,8 +115,7 @@ export function useSettingsIntegrationClients({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmedName, scopes }),
       });
-      if (!response.ok)
-        throw new Error((await readErrorDetail(response)) ?? m.integration_clients_create_failed());
+      if (!response.ok) throw await ApiError.fromResponse(response);
       const created = (await response.json()) as CreatedIntegrationClient;
       if (sessionGeneration.current !== generation) return;
       setCreatedClient(created);
@@ -127,9 +123,7 @@ export function useSettingsIntegrationClients({
     } catch (createError) {
       if (sessionGeneration.current !== generation) return;
       logger.error("Failed to create integration client:", createError);
-      setError(
-        createError instanceof Error ? createError.message : m.integration_clients_create_failed(),
-      );
+      setError(getErrorMessage(createError, m.integration_clients_create_failed()));
     } finally {
       if (sessionGeneration.current === generation) {
         mutationInFlight.current = false;
@@ -148,8 +142,7 @@ export function useSettingsIntegrationClients({
       const response = await fetchFn(`/api/integration-clients/${clientId}/rotate`, {
         method: "POST",
       });
-      if (!response.ok)
-        throw new Error((await readErrorDetail(response)) ?? m.integration_clients_rotate_failed());
+      if (!response.ok) throw await ApiError.fromResponse(response);
       const rotated = (await response.json()) as CreatedIntegrationClient;
       if (sessionGeneration.current !== generation) return;
       setCreatedClient(rotated);
@@ -157,9 +150,7 @@ export function useSettingsIntegrationClients({
     } catch (rotateError) {
       if (sessionGeneration.current !== generation) return;
       logger.error("Failed to rotate integration client:", rotateError);
-      setError(
-        rotateError instanceof Error ? rotateError.message : m.integration_clients_rotate_failed(),
-      );
+      setError(getErrorMessage(rotateError, m.integration_clients_rotate_failed()));
     } finally {
       if (sessionGeneration.current === generation) {
         mutationInFlight.current = false;
@@ -177,7 +168,7 @@ export function useSettingsIntegrationClients({
     try {
       const response = await fetchFn(`/api/integration-clients/${clientId}`, { method: "DELETE" });
       if (!response.ok && response.status !== 404) {
-        throw new Error((await readErrorDetail(response)) ?? m.integration_clients_revoke_failed());
+        throw await ApiError.fromResponse(response);
       }
       if (sessionGeneration.current !== generation) return;
       setCreatedClient((current) => (current?.id === clientId ? null : current));
@@ -185,9 +176,7 @@ export function useSettingsIntegrationClients({
     } catch (revokeError) {
       if (sessionGeneration.current !== generation) return;
       logger.error("Failed to revoke integration client:", revokeError);
-      setError(
-        revokeError instanceof Error ? revokeError.message : m.integration_clients_revoke_failed(),
-      );
+      setError(getErrorMessage(revokeError, m.integration_clients_revoke_failed()));
     } finally {
       if (sessionGeneration.current === generation) {
         mutationInFlight.current = false;
