@@ -54,6 +54,7 @@ def test_register_requires_admin(db_client: TestClient, auth_headers) -> None:
         headers=auth_headers(2, is_admin=False),
     )
     assert response.status_code == 403
+    assert response.json()["code"] == "admin_required"
 
 
 def test_register_duplicate_username_conflict(db_client: TestClient, auth_headers) -> None:
@@ -73,6 +74,7 @@ def test_register_duplicate_username_conflict(db_client: TestClient, auth_header
         headers=admin_h,
     )
     assert response.status_code == 409
+    assert response.json()["code"] == "username_taken"
     assert "username already exists" in response.json()["detail"]
 
 

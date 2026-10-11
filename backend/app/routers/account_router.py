@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal, require_oidc_principal
 from app.schemas import AccountCapabilities, AccountProfile
@@ -38,7 +39,7 @@ async def get_account_profile(
     try:
         user = await get_user(session, principal.user_id)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error
 
     return AccountProfile(
         id=user.id,
@@ -80,4 +81,4 @@ async def delete_account(
         async with session.begin():
             await delete_user_uncommitted(session, principal.user_id)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error

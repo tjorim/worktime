@@ -14,13 +14,14 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import AuditActor
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session, get_session_factory
 from app.schemas import OidcDiscoveryConfig
 from app.services.access_token_service import TOKEN_PREFIX as _PAT_PREFIX
@@ -86,9 +87,8 @@ async def oidc_config() -> OidcDiscoveryConfig:
     URL paths.
     """
     if not settings.OIDC_ISSUER_URL:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="OIDC not configured on this server",
+        raise api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCode.OIDC_NOT_CONFIGURED, "OIDC not configured on this server"
         )
     issuer = settings.OIDC_ISSUER_URL.rstrip("/")
     cached = _config_cache.get(issuer)
@@ -98,9 +98,8 @@ async def oidc_config() -> OidcDiscoveryConfig:
         config = await _discover(issuer)
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         logger.error("OIDC discovery failed for %s: %s", issuer, exc)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="OIDC discovery failed",
+        raise api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCode.OIDC_DISCOVERY_FAILED, "OIDC discovery failed"
         ) from exc
     _config_cache[issuer] = config
     return config
@@ -120,9 +119,10 @@ async def _authenticate_pat(request: Request, token: str, session: AsyncSession)
     """
     record = await authenticate_access_token(session, token)
     if record is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or revoked access token",
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCode.INVALID_ACCESS_TOKEN,
+            "Invalid or revoked access token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     request.state.user_id = record.user_id
@@ -156,32 +156,34 @@ async def get_bearer_principal(
     try:
         claims = await decode_token(token)
     except OIDCTokenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCode.INVALID_TOKEN,
+            "Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
     subject = claims.get("sub")
     if not isinstance(subject, str) or not subject.strip():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing or empty subject claim",
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCode.TOKEN_SUBJECT_MISSING,
+            "Token missing or empty subject claim",
             headers={"WWW-Authenticate": "Bearer"},
         )
     if _is_keycloak_service_account(claims):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Keycloak service accounts cannot use the user REST API",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.SERVICE_ACCOUNT_FORBIDDEN,
+            "Keycloak service accounts cannot use the user REST API",
         )
 
     try:
         local_user = await get_or_create_local_user(subject, claims, session)
     except Exception as exc:
         logger.exception("Failed to resolve local user for subject %s", subject)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication service error",
+        raise api_error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, ErrorCode.AUTH_SERVICE_ERROR, "Authentication service error"
         ) from exc
 
     # Make the resolved user ID and auth type available to middleware for access logging.
@@ -223,9 +225,10 @@ def get_authenticated_principal(
     ``require_scoped_principal`` (currently the dedicated Pebble surface).
     """
     if principal.auth_type != AuthType.KEYCLOAK_USER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint requires an interactive Keycloak user session",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.INTERACTIVE_SESSION_REQUIRED,
+            "This endpoint requires an interactive Keycloak user session",
         )
     return principal
 
@@ -253,10 +256,7 @@ def require_scoped_principal(
         if principal.auth_type == AuthType.DELEGATED and has_required_scopes(principal.scopes, required):
             return principal
         missing = ", ".join(sorted(required))
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Missing required scope: {missing}",
-        )
+        raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.MISSING_SCOPE, f"Missing required scope: {missing}")
 
     return dependency
 
@@ -298,9 +298,10 @@ def get_authenticated_user_id_shortlived(
     Requires an interactive Keycloak user session, same as ``get_authenticated_principal``.
     """
     if principal.auth_type != AuthType.KEYCLOAK_USER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This endpoint requires an interactive Keycloak user session",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.INTERACTIVE_SESSION_REQUIRED,
+            "This endpoint requires an interactive Keycloak user session",
         )
     return principal.user_id
 
@@ -308,7 +309,7 @@ def get_authenticated_user_id_shortlived(
 def require_user_match(user_id: int, authenticated_user_id: int) -> None:
     """Enforce that request user_id matches the authenticated user."""
     if user_id != authenticated_user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.FORBIDDEN, "Forbidden")
 
 
 def resolve_scoped_user_id(user_id: int | None, authenticated_user_id: int) -> int:
@@ -332,7 +333,7 @@ def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal)
     if principal.is_admin:
         return
     if principal.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.FORBIDDEN, "Forbidden")
 
 
 def audit_actor_for(principal: AuthenticatedPrincipal) -> AuditActor:
@@ -363,8 +364,9 @@ def require_oidc_principal(
     weaken if that dependency's policy changes later.
     """
     if principal.auth_type != AuthType.KEYCLOAK_USER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This operation requires an interactive Keycloak user session",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.OIDC_SESSION_REQUIRED,
+            "This operation requires an interactive Keycloak user session",
         )
     return principal

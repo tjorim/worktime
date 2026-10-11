@@ -46,13 +46,21 @@ hooks) translate inside the hook, so views never see an `Error`.
 
 ## Adding a code
 
-1. The server sends `{ "code": "snake_case_code", "detail": "…" }`.
+1. Add an `ErrorCode` member in `backend/app/core/errors.py` and raise
+   `api_error(status, ErrorCode.X, "English detail")` instead of `HTTPException`. The
+   handler renders `{ "code": "snake_case_code", "detail": "…" }`. Plain `HTTPException`s
+   keep `{ "detail": "…" }` and the client shows its status/operation message.
+   Codes are permanent: never rename or reuse one.
 2. Add a message to `messages/en.json` and `nl.json`.
-3. Pass it in the surface's `codeMessages`. A code the client has not learned yet falls
-   back to the operation message, so adding codes on the server first is safe.
+3. Add it to the surface's map in `src/utils/apiErrorCodes.ts` and pass that map as
+   `codeMessages`. A code the client has not learned yet falls back to the operation
+   message, so adding codes on the server first is safe.
+   `tests/utils/apiErrorCodes.test.ts` fails if a map lists a code the backend does not send.
+4. Assert the code in a backend test (`response.json()["code"]`).
 
-The backend does not send codes yet, so today only statuses are mapped; see the
-follow-up issue linked from #1473.
+Codes exist for access tokens, integration clients, account/user deletion, registration
+conflicts, and the auth dependencies (`require_oidc_principal`, scope and admin checks).
+Other routers still send `detail` only.
 
 ## Tests
 

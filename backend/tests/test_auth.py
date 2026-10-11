@@ -109,6 +109,7 @@ def test_user_cannot_access_other_user(
         headers=auth_headers(user_a),
     )
     assert response.status_code == 403
+    assert response.json()["code"] == "forbidden"
 
 
 # ---------------------------------------------------------------------------

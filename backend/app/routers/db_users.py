@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
@@ -61,12 +62,12 @@ async def create_user_endpoint(
     authenticates via OIDC.
     """
     if not principal.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.ADMIN_REQUIRED, "Forbidden")
 
     try:
         user = await create_user(session, payload)
     except ConflictError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise api_error(status.HTTP_409_CONFLICT, ErrorCode.USERNAME_TAKEN, str(error)) from error
 
     return UserRead.model_validate(user, from_attributes=True)
 
@@ -79,12 +80,12 @@ async def list_users_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> UserListResponse:
     if not principal.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.ADMIN_REQUIRED, "Forbidden")
 
     try:
         users, total = await list_users(session, offset=offset, limit=limit)
     except ValidationError as error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
 
     return UserListResponse(
         items=[UserRead.model_validate(item, from_attributes=True) for item in users],
@@ -102,7 +103,7 @@ async def get_user_endpoint(
     try:
         user = await get_user(session, user_id)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error
 
     return UserRead.model_validate(user, from_attributes=True)
 
@@ -126,7 +127,7 @@ async def export_user_endpoint(
             preferences,
         ) = await get_user_export_data(session, user_id)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error
 
     response = UserDataExport(
         exported_at=datetime.now(UTC),
@@ -156,7 +157,7 @@ async def get_user_by_username_endpoint(
     # Return 404 for both "does not exist" and "not yours": a 403 here would
     # let any authenticated caller enumerate which usernames are taken.
     if user is None or (not principal.is_admin and user.id != principal.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, "user not found")
 
     return UserRead.model_validate(user, from_attributes=True)
 
@@ -172,11 +173,11 @@ async def update_user_endpoint(
     try:
         user = await update_user(session, user_id, payload)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error
     except ConflictError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise api_error(status.HTTP_409_CONFLICT, ErrorCode.USERNAME_TAKEN, str(error)) from error
     except ValidationError as error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
 
     return UserRead.model_validate(user, from_attributes=True)
 
@@ -188,9 +189,10 @@ async def delete_user_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     if principal.is_admin and principal.user_id == user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admins cannot delete their own account via this endpoint.",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.ADMIN_SELF_DELETE_FORBIDDEN,
+            "Admins cannot delete their own account via this endpoint.",
         )
 
     require_user_or_admin_match(user_id, principal)
@@ -199,6 +201,6 @@ async def delete_user_endpoint(
         async with session.begin():
             await delete_user_uncommitted(session, user_id)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

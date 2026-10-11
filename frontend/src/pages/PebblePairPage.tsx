@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { pebblePairErrorMessages } from "@/utils/apiErrorCodes";
 import { logger } from "@/utils/logger";
 
 export function PebblePairPage() {
@@ -42,7 +43,7 @@ export function PebblePairPage() {
       } catch (error) {
         pairRequested.current = false;
         logger.error("Pebble pairing failed:", error);
-        setPairingError(getErrorMessage(error, m.pebble_pair_failed()));
+        setPairingError(getErrorMessage(error, m.pebble_pair_failed(), pebblePairErrorMessages));
       }
     };
     void pair();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { integrationClientErrorMessages } from "@/utils/apiErrorCodes";
 import { logger } from "@/utils/logger";
 
 export type IntegrationClientScope = "worktime:mcp" | "worktime:admin";
@@ -72,7 +73,13 @@ export function useSettingsIntegrationClients({
         )
           return;
         logger.error("Failed to load integration clients:", loadError);
-        setError(getErrorMessage(loadError, m.integration_clients_load_failed()));
+        setError(
+          getErrorMessage(
+            loadError,
+            m.integration_clients_load_failed(),
+            integrationClientErrorMessages,
+          ),
+        );
       } finally {
         if (
           sessionGeneration.current === expectedSession &&
@@ -123,7 +130,13 @@ export function useSettingsIntegrationClients({
     } catch (createError) {
       if (sessionGeneration.current !== generation) return;
       logger.error("Failed to create integration client:", createError);
-      setError(getErrorMessage(createError, m.integration_clients_create_failed()));
+      setError(
+        getErrorMessage(
+          createError,
+          m.integration_clients_create_failed(),
+          integrationClientErrorMessages,
+        ),
+      );
     } finally {
       if (sessionGeneration.current === generation) {
         mutationInFlight.current = false;
@@ -150,7 +163,13 @@ export function useSettingsIntegrationClients({
     } catch (rotateError) {
       if (sessionGeneration.current !== generation) return;
       logger.error("Failed to rotate integration client:", rotateError);
-      setError(getErrorMessage(rotateError, m.integration_clients_rotate_failed()));
+      setError(
+        getErrorMessage(
+          rotateError,
+          m.integration_clients_rotate_failed(),
+          integrationClientErrorMessages,
+        ),
+      );
     } finally {
       if (sessionGeneration.current === generation) {
         mutationInFlight.current = false;
@@ -176,7 +195,13 @@ export function useSettingsIntegrationClients({
     } catch (revokeError) {
       if (sessionGeneration.current !== generation) return;
       logger.error("Failed to revoke integration client:", revokeError);
-      setError(getErrorMessage(revokeError, m.integration_clients_revoke_failed()));
+      setError(
+        getErrorMessage(
+          revokeError,
+          m.integration_clients_revoke_failed(),
+          integrationClientErrorMessages,
+        ),
+      );
     } finally {
       if (sessionGeneration.current === generation) {
         mutationInFlight.current = false;

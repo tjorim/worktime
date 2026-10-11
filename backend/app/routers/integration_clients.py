@@ -17,9 +17,10 @@ from __future__ import annotations
 
 from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, audit_actor_for, require_oidc_principal
 from app.schemas import (
@@ -50,9 +51,10 @@ def _require_no_self_escalation(principal: AuthenticatedPrincipal, scopes: list[
     ever reach this endpoint to grant itself a broader one.
     """
     if ADMIN_SCOPE in scopes and not principal.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"admin privileges are required to grant the {ADMIN_SCOPE!r} scope",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.ADMIN_SCOPE_REQUIRED,
+            f"admin privileges are required to grant the {ADMIN_SCOPE!r} scope",
         )
 
 
@@ -108,7 +110,7 @@ async def rotate_integration_client_endpoint(
             session, principal.user_id, client_id, actor=audit_actor_for(principal)
         )
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.INTEGRATION_CLIENT_NOT_FOUND, str(error)) from error
 
     return IntegrationClientCreated(
         id=client.id,
@@ -129,6 +131,6 @@ async def revoke_integration_client_endpoint(
     try:
         await revoke_integration_client(session, principal.user_id, client_id, actor=audit_actor_for(principal))
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.INTEGRATION_CLIENT_NOT_FOUND, str(error)) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

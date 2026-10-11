@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { adminUserDeleteErrorMessages } from "@/utils/apiErrorCodes";
 
 interface ManagedUser {
   id: number;
@@ -108,7 +109,9 @@ export function useSettingsAdminUsers({
       showSuccessToast(m.account_admin_users_deleted(), Trash2Icon);
     } catch (error) {
       logger.error("Failed to delete admin-managed user:", error);
-      setAdminUsersDeleteError(getErrorMessage(error, m.account_admin_users_delete_failed()));
+      setAdminUsersDeleteError(
+        getErrorMessage(error, m.account_admin_users_delete_failed(), adminUserDeleteErrorMessages),
+      );
     } finally {
       setDeletingAdminUserId(null);
     }

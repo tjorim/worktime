@@ -112,6 +112,18 @@ describe("Settings integration clients", () => {
     expect(screen.queryByText(/slow down/)).not.toBeInTheDocument();
   });
 
+  it("shows the translated reason for a recognised error code", async () => {
+    renderHarness(async () =>
+      jsonResponse(
+        { code: "admin_scope_required", detail: "admin privileges are required" },
+        { status: 403 },
+      ),
+    );
+
+    expect(await screen.findByText(m.error_code_admin_scope_required())).toBeInTheDocument();
+    expect(screen.queryByText(/admin privileges are required/)).not.toBeInTheDocument();
+  });
+
   it("hides admin scope from non-admin users", async () => {
     renderHarness(async () => jsonResponse({ items: [], total: 0 }));
     await screen.findByText("No integration clients yet.");
