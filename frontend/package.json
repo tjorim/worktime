@@ -55,7 +55,7 @@
     "@schedule-x/react": "^4.1.0",
     "@schedule-x/theme-default": "^4.9.1",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/charts": "^0.18.0",
+    "@tanstack/charts": "^1.0.0",
     "@tanstack/query-db-collection": "^1.4.0",
     "@tanstack/react-db": "^0.5.5",
     "@tanstack/react-form": "2.0.0-alpha.2",

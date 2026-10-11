@@ -20,6 +20,9 @@ import type { LabelPercentage, WeekDay, WeeklySummary } from "./hooks/useWeeklyT
 import { percent, resolveLabelColors } from "./cssVars";
 import { CopyableHoursCell, MetricCard } from "./WeeklyCells";
 import { WeeklyHoursChart } from "./WeeklyHoursChart";
+import { WeeklyLabelChart } from "./WeeklyLabelChart";
+import { RecentWeeksCharts } from "./RecentWeeksCharts";
+import type { RecentWeek } from "./hooks/useRecentWeeks";
 
 const SECTION_HEADING = "mb-3 text-base font-medium text-muted-foreground uppercase";
 
@@ -42,6 +45,8 @@ interface WeeklyDataViewProps {
   copiedCellId: string | null;
   onCopyCell: (id: string, value: string) => void;
   summary: WeeklySummary;
+  /** Oldest first, ending with the viewed week. Omit to hide the recent-weeks charts. */
+  recentWeeks?: RecentWeek[];
 }
 
 export function WeeklyDataView({
@@ -63,6 +68,7 @@ export function WeeklyDataView({
   copiedCellId,
   onCopyCell,
   summary,
+  recentWeeks,
 }: WeeklyDataViewProps) {
   const createDayKeyDownHandler =
     (dayIso: string, preventEnterDefault: boolean) => (e: ReactKeyboardEvent<HTMLElement>) => {
@@ -153,6 +159,14 @@ export function WeeklyDataView({
         todayIso={todayIso}
         targetDaily={targetDaily}
       />
+
+      {recentWeeks && recentWeeks.length > 0 && (
+        <RecentWeeksCharts
+          weeks={recentWeeks}
+          weeklyTargetHours={weeklyTargetHours}
+          targetDaily={targetDaily}
+        />
+      )}
 
       <div className="mb-4">
         <h6 className={SECTION_HEADING}>
@@ -317,6 +331,15 @@ export function WeeklyDataView({
           </TableBody>
         </Table>
       </div>
+
+      {labelPercentages.length > 0 && (
+        <WeeklyLabelChart
+          weekDays={weekDays}
+          dailyTotals={dailyTotals}
+          labelPercentages={labelPercentages}
+          targetDaily={targetDaily}
+        />
+      )}
 
       {labelPercentages.length > 0 && (
         <div className="mb-4">

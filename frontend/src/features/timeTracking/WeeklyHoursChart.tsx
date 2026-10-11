@@ -1,4 +1,5 @@
 import { ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon } from "lucide-react";
+import { useMemo } from "react";
 import { Icon } from "@/components/shared/Icon";
 import { barY, defineChart, ruleY } from "@tanstack/charts";
 import { motion } from "@tanstack/charts/motion";
@@ -33,42 +34,45 @@ export function WeeklyHoursChart({
   todayIso,
   targetDaily,
 }: WeeklyHoursChartProps) {
-  const rows: DayHoursRow[] = weekDays.map((day, index) => ({
-    iso: day.iso,
-    label: day.label.substring(0, 3),
-    hours: dailyHourTotals[index] ?? 0,
-  }));
+  // A new definition identity rebuilds the chart scene, so only recreate it when its inputs change.
+  const definition = useMemo(() => {
+    const rows: DayHoursRow[] = weekDays.map((day, index) => ({
+      iso: day.iso,
+      label: day.label.substring(0, 3),
+      hours: dailyHourTotals[index] ?? 0,
+    }));
 
-  const definition = defineChart({
-    marks: [
-      ...(targetDaily > 0
-        ? [
-            ruleY([targetDaily], {
-              stroke: "var(--wt-success)",
-              strokeOpacity: 0.7,
-              strokeDasharray: "4 3",
-            }),
-          ]
-        : []),
-      barY(rows, {
-        x: "label",
-        y: "hours",
-        radius: 4,
-        fill: (row) => (row.iso === todayIso ? "var(--wt-primary)" : "var(--wt-secondary)"),
-      }),
-    ],
-    scales: {
-      x: {
-        scale: () => scaleBand().padding(0.35),
+    return defineChart({
+      marks: [
+        ...(targetDaily > 0
+          ? [
+              ruleY([targetDaily], {
+                stroke: "var(--wt-success)",
+                strokeOpacity: 0.7,
+                strokeDasharray: "4 3",
+              }),
+            ]
+          : []),
+        barY(rows, {
+          x: "label",
+          y: "hours",
+          radius: 4,
+          fill: (row) => (row.iso === todayIso ? "var(--wt-primary)" : "var(--wt-secondary)"),
+        }),
+      ],
+      scales: {
+        x: {
+          scale: () => scaleBand().padding(0.35),
+        },
+        y: {
+          scale: scaleLinear,
+          nice: true,
+          grid: true,
+        },
       },
-      y: {
-        scale: scaleLinear,
-        nice: true,
-        grid: true,
-      },
-    },
-    tooltip,
-  });
+      tooltip,
+    });
+  }, [weekDays, dailyHourTotals, todayIso, targetDaily]);
 
   return (
     <div className="mb-4">
@@ -82,6 +86,7 @@ export function WeeklyHoursChart({
           renderer={chartRenderer}
           height={140}
           ariaLabel={m.tt_daily_hours_chart_aria()}
+          ariaDescription={m.tt_daily_hours_chart_desc()}
         />
       </div>
       {targetDaily > 0 && (
