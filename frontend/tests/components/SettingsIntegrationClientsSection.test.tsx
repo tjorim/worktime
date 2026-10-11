@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
 import { ToastProvider } from "@/contexts/ToastContext";
+import * as m from "@/paraglide/messages.js";
 import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";
 
 const jsonResponse = (body: unknown, init?: ResponseInit) =>
@@ -95,6 +96,20 @@ describe("Settings integration clients", () => {
         body: JSON.stringify({ name: "Home hub", scopes: ["worktime:mcp", "worktime:admin"] }),
       }),
     );
+  });
+
+  it("shows the translated fallback, not the server's detail, when loading fails", async () => {
+    renderHarness(async () => jsonResponse({ detail: "database exploded" }, { status: 500 }));
+
+    expect(await screen.findByText(m.integration_clients_load_failed())).toBeInTheDocument();
+    expect(screen.queryByText(/database exploded/)).not.toBeInTheDocument();
+  });
+
+  it("shows a translated reason when loading is rate limited", async () => {
+    renderHarness(async () => jsonResponse({ detail: "slow down" }, { status: 429 }));
+
+    expect(await screen.findByText(m.error_rate_limited())).toBeInTheDocument();
+    expect(screen.queryByText(/slow down/)).not.toBeInTheDocument();
   });
 
   it("hides admin scope from non-admin users", async () => {

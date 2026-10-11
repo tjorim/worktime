@@ -112,11 +112,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     lastDisplayedOidcErrorRef.current = oidcAuth.error;
     logger.error("OIDC authentication error:", oidcAuth.error);
-    const errorMessage =
-      oidcAuth.error instanceof Error && oidcAuth.error.message.trim() !== ""
-        ? oidcAuth.error.message
-        : m.auth_error_unknown();
-    showError(m.auth_error_oidc({ message: errorMessage }));
+    showError(m.auth_error_oidc());
   }, [oidcAuth.error, showError]);
 
   const getAccessToken = useCallback((): string | null => {

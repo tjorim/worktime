@@ -181,6 +181,8 @@ unfamiliar branch's existing commits:
   Feature folders may import shared code, but must not import another feature directly; move code used
   by multiple features to `components/shared/`, `hooks/`, `lib/`, `types/`, or `utils/` as appropriate.
 - All storage keys live in `frontend/src/constants/storageKeys.ts`
+- Never render `error.message` or a server `detail` in the interface: they are English diagnostics. Throw
+  `ApiError.fromResponse(response)` and show `getErrorMessage(error, m.<operation>_failed())` — see `docs/api-errors.md`
 - List-style tables (search, click-to-sort headers, pagination) share `hooks/useDataTable.ts`,
   `components/shared/SortableHeaderCell.tsx` and `components/shared/TablePagination.tsx` — reuse them
   instead of hand-rolling sort/search/paging. Render body cells directly in the row markup rather than via

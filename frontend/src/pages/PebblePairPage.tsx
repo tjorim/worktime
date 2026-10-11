@@ -6,6 +6,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";
+import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { logger } from "@/utils/logger";
 
 export function PebblePairPage() {
   const { isAuthenticated, isValidating, triggerLogin } = useAuth();
@@ -31,7 +33,7 @@ export function PebblePairPage() {
         const response = await apiFetch("/api/access-tokens/pebble", {
           method: "POST",
         });
-        if (!response.ok) throw new Error(`Pairing failed (${response.status})`);
+        if (!response.ok) throw await ApiError.fromResponse(response);
         const result = (await response.json()) as { token?: string };
         if (!result.token) throw new Error("Pairing response did not include a token");
         const payload = encodeURIComponent(JSON.stringify({ accessToken: result.token }));
@@ -39,7 +41,8 @@ export function PebblePairPage() {
         setClosed(true);
       } catch (error) {
         pairRequested.current = false;
-        setPairingError(error instanceof Error ? error.message : String(error));
+        logger.error("Pebble pairing failed:", error);
+        setPairingError(getErrorMessage(error, m.pebble_pair_failed()));
       }
     };
     void pair();

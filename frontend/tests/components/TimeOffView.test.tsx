@@ -677,7 +677,7 @@ describe("TimeOffView", () => {
       ).toBeInTheDocument();
     });
 
-    it("surfaces the server's detail message when the pull request fails", async () => {
+    it("shows the translated fallback, not the server's detail, when the pull request fails", async () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
@@ -697,9 +697,31 @@ describe("TimeOffView", () => {
       });
       await user.click(pullButton);
 
+      expect(await screen.findByText(m.timeoff_pull_failed_generic())).toBeInTheDocument();
+      expect(screen.queryByText(/share unreachable/)).not.toBeInTheDocument();
+    });
+
+    it("shows a translated reason when the pull request is rate limited", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.get("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({ detail: "slow down" }, { status: 429 }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }));
+
       expect(
-        await screen.findByText(m.timeoff_pull_failed({ error: "share unreachable" })),
+        await screen.findByText(m.timeoff_pull_failed({ error: m.error_rate_limited() })),
       ).toBeInTheDocument();
+      expect(screen.queryByText(/slow down/)).not.toBeInTheDocument();
     });
   });
 
@@ -819,7 +841,7 @@ describe("TimeOffView", () => {
       expect(await screen.findByText(m.timeoff_push_conflict())).toBeInTheDocument();
     });
 
-    it("surfaces the server's detail message when the push request fails", async () => {
+    it("shows the translated fallback, not the server's detail, when the push request fails", async () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.put("http://localhost:8080/hday/jsmith", () =>
@@ -836,9 +858,31 @@ describe("TimeOffView", () => {
 
       await user.click(await screen.findByRole("button", { name: m.timeoff_push_events_aria() }));
 
+      expect(await screen.findByText(m.timeoff_push_failed_generic())).toBeInTheDocument();
+      expect(screen.queryByText(/share unreachable/)).not.toBeInTheDocument();
+    });
+
+    it("shows a translated reason when the push request is rate limited", async () => {
+      seedConnectedHelperWithUsername("jsmith");
+      server.use(
+        http.put("http://localhost:8080/hday/jsmith", () =>
+          HttpResponse.json({ detail: "slow down" }, { status: 429 }),
+        ),
+      );
+
+      const user = userEvent.setup();
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      await user.click(await screen.findByRole("button", { name: m.timeoff_push_events_aria() }));
+
       expect(
-        await screen.findByText(m.timeoff_push_failed({ error: "share unreachable" })),
+        await screen.findByText(m.timeoff_push_failed({ error: m.error_rate_limited() })),
       ).toBeInTheDocument();
+      expect(screen.queryByText(/slow down/)).not.toBeInTheDocument();
     });
 
     it("queues an edit that arrives mid-push instead of racing, and sends it with the latest etag once free", async () => {

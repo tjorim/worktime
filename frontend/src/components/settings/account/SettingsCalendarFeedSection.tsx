@@ -13,6 +13,7 @@ import { useToast } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { logger } from "@/utils/logger";
+import { ApiError } from "@/utils/apiError";
 
 interface Props {
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
@@ -32,7 +33,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     let active = true;
     void fetchFn("/api/ical")
       .then(async (response) => {
-        if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
+        if (!response.ok) throw await ApiError.fromResponse(response);
         const payload = (await response.json()) as {
           configured: boolean;
           last_used_at?: string | null;
@@ -59,7 +60,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "POST" });
-      if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
+      if (!response.ok) throw await ApiError.fromResponse(response);
       const payload = (await response.json()) as { url_path: string };
       setUrl(new URL(payload.url_path, window.location.origin).toString());
       setConfigured(true);
@@ -77,7 +78,7 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "DELETE" });
-      if (!response.ok) throw new Error(`Unexpected status: ${response.status}`);
+      if (!response.ok) throw await ApiError.fromResponse(response);
       setUrl(null);
       setConfigured(false);
       setLastFetchedAt(null);

@@ -2,7 +2,7 @@ import { Trash2 as Trash2Icon, UserCheck as UserCheckIcon, type LucideIcon } fro
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
-import { readErrorDetail } from "@/utils/apiClient";
+import { ApiError, getErrorMessage } from "@/utils/apiError";
 
 interface AccountProfile {
   id: number;
@@ -63,7 +63,7 @@ export function useSettingsAccount({
     fetchFn("/api/me")
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(`Unexpected status: ${response.status}`);
+          throw await ApiError.fromResponse(response);
         }
         const profile = (await response.json()) as AccountProfile;
         if (isCancelled) return;
@@ -111,7 +111,7 @@ export function useSettingsAccount({
         body: JSON.stringify({ display_name: nextDisplayName }),
       });
       if (!response.ok) {
-        throw new Error(`Unexpected status: ${response.status}`);
+        throw await ApiError.fromResponse(response);
       }
       const updatedProfile = (await response.json()) as {
         id: number;
@@ -144,18 +144,14 @@ export function useSettingsAccount({
     try {
       const response = await fetchFn("/api/me", { method: "DELETE" });
       if (!response.ok) {
-        throw new Error((await readErrorDetail(response)) ?? m.account_delete_failed());
+        throw await ApiError.fromResponse(response);
       }
 
       showSuccessToast(m.account_deleted(), Trash2Icon);
       onAccountDeleted();
     } catch (error) {
       logger.error("Failed to delete account:", error);
-      setDeleteAccountError(
-        error instanceof Error && error.message.trim() !== ""
-          ? error.message
-          : m.account_delete_failed(),
-      );
+      setDeleteAccountError(getErrorMessage(error, m.account_delete_failed()));
     } finally {
       setIsDeletingAccount(false);
     }

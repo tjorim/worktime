@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useApiClient } from "@/hooks/useApiClient";
 import { apiFetch } from "@/utils/apiClient";
+import { ApiError } from "@/utils/apiError";
 
 const auth = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
@@ -49,7 +50,7 @@ describe("useApiClient", () => {
   it("starts only the login redirect when a request is unauthorized", async () => {
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onUnauthorized();
-      throw new Error("Unauthorized");
+      throw new ApiError({ status: 401, message: "Unauthorized" });
     });
     const { result } = renderHook(() => useApiClient());
 
@@ -63,7 +64,7 @@ describe("useApiClient", () => {
   it("can show an unauthorized warning without starting a login redirect", async () => {
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onUnauthorized();
-      throw new Error("Unauthorized");
+      throw new ApiError({ status: 401, message: "Unauthorized" });
     });
     const { result } = renderHook(() => useApiClient());
 
@@ -85,7 +86,7 @@ describe("useApiClient", () => {
       calls += 1;
       if (calls === 1) {
         options.onUnauthorized();
-        throw new Error("Unauthorized");
+        throw new ApiError({ status: 401, message: "Unauthorized" });
       }
       return new Response(null, { status: 200 });
     });
@@ -111,7 +112,7 @@ describe("useApiClient", () => {
       calls += 1;
       if (calls === 1) {
         options.onUnauthorized();
-        throw new Error("Unauthorized");
+        throw new ApiError({ status: 401, message: "Unauthorized" });
       }
       const headers = new Headers(init?.headers);
       expect(headers.get("Authorization")).toBe("Bearer fresh-token");
@@ -129,7 +130,7 @@ describe("useApiClient", () => {
     auth.renewSession.mockResolvedValue("renewed-token");
     vi.mocked(apiFetch).mockImplementation(async (_url, _init, options) => {
       options.onUnauthorized();
-      throw new Error("Unauthorized");
+      throw new ApiError({ status: 401, message: "Unauthorized" });
     });
     const { result } = renderHook(() => useApiClient());
 

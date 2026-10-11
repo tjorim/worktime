@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
-import { readErrorDetail } from "@/utils/apiClient";
+import { ApiError, getErrorMessage } from "@/utils/apiError";
 
 export interface ApiToken {
   id: string;
@@ -40,7 +40,7 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
     try {
       const response = await fetchFn("/api/access-tokens");
       if (!response.ok) {
-        throw new Error(`Unexpected status: ${response.status}`);
+        throw await ApiError.fromResponse(response);
       }
       const payload = (await response.json()) as { items: ApiToken[] };
       setApiTokens(payload.items);
@@ -91,18 +91,14 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
         }),
       });
       if (!response.ok) {
-        throw new Error((await readErrorDetail(response)) ?? m.api_tokens_create_failed());
+        throw await ApiError.fromResponse(response);
       }
       const created = (await response.json()) as CreatedApiToken;
       setCreatedApiToken(created);
       await loadApiTokens();
     } catch (error) {
       logger.error("Failed to create API token:", error);
-      setCreateApiTokenError(
-        error instanceof Error && error.message.trim() !== ""
-          ? error.message
-          : m.api_tokens_create_failed(),
-      );
+      setCreateApiTokenError(getErrorMessage(error, m.api_tokens_create_failed()));
     } finally {
       setIsCreatingApiToken(false);
     }
@@ -115,7 +111,7 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
     try {
       const response = await fetchFn(`/api/access-tokens/${tokenId}`, { method: "DELETE" });
       if (!response.ok && response.status !== 404) {
-        throw new Error((await readErrorDetail(response)) ?? m.api_tokens_revoke_failed());
+        throw await ApiError.fromResponse(response);
       }
       setApiTokens((current) => current?.filter((token) => token.id !== tokenId) ?? current);
       if (createdApiToken?.id === tokenId) {
@@ -123,11 +119,7 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       }
     } catch (error) {
       logger.error("Failed to revoke API token:", error);
-      setRevokeApiTokenError(
-        error instanceof Error && error.message.trim() !== ""
-          ? error.message
-          : m.api_tokens_revoke_failed(),
-      );
+      setRevokeApiTokenError(getErrorMessage(error, m.api_tokens_revoke_failed()));
     } finally {
       setRevokingApiTokenId(null);
     }

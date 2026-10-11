@@ -95,6 +95,45 @@ describe("TeamScheduleView", () => {
     expect(screen.queryByText(m.team_helper_required_heading())).not.toBeInTheDocument();
   });
 
+  it("shows a translated error, not the helper's English detail, when the fetch fails", async () => {
+    seedHelperUrl(HELPER_URL);
+    server.use(
+      http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
+        HttpResponse.json({ detail: "share unreachable" }, { status: 503 }),
+      ),
+    );
+
+    render(
+      <TestProviders>
+        <TeamScheduleView />
+      </TestProviders>,
+    );
+
+    expect(
+      await screen.findByText(m.team_fetch_failed({ error: m.team_unknown_error() })),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/share unreachable/)).not.toBeInTheDocument();
+  });
+
+  it("shows a translated reason for a recognised status when the fetch fails", async () => {
+    seedHelperUrl(HELPER_URL);
+    server.use(
+      http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
+        HttpResponse.json({ detail: "slow down" }, { status: 429 }),
+      ),
+    );
+
+    render(
+      <TestProviders>
+        <TeamScheduleView />
+      </TestProviders>,
+    );
+
+    expect(
+      await screen.findByText(m.team_fetch_failed({ error: m.error_rate_limited() })),
+    ).toBeInTheDocument();
+  });
+
   it("clears stale data and refetches when the configured helper changes", async () => {
     seedHelperUrl(HELPER_URL);
     server.use(
