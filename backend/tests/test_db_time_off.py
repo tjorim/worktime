@@ -57,7 +57,9 @@ class TestTimeOffAuth:
 
         entry = _create_entry(db_client, headers_a)
 
-        assert db_client.get(f"/api/time-off/{entry['entry_id']}", headers=headers_b).status_code == 404
+        other_user_get = db_client.get(f"/api/time-off/{entry['entry_id']}", headers=headers_b)
+        assert other_user_get.status_code == 404
+        assert other_user_get.json()["code"] == "not_found"
         assert (
             db_client.patch(
                 f"/api/time-off/{entry['entry_id']}",
@@ -314,7 +316,9 @@ class TestGetPatchDeleteTimeOff:
         user_id = create_user_factory(db_client, admin_h, "to-404")
         headers = auth_headers(user_id)
 
-        assert db_client.get("/api/time-off/not-found", headers=headers).status_code == 404
+        missing = db_client.get("/api/time-off/not-found", headers=headers)
+        assert missing.status_code == 404
+        assert missing.json()["code"] == "not_found"
         assert (
             db_client.patch(
                 "/api/time-off/not-found",

@@ -1,8 +1,9 @@
 """Calendar subscription management and public feed endpoint."""
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
 from app.schemas import IcalFeedCreated, IcalFeedStatus
@@ -55,7 +56,7 @@ async def revoke_feed(
 async def calendar_feed(token: str, session: AsyncSession = Depends(get_session)) -> Response:
     credential = await authenticate_ical_feed_token(session, token)
     if credential is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="calendar feed not found")
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.CALENDAR_FEED_NOT_FOUND, "calendar feed not found")
     body = await build_ical_feed(session, credential.user_id)
     return Response(
         body,

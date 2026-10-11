@@ -59,6 +59,7 @@ class TestFcmRouter:
 
         response = db_client.post("/api/push/fcm-token", json=_register_payload(), headers=headers)
         assert response.status_code == 503
+        assert response.json()["code"] == "fcm_not_configured"
 
     def test_register_unregister_lifecycle_over_http(
         self,
@@ -87,6 +88,7 @@ class TestFcmRouter:
 
         deleted_again = db_client.delete("/api/push/fcm-token", params={"token": "test-fcm-token-1"}, headers=headers)
         assert deleted_again.status_code == 404
+        assert deleted_again.json()["code"] == "fcm_token_not_found"
 
     def test_cannot_unregister_another_users_token(
         self,
@@ -110,6 +112,7 @@ class TestFcmRouter:
             "/api/push/fcm-token", params={"token": "owner-token"}, headers=auth_headers(other_id)
         )
         assert response.status_code == 404
+        assert response.json()["code"] == "fcm_token_not_found"
 
 
 class TestFcmDeviceTokenService:

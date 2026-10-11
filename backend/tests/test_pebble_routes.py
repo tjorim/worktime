@@ -35,6 +35,7 @@ def test_pebble_scope_matrix_and_clock_actions(
         headers=write_headers,
     )
     assert duplicate_clock_in.status_code == 409
+    assert duplicate_clock_in.json()["code"] == "conflict"
 
     refreshed = db_client.get("/api/pebble/dashboard", headers=write_headers)
     assert refreshed.status_code == 200
@@ -56,6 +57,7 @@ def test_pebble_scope_matrix_and_clock_actions(
         headers=write_headers,
     )
     assert duplicate_clock_out.status_code == 409
+    assert duplicate_clock_out.json()["code"] == "no_running_task"
 
 
 def test_pebble_dashboard_reports_soonest_planned_task(

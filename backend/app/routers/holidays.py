@@ -25,11 +25,13 @@ from datetime import datetime as dt_datetime
 from typing import Annotated, Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.errors import ErrorCode, api_error
 
 from ..cache.store import get_cache
 from ..database.engine import get_session
@@ -93,9 +95,10 @@ def _normalize_country(country: str | None = None) -> str:
         return HOLIDAY_COUNTRY_CODE
     if country == HOLIDAY_COUNTRY_CODE:
         return country
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Unsupported country code: {country}. Only {HOLIDAY_COUNTRY_CODE} is supported.",
+    raise api_error(
+        status.HTTP_400_BAD_REQUEST,
+        ErrorCode.UNSUPPORTED_COUNTRY,
+        f"Unsupported country code: {country}. Only {HOLIDAY_COUNTRY_CODE} is supported.",
     )
 
 

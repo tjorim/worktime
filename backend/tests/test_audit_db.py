@@ -169,6 +169,7 @@ async def test_audit_rest_endpoint_scopes_to_own_trail_for_non_admin(
 
     forbidden = db_client.get(f"/api/audit?user_id={other_id}", headers=owner_headers)
     assert forbidden.status_code == 403
+    assert forbidden.json()["code"] == "audit_access_denied"
 
 
 async def test_audit_rest_endpoint_allows_admin_team_wide_read(

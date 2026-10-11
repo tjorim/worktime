@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import DEFAULT_AUDIT_LIMIT, MAX_AUDIT_LIMIT, AuditAuthorizationError, list_audit_entries
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.schemas import AuditEntryListResponse, AuditEntryRead
@@ -43,7 +44,7 @@ async def list_audit_entries_endpoint(
             before_id=before_id,
         )
     except AuditAuthorizationError as error:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+        raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.AUDIT_ACCESS_DENIED, str(error)) from error
 
     return AuditEntryListResponse(
         items=[AuditEntryRead.model_validate(entry, from_attributes=True) for entry in entries],

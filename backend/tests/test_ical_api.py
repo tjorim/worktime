@@ -52,7 +52,9 @@ def test_ical_feed_lifecycle_over_http(
 
     revoked = db_client.delete("/api/ical", headers=headers)
     assert revoked.status_code == 204
-    assert db_client.get(feed_path).status_code == 404
+    revoked_feed = db_client.get(feed_path)
+    assert revoked_feed.status_code == 404
+    assert revoked_feed.json()["code"] == "calendar_feed_not_found"
 
     final = db_client.get("/api/ical", headers=headers)
     assert final.status_code == 200

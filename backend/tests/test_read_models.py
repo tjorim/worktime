@@ -178,3 +178,20 @@ def test_next_shifts_endpoint_respects_limit(
     assert response.status_code == 200
     body = response.json()
     assert [item["date"] for item in body["items"]] == ["2025-07-18", "2025-07-19"]
+
+
+def test_dashboard_rejects_unknown_timezone_with_a_code(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "read-model-bad-tz")
+
+    response = db_client.get(
+        "/api/read-models/dashboard?timezone=Mars/Olympus_Mons",
+        headers=auth_headers(user_id),
+    )
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "unknown_timezone"

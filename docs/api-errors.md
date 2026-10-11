@@ -58,9 +58,18 @@ hooks) translate inside the hook, so views never see an `Error`.
    `tests/utils/apiErrorCodes.test.ts` fails if a map lists a code the backend does not send.
 4. Assert the code in a backend test (`response.json()["code"]`).
 
-Codes exist for access tokens, integration clients, account/user deletion, registration
-conflicts, and the auth dependencies (`require_oidc_principal`, scope and admin checks).
-Other routers still send `detail` only.
+Every router sends a code. Authentication, tokens, integration clients, account deletion and
+registration have specific ones; the data routers share `not_found`, `conflict` and
+`validation_failed` (the `detail` keeps the specific English diagnostic for logs). Conditions a
+client may branch on have their own: `sync_cursor_expired` (410; `detail` stays the structured
+`{code, message, max_offline_days}` object offline clients already parse), `bulk_delete_blocked`,
+`sync_stream_limit_reached`, `push_not_configured`, `fcm_not_configured`, `no_running_task`,
+`unsupported_country`, `unknown_timezone`, `calendar_feed_not_found`, `audit_access_denied`.
+
+Not every code has a client message. Add one to `messages/` and `apiErrorCodes.ts` only when a
+surface shows that error to people. Push registration, for example, is best-effort and silent by
+design, so `push_not_configured` is not mapped. FastAPI request-validation errors (422) are still
+the framework's `{ "detail": [...] }` shape.
 
 ## Tests
 

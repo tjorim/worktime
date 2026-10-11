@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
@@ -47,9 +48,9 @@ async def create_or_update_work_location_endpoint(
     try:
         location = await create_or_update_work_location(session, user_id, payload, actor=audit_actor_for(principal))
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
     except ValidationError as error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
 
     return WorkLocationRead.model_validate(location, from_attributes=True)
 
@@ -99,7 +100,7 @@ async def get_work_location_endpoint(
         with time_operation("query", timings):
             location = await get_work_location(session, user_id, value_date)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
 
     response = WorkLocationRead.model_validate(location, from_attributes=True)
     return JSONResponse(
@@ -120,6 +121,6 @@ async def delete_work_location_endpoint(
     try:
         await delete_work_location(session, user_id, value_date, actor=audit_actor_for(principal))
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
