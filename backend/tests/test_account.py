@@ -58,6 +58,7 @@ def test_me_stale_principal_returns_404(
     """A token for a user that does not exist in the DB should yield 404."""
     response = db_client.get("/api/me", headers=auth_headers(9999))
     assert response.status_code == 404
+    assert response.json()["code"] == "user_not_found"
 
 
 def test_unauthenticated_delete_me_returns_401(db_client: TestClient) -> None:

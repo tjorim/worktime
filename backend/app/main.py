@@ -20,6 +20,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import settings
 from .config.cors import get_cors_origins
+from .core.errors import ApiHTTPException, handle_api_http_exception
 from .database import init_db
 from .middleware.rate_limit import handle_rate_limit_exceeded, limiter
 from .middleware.request_id import RequestIdMiddleware
@@ -184,6 +185,7 @@ else:
 # a request ID, timing header, and access-log entry like any other response.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
+app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
 app.add_middleware(SlowAPIMiddleware)
 if settings.RATE_LIMIT_ENABLED:
     logger.info(f"✓ Rate limiting enabled ({settings.RATE_LIMIT_DEFAULT} per client IP)")

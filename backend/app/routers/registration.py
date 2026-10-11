@@ -20,9 +20,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.schemas import UserCreate, UserRead, UserRegister
@@ -47,9 +48,10 @@ async def register_user(
     a matching OIDC login.
     """
     if not principal.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="admin privileges required",
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.ADMIN_REQUIRED,
+            "admin privileges required",
         )
 
     user_create = UserCreate(
@@ -60,9 +62,10 @@ async def register_user(
     try:
         user = await create_user(session, user_create)
     except ConflictError as error:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(error),
+        raise api_error(
+            status.HTTP_409_CONFLICT,
+            ErrorCode.USERNAME_TAKEN,
+            str(error),
         ) from error
 
     return UserRead.model_validate(user, from_attributes=True)

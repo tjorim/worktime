@@ -176,6 +176,7 @@ async def test_non_admin_cannot_grant_admin_scope_to_integration_client(
     )
 
     assert response.status_code == 403
+    assert response.json()["code"] == "admin_scope_required"
 
 
 async def test_admin_can_grant_admin_scope_to_integration_client(
@@ -216,6 +217,7 @@ async def test_personal_access_token_cannot_manage_integration_clients(
     )
 
     assert response.status_code == 403
+    assert response.json()["code"] == "oidc_session_required"
 
 
 async def test_revoke_and_rotate_integration_client_endpoints(
@@ -239,3 +241,4 @@ async def test_revoke_and_rotate_integration_client_endpoints(
 
     missing_response = db_client.delete("/api/integration-clients/999999", headers=headers)
     assert missing_response.status_code == 404
+    assert missing_response.json()["code"] == "integration_client_not_found"

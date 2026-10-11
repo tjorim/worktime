@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { accountDeleteErrorMessages } from "@/utils/apiErrorCodes";
 
 interface AccountProfile {
   id: number;
@@ -151,7 +152,9 @@ export function useSettingsAccount({
       onAccountDeleted();
     } catch (error) {
       logger.error("Failed to delete account:", error);
-      setDeleteAccountError(getErrorMessage(error, m.account_delete_failed()));
+      setDeleteAccountError(
+        getErrorMessage(error, m.account_delete_failed(), accountDeleteErrorMessages),
+      );
     } finally {
       setIsDeletingAccount(false);
     }

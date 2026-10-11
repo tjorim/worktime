@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
 from app.schemas import (
@@ -88,6 +89,6 @@ async def revoke_access_token_endpoint(
     try:
         await revoke_access_token(session, principal.user_id, token_id)
     except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.ACCESS_TOKEN_NOT_FOUND, str(error)) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

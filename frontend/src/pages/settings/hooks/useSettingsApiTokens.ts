@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { accessTokenErrorMessages } from "@/utils/apiErrorCodes";
 
 export interface ApiToken {
   id: string;
@@ -98,7 +99,9 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       await loadApiTokens();
     } catch (error) {
       logger.error("Failed to create API token:", error);
-      setCreateApiTokenError(getErrorMessage(error, m.api_tokens_create_failed()));
+      setCreateApiTokenError(
+        getErrorMessage(error, m.api_tokens_create_failed(), accessTokenErrorMessages),
+      );
     } finally {
       setIsCreatingApiToken(false);
     }
@@ -119,7 +122,9 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       }
     } catch (error) {
       logger.error("Failed to revoke API token:", error);
-      setRevokeApiTokenError(getErrorMessage(error, m.api_tokens_revoke_failed()));
+      setRevokeApiTokenError(
+        getErrorMessage(error, m.api_tokens_revoke_failed(), accessTokenErrorMessages),
+      );
     } finally {
       setRevokingApiTokenId(null);
     }

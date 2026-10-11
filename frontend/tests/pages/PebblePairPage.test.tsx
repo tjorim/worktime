@@ -15,6 +15,7 @@ vi.mock("@/paraglide/messages.js", () => ({
   pebble_pair_close_instruction: () => "You can close this window.",
   pebble_pair_failed: () => "Could not pair your watch right now.",
   error_rate_limited: () => "Too many requests.",
+  error_code_oidc_session_required: () => "This needs a signed-in browser session.",
   auth_session_expired: () => "Your session has expired.",
   auth_error_forbidden: () => "Access denied.",
 }));
@@ -67,5 +68,19 @@ describe("PebblePairPage", () => {
 
     expect(await screen.findByText("Too many requests.")).toBeInTheDocument();
     expect(screen.queryByText(/Rate limit exceeded/)).not.toBeInTheDocument();
+  });
+
+  it("shows the surface's translated reason for a recognised error code", async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ code: "oidc_session_required", detail: "This operation requires" }),
+        { status: 403 },
+      ),
+    );
+
+    render(<PebblePairPage />);
+
+    expect(await screen.findByText("This needs a signed-in browser session.")).toBeInTheDocument();
+    expect(screen.queryByText(/This operation requires/)).not.toBeInTheDocument();
   });
 });

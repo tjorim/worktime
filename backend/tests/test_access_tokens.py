@@ -9,13 +9,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.requests import Request
 
+from app.core.errors import ApiHTTPException, ErrorCode
 from app.database.models import AccessToken
 from app.routers.auth import (
     PEBBLE_READ_SCOPE,
@@ -47,12 +47,14 @@ def _fake_request() -> Request:
 def test_regular_api_and_oidc_boundary_reject_delegated_pat() -> None:
     principal = AuthenticatedPrincipal(user_id=1, auth_type=AuthType.DELEGATED)
 
-    with pytest.raises(HTTPException) as regular_error:
+    with pytest.raises(ApiHTTPException) as regular_error:
         get_authenticated_principal(principal)
     assert regular_error.value.status_code == 403
-    with pytest.raises(HTTPException) as exc_info:
+    assert regular_error.value.code == ErrorCode.INTERACTIVE_SESSION_REQUIRED
+    with pytest.raises(ApiHTTPException) as exc_info:
         require_oidc_principal(principal)
     assert exc_info.value.status_code == 403
+    assert exc_info.value.code == ErrorCode.OIDC_SESSION_REQUIRED
 
 
 async def test_authentication_throttles_recent_activity_write() -> None:
@@ -234,10 +236,11 @@ def test_scope_helper_supports_namespace_wildcards() -> None:
 async def test_get_bearer_principal_rejects_unknown_pat(db_session: AsyncSession) -> None:
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wtpat_does-not-exist")
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ApiHTTPException) as exc_info:
         await get_bearer_principal(request=_fake_request(), credentials=credentials, session=db_session)
 
     assert exc_info.value.status_code == 401
+    assert exc_info.value.code == ErrorCode.INVALID_ACCESS_TOKEN
 
 
 async def test_user_rest_auth_rejects_keycloak_service_account(
@@ -253,7 +256,7 @@ async def test_user_rest_auth_rejects_keycloak_service_account(
 
     monkeypatch.setattr("app.routers.auth.decode_token", _decode)
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ApiHTTPException) as exc_info:
         await get_bearer_principal(
             request=_fake_request(),
             credentials=HTTPAuthorizationCredentials(
@@ -264,6 +267,7 @@ async def test_user_rest_auth_rejects_keycloak_service_account(
         )
 
     assert exc_info.value.status_code == 403
+    assert exc_info.value.code == ErrorCode.SERVICE_ACCOUNT_FORBIDDEN
 
 
 def test_access_token_lifecycle_over_http(
@@ -298,6 +302,7 @@ def test_access_token_lifecycle_over_http(
 
     revoked_again = db_client.delete(f"/api/access-tokens/{token_id}", headers=headers)
     assert revoked_again.status_code == 404
+    assert revoked_again.json()["code"] == "access_token_not_found"
 
 
 def test_access_token_endpoint_persists_explicit_pebble_scopes(
@@ -383,9 +388,14 @@ def test_access_token_endpoints_reject_pat_auth(
     owner_id = create_user_factory(db_client, admin_headers, "pat-reject-owner")
     pat_headers = auth_headers(owner_id, via_pat=True)
 
-    assert db_client.post("/api/access-tokens", json={"name": "x"}, headers=pat_headers).status_code == 403
-    assert db_client.get("/api/access-tokens", headers=pat_headers).status_code == 403
-    assert db_client.delete("/api/access-tokens/some-id", headers=pat_headers).status_code == 403
+    responses = [
+        db_client.post("/api/access-tokens", json={"name": "x"}, headers=pat_headers),
+        db_client.get("/api/access-tokens", headers=pat_headers),
+        db_client.delete("/api/access-tokens/some-id", headers=pat_headers),
+    ]
+    for response in responses:
+        assert response.status_code == 403
+        assert response.json()["code"] == "oidc_session_required"
 
 
 def test_access_token_scoped_to_owner(
@@ -403,7 +413,9 @@ def test_access_token_scoped_to_owner(
     token_id = created.json()["id"]
 
     assert db_client.get("/api/access-tokens", headers=other_headers).json()["total"] == 0
-    assert db_client.delete(f"/api/access-tokens/{token_id}", headers=other_headers).status_code == 404
+    other_delete = db_client.delete(f"/api/access-tokens/{token_id}", headers=other_headers)
+    assert other_delete.status_code == 404
+    assert other_delete.json()["code"] == "access_token_not_found"
 
 
 def test_delete_account_rejects_pat_auth(
@@ -415,7 +427,9 @@ def test_delete_account_rejects_pat_auth(
     owner_id = create_user_factory(db_client, admin_headers, "pat-delete-account")
     pat_headers = auth_headers(owner_id, via_pat=True)
 
-    assert db_client.delete("/api/me", headers=pat_headers).status_code == 403
+    response = db_client.delete("/api/me", headers=pat_headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == "oidc_session_required"
 
 
 def test_legacy_user_delete_rejects_pat_auth(
@@ -427,5 +441,7 @@ def test_legacy_user_delete_rejects_pat_auth(
     owner_id = create_user_factory(db_client, admin_headers, "pat-delete-legacy")
     pat_headers = auth_headers(owner_id, via_pat=True)
 
-    assert db_client.delete(f"/api/users/{owner_id}", headers=pat_headers).status_code == 403
+    response = db_client.delete(f"/api/users/{owner_id}", headers=pat_headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == "oidc_session_required"
     assert db_client.get(f"/api/users/{owner_id}", headers=admin_headers).status_code == 200
