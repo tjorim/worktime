@@ -140,6 +140,7 @@
   --color-border: var(--wt-theme-border);
   --color-input: var(--wt-border-color);
   --color-ring: var(--wt-primary-color);
+  --color-link: var(--wt-link-color);
   --radius-sm: var(--wt-border-radius-sm);
   --radius-md: var(--wt-border-radius);
   --radius-lg: var(--wt-border-radius-lg);
