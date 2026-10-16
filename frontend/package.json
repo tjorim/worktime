@@ -76,7 +76,7 @@
     "react-select": "^5.10.2",
     "tailwindcss": "^4.3.3",
     "temporal-polyfill": "^1.0.5",
-    "uuid": "^14.0.2"
+    "uuid": "^14.0.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
