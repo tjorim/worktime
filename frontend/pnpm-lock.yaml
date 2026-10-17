@@ -30,8 +30,8 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
       '@tanstack/charts':
-        specifier: ^1.0.0
-        version: 1.0.0(preact@10.29.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2)
+        specifier: ^1.1.0
+        version: 1.1.0(preact@10.29.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2)
       '@tanstack/query-db-collection':
         specifier: ^1.4.4
         version: 1.4.4(@tanstack/query-core@5.104.2)(typescript@7.0.2)
@@ -2331,8 +2331,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tanstack/charts@1.0.0':
-    resolution: {integrity: sha512-4U+zbn5jzQF8MNDsvjMG7TE4Fv68mfIIiFlFmrWiBIHor8zCX+7W8gpyDcT1SYJYvOIZXv3uxbK/IjwGY40Sig==}
+  '@tanstack/charts@1.1.0':
+    resolution: {integrity: sha512-0mb05yZMrBUzjHBohcKtK1XcTKJH9b8LS2uT0iYjDiLU+QR2jo0hrUJramAgg/AfBLMu2DY5fOgKe5bsqd6z4Q==}
     peerDependencies:
       '@angular/core': '>=19'
       '@angular/platform-browser': '>=19'
@@ -6580,7 +6580,7 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
 
-  '@tanstack/charts@1.0.0(preact@10.29.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2)':
+  '@tanstack/charts@1.1.0(preact@10.29.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2)':
     dependencies:
       '@types/d3-force': 3.0.10
       '@types/d3-geo': 3.1.1
