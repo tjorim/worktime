@@ -1,22 +1,8 @@
 name: .hday Helper CI
 
 on:
-  pull_request:
-    paths:
-      - "hday-helper/**"
-      - "frontend/src/lib/hday/**"
-      - ".github/workflows/hday-helper-ci.yml"
-  push:
-    branches: [main]
-    paths:
-      - "hday-helper/**"
-      - "frontend/src/lib/hday/**"
-      - ".github/workflows/hday-helper-ci.yml"
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   contents: read

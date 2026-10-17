@@ -2,6 +2,8 @@ version: 2
 updates:
   # Monitor npm dependencies for the main Worktime project
   - package-ecosystem: "npm"
+    allow:
+      - dependency-type: all
     directory: "/frontend"
     schedule:
       interval: "weekly"
@@ -46,6 +48,7 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+          - "oxc-parser"
       i18n:
         patterns:
           - "@inlang/*"
@@ -80,6 +83,8 @@ updates:
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
+    allow:
+      - dependency-type: all
     directory: "/backend"
     schedule:
       interval: "weekly"
@@ -97,6 +102,13 @@ updates:
       - "backend"
       - "python"
     groups:
+      # fastmcp pulls in mcp and mcp-types; keep them moving together
+      fastmcp:
+        patterns:
+          - "fastmcp"
+          - "fastmcp-slim"
+          - "mcp"
+          - "mcp-types"
       python-quality:
         patterns:
           - "ruff"
