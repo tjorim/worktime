@@ -60,8 +60,8 @@ importers:
         specifier: ^1.11.23
         version: 1.11.23
       eventsource-parser:
-        specifier: ^4.1.1
-        version: 4.1.1
+        specifier: ^4.1.2
+        version: 4.1.2
       frappe-gantt:
         specifier: ^1.2.2
         version: 1.2.2
@@ -3287,8 +3287,8 @@ packages:
     resolution: {integrity: sha512-lW6is4T1NFOYnmqGZIfvixqj7A7sSvScF+DN8EK6K58xI5MZ5UvYe0GjopxOXQtZvUn4eDdVuZ8XSoYWTMEKwA==}
     engines: {node: '>=20'}
 
-  eventsource-parser@4.1.1:
-    resolution: {integrity: sha512-zaWNqeSLeyzEAAt2Q6aDBRDRk/VnPmsKqvToyGvv6aahvLv71A4Jw7jG93Hckf11zXurbqgsffvpSgKPoeU1Qw==}
+  eventsource-parser@4.1.2:
+    resolution: {integrity: sha512-N9b0EvATDJfZj+Szg3m8WwqseQhei/mtTd6V0rCciGbI/yG24o3yBk0YVyfOZZsLVMZHWs++Zk3Aqd2y2EztnQ==}
     engines: {node: '>=22.12'}
 
   expand-template@2.0.3:
@@ -7535,7 +7535,7 @@ snapshots:
 
   eta@4.6.0: {}
 
-  eventsource-parser@4.1.1: {}
+  eventsource-parser@4.1.2: {}
 
   expand-template@2.0.3: {}
 
