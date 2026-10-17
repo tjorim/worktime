@@ -89,6 +89,10 @@ jobs:
         working-directory: frontend
         run: pnpm run build
 
+      - name: Check bundle budget
+        working-directory: frontend
+        run: pnpm run check-bundle-budget
+
   e2e:
     name: E2E Tests (Chromium)
     runs-on: ubuntu-latest

@@ -971,6 +971,8 @@
   "confirmation_confirm": "Bevestigen",
   "error_boundary_fallback_message": "Het spijt ons, maar er is iets onverwachts gebeurd. Probeer eerst Opnieuw proberen; als de fout blijft, gebruik Pagina herladen. Neem contact op met ondersteuning als het probleem aanhoudt.",
   "error_boundary_debug_information": "Debug-informatie",
+  "route_load_failed_title": "Deze pagina kon niet worden geladen",
+  "route_load_failed_message": "Deze pagina kon niet worden geladen, mogelijk omdat je offline bent of de app net is bijgewerkt. Probeer het opnieuw of herlaad de pagina.",
   "team_label": "Team {team}",
   "week_view_table_aria": "Rooster voor week van {startDate} - {endDate}",
   "week_view_day_header_aria": "{date} {today}",
