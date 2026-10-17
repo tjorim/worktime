@@ -1,10 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
  * Settings is a code-split route (#1513). These run against the dev server, where
  * the route's module is served from /src/pages/SettingsPage.tsx; the production
  * chunk, service worker and offline behaviour are covered by pwa-offline.pwa.spec.ts.
  */
+// The header ("Back to app") and a `main` landmark also render around the route error page,
+// so only the section heading, which SettingsPage itself renders, proves Settings loaded.
+const sectionHeading = (page: Page, name: string) =>
+  page.getByRole("heading", { level: 1, name, exact: true });
+
 test.describe("lazy settings route", () => {
   // The MSW worker would otherwise intercept the module request before page.route sees it.
   test.use({ serviceWorkers: "block" });
@@ -13,20 +18,21 @@ test.describe("lazy settings route", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(sectionHeading(page, "Schedule & team")).toBeVisible();
 
     await page.goBack();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(sectionHeading(page, "Schedule & team")).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Schedule" })).toBeVisible();
 
     await page.goForward();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole("button", { name: "Back to app" })).toBeVisible();
+    await expect(sectionHeading(page, "Schedule & team")).toBeVisible();
   });
 
   test("a direct link keeps the requested section", async ({ page }) => {
     await page.goto("/settings?section=data");
-    await expect(page.getByRole("button", { name: "Back to app" })).toBeVisible();
+    await expect(sectionHeading(page, "Data & backup")).toBeVisible();
     await expect(page).toHaveURL(/section=data/);
   });
 
@@ -38,6 +44,7 @@ test.describe("lazy settings route", () => {
       page.getByRole("alert").filter({ hasText: "Could not load this page" }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Try Again" })).toHaveCount(0);
+    await expect(sectionHeading(page, "Schedule & team")).toHaveCount(0);
 
     await page.unroute(chunk);
     await Promise.all([
@@ -45,6 +52,7 @@ test.describe("lazy settings route", () => {
       page.getByRole("button", { name: "Reload Page" }).click(),
     ]);
 
-    await expect(page.getByRole("button", { name: "Back to app" })).toBeVisible();
+    await expect(sectionHeading(page, "Schedule & team")).toBeVisible();
+    await expect(page.getByText("Could not load this page")).toHaveCount(0);
   });
 });
