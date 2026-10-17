@@ -1,20 +1,8 @@
 name: Android CI
 
 on:
-  pull_request:
-    paths:
-      - "android/**"
-      - ".github/workflows/android.yml"
-  push:
-    branches: [main]
-    paths:
-      - "android/**"
-      - ".github/workflows/android.yml"
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   contents: read
