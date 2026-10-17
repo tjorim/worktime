@@ -98,6 +98,13 @@ updates:
       - "backend"
       - "python"
     groups:
+      # fastmcp pulls in mcp and mcp-types; keep them moving together
+      fastmcp:
+        patterns:
+          - "fastmcp"
+          - "fastmcp-slim"
+          - "mcp"
+          - "mcp-types"
       python-quality:
         patterns:
           - "ruff"
