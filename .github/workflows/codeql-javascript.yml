@@ -1,22 +1,8 @@
 name: CodeQL JavaScript
 
 on:
-  pull_request:
-    paths:
-      - "frontend/**"
-      - "hday-helper/**"
-      - ".github/workflows/codeql-javascript.yml"
-  push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - "hday-helper/**"
-      - ".github/workflows/codeql-javascript.yml"
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   actions: read

@@ -1,20 +1,8 @@
 name: CodeQL Python
 
 on:
-  pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/codeql-python.yml"
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/codeql-python.yml"
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   actions: read
