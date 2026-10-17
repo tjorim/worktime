@@ -979,7 +979,7 @@
   "error_boundary_fallback_message": "We're sorry, but something unexpected happened. Try Again first; if the error persists, use Reload Page. Contact support if the problem continues.",
   "error_boundary_debug_information": "Debug Information",
   "route_load_failed_title": "Could not load this page",
-  "route_load_failed_message": "This page could not be loaded, possibly because you are offline or the app was just updated. Try again, or reload the page.",
+  "route_load_failed_message": "This page could not be loaded, possibly because you are offline or the app was just updated. Reload the page to try again.",
   "team_label": "Team {team}",
   "week_view_table_aria": "Schedule for week of {startDate} - {endDate}",
   "week_view_day_header_aria": "{date} {today}",

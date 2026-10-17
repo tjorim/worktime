@@ -23,6 +23,14 @@ own recommended pattern instead — set up once, save the session, reuse it:
   project still starts from a clean, unseeded session, which is what
   `onboarding.spec.ts` needs to confirm the real first-run wizard still shows.
 
+- **Service worker and production-build specs**: name the file `*.pwa.spec.ts`. It
+  runs under the `chromium-pwa` project against `vite build` + `vite preview`
+  (second `webServer` in `playwright.config.ts`, built into
+  `node_modules/.e2e-pwa-dist` so it never overwrites `dist/`), because the dev
+  server keeps the service worker off. See `pwa-offline.pwa.spec.ts`: offline use of the
+  code-split routes from the Workbox precache, and recovery when a route chunk
+  fails to load. These specs have no MSW, so stick to public routes such as `/privacy`.
+
 - **Manual debugging in a real browser**:
   ```bash
   VITE_MSW=true pnpm exec vite --no-open      # terminal 1

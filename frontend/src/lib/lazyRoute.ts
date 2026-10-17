@@ -9,21 +9,13 @@ export class RouteChunkLoadError extends Error {
   }
 }
 
-const failureResets = new Set<() => void>();
-
-/**
- * Forget every recorded chunk-load failure so the next render of a lazy route
- * downloads its chunk again. Called by the route error UI's "Try again".
- */
-export function retryLazyRoutes(): void {
-  for (const reset of failureResets) reset();
-}
-
 /**
  * Code-split a route component. Behaves like TanStack Router's
  * `lazyRouteComponent` (suspends while loading and exposes `.preload` for
- * intent preloading) but, unlike it, a failed import can be retried in place
- * with `retryLazyRoutes()` instead of only by reloading the page.
+ * intent preloading) but throws a typed `RouteChunkLoadError` on failure and,
+ * unlike it, never reloads the page on its own. A failed import is final for the
+ * document: browsers remember a failed module fetch, so importing the same chunk
+ * again would not reach the network. The error UI therefore offers a reload.
  */
 export function lazyRoute<T extends Record<string, unknown>, K extends keyof T>(
   importer: () => Promise<T>,
@@ -44,11 +36,6 @@ export function lazyRoute<T extends Record<string, unknown>, K extends keyof T>(
     );
     return pending;
   };
-
-  failureResets.add(() => {
-    failure = undefined;
-    pending = undefined;
-  });
 
   function LazyRoute(props: object) {
     if (failure) throw failure;

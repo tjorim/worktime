@@ -19,7 +19,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /\.authenticated\.spec\.ts/,
+      testIgnore: /\.(authenticated|pwa)\.spec\.ts/,
     },
     // Specs matching *.authenticated.spec.ts run pre-logged-in and past
     // onboarding (see e2e/auth.setup.ts) instead of hitting the real Keycloak
@@ -30,14 +30,32 @@ export default defineConfig({
       testMatch: /\.authenticated\.spec\.ts/,
       dependencies: ["setup"],
     },
-  ],
-  webServer: {
-    command: "pnpm exec vite --no-open",
-    url: "http://localhost:8000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      VITE_MSW: "true",
+    // Specs matching *.pwa.spec.ts need the real service worker, which the dev server
+    // keeps off, so they run against a production build served by `vite preview`.
+    {
+      name: "chromium-pwa",
+      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4174" },
+      testMatch: /\.pwa\.spec\.ts/,
     },
-  },
+  ],
+  webServer: [
+    {
+      command: "pnpm exec vite --no-open",
+      url: "http://localhost:8000",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        VITE_MSW: "true",
+      },
+    },
+    {
+      // Built outside dist/ so running the suite never clobbers a local build.
+      command:
+        "pnpm exec vite build --outDir node_modules/.e2e-pwa-dist --emptyOutDir && " +
+        "pnpm exec vite preview --outDir node_modules/.e2e-pwa-dist --port 4174 --strictPort",
+      url: "http://localhost:4174",
+      reuseExistingServer: !process.env.CI,
+      timeout: 240_000,
+    },
+  ],
 });

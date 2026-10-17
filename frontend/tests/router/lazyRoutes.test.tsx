@@ -1,6 +1,5 @@
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const gate = vi.hoisted(() => {
@@ -58,20 +57,14 @@ describe("lazy secondary routes", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("offers retry and reload when the chunk cannot be loaded", async () => {
+  it("offers a reload when the chunk cannot be loaded", async () => {
     gate.mode = "fail";
-    const user = userEvent.setup();
     render(<RouterProvider router={await makeRouter("/settings")} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load this page");
     expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try Again" })).not.toBeInTheDocument();
     expect(screen.queryByText(/dynamically imported/)).not.toBeInTheDocument();
-
-    gate.mode = "ok";
-    await user.click(screen.getByRole("button", { name: "Try Again" }));
-
-    expect(await screen.findByText("settings page")).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 
   it("loads the chunk ahead of navigation on intent preload", async () => {

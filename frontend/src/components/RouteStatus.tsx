@@ -4,7 +4,7 @@ import { Icon } from "@/components/shared/Icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { RouteChunkLoadError, retryLazyRoutes } from "@/lib/lazyRoute";
+import { RouteChunkLoadError } from "@/lib/lazyRoute";
 import * as m from "@/paraglide/messages.js";
 
 /** Shown while a lazily loaded route chunk downloads. */
@@ -22,7 +22,7 @@ export function RoutePending() {
  * Recovery UI for a route chunk that failed to load (offline and uncached, or a
  * deploy replaced it). Anything else is rethrown to the app-level ErrorBoundary.
  */
-export function RouteError({ error, reset }: ErrorComponentProps) {
+export function RouteError({ error }: ErrorComponentProps) {
   if (!(error instanceof RouteChunkLoadError)) throw error;
 
   return (
@@ -32,17 +32,8 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
         <AlertTitle>{m.route_load_failed_title()}</AlertTitle>
         <AlertDescription>
           <p>{m.route_load_failed_message()}</p>
-          <div className="mt-2 flex gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                retryLazyRoutes();
-                reset();
-              }}
-            >
-              {m.error_boundary_try_again()}
-            </Button>
-            <Button variant="outline" onClick={() => window.location.reload()}>
+          <div className="mt-2">
+            <Button variant="destructive" onClick={() => window.location.reload()}>
               {m.error_boundary_reload()}
             </Button>
           </div>
