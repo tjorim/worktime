@@ -64,7 +64,7 @@ describe("TeamScheduleView", () => {
 
   it("requires a configured helper and never falls back to the app's own origin", async () => {
     seedHelperUrl(null);
-    // No handler for */api/team/*hday is registered — MSW's onUnhandledRequest: "error"
+    // No handler for */api/team/*hday is registered — MSW's onUnhandledFrame: "error"
     // means the test fails loudly if the view ever attempts that request.
 
     render(

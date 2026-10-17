@@ -108,7 +108,7 @@ async function resetTestState(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "error" });
+  server.listen({ onUnhandledFrame: "error" });
 });
 
 // Set up DOM environment
