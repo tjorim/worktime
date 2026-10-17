@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
@@ -25,7 +26,7 @@ describe("useGanttTasks", () => {
   it("addTask creates a task with generated id", async () => {
     const taskId = nextId("generated-id");
     vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => taskId),
+      randomUUID: vi.fn((): string => randomUUID()).mockReturnValueOnce(taskId),
     });
 
     const { result } = renderHook(() => useGanttTasks());
@@ -51,7 +52,7 @@ describe("useGanttTasks", () => {
   it("updateTask modifies an existing task", async () => {
     const taskId = nextId("update-task");
     vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => taskId),
+      randomUUID: vi.fn((): string => randomUUID()).mockReturnValueOnce(taskId),
     });
 
     const { result } = renderHook(() => useGanttTasks());
@@ -167,9 +168,8 @@ describe("useGanttTasks", () => {
   it("filters invalid tasks (bad date format)", async () => {
     const okId = nextId("ok");
     const badId = nextId("bad-format");
-    vi.stubGlobal("crypto", {
-      randomUUID: vi.fn().mockReturnValueOnce(okId).mockReturnValueOnce(badId),
-    });
+    const mockRandomUUID = vi.fn((): string => randomUUID()).mockReturnValueOnce(okId);
+    vi.stubGlobal("crypto", { randomUUID: mockRandomUUID });
 
     const { result } = renderHook(() => useGanttTasks());
 
@@ -182,6 +182,7 @@ describe("useGanttTasks", () => {
     });
 
     act(() => {
+      mockRandomUUID.mockReturnValueOnce(badId);
       result.current.addTask({ name: "Invalid", start: "bad-date", end: "2026-02-05" });
     });
 
@@ -195,7 +196,7 @@ describe("useGanttTasks", () => {
   it("persists tasks across hook re-renders", async () => {
     const persistentId = nextId("persistent-id");
     vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => persistentId),
+      randomUUID: vi.fn((): string => randomUUID()).mockReturnValueOnce(persistentId),
     });
 
     const { result, unmount } = renderHook(() => useGanttTasks());
@@ -219,7 +220,7 @@ describe("useGanttTasks", () => {
   it("resets tasks when collection contents are replaced with an empty list", async () => {
     const taskId = nextId("reset-task");
     vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => taskId),
+      randomUUID: vi.fn((): string => randomUUID()).mockReturnValueOnce(taskId),
     });
 
     const { result } = renderHook(() => useGanttTasks());
