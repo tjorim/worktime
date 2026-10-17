@@ -1,12 +1,19 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
+import { RouteError, RoutePending } from "@/components/RouteStatus";
 import { preloadSyncCollections } from "@/db/collections";
+import { lazyRoute } from "@/lib/lazyRoute";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { HomePage } from "@/pages/HomePage";
-import { PebblePairPage } from "@/pages/PebblePairPage";
-import { PrivacyPage } from "@/pages/PrivacyPage";
-import { SettingsPage } from "@/pages/SettingsPage";
 import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
+
+// Secondary routes are code-split: Settings alone pulls in backup/restore, the
+// account/admin sections and their dialogs. Home, the auth callbacks and the
+// layout stay in the entry chunk so sign-in and the first paint never wait on
+// a second download.
+const SettingsPage = lazyRoute(() => import("@/pages/SettingsPage"), "SettingsPage");
+const PrivacyPage = lazyRoute(() => import("@/pages/PrivacyPage"), "PrivacyPage");
+const PebblePairPage = lazyRoute(() => import("@/pages/PebblePairPage"), "PebblePairPage");
 
 const rootRoute = createRootRoute({
   component: AppLayout,
@@ -94,6 +101,8 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   defaultPreload: "intent",
+  defaultPendingComponent: RoutePending,
+  defaultErrorComponent: RouteError,
   // Let the collections own freshness rather than caching the preload hint.
   defaultPreloadStaleTime: 0,
 });
