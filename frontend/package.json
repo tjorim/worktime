@@ -99,7 +99,7 @@
     "happy-dom": "^20.14.5",
     "lightningcss": "^1.33.0",
     "msw": "^2.15.0",
-    "oxc-parser": "^0.153.0",
+    "oxc-parser": "^0.154.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
     "postcss": "^8.5.30",
