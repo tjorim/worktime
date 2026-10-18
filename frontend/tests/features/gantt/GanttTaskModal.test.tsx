@@ -97,7 +97,8 @@ describe("GanttTaskModal", () => {
     );
 
     await user.type(screen.getByLabelText("Name"), "Document API");
-    await user.selectOptions(screen.getByLabelText("Search tasks…"), ["task-1"]);
+    await user.click(screen.getByRole("combobox", { name: "Dependencies" }));
+    await user.click(screen.getByRole("option", { name: "Task One" }));
     await user.type(screen.getByLabelText("Notes"), "  Keep this note  ");
     await user.click(screen.getByRole("button", { name: "Add Task" }));
 

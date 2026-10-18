@@ -167,12 +167,6 @@ export default defineConfig({
             ) {
               return "vendor-temporal";
             }
-            if (
-              normalizedId.includes("/node_modules/react-select/") ||
-              normalizedId.includes("/node_modules/@emotion/")
-            ) {
-              return "vendor-select";
-            }
             // Chart and form libraries are only reachable from lazy tabs/modals. Left in the
             // catch-all group they would ride along in the chunk the entry statically imports.
             if (

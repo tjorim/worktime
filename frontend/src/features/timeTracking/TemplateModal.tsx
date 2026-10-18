@@ -9,11 +9,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { DialogSelect } from "@/components/shared/DialogSelect";
+import { SearchSelect } from "@/components/shared/SearchSelect";
 import { useForm, useSelector } from "@tanstack/react-form";
 import type { Label } from "@/lib/timeTracking/constants";
-import { selectClassNames } from "@/utils/reactSelectStyles";
-import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
+import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
 
 export type TemplateForm = {
@@ -101,12 +100,9 @@ export function TemplateModal({
               {(field) => (
                 <Field>
                   <FieldLabel htmlFor="templateLabel">{m.form_label()}</FieldLabel>
-                  <DialogSelect<LabelOption>
-                    unstyled
-                    isClearable
-                    isSearchable
+                  <SearchSelect
                     inputId="templateLabel"
-                    isDisabled={isLabelSelectionDisabled}
+                    disabled={isLabelSelectionDisabled}
                     placeholder={
                       isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
                     }
@@ -114,7 +110,6 @@ export function TemplateModal({
                     options={labels.map((l) => ({ value: l.id, label: l.name }))}
                     value={selectedLabelOption}
                     onChange={(selected) => field.handleChange(selected?.value ?? "")}
-                    classNames={selectClassNames}
                   />
                   {isLabelSelectionDisabled ? (
                     <FieldDescription id="templateLabelHelp">

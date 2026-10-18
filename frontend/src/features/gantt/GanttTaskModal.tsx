@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DialogSelect } from "@/components/shared/DialogSelect";
+import { SearchSelect, MultiSearchSelect } from "@/components/shared/SearchSelect";
 import {
   Dialog,
   DialogContent,
@@ -16,13 +16,10 @@ import {
 import { useForm, useSelector } from "@tanstack/react-form";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
-import { selectClassNames } from "@/utils/reactSelectStyles";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
+import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
 import { getLoggedMinutes, formatLoggedDuration } from "@/utils/ganttLoggedTime";
 import * as m from "@/paraglide/messages.js";
-
-type DepOption = { value: string; label: string };
 
 export type GanttTaskFormInput = Omit<RawGanttTask, "id">;
 
@@ -259,12 +256,9 @@ export function GanttTaskModal({
               {(field) => (
                 <Field>
                   <FieldLabel htmlFor="ganttTaskLabel">{m.form_label()}</FieldLabel>
-                  <DialogSelect<LabelOption>
-                    unstyled
-                    isClearable
-                    isSearchable
+                  <SearchSelect
                     inputId="ganttTaskLabel"
-                    isDisabled={isLabelSelectionDisabled}
+                    disabled={isLabelSelectionDisabled}
                     placeholder={
                       isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
                     }
@@ -272,7 +266,6 @@ export function GanttTaskModal({
                     options={labelOptions}
                     value={selectedLabelOption}
                     onChange={(selected) => field.handleChange(selected?.value ?? "")}
-                    classNames={selectClassNames}
                   />
                   {isLabelSelectionDisabled ? (
                     <FieldDescription id="ganttTaskLabelHelp">
@@ -383,18 +376,12 @@ export function GanttTaskModal({
 
             <Field>
               <FieldLabel htmlFor="ganttTaskDependencies">{m.gantt_task_deps_label()}</FieldLabel>
-              <DialogSelect<DepOption, true>
-                isMulti
-                unstyled
+              <MultiSearchSelect
                 inputId="ganttTaskDependencies"
                 placeholder={m.gantt_task_deps_placeholder()}
                 options={depOptions}
                 value={depValue}
                 onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
-                classNames={{
-                  ...selectClassNames,
-                  control: (state) => `${selectClassNames.control(state)} gap-1`,
-                }}
               />
             </Field>
 

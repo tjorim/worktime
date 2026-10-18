@@ -91,9 +91,4 @@ export const exclusions = {
     "refusing to build a keep-local replace payload from empty local data":
       "internal invariant diagnostic",
   },
-  "utils/reactSelectStyles.ts": {
-    "flex min-h-8 w-full flex-wrap items-center rounded-lg border bg-background px-2.5 py-1 text-sm":
-      "CSS class fragment",
-    "rounded-md px-3 py-2 text-sm": "CSS class fragment",
-  },
 };

@@ -84,7 +84,8 @@ describe("TemplatesPanel", () => {
       expect(within(dialog).getByText("Add New Template")).toBeInTheDocument();
 
       await user.type(within(dialog).getByLabelText(/Task name/i), "Standup");
-      await user.selectOptions(within(dialog).getByLabelText(/Label/i), "lbl-1");
+      await user.click(within(dialog).getByLabelText(/Label/i));
+      await user.click(screen.getByRole("option", { name: "Support" }));
       // Use fireEvent for time inputs since userEvent.type doesn't work reliably with type="time"
       const startInput = within(dialog).getByLabelText(/^Start$/i);
       const stopInput = within(dialog).getByLabelText(/^Stop$/i);
@@ -136,7 +137,8 @@ describe("TemplatesPanel", () => {
       await user.click(screen.getByRole("button", { name: /Add Template/i }));
 
       const dialog = screen.getByRole("dialog");
-      await user.selectOptions(within(dialog).getByLabelText(/Label/i), "lbl-1");
+      await user.click(within(dialog).getByLabelText(/Label/i));
+      await user.click(screen.getByRole("option", { name: "Support" }));
       const startInput = within(dialog).getByLabelText(/^Start$/i);
       const stopInput = within(dialog).getByLabelText(/^Stop$/i);
       await user.clear(startInput);
@@ -161,7 +163,8 @@ describe("TemplatesPanel", () => {
 
       const dialog = screen.getByRole("dialog");
       await user.type(within(dialog).getByLabelText(/Task name/i), "Test");
-      await user.selectOptions(within(dialog).getByLabelText(/Label/i), "lbl-1");
+      await user.click(within(dialog).getByLabelText(/Label/i));
+      await user.click(screen.getByRole("option", { name: "Support" }));
 
       const startInput = within(dialog).getByLabelText(/^Start$/i);
       const stopInput = within(dialog).getByLabelText(/^Stop$/i);

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Hint } from "@/components/ui/tooltip";
 import { Grid, GridItem } from "@/components/ui/grid";
 import type { CSSProperties, ReactElement } from "react";
-import ReactSelect from "react-select";
+import { SearchSelect } from "@/components/shared/SearchSelect";
 import {
   isHexColor,
   getDefaultLabelColor,
@@ -17,12 +17,8 @@ import {
 } from "@/lib/timeTracking/constants";
 import type { Label } from "@/lib/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
-import { selectClassNames } from "@/utils/reactSelectStyles";
-import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
-import {
-  useSelectedGanttTaskOption,
-  type GanttTaskOption,
-} from "@/hooks/useSelectedGanttTaskOption";
+import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
+import { useSelectedGanttTaskOption } from "@/hooks/useSelectedGanttTaskOption";
 import * as m from "@/paraglide/messages.js";
 
 type TaskEntryFormProps = {
@@ -177,18 +173,14 @@ export function TaskEntryForm({
         <GridItem desktopSpan={primaryFieldWidth}>
           <Field>
             <FieldLabel htmlFor="timeTrackerLabel">{m.form_label()}</FieldLabel>
-            <ReactSelect<LabelOption>
-              unstyled
-              isClearable
-              isSearchable
+            <SearchSelect
               inputId="timeTrackerLabel"
-              isDisabled={labels.length === 0}
+              disabled={labels.length === 0}
               placeholder={labels.length === 0 ? m.tt_add_labels_first() : m.tt_choose_label()}
               aria-describedby={labels.length === 0 ? "timeTrackerLabelHelp" : undefined}
               options={labels.map((item) => ({ value: item.id, label: item.name }))}
               value={selectedLabelOption}
               onChange={(selected) => onLabelChange(selected?.value ?? "")}
-              classNames={selectClassNames}
             />
             {labels.length === 0 && (
               <FieldDescription id="timeTrackerLabelHelp" className="block">
@@ -211,16 +203,12 @@ export function TaskEntryForm({
           <GridItem desktopSpan={primaryFieldWidth}>
             <Field>
               <FieldLabel htmlFor="timeTrackerGanttTask">{m.tt_gantt_task()}</FieldLabel>
-              <ReactSelect<GanttTaskOption>
-                unstyled
-                isClearable
-                isSearchable
+              <SearchSelect
                 inputId="timeTrackerGanttTask"
                 placeholder={m.tt_no_gantt_task()}
                 options={ganttTaskOptions}
                 value={selectedGanttTaskOption}
                 onChange={(selected) => onGanttTaskChange(selected?.value ?? "")}
-                classNames={selectClassNames}
               />
             </Field>
           </GridItem>

@@ -17,13 +17,13 @@ import { gzipSync } from "node:zlib";
 
 const DIST = resolve(import.meta.dirname, "..", "dist");
 
-// Budgets sit ~5% above the numbers measured for #1513 (initial 1514 kB raw /
-// 456 kB gzip, total 2417 kB raw). Lower them when the numbers improve; raise
+// Budgets sit ~5% above the numbers measured for #1569 (initial 1477 kB raw /
+// 441 kB gzip, total 2375 kB raw). Lower them when the numbers improve; raise
 // them only with a reason.
 const BUDGETS = {
-  initialRawKb: 1_590,
-  initialGzipKb: 480,
-  totalJsRawKb: 2_540,
+  initialRawKb: 1_550,
+  initialGzipKb: 465,
+  totalJsRawKb: 2_495,
 } as const;
 
 function listJs(dir: string): string[] {

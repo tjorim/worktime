@@ -1025,8 +1025,9 @@ describe("SettingsPage Schedule & Team Section", () => {
 
     expect(screen.getByText(m.select_team_label())).toBeInTheDocument();
     const teamSelector = screen.getByRole("combobox", { name: m.select_team_label() });
-    await user.selectOptions(teamSelector, "1");
-    expect(screen.getByText("Team 1")).toBeInTheDocument();
+    await user.click(teamSelector);
+    await user.click(screen.getByRole("option", { name: "Team 1" }));
+    expect(teamSelector).toHaveTextContent("Team 1");
   });
 });
 

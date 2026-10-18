@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { accessibilityContexts, expectNoAccessibilityViolations } from "./axe";
 
 /**
@@ -36,6 +36,12 @@ for (const context of accessibilityContexts) {
       test(`settings ${section} has no axe violations`, async ({ page }) => {
         await page.goto(`/settings?section=${section}`);
         await page.locator("main").waitFor();
+        if (section === "account") {
+          // The initial pull enables this button with an opacity transition. Scan settled UI.
+          const sync = page.getByRole("button", { name: "Sync now", exact: true });
+          await expect(sync).toBeEnabled();
+          await expect(sync).toHaveCSS("opacity", "1");
+        }
         await expectNoAccessibilityViolations(page, `settings ${section} (${context.name})`);
       });
     }

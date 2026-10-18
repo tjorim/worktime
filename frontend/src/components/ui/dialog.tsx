@@ -2,7 +2,6 @@ import * as m from "@/paraglide/messages";
 import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn } from "@/lib/utils";
-import { DialogMenuPortalContext } from "@/hooks/useDialogMenuPortalTarget";
 
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
@@ -49,37 +48,31 @@ function DialogContent({
   scrollable?: boolean;
   position?: "center" | "top";
 }) {
-  const [menuPortalTarget, setMenuPortalTarget] = React.useState<HTMLDivElement | null>(null);
-
   return (
     <DialogPortal>
-      <DialogMenuPortalContext.Provider value={menuPortalTarget}>
-        <DialogOverlay {...overlayProps} />
-        <DialogPrimitive.Popup
-          data-slot="dialog-content"
-          className={cn(
-            "dialog-viewport fixed top-1/2 left-1/2 z-dialog max-w-dialog -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-background text-foreground outline-none data-closed:hidden",
-            size === "lg" && "max-w-dialog-lg",
-            scrollable && "flex flex-col overflow-hidden",
-            position === "top" && "top-7 translate-y-0",
-            className,
-          )}
-          {...props}
-        >
-          {children}
-          {showCloseButton && (
-            <DialogPrimitive.Close
-              aria-label={m.close()}
-              data-slot="dialog-close"
-              render={<Button variant="ghost" className="absolute top-3 right-3" size="icon-sm" />}
-            >
-              <XIcon />
-            </DialogPrimitive.Close>
-          )}
-        </DialogPrimitive.Popup>
-        {/* Keep picker menus inside the modal portal, outside its clipping scroll containers. */}
-        <div data-base-ui-portal="" ref={setMenuPortalTarget} />
-      </DialogMenuPortalContext.Provider>
+      <DialogOverlay {...overlayProps} />
+      <DialogPrimitive.Popup
+        data-slot="dialog-content"
+        className={cn(
+          "dialog-viewport fixed top-1/2 left-1/2 z-dialog max-w-dialog -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-background text-foreground outline-none data-closed:hidden",
+          size === "lg" && "max-w-dialog-lg",
+          scrollable && "flex flex-col overflow-hidden",
+          position === "top" && "top-7 translate-y-0",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {showCloseButton && (
+          <DialogPrimitive.Close
+            aria-label={m.close()}
+            data-slot="dialog-close"
+            render={<Button variant="ghost" className="absolute top-3 right-3" size="icon-sm" />}
+          >
+            <XIcon />
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Popup>
     </DialogPortal>
   );
 }

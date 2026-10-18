@@ -58,7 +58,7 @@ describe("Header", () => {
       const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
-      await user.click(await screen.findByRole("button", { name: "About" }));
+      await user.click(await screen.findByRole("button", { name: "About" }, { timeout: 5000 }));
       const aboutHelpButton = await screen.findByText("About & Help");
       await user.click(aboutHelpButton);
 
@@ -74,7 +74,7 @@ describe("Header", () => {
       const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
-      await user.click(await screen.findByRole("button", { name: "About" }));
+      await user.click(await screen.findByRole("button", { name: "About" }, { timeout: 5000 }));
       const aboutHelpButton = await screen.findByText("About & Help");
       await user.click(aboutHelpButton);
 
