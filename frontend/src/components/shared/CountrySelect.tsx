@@ -1,6 +1,5 @@
-import ReactSelect from "react-select";
+import { SearchSelect } from "@/components/shared/SearchSelect";
 import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "@/types/countries";
-import { selectClassNames } from "@/utils/reactSelectStyles";
 
 type CountryOption = { value: string; label: string };
 
@@ -19,10 +18,7 @@ export function CountrySelect({ value, onChange, ariaLabel, inputId }: CountrySe
   const selected = value ? (COUNTRY_OPTIONS.find((o) => o.value === value) ?? null) : null;
 
   return (
-    <ReactSelect<CountryOption>
-      unstyled
-      isClearable
-      isSearchable
+    <SearchSelect
       inputId={inputId}
       aria-label={ariaLabel}
       options={COUNTRY_OPTIONS}
@@ -31,7 +27,6 @@ export function CountrySelect({ value, onChange, ariaLabel, inputId }: CountrySe
         const code = s?.value ?? null;
         onChange(isValidCountryCode(code) ? code : null);
       }}
-      classNames={selectClassNames}
     />
   );
 }

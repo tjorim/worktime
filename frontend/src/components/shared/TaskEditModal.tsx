@@ -11,16 +11,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { DialogSelect } from "@/components/shared/DialogSelect";
+import { SearchSelect } from "@/components/shared/SearchSelect";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Label } from "@/lib/timeTracking/constants";
 import { BREAK_DURATION_MINUTES } from "@/lib/timeTracking/timeUtils";
-import { selectClassNames } from "@/utils/reactSelectStyles";
-import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
-import {
-  useSelectedGanttTaskOption,
-  type GanttTaskOption,
-} from "@/hooks/useSelectedGanttTaskOption";
+import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
+import { useSelectedGanttTaskOption } from "@/hooks/useSelectedGanttTaskOption";
 import * as m from "@/paraglide/messages.js";
 import type { GanttTask } from "@/types/gantt";
 
@@ -117,31 +113,23 @@ export function TaskEditModal({
             </Field>
             <Field className="mb-4">
               <FieldLabel htmlFor="editTaskLabel">{m.form_label()}</FieldLabel>
-              <DialogSelect<LabelOption>
-                unstyled
-                isClearable
-                isSearchable
+              <SearchSelect
                 inputId="editTaskLabel"
                 placeholder={m.tt_select_label()}
                 options={labels.map((l) => ({ value: l.id, label: l.name }))}
                 value={selectedLabelOption}
                 onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
-                classNames={selectClassNames}
               />
             </Field>
             {showGanttPicker && (
               <Field className="mb-4">
                 <FieldLabel htmlFor="editTaskGanttTask">{m.tt_gantt_task()}</FieldLabel>
-                <DialogSelect<GanttTaskOption>
-                  unstyled
-                  isClearable
-                  isSearchable
+                <SearchSelect
                   inputId="editTaskGanttTask"
                   placeholder={m.tt_no_gantt_task()}
                   options={ganttTaskOptions}
                   value={selectedGanttTaskOption}
                   onChange={(selected) => onChange({ ...value, ganttTaskId: selected?.value })}
-                  classNames={selectClassNames}
                 />
               </Field>
             )}

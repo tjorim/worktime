@@ -1455,7 +1455,10 @@
     {
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
-      "match": { "countPlural=one": "{count} dag", "countPlural=other": "{count} dagen" }
+      "match": {
+        "countPlural=one": "{count} dag",
+        "countPlural=other": "{count} dagen"
+      }
     }
   ],
   "gantt_empty_title": "Nog geen taken",
@@ -1492,5 +1495,8 @@
   "holidays_network": "Netwerkfout: geen verbinding met de feestdagen-API",
   "school_holidays_fetch_failed": "Schoolvakanties ophalen mislukt",
   "school_holidays_timeout": "Time-out: de schoolvakanties-API is niet bereikbaar",
-  "school_holidays_network": "Netwerkfout: geen verbinding met de schoolvakanties-API"
+  "school_holidays_network": "Netwerkfout: geen verbinding met de schoolvakanties-API",
+  "picker_placeholder": "Selecteer…",
+  "picker_open": "Opties openen",
+  "picker_empty": "Geen opties gevonden."
 }

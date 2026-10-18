@@ -227,7 +227,7 @@ describe("TransferView", () => {
   });
 
   describe("Team comparison UI", () => {
-    it("displays team comparison dropdown with available teams", () => {
+    it("displays team comparison dropdown with available teams", async () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       const otherTeamSelect = screen.getByRole("combobox", {
@@ -236,6 +236,7 @@ describe("TransferView", () => {
       expect(otherTeamSelect).toBeInTheDocument();
       expect(screen.getByText("Team 2")).toBeInTheDocument(); // From mock hook
 
+      await userEvent.click(otherTeamSelect);
       expect(screen.getByRole("option", { name: "Team 3" })).toBeInTheDocument();
       expect(screen.getByRole("option", { name: "Team 4" })).toBeInTheDocument();
       expect(screen.getByRole("option", { name: "Team 5" })).toBeInTheDocument();
@@ -254,7 +255,8 @@ describe("TransferView", () => {
       const otherTeamSelect = screen.getByRole("combobox", {
         name: "Select team to view transfers with",
       });
-      await user.selectOptions(otherTeamSelect, "3");
+      await user.click(otherTeamSelect);
+      await user.click(screen.getByRole("option", { name: "Team 3" }));
 
       expect(mockSetOtherTeam).toHaveBeenCalledWith(3);
     });
@@ -703,9 +705,12 @@ describe("TransferView", () => {
       const otherTeamSelect = screen.getByLabelText("View transfers with Team:");
 
       // Rapid changes
-      await user.selectOptions(otherTeamSelect, "3");
-      await user.selectOptions(otherTeamSelect, "4");
-      await user.selectOptions(otherTeamSelect, "5");
+      await user.click(otherTeamSelect);
+      await user.click(screen.getByRole("option", { name: "Team 3" }));
+      await user.click(otherTeamSelect);
+      await user.click(screen.getByRole("option", { name: "Team 4" }));
+      await user.click(otherTeamSelect);
+      await user.click(screen.getByRole("option", { name: "Team 5" }));
 
       expect(mockSetOtherTeam).toHaveBeenCalledTimes(3);
       expect(mockSetOtherTeam).toHaveBeenNthCalledWith(1, 3);

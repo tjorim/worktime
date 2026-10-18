@@ -1455,7 +1455,10 @@
     {
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
-      "match": { "countPlural=one": "{count} day", "countPlural=other": "{count} days" }
+      "match": {
+        "countPlural=one": "{count} day",
+        "countPlural=other": "{count} days"
+      }
     }
   ],
   "gantt_empty_title": "No tasks yet",
@@ -1492,5 +1495,8 @@
   "holidays_network": "Network error: Unable to connect to holiday API",
   "school_holidays_fetch_failed": "Failed to fetch school holidays",
   "school_holidays_timeout": "Request timeout: Unable to reach school holiday API",
-  "school_holidays_network": "Network error: Unable to connect to school holiday API"
+  "school_holidays_network": "Network error: Unable to connect to school holiday API",
+  "picker_placeholder": "Select…",
+  "picker_open": "Open options",
+  "picker_empty": "No options found."
 }

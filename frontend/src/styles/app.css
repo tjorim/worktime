@@ -30,3 +30,8 @@
     display: none !important;
   }
 }
+
+/* Fit picker lists to both long option sets and short dialog viewports. */
+@utility combobox-list-viewport {
+  max-height: min(calc(var(--spacing) * 60), var(--available-height));
+}

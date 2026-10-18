@@ -1,11 +1,16 @@
 import { useId, type ReactNode } from "react";
 import { Field, FieldLabel } from "@/components/ui/field";
 
-import ReactSelect from "react-select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import type { ScheduleOption } from "@/data/rosters";
 import * as m from "@/paraglide/messages.js";
 import { getTeamCountForOption } from "@/utils/scheduleUtils";
-import { selectClassNames } from "@/utils/reactSelectStyles";
 
 type TeamOption = { value: number; label: string };
 
@@ -46,18 +51,24 @@ export function TeamSelector({
       <FieldLabel htmlFor={effectiveId} className="font-semibold">
         {label}
       </FieldLabel>
-      <ReactSelect<TeamOption>
-        unstyled
-        isSearchable={false}
-        inputId={effectiveId}
-        aria-label={ariaLabel}
-        options={options}
-        value={value}
-        onChange={(option) => {
-          if (option) onChange(Number(option.value));
+      <Select
+        items={options}
+        value={value?.value ?? null}
+        onValueChange={(team) => {
+          if (team !== null) onChange(team);
         }}
-        classNames={selectClassNames}
-      />
+      >
+        <SelectTrigger id={effectiveId} aria-label={ariaLabel} className="w-full">
+          <SelectValue placeholder={m.picker_placeholder()} />
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false}>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </Field>
   );
 }

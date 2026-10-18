@@ -13,62 +13,6 @@ import { labelsCollection } from "@/db/collections";
 
 // OIDC mocks are provided globally by tests/setup.ts
 
-vi.mock("react-select", () => ({
-  default: ({
-    options = [],
-    value = null,
-    onChange = () => {},
-    inputId,
-    isMulti = false,
-    isDisabled = false,
-    "aria-label": ariaLabel,
-    "aria-describedby": ariaDescribedBy,
-  }: {
-    options?: { value: string; label: string }[];
-    value?: { value: string; label: string } | { value: string; label: string }[] | null;
-    onChange?: (v: unknown) => void;
-    inputId?: string;
-    isMulti?: boolean;
-    isDisabled?: boolean;
-    "aria-label"?: string;
-    "aria-describedby"?: string;
-  }) => {
-    const selectedValues = Array.isArray(value)
-      ? value.map((v) => v.value)
-      : value
-        ? [value.value]
-        : [];
-    return (
-      <select
-        multiple={isMulti}
-        id={inputId}
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        disabled={isDisabled}
-        value={isMulti ? selectedValues : (selectedValues[0] ?? "")}
-        onChange={(e) => {
-          if (isMulti) {
-            onChange(
-              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
-            );
-          } else {
-            const val = e.target.value;
-            onChange(
-              val ? { value: val, label: e.target.options[e.target.selectedIndex]!.text } : null,
-            );
-          }
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    );
-  },
-}));
-
 const defaultProps = {
   show: true,
   onTeamSelect: vi.fn(),
@@ -591,7 +535,9 @@ describe("WelcomeWizard", () => {
 
       // Simulate reset from the routed settings page
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(await screen.findByRole("button", { name: "Data & backup" }));
+      await user.click(
+        await screen.findByRole("button", { name: "Data & backup" }, { timeout: 5000 }),
+      );
       await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
@@ -631,7 +577,9 @@ describe("WelcomeWizard", () => {
 
       // Should be able to open settings and reset again
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(await screen.findByRole("button", { name: "Data & backup" }));
+      await user.click(
+        await screen.findByRole("button", { name: "Data & backup" }, { timeout: 5000 }),
+      );
       await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
       await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 

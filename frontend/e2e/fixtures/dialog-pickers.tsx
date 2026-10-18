@@ -3,6 +3,13 @@ import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
 import { TemplateModal } from "@/features/timeTracking/TemplateModal";
 import { TaskEditModal } from "@/components/shared/TaskEditModal";
+import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
+import { oidcConfig } from "@/config/oidc";
+import { WelcomeWizard } from "@/components/WelcomeWizard";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { GanttTaskModal } from "@/features/gantt/GanttTaskModal";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 const labels = Array.from({ length: 20 }, (_, index) => ({
@@ -22,6 +29,34 @@ function Fixture() {
     includesBreak: false,
   });
   const mode = params.get("mode");
+  if (mode === "wizard") {
+    return (
+      <OidcAuthProvider {...oidcConfig}>
+        <SettingsProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <WelcomeWizard
+                show={open}
+                startStep="work-location-setup"
+                onTeamSelect={() => {}}
+                onHide={() => setOpen(false)}
+              />
+            </AuthProvider>
+          </ToastProvider>
+        </SettingsProvider>
+      </OidcAuthProvider>
+    );
+  }
+  if (mode === "gantt") {
+    return (
+      <GanttTaskModal
+        show={open}
+        onHide={() => setOpen(false)}
+        onSave={() => setOpen(false)}
+        existingTasks={labels.map((label) => ({ id: label.id, name: label.name }))}
+      />
+    );
+  }
   if (mode === "warning") {
     return (
       <ConfirmationDialog

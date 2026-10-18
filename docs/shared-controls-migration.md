@@ -7,10 +7,11 @@ All dialog body consumers use the same padding and scrolling utilities.
 
 ## Decisions
 
-- Keep `react-select` for CountrySelect and the shared label, task and team pickers.
-  Search, clearing, disabled controls and existing option resolution stay intact.
-  `selectClassNames` owns their token styles; `bootstrapSelectClassNames` remains an
-  export alias for consumers in product areas that have not migrated yet.
+- Use the owned Base UI Combobox for searchable country, label, task and template
+  pickers, with chips for Gantt dependencies (#1569). `SearchSelect` resolves options
+  by ID and preserves clearing, disabled controls and accessible field labels.
+  TeamSelector uses the owned Base UI Select. Base UI portals keep menus outside
+  scrolling dialog bodies, with the shared popover layer above dialogs.
 - Use Base UI Menu with a virtual pointer anchor for ContextMenu. Base UI handles
   viewport collision detection, keyboard navigation, disabled actions and focus
   restoration. Disabled items remain keyboard discoverable and cannot activate.

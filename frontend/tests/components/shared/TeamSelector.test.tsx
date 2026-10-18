@@ -17,7 +17,8 @@ describe("TeamSelector", () => {
       />,
     );
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Choose team" }), "2");
+    await user.click(screen.getByRole("combobox", { name: "Choose team" }));
+    await user.click(screen.getByRole("option", { name: "Team 2" }));
 
     expect(onChange).toHaveBeenCalledWith(2);
   });
@@ -34,6 +35,7 @@ describe("TeamSelector", () => {
       />,
     );
 
+    await userEvent.click(screen.getByRole("combobox", { name: "Choose other team" }));
     expect(screen.getByRole("option", { name: "Team 4" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Team 3" })).not.toBeInTheDocument();
   });

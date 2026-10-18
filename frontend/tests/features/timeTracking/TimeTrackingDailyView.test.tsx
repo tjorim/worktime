@@ -612,7 +612,8 @@ describe("TimeTrackingDailyView", () => {
       const user = userEvent.setup();
       renderView();
 
-      await user.selectOptions(screen.getByLabelText(/^Template$/i), "tpl-1");
+      await user.click(screen.getByLabelText(/^Template$/i));
+      await user.click(screen.getByRole("option", { name: /Morning Support/ }));
       await user.click(screen.getByRole("button", { name: /Use Template/i }));
 
       expect(screen.getByLabelText(/^Task$/i)).toHaveValue("Morning Support");
@@ -805,7 +806,8 @@ describe("TimeTrackingDailyView", () => {
       const taskInput = within(dialog).getByLabelText(/^Task$/i);
       await user.clear(taskInput);
       await user.type(taskInput, "Updated Task");
-      await user.selectOptions(within(dialog).getByLabelText(/^Label$/i), "Meeting");
+      await user.click(within(dialog).getByLabelText(/^Label$/i));
+      await user.click(screen.getByRole("option", { name: "Meeting" }));
       await user.clear(within(dialog).getByLabelText(/^Start$/i));
       await user.type(within(dialog).getByLabelText(/^Start$/i), "09:00");
       await user.clear(within(dialog).getByLabelText(/^Stop$/i));
