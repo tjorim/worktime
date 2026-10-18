@@ -40,6 +40,7 @@
     "test:e2e": "playwright test",
     "generate-changelog": "tsx scripts/generate-changelog.ts",
     "generate-icons": "tsx scripts/generate-icons.ts",
+    "check-bundle-budget": "tsx scripts/check-bundle-budget.ts",
     "check-version-consistency": "tsx scripts/check-version-consistency.ts",
     "check-message-parity": "node scripts/check-message-parity.mjs",
     "locale:audit": "node scripts/locale-audit.mjs",

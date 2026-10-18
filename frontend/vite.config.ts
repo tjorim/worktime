@@ -173,6 +173,20 @@ export default defineConfig({
             ) {
               return "vendor-select";
             }
+            // Chart and form libraries are only reachable from lazy tabs/modals. Left in the
+            // catch-all group they would ride along in the chunk the entry statically imports.
+            if (
+              normalizedId.includes("/node_modules/@tanstack/charts/") ||
+              normalizedId.includes("/node_modules/preact/")
+            ) {
+              return "vendor-charts";
+            }
+            if (
+              normalizedId.includes("/node_modules/@tanstack/form-core/") ||
+              normalizedId.includes("/node_modules/@tanstack/react-form/")
+            ) {
+              return "vendor-form";
+            }
             if (normalizedId.includes("/dayjs/")) {
               return "vendor-utils";
             }

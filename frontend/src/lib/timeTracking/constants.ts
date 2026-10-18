@@ -146,11 +146,15 @@ export function getContrastingTextColor(backgroundColor?: string): string {
   if (normalized.length !== 6) {
     return "#000";
   }
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
-  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-  return luminance > 0.6 ? "#000" : "#fff";
+  // Pick whichever of black/white has the higher WCAG contrast ratio against the label color.
+  // A perceived-brightness cutoff (YIQ) puts white on mid-tones such as orange #f97316 at 2.8:1.
+  const channel = (offset: number) => {
+    const value = Number.parseInt(normalized.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+  // White wins when (1.05 / (L + 0.05)) > ((L + 0.05) / 0.05), i.e. L below about 0.179.
+  return luminance > 0.179 ? "#000" : "#fff";
 }
 
 export function sanitizeLabels(labels: unknown[]): Label[] {

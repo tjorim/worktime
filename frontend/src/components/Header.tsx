@@ -37,6 +37,11 @@ export function Header() {
     void router.preloadRoute({ to: "/" }).catch(() => {});
   }, [router]);
 
+  // Settings is a separate chunk; fetch it before the click or Ctrl+, lands.
+  const handlePreloadSettings = useCallback(() => {
+    void router.preloadRoute({ to: "/settings" }).catch(() => {});
+  }, [router]);
+
   const shortcuts = useMemo(
     () => ({
       onToggleSettings: handleToggleSettings,
@@ -74,8 +79,8 @@ export function Header() {
               size="sm"
               className="px-2 text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground"
               onClick={handleToggleSettings}
-              onMouseEnter={isSettingsPage ? handlePreloadHome : undefined}
-              onFocus={isSettingsPage ? handlePreloadHome : undefined}
+              onMouseEnter={isSettingsPage ? handlePreloadHome : handlePreloadSettings}
+              onFocus={isSettingsPage ? handlePreloadHome : handlePreloadSettings}
               aria-label={isSettingsPage ? m.settings_page_back_btn() : m.settings_title()}
               title={
                 isSettingsPage
