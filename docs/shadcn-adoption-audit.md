@@ -56,8 +56,8 @@ in both themes) and prettier formatting.
 ## Required single choices (#1631)
 
 Decision: yes, use radio semantics for required single-choice settings. `ChoiceRadioGroup`
-is built directly on Base UI `RadioGroup`/`Radio.Root` (the generated `ui/radio-group.tsx`
-is a round radio dot, not a segmented control) and is covered by
+is a thin wrapper over the `segmented` variant of `ui/radio-group.tsx` (the default variant
+stays the round radio dot, so the segmented look lives in one place, not copied) and is covered by
 `tests/components/shared/ChoiceRadioGroup.test.tsx` (group name, checked state,
 controlled value, no event on re-selecting, keyboard).
 
