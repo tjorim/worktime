@@ -4,7 +4,7 @@ import {
   SlidersHorizontal as SlidersHorizontalIcon,
   Sun as SunIcon,
 } from "lucide-react";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceRadioGroup } from "@/components/shared/ChoiceRadioGroup";
 import {
   SettingsList,
   SettingsRow,
@@ -38,7 +38,7 @@ export function SettingsGeneralSection({
     <SettingsSection icon={SlidersHorizontalIcon} title={m.preferences_title()}>
       <SettingsList>
         <SettingsRow title={m.time_format_label()} description={m.time_format_description()}>
-          <ChoiceToggleGroup
+          <ChoiceRadioGroup
             label={m.time_format_label()}
             value={timeFormat}
             onChange={onTimeFormatChange}
@@ -49,7 +49,7 @@ export function SettingsGeneralSection({
           />
         </SettingsRow>
         <SettingsRow title={m.theme_label()} description={m.theme_description()}>
-          <ChoiceToggleGroup
+          <ChoiceRadioGroup
             label={m.theme_label()}
             value={theme}
             onChange={onThemeChange}
@@ -61,7 +61,7 @@ export function SettingsGeneralSection({
           />
         </SettingsRow>
         <SettingsRow title={m.language_label()} description={m.language_description()}>
-          <ChoiceToggleGroup
+          <ChoiceRadioGroup
             label={m.language_label()}
             value={locale}
             onChange={onLocaleChange}

@@ -7,4 +7,4 @@ IDs; checkbox/switch values use Base UI `onCheckedChange`. `Grid` and `GridItem`
 provide responsive twelve-column layouts. Use semantic badge/alert variants and
 `buttonVariants` for links. `RadioGroup`/`RadioGroupItem` wrap Base UI radios. Dialog bodies use `min-h-0 overflow-y-auto p-4`.
 See `docs/shared-controls-migration.md` for retained select and toast behaviour.
-`ToggleGroup` backs compact single-choice selections through `components/shared/ChoiceToggleGroup.tsx`, and `Empty` backs `EmptyState`. See `docs/shadcn-adoption-audit.md` for what is generated, kept custom and why.
+`ToggleGroup` backs compact single-choice selections through `components/shared/ChoiceToggleGroup.tsx` (view switchers, work location), required single choices (theme, language, time format) use radio semantics through `components/shared/ChoiceRadioGroup.tsx`, and `Empty` backs `EmptyState`. See `docs/shadcn-adoption-audit.md` for what is generated, kept custom and why.
