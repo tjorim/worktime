@@ -2,9 +2,8 @@ import {
   ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon,
   ListChecks as ListChecksIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
-import { Button as ToggleButton } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -113,32 +112,20 @@ export function TimeTrackingView({
   return (
     <div data-slot="time-tracking-view" className="flex flex-col gap-3 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div
-          role="group"
-          className="flex w-full max-w-sm gap-1"
-          aria-label={m.tt_toggle_view_aria()}
-        >
-          <ToggleButton
-            className="flex-1"
-            variant={viewMode === "daily" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={viewMode === "daily"}
-            onClick={() => setViewMode("daily")}
-          >
-            <Icon icon={ListChecksIcon} className="mr-1" />
-            {m.tt_daily_log()}
-          </ToggleButton>
-          <ToggleButton
-            className="flex-1"
-            variant={viewMode === "weekly" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={viewMode === "weekly"}
-            onClick={() => setViewMode("weekly")}
-          >
-            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="mr-1" />
-            {m.tt_weekly_summary()}
-          </ToggleButton>
-        </div>
+        <ChoiceToggleGroup
+          fill
+          label={m.tt_toggle_view_aria()}
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: "daily", label: m.tt_daily_log(), icon: ListChecksIcon },
+            {
+              value: "weekly",
+              label: m.tt_weekly_summary(),
+              icon: ChartNoAxesColumnIncreasingIcon,
+            },
+          ]}
+        />
       </div>
 
       {viewMode === "daily" && (

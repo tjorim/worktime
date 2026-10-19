@@ -244,6 +244,15 @@ Lucide and no class prefix. Own/restyle the generated source in `src/components/
 imports resolve to `@/lib/utils` (clsx + tailwind-merge). Do not run init over our existing palette or
 bulk-generate components.
 
+Before writing or extending a shared control or a repeated composition (selection groups, empty
+states, loading placeholders, pagination, navigation, feedback), check in this order: the existing
+component in `src/components/ui/` and `components/shared/`, then the configured registry
+(`pnpm dlx shadcn@latest add <component> --dry-run`) and the official shadcn/Base UI docs and
+variants. Generate only a component that has a consumer, restyle it to our tokens and lint rules,
+and keep a custom implementation only for a real requirement (domain rendering, TanStack state,
+action buttons that are not a selection), documenting why. `docs/shadcn-adoption-audit.md` records
+the current keep/extend/replace decisions (#1629).
+
 Use plain Tailwind utilities (`px-2`, `text-muted-foreground`) and variants (`dark:bg-background`, `md:flex`).
 There is no `tw:` prefix. Do not add raw colour literals, arbitrary values or new inline styles.
 

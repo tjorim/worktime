@@ -2,10 +2,8 @@ import {
   ArrowLeftRight as ArrowLeftRightIcon,
   CalendarDays as CalendarDaysIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 
 import type { ScheduleOption } from "@/data/rosters";
 import { useLastUsed } from "@/contexts/LastUsedContext";
@@ -13,6 +11,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { TransferView } from "@/components/TransferView";
 import { WeekView } from "@/components/schedule/WeekView";
 import { TodayView } from "@/components/schedule/TodayView";
+import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 
 /**
@@ -96,26 +95,15 @@ export function ScheduleTabView({
 
   return (
     <div data-slot="schedule-tab-view" className="py-4 flex flex-col gap-4">
-      <div role="group" className="flex flex-wrap gap-1" aria-label={m.schedule_toggle_view_aria()}>
-        <Button
-          variant={viewMode === "schedule" ? "default" : "outline"}
-          size="sm"
-          aria-pressed={viewMode === "schedule"}
-          onClick={() => setViewMode("schedule")}
-        >
-          <Icon icon={CalendarDaysIcon} className="mr-1" />
-          {m.schedule_overview_tab()}
-        </Button>
-        <Button
-          variant={viewMode === "transfer" ? "default" : "outline"}
-          size="sm"
-          aria-pressed={viewMode === "transfer"}
-          onClick={() => setViewMode("transfer")}
-        >
-          <Icon icon={ArrowLeftRightIcon} className="mr-1" />
-          {m.schedule_transfers_tab()}
-        </Button>
-      </div>
+      <ChoiceToggleGroup
+        label={m.schedule_toggle_view_aria()}
+        value={viewMode}
+        onChange={setViewMode}
+        options={[
+          { value: "schedule", label: m.schedule_overview_tab(), icon: CalendarDaysIcon },
+          { value: "transfer", label: m.schedule_transfers_tab(), icon: ArrowLeftRightIcon },
+        ]}
+      />
 
       {viewMode === "schedule" && (
         <div className="flex flex-col gap-4">
