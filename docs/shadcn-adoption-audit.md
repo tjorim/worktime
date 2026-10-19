@@ -10,7 +10,8 @@ component would add) and the Base UI docs. Decisions are **keep**, **extend** or
 | Area | Source | Consumers | Decision | Reason |
 | --- | --- | --- | --- | --- |
 | Main navigation tabs | `components/ui/tabs.tsx`, `components/MainTabs.tsx` | `MainTabs` (6 tabs, `keepMounted` panels) | **Keep** | Already the generated Base UI Tabs, with its `default` list variant. The responsive icon-over-label trigger is composed with classes, not forked. |
-| Compact single-choice selections (view switchers, theme/language/time format, work location) | was hand-rolled `role="group"` + `Button aria-pressed` six times | `ScheduleTabView`, `TimeOffView`, `TimeTrackingView`, `GanttView`, `SettingsGeneralSection`, `WorkLocationDayHeader` | **Replace** with `ui/toggle-group.tsx` through `shared/ChoiceToggleGroup.tsx` | The same pattern was copied in six places with different spacing/labels. Base UI ToggleGroup gives the group role, per-option `aria-pressed` and arrow-key navigation. `ChoiceToggleGroup` stays controlled and calls `onChange` on every activation (the work location "Other…" option must reopen its dialog when already selected). |
+| Compact single-choice selections (view switchers, work location) | was hand-rolled `role="group"` + `Button aria-pressed` six times | `ScheduleTabView`, `TimeOffView`, `TimeTrackingView`, `GanttView`, `WorkLocationDayHeader` | **Replace** with `ui/toggle-group.tsx` through `shared/ChoiceToggleGroup.tsx` | The same pattern was copied in six places with different spacing/labels. Base UI ToggleGroup gives the group role, per-option `aria-pressed` and arrow-key navigation. `ChoiceToggleGroup` stays controlled and calls `onChange` on every activation (the work location "Other…" option must reopen its dialog when already selected). |
+| Required single-choice settings (theme, language, time format) | was `ChoiceToggleGroup` (#1630) | `SettingsGeneralSection` | **Replace** with `shared/ChoiceRadioGroup.tsx` (Base UI `RadioGroup`/`Radio`, #1631) | These always have exactly one value, so radio semantics (`role="radiogroup"`, `aria-checked`, arrows move the selection, no deselect) describe them correctly; toggle buttons with `aria-pressed` imply an on/off state. Matches `travel`'s `ChoiceGroup` (travel#469). It keeps the segmented look of `ChoiceToggleGroup`. `ChoiceToggleGroup` stays for view switchers and the work location row: those are navigation-like or re-fire on the selected option (the "Other…" dialog), and the work location can have no selection. The schedule picker, wizard schedule step and sync-conflict cards are card-style choices with their own markup and are out of scope here. |
 | Empty states | `components/shared/EmptyState.tsx` | `CalendarView`, `GenericStatus`, `PersonalizedStatus`, `TimeOffTableView`, `TransferView`, `GanttChart`, `DailyTaskList`, `LabelsPanel`, `TemplatesPanel`, `TimeTrackingWeeklyView` | **Replace** internals with `ui/empty.tsx` | Same props and call sites; markup now comes from `Empty`/`EmptyHeader`/`EmptyMedia`/`EmptyTitle`/`EmptyDescription`/`EmptyContent`. `EmptyTitle` renders the heading the old component exposed (`h6`) so the accessibility tree is unchanged. |
 | Table pagination | `components/shared/TablePagination.tsx` | `AdminUsersTable`, `TimeOffTableView`, `GanttTableView` | **Keep** | The generated `Pagination` renders anchor links for URL navigation. This footer drives TanStack Table state (`getCanNextPage`, page size) with buttons and a page-size `Select`, which the generated component does not model. Built on the owned `Button` and `Select`. |
 | Date navigation (previous / current / next) | `components/shared/NavigationButtonGroup.tsx` | `TeamScheduleView`, `WeekView`, `DailyViewHeader`, `TimeTrackingWeeklyView` | **Keep** | These are actions, not a selection, so neither ToggleGroup nor Tabs fits. The generated `ButtonGroup` would join the buttons and force a group label, but the `inline` mode lets callers lay the buttons out inside their own toolbars, and the "current" button swaps between `default` and disabled. Uses `Button`/`IconButton`, `FieldLabel` and `Input`. |
@@ -51,6 +52,14 @@ in both themes) and prettier formatting.
   row (selected, keyboard focus), and the empty states (Time off, Gantt).
   Reduced motion was on for the captures; the toggle only uses a colour
   transition.
+
+## Required single choices (#1631)
+
+Decision: yes, use radio semantics for required single-choice settings. `ChoiceRadioGroup`
+is built directly on Base UI `RadioGroup`/`Radio.Root` (the generated `ui/radio-group.tsx`
+is a round radio dot, not a segmented control) and is covered by
+`tests/components/shared/ChoiceRadioGroup.test.tsx` (group name, checked state,
+controlled value, no event on re-selecting, keyboard).
 
 ## Follow-ups
 

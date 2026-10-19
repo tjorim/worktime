@@ -110,10 +110,8 @@ describe("Header", () => {
       await user.click(settingsButton);
       await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
-      // Find and click the dark theme button
-      const darkThemeButton = await screen.findByRole("button", {
-        name: /Dark/i,
-      });
+      // Find and click the dark theme option
+      const darkThemeButton = await screen.findByRole("radio", { name: /Dark/i });
       await user.click(darkThemeButton);
 
       // Check that the theme is applied to the document element
@@ -129,10 +127,8 @@ describe("Header", () => {
       await user.click(settingsButton);
       await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
-      // Find and click the light theme button
-      const lightThemeButton = await screen.findByRole("button", {
-        name: /Light/i,
-      });
+      // Find and click the light theme option
+      const lightThemeButton = await screen.findByRole("radio", { name: /Light/i });
       await user.click(lightThemeButton);
 
       // Check that the theme is applied to the document element
@@ -164,10 +160,8 @@ describe("Header", () => {
       await user.click(settingsButton);
       await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
-      // Find and click the auto theme button (should be default)
-      const autoThemeButton = await screen.findByRole("button", {
-        name: /Auto/i,
-      });
+      // Find and click the auto theme option (should be default)
+      const autoThemeButton = await screen.findByRole("radio", { name: /Auto/i });
       await user.click(autoThemeButton);
 
       // Check that the resolved theme is applied to the document element
@@ -203,9 +197,7 @@ describe("Header", () => {
       await user.click(settingsButton);
       await user.click(await screen.findByRole("button", { name: "Preferences" }));
 
-      const autoThemeButton = await screen.findByRole("button", {
-        name: /Auto/i,
-      });
+      const autoThemeButton = await screen.findByRole("radio", { name: /Auto/i });
       await user.click(autoThemeButton);
 
       // Check initial theme (light)
