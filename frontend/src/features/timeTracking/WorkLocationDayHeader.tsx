@@ -4,9 +4,8 @@ import {
   MapPin as MapPinIcon,
   X as XIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import { Hint } from "@/components/ui/tooltip";
 import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
 import { IconButton } from "@/components/shared/IconButton";
@@ -50,37 +49,24 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        {settings.homeCountry && (
-          <Button
-            size="sm"
-            variant={stored?.location === "home" ? "default" : "outline"}
-            onClick={handleHome}
-            aria-pressed={stored?.location === "home"}
-          >
-            <Icon icon={HouseIcon} className="mr-1" />
-            {m.work_location_home()}
-          </Button>
-        )}
-        {settings.officeCountry && (
-          <Button
-            size="sm"
-            variant={stored?.location === "office" ? "default" : "outline"}
-            onClick={handleOffice}
-            aria-pressed={stored?.location === "office"}
-          >
-            <Icon icon={BuildingIcon} className="mr-1" />
-            {m.work_location_office()}
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant={stored?.location === "other" ? "default" : "outline"}
-          onClick={() => setShowOtherModal(true)}
-          aria-pressed={stored?.location === "other"}
-        >
-          <Icon icon={MapPinIcon} className="mr-1" />
-          {m.tt_other_location()}
-        </Button>
+        <ChoiceToggleGroup
+          label={m.tt_work_location_aria()}
+          value={stored?.location}
+          onChange={(location) => {
+            if (location === "home") handleHome();
+            else if (location === "office") handleOffice();
+            else setShowOtherModal(true);
+          }}
+          options={[
+            ...(settings.homeCountry
+              ? [{ value: "home" as const, label: m.work_location_home(), icon: HouseIcon }]
+              : []),
+            ...(settings.officeCountry
+              ? [{ value: "office" as const, label: m.work_location_office(), icon: BuildingIcon }]
+              : []),
+            { value: "other" as const, label: m.tt_other_location(), icon: MapPinIcon },
+          ]}
+        />
         {stored && (
           <Hint
             placement="top"

@@ -23,6 +23,7 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "@/features/gantt/GanttChart";
 import { GanttTableView } from "@/features/gantt/GanttTableView";
 import { GanttTaskModal, type GanttTaskFormInput } from "@/features/gantt/GanttTaskModal";
+import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 
 const EMPTY_ARRAY: string[] = [];
@@ -135,32 +136,16 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
   return (
     <div className="flex flex-col gap-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div
-          role="group"
-          className="flex w-full max-w-sm gap-1"
-          aria-label={m.gantt_toggle_view_aria()}
-        >
-          <Button
-            className="flex-1"
-            variant={view === "chart" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={view === "chart"}
-            onClick={() => updateLastGanttView("chart")}
-          >
-            <Icon icon={ChartColumnIcon} className="mr-1" />
-            {m.gantt_chart_view()}
-          </Button>
-          <Button
-            className="flex-1"
-            variant={view === "table" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={view === "table"}
-            onClick={() => updateLastGanttView("table")}
-          >
-            <Icon icon={TableIcon} className="mr-1" />
-            {m.gantt_table_view()}
-          </Button>
-        </div>
+        <ChoiceToggleGroup
+          fill
+          label={m.gantt_toggle_view_aria()}
+          value={view}
+          onChange={updateLastGanttView}
+          options={[
+            { value: "chart", label: m.gantt_chart_view(), icon: ChartColumnIcon },
+            { value: "table", label: m.gantt_table_view(), icon: TableIcon },
+          ]}
+        />
         <Button size="sm" onClick={handleAddTask}>
           <Icon icon={CirclePlusIcon} className="mr-1" />
           {m.gantt_task_modal_add()}

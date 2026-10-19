@@ -59,6 +59,7 @@ import {
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
 } from "@/data/timeoffConstants";
+import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, describeError } from "@/utils/apiError";
@@ -844,44 +845,23 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         </Alert>
       )}
       <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
-        <div
-          role="group"
-          className="flex w-full max-w-sm gap-1"
-          aria-label={m.timeoff_toggle_view_aria()}
-        >
-          <Button
-            className="flex-1"
-            variant={viewMode === "table" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={viewMode === "table"}
-            onClick={() => setViewMode("table")}
-          >
-            <Icon icon={TableIcon} className="mr-1" />
-            {m.timeoff_view_table()}
-          </Button>
-          <Button
-            className="flex-1"
-            variant={viewMode === "stats" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={viewMode === "stats"}
-            onClick={() => setViewMode("stats")}
-          >
-            <Icon icon={ChartNoAxesColumnIncreasingIcon} className="mr-1" />
-            {m.timeoff_view_statistics()}
-          </Button>
-          {helperConnectionStatus === "connected" && (
-            <Button
-              className="flex-1"
-              variant={viewMode === "team" ? "default" : "outline"}
-              size="sm"
-              aria-pressed={viewMode === "team"}
-              onClick={() => setViewMode("team")}
-            >
-              <Icon icon={UsersIcon} className="mr-1" />
-              {m.timeoff_view_team()}
-            </Button>
-          )}
-        </div>
+        <ChoiceToggleGroup
+          fill
+          label={m.timeoff_toggle_view_aria()}
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: "table", label: m.timeoff_view_table(), icon: TableIcon },
+            {
+              value: "stats",
+              label: m.timeoff_view_statistics(),
+              icon: ChartNoAxesColumnIncreasingIcon,
+            },
+            ...(helperConnectionStatus === "connected"
+              ? [{ value: "team" as const, label: m.timeoff_view_team(), icon: UsersIcon }]
+              : []),
+          ]}
+        />
         {(viewMode !== "table" || entries.length > 0) && (
           <span className="text-sm text-muted-foreground">
             {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
