@@ -50,4 +50,29 @@ describe("ChoiceToggleGroup", () => {
     expect(screen.getByRole("button", { name: "Alpha" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Beta" })).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("supports keyboard use: Tab in, arrow keys move focus, Enter and Space activate", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ChoiceToggleGroup label="Pick one" value="a" onChange={onChange} options={options} />);
+
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Alpha" })).toHaveFocus();
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("button", { name: "Beta" })).toHaveFocus();
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.keyboard("{Enter}");
+    expect(onChange).toHaveBeenLastCalledWith("b");
+
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("button", { name: "Alpha" })).toHaveFocus();
+
+    // Re-activating the selected option still reports it (reopens dialogs).
+    await user.keyboard(" ");
+    expect(onChange).toHaveBeenLastCalledWith("a");
+    await user.keyboard("{Enter}");
+    expect(onChange).toHaveBeenCalledTimes(3);
+  });
 });
