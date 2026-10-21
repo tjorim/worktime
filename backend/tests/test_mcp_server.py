@@ -6,8 +6,10 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
-from fastmcp import FastMCP
+from fastmcp import Client, FastMCP
+from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.server.auth import AccessToken, AuthContext, MultiAuth, run_auth_checks
 from fastmcp.server.transforms.search import BM25SearchTransform
 from pydantic import ValidationError
@@ -23,6 +25,7 @@ from app.mcp_server import (
     ToolEffect,
     WorktimeMcpBackend,
     _build_auth_provider,
+    create_mcp_http_app,
     create_mcp_server,
     tool_annotations,
     tool_auth,
@@ -1485,3 +1488,69 @@ async def test_integration_client_rate_limit_middleware_ignores_non_integration_
         await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
 
     assert downstream_called is True
+
+
+async def test_http_app_authenticates_integration_client_through_multiauth(test_db: AsyncEngine) -> None:
+    """Drive the real HTTP app (MultiAuth, rate-limit middleware, stateless transport) with a
+    managed key, since FastMCP 4.1 qualifies MultiAuth client IDs by source (issue #1480).
+
+    The principal must resolve from token claims rather than the ``client_id`` shape, discovery
+    and proxied calls must work, a bad key must be a 401, and the transport must stay stateless
+    (no session to expire under the SDK's 30-minute idle default).
+    """
+    session_factory = _make_factory(test_db)
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="http-e2e", display_name="HTTP E2E"))
+        client, key = await integration_client_service.create_integration_client(session, user.id, name="e2e-client")
+
+    _server, app = create_mcp_http_app(session_factory, path="/", stateless_http=True)
+
+    def client_factory(
+        headers: dict[str, str] | None = None, timeout: httpx.Timeout | None = None, **_: Any
+    ) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), headers=headers, timeout=timeout, follow_redirects=True
+        )
+
+    def transport(token: str) -> StreamableHttpTransport:
+        return StreamableHttpTransport(
+            "http://test/", headers={"Authorization": f"Bearer {token}"}, httpx_client_factory=client_factory
+        )
+
+    async with app.router.lifespan_context(app):
+        async with Client(transport(key)) as mcp_client:
+            whoami = (await mcp_client.call_tool("whoami", {})).structured_content
+            labels = (
+                await mcp_client.call_tool("call_tool", {"name": "list_labels", "arguments": {}})
+            ).structured_content
+            found = (await mcp_client.call_tool("search_tools", {"query": "time off"})).structured_content
+            repeated = (await mcp_client.call_tool("search_tools", {"query": "time off"})).structured_content
+
+        initialize = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "0"},
+            },
+        }
+        headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
+        async with client_factory() as http:
+            ok = await http.post("http://test/", json=initialize, headers={**headers, "Authorization": f"Bearer {key}"})
+            bad = await http.post(
+                "http://test/", json=initialize, headers={**headers, "Authorization": "Bearer wtic_not-a-key"}
+            )
+
+    assert whoami is not None
+    assert whoami["user_id"] == user.id
+    assert whoami["auth_type"] == "integration_client"
+    assert whoami["integration_client"]["id"] == client.id
+    assert labels == {"labels": []}
+    assert found is not None
+    assert "get_time_off_summary" in [item["name"] for item in found["result"]]
+    assert repeated == found
+    assert ok.status_code == 200
+    assert "mcp-session-id" not in ok.headers
+    assert bad.status_code == 401
