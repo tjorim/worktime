@@ -1,14 +1,20 @@
 import { Outlet } from "@tanstack/react-router";
+import { lazy, Suspense, useState } from "react";
 import { AboutModal } from "@/components/AboutModal";
 import { FeatureIntroAlert } from "@/components/FeatureIntroAlert";
 import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { Header } from "@/components/Header";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
-import { WelcomeWizard } from "@/components/WelcomeWizard";
 import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useSettings } from "@/contexts/SettingsContext";
+
+// Shown on first run and from the settings only: its steps (country, team and
+// schedule pickers) load when it first opens, not on every page load.
+const WelcomeWizard = lazy(() =>
+  import("@/components/WelcomeWizard").then((module) => ({ default: module.WelcomeWizard })),
+);
 
 /**
  * Root layout for all app routes.
@@ -21,6 +27,9 @@ export function AppLayout() {
   const shell = useAppShellContext();
   const { settings } = useSettings();
   const { conflictCount, conflictedPayload, resolveOngoingConflicts } = useOngoingSyncContext();
+  // Kept mounted once opened so closing keeps the dialog's exit animation.
+  const [wizardOpened, setWizardOpened] = useState(shell.showTeamModal);
+  if (shell.showTeamModal && !wizardOpened) setWizardOpened(true);
 
   return (
     <div className="min-h-screen pt-header">
@@ -41,16 +50,20 @@ export function AppLayout() {
           enableTimeTracking={settings.enableTimeTracking}
           enableGantt={settings.enableGantt}
         />
-        <WelcomeWizard
-          show={shell.showTeamModal}
-          onTeamSelect={shell.onTeamSelect}
-          onScheduleSelect={shell.onScheduleSelect}
-          onSkip={shell.onSkipTeamWizard}
-          onHide={shell.onHideTeamModal}
-          onDefer={shell.onDeferTeamWizard}
-          mode={shell.teamModalMode}
-          startStep={shell.teamWizardStartStep}
-        />
+        {wizardOpened && (
+          <Suspense fallback={null}>
+            <WelcomeWizard
+              show={shell.showTeamModal}
+              onTeamSelect={shell.onTeamSelect}
+              onScheduleSelect={shell.onScheduleSelect}
+              onSkip={shell.onSkipTeamWizard}
+              onHide={shell.onHideTeamModal}
+              onDefer={shell.onDeferTeamWizard}
+              mode={shell.teamModalMode}
+              startStep={shell.teamWizardStartStep}
+            />
+          </Suspense>
+        )}
         <FirstSyncConflictDialog
           show={shell.syncConflictShow}
           counts={shell.syncConflictCounts}

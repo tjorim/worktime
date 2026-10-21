@@ -145,7 +145,8 @@ describe("App", () => {
       expect(await screen.findByTestId("header")).toBeInTheDocument();
       expect(await screen.findByTestId("current-status")).toBeInTheDocument();
       expect(await screen.findByTestId("main-tabs")).toBeInTheDocument();
-      expect(screen.getByTestId("welcome-wizard")).toBeInTheDocument();
+      // Lazy: mounted once a first run shows it.
+      expect(await screen.findByTestId("welcome-wizard")).toBeInTheDocument();
     });
 
     it("wraps components in error boundaries", () => {

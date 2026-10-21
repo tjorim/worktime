@@ -207,7 +207,10 @@ describe("§1 Local-only usage", () => {
   it("renders the app without authentication and shows the onboarding wizard", async () => {
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText(/Welcome to Worktime/i)).toBeInTheDocument());
+    // The wizard is lazy; the first test to open it also transforms its modules.
+    expect(
+      await screen.findByText(/Welcome to Worktime/i, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
   });
 
   it("stores no sync cursor when the user has not authenticated", () => {
