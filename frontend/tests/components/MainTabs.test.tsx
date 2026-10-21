@@ -8,11 +8,27 @@ import type { Dayjs } from "dayjs";
 import type { TabKey } from "@/contexts/SettingsContext";
 import { TestProviders } from "@tests/utils/testProviders";
 
-// Mock the child components
-vi.mock("@/components/ScheduleTabView", () => ({
-  ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => (
-    <div data-testid="schedule-tab-view">ScheduleTabView - Team {myTeam}</div>
-  ),
+// Mock the child components. The schedule mock keeps local state, so a test
+// can tell whether it stayed mounted while another tab was shown.
+vi.mock("@/components/ScheduleTabView", async () => {
+  const { useState } = await import("react");
+  return {
+    ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => {
+      const [clicks, setClicks] = useState(0);
+      return (
+        <div data-testid="schedule-tab-view">
+          ScheduleTabView - Team {myTeam}
+          <button type="button" onClick={() => setClicks(clicks + 1)}>
+            Schedule clicks: {clicks}
+          </button>
+        </div>
+      );
+    },
+  };
+});
+
+vi.mock("@/components/CalendarView", () => ({
+  CalendarView: () => <div data-testid="calendar-view">CalendarView</div>,
 }));
 
 const defaultProps = {
@@ -105,6 +121,27 @@ describe("MainTabs", () => {
       await user.click(timeOffTab);
 
       expect(mockOnTabChange).toHaveBeenCalledWith("timeoff");
+    });
+  });
+
+  describe("Schedule tab loading", () => {
+    it("mounts the schedule only on its first visit and keeps it afterwards", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<MainTabs {...defaultProps} activeTab="calendar" />);
+
+      expect(await screen.findByTestId("calendar-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-tab-view")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("tab", { name: "Schedule" }));
+      await user.click(await screen.findByRole("button", { name: "Schedule clicks: 0" }));
+      expect(screen.getByRole("button", { name: "Schedule clicks: 1" })).toBeInTheDocument();
+
+      await user.click(screen.getByRole("tab", { name: "Calendar" }));
+      expect(await screen.findByTestId("calendar-view")).toBeInTheDocument();
+      await user.click(screen.getByRole("tab", { name: "Schedule" }));
+
+      // Same instance: its state survived the visit to another tab.
+      expect(await screen.findByRole("button", { name: "Schedule clicks: 1" })).toBeInTheDocument();
     });
   });
 
