@@ -18,9 +18,15 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
-import { ScheduleTabView } from "@/components/ScheduleTabView";
 import { MobileQuickActions } from "@/components/MobileQuickActions";
 
+// Kept mounted once visited (keepMounted), but loaded only then: its team
+// selector and transfer accordion are not needed on the calendar tab.
+const ScheduleTabView = lazy(() =>
+  import("@/components/ScheduleTabView").then((module) => ({
+    default: module.ScheduleTabView,
+  })),
+);
 const CalendarView = lazy(() =>
   import("@/components/CalendarView").then((module) => ({
     default: module.CalendarView,
@@ -92,6 +98,8 @@ export function MainTabs({
 }: MainTabsProps) {
   const { settings } = useSettings();
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
+  const [scheduleVisited, setScheduleVisited] = useState(activeKey === "schedule");
+  if (activeKey === "schedule" && !scheduleVisited) setScheduleVisited(true);
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
@@ -240,15 +248,19 @@ export function MainTabs({
           )}
 
           <TabsContent value="schedule" keepMounted>
-            <ScheduleTabView
-              myTeam={myTeam}
-              currentDate={currentDate}
-              setCurrentDate={setCurrentDate}
-              onTeamClick={handleTeamClick}
-              onChangeSchedule={onChangeSchedule}
-              onChangeTeam={onChangeTeam}
-              isActive={activeKey === "schedule"}
-            />
+            {scheduleVisited && (
+              <Suspense fallback={loadingFallback}>
+                <ScheduleTabView
+                  myTeam={myTeam}
+                  currentDate={currentDate}
+                  setCurrentDate={setCurrentDate}
+                  onTeamClick={handleTeamClick}
+                  onChangeSchedule={onChangeSchedule}
+                  onChangeTeam={onChangeTeam}
+                  isActive={activeKey === "schedule"}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
           {timeOffEnabled && (

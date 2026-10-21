@@ -187,6 +187,16 @@ export default defineConfig({
             if (normalizedId.includes("/frappe-gantt/")) {
               return "vendor-gantt";
             }
+            // Base UI parts only lazy views use (pickers, menus, disclosures; the
+            // welcome wizard and schedule tab load on demand, apps#247). The shared
+            // internals, dialog, tabs and tooltip stay in the catch-all group.
+            if (
+              /\/node_modules\/@base-ui\/react\/(accordion|alert-dialog|checkbox|checkbox-group|collapsible|combobox|context-menu|menu|menubar|popover|radio|radio-group|select|separator|switch)\//.test(
+                normalizedId,
+              )
+            ) {
+              return "vendor-base-ui-lazy";
+            }
             return "vendor";
           }
         },
