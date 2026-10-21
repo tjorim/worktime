@@ -24,6 +24,7 @@ from .core.errors import ApiHTTPException, handle_api_http_exception
 from .database import init_db
 from .middleware.rate_limit import handle_rate_limit_exceeded, limiter
 from .middleware.request_id import RequestIdMiddleware
+from .middleware.request_timing import RequestTimingMiddleware
 from .middleware.timing import TimingMiddleware
 from .routers.auth import router as auth_router
 from .routers.health import router as health_router
@@ -197,6 +198,9 @@ app.add_middleware(TimingMiddleware)
 # RequestIdMiddleware sets/echoes X-Request-ID and emits structured access logs
 # after every response, with user_id included for authenticated requests.
 app.add_middleware(RequestIdMiddleware)
+# RequestTimingMiddleware sets Server-Timing and logs slow requests by route
+# template (apps#246); it wraps everything except TrustedHostMiddleware.
+app.add_middleware(RequestTimingMiddleware)
 
 # TrustedHostMiddleware is outermost: it rejects requests with an unrecognized
 # Host header before any other middleware runs. TRUSTED_HOSTS="*" (development
