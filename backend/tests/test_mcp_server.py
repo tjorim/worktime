@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.client.transports import StreamableHttpTransport
@@ -1505,11 +1505,19 @@ async def test_http_app_authenticates_integration_client_through_multiauth(test_
 
     _server, app = create_mcp_http_app(session_factory, path="/", stateless_http=True)
 
+    # FastMCP 4.1 and the MCP SDK speak httpx2 (a separate package from httpx).
     def client_factory(
-        headers: dict[str, str] | None = None, timeout: httpx.Timeout | None = None, **_: Any
-    ) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), headers=headers, timeout=timeout, follow_redirects=True
+        headers: dict[str, str] | None = None,
+        timeout: httpx2.Timeout | None = None,
+        auth: httpx2.Auth | None = None,
+        follow_redirects: bool = True,
+    ) -> httpx2.AsyncClient:
+        return httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=app),
+            headers=headers,
+            timeout=timeout,
+            auth=auth,
+            follow_redirects=follow_redirects,
         )
 
     def transport(token: str) -> StreamableHttpTransport:
