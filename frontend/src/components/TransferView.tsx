@@ -14,6 +14,7 @@ import {
   UserCheck as UserCheckIcon,
   UserPlus as UserPlusIcon,
   Users as UsersIcon,
+  UsersCollaboration as UsersCollaborationIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
@@ -270,7 +271,7 @@ function OverlapItemsList({
           <Grid className="items-center gap-2">
             <GridItem span={5} desktopSpan={3}>
               <div className="flex items-center gap-2 font-semibold">
-                <Icon icon={UsersIcon} className="text-primary" />
+                <Icon icon={UsersCollaborationIcon} className="text-primary" />
                 {formatYYWWD(overlap.start)}
               </div>
               <small className="flex items-center gap-1 text-muted-foreground">
@@ -707,7 +708,7 @@ export function TransferView({
                       {m.transfer_overlaps_section_title()}
                     </span>
                     <Badge>
-                      <Icon icon={UsersIcon} />
+                      <Icon icon={UsersCollaborationIcon} />
                       {overlaps.length}
                     </Badge>
                   </div>
