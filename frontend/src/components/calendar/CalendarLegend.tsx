@@ -1,4 +1,4 @@
-import { Info as InfoIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

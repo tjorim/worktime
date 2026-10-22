@@ -1,8 +1,4 @@
-import {
-  CalendarDays as CalendarDaysIcon,
-  UserPlus as UserPlusIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDaysIcon, type LucideIcon, UserPlusIcon } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
 

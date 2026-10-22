@@ -1,4 +1,4 @@
-import { Trash2 as Trash2Icon, UserCheck as UserCheckIcon, type LucideIcon } from "lucide-react";
+import { type LucideIcon, TrashIcon, UserCheckIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
@@ -148,7 +148,7 @@ export function useSettingsAccount({
         throw await ApiError.fromResponse(response);
       }
 
-      showSuccessToast(m.account_deleted(), Trash2Icon);
+      showSuccessToast(m.account_deleted(), TrashIcon);
       onAccountDeleted();
     } catch (error) {
       logger.error("Failed to delete account:", error);

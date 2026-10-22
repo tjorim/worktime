@@ -1,4 +1,4 @@
-import { Globe as GlobeIcon, LayoutGrid as LayoutGridIcon } from "lucide-react";
+import { GlobeIcon, LayoutGridIcon } from "lucide-react";
 import { CountrySelect } from "@/components/shared/CountrySelect";
 import {
   SettingsHint,

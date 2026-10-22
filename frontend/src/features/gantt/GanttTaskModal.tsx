@@ -1,4 +1,4 @@
-import { CircleX as CircleXIcon, Pencil as PencilIcon } from "lucide-react";
+import { CircleXIcon, PencilIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";

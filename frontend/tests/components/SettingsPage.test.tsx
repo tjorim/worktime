@@ -1,4 +1,4 @@
-import { type LucideIcon, Trash2 as Trash2Icon } from "lucide-react";
+import { type LucideIcon, TrashIcon } from "lucide-react";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
@@ -368,7 +368,7 @@ describe("SettingsPage Account Section", () => {
       expect(onAccountDeleted).toHaveBeenCalledTimes(1);
     });
     expect(fetchFn).toHaveBeenCalledWith("/api/me", { method: "DELETE" });
-    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", Trash2Icon);
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", TrashIcon);
   });
 
   it("shows an inline error when self-service account deletion fails", async () => {
@@ -789,7 +789,7 @@ describe("SettingsPage Admin Section", () => {
     await waitFor(() => {
       expect(screen.queryByText("member-user")).not.toBeInTheDocument();
     });
-    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", Trash2Icon);
+    expect(showSuccessToast).toHaveBeenCalledWith("Account deleted.", TrashIcon);
     expect(fetchFn).toHaveBeenCalledWith("/api/users/2", { method: "DELETE" });
   });
 

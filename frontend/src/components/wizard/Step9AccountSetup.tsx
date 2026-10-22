@@ -1,12 +1,12 @@
 import {
-  ArrowLeft as ArrowLeftIcon,
-  Check as CheckIcon,
-  CircleCheck as CircleCheckIcon,
-  CircleX as CircleXIcon,
-  Cloud as CloudIcon,
-  HardDrive as HardDriveIcon,
-  UserCheck as UserCheckIcon,
-  UserPlus as UserPlusIcon,
+  ArrowLeftIcon,
+  CheckIcon,
+  CircleCheckIcon,
+  CircleXIcon,
+  CloudIcon,
+  HardDriveIcon,
+  UserCheckIcon,
+  UserPlusIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Badge } from "@/components/ui/badge";

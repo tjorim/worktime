@@ -1,4 +1,4 @@
-import { ChevronLeft as ChevronLeftIcon } from "lucide-react";
+import { ChevronLeftIcon } from "lucide-react";
 import { render, screen } from "@testing-library/react";
 import { IconButton } from "@/components/shared/IconButton";
 

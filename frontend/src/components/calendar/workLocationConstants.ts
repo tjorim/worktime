@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Building as BuildingIcon, House as HouseIcon, MapPin as MapPinIcon } from "lucide-react";
+import { BuildingIcon, HouseIcon, MapPinIcon } from "lucide-react";
 import type { WorkLocation } from "@/types/workLocation";
 
 export const WORK_LOCATION_ICONS: Record<WorkLocation, LucideIcon> = {

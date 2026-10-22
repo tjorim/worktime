@@ -1,4 +1,4 @@
-import { Download as DownloadIcon } from "lucide-react";
+import { DownloadIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";

@@ -1,9 +1,4 @@
-import {
-  Building as BuildingIcon,
-  House as HouseIcon,
-  MapPin as MapPinIcon,
-  X as XIcon,
-} from "lucide-react";
+import { BuildingIcon, HouseIcon, MapPinIcon, XIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import { Hint } from "@/components/ui/tooltip";

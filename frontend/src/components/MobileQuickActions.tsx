@@ -1,11 +1,4 @@
-import {
-  Calendar as CalendarIcon,
-  Circle as CircleIcon,
-  Plane as PlaneIcon,
-  Play as PlayIcon,
-  Plus as PlusIcon,
-  Timer as TimerIcon,
-} from "lucide-react";
+import { CalendarIcon, CircleIcon, PlaneIcon, PlayIcon, PlusIcon, TimerIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 

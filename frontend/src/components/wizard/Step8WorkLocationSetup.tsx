@@ -1,9 +1,4 @@
-import {
-  ArrowLeft as ArrowLeftIcon,
-  ArrowRight as ArrowRightIcon,
-  Check as CheckIcon,
-  Globe as GlobeIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, GlobeIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

@@ -1,4 +1,4 @@
-import { ChartColumn as ChartColumnIcon, CirclePlus as CirclePlusIcon } from "lucide-react";
+import { ChartColumnIcon, CirclePlusIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";

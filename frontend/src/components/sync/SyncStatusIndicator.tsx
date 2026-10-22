@@ -1,10 +1,10 @@
 import {
-  Cloud as CloudIcon,
-  CloudCheck as CloudCheckIcon,
-  CloudOff as CloudOffIcon,
-  CloudUpload as CloudUploadIcon,
-  RefreshCw as RefreshCwIcon,
-  TriangleAlert as TriangleAlertIcon,
+  CloudCheckIcon,
+  CloudIcon,
+  CloudOffIcon,
+  CloudUploadIcon,
+  RefreshCwIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useMemo, useRef, useState } from "react";

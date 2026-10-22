@@ -1,8 +1,4 @@
-import {
-  CloudCheck as CloudCheckIcon,
-  RefreshCw as RefreshCwIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { CloudCheckIcon, type LucideIcon, RefreshCwIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Button } from "@/components/ui/button";
 import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";

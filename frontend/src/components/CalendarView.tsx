@@ -1,10 +1,10 @@
 import {
-  Calendar as CalendarIcon,
-  CalendarDays as CalendarDaysIcon,
-  Columns3 as Columns3Icon,
-  Info as InfoIcon,
-  Pencil as PencilIcon,
-  Trash2 as Trash2Icon,
+  CalendarDaysIcon,
+  CalendarIcon,
+  Columns3Icon,
+  InfoIcon,
+  PencilIcon,
+  TrashIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -293,7 +293,7 @@ export function CalendarView({
     if (!timeOffEnabled) return;
     if (deleteEntryId) {
       deleteEntry(deleteEntryId);
-      toast.showSuccess(m.calendar_event_deleted(), Trash2Icon);
+      toast.showSuccess(m.calendar_event_deleted(), TrashIcon);
     }
     setShowDeleteConfirm(false);
     setDeleteEntryId(null);

@@ -1,12 +1,12 @@
 import { Grid, GridItem } from "@/components/ui/grid";
 import {
-  CalendarX as CalendarXIcon,
-  CircleArrowRight as CircleArrowRightIcon,
-  Hourglass as HourglassIcon,
-  LogIn as LogInIcon,
-  LogOut as LogOutIcon,
-  Tag as TagIcon,
-  TriangleAlert as TriangleAlertIcon,
+  CalendarXIcon,
+  CircleArrowRightIcon,
+  HourglassIcon,
+  LogInIcon,
+  LogOutIcon,
+  TagIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useMemo } from "react";

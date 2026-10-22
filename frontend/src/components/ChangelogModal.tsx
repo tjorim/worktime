@@ -1,12 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Bug as BugIcon,
-  CalendarClock as CalendarClockIcon,
-  CirclePlus as CirclePlusIcon,
-  Info as InfoIcon,
-  NotebookText as NotebookTextIcon,
-  RefreshCw as RefreshCwIcon,
-  Rocket as RocketIcon,
+  BugIcon,
+  CalendarClockIcon,
+  CirclePlusIcon,
+  InfoIcon,
+  NotebookTextIcon,
+  RefreshCwIcon,
+  RocketIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";

@@ -1,4 +1,4 @@
-import { Pencil as PencilIcon, Trash2 as Trash2Icon } from "lucide-react";
+import { PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -418,7 +418,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                         setDeletingTask(task);
                       }}
                     >
-                      <Icon icon={Trash2Icon} />
+                      <Icon icon={TrashIcon} />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -446,7 +446,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
         }
         confirmLabel={m.gantt_delete_label()}
         variant="danger"
-        icon={Trash2Icon}
+        icon={TrashIcon}
         onConfirm={handleDelete}
         onCancel={() => setDeletingTask(null)}
       />

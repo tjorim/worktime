@@ -1,4 +1,4 @@
-import { CirclePlus as CirclePlusIcon, type LucideIcon } from "lucide-react";
+import { CirclePlusIcon, type LucideIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";

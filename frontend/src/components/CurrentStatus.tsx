@@ -1,9 +1,4 @@
-import {
-  Calendar as CalendarIcon,
-  CalendarPlus as CalendarPlusIcon,
-  ChevronDown as ChevronDownIcon,
-  ChevronUp as ChevronUpIcon,
-} from "lucide-react";
+import { CalendarIcon, CalendarPlusIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";

@@ -1,4 +1,4 @@
-import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";

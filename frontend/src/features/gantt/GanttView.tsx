@@ -1,9 +1,4 @@
-import {
-  ChartColumn as ChartColumnIcon,
-  CirclePlus as CirclePlusIcon,
-  Table as TableIcon,
-  Trash2 as Trash2Icon,
-} from "lucide-react";
+import { ChartColumnIcon, CirclePlusIcon, TableIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -189,7 +184,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
         message={getGanttDeleteConfirmMessage(editingTask?.name, linkedEntryCount)}
         confirmLabel={m.gantt_delete_label()}
         variant="danger"
-        icon={Trash2Icon}
+        icon={TrashIcon}
         onConfirm={handleDeleteTask}
         onCancel={() => setShowDeleteConfirm(false)}
       />

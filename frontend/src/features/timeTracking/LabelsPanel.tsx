@@ -1,4 +1,4 @@
-import { Tags as TagsIcon } from "lucide-react";
+import { TagsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";

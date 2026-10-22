@@ -1,4 +1,4 @@
-import { Network as NetworkIcon } from "lucide-react";
+import { NetworkIcon } from "lucide-react";
 import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";

@@ -1,23 +1,23 @@
 import {
-  ArrowLeftRight as ArrowLeftRightIcon,
-  Book as BookIcon,
-  Bug as BugIcon,
-  CalendarDays as CalendarDaysIcon,
-  CircleUser as CircleUserIcon,
-  Code as CodeIcon,
-  CodeXml as CodeXmlIcon,
-  FileText as FileTextIcon,
-  Headset as HeadsetIcon,
-  History as HistoryIcon,
-  Info as InfoIcon,
-  Lightbulb as LightbulbIcon,
-  Link as LinkIcon,
-  Shield as ShieldIcon,
-  ShieldCheck as ShieldCheckIcon,
-  SquareCode as SquareCodeIcon,
-  Star as StarIcon,
-  Tag as TagIcon,
-  Users as UsersIcon,
+  ArrowLeftRightIcon,
+  BookIcon,
+  BugIcon,
+  CalendarDaysIcon,
+  CircleUserIcon,
+  CodeIcon,
+  CodeXmlIcon,
+  FileTextIcon,
+  HeadsetIcon,
+  InfoIcon,
+  LightbulbIcon,
+  LinkIcon,
+  RotateCcwClockIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+  SquareCodeIcon,
+  StarIcon,
+  TagIcon,
+  UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           {/* App Title & Version */}
           <div className="text-center mb-6">
             <div className="mb-2">
-              <Icon icon={HistoryIcon} className="text-primary text-3xl" />
+              <Icon icon={RotateCcwClockIcon} className="text-primary text-3xl" />
             </div>
             <h5 className="mb-2">{m.about_app_subtitle()}</h5>
             <div className="mb-2">

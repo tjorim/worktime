@@ -1,4 +1,4 @@
-import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";

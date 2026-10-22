@@ -1,9 +1,9 @@
 import {
-  CalendarCheck as CalendarCheckIcon,
-  CalendarClock as CalendarClockIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  House as HouseIcon,
+  CalendarCheckIcon,
+  CalendarClockIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  HouseIcon,
   type LucideIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";

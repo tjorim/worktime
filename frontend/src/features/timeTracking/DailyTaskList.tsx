@@ -1,13 +1,13 @@
 import {
-  CalendarClock as CalendarClockIcon,
-  ChartGantt as ChartGanttIcon,
-  CircleX as CircleXIcon,
-  Clock as ClockIcon,
-  Coffee as CoffeeIcon,
-  History as HistoryIcon,
-  Hourglass as HourglassIcon,
-  Pencil as PencilIcon,
-  Trash2 as Trash2Icon,
+  CalendarClockIcon,
+  ChartGanttIcon,
+  CircleXIcon,
+  ClockIcon,
+  CoffeeIcon,
+  HourglassIcon,
+  PencilIcon,
+  RotateCcwClockIcon,
+  TrashIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
@@ -494,7 +494,7 @@ export function DailyTaskList({
 
     items.push({
       label: m.remove(),
-      icon: Trash2Icon,
+      icon: TrashIcon,
       onClick: () => onRemoveTask(task.id),
       variant: "danger",
     });
@@ -505,7 +505,7 @@ export function DailyTaskList({
   if (tasks.length === 0 && !editingTask) {
     return (
       <EmptyState
-        icon={HistoryIcon}
+        icon={RotateCcwClockIcon}
         title={m.tt_no_entries_title()}
         description={m.tt_no_entries_desc()}
       />
@@ -648,7 +648,7 @@ export function DailyTaskList({
                         aria-label={m.delete_with_name({ name: task.text })}
                         onClick={() => onRemoveTask(task.id)}
                       >
-                        <Icon icon={Trash2Icon} />
+                        <Icon icon={TrashIcon} />
                       </Button>
                     </div>
                   </div>
