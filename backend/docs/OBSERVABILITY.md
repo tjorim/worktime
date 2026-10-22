@@ -102,26 +102,9 @@ Unauthorized (request-id: 3fa85f64-…)
 
 ---
 
-## Profiling Slow Requests (Tachyon)
+## Profiling
 
-Python 3.15 ships a sampling profiler, `profiling.sampling` ("Tachyon"), that attaches to a running process without code changes or restarts. Use it locally to explain a slow route or MCP tool once the access log / `X-Total-Ms` has pointed at one.
-
-```bash
-cd backend
-uv run uvicorn app.main:app --port 8000 &         # or any already-running local API
-API_PID=$!
-# Drive the slow request(s) in a loop from another shell, then:
-uv run python -m profiling.sampling attach --mode cpu -d 30 --sort tottime -l 25 "$API_PID"
-uv run python -m profiling.sampling attach --mode cpu -d 30 --flamegraph -o /tmp/worktime-flame.html "$API_PID"
-```
-
-- Use `--mode cpu`. The default wall-clock mode is dominated by the idle event loop (`asyncio.Runner.run`) in an async server.
-- `--async-aware` follows task stacks instead of thread stacks; try it when time is spent awaiting rather than computing.
-- Run one profiler at a time. Concurrent attaches raise the reported error rate (unreadable samples).
-- Profiles contain code locations and sample counts, not argument or variable values, but still treat them as local diagnostics rather than artifacts to publish.
-- To compare before/after a fix, save the first run with `--binary -o before.bin` and use `--diff-flamegraph before.bin` on the second.
-
-Not enabled in production: attaching to the API container's PID 1 depends on the VPS's ptrace policy (`kernel.yama.ptrace_scope`), the container's seccomp profile and capabilities, and a collection/retention policy. All of these need separate verification before use there.
+To find out *why* a request identified by `X-Request-ID` and `Server-Timing` is slow, profile it locally with the standard-library sampling profiler. See [PROFILING.md](PROFILING.md).
 
 ---
 
