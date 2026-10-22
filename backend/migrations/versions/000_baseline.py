@@ -452,7 +452,10 @@ def upgrade() -> None:
         WHERE end_date < start_date
         """
     )
-    op.create_check_constraint("ck_gantt_tasks_date_range", "gantt_tasks", "start_date <= end_date")
+    # Batch mode: SQLite has no ALTER TABLE ADD CONSTRAINT. On PostgreSQL it emits the
+    # same plain ALTER TABLE.
+    with op.batch_alter_table("gantt_tasks") as batch_op:
+        batch_op.create_check_constraint("ck_gantt_tasks_date_range", "start_date <= end_date")
     # Legacy revision 008.
     op.create_table(
         "push_subscriptions",
@@ -497,7 +500,8 @@ def downgrade() -> None:
     op.drop_index("ix_push_subscriptions_endpoint", table_name="push_subscriptions")
     op.drop_table("push_subscriptions")
     # Legacy revision 007.
-    op.drop_constraint("ck_gantt_tasks_date_range", "gantt_tasks", type_="check")
+    with op.batch_alter_table("gantt_tasks") as batch_op:
+        batch_op.drop_constraint("ck_gantt_tasks_date_range", type_="check")
     # Legacy revision 006.
     if op.get_bind().dialect.name == "postgresql":
         with op.get_context().autocommit_block():
