@@ -244,7 +244,7 @@ Behavior to note:
 
 Requirements:
 
-- Python 3.14+
+- Python 3.15+
 - `uv`
 - PostgreSQL when DB features are exercised (see AGENTS.md for the SQLite no-container shortcut)
 - No local Keycloak/IdP needed — use `DEV_AUTH_BYPASS_TOKEN` instead (see AGENTS.md)
@@ -279,11 +279,24 @@ The repo includes [Dockerfile](Dockerfile).
 
 Current Docker characteristics:
 
-- Python 3.14 slim base image
+- Python 3.15 slim base image
 - multi-stage build
 - dependency installation via `uv`
-- healthcheck via `GET /health`
+- healthcheck via `GET /api/health`
 - non-root runtime user
+
+## Python Runtime
+
+CI and the container run CPython 3.15, and the supported floor is `requires-python >=3.15` with Ruff/ty targeting `py315`. The backend is a deployed application with no library consumers, and CI tests one interpreter, so a lower floor would claim support nothing checks. **Local development needs Python 3.15.** Rolling back is a revert of the Dockerfile, workflows and floor together.
+
+3.15 features, as assessed in issue #1481:
+
+- **Sampling profiler (Tachyon):** use it for local slow-request/MCP investigations. See [docs/PROFILING.md](docs/PROFILING.md). It is not enabled in production.
+- **Lazy imports:** not adopted. `-X lazy_imports=all` crashes at startup inside SQLAlchemy's PostgreSQL dialect registration. The eager import cost (~2 s to ready, ~180 MB RSS) is paid once per long-running process, and first requests are not slowed. Router and model registration stay eager.
+- **UTF-8 default:** every file read/write in `app/` passes `encoding="utf-8"` explicitly. Keep doing so for new file I/O; running the tests with `PYTHONWARNDEFAULTENCODING=1 pytest -W error::EncodingWarning` flags any that slip through.
+- **Comprehension unpacking (PEP 798):** used where it flattens one level, for example the iCalendar line folding (`"\r\n".join(*_fold(line) for line in lines)`).
+- **`frozendict`, `sentinel`, typing additions:** no concrete case simplifies today. PATCH routes distinguish omitted from `null` via Pydantic's `model_fields_set` / `model_dump(exclude_unset=True)`; keep that rather than introducing sentinels.
+- **Free-threaded build and experimental JIT:** not validated. Passing tests on the default build say nothing about them; both need their own dependency checks and workload benchmarks.
 
 ## Testing
 

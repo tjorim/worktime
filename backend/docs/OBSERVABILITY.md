@@ -102,6 +102,12 @@ Unauthorized (request-id: 3fa85f64-…)
 
 ---
 
+## Profiling
+
+To find out *why* a request identified by `X-Request-ID` and `Server-Timing` is slow, profile it locally with the standard-library sampling profiler. See [PROFILING.md](PROFILING.md).
+
+---
+
 ## Adding a New Route — Checklist
 
 - [ ] Route is added via `app.include_router(...)` — not via `app.mount()` with a sub-app that bypasses middleware.
