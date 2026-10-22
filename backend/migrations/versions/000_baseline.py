@@ -68,6 +68,7 @@ def upgrade() -> None:
         ["user_id", "name"],
         unique=True,
         postgresql_where=sa.text("deleted_at IS NULL"),
+        sqlite_where=sa.text("deleted_at IS NULL"),
     )
 
     op.create_table(
@@ -162,6 +163,7 @@ def upgrade() -> None:
         ["user_id", "date"],
         unique=True,
         postgresql_where=sa.text("deleted_at IS NULL"),
+        sqlite_where=sa.text("deleted_at IS NULL"),
     )
 
     op.create_table(

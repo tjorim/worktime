@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 from app.config import settings
+from app.database import sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ def _build_engine():
                 poolclass=StaticPool,
                 connect_args={"check_same_thread": False},
             )
+            sqlite.configure_engine(_engine)
         else:
             logger.info("Creating PostgreSQL async engine")
             _engine = create_async_engine(

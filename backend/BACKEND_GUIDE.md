@@ -178,7 +178,7 @@ Under `/api/sync`:
 ## Storage Model
 
 The database layer is PostgreSQL-backed and expects an async SQLAlchemy URL using the `asyncpg` driver
-(a `sqlite+aiosqlite://` URL is also accepted as a local-development convenience without a container).
+(a `sqlite+aiosqlite://` URL is also accepted for local development and is the default for the test suite; see `app/database/sqlite.py`).
 
 Schema management is handled through Alembic. The backend can be started with DB routes disabled, but the current app is clearly designed to support DB-backed features as a first-class path.
 
@@ -246,7 +246,7 @@ Requirements:
 
 - Python 3.14+
 - `uv`
-- PostgreSQL when DB features are exercised (see AGENTS.md for the SQLite no-container shortcut)
+- Nothing else for development or tests: both default to SQLite (see AGENTS.md). PostgreSQL is optional locally and is what CI also runs.
 - No local Keycloak/IdP needed — use `DEV_AUTH_BYPASS_TOKEN` instead (see AGENTS.md)
 
 Typical local flow:

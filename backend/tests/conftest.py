@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from collections.abc import AsyncGenerator, Callable, Generator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -16,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.cache.store import get_cache
+from app.database import sqlite
 from app.database.engine import get_session
 from app.database.models import Base
 from app.main import app
@@ -23,11 +26,11 @@ from app.routers.auth import AuthenticatedPrincipal, AuthType, get_bearer_princi
 
 _TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
-    # Default targets a *separate* test database (worktime_test) so the dev
-    # database (worktime, provisioned by docker-compose) is never touched.
-    # Create it once with: psql -U worktime -c "CREATE DATABASE worktime_test;"
-    # Override via TEST_DATABASE_URL env var in CI or custom environments.
-    "postgresql+asyncpg://worktime:worktime@localhost/worktime_test",
+    # Default: a throwaway SQLite file, so the suite needs no container. CI also runs it
+    # against PostgreSQL (the production database) by setting TEST_DATABASE_URL, for example
+    # postgresql+asyncpg://worktime:worktime@localhost/worktime_test (a *separate* database
+    # from the dev one; create it with: psql -U worktime -c "CREATE DATABASE worktime_test;").
+    f"sqlite+aiosqlite:///{Path(tempfile.gettempdir()) / 'worktime_test.db'}",
 )
 
 
@@ -83,6 +86,8 @@ async def _schema_engine() -> AsyncGenerator[AsyncEngine]:
     """Session-scoped engine: create schema once, drop it after all tests."""
     _assert_test_database_url(_TEST_DATABASE_URL)
     engine = create_async_engine(_TEST_DATABASE_URL, poolclass=NullPool)
+    if engine.dialect.name == "sqlite":
+        sqlite.configure_engine(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -97,8 +102,13 @@ async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine]:
     """Per-test fixture: yields the shared engine and truncates all tables after each test."""
     yield _schema_engine
     async with _schema_engine.begin() as conn:
-        table_names = ", ".join(f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables))
-        await conn.execute(sql_text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
+        if _schema_engine.dialect.name == "sqlite":
+            # Without AUTOINCREMENT, SQLite restarts ids after a full delete, like RESTART IDENTITY.
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
+        else:
+            table_names = ", ".join(f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables))
+            await conn.execute(sql_text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
 
 
 @pytest_asyncio.fixture()

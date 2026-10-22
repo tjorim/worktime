@@ -13,6 +13,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -2678,6 +2679,8 @@ class TestSyncCorrectnessFixes:
         timing ever let the preflight check (rather than the savepoint this
         test targets) resolve the conflict instead.
         """
+        if test_db.dialect.name == "sqlite":
+            pytest.skip("needs PostgreSQL: SQLite has one writer lock, so two sessions cannot race on an index entry")
         from app.services import sync_service
 
         factory = async_sessionmaker(test_db, expire_on_commit=False)
@@ -2751,6 +2754,8 @@ class TestSyncCorrectnessFixes:
         actual regression check: before the fix, the aborted transaction
         would make it raise.
         """
+        if test_db.dialect.name == "sqlite":
+            pytest.skip("needs PostgreSQL: SQLite has one writer lock, so two sessions cannot race on an index entry")
         factory = async_sessionmaker(test_db, expire_on_commit=False)
         async with factory() as setup_session:
             user = await create_user(setup_session, UserCreate(username="reopen-race-user", display_name="Race"))
