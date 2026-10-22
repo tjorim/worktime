@@ -85,6 +85,7 @@ class Label(ClientTimestampMixin, Base):
             "name",
             unique=True,
             postgresql_where=sql_text("deleted_at IS NULL"),
+            sqlite_where=sql_text("deleted_at IS NULL"),
         ),
         Index("ix_time_tracking_labels_user_id_updated_at", "user_id", "updated_at"),
         # This table was renamed from time_tracking_labels in production, and a
@@ -201,6 +202,7 @@ class WorkLocation(ClientTimestampMixin, Base):
             "date",
             unique=True,
             postgresql_where=sql_text("deleted_at IS NULL"),
+            sqlite_where=sql_text("deleted_at IS NULL"),
         ),
         Index("ix_work_locations_user_id_updated_at", "user_id", "updated_at"),
     )
