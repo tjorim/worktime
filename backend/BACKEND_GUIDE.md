@@ -279,7 +279,7 @@ The repo includes [Dockerfile](Dockerfile).
 
 Current Docker characteristics:
 
-- Python 3.14 slim base image
+- Python 3.15 slim base image
 - multi-stage build
 - dependency installation via `uv`
 - healthcheck via `GET /health`
