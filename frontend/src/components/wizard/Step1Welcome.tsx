@@ -1,4 +1,4 @@
-import { ArrowRight as ArrowRightIcon, History as HistoryIcon } from "lucide-react";
+import { ArrowRightIcon, RotateCcwClockIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Button } from "@/components/ui/button";
 import { WizardActions } from "./WizardParts";
@@ -26,7 +26,7 @@ export function Step1Welcome({
     <>
       <div className="mb-4 text-center">
         <div className="mb-3">
-          <Icon icon={HistoryIcon} className="text-5xl text-primary" />
+          <Icon icon={RotateCcwClockIcon} className="text-5xl text-primary" />
         </div>
         <p className="mb-3 text-xl font-light">{m.wizard_welcome_lead()}</p>
         <p className="text-muted-foreground">{m.wizard_welcome_description()}</p>

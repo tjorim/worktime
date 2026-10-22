@@ -1,4 +1,4 @@
-import { TrendingUp as TrendingUpIcon } from "lucide-react";
+import { TrendingUpIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";

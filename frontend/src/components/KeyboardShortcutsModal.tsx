@@ -1,4 +1,4 @@
-import { Keyboard as KeyboardIcon } from "lucide-react";
+import { KeyboardIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import {
   Dialog,

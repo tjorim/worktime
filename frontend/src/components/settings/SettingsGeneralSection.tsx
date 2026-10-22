@@ -1,9 +1,4 @@
-import {
-  Contrast as ContrastIcon,
-  Moon as MoonIcon,
-  SlidersHorizontal as SlidersHorizontalIcon,
-  Sun as SunIcon,
-} from "lucide-react";
+import { ContrastIcon, MoonIcon, SlidersHorizontalIcon, SunIcon } from "lucide-react";
 import { ChoiceRadioGroup } from "@/components/shared/ChoiceRadioGroup";
 import {
   SettingsList,

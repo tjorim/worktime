@@ -1,4 +1,4 @@
-import { Download as DownloadIcon } from "lucide-react";
+import { DownloadIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { usePwaInstall } from "@/contexts/PwaInstallContext";
 import { useToast } from "@/contexts/ToastContext";

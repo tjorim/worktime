@@ -1,4 +1,4 @@
-import { Plus as PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";

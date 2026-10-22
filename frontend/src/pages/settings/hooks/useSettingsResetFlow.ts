@@ -1,4 +1,4 @@
-import { Trash2 as Trash2Icon, type LucideIcon } from "lucide-react";
+import { type LucideIcon, TrashIcon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -139,7 +139,7 @@ export function useSettingsResetFlow({
       if (settingsCleared) parts.push(m.reset_item_settings());
       if (timeTrackingCleared) parts.push(m.reset_item_time_tracking_data());
       if (timeOffCleared) parts.push(m.reset_item_time_off_data());
-      showSuccessToast(m.data_cleared({ items: listFormat.format(parts) }), Trash2Icon);
+      showSuccessToast(m.data_cleared({ items: listFormat.format(parts) }), TrashIcon);
     } else if (!anythingSucceeded && somethingFailed) {
       showWarningToast(m.failed_to_clear({ items: listFormat.format(errors) }));
     } else if (anythingSucceeded && somethingFailed) {

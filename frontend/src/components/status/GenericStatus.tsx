@@ -1,12 +1,12 @@
 import { Grid, GridItem } from "@/components/ui/grid";
 import {
-  Calendar as CalendarIcon,
-  CalendarX as CalendarXIcon,
-  CircleArrowRight as CircleArrowRightIcon,
-  CircleCheck as CircleCheckIcon,
-  Lightbulb as LightbulbIcon,
-  MoonStar as MoonStarIcon,
-  Users as UsersIcon,
+  CalendarIcon,
+  CalendarXIcon,
+  CircleArrowRightIcon,
+  CircleCheckIcon,
+  LightbulbIcon,
+  MoonStarIcon,
+  UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo } from "react";

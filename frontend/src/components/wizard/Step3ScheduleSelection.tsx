@@ -1,4 +1,4 @@
-import { ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, X as XIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, XIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

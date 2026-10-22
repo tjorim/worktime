@@ -1,6 +1,6 @@
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Clipboard as ClipboardIcon, Columns3 as Columns3Icon } from "lucide-react";
+import { ClipboardIcon, Columns3Icon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";

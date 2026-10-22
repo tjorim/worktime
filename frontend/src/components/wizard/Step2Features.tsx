@@ -1,14 +1,14 @@
 import {
-  ArrowLeft as ArrowLeftIcon,
-  ArrowRight as ArrowRightIcon,
-  CalendarCheck as CalendarCheckIcon,
-  ChartGantt as ChartGanttIcon,
-  Globe as GlobeIcon,
-  History as HistoryIcon,
-  Settings as SettingsIcon,
-  Timer as TimerIcon,
-  Users as UsersIcon,
-  WifiOff as WifiOffIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CalendarCheckIcon,
+  ChartGanttIcon,
+  GlobeIcon,
+  RotateCcwClockIcon,
+  SettingsIcon,
+  TimerIcon,
+  UsersIcon,
+  WifiOffIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -85,7 +85,7 @@ export function Step2Features({
           </GridItem>
           <GridItem desktopSpan={6}>
             <div className="flex items-start gap-3">
-              <Icon icon={HistoryIcon} className="mt-1 text-2xl text-success" />
+              <Icon icon={RotateCcwClockIcon} className="mt-1 text-2xl text-success" />
               <div>
                 <h6 className="mb-1 text-base font-medium">{m.wizard_feature_tracking_title()}</h6>
                 <small className="text-sm text-muted-foreground">

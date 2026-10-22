@@ -1,9 +1,4 @@
-import {
-  Calendar as CalendarIcon,
-  CalendarPlus as CalendarPlusIcon,
-  Keyboard as KeyboardIcon,
-  Users as UsersIcon,
-} from "lucide-react";
+import { CalendarIcon, CalendarPlusIcon, KeyboardIcon, UsersIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";

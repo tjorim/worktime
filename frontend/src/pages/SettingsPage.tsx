@@ -1,13 +1,13 @@
 import {
-  CalendarDays as CalendarDaysIcon,
-  CircleUser as CircleUserIcon,
-  Database as DatabaseIcon,
-  History as HistoryIcon,
-  Info as InfoIcon,
-  LayoutGrid as LayoutGridIcon,
-  SlidersHorizontal as SlidersHorizontalIcon,
-  Users as UsersIcon,
+  CalendarDaysIcon,
+  CircleUserIcon,
+  DatabaseIcon,
+  InfoIcon,
+  LayoutGridIcon,
   type LucideIcon,
+  RotateCcwClockIcon,
+  SlidersHorizontalIcon,
+  UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -68,7 +68,7 @@ const SETTINGS_SECTIONS: Array<{
   { key: "scheduleTeam", icon: CalendarDaysIcon, label: m.schedule_team_section_title },
   { key: "general", icon: SlidersHorizontalIcon, label: m.preferences_title },
   { key: "features", icon: LayoutGridIcon, label: m.features_title },
-  { key: "timeTracking", icon: HistoryIcon, label: m.time_tracking_section_title },
+  { key: "timeTracking", icon: RotateCcwClockIcon, label: m.time_tracking_section_title },
   { key: "account", icon: CircleUserIcon, label: m.account_section_title },
   { key: "admin", icon: UsersIcon, label: m.account_admin_users_title, adminOnly: true },
   { key: "data", icon: DatabaseIcon, label: m.quick_actions_title },

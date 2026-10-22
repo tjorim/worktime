@@ -1,9 +1,4 @@
-import {
-  CalendarDays as CalendarDaysIcon,
-  ChartPie as ChartPieIcon,
-  ListChecks as ListChecksIcon,
-  Table as TableIcon,
-} from "lucide-react";
+import { CalendarDaysIcon, ChartPieIcon, ListChecksIcon, TableIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Badge } from "@/components/ui/badge";

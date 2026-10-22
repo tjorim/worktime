@@ -1,4 +1,4 @@
-import { Star as StarIcon } from "lucide-react";
+import { StarIcon } from "lucide-react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";

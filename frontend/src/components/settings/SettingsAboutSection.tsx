@@ -1,12 +1,12 @@
 import {
-  ChevronRight as ChevronRightIcon,
-  CircleCheck as CircleCheckIcon,
-  CircleHelp as CircleHelpIcon,
-  Info as InfoIcon,
-  Keyboard as KeyboardIcon,
-  Share as ShareIcon,
-  Smartphone as SmartphoneIcon,
-  Sparkles as SparklesIcon,
+  ChevronRightIcon,
+  CircleCheckIcon,
+  CircleQuestionMarkIcon,
+  InfoIcon,
+  KeyboardIcon,
+  ShareIcon,
+  SmartphoneIcon,
+  SparklesIcon,
 } from "lucide-react";
 import * as m from "@/paraglide/messages.js";
 import { SettingsBackendStatus } from "@/components/settings/SettingsBackendStatus";
@@ -46,7 +46,7 @@ export function SettingsAboutSection({
           onClick={onShowChangelog}
         />
         <SettingsActionRow
-          icon={CircleHelpIcon}
+          icon={CircleQuestionMarkIcon}
           title={m.about_help_label()}
           description={m.about_help_description()}
           trailingIcon={ChevronRightIcon}

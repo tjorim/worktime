@@ -1,11 +1,11 @@
 import {
-  CalendarCheck as CalendarCheckIcon,
-  CloudDownload as CloudDownloadIcon,
-  CloudUpload as CloudUploadIcon,
-  Download as DownloadIcon,
-  Plus as PlusIcon,
-  Trash2 as Trash2Icon,
-  Upload as UploadIcon,
+  CalendarCheckIcon,
+  CloudDownloadIcon,
+  CloudUploadIcon,
+  DownloadIcon,
+  PlusIcon,
+  TrashIcon,
+  UploadIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { memo } from "react";
@@ -140,7 +140,7 @@ function TimeOffToolbarComponent({
             onClick={onBulkDelete}
             aria-label={m.timeoff_delete_selected_events_aria()}
           >
-            <Icon icon={Trash2Icon} className="mr-1" />
+            <Icon icon={TrashIcon} className="mr-1" />
             {m.timeoff_delete_selected_btn()}
           </Button>
           <Button

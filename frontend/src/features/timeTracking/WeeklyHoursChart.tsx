@@ -1,4 +1,4 @@
-import { ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon } from "lucide-react";
+import { ChartNoAxesColumnIncreasingIcon } from "lucide-react";
 import { useMemo } from "react";
 import { Icon } from "@/components/shared/Icon";
 import { barY, defineChart, ruleY } from "@tanstack/charts";

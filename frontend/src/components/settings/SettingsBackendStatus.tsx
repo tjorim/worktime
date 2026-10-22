@@ -1,4 +1,4 @@
-import { CloudCheck as CloudCheckIcon } from "lucide-react";
+import { CloudCheckIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,5 +1,5 @@
 import { NativeSelect } from "@/components/ui/native-select";
-import { TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { ChangeEvent } from "react";
 import { Badge } from "@/components/ui/badge";

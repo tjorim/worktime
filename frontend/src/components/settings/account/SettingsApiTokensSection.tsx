@@ -1,4 +1,4 @@
-import { Clipboard as ClipboardIcon, Key as KeyIcon } from "lucide-react";
+import { ClipboardIcon, KeyIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";

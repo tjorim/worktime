@@ -1,9 +1,4 @@
-import {
-  CalendarX as CalendarXIcon,
-  Pencil as PencilIcon,
-  Search as SearchIcon,
-  Trash2 as Trash2Icon,
-} from "lucide-react";
+import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -348,7 +343,7 @@ export function TimeOffTableView({
                               onClick={() => onDeleteEvent(entry.id)}
                               aria-label={m.delete_with_name({ name: title })}
                             >
-                              <Icon icon={Trash2Icon} />
+                              <Icon icon={TrashIcon} />
                             </Button>
                           </TableCell>
                         </TableRow>

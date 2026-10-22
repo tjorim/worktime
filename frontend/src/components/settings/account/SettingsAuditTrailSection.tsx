@@ -1,4 +1,4 @@
-import { History as HistoryIcon } from "lucide-react";
+import { RotateCcwClockIcon } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +44,7 @@ export function SettingsAuditTrailSection({
 }: SettingsAuditTrailSectionProps) {
   return (
     <SettingsSection
-      icon={HistoryIcon}
+      icon={RotateCcwClockIcon}
       title={teamWide ? m.audit_trail_admin_title() : m.audit_trail_title()}
     >
       <SettingsHint className="mb-2">

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import * as m from "@/paraglide/messages";
 import { Alert } from "@/components/ui/alert";
@@ -39,7 +39,7 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
         onClick={onDismiss}
         aria-label={m.close()}
       >
-        <Icon icon={X} />
+        <Icon icon={XIcon} />
       </Button>
     </Alert>
   );

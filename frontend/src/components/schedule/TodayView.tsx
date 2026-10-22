@@ -1,11 +1,11 @@
 import { Alert } from "@/components/ui/alert";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
-  Calendar as CalendarIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  ClipboardList as ClipboardListIcon,
-  Users as UsersIcon,
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClipboardListIcon,
+  UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";

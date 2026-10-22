@@ -1,7 +1,4 @@
-import {
-  ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon,
-  ListChecks as ListChecksIcon,
-} from "lucide-react";
+import { ChartNoAxesColumnIncreasingIcon, ListChecksIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";

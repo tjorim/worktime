@@ -1,9 +1,9 @@
 import {
-  ArrowLeftRight as ArrowLeftRightIcon,
-  CircleCheck as CircleCheckIcon,
-  CloudDownload as CloudDownloadIcon,
-  Combine as CombineIcon,
-  HardDrive as HardDriveIcon,
+  ArrowLeftRightIcon,
+  CircleCheckIcon,
+  CloudDownloadIcon,
+  CombineIcon,
+  HardDriveIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";

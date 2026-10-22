@@ -1,4 +1,4 @@
-import { Trash2 as Trash2Icon, Users as UsersIcon } from "lucide-react";
+import { TrashIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
@@ -84,7 +84,7 @@ export function SettingsAdminUsersSection({
         }}
         onCancel={() => setPendingDeleteUserId(null)}
         variant="danger"
-        icon={Trash2Icon}
+        icon={TrashIcon}
       />
     </SettingsSection>
   );

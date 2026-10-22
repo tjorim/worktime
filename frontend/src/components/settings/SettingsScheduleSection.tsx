@@ -1,4 +1,4 @@
-import { CalendarDays as CalendarDaysIcon, Check as CheckIcon } from "lucide-react";
+import { CalendarDaysIcon, CheckIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

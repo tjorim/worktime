@@ -1,4 +1,4 @@
-import { ClipboardCheck as ClipboardCheckIcon, FileText as FileTextIcon } from "lucide-react";
+import { ClipboardCheckIcon, FileTextIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";

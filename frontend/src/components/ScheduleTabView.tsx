@@ -1,7 +1,4 @@
-import {
-  ArrowLeftRight as ArrowLeftRightIcon,
-  CalendarDays as CalendarDaysIcon,
-} from "lucide-react";
+import { ArrowLeftRightIcon, CalendarDaysIcon } from "lucide-react";
 import type { Dayjs } from "dayjs";
 import { useEffect, useRef, useState } from "react";
 

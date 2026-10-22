@@ -1,13 +1,13 @@
 import {
-  CircleUser as CircleUserIcon,
-  CloudCheck as CloudCheckIcon,
-  LogIn as LogInIcon,
-  LogOut as LogOutIcon,
-  Save as SaveIcon,
-  Smartphone as SmartphoneIcon,
-  Trash2 as Trash2Icon,
-  UserCheck as UserCheckIcon,
-  UserX as UserXIcon,
+  CircleUserIcon,
+  CloudCheckIcon,
+  LogInIcon,
+  LogOutIcon,
+  SaveIcon,
+  SmartphoneIcon,
+  TrashIcon,
+  UserCheckIcon,
+  UserXIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
@@ -167,7 +167,7 @@ export function SettingsAccountSection({
                     disabled={isDeletingAccount}
                     onClick={() => setShowDeleteAccountConfirm(true)}
                   >
-                    <Icon icon={Trash2Icon} />
+                    <Icon icon={TrashIcon} />
                     {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
                   </Button>
                 </div>
@@ -213,7 +213,7 @@ export function SettingsAccountSection({
         }}
         onCancel={() => setShowDeleteAccountConfirm(false)}
         variant="danger"
-        icon={Trash2Icon}
+        icon={TrashIcon}
       />
     </SettingsSection>
   );

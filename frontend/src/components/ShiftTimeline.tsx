@@ -1,4 +1,4 @@
-import { Clock as ClockIcon, Radio as RadioIcon } from "lucide-react";
+import { ClockIcon, RadioIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import { Badge } from "@/components/ui/badge";

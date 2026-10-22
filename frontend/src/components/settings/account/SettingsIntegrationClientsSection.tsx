@@ -1,4 +1,4 @@
-import { Plug as PlugIcon } from "lucide-react";
+import { PlugIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

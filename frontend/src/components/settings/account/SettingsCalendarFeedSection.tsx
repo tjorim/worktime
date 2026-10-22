@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, RefreshCw as RefreshCwIcon } from "lucide-react";
+import { CalendarIcon, RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

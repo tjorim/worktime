@@ -1,13 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Briefcase as BriefcaseIcon,
-  Building as BuildingIcon,
-  CalendarX as CalendarXIcon,
-  Ellipsis as EllipsisIcon,
-  Gift as GiftIcon,
-  GraduationCap as GraduationCapIcon,
-  Thermometer as ThermometerIcon,
-  Umbrella as UmbrellaIcon,
+  BriefcaseIcon,
+  BuildingIcon,
+  CalendarXIcon,
+  EllipsisIcon,
+  GiftIcon,
+  GraduationCapIcon,
+  ThermometerIcon,
+  UmbrellaIcon,
 } from "lucide-react";
 import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";

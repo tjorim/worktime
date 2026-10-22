@@ -1,10 +1,10 @@
 import {
-  CircleCheck as CircleCheckIcon,
-  CircleX as CircleXIcon,
-  Info as InfoIcon,
-  Trash2 as Trash2Icon,
-  TriangleAlert as TriangleAlertIcon,
+  CircleCheckIcon,
+  CircleXIcon,
+  InfoIcon,
   type LucideIcon,
+  TrashIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import {
@@ -17,7 +17,7 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import * as m from "@/paraglide/messages.js";
@@ -158,7 +158,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
         onClick={() => onClose(toast.id)}
         aria-label={m.toast_close_aria()}
       >
-        <Icon icon={X} />
+        <Icon icon={XIcon} />
       </Button>
     </div>
   );
@@ -232,7 +232,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
       const id = addToast({
         message,
         variant: "info",
-        icon: icon ?? Trash2Icon,
+        icon: icon ?? TrashIcon,
         delay: UNDO_TOAST_DELAY,
         action: {
           label: m.toast_undo(),

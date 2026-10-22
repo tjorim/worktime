@@ -1,4 +1,4 @@
-import { FileText as FileTextIcon } from "lucide-react";
+import { FileTextIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

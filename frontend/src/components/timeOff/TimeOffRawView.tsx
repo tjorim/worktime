@@ -1,9 +1,4 @@
-import {
-  CircleCheck as CircleCheckIcon,
-  Clipboard as ClipboardIcon,
-  RotateCcw as RotateCcwIcon,
-  SquareCode as SquareCodeIcon,
-} from "lucide-react";
+import { CircleCheckIcon, ClipboardIcon, RotateCcwIcon, SquareCodeIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
 import { useToast } from "@/contexts/ToastContext";

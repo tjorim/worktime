@@ -1,4 +1,4 @@
-import { CalendarX as CalendarXIcon } from "lucide-react";
+import { CalendarXIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";

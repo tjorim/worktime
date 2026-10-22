@@ -1,4 +1,4 @@
-import { RotateCw as RotateCwIcon } from "lucide-react";
+import { RotateCwIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useToast } from "@/contexts/ToastContext";

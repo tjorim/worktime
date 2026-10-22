@@ -1,10 +1,10 @@
 import {
-  Calendar as CalendarIcon,
-  ChartGantt as ChartGanttIcon,
-  Layers as LayersIcon,
-  List as ListIcon,
-  Plane as PlaneIcon,
-  Timer as TimerIcon,
+  CalendarIcon,
+  ChartGanttIcon,
+  LayersIcon,
+  ListIcon,
+  PlaneIcon,
+  TimerIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";

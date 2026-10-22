@@ -1,11 +1,11 @@
 import { Input } from "@/components/ui/input";
 import {
-  Building as BuildingIcon,
-  FileText as FileTextIcon,
-  FileX as FileXIcon,
-  Inbox as InboxIcon,
-  Search as SearchIcon,
-  Users as UsersIcon,
+  BuildingIcon,
+  FileTextIcon,
+  FileXIcon,
+  InboxIcon,
+  SearchIcon,
+  UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";

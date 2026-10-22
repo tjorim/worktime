@@ -1,4 +1,4 @@
-import { Sun as SunIcon } from "lucide-react";
+import { SunIcon } from "lucide-react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";

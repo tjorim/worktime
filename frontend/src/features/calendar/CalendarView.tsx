@@ -1,4 +1,4 @@
-import { Info as InfoIcon, TriangleAlert as TriangleAlertIcon } from "lucide-react";
+import { InfoIcon, TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import "temporal-polyfill/global";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

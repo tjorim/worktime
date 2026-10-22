@@ -1,8 +1,4 @@
-import {
-  ArrowLeft as ArrowLeftIcon,
-  History as HistoryIcon,
-  Settings as SettingsIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, RotateCcwClockIcon, SettingsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -69,7 +65,7 @@ export function Header() {
             onFocus={handlePreloadHome}
             className="flex items-center gap-2 border-0 bg-transparent text-inherit rounded focus-visible:ring-3 focus-visible:ring-ring"
           >
-            <Icon icon={HistoryIcon} className="size-5" />
+            <Icon icon={RotateCcwClockIcon} className="size-5" />
             <span className="font-bold">Worktime</span>
           </button>
           <div className="flex items-center gap-3 ml-auto">

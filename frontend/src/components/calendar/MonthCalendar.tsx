@@ -1,13 +1,13 @@
 import {
-  Building as BuildingIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  CirclePlus as CirclePlusIcon,
-  CircleX as CircleXIcon,
-  House as HouseIcon,
-  MapPin as MapPinIcon,
-  Pencil as PencilIcon,
-  Trash2 as Trash2Icon,
+  BuildingIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CirclePlusIcon,
+  CircleXIcon,
+  HouseIcon,
+  MapPinIcon,
+  PencilIcon,
+  TrashIcon,
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
@@ -403,7 +403,7 @@ export function MonthCalendar({
       if (onDeleteEvent) {
         items.push({
           label: m.calendar_context_delete_event(),
-          icon: Trash2Icon,
+          icon: TrashIcon,
           variant: "danger" as const,
           onClick: () => {
             handleCloseContextMenu();

@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Pencil as PencilIcon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";

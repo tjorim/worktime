@@ -1,9 +1,4 @@
-import {
-  CircleCheck as CircleCheckIcon,
-  CloudDownload as CloudDownloadIcon,
-  HardDrive as HardDriveIcon,
-  TriangleAlert as TriangleAlertIcon,
-} from "lucide-react";
+import { CircleCheckIcon, CloudDownloadIcon, HardDriveIcon, TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";

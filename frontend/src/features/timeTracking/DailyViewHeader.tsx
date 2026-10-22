@@ -1,4 +1,4 @@
-import { Clock as ClockIcon } from "lucide-react";
+import { ClockIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { Badge } from "@/components/ui/badge";
 import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";

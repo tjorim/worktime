@@ -1,10 +1,10 @@
 import {
-  ChevronRight as ChevronRightIcon,
-  Download as DownloadIcon,
-  RotateCw as RotateCwIcon,
-  Trash2 as Trash2Icon,
-  Upload as UploadIcon,
-  Zap as ZapIcon,
+  ChevronRightIcon,
+  DownloadIcon,
+  RotateCwIcon,
+  TrashIcon,
+  UploadIcon,
+  ZapIcon,
 } from "lucide-react";
 import {
   SettingsActionRow,
@@ -46,7 +46,7 @@ export function SettingsDataSection({
           aria-busy={isRestoringBackup}
         />
         <SettingsActionRow
-          icon={Trash2Icon}
+          icon={TrashIcon}
           title={m.reset_settings_label()}
           description={m.reset_settings_description()}
           trailingIcon={RotateCwIcon}
