@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import logger as audit
-from app.mcp.context import WorktimeMcpContext, actor_from_context
+from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.mcp.formatting import to_iso_date
 from app.schemas import GanttTaskCreate, GanttTaskRead, GanttTaskUpdate
 from app.services.db_service import (
@@ -82,14 +82,17 @@ async def create_gantt_task(
 
     Side effects: inserts a new GanttTask row. Returns the created task.
     """
-    payload = GanttTaskCreate(
-        name=name,
-        start_date=start_date,
-        end_date=end_date,
-        progress=progress,
-        dependencies=dependencies,
-        notes=notes,
-        label_id=label_id,
+    payload = validate_arguments(
+        GanttTaskCreate,
+        {
+            "name": name,
+            "start_date": start_date,
+            "end_date": end_date,
+            "progress": progress,
+            "dependencies": dependencies,
+            "notes": notes,
+            "label_id": label_id,
+        },
     )
     task = await create_gantt_task_service(db, context.user_id, payload, actor=actor_from_context(context))
     audit.append(
@@ -141,7 +144,7 @@ async def update_gantt_task(
     if notes is not None:
         update_data["notes"] = None if notes == "" else notes
 
-    payload = GanttTaskUpdate(**update_data)
+    payload = validate_arguments(GanttTaskUpdate, update_data)
     task = await update_gantt_task_service(db, context.user_id, task_id, payload, actor=actor_from_context(context))
     audit.append(
         target=f"user:{context.user_id}:gantt:{task_id}",

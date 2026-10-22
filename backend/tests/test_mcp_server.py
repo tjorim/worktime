@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from fastmcp.server.auth import AccessToken, AuthContext, MultiAuth, run_auth_checks
 from fastmcp.server.transforms.search import BM25SearchTransform
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
@@ -928,7 +928,7 @@ async def test_set_work_location_invalid_country(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """set_work_location raises ValidationError for invalid country code."""
+    """set_work_location reports an invalid country code as an argument error naming the field."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -942,7 +942,7 @@ async def test_set_work_location_invalid_country(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ToolError, match="Invalid arguments: country_code"):
         await backend.set_work_location(
             value_date=date(2026, 5, 1),
             country_code="ZZ",
@@ -1118,7 +1118,7 @@ async def test_create_gantt_task_invalid_date_range(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ToolError, match="Invalid arguments"):
         await backend.create_gantt_task(
             name="Bad range",
             start_date=date(2026, 6, 14),

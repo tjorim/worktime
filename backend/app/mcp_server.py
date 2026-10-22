@@ -41,7 +41,9 @@ from app.mcp.context import (
     McpAuthError,
     McpPermissionError,
     McpRateLimitError,
+    ToolCallErrorMiddleware,
     WorktimeMcpContext,
+    guard_invalid_results,
 )
 from app.mcp.context import (
     map_domain_errors as _map_domain_errors,
@@ -787,6 +789,7 @@ def create_mcp_server(
             "(name plus arguments)."
         ),
         auth=_build_auth_provider(factory),
+        middleware=[ToolCallErrorMiddleware()],
         transforms=[
             BM25SearchTransform(
                 max_results=10,
@@ -803,7 +806,7 @@ def create_mcp_server(
             name=tool_name,
             annotations=tool_annotations(tool_name),
             auth=tool_auth(tool_name),
-        )(getattr(backend, tool_name))
+        )(guard_invalid_results(tool_name, getattr(backend, tool_name)))
 
     return server
 
