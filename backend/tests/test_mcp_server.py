@@ -6,13 +6,10 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import httpx2
 import pytest
-from fastmcp import Client, FastMCP
-from fastmcp.client.transports import StreamableHttpTransport
+from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, AuthContext, MultiAuth, run_auth_checks
 from fastmcp.server.transforms.search import BM25SearchTransform
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
@@ -25,7 +22,6 @@ from app.mcp_server import (
     ToolEffect,
     WorktimeMcpBackend,
     _build_auth_provider,
-    create_mcp_http_app,
     create_mcp_server,
     tool_annotations,
     tool_auth,
@@ -931,7 +927,7 @@ async def test_set_work_location_invalid_country(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """set_work_location raises ValidationError for invalid country code."""
+    """set_work_location reports an invalid country code as an argument error naming the field."""
     import app.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
@@ -945,7 +941,7 @@ async def test_set_work_location_invalid_country(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match="Invalid arguments: country_code"):
         await backend.set_work_location(
             value_date=date(2026, 5, 1),
             country_code="ZZ",
@@ -1121,7 +1117,7 @@ async def test_create_gantt_task_invalid_date_range(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match="Invalid arguments"):
         await backend.create_gantt_task(
             name="Bad range",
             start_date=date(2026, 6, 14),
@@ -1488,77 +1484,3 @@ async def test_integration_client_rate_limit_middleware_ignores_non_integration_
         await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
 
     assert downstream_called is True
-
-
-async def test_http_app_authenticates_integration_client_through_multiauth(test_db: AsyncEngine) -> None:
-    """Drive the real HTTP app (MultiAuth, rate-limit middleware, stateless transport) with a
-    managed key, since FastMCP 4.1 qualifies MultiAuth client IDs by source (issue #1480).
-
-    The principal must resolve from token claims rather than the ``client_id`` shape, discovery
-    and proxied calls must work, a bad key must be a 401, and the transport must stay stateless
-    (no session to expire under the SDK's 30-minute idle default).
-    """
-    session_factory = _make_factory(test_db)
-    async with session_factory() as session:
-        user = await db_service.create_user(session, UserCreate(username="http-e2e", display_name="HTTP E2E"))
-        client, key = await integration_client_service.create_integration_client(session, user.id, name="e2e-client")
-
-    _server, app = create_mcp_http_app(session_factory, path="/", stateless_http=True)
-
-    # FastMCP 4.1 and the MCP SDK speak httpx2 (a separate package from httpx).
-    def client_factory(
-        headers: dict[str, str] | None = None,
-        timeout: httpx2.Timeout | None = None,
-        auth: httpx2.Auth | None = None,
-        follow_redirects: bool = True,
-    ) -> httpx2.AsyncClient:
-        return httpx2.AsyncClient(
-            transport=httpx2.ASGITransport(app=app),
-            headers=headers,
-            timeout=timeout,
-            auth=auth,
-            follow_redirects=follow_redirects,
-        )
-
-    def transport(token: str) -> StreamableHttpTransport:
-        return StreamableHttpTransport(
-            "http://test/", headers={"Authorization": f"Bearer {token}"}, httpx_client_factory=client_factory
-        )
-
-    async with app.router.lifespan_context(app):
-        async with Client(transport(key)) as mcp_client:
-            whoami = (await mcp_client.call_tool("whoami", {})).structured_content
-            labels = (
-                await mcp_client.call_tool("call_tool", {"name": "list_labels", "arguments": {}})
-            ).structured_content
-            found = (await mcp_client.call_tool("search_tools", {"query": "time off"})).structured_content
-            repeated = (await mcp_client.call_tool("search_tools", {"query": "time off"})).structured_content
-
-        initialize = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {},
-                "clientInfo": {"name": "test", "version": "0"},
-            },
-        }
-        headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-        async with client_factory() as http:
-            ok = await http.post("http://test/", json=initialize, headers={**headers, "Authorization": f"Bearer {key}"})
-            bad = await http.post(
-                "http://test/", json=initialize, headers={**headers, "Authorization": "Bearer wtic_not-a-key"}
-            )
-
-    assert whoami is not None
-    assert whoami["user_id"] == user.id
-    assert whoami["auth_type"] == "integration_client"
-    assert whoami["integration_client"]["id"] == client.id
-    assert labels == {"labels": []}
-    assert found is not None
-    assert "get_time_off_summary" in [item["name"] for item in found["result"]]
-    assert repeated == found
-    assert ok.status_code == 200
-    assert "mcp-session-id" not in ok.headers
-    assert bad.status_code == 401

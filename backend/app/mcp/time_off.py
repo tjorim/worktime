@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import logger as audit
-from app.mcp.context import WorktimeMcpContext, actor_from_context
+from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.schemas import EntryFlag, EntryKind, EntryType, TimeOffEntryCreate, TimeOffEntryRead, TimeOffEntryUpdate
 from app.services.db_service import (
     create_or_update_time_off_entry,
@@ -66,16 +66,19 @@ async def create_time_off_event(
     provided the call is idempotent — re-sending the same payload restores a
     previously deleted entry. Returns the created or updated entry.
     """
-    payload = TimeOffEntryCreate(
-        entry_id=entry_id,
-        entry_kind=entry_kind,
-        entry_type=entry_type,
-        entry_flag=entry_flag,
-        date=date,
-        start_date=start_date,
-        end_date=end_date,
-        weekday=weekday,
-        note=note,
+    payload = validate_arguments(
+        TimeOffEntryCreate,
+        {
+            "entry_id": entry_id,
+            "entry_kind": entry_kind,
+            "entry_type": entry_type,
+            "entry_flag": entry_flag,
+            "date": date,
+            "start_date": start_date,
+            "end_date": end_date,
+            "weekday": weekday,
+            "note": note,
+        },
     )
     entry, created = await create_or_update_time_off_entry(
         db, context.user_id, payload, actor=actor_from_context(context)
@@ -127,7 +130,7 @@ async def update_time_off_event(
     if note is not None:
         update_data["note"] = None if note == "" else note
 
-    payload = TimeOffEntryUpdate(**update_data)
+    payload = validate_arguments(TimeOffEntryUpdate, update_data)
     entry = await update_time_off_entry(db, context.user_id, entry_id, payload, actor=actor_from_context(context))
     audit.append(
         target=f"user:{context.user_id}:time_off:{entry_id}",

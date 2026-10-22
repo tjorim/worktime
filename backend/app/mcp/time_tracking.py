@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import logger as audit
-from app.mcp.context import WorktimeMcpContext, actor_from_context
+from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.mcp.formatting import to_iso_datetime
 from app.schemas import LabelCreate, LabelRead, LabelUpdate, TaskCreate, TaskRead, TaskUpdate
 from app.services.db_service import (
@@ -86,7 +86,10 @@ async def list_labels(context: WorktimeMcpContext, db: AsyncSession) -> dict[str
 
 async def create_label_tool(context: WorktimeMcpContext, db: AsyncSession, name: str, color: str) -> dict[str, Any]:
     label = await create_label(
-        db, context.user_id, LabelCreate(name=name, color=color), actor=actor_from_context(context)
+        db,
+        context.user_id,
+        validate_arguments(LabelCreate, {"name": name, "color": color}),
+        actor=actor_from_context(context),
     )
     return LabelRead.model_validate(label, from_attributes=True).model_dump(mode="json")
 
@@ -98,8 +101,8 @@ async def update_label_tool(
     name: str | None = None,
     color: str | None = None,
 ) -> dict[str, Any]:
-    payload = LabelUpdate.model_validate(
-        {key: value for key, value in {"name": name, "color": color}.items() if value is not None}
+    payload = validate_arguments(
+        LabelUpdate, {key: value for key, value in {"name": name, "color": color}.items() if value is not None}
     )
     label = await update_label(
         db,
@@ -140,12 +143,15 @@ async def start_time_entry(
     exists. Returns the created task resource.
     """
     effective_start = start_time or datetime.now(UTC)
-    payload = TaskCreate(
-        text=text,
-        label_id=label_id,
-        start_time=effective_start,
-        stop_time=None,
-        includes_break=False,
+    payload = validate_arguments(
+        TaskCreate,
+        {
+            "text": text,
+            "label_id": label_id,
+            "start_time": effective_start,
+            "stop_time": None,
+            "includes_break": False,
+        },
     )
     task = await create_task(db, context.user_id, payload, actor=actor_from_context(context))
     audit.append(
@@ -171,7 +177,7 @@ async def stop_time_entry(
     if running is None:
         raise NotFoundError("no running task found")
     effective_stop = stop_time or datetime.now(UTC)
-    payload = TaskUpdate(stop_time=effective_stop)
+    payload = validate_arguments(TaskUpdate, {"stop_time": effective_stop})
     task = await update_task(db, context.user_id, running.id, payload, actor=actor_from_context(context))
     audit.append(
         target=f"user:{context.user_id}:task:{task.id}",
@@ -196,12 +202,15 @@ async def create_time_tracking_task(
     omitted the task is left open (running); only one open task is allowed
     per user. Returns the created task resource.
     """
-    payload = TaskCreate(
-        text=text,
-        label_id=label_id,
-        start_time=start_time,
-        stop_time=stop_time,
-        includes_break=includes_break,
+    payload = validate_arguments(
+        TaskCreate,
+        {
+            "text": text,
+            "label_id": label_id,
+            "start_time": start_time,
+            "stop_time": stop_time,
+            "includes_break": includes_break,
+        },
     )
     task = await create_task(db, context.user_id, payload, actor=actor_from_context(context))
     audit.append(
@@ -254,7 +263,7 @@ async def update_time_tracking_task(
     if includes_break is not None:
         update_data["includes_break"] = includes_break
 
-    payload = TaskUpdate(**update_data)
+    payload = validate_arguments(TaskUpdate, update_data)
     task = await update_task(db, context.user_id, task_id, payload, actor=actor_from_context(context))
     audit.append(
         target=f"user:{context.user_id}:task:{task_id}",

@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import logger as audit
-from app.mcp.context import WorktimeMcpContext, actor_from_context
+from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.schemas import WorkLocationCreate, WorkLocationRead
 from app.services.db_service import create_or_update_work_location, delete_work_location, list_work_locations
 
@@ -51,7 +51,7 @@ async def set_work_location(
     Side effects: upserts a WorkLocation row for (user_id, date). Returns the
     created or updated work-location resource.
     """
-    payload = WorkLocationCreate(date=value_date, country_code=country_code, label=label)
+    payload = validate_arguments(WorkLocationCreate, {"date": value_date, "country_code": country_code, "label": label})
     location = await create_or_update_work_location(db, context.user_id, payload, actor=actor_from_context(context))
     audit.append(
         target=f"user:{context.user_id}:work_location:{value_date.isoformat()}",
