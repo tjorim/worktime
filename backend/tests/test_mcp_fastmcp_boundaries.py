@@ -79,6 +79,7 @@ async def test_tool_body_argument_failures_are_sanitised_and_not_audited(
     assert PRIVATE not in str(error)
     assert PRIVATE not in caplog.text
     assert "input_value" not in caplog.text
+    assert not [record for record in caplog.records if record.levelno >= logging.ERROR]
     assert await _audit_count(factory) == before
 
 
@@ -111,16 +112,28 @@ async def test_invalid_stored_result_is_correlated_and_distinct_from_argument_fa
 
 
 @pytest.mark.parametrize("through_proxy", [False, True], ids=["direct", "call_tool_proxy"])
-async def test_wrong_argument_types_and_unknown_tools_are_rejected(test_db: AsyncEngine, through_proxy: bool) -> None:
+async def test_wrong_argument_types_and_unknown_tools_are_rejected(
+    test_db: AsyncEngine, caplog: pytest.LogCaptureFixture, through_proxy: bool
+) -> None:
     factory = _make_factory(test_db)
     user_id = await _owner(factory)
     mcp = create_mcp_server(factory)
 
-    wrong_type = await _call(mcp, user_id, "get_time_off_summary", {"start_date": "x"}, through_proxy=through_proxy)
+    with caplog.at_level(logging.DEBUG):
+        wrong_type = await _call(
+            mcp, user_id, "get_time_off_summary", {"start_date": PRIVATE}, through_proxy=through_proxy
+        )
+    error_records = [record for record in caplog.records if record.levelno >= logging.ERROR]
     unknown = await _call(mcp, user_id, "no_such_tool", {}, through_proxy=through_proxy)
 
-    assert "start_date" in str(wrong_type)
-    assert "no_such_tool" in str(unknown)
+    assert "Invalid arguments for 'get_time_off_summary': start_date" in str(wrong_type)
+    assert "input_value" not in str(wrong_type)
+    assert PRIVATE not in str(wrong_type)
+    assert PRIVATE not in caplog.text
+    # A bad call is not a server fault: nothing at error level, so no traceback carrying the value.
+    assert not error_records
+    assert "Unknown tool 'no_such_tool'" in str(unknown)
+    assert "search_tools" in str(unknown)
 
 
 async def test_multiauth_resolves_keycloak_and_integration_principals_over_stateless_http(

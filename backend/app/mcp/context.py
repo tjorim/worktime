@@ -14,7 +14,12 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Concatenate
 
-from fastmcp.exceptions import ToolError
+import mcp.types as mt
+from fastmcp.exceptions import DisabledError, ToolError
+from fastmcp.exceptions import NotFoundError as UnknownComponentError
+from fastmcp.exceptions import ValidationError as FastMCPValidationError
+from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
+from fastmcp.tools.base import ToolResult
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
 
@@ -111,12 +116,13 @@ def validate_arguments[M: BaseModel](model: type[M], payload: Mapping[str, Any])
     """Validate tool arguments against ``model`` and report failures without echoing the caller's values.
 
     Pydantic's default message (and the exception chained to it) carries the
-    offending ``input_value``, which FastMCP logs and returns to the client.
+    offending ``input_value``, which FastMCP logs and returns to the client. A caller
+    mistake is not a server fault, so it is logged at warning level without a traceback.
     """
     try:
         return model.model_validate(payload)
     except PydanticValidationError as exc:
-        raise ValueError(f"Invalid arguments: {describe_validation_error(exc)}") from None
+        raise ToolError(f"Invalid arguments: {describe_validation_error(exc)}", log_level=logging.WARNING) from None
 
 
 def guard_invalid_results[**P, R](tool_name: str, func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
@@ -146,3 +152,49 @@ def guard_invalid_results[**P, R](tool_name: str, func: Callable[P, Awaitable[R]
             ) from None
 
     return wrapper
+
+
+class ToolCallErrorMiddleware(Middleware):
+    """Report bad arguments and unknown tools without echoing values or logging tracebacks.
+
+    FastMCP validates arguments before the tool body runs, and its error text embeds
+    ``input_value``. Through the ``call_tool`` proxy that raw error (or the
+    ``NotFoundError`` for a tool name that does not exist) also escapes the proxy's
+    body and is logged at error level with its traceback. The proxied call passes
+    through this middleware as well, so raising a ``ToolError`` here (which FastMCP
+    logs without a traceback) keeps the client message and the log value-free.
+    """
+
+    async def on_call_tool(
+        self,
+        context: MiddlewareContext[mt.CallToolRequestParams],
+        call_next: CallNext[mt.CallToolRequestParams, ToolResult],
+    ) -> ToolResult:
+        try:
+            return await call_next(context)
+        except FastMCPValidationError as exc:
+            cause = exc.__cause__
+            detail = (
+                describe_validation_error(cause)
+                if isinstance(cause, PydanticValidationError)
+                else "check the tool's input schema from search_tools"
+            )
+            raise ToolError(
+                f"Invalid arguments for {context.message.name!r}: {detail}", log_level=logging.WARNING
+            ) from None
+        except UnknownComponentError, DisabledError:
+            raise _unknown_tool(context.message.name) from None
+        except ToolError as exc:
+            # The proxy checks the name against the catalog in its own body, so the
+            # NotFoundError reaches us wrapped as the proxy's failure.
+            if isinstance(exc.__cause__, (UnknownComponentError, DisabledError)):
+                proxied = (context.message.arguments or {}).get("name")
+                raise _unknown_tool(proxied if isinstance(proxied, str) else context.message.name) from None
+            raise
+
+
+def _unknown_tool(name: str) -> ToolError:
+    return ToolError(
+        f"Unknown tool {name!r}. Use search_tools to find a tool for your task, then run it with call_tool.",
+        log_level=logging.WARNING,
+    )
