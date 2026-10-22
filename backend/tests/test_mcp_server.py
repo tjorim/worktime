@@ -1189,7 +1189,7 @@ async def test_write_tools_produce_audit_log_entries(
     await audit_module.flush()
 
     assert audit_file.exists()
-    lines = [json.loads(line) for line in audit_file.read_text().splitlines() if line.strip()]
+    lines = [json.loads(line) for line in audit_file.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert len(lines) >= 1
     entry = lines[-1]
     assert entry["action"] == "set_work_location"

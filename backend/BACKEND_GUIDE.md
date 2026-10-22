@@ -282,8 +282,20 @@ Current Docker characteristics:
 - Python 3.15 slim base image
 - multi-stage build
 - dependency installation via `uv`
-- healthcheck via `GET /health`
+- healthcheck via `GET /api/health`
 - non-root runtime user
+
+## Python Runtime
+
+CI and the container run CPython 3.15. The supported floor stays at `requires-python >=3.14` with Ruff/ty targeting `py314`, so the code still runs on the 3.14 image and a rollback is a Dockerfile/workflow revert. Raising the floor is a separate, deliberate change.
+
+3.15 features, as assessed in issue #1481:
+
+- **Sampling profiler (Tachyon):** use it for local slow-request/MCP investigations. See [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md#profiling-slow-requests-tachyon). It is not enabled in production.
+- **Lazy imports:** not adopted. `-X lazy_imports=all` crashes at startup inside SQLAlchemy's PostgreSQL dialect registration. The eager import cost (~2 s to ready, ~180 MB RSS) is paid once per long-running process, and first requests are not slowed. Selective `lazy import` syntax would also break the 3.14 floor. Router and model registration stay eager.
+- **UTF-8 default:** every file read/write in `app/` and `tests/` passes `encoding="utf-8"` explicitly. Keep doing so for new file I/O.
+- **`frozendict`, `sentinel`, comprehension unpacking, typing additions:** no concrete case simplifies today, and all of them require 3.15 at runtime. PATCH routes distinguish omitted from `null` via Pydantic's `model_fields_set` / `model_dump(exclude_unset=True)`; keep that rather than introducing sentinels.
+- **Free-threaded build and experimental JIT:** not validated. Passing tests on the default build say nothing about them; both need their own dependency checks and workload benchmarks.
 
 ## Testing
 
