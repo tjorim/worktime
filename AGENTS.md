@@ -36,8 +36,8 @@ uv run pytest
 uv run alembic upgrade head
 ```
 
-> **Prerequisites:** none. Tests and a local dev instance both default to SQLite, so no
-> container is needed. The suite takes about 15 seconds that way. Production runs on
+> **Prerequisites:** tests default to SQLite, so no container is needed. Local development
+> defaults to PostgreSQL unless `DATABASE_URL` is set to SQLite (see below). The suite takes about 15 seconds that way. Production runs on
 > PostgreSQL, and CI runs the whole suite against it too; two tests that simulate two
 > sessions racing on an index entry need PostgreSQL's row-level locking and skip on SQLite.
 > To run the suite against PostgreSQL, start one with

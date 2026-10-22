@@ -246,7 +246,7 @@ Requirements:
 
 - Python 3.14+
 - `uv`
-- Nothing else for development or tests: both default to SQLite (see AGENTS.md). PostgreSQL is optional locally and is what CI also runs.
+- Tests default to SQLite and need no database container (see AGENTS.md). Development defaults to PostgreSQL; set `DATABASE_URL` as below to use SQLite locally. CI also runs the suite against PostgreSQL.
 - No local Keycloak/IdP needed — use `DEV_AUTH_BYPASS_TOKEN` instead (see AGENTS.md)
 
 Typical local flow:
@@ -254,6 +254,7 @@ Typical local flow:
 ```bash
 cd backend
 uv sync
+export DATABASE_URL=sqlite+aiosqlite:///./dev.db
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```

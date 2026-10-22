@@ -76,6 +76,25 @@ def test_authenticated_delete_me_removes_user(
     admin_headers = auth_headers(1, is_admin=True)
     user_id = create_user_factory(db_client, admin_headers, "delete-me-user")
 
+    headers = auth_headers(user_id)
+    label = db_client.post(
+        f"/api/time-tracking/labels?user_id={user_id}",
+        json={"name": "Project", "color": "#123456"},
+        headers=headers,
+    )
+    assert label.status_code == 201, label.text
+    task = db_client.post(
+        f"/api/gantt-tasks?user_id={user_id}",
+        json={
+            "name": "Labelled task",
+            "start_date": "2026-03-01",
+            "end_date": "2026-03-15",
+            "label_id": label.json()["id"],
+        },
+        headers=headers,
+    )
+    assert task.status_code == 201, task.text
+
     response = db_client.delete("/api/me", headers=auth_headers(user_id))
 
     assert response.status_code == 204
