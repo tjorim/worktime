@@ -2,12 +2,12 @@ import { ChartNoAxesColumnIncreasing as ChartNoAxesColumnIncreasingIcon } from "
 import { useMemo } from "react";
 import { Icon } from "@/components/shared/Icon";
 import { barY, defineChart, ruleY } from "@tanstack/charts";
-import { motion } from "@tanstack/charts/motion";
 import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import * as m from "@/paraglide/messages.js";
+import { chartRenderer } from "./chartRenderer";
 import type { WeekDay } from "./hooks/useWeeklyTimeTrackingSummary";
 
 interface DayHoursRow {
@@ -15,11 +15,6 @@ interface DayHoursRow {
   label: string;
   hours: number;
 }
-
-// Spring transition for bar height/position as the week's data changes.
-const chartRenderer = motion({
-  transition: { type: "spring", stiffness: 170, damping: 22, mass: 1 },
-});
 
 interface WeeklyHoursChartProps {
   weekDays: WeekDay[];

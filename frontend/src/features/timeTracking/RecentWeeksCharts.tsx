@@ -2,18 +2,14 @@ import { CalendarRange as CalendarRangeIcon } from "lucide-react";
 import { useMemo, type CSSProperties } from "react";
 import { Icon } from "@/components/shared/Icon";
 import { barY, cell, defineChart, ruleY } from "@tanstack/charts";
-import { motion } from "@tanstack/charts/motion";
 import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
+import { chartRenderer } from "./chartRenderer";
 import type { RecentWeek } from "./hooks/useRecentWeeks";
-
-const chartRenderer = motion({
-  transition: { type: "spring", stiffness: 170, damping: 22, mass: 1 },
-});
 
 /** Intensity levels of the heatmap: 0 is an empty day, 4 reaches the daily target. */
 const HEAT_LEVELS = ["0", "1", "2", "3", "4"] as const;

@@ -4,12 +4,12 @@ import { Icon } from "@/components/shared/Icon";
 import { barY, defineChart, ruleY, stack } from "@tanstack/charts";
 import { controlledSignal } from "@tanstack/charts/interaction/signal";
 import { interactiveColorLegend } from "@tanstack/charts/legend";
-import { motion } from "@tanstack/charts/motion";
 import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import * as m from "@/paraglide/messages.js";
+import { chartRenderer } from "./chartRenderer";
 import { resolveLabelColors } from "./cssVars";
 import type { LabelPercentage, WeekDay, WeeklySummary } from "./hooks/useWeeklyTimeTrackingSummary";
 
@@ -18,10 +18,6 @@ interface LabelHoursRow {
   label: string;
   hours: number;
 }
-
-const chartRenderer = motion({
-  transition: { type: "spring", stiffness: 170, damping: 22, mass: 1 },
-});
 
 interface WeeklyLabelChartProps {
   weekDays: WeekDay[];
@@ -74,7 +70,13 @@ export function WeeklyLabelChart({
           layout: stack({ order: domain }),
           radius: 2,
           // Hovering or focusing a legend item dims the other categories.
-          states: [{ when: { focus: "unmatched", source: "legend" }, style: { opacity: 0.25 } }],
+          states: [
+            {
+              when: { focus: "unmatched", source: "legend" },
+              style: { opacity: 0.25 },
+              transition: { type: "tween", duration: 120, easing: "ease-out" },
+            },
+          ],
         }),
       ],
       scales: {
