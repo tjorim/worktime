@@ -4,7 +4,7 @@ import {
   LogInIcon,
   LogOutIcon,
   SaveIcon,
-  SmartphoneIcon,
+  SmartphoneUserRoundIcon,
   TrashIcon,
   UserCheckIcon,
   UserXIcon,
@@ -189,7 +189,7 @@ export function SettingsAccountSection({
               {m.account_sync_benefit_backup()}
             </span>
             <span>
-              <Icon icon={SmartphoneIcon} className="mr-1 text-success" />
+              <Icon icon={SmartphoneUserRoundIcon} className="mr-1 text-success" />
               {m.account_sync_benefit_crossdevice()}
             </span>
           </div>
