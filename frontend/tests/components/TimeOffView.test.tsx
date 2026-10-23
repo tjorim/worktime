@@ -9,7 +9,7 @@ import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { hdayChangeEmitter } from "@/mocks/data/hdayChangeEmitter";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";

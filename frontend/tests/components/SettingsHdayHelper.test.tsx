@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
 import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";

@@ -24,7 +24,7 @@ async function enableMocking(): Promise<void> {
     search: window.location.search,
     envScenarioId: import.meta.env.VITE_MSW_SCENARIO,
   });
-  await worker.start({ onUnhandledRequest: "warn" });
+  await worker.start({ onUnhandledFrame: "warn" });
 }
 
 const container = document.getElementById("root");

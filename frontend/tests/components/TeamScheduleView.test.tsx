@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
+import { delay } from "msw/utils/delay";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
@@ -64,7 +65,7 @@ describe("TeamScheduleView", () => {
 
   it("requires a configured helper and never falls back to the app's own origin", async () => {
     seedHelperUrl(null);
-    // No handler for */api/team/*hday is registered — MSW's onUnhandledRequest: "error"
+    // No handler for */api/team/*hday is registered — MSW's onUnhandledFrame: "error"
     // means the test fails loudly if the view ever attempts that request.
 
     render(

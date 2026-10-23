@@ -1,6 +1,7 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
+import { msw } from "msw/vite";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
@@ -24,6 +25,9 @@ export default defineConfig({
       strategy: ["localStorage", "preferredLanguage", "baseLocale"],
     }),
     reactPlugin(),
+    // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,
+    // so the worker script is never emitted into dist.
+    msw(),
     tailwindcss(),
     VitePWA({
       // "prompt" (not "autoUpdate") so the app controls when the new SW activates,
@@ -62,7 +66,6 @@ export default defineConfig({
       workbox: {
         // App-shell precache: build output plus static assets copied from public/.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        // MSW's mock worker is dev-only tooling; it has no place in the production precache.
         // push-sw.js is imported as code below, not precached content.
         // The manifest.icons entries below are already added to the precache (with their
         // own `?__WB_REVISION__=` query) by vite-plugin-pwa's manifest-icon injection, so
@@ -71,7 +74,6 @@ export default defineConfig({
         // the SW fails to install. Excluding them here leaves the manifest-icon injection
         // as the only source, which still guarantees they're precached.
         globIgnores: [
-          "mockServiceWorker.js",
           "push-sw.js",
           "assets/icons/icon-192.png",
           "assets/icons/icon-512.png",
