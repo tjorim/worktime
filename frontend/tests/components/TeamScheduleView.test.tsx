@@ -50,6 +50,11 @@ function teamHdayPayload(teamId: string, name = "Engineering") {
 describe("TeamScheduleView", () => {
   beforeEach(() => {
     localStorage.clear();
+    // The view probes the configured helper's health before it shows the team.
+    server.use(
+      http.get(`${HELPER_URL}/health`, () => HttpResponse.json({ status: "ok" })),
+      http.get(`${OTHER_HELPER_URL}/health`, () => HttpResponse.json({ status: "ok" })),
+    );
   });
 
   it("guards direct rendering when no helper is configured", () => {

@@ -85,11 +85,15 @@ describe("SettingsHdayHelper", () => {
 
   it("ignores a stale health result after the helper URL changes", async () => {
     const resolvers = new Map<string, (response: Response) => void>();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        (input: RequestInfo | URL) =>
-          new Promise<Response>((resolve) => resolvers.set(String(input), resolve)),
+    server.use(
+      http.get(
+        "*/health",
+        ({ request }) =>
+          new Promise<Response>((resolve) => {
+            resolvers.set(request.url, resolve);
+            // A superseded probe is aborted by the app; end its pending request instead of leaving it open.
+            request.signal.addEventListener("abort", () => resolve(HttpResponse.error()));
+          }),
       ),
     );
     const user = userEvent.setup();
@@ -104,14 +108,14 @@ describe("SettingsHdayHelper", () => {
     await waitFor(() => expect(resolvers.has("http://helper-b:8080/health")).toBe(true));
 
     await act(async () => {
-      resolvers.get("http://helper-a:8080/health")?.(Response.json({ status: "ok" }));
+      resolvers.get("http://helper-a:8080/health")?.(HttpResponse.json({ status: "ok" }));
     });
 
     expect(screen.getByText("http://helper-b:8080")).toBeInTheDocument();
     expect(screen.queryByText("connected")).not.toBeInTheDocument();
 
     await act(async () => {
-      resolvers.get("http://helper-b:8080/health")?.(Response.json({ status: "ok" }));
+      resolvers.get("http://helper-b:8080/health")?.(HttpResponse.json({ status: "ok" }));
     });
     expect(await screen.findByText("connected")).toBeInTheDocument();
   });
