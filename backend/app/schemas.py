@@ -11,10 +11,11 @@ from urllib.parse import urlparse
 import pycountry
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schema_types import NonEmptyText
 from app.utils.datetime import ensure_utc
 
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
+
+NonEmptyText = Annotated[str, Field(min_length=1)]
 
 
 class RequestModel(BaseModel):
