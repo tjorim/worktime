@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "mode": "shadcn",
+  "style": "base-nova",
+  "directories": ["src/components/ui"],
+  "components": {
+    "accordion": {
+      "files": ["src/components/ui/accordion.tsx"],
+      "registry": "accordion",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/accordion.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "2b27257f7a644fd408456530582eb20a56a089d5e9994f604b22c00e8357413e",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "alert-dialog": {
+      "files": ["src/components/ui/alert-dialog.tsx"],
+      "registry": "alert-dialog",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/alert-dialog.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "a424e9280f24fe341d0c37e1acf044581edb748b22e022e3c89e44c3dae7a7b3",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "alert": {
+      "files": ["src/components/ui/alert.tsx"],
+      "registry": "alert",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/alert.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "c66957c5b3a51860a650c4cf8717917895493aa2c7a03df76b983b68405b6734",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "badge": {
+      "files": ["src/components/ui/badge.tsx"],
+      "registry": "badge",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/badge.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "1c083a2b0fef00084c7c4c68212552e14d1afe9cdf8326a03378041d323a9d95",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "button": {
+      "files": ["src/components/ui/button.tsx"],
+      "registry": "button",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/button.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "1579050469b112caa3b35b0d3b40df1113899878c33bad74c5d504c3e86d2aca",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "card": {
+      "files": ["src/components/ui/card.tsx"],
+      "registry": "card",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/card.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "b2595b7103396bd880104e809586ff796d69a0d4b66939ae3fb71f1bc7f2b404",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "checkbox": {
+      "files": ["src/components/ui/checkbox.tsx"],
+      "registry": "checkbox",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/checkbox.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "45f0ea21f6d5adba482e5ee184f180e2f8498da29346ac12e02600fed74ae199",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "combobox": {
+      "files": ["src/components/ui/combobox.tsx"],
+      "registry": "combobox",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/combobox.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "d60efcfa55026c47829f579a0c6e07d4175547d630909aadd3de929681f69a3c",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "dialog": {
+      "files": ["src/components/ui/dialog.tsx"],
+      "registry": "dialog",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/dialog.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "7869a19a6cb083ca88e4cb285f69c73602e6333b3538197ffe615bdc4adb0474",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "empty": {
+      "files": ["src/components/ui/empty.tsx"],
+      "registry": "empty",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/empty.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "0d471de90562a99802b32e83002b0dc50935440619b6521dc5833c1eca9237ea",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "field": {
+      "files": ["src/components/ui/field.tsx"],
+      "registry": "field",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/field.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "8b2d11bdbb8214ff7cd38682323b2be1d8dd00f48122ddc3bcfb99dd35d6184e",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "grid": {
+      "files": ["src/components/ui/grid.tsx"],
+      "registry": null,
+      "origin": "local",
+      "reason": "Locally owned composition; maintain against the Base UI APIs it imports and the app UI audit.",
+      "reviewedAt": null,
+      "reviewNote": null
+    },
+    "input": {
+      "files": ["src/components/ui/input.tsx"],
+      "registry": "input",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/input.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "632c4d9da9a94c7837ee987418f69d0daebcb7ec25a318d8c0a083f5352dc8e4",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "label": {
+      "files": ["src/components/ui/label.tsx"],
+      "registry": "label",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/label.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "193c7153eba3bc21b95e53b1dd787dee2de02ea094cd80a5efa93ffd4f3a36a6",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "native-select": {
+      "files": ["src/components/ui/native-select.tsx"],
+      "registry": "native-select",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/native-select.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "5ded8c5b95508f370158f8e094c59b4f6bae549792fa8bfa43bae718cbfe1e96",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "popover": {
+      "files": ["src/components/ui/popover.tsx"],
+      "registry": "popover",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/popover.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "3c89b7e34758a7f402641a1b0a504247998464c140f9962e28e4ef4e11c190d7",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "progress": {
+      "files": ["src/components/ui/progress.tsx"],
+      "registry": "progress",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/progress.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "f327d38e883e39a80cbbed766ca9116fbef48331f31c435878bbe11bc6730b1f",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "radio-group": {
+      "files": ["src/components/ui/radio-group.tsx"],
+      "registry": "radio-group",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/radio-group.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "bb68c0e52d80a91bed0942e26b1dac081ef3da0d2740747c07153b7149cd7a1b",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "select": {
+      "files": ["src/components/ui/select.tsx"],
+      "registry": "select",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/select.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "d583d1e3514266b2dd47136029350b889a7420836cec1b88e1ded8a0a9d7ff01",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "separator": {
+      "files": ["src/components/ui/separator.tsx"],
+      "registry": "separator",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/separator.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "8182c4d5cf5e1da244373e33fd7569e63ef5aae7c5a6216f513f2d20686fc8e2",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "spinner": {
+      "files": ["src/components/ui/spinner.tsx"],
+      "registry": "spinner",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/spinner.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "b5963ae0b6c398cf7e8edd566fee1035e70e18ac4fd6756a9f60c12f96b17264",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "switch": {
+      "files": ["src/components/ui/switch.tsx"],
+      "registry": "switch",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/switch.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "7d1ab8fc5f50acfff6dabefd90df30820c144279b42e16379a1cf124a9542ae3",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "table": {
+      "files": ["src/components/ui/table.tsx"],
+      "registry": "table",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/table.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "8847355c958925356d52b9275c50c71ad3955665bca2dd60b790f0de9899e9a3",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "tabs": {
+      "files": ["src/components/ui/tabs.tsx"],
+      "registry": "tabs",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/tabs.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "f6fc78f38c183a0ef5458d424f97cef31a10735847dbb2bac08f30524faa95f3",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "textarea": {
+      "files": ["src/components/ui/textarea.tsx"],
+      "registry": "textarea",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/textarea.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "41d48a049cab3e20e8f4b1d7b4727a42ebb8f647006d808f1a2f6c27af6ce116",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "toggle-group": {
+      "files": ["src/components/ui/toggle-group.tsx"],
+      "registry": "toggle-group",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/toggle-group.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "1ec416475c67019d52fa69ce4a817f703148370f119badc319ae63c9be3e602e",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "toggle": {
+      "files": ["src/components/ui/toggle.tsx"],
+      "registry": "toggle",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/toggle.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "a98444301997970cf65f6bdd05d17c520daee7b6099077008257c92bb8fe2032",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "tooltip": {
+      "files": ["src/components/ui/tooltip.tsx"],
+      "registry": "tooltip",
+      "origin": "https://ui.shadcn.com/r/styles/base-nova/tooltip.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "28540791a48b412d720acaec7b04d9b9037a4435420f05b6ac02d5ec16a65120",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "ContextMenu": {
+      "files": ["src/components/shared/ContextMenu.tsx"],
+      "registry": null,
+      "origin": "local",
+      "reason": "App-specific Base UI composition; review direct primitive API changes and interaction tests.",
+      "reviewedAt": null,
+      "reviewNote": null
+    },
+    "TimelineProgressBar": {
+      "files": ["src/features/timeTracking/TimelineProgressBar.tsx"],
+      "registry": null,
+      "origin": "local",
+      "reason": "App-specific Base UI composition; review direct primitive API changes and interaction tests.",
+      "reviewedAt": null,
+      "reviewNote": null
+    }
+  }
+}
