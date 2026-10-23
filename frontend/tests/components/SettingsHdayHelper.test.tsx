@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
 import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";
@@ -85,6 +85,8 @@ describe("SettingsHdayHelper", () => {
 
   it("ignores a stale health result after the helper URL changes", async () => {
     const resolvers = new Map<string, (response: Response) => void>();
+    // A stub rather than MSW: this test needs helper A's response to arrive after the app has moved on to
+    // helper B, i.e. a request that ignores cancellation. A real request is aborted, so it could never arrive late.
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -104,14 +106,14 @@ describe("SettingsHdayHelper", () => {
     await waitFor(() => expect(resolvers.has("http://helper-b:8080/health")).toBe(true));
 
     await act(async () => {
-      resolvers.get("http://helper-a:8080/health")?.(Response.json({ status: "ok" }));
+      resolvers.get("http://helper-a:8080/health")?.(HttpResponse.json({ status: "ok" }));
     });
 
     expect(screen.getByText("http://helper-b:8080")).toBeInTheDocument();
     expect(screen.queryByText("connected")).not.toBeInTheDocument();
 
     await act(async () => {
-      resolvers.get("http://helper-b:8080/health")?.(Response.json({ status: "ok" }));
+      resolvers.get("http://helper-b:8080/health")?.(HttpResponse.json({ status: "ok" }));
     });
     expect(await screen.findByText("connected")).toBeInTheDocument();
   });

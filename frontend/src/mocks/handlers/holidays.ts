@@ -12,7 +12,7 @@
  * data so tests and dev mode work without a real backend or external network.
  */
 
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export const holidayHandlers = [

@@ -1,5 +1,19 @@
+import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/mocks/server";
 import { apiFetch } from "@/utils/apiClient";
+
+/** Answers every method on `path` with `status` and returns the requests it received. */
+function serve(path: string, status = 200): Request[] {
+  const received: Request[] = [];
+  server.use(
+    http.all(path, ({ request }) => {
+      received.push(request);
+      return new HttpResponse(null, { status });
+    }),
+  );
+  return received;
+}
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -7,8 +21,7 @@ describe("apiFetch", () => {
   });
 
   it("does not set default Content-Type when body is FormData", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const received = serve("/upload");
 
     const body = new FormData();
     body.append("file", new Blob(["x"]), "x.txt");
@@ -22,16 +35,15 @@ describe("apiFetch", () => {
       },
     );
 
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const headers = new Headers(init.headers);
+    const headers = received[0]!.headers;
 
-    expect(headers.has("Content-Type")).toBe(false);
+    // The browser adds the multipart boundary itself; a preset JSON type would break the upload.
+    expect(headers.get("Content-Type")).toMatch(/^multipart\/form-data; boundary=/);
     expect(headers.get("Accept")).toBe("application/json");
   });
 
   it("sets default Content-Type for non-FormData requests", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const received = serve("/data");
 
     await apiFetch(
       "/data",
@@ -42,16 +54,14 @@ describe("apiFetch", () => {
       },
     );
 
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const headers = new Headers(init.headers);
+    const headers = received[0]!.headers;
 
     expect(headers.get("Content-Type")).toBe("application/json");
     expect(headers.get("Accept")).toBe("application/json");
   });
 
   it("calls onUnauthorized and throws on 401", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
-    vi.stubGlobal("fetch", fetchMock);
+    serve("/data", 401);
 
     const onUnauthorized = vi.fn();
 
@@ -70,8 +80,7 @@ describe("apiFetch", () => {
   });
 
   it("calls onForbidden and throws on 403", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 403 }));
-    vi.stubGlobal("fetch", fetchMock);
+    serve("/data", 403);
 
     const onForbidden = vi.fn();
 
@@ -90,8 +99,7 @@ describe("apiFetch", () => {
   });
 
   it("preserves caller headers in requests", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const received = serve("/data");
 
     await apiFetch(
       "/data",
@@ -106,9 +114,6 @@ describe("apiFetch", () => {
       },
     );
 
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const headers = new Headers(init.headers);
-
-    expect(headers.get("X-Custom")).toBe("value");
+    expect(received[0]!.headers.get("X-Custom")).toBe("value");
   });
 });

@@ -1,6 +1,6 @@
 import { type LucideIcon, TrashIcon } from "lucide-react";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

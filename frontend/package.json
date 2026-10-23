@@ -57,19 +57,19 @@
     "@schedule-x/theme-default": "^4.9.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/charts": "^1.1.0",
-    "@tanstack/query-db-collection": "^1.4.5",
-    "@tanstack/react-db": "^0.5.10",
+    "@tanstack/query-db-collection": "^1.4.7",
+    "@tanstack/react-db": "^0.5.11",
     "@tanstack/react-form": "2.0.0-alpha.2",
-    "@tanstack/react-query": "^5.104.3",
-    "@tanstack/react-router": "^1.170.44",
+    "@tanstack/react-query": "^5.104.5",
+    "@tanstack/react-router": "^1.170.45",
     "@tanstack/react-table": "^9.3.1",
     "class-variance-authority": "^0.7.1",
-    "cn": "^0.4.0",
+    "cn": "^0.5.0",
     "dayjs": "^1.11.23",
     "eventsource-parser": "^4.1.2",
     "frappe-gantt": "^1.2.2",
     "idb-keyval": "6.3.0",
-    "lucide-react": "^1.57.0",
+    "lucide-react": "^1.59.0",
     "oidc-client-ts": "^3.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -80,11 +80,11 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@inlang/paraglide-js": "^2.29.0",
+    "@inlang/paraglide-js": "^2.29.1",
     "@inlang/plugin-m-function-matcher": "^2.3.4",
     "@inlang/plugin-message-format": "^4.5.4",
     "@playwright/test": "^1.63.0",
-    "@shadcn/lint": "^0.2.1",
+    "@shadcn/lint": "^0.2.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -95,14 +95,14 @@
     "@vitejs/plugin-react": "^6.1.2",
     "@vitest/ui": "^5.0.5",
     "canvas": "^3.2.3",
-    "fake-indexeddb": "6.2.5",
-    "happy-dom": "^20.14.5",
+    "fake-indexeddb": "6.2.6",
+    "happy-dom": "^21.0.4",
     "lightningcss": "^1.33.0",
-    "msw": "^2.15.0",
-    "oxc-parser": "^0.154.0",
-    "oxfmt": "^0.73.0",
-    "oxlint": "^1.88.0",
-    "postcss": "^8.5.30",
+    "msw": "^3.0.3",
+    "oxc-parser": "^0.155.0",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "postcss": "^8.5.31",
     "terser": "^5.51.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
@@ -114,10 +114,5 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.33.0",
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
-  }
+  "packageManager": "pnpm@10.33.0"
 }

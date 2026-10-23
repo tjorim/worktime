@@ -36,14 +36,18 @@ uv run pytest
 uv run alembic upgrade head
 ```
 
-> **Prerequisites:** Tests require a running PostgreSQL instance — start one with
-> `docker compose -f backend/docker-compose.yml up db -d` from the repo root. They
-> default to `postgresql+asyncpg://worktime:worktime@localhost/worktime_test`;
-> override via the `TEST_DATABASE_URL` environment variable.
+> **Prerequisites:** tests default to SQLite, so no container is needed. Local development
+> defaults to PostgreSQL unless `DATABASE_URL` is set to SQLite (see below). The suite takes about 15 seconds that way. Production runs on
+> PostgreSQL, and CI runs the whole suite against it too; two tests that simulate two
+> sessions racing on an index entry need PostgreSQL's row-level locking and skip on SQLite.
+> To run the suite against PostgreSQL, start one with
+> `docker compose -f backend/docker-compose.yml up db -d` and set
+> `TEST_DATABASE_URL=postgresql+asyncpg://worktime:worktime@localhost/worktime_test`.
 >
-> For just running the app locally (`uv run uvicorn ...`), Postgres isn't required —
-> set `DATABASE_URL=sqlite+aiosqlite:///./dev.db` (no container needed) and run
-> `uv run alembic upgrade head` once against it first.
+> For a local dev instance (`uv run uvicorn ...`), set
+> `DATABASE_URL=sqlite+aiosqlite:///./dev.db` and run `uv run alembic upgrade head` once
+> against it first. `app/database/sqlite.py` makes SQLite read timezone-aware datetimes back
+> as UTC and enforce foreign keys, which are the two ways it differs from PostgreSQL here.
 >
 > Auth doesn't require a local Keycloak/IdP either — set `DEV_AUTH_BYPASS_TOKEN`
 > to any string and pass it as `Authorization: Bearer <value>`; it's treated as

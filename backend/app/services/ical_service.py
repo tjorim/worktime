@@ -408,4 +408,4 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
         )
 
     lines.append("END:VCALENDAR")
-    return "\r\n".join(part for line in lines for part in _fold(line)) + "\r\n"
+    return "\r\n".join(*_fold(line) for line in lines) + "\r\n"

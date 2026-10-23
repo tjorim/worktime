@@ -60,21 +60,6 @@ if (typeof window !== "undefined") {
   });
 }
 
-// Mock window.matchMedia (for responsive design components)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => {},
-  }),
-});
-
 // ---------------------------------------------------------------------------
 // TanStack DB collection cleanup helper
 //
@@ -108,7 +93,7 @@ async function resetTestState(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "error" });
+  server.listen({ onUnhandledFrame: "error" });
 });
 
 // Set up DOM environment

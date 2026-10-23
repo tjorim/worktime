@@ -126,6 +126,7 @@ describe("PwaInstallContext", () => {
   });
 
   it("detects an already-installed standalone display mode", () => {
+    // Happy DOM only implements display-mode: browser; standalone still needs a focused mock.
     const matchMediaSpy = vi.spyOn(window, "matchMedia").mockImplementation(
       (query: string) =>
         ({

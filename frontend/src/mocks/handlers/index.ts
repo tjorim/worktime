@@ -6,6 +6,7 @@
  * the browser dev mode worker and the Vitest Node.js server.
  */
 
+import { accountHandlers } from "./account";
 import { holidayHandlers } from "./holidays";
 import { readModelHandlers } from "./readModels";
 import { scenarioControlHandlers } from "./scenarioControl";
@@ -16,6 +17,7 @@ import { workLocationHandlers } from "./workLocations";
 
 export const handlers = [
   ...scenarioControlHandlers,
+  ...accountHandlers,
   ...syncHandlers,
   ...holidayHandlers,
   ...readModelHandlers,

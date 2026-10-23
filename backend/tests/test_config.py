@@ -231,7 +231,7 @@ def test_resolved_database_url_does_not_double_bracket_ipv6_host():
 def test_resolved_database_url_reads_db_password_file(tmp_path):
     """DB_PASSWORD_FILE takes precedence over DB_PASSWORD when both are set."""
     password_file = tmp_path / "db_password"
-    password_file.write_text("secret-from-file\n")
+    password_file.write_text("secret-from-file\n", encoding="utf-8")
 
     settings = Settings(
         _env_file=None,
