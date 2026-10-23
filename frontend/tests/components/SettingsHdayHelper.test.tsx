@@ -85,15 +85,13 @@ describe("SettingsHdayHelper", () => {
 
   it("ignores a stale health result after the helper URL changes", async () => {
     const resolvers = new Map<string, (response: Response) => void>();
-    server.use(
-      http.get(
-        "*/health",
-        ({ request }) =>
-          new Promise<Response>((resolve) => {
-            resolvers.set(request.url, resolve);
-            // A superseded probe is aborted by the app; end its pending request instead of leaving it open.
-            request.signal.addEventListener("abort", () => resolve(HttpResponse.error()));
-          }),
+    // A stub rather than MSW: this test needs helper A's response to arrive after the app has moved on to
+    // helper B, i.e. a request that ignores cancellation. A real request is aborted, so it could never arrive late.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (input: RequestInfo | URL) =>
+          new Promise<Response>((resolve) => resolvers.set(String(input), resolve)),
       ),
     );
     const user = userEvent.setup();
