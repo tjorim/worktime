@@ -98,7 +98,7 @@
     "fake-indexeddb": "6.2.5",
     "happy-dom": "^20.14.5",
     "lightningcss": "^1.33.0",
-    "msw": "^2.15.0",
+    "msw": "^3.0.3",
     "oxc-parser": "^0.155.0",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
@@ -114,10 +114,5 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.33.0",
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
-  }
+  "packageManager": "pnpm@10.33.0"
 }

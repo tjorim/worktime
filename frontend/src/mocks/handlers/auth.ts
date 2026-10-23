@@ -1,4 +1,4 @@
-import { HttpResponse } from "msw";
+import { HttpResponse } from "msw/http";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export function buildAuthFailureResponse(): Response | null {

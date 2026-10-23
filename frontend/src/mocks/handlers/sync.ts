@@ -14,7 +14,7 @@
  *  DELETE /api/users/:id
  */
 
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { sseEmitter } from "@/mocks/data/sseEmitter";
 import { syncStore } from "@/mocks/data/syncStore";
 import { buildAuthFailureResponse } from "./auth";
