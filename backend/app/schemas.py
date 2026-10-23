@@ -9,11 +9,19 @@ from typing import Annotated, Any, Literal, cast
 from urllib.parse import urlparse
 
 import pycountry
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.utils.datetime import ensure_utc
 
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
+
+NonEmptyText = Annotated[str, Field(min_length=1)]
+
+
+class RequestModel(BaseModel):
+    """External write payload; unknown fields must not be silently discarded."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class ListResponse[T](BaseModel):
@@ -23,7 +31,7 @@ class ListResponse[T](BaseModel):
     total: int
 
 
-class UserRegister(BaseModel):
+class UserRegister(RequestModel):
     """Payload for the admin-only pre-registration endpoint.
 
     ``display_name`` is optional; it defaults to the username when omitted.
@@ -43,7 +51,7 @@ class UserRegister(BaseModel):
     display_name: str | None = None
 
 
-class UserCreate(BaseModel):
+class UserCreate(RequestModel):
     username: str
     display_name: str
     settings: dict[str, Any] = Field(default_factory=dict)
@@ -58,7 +66,7 @@ class UserRead(BaseModel):
     updated_at: dt_datetime
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(RequestModel):
     username: str | None = None
     display_name: str | None = None
     settings: dict[str, Any] | None = None
@@ -102,7 +110,7 @@ def _validate_hex_color(value: str | None) -> str | None:
     return value.upper()
 
 
-class LabelCreate(BaseModel):
+class LabelCreate(RequestModel):
     name: str
     color: str
 
@@ -123,7 +131,7 @@ class LabelRead(BaseModel):
     created_at: dt_datetime
 
 
-class LabelUpdate(BaseModel):
+class LabelUpdate(RequestModel):
     name: str | None = None
     color: str | None = None
 
@@ -133,7 +141,7 @@ class LabelUpdate(BaseModel):
         return _validate_hex_color(value)
 
 
-class TaskCreate(BaseModel):
+class TaskCreate(RequestModel):
     text: str
     label_id: str | None = None
     gantt_task_id: str | None = None
@@ -159,7 +167,7 @@ class TaskRead(BaseModel):
     created_at: dt_datetime
 
 
-class TaskUpdate(BaseModel):
+class TaskUpdate(RequestModel):
     label_id: str | None = None
     gantt_task_id: str | None = None
     text: str | None = None
@@ -173,7 +181,7 @@ class TaskUpdate(BaseModel):
         return ensure_utc(value)
 
 
-class TemplateCreate(BaseModel):
+class TemplateCreate(RequestModel):
     text: str
     label_id: str | None = None
     start_time: dt_time
@@ -190,14 +198,14 @@ class TemplateRead(BaseModel):
     created_at: dt_datetime
 
 
-class TemplateUpdate(BaseModel):
+class TemplateUpdate(RequestModel):
     text: str | None = None
     label_id: str | None = None
     start_time: dt_time | None = None
     stop_time: dt_time | None = None
 
 
-class WorkLocationCreate(BaseModel):
+class WorkLocationCreate(RequestModel):
     date: dt_date
     country_code: str
     label: str | None = None
@@ -220,7 +228,7 @@ class WorkLocationRead(BaseModel):
     created_at: dt_datetime
 
 
-class WorkLocationUpdate(BaseModel):
+class WorkLocationUpdate(RequestModel):
     country_code: str | None = None
     label: str | None = None
 
@@ -245,7 +253,7 @@ class IcalFeedStatus(BaseModel):
     last_used_at: dt_datetime | None = None
 
 
-class AccessTokenCreate(BaseModel):
+class AccessTokenCreate(RequestModel):
     """Payload for minting a new personal access token."""
 
     name: str = Field(min_length=1, max_length=100)
@@ -284,11 +292,11 @@ class AccessTokenListResponse(ListResponse[AccessTokenRead]):
     pass
 
 
-class PushSubscriptionKeys(BaseModel):
+class PushSubscriptionKeys(RequestModel):
     """The two keys the browser's PushManager returns alongside the endpoint."""
 
-    p256dh: str = Field(min_length=1)
-    auth: str = Field(min_length=1)
+    p256dh: NonEmptyText
+    auth: NonEmptyText
 
 
 # The backend later issues an authenticated server-side HTTP request straight to
@@ -313,7 +321,7 @@ def _is_allowed_push_endpoint_host(hostname: str) -> bool:
     return hostname in _ALLOWED_PUSH_ENDPOINT_HOSTS or hostname.endswith(_ALLOWED_PUSH_ENDPOINT_HOST_SUFFIXES)
 
 
-class PushSubscriptionCreate(BaseModel):
+class PushSubscriptionCreate(RequestModel):
     """Payload for registering (or updating, by re-posting) a browser's push subscription."""
 
     endpoint: str = Field(min_length=1, max_length=2048)
@@ -350,7 +358,7 @@ class PushSubscriptionRead(BaseModel):
     updated_at: dt_datetime
 
 
-class FcmTokenCreate(BaseModel):
+class FcmTokenCreate(RequestModel):
     """Payload for registering (or updating, by re-posting) an Android device's
     FCM registration token.
     """
@@ -369,7 +377,7 @@ class FcmTokenRead(BaseModel):
 IntegrationClientScope = Literal["worktime:mcp", "worktime:admin"]
 
 
-class IntegrationClientCreate(BaseModel):
+class IntegrationClientCreate(RequestModel):
     """Payload for provisioning a new managed integration client (issue #1054).
 
     ``worktime:admin`` is a deliberate, explicit grant — never implied by
@@ -461,7 +469,7 @@ class WorkLocationListResponse(ListResponse[WorkLocationRead]):
     pass
 
 
-class GanttTaskCreate(BaseModel):
+class GanttTaskCreate(RequestModel):
     name: str
     label_id: str | None = None
     start_date: dt_date
@@ -490,7 +498,7 @@ class GanttTaskRead(BaseModel):
     created_at: dt_datetime
 
 
-class GanttTaskUpdate(BaseModel):
+class GanttTaskUpdate(RequestModel):
     name: str | None = None
     label_id: str | None = None
     start_date: dt_date | None = None
@@ -525,7 +533,7 @@ class UserPreferencesRead(BaseModel):
     updated_at: dt_datetime
 
 
-class UserPreferencesWrite(BaseModel):
+class UserPreferencesWrite(RequestModel):
     """Request schema for writing the authenticated user's preferences blob.
 
     ``client_updated_at`` is the client-side timestamp of the local state being
@@ -556,10 +564,10 @@ EntryKind = Literal["date", "range", "weekly"]
 EntryFlag = Literal["full_day", "half_am", "half_pm", "onsite", "no_fly", "can_fly"]
 
 
-class TimeOffEntryCreate(BaseModel):
+class TimeOffEntryCreate(RequestModel):
     """Request schema for creating or upserting a time-off entry."""
 
-    entry_id: str | None = Field(default=None, min_length=1)
+    entry_id: NonEmptyText | None = None
     entry_kind: EntryKind = "date"
     date: dt_date | None = None
     start_date: dt_date | None = None
@@ -614,7 +622,7 @@ class TimeOffEntryRead(BaseModel):
     updated_at: dt_datetime
 
 
-class TimeOffEntryUpdate(BaseModel):
+class TimeOffEntryUpdate(RequestModel):
     entry_kind: EntryKind | None = None
     date: dt_date | None = None
     start_date: dt_date | None = None
@@ -749,7 +757,7 @@ class TimeOffEntrySyncRead(BaseModel):
 # for 'delete' only the identity field is strictly needed.
 
 
-class LabelSyncItem(BaseModel):
+class LabelSyncItem(RequestModel):
     id: str
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
@@ -757,7 +765,7 @@ class LabelSyncItem(BaseModel):
     color: str | None = None
 
 
-class TaskSyncItem(BaseModel):
+class TaskSyncItem(RequestModel):
     id: str
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
@@ -769,7 +777,7 @@ class TaskSyncItem(BaseModel):
     includes_break: bool | None = None
 
 
-class TemplateSyncItem(BaseModel):
+class TemplateSyncItem(RequestModel):
     id: str
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
@@ -779,7 +787,7 @@ class TemplateSyncItem(BaseModel):
     stop_time: dt_time | None = None
 
 
-class WorkLocationSyncItem(BaseModel):
+class WorkLocationSyncItem(RequestModel):
     """Work locations are identified by date (natural key) rather than an integer PK."""
 
     date: dt_date
@@ -789,10 +797,10 @@ class WorkLocationSyncItem(BaseModel):
     label: str | None = None
 
 
-class TimeOffEntrySyncItemBase(BaseModel):
+class TimeOffEntrySyncItemBase(RequestModel):
     """Time-off entries are identified by a stable client-generated entry id."""
 
-    id: str = Field(min_length=1)
+    id: NonEmptyText
     client_updated_at: dt_datetime
 
 
@@ -889,7 +897,7 @@ type TimeOffEntrySyncItem = Annotated[
 ]
 
 
-class GanttTaskSyncItem(BaseModel):
+class GanttTaskSyncItem(RequestModel):
     id: str
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
@@ -957,7 +965,7 @@ class UserDataExport(BaseModel):
 MAX_SYNC_PUSH_ITEMS = 1000
 
 
-class SyncPushRequest(BaseModel):
+class SyncPushRequest(RequestModel):
     """Batched push of local changes from client to server."""
 
     # Opt-in acknowledgement that this batch is *meant* to remove a large share
