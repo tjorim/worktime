@@ -1,3 +1,4 @@
+import type { DetachedWindowAPI } from "happy-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import RealDayjs from "dayjs";
@@ -8,6 +9,9 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import * as useCountdownHook from "@/hooks/useCountdown";
 import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
 import * as shiftCalculations from "@/utils/shiftCalculations";
+
+const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
+const originalViewport = { width: window.innerWidth, height: window.innerHeight };
 
 // Mock useSettings to provide scheduleType
 vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
@@ -232,6 +236,7 @@ describe("CurrentStatus Component", () => {
   });
 
   afterEach(() => {
+    happyDOM.setViewport(originalViewport);
     vi.restoreAllMocks();
   });
 
@@ -547,19 +552,7 @@ describe("CurrentStatus Component", () => {
 
   describe("Compact variant", () => {
     it("starts compact for the responsive variant on mobile", () => {
-      vi.spyOn(window, "matchMedia").mockImplementation(
-        (query) =>
-          ({
-            matches: query === "(max-width: 767.98px)",
-            media: query,
-            onchange: null,
-            addListener: vi.fn(),
-            removeListener: vi.fn(),
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-            dispatchEvent: vi.fn(),
-          }) as MediaQueryList,
-      );
+      happyDOM.setViewport({ width: 390, height: 844 });
 
       renderWithProviders(
         <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} variant="responsive" />,

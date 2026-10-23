@@ -1,8 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import type { DetachedWindowAPI } from "happy-dom";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "@/App";
+
+const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
+const originalColorScheme = happyDOM.settings.device.prefersColorScheme;
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 
@@ -19,6 +23,7 @@ describe("Header", () => {
   });
 
   afterEach(() => {
+    happyDOM.settings.device.prefersColorScheme = originalColorScheme;
     localStorage.clear();
     // Reset URL so settings-toggle behaviour (navigate home when already on /settings)
     // doesn't carry over into the next test.
@@ -138,20 +143,7 @@ describe("Header", () => {
     it("resolves auto theme to system preference and applies to document.documentElement", async () => {
       const user = userEvent.setup();
 
-      // Mock system preference to dark
-      Object.defineProperty(window, "matchMedia", {
-        writable: true,
-        value: vi.fn().mockImplementation((query) => ({
-          matches: query === "(prefers-color-scheme: dark)",
-          media: query,
-          onchange: null,
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
-        })),
-      });
+      happyDOM.settings.device.prefersColorScheme = "dark";
 
       render(<App />);
 
@@ -171,24 +163,7 @@ describe("Header", () => {
     it("updates theme when system preference changes in auto mode", async () => {
       const user = userEvent.setup();
 
-      let mediaQueryChangeHandler: (event: { matches: boolean }) => void = () => {};
-
-      // Mock system preference initially to light
-      Object.defineProperty(window, "matchMedia", {
-        writable: true,
-        value: vi.fn().mockImplementation((query) => ({
-          matches: false, // Initially light
-          media: query,
-          onchange: null,
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-          addEventListener: vi.fn((...args) => {
-            mediaQueryChangeHandler = args[1];
-          }),
-          removeEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
-        })),
-      });
+      happyDOM.settings.device.prefersColorScheme = "light";
 
       render(<App />);
 
@@ -203,23 +178,11 @@ describe("Header", () => {
       // Check initial theme (light)
       expect(document.documentElement.getAttribute("data-theme")).toBe("light");
 
-      // Simulate system preference change to dark
-      Object.defineProperty(window, "matchMedia", {
-        writable: true,
-        value: vi.fn().mockImplementation((query) => ({
-          matches: query === "(prefers-color-scheme: dark)",
-          media: query,
-          onchange: null,
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
-        })),
+      act(() => {
+        happyDOM.settings.device.prefersColorScheme = "dark";
+        // Happy DOM reevaluates existing media queries on resize.
+        window.dispatchEvent(new Event("resize"));
       });
-
-      // Trigger the change handler
-      mediaQueryChangeHandler({ matches: true });
 
       // Check that theme updated to dark
       expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
