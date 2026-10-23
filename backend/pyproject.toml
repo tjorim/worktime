@@ -20,7 +20,7 @@ dependencies = [
   "psycopg[binary]==3.3.6",
   "pycountry==26.2.16",
   "pydantic==2.14.1",
-  "pydantic-settings==2.15.0",
+  "pydantic-settings==2.16.0",
   "PyJWT[crypto]==2.13.0",
   "python-dotenv==1.2.4",
   "sqlalchemy[asyncio]==2.1.4",
