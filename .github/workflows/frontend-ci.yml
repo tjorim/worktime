@@ -35,8 +35,9 @@ jobs:
       - name: Validate UI maintenance inventory
         working-directory: frontend
         run: |
-          node --test scripts/ui-maintenance.verify.mjs
+          node --test scripts/ui-maintenance.verify.mjs scripts/ui-imports.verify.mjs
           node scripts/ui-maintenance.mjs check
+          node scripts/ui-imports.mjs
 
       - name: Validate release version consistency
         working-directory: frontend
