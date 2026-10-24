@@ -298,5 +298,20 @@
       "reviewedAt": null,
       "reviewNote": null
     }
+  },
+  "importPolicy": {
+    "uiAlias": "@/components/ui",
+    "baseUiExceptions": {
+      "src/components/shared/ContextMenu.tsx": {
+        "component": "ContextMenu",
+        "modules": ["@base-ui/react/menu"],
+        "reason": "Virtual pointer-anchored menu composition; preserve its controlled position and focus ownership."
+      },
+      "src/features/timeTracking/TimelineProgressBar.tsx": {
+        "component": "TimelineProgressBar",
+        "modules": ["@base-ui/react/tooltip"],
+        "reason": "Timeline geometry uses the primitive tooltip namespace with the owned TooltipContent; keep the custom chart composition."
+      }
+    }
   }
 }
