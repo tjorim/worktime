@@ -65,3 +65,7 @@ controlled value, no event on re-selecting, keyboard).
 
 None blocking. If a content-shaped loading state is added later, generate
 `skeleton` at that point rather than ahead of a consumer.
+
+## Dependency and upstream source maintenance
+
+Use the pinned CLI and review workflow in [ui-maintenance.md](ui-maintenance.md). Existing generator/version examples above describe the original adoption; current maintenance commands and captured revisions live in that workflow and the frontend inventory.

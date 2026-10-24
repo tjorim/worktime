@@ -243,7 +243,7 @@ add or adjust a clearly headed section). This applies to every repository above,
 
 Tailwind v4 and Base UI are the whole styling stack: Bootstrap, react-bootstrap, Bootstrap Icons and
 Sass are gone (#1384). Generate new shared primitives on demand with
-`cd frontend && pnpm dlx shadcn@latest add <component>`; `components.json` pins `base-nova` (Base UI),
+`cd frontend && pnpm exec shadcn add <component>`; `components.json` pins `base-nova` (Base UI),
 Lucide and no class prefix. Own/restyle the generated source in `src/components/ui/`; all generated `cn`
 imports resolve to `@/lib/utils` (clsx + tailwind-merge). Do not run init over our existing palette or
 bulk-generate components.
@@ -251,7 +251,7 @@ bulk-generate components.
 Before writing or extending a shared control or a repeated composition (selection groups, empty
 states, loading placeholders, pagination, navigation, feedback), check in this order: the existing
 component in `src/components/ui/` and `components/shared/`, then the configured registry
-(`pnpm dlx shadcn@latest add <component> --dry-run`) and the official shadcn/Base UI docs and
+(`pnpm exec shadcn add <component> --dry-run`) and the official shadcn/Base UI docs and
 variants. Generate only a component that has a consumer, restyle it to our tokens and lint rules,
 and keep a custom implementation only for a real requirement (domain rendering, TanStack state,
 action buttons that are not a selection), documenting why. `docs/shadcn-adoption-audit.md` records
@@ -289,3 +289,7 @@ lint does not know is either a typo or needs an `@utility` declaration.
 Verify new components in light and dark, and run lint, formatting, both type checks, tests and build.
 `tests/lib/styleStack.test.ts` pins the layer order, token coverage, the `data-theme` dark variant and
 class merging; `e2e/theme-tokens.spec.ts` checks token resolution in a real browser in both themes.
+
+## UI dependency maintenance
+
+Follow [docs/ui-maintenance.md](docs/ui-maintenance.md) for Base UI/runtime updates and the pinned shadcn CLI, registry comparisons and review records. Run `pnpm ui:check` from `frontend/` after changing shared UI. Dependabot does not update owned component source; preserve the documented customisations and validate interactions and bundle budgets.

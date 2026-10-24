@@ -32,6 +32,12 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Validate UI maintenance inventory
+        working-directory: frontend
+        run: |
+          node --test scripts/ui-maintenance.verify.mjs
+          node scripts/ui-maintenance.mjs check
+
       - name: Validate release version consistency
         working-directory: frontend
         run: pnpm run check-version-consistency

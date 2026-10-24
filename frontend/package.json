@@ -46,7 +46,12 @@
     "locale:audit": "node scripts/locale-audit.mjs",
     "sync-version": "tsx scripts/sync-version.ts",
     "generate-roster-fixture": "pnpm paraglide:compile && TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/generate-roster-fixture.ts",
-    "check-roster-fixture": "pnpm paraglide:compile && TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts"
+    "check-roster-fixture": "pnpm paraglide:compile && TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts",
+    "ui:check": "node scripts/ui-maintenance.mjs check",
+    "ui:upstream": "node scripts/ui-maintenance.mjs upstream",
+    "ui:diff": "node scripts/ui-maintenance.mjs diff",
+    "ui:record": "node scripts/ui-maintenance.mjs record",
+    "ui:test": "node --test scripts/ui-maintenance.verify.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -103,6 +108,7 @@
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "postcss": "^8.5.31",
+    "shadcn": "4.22.1",
     "terser": "^5.51.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
