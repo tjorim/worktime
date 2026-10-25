@@ -115,15 +115,20 @@ export function hasFullDayTimeOffEvent(date: Dayjs, entries: TimeOffEntry[]): bo
 }
 
 /**
- * Checks if a date has a time-off entry that takes the whole day, i.e. anything but a
- * half-day (`half_am` / `half_pm`) entry, where the user still works the other half.
+ * Checks if a date has time off that takes the whole day: any entry that isn't a half-day
+ * (`half_am` / `half_pm`) one, or a morning and an afternoon half-day entry together.
+ * A single half-day entry leaves the other half as a working shift.
  * Unlike `hasFullDayTimeOffEvent` it keeps marker flags (`onsite`, `no_fly`, `can_fly`)
  * counting as time off, matching the legacy .hday behavior.
  */
 export function hasWholeDayTimeOffEvent(date: Dayjs, entries: TimeOffEntry[]): boolean {
-  return hasTimeOffEvent(
-    date,
-    entries.filter((entry) => entry.entryFlag !== "half_am" && entry.entryFlag !== "half_pm"),
+  const matching = entries.filter((entry) => hasTimeOffEvent(date, [entry]));
+  if (matching.some((entry) => entry.entryFlag !== "half_am" && entry.entryFlag !== "half_pm")) {
+    return true;
+  }
+  return (
+    matching.some((entry) => entry.entryFlag === "half_am") &&
+    matching.some((entry) => entry.entryFlag === "half_pm")
   );
 }
 

@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
+
+from app.routers import pebble
 
 
 def test_pebble_scope_matrix_and_clock_actions(
@@ -150,14 +154,26 @@ def test_keycloak_user_keeps_access_to_pebble_surface(
     assert clocked_out.status_code == 200
 
 
-def test_pebble_dashboard_accepts_timezone_and_rejects_unknown_ones(
+def test_pebble_dashboard_forwards_the_requested_timezone_and_rejects_unknown_ones(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
     user_id = create_user_factory(db_client, admin_headers, "pebble-timezone-user")
     read_headers = auth_headers(user_id, via_pat=True)
+
+    # The route has no as_of, so the clock can't be pinned near a day boundary; assert the zone
+    # that reaches the read-model builder instead (which is what shift evaluation keys off).
+    real_builder = pebble.build_dashboard_read_model
+    seen: list[str] = []
+
+    async def spy(*args: Any, **kwargs: Any) -> Any:
+        seen.append(kwargs["timezone"])
+        return await real_builder(*args, **kwargs)
+
+    monkeypatch.setattr(pebble, "build_dashboard_read_model", spy)
 
     default_zone = db_client.get("/api/pebble/dashboard", headers=read_headers)
     explicit_zone = db_client.get("/api/pebble/dashboard?timezone=America/New_York", headers=read_headers)
@@ -165,5 +181,6 @@ def test_pebble_dashboard_accepts_timezone_and_rejects_unknown_ones(
 
     assert default_zone.status_code == 200, default_zone.text
     assert explicit_zone.status_code == 200, explicit_zone.text
+    assert seen == ["Europe/Brussels", "America/New_York"]
     assert unknown_zone.status_code == 400
     assert unknown_zone.json()["code"] == "unknown_timezone"

@@ -788,12 +788,17 @@ async def test_tracked_time_on_a_scheduled_off_day_gets_its_own_event(monkeypatc
     assert "DESCRIPTION:16:00–18:30 Fix prod outage (Incident)" in feed
 
 
-def test_night_shift_end_follows_local_clock_across_dst_change() -> None:
-    from datetime import date
+@pytest.mark.asyncio
+async def test_night_shift_across_the_autumn_dst_change_ends_at_seven_local(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 5-shift/team 1 has a Night shift (23:00 -> 07:00) starting 2026-10-24. Brussels
+    # leaves DST at 03:00 on the 25th, so the shift starts at 21:00Z (CEST) but ends
+    # at 07:00 CET = 06:00Z. Adding a flat 24h to the UTC end (05:00Z) would be an hour early.
+    _patch_ical(monkeypatch, schedule_type="5-shift", team_number=1)
 
-    from app.services.ical_service import _WORKTIME_TIMEZONE, _utc_at
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 10, 20))
 
-    # 2026-10-25 is the autumn DST change in Brussels: a night shift starting that evening
-    # must still end at 07:00 local on the 26th, not 24 absolute hours after its UTC start.
-    end = _utc_at(date(2026, 10, 26), 7)
-    assert end.astimezone(_WORKTIME_TIMEZONE).hour == 7
+    event = feed.split("UID:shift-42-5-shift-1-2026-10-24@worktime", 1)[1].split("END:VEVENT", 1)[0]
+    assert "DTSTART:20261024T210000Z" in event
+    assert "DTEND:20261025T060000Z" in event
