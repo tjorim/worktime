@@ -169,6 +169,16 @@ describe("workingDayUtils", () => {
       expect(isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, holidays)).toBe(false);
     });
 
+    it("keeps a half-day time-off entry as a working day", () => {
+      const half = buildTimeOffEntryForRange({
+        start: "2025-07-16",
+        end: "2025-07-16",
+        entryType: "vacation",
+        entryFlag: "half_am",
+      });
+      expect(isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", [half], emptyHolidays)).toBe(true);
+    });
+
     it("handles 9-5 schedules", () => {
       expect(isWorkingDay(dayjs("2026-01-26"), 1, "9-5", emptyEntries, emptyHolidays)).toBe(true);
       expect(isWorkingDay(dayjs("2026-01-25"), 1, "9-5", emptyEntries, emptyHolidays)).toBe(false);

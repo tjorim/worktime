@@ -786,3 +786,14 @@ async def test_tracked_time_on_a_scheduled_off_day_gets_its_own_event(monkeypatc
     assert "UID:day-info-42-2026-08-29@worktime" in feed
     assert "SUMMARY:Time tracked" in feed
     assert "DESCRIPTION:16:00–18:30 Fix prod outage (Incident)" in feed
+
+
+def test_night_shift_end_follows_local_clock_across_dst_change() -> None:
+    from datetime import date
+
+    from app.services.ical_service import _WORKTIME_TIMEZONE, _utc_at
+
+    # 2026-10-25 is the autumn DST change in Brussels: a night shift starting that evening
+    # must still end at 07:00 local on the 26th, not 24 absolute hours after its UTC start.
+    end = _utc_at(date(2026, 10, 26), 7)
+    assert end.astimezone(_WORKTIME_TIMEZONE).hour == 7

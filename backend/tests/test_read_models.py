@@ -195,3 +195,19 @@ def test_dashboard_rejects_unknown_timezone_with_a_code(
 
     assert response.status_code == 400
     assert response.json()["code"] == "unknown_timezone"
+
+
+def test_current_working_team_uses_each_candidates_own_shift_day() -> None:
+    from datetime import UTC, date, datetime
+
+    from app.services.read_models_service import _get_current_working_team, _resolve_shift
+
+    # 02:00 belongs to the shift day that started the evening before, so the team
+    # working is the one with the night shift on 07-19, not the one starting at 23:00 on 07-20.
+    as_of = datetime(2025, 7, 20, 2, 0, tzinfo=UTC)
+    current = _get_current_working_team("5-shift", as_of)
+
+    assert current is not None
+    assert current.date == date(2025, 7, 19)
+    assert current.shift.code == "N"
+    assert _resolve_shift("5-shift", current.team_number, date(2025, 7, 19)).code == "N"

@@ -148,3 +148,22 @@ def test_keycloak_user_keeps_access_to_pebble_surface(
     assert dashboard.status_code == 200
     assert clocked_in.status_code == 201
     assert clocked_out.status_code == 200
+
+
+def test_pebble_dashboard_accepts_timezone_and_rejects_unknown_ones(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "pebble-timezone-user")
+    read_headers = auth_headers(user_id, via_pat=True)
+
+    default_zone = db_client.get("/api/pebble/dashboard", headers=read_headers)
+    explicit_zone = db_client.get("/api/pebble/dashboard?timezone=America/New_York", headers=read_headers)
+    unknown_zone = db_client.get("/api/pebble/dashboard?timezone=Mars/Olympus", headers=read_headers)
+
+    assert default_zone.status_code == 200, default_zone.text
+    assert explicit_zone.status_code == 200, explicit_zone.text
+    assert unknown_zone.status_code == 400
+    assert unknown_zone.json()["code"] == "unknown_timezone"

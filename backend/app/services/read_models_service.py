@@ -282,7 +282,7 @@ def _get_current_working_team(
                 schedule_type=schedule_type,
                 team_number=team_number,
                 target_date=candidate_date,
-                shift_day=_get_current_shift_day(as_of, schedule_type),
+                shift_day=candidate_date,
                 as_of=as_of,
             )
             if item.is_currently_working:

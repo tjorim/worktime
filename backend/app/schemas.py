@@ -332,7 +332,16 @@ class PushSubscriptionCreate(RequestModel):
     @classmethod
     def validate_endpoint(cls, value: str) -> str:
         parsed = urlparse(value)
-        if parsed.scheme != "https" or not parsed.hostname or not _is_allowed_push_endpoint_host(parsed.hostname):
+        # Reject userinfo, backslashes and control characters: parsers disagree on them, so the
+        # hostname checked here could differ from the host the HTTP client actually connects to.
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or "\\" in value
+            or "@" in parsed.netloc
+            or any(ord(char) < 0x21 for char in value)
+            or not _is_allowed_push_endpoint_host(parsed.hostname)
+        ):
             raise ValueError("endpoint must be a known browser push service URL")
         return value
 
