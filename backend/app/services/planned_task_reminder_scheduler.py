@@ -187,13 +187,20 @@ async def _check_and_send_reminders() -> None:
         now_utc = dt_datetime.now(UTC)
         await _release_stale_claims(session, now_utc)
         due_tasks = await _find_due_tasks(session, now_utc)
-        for task in due_tasks:
+        # Snapshot ids: session.rollback() below expires every loaded instance, and
+        # reading an expired attribute in an async session raises MissingGreenlet.
+        task_ids = [task.id for task in due_tasks]
+        for task_id in task_ids:
             try:
+                # populate_existing: the identity map may still hold the object from the scan.
+                task = await session.get(TimeTrackingTask, task_id, populate_existing=True)
+                if task is None:
+                    continue
                 await _send_reminder(session, task, now_utc=now_utc)
             except Exception:
                 logger.warning(
                     "Planned-task reminder send failed for task %s (non-fatal)",
-                    task.id,
+                    task_id,
                     exc_info=True,
                 )
                 # A DB-level failure mid-statement leaves Postgres refusing further

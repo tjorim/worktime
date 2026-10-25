@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,10 @@ from app.services.db_service import (
 )
 from app.services.read_models_service import build_dashboard_read_model
 
+# Shift hours are local wall-clock times (the iCal feed uses the same zone), so a client
+# that does not say otherwise gets them evaluated in the roster's home zone, not UTC.
+DEFAULT_SHIFT_TIMEZONE = "Europe/Brussels"
+
 router = APIRouter(prefix="/pebble", tags=["Pebble"])
 
 
@@ -46,15 +51,24 @@ def _task_read(task: TimeTrackingTask) -> TaskRead:
 
 @router.get("/dashboard", response_model=PebbleDashboardRead)
 async def get_pebble_dashboard(
+    timezone: str = Query(default=DEFAULT_SHIFT_TIMEZONE),
     principal: AuthenticatedPrincipal = Depends(require_pebble_read_principal),
     session: AsyncSession = Depends(get_session),
 ) -> PebbleDashboardRead:
+    try:
+        ZoneInfo(timezone)
+    except ZoneInfoNotFoundError, KeyError, ValueError:
+        raise api_error(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.UNKNOWN_TIMEZONE,
+            f"Unknown timezone: {timezone!r}",
+        ) from None
     try:
         dashboard = await build_dashboard_read_model(
             session,
             principal,
             as_of=None,
-            timezone="UTC",
+            timezone=timezone,
             next_shift_limit=1,
         )
     except NotFoundError as error:

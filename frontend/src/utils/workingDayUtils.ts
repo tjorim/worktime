@@ -115,11 +115,29 @@ export function hasFullDayTimeOffEvent(date: Dayjs, entries: TimeOffEntry[]): bo
 }
 
 /**
+ * Checks if a date has time off that takes the whole day: any entry that isn't a half-day
+ * (`half_am` / `half_pm`) one, or a morning and an afternoon half-day entry together.
+ * A single half-day entry leaves the other half as a working shift.
+ * Unlike `hasFullDayTimeOffEvent` it keeps marker flags (`onsite`, `no_fly`, `can_fly`)
+ * counting as time off, matching the legacy .hday behavior.
+ */
+export function hasWholeDayTimeOffEvent(date: Dayjs, entries: TimeOffEntry[]): boolean {
+  const matching = entries.filter((entry) => hasTimeOffEvent(date, [entry]));
+  if (matching.some((entry) => entry.entryFlag !== "half_am" && entry.entryFlag !== "half_pm")) {
+    return true;
+  }
+  return (
+    matching.some((entry) => entry.entryFlag === "half_am") &&
+    matching.some((entry) => entry.entryFlag === "half_pm")
+  );
+}
+
+/**
  * Determines if a date is a working day for a user.
  *
  * A day is NOT a working day if:
  * 1. The shift schedule shows OFF (O) for that day
- * 2. There's a time-off event on that day
+ * 2. There's a whole-day time-off event on that day (a half-day entry leaves a half shift)
  * 3. It's a public holiday (with shift-specific logic for night shifts)
  *
  * @param date - The date to check
@@ -149,7 +167,7 @@ export function isWorkingDay(
     }
 
     // Check for time-off events
-    if (hasTimeOffEvent(date, entries)) {
+    if (hasWholeDayTimeOffEvent(date, entries)) {
       return false;
     }
 
@@ -195,7 +213,7 @@ export function getNonWorkingReason(
     }
 
     // Check for time-off events
-    if (hasTimeOffEvent(date, entries)) {
+    if (hasWholeDayTimeOffEvent(date, entries)) {
       return m.nonworking_time_off();
     }
 

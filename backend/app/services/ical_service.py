@@ -286,7 +286,8 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                 shift_start = _utc_at(day, shift.start_hour)
                 shift_end = _utc_at(day, shift.end_hour)
                 if shift_end <= shift_start:
-                    shift_end += timedelta(days=1)
+                    # Next local day, not +24h of absolute time: those differ on DST changes.
+                    shift_end = _utc_at(day + timedelta(days=1), shift.end_hour)
                 shift_windows[day] = (shift_start, shift_end)
 
                 if day not in full_day_off_dates and day not in fully_covered_by_halves:
