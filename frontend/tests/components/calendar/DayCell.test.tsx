@@ -67,10 +67,23 @@ describe("DayCell", () => {
       expect(screen.getByText("15")).toBeInTheDocument();
     });
 
-    it("should have accessible aria-label with full date", () => {
+    it("should have accessible description with full date", () => {
       render(<DayCell {...defaultProps} />);
-      const header = screen.getByLabelText(/January 15, 2025/i);
-      expect(header).toBeInTheDocument();
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/January 15, 2025/i);
+    });
+
+    it("includes the visible shift code and event text in the accessible name", () => {
+      render(
+        <TestProviders>
+          <DayCell
+            {...defaultProps}
+            shiftBadge={OFF_SHIFT}
+            events={[createEntryEvent({ note: "Annual leave" })]}
+          />
+        </TestProviders>,
+      );
+
+      expect(screen.getByRole("gridcell")).toHaveAccessibleName(/15 O.*Annual leave/);
     });
 
     it("should apply is-other-month class when not current month", () => {
@@ -91,10 +104,9 @@ describe("DayCell", () => {
       expect(gridcell).toBeInTheDocument();
     });
 
-    it("should include Today in aria-label when isToday", () => {
+    it("should include Today in accessible description when isToday", () => {
       render(<DayCell {...defaultProps} isToday={true} />);
-      const header = screen.getByLabelText(/Today/i);
-      expect(header).toBeInTheDocument();
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Today/i);
     });
   });
 
@@ -382,9 +394,8 @@ describe("DayCell", () => {
       // Check for holiday emoji (🎉)
       expect(screen.getByText("🎉")).toBeInTheDocument();
 
-      // Check aria-label includes holiday name
-      const header = screen.getByLabelText(/New Year/i);
-      expect(header).toBeInTheDocument();
+      // Check the accessible description includes holiday name
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/New Year/i);
     });
 
     it("should show school holiday indicator", () => {
@@ -398,9 +409,10 @@ describe("DayCell", () => {
       // Check for school holiday emoji (🏫)
       expect(screen.getByText("🏫")).toBeInTheDocument();
 
-      // Check aria-label includes school holiday
-      const header = screen.getByLabelText(/School Holiday: Winter Break/i);
-      expect(header).toBeInTheDocument();
+      // Check the accessible description includes school holiday
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(
+        /School Holiday: Winter Break/i,
+      );
     });
 
     it("should show payday indicator", () => {
@@ -414,9 +426,8 @@ describe("DayCell", () => {
       // Check for payday emoji (💶)
       expect(screen.getByText("💶")).toBeInTheDocument();
 
-      // Check aria-label includes payday
-      const header = screen.getByLabelText(/Payday/i);
-      expect(header).toBeInTheDocument();
+      // Check the accessible description includes payday
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Payday/i);
     });
 
     it("should apply holiday CSS classes", () => {
@@ -460,8 +471,7 @@ describe("DayCell", () => {
       const indicator = screen.getByTitle("Working from home");
       expect(indicator).toBeInTheDocument();
 
-      const header = screen.getByLabelText(/Working from home/i);
-      expect(header).toBeInTheDocument();
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Working from home/i);
     });
 
     it("shows work location indicator when no shift badge is provided", () => {
@@ -475,8 +485,7 @@ describe("DayCell", () => {
       const indicator = screen.getByTitle("Working from office");
       expect(indicator).toBeInTheDocument();
 
-      const header = screen.getByLabelText(/Working from office/i);
-      expect(header).toBeInTheDocument();
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Working from office/i);
     });
 
     it("shows work location alongside school holiday indicators", () => {
@@ -494,8 +503,10 @@ describe("DayCell", () => {
       expect(screen.getByText("🏫")).toBeInTheDocument();
       const indicator = screen.getByTitle("Working from home");
       expect(indicator).toBeInTheDocument();
-      expect(screen.getByLabelText(/School Holiday: Winter Break/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Working from home/i)).toBeInTheDocument();
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(
+        /School Holiday: Winter Break/i,
+      );
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Working from home/i);
     });
   });
 
