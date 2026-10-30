@@ -451,7 +451,7 @@ export function MonthCalendar({
             size="sm"
             onClick={() => onMonthChange(today.startOf("month"))}
             disabled={isCurrentMonth}
-            aria-label={m.calendar_nav_current_month_label()}
+            title={m.calendar_nav_current_month_label()}
           >
             <Icon icon={HouseIcon} className="mr-1" />
             {m.calendar_nav_current_month_text()}

@@ -1,7 +1,15 @@
 import { PlusIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
-import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useId,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { cn } from "@/lib/utils";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
@@ -169,7 +177,7 @@ function openMenuFromElement(el: HTMLElement, handler: (x: number, y: number) =>
  * Accessibility:
  * - role="gridcell" for ARIA grid semantics
  * - Roving tabindex (0 for focused cell, -1 for others)
- * - ARIA labels with full date and holiday information
+ * - Accessible descriptions with full date and holiday information
  * - Color indicators supplemented with emoji symbols
  * - Semantic button elements for all interactive areas
  */
@@ -190,6 +198,7 @@ export function DayCell({
   isFocusTarget = false,
   cellRef,
 }: DayCellProps) {
+  const descriptionId = useId();
   const [isOverflowExpanded, setIsOverflowExpanded] = useState(false);
   const visibleEvents = events.slice(0, MAX_EVENTS);
   const hiddenEvents = events.slice(MAX_EVENTS);
@@ -206,24 +215,24 @@ export function DayCell({
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
-  const ariaLabelParts = [longDateFormatter.format(date.toDate())];
+  const descriptionParts = [longDateFormatter.format(date.toDate())];
   if (isToday) {
-    ariaLabelParts.push(m.daycell_today_label());
+    descriptionParts.push(m.daycell_today_label());
   }
   if (shiftBadge) {
-    ariaLabelParts.push(m.daycell_shift_label({ shift: shiftBadge.name }));
+    descriptionParts.push(m.daycell_shift_label({ shift: shiftBadge.name }));
   }
   if (workLocationLabel) {
-    ariaLabelParts.push(workLocationLabel);
+    descriptionParts.push(workLocationLabel);
   }
   if (publicHoliday) {
-    ariaLabelParts.push(publicHoliday.name);
+    descriptionParts.push(publicHoliday.name);
   }
   if (schoolHoliday) {
-    ariaLabelParts.push(m.daycell_school_holiday_label({ holiday: schoolHoliday.name }));
+    descriptionParts.push(m.daycell_school_holiday_label({ holiday: schoolHoliday.name }));
   }
   if (paydayInfo) {
-    ariaLabelParts.push(paydayInfo.name);
+    descriptionParts.push(paydayInfo.name);
   }
 
   // Long-press state for touch support
@@ -392,7 +401,8 @@ export function DayCell({
       ref={cellRef}
       role="gridcell"
       tabIndex={isFocusTarget ? 0 : -1}
-      aria-label={ariaLabelParts.join(" - ")}
+      // Use the rendered content as the name and provide full date details separately.
+      aria-describedby={descriptionId}
       aria-haspopup={onDayContextMenu ? "menu" : undefined}
       className="month-calendar-day"
       data-other-month={!isCurrentMonth || undefined}
@@ -426,6 +436,9 @@ export function DayCell({
       onTouchEnd={clearLongPress}
       onTouchMove={handleTouchMove}
     >
+      <span id={descriptionId} hidden>
+        {descriptionParts.join(" - ")}
+      </span>
       <div className="month-calendar-day-header">
         <span className="month-calendar-day-number">{date.date()}</span>
         <span className="month-calendar-day-indicators" aria-hidden="true">

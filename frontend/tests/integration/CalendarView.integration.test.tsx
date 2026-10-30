@@ -216,12 +216,12 @@ describe("CalendarView Integration Tests", () => {
       const shiftBadges = screen.getAllByText(/^[MLNDO]$/);
       expect(shiftBadges.length).toBeGreaterThan(0);
 
-      // Verify public holiday is exposed through day-cell accessible name
-      const holidayCell = screen.getByRole("gridcell", { name: /New Year's Day/i });
+      // Verify public holiday is exposed through day-cell accessible description
+      const holidayCell = screen.getByRole("gridcell", { description: /New Year's Day/i });
       expect(holidayCell).toBeInTheDocument();
 
-      // Verify payday is exposed through day-cell accessible name
-      const paydayCell = screen.getByRole("gridcell", { name: /Payday/i });
+      // Verify payday is exposed through day-cell accessible description
+      const paydayCell = screen.getByRole("gridcell", { description: /Payday/i });
       expect(paydayCell).toBeInTheDocument();
     });
 
@@ -261,9 +261,9 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      // Verify school holiday is exposed through day-cell accessible name
+      // Verify school holiday is exposed through day-cell accessible description
       const schoolHolidayCells = screen.getAllByRole("gridcell", {
-        name: /School Holiday: Winter Holiday/i,
+        description: /School Holiday: Winter Holiday/i,
       });
       expect(schoolHolidayCells.length).toBeGreaterThan(0);
     });
@@ -297,7 +297,7 @@ describe("CalendarView Integration Tests", () => {
 
       // Verify both school holiday and time-off event appear (school holiday appears multiple days)
       expect(
-        screen.getAllByRole("gridcell", { name: /School Holiday: Winter Holiday/i }).length,
+        screen.getAllByRole("gridcell", { description: /School Holiday: Winter Holiday/i }).length,
       ).toBeGreaterThan(0);
       expect(screen.getByRole("button", { name: /Personal Day/i })).toBeInTheDocument();
     });
@@ -459,7 +459,7 @@ describe("CalendarView Integration Tests", () => {
       expect(screen.getByText(/February 2025/i)).toBeInTheDocument();
 
       // Click Today button (labeled as "This Month" in MonthCalendar) using fireEvent
-      const todayButton = screen.getByRole("button", { name: /current month/i });
+      const todayButton = screen.getByRole("button", { name: /This Month/i });
       fireEvent.click(todayButton);
 
       // Verify we're back in January
