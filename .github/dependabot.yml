@@ -19,6 +19,7 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+      - "platform:frontend"
     versioning-strategy: "increase"
     groups:
       # Group React core with its types (tightly coupled)
@@ -99,7 +100,7 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
-      - "backend"
+      - "platform:backend"
       - "python"
     groups:
       # fastmcp pulls in mcp and mcp-types; keep them moving together
@@ -138,7 +139,7 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
-      - "android"
+      - "platform:android"
 
   # Monitor Docker images
   - package-ecosystem: "docker"
