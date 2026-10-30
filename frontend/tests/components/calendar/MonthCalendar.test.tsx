@@ -118,7 +118,7 @@ describe("MonthCalendar", () => {
     it("should render navigation buttons", () => {
       render(<MonthCalendar {...defaultProps} />);
       expect(screen.getByRole("button", { name: "Previous month" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Jump to current month" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "This Month" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Next month" })).toBeInTheDocument();
     });
 
@@ -163,7 +163,7 @@ describe("MonthCalendar", () => {
       const user = userEvent.setup();
       render(<MonthCalendar {...defaultProps} />);
 
-      await user.click(screen.getByRole("button", { name: "Jump to current month" }));
+      await user.click(screen.getByRole("button", { name: "This Month" }));
 
       expect(mockOnMonthChange).toHaveBeenCalledTimes(1);
       const calledMonth = mockOnMonthChange.mock.calls[0]![0];
@@ -248,8 +248,8 @@ describe("MonthCalendar", () => {
 
       render(<MonthCalendar {...defaultProps} publicHolidays={publicHolidays} />);
 
-      // Holiday indicators are decorative; holiday name is exposed via gridcell accessible name
-      const holidayCell = screen.getByRole("gridcell", { name: /Test Holiday/i });
+      // Holiday indicators are decorative; holiday name is exposed via gridcell accessible description
+      const holidayCell = screen.getByRole("gridcell", { description: /Test Holiday/i });
       expect(holidayCell).toBeInTheDocument();
     });
 
@@ -266,8 +266,8 @@ describe("MonthCalendar", () => {
 
       render(<MonthCalendar {...defaultProps} paydayMap={paydayMap} />);
 
-      // Payday indicators are decorative; payday name is exposed via gridcell accessible name
-      const paydayCell = screen.getByRole("gridcell", { name: /Payday/i });
+      // Payday indicators are decorative; payday name is exposed via gridcell accessible description
+      const paydayCell = screen.getByRole("gridcell", { description: /Payday/i });
       expect(paydayCell).toBeInTheDocument();
     });
   });
