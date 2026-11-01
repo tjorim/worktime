@@ -3,6 +3,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
+import { ANONYMOUS_USER_STATE_OWNER } from "@/constants/storageKeys";
+import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/utils/syncClient";
 
@@ -92,15 +94,19 @@ export function useSettingsResetFlow({
     if (settingsCleared && resetAccountId && fetchFn) {
       const fetch = fetchFn;
       void fetchPreferences(fetch)
-        .then((prefs) => {
-          if (
-            prefs &&
-            resetGenerationRef.current === resetGeneration &&
-            activeAccountIdRef.current === resetAccountId
-          ) {
-            applyPreferencesPull(prefs.data);
-          }
-        })
+        .then((prefs) =>
+          withPreferenceLock(() => {
+            const owner = getPreferenceOwner();
+            if (
+              prefs &&
+              resetGenerationRef.current === resetGeneration &&
+              activeAccountIdRef.current === resetAccountId &&
+              (owner === null || owner === ANONYMOUS_USER_STATE_OWNER || owner === resetAccountId)
+            ) {
+              applyPreferencesPull(prefs.data, resetAccountId);
+            }
+          }),
+        )
         .catch((error: unknown) => {
           logger.error("Failed to restore preferences from account after reset:", error);
         });

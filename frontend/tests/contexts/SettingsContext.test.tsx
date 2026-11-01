@@ -36,6 +36,23 @@ describe("SettingsContext unified user state", () => {
     expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBeNull();
   });
 
+  it("keeps the atomic account owner through normal edits and a full reset", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-b", scheduleType: "3-shift" }),
+    );
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    await act(async () => {
+      result.current.setMyTeam(3);
+      result.current.updateTheme("dark");
+      result.current.resetSettings();
+    });
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toHaveProperty(
+      "_accountOwner",
+      "user-b",
+    );
+  });
+
   it("provides default values and mutators", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     expect(result.current.settings.timeFormat).toBe("24h");

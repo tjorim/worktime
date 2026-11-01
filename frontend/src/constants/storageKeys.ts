@@ -40,3 +40,6 @@ export function getAccountPreferencesKey(userId: string): string {
 
 /** Incoming account preferences staged until an account switch is committed. */
 export const USER_STATE_SWITCH_STORAGE_KEY = "worktime_user_state_switch";
+
+/** Additional unclaimed copies retained when legacy settings were edited during recovery. */
+export const USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY = "worktime_user_state_unclaimed_history";

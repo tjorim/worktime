@@ -12,6 +12,7 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
+import { preservePreferenceOwner } from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
@@ -405,7 +406,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       markNewAnonymousPreferences();
       _setRawUserState((prev) => {
         const next = typeof updater === "function" ? updater(prev) : updater;
-        return { ...next, _updatedAt: new Date().toISOString() };
+        return preservePreferenceOwner(prev, { ...next, _updatedAt: new Date().toISOString() });
       });
     },
     [_setRawUserState],
@@ -424,7 +425,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const setDeviceLocalState = useCallback(
     (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
       markNewAnonymousPreferences();
-      _setRawUserState((prev) => (typeof updater === "function" ? updater(prev) : updater));
+      _setRawUserState((prev) =>
+        preservePreferenceOwner(prev, typeof updater === "function" ? updater(prev) : updater),
+      );
     },
     [_setRawUserState],
   );
