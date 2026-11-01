@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_UNCLAIMED_STORAGE_KEY,
+  getAccountPreferencesKey,
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
   getSyncCursorKey,
@@ -10,6 +13,7 @@ import {
 } from "@/constants/storageKeys";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { tasksCollection, timeOffCollection } from "@/db/collections";
+import { reconcilePreferences } from "@/utils/syncClient";
 import * as collections from "@/db/collections";
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -69,6 +73,7 @@ function seedTimeOff() {
 describe("useFirstSyncFlow", () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-1");
   });
 
   afterEach(() => {
@@ -85,7 +90,8 @@ describe("useFirstSyncFlow", () => {
     expect(result.current.phase).toBe("idle");
   });
 
-  it("skips the flow when a sync cursor already exists", async () => {
+  it("skips the flow when a sync cursor already exists and no local preferences need isolation", async () => {
+    localStorage.removeItem(USER_STATE_OWNER_STORAGE_KEY);
     localStorage.setItem(getSyncCursorKey("user-1"), "2026-01-01T00:00:00.000Z");
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -113,6 +119,7 @@ describe("useFirstSyncFlow", () => {
   it.each([false, true])(
     "does not upload A's preferences when B signs in (returning: %s)",
     async (returning) => {
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
       mockFetch.mockImplementation(async (url: string) => ({
         ok: true,
         json: async () => (url === "/api/preferences" ? null : emptyStatus),
@@ -197,6 +204,165 @@ describe("useFirstSyncFlow", () => {
     expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe("user-a");
     expect(mockFetch.mock.calls.filter(([url]) => url === "/api/preferences")).toHaveLength(1);
     expect(mockFetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  });
+
+  it.each([false, true])(
+    "isolates legacy preferences with unknown ownership (returning: %s)",
+    async (returning) => {
+      localStorage.removeItem(USER_STATE_OWNER_STORAGE_KEY);
+      const legacy = JSON.stringify({
+        scheduleType: "2-shift",
+        _updatedAt: "2099-01-01T00:00:00Z",
+      });
+      localStorage.setItem(USER_STATE_STORAGE_KEY, legacy);
+      if (returning) localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+      mockFetch.mockImplementation(async (url: string) => ({
+        ok: true,
+        json: async () => (url === "/api/preferences" ? null : emptyStatus),
+      }));
+      const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+      await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+      expect(JSON.stringify(mockFetch.mock.calls)).not.toContain("2-shift");
+      expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).not.toContain("2-shift");
+      expect(localStorage.getItem(USER_STATE_UNCLAIMED_STORAGE_KEY)).toBe(legacy);
+    },
+  );
+
+  it.each(["replacement", "backup"])(
+    "keeps sync disabled when the %s write fails",
+    async (failure) => {
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+      const outgoing = JSON.stringify({
+        scheduleType: "2-shift",
+        _updatedAt: "2099-01-01T00:00:00Z",
+      });
+      localStorage.setItem(USER_STATE_STORAGE_KEY, outgoing);
+      localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { scheduleType: "3-shift" } }),
+      });
+      const original = localStorage.setItem;
+      const write = vi.spyOn(localStorage, "setItem").mockImplementation(function (
+        this: Storage,
+        key: string,
+        value: string,
+      ) {
+        if (
+          key ===
+          (failure === "replacement" ? USER_STATE_STORAGE_KEY : getAccountPreferencesKey("user-a"))
+        )
+          throw new DOMException("Quota exceeded", "QuotaExceededError");
+        return original.call(this, key, value);
+      });
+      try {
+        const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), {
+          wrapper,
+        });
+        await waitFor(() => expect(result.current.phase).toBe("error"));
+        expect(result.current.isSyncEstablished).toBe(false);
+        expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).toBe(outgoing);
+        expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).not.toBe("user-b");
+      } finally {
+        write.mockRestore();
+      }
+    },
+  );
+
+  it("does not misattribute the replacement after an owner-write failure and reload", async () => {
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+    const outgoing = JSON.stringify({
+      scheduleType: "2-shift",
+      _updatedAt: "2099-01-01T00:00:00Z",
+    });
+    localStorage.setItem(USER_STATE_STORAGE_KEY, outgoing);
+    localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { scheduleType: "3-shift" } }),
+    });
+    const original = localStorage.setItem;
+    const write = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+      if (key === USER_STATE_OWNER_STORAGE_KEY && value === "user-b")
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      original(key, value);
+    });
+    const first = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    try {
+      await waitFor(() => expect(first.result.current.phase).toBe("error"));
+      expect(first.result.current.isSyncEstablished).toBe(false);
+      expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBeNull();
+    } finally {
+      write.mockRestore();
+      first.unmount();
+    }
+    const next = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    await waitFor(() => expect(next.result.current.isSyncEstablished).toBe(true));
+    expect(localStorage.getItem(getAccountPreferencesKey("user-a"))).toBe(outgoing);
+    expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).toContain("3-shift");
+  });
+
+  it("restores A's unsynced preference edits after A signs in again", async () => {
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+    const outgoing = {
+      scheduleType: "2-shift",
+      settings: { hdayUsername: "alice" },
+      _updatedAt: "2099-01-01T00:00:00Z",
+    };
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(outgoing));
+    localStorage.setItem(getSyncCursorKey("user-a"), emptyStatus.server_timestamp);
+    const fetchA = vi.fn(
+      async (url: string, _init?: RequestInit) =>
+        ({
+          ok: true,
+          json: async () => (url === "/api/preferences" ? null : emptyStatus),
+        }) as Response,
+    );
+    mockFetch.mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () => (url === "/api/preferences" ? null : emptyStatus),
+    }));
+    const { result, rerender } = renderHook(
+      ({ signedIn, uid, fetch }) => useFirstSyncFlow(signedIn, uid, fetch),
+      { wrapper, initialProps: { signedIn: true, uid: "user-a", fetch: fetchA } },
+    );
+    await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+    rerender({ signedIn: false, uid: "user-a", fetch: fetchA });
+    rerender({ signedIn: true, uid: "user-b", fetch: mockFetch });
+    await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+    expect(localStorage.getItem(getAccountPreferencesKey("user-a"))).toBe(JSON.stringify(outgoing));
+    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain("alice");
+    rerender({ signedIn: false, uid: "user-b", fetch: mockFetch });
+    rerender({ signedIn: true, uid: "user-a", fetch: fetchA });
+    await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toMatchObject(outgoing);
+    await reconcilePreferences(fetchA);
+    expect(
+      fetchA.mock.calls.some(
+        ([url, init]) =>
+          url === "/api/preferences" &&
+          init?.method === "PUT" &&
+          init.body?.toString().includes("alice"),
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain("alice");
+  });
+
+  it("allows explicitly anonymous preferences to join the first account", async () => {
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, ANONYMOUS_USER_STATE_OWNER);
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ scheduleType: "2-shift" }));
+    mockFetch.mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () => (url === "/api/preferences" ? null : emptyStatus),
+    }));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+    expect(
+      mockFetch.mock.calls.some(
+        ([url, init]) =>
+          url === "/api/preferences" && init?.method === "PUT" && init.body.includes("2-shift"),
+      ),
+    ).toBe(true);
   });
 
   it("pushes preferences-only local state without treating it as an entity conflict", async () => {

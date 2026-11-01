@@ -3,7 +3,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_OWNER_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+} from "@/constants/storageKeys";
 
 describe("SettingsContext unified user state", () => {
   function wrapper({ children }: { children: ReactNode }) {
@@ -14,6 +18,22 @@ describe("SettingsContext unified user state", () => {
     window.localStorage.clear();
     document.body.removeAttribute("data-theme");
     vi.restoreAllMocks();
+  });
+
+  it.each(["account", "device"])("marks new %s settings as anonymous", async (kind) => {
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    await act(async () => {
+      if (kind === "account") result.current.setMyTeam(3);
+      else result.current.updateTheme("dark");
+    });
+    expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe(ANONYMOUS_USER_STATE_OWNER);
+  });
+
+  it("does not claim legacy preferences as anonymous when editing them", async () => {
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ myTeam: 2 }));
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    await act(async () => result.current.setMyTeam(3));
+    expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBeNull();
   });
 
   it("provides default values and mutators", () => {

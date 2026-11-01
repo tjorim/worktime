@@ -42,7 +42,7 @@ if (typeof window !== "undefined") {
   Object.defineProperty(window, "localStorage", {
     writable: true,
     value: {
-      getItem: (key: string) => storage[key] || null,
+      getItem: (key: string) => storage[key] ?? null,
       setItem: (key: string, value: string) => {
         storage[key] = value;
       },

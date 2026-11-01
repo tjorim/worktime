@@ -6,7 +6,11 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { CountryCode } from "@/types/countries";
 import { isValidCountryCode } from "@/types/countries";
 
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_OWNER_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+} from "@/constants/storageKeys";
 import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
 import { logger } from "@/utils/logger";
 
@@ -367,6 +371,20 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   };
 };
 
+/** Mark only newly created state as anonymous; existing unowned state is legacy. */
+function markNewAnonymousPreferences(): void {
+  try {
+    if (
+      localStorage.getItem(USER_STATE_STORAGE_KEY) === null &&
+      localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY) === null
+    ) {
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, ANONYMOUS_USER_STATE_OWNER);
+    }
+  } catch {
+    // Missing ownership remains unknown, so sign-in will not auto-upload it.
+  }
+}
+
 /**
  * Settings provider that manages the current unified user state in localStorage.
  *
@@ -384,6 +402,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const setUserState = useCallback(
     (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
+      markNewAnonymousPreferences();
       _setRawUserState((prev) => {
         const next = typeof updater === "function" ? updater(prev) : updater;
         return { ...next, _updatedAt: new Date().toISOString() };
@@ -404,6 +423,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   // genuinely newer settings change synced from elsewhere.
   const setDeviceLocalState = useCallback(
     (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
+      markNewAnonymousPreferences();
       _setRawUserState((prev) => (typeof updater === "function" ? updater(prev) : updater));
     },
     [_setRawUserState],

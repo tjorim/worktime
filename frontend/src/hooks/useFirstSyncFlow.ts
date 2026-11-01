@@ -54,7 +54,13 @@ import {
   mergePullIntoCollections,
   preloadSyncCollections,
 } from "@/db/collections";
-import { USER_STATE_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_STORAGE_KEY,
+  USER_STATE_UNCLAIMED_STORAGE_KEY,
+  getAccountPreferencesKey,
+  USER_STATE_OWNER_STORAGE_KEY,
+} from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
 import {
   countSyncPayloadEntities,
@@ -252,12 +258,38 @@ export function useFirstSyncFlow(
       // (or defaults for an empty account) before enabling any sync, including
       // when this account already has a cursor on this device.
       const owner = localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY);
-      if (owner !== null && owner !== uid) {
-        const response = await fetch("/api/preferences");
-        if (!response.ok) throw new Error("Account preferences could not be loaded");
-        const serverPrefs = (await response.json()) as PreferencesResponse | null;
+      const saved = localStorage.getItem(getAccountPreferencesKey(uid));
+      const needsRestore =
+        owner !== null || saved !== null || localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
+      if (owner !== uid && owner !== ANONYMOUS_USER_STATE_OWNER && needsRestore) {
+        let incoming: Record<string, unknown>;
+        if (saved !== null) {
+          // Only this subject can reclaim its unsynced preference edits. The
+          // normal reconciliation will compare them with its server copy.
+          incoming = JSON.parse(saved) as Record<string, unknown>;
+        } else {
+          const response = await fetch("/api/preferences");
+          if (!response.ok) throw new Error("Account preferences could not be loaded");
+          const serverPrefs = (await response.json()) as PreferencesResponse | null;
+          incoming = serverPrefs?.data ?? {};
+        }
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-        applyPreferencesPull(serverPrefs?.data ?? {});
+        const outgoing = localStorage.getItem(USER_STATE_STORAGE_KEY);
+        if (outgoing !== null) {
+          // Never infer ownership of a legacy blob. Keep it for recovery, but
+          // do not upload it to whichever account happens to sign in next.
+          const backupKey =
+            owner === null ? USER_STATE_UNCLAIMED_STORAGE_KEY : getAccountPreferencesKey(owner);
+          const unclaimed = owner === null ? localStorage.getItem(backupKey) : null;
+          if (unclaimed !== null && unclaimed !== outgoing)
+            throw new Error("Unclaimed preferences already exist");
+          localStorage.setItem(backupKey, outgoing);
+        }
+        // Invalidate ownership before replacing the shared blob: if either
+        // subsequent write fails, a reload must not claim the wrong copy.
+        localStorage.removeItem(USER_STATE_OWNER_STORAGE_KEY);
+        if (!applyPreferencesPull(incoming))
+          throw new Error("Account preferences could not be stored");
       }
       localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, uid);
       setPreparedForUser(uid);

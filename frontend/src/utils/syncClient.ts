@@ -755,7 +755,7 @@ export function buildLocalPreferencesPayload(): {
  * synced blob (or values pushed before this device excluded them) overwrite
  * this device's own navigation state or device-local settings.
  */
-export function applyPreferencesPull(data: Record<string, unknown>): void {
+export function applyPreferencesPull(data: Record<string, unknown>): boolean {
   try {
     const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
     let localLastUsed: unknown;
@@ -791,8 +791,10 @@ export function applyPreferencesPull(data: Record<string, unknown>): void {
         }),
       );
     }
+    return true;
   } catch {
-    // Ignore storage errors (e.g., private browsing with full storage quota)
+    // Callers switching accounts must fail closed if the old copy remains.
+    return false;
   }
 }
 
