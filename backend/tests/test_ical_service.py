@@ -608,7 +608,8 @@ async def test_work_location_is_folded_into_the_shift_title_not_a_separate_event
 async def test_work_location_summary_escapes_text_before_folding(
     monkeypatch: pytest.MonkeyPatch, schedule_type: str | None, newline: str
 ) -> None:
-    label = f"Café, A; B\\C{newline}X-WT-REVIEW:injected{newline}BEGIN:VEVENT"
+    long_tail = " Long office name" * 6
+    label = f"Café, A; B\\C{newline}X-WT-REVIEW:injected{newline}BEGIN:VEVENT{long_tail}"
     _patch_ical(
         monkeypatch,
         schedule_type=schedule_type,
@@ -621,8 +622,12 @@ async def test_work_location_summary_escapes_text_before_folding(
     # Unfold physical continuation lines before checking the literal TEXT value.
     unfolded = feed.replace("\r\n ", "")
     prefix = "Day shift — " if schedule_type else ""
-    escaped_label = r"Café\, A\; B\\C\nX-WT-REVIEW:injected\nBEGIN:VEVENT"
+    escaped_label = r"Café\, A\; B\\C\nX-WT-REVIEW:injected\nBEGIN:VEVENT" + long_tail
     assert f"SUMMARY:{prefix}{escaped_label}\r\n" in unfolded
+    # The summary is long enough to be folded, so escaping and folding are exercised together.
+    physical = feed.split("\r\n")
+    summary_index = next(i for i, line in enumerate(physical) if line.startswith("SUMMARY:") and "Caf" in line)
+    assert physical[summary_index + 1].startswith(" ")
     assert "\r\nX-WT-REVIEW:" not in feed
     assert unfolded.split("\r\n").count("BEGIN:VEVENT") == unfolded.split("\r\n").count("END:VEVENT")
     assert all(len(line.encode("utf-8")) <= 75 for line in feed.split("\r\n"))
