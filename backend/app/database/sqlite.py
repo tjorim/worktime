@@ -1,12 +1,14 @@
 """SQLite support for local development and the test suite.
 
 Production runs on PostgreSQL; SQLite exists so a dev instance and the tests need no
-container. The two differences that matter to this application:
+container. The compatibility settings that matter to this application:
 
 * SQLite stores no timezone, so ``DateTime(timezone=True)`` columns come back naive and
   comparing them with aware values raises ``TypeError``. :class:`UTCDateTime` writes aware
   values as UTC and reads every value back as UTC.
 * SQLite ignores foreign keys unless ``PRAGMA foreign_keys=ON`` runs on each connection.
+* WAL lets readers coexist with a writer; a busy timeout lets concurrent writers wait
+  for the write lock instead of failing immediately.
 
 Call :func:`configure_engine` on every SQLite engine, before its first connection.
 """
@@ -50,9 +52,11 @@ class UTCDateTime(DATETIME):
         return process
 
 
-def _enable_foreign_keys(dbapi_connection: Any, _record: Any) -> None:
+def _configure_connection(dbapi_connection: Any, _record: Any) -> None:
     cursor = dbapi_connection.cursor()
     try:
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
     finally:
         cursor.close()
@@ -69,6 +73,6 @@ def install() -> None:
 
 
 def configure_engine(engine: AsyncEngine) -> None:
-    """Install the datetime handling and switch foreign keys on for every connection of *engine*."""
+    """Install datetime handling, foreign keys, and concurrency pragmas on *engine*."""
     install()
-    event.listen(engine.sync_engine, "connect", _enable_foreign_keys)
+    event.listen(engine.sync_engine, "connect", _configure_connection)

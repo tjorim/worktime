@@ -78,7 +78,7 @@ async def delete_account(
     Raises 404 if the session maps to a local user id that no longer exists.
     """
     try:
-        async with session.begin():
-            await delete_user_uncommitted(session, principal.user_id)
+        await delete_user_uncommitted(session, principal.user_id)
+        await session.commit()
     except NotFoundError as error:
         raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error

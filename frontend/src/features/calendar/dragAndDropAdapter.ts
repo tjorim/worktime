@@ -1,3 +1,5 @@
+import { Temporal } from "temporal-polyfill";
+
 import { createDragAndDropPlugin as createV3Plugin } from "@schedule-x/drag-and-drop";
 
 /**
@@ -13,4 +15,18 @@ export function createDragAndDropPlugin(minutesPerInterval = 15) {
     startDateGridDrag: plugin.createDateGridDragHandler.bind(plugin),
     startMonthGridDrag: plugin.createMonthGridDragHandler.bind(plugin),
   };
+}
+
+/** Store drag results in the same local wall-clock format as the Daily Log. */
+export function localDateTime(
+  value: Temporal.ZonedDateTime | Temporal.PlainDate | string,
+): string | null {
+  if (typeof value === "string") return value.replace(" ", "T");
+  if (value instanceof Temporal.ZonedDateTime) {
+    return value
+      .withTimeZone(Temporal.Now.timeZoneId())
+      .toPlainDateTime()
+      .toString({ smallestUnit: "minute" });
+  }
+  return null;
 }

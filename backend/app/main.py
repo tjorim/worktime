@@ -15,14 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import settings
 from .config.cors import get_cors_origins
 from .core.errors import ApiHTTPException, handle_api_http_exception
 from .database import init_db
-from .middleware.rate_limit import handle_rate_limit_exceeded, limiter
+from .middleware.rate_limit import RouterAwareRateLimitMiddleware, handle_rate_limit_exceeded, limiter
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.request_timing import RequestTimingMiddleware
 from .middleware.timing import TimingMiddleware
@@ -187,7 +186,7 @@ else:
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
 app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
-app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RouterAwareRateLimitMiddleware)
 if settings.RATE_LIMIT_ENABLED:
     logger.info(f"✓ Rate limiting enabled ({settings.RATE_LIMIT_DEFAULT} per client IP)")
 else:

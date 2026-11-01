@@ -313,6 +313,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                         if classification == "other":
                             description_lines.insert(0, f"Country: {location.country_code}")
                     description = "\n".join(description_lines)
+                    summary = f"{shift.name} shift{summary_suffix}{location_suffix}"
                     days_with_shift_event.add(day)
                     lines.extend(
                         [
@@ -321,7 +322,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
                             f"DTSTAMP:{stamp}",
                             f"DTSTART:{event_start:%Y%m%dT%H%M%SZ}",
                             f"DTEND:{event_end:%Y%m%dT%H%M%SZ}",
-                            f"SUMMARY:{_escape(shift.name)} shift{summary_suffix}{location_suffix}",
+                            f"SUMMARY:{_escape(summary)}",
                             *([f"DESCRIPTION:{_escape(description)}"] if description else []),
                             *([f"COLOR:{color}"] if color else []),
                             "END:VEVENT",

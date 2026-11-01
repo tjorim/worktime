@@ -9,6 +9,9 @@ import * as m from "@/paraglide/messages.js";
 import { appendToPendingSyncOutbox } from "@/utils/syncClient";
 import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
 
+const mockClearPushSubscription = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock("@/utils/pushNotifications", () => ({ clearPushSubscription: mockClearPushSubscription }));
+
 // Mock react-oidc-context
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
 const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
@@ -375,6 +378,21 @@ describe("AuthContext", () => {
   });
 
   describe("logout", () => {
+    it("waits for push revocation before redirecting away", async () => {
+      let finishCleanup!: () => void;
+      mockClearPushSubscription.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishCleanup = resolve;
+          }),
+      );
+      renderWithProviders(<AuthActions />);
+      await userEvent.click(screen.getByText("logout"));
+      expect(mockSignoutRedirect).not.toHaveBeenCalled();
+      finishCleanup();
+      await waitFor(() => expect(mockSignoutRedirect).toHaveBeenCalledOnce());
+    });
+
     it("calls signoutRedirect when logout is invoked", async () => {
       mockOidcAuth = {
         ...mockOidcAuth,
@@ -393,7 +411,11 @@ describe("AuthContext", () => {
         </>,
       );
       await user.click(screen.getByText("logout"));
-      expect(mockSignoutRedirect).toHaveBeenCalled();
+      await waitFor(() => expect(mockSignoutRedirect).toHaveBeenCalled());
+      expect(mockClearPushSubscription).toHaveBeenCalledWith("tok-abc");
+      expect(mockClearPushSubscription.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSignoutRedirect.mock.invocationCallOrder[0]!,
+      );
     });
   });
 
