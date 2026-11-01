@@ -4,8 +4,11 @@ import ipaddress
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import _should_exempt, sync_check_limits
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
+from starlette.routing import Match
 
 from ..config import settings
 
@@ -67,4 +70,46 @@ def handle_rate_limit_exceeded(request: Request, exc: Exception) -> Response:
     """
     if not isinstance(exc, RateLimitExceeded):
         raise exc
-    return _rate_limit_exceeded_handler(request, exc)
+    response = _rate_limit_exceeded_handler(request, exc)
+    return JSONResponse(
+        {"error": f"Rate limit exceeded: {exc.detail}", "code": "rate_limited"},
+        status_code=429,
+        headers={key: value for key, value in response.headers.items() if key != "content-length"},
+    )
+
+
+class RouterAwareRateLimitMiddleware(BaseHTTPMiddleware):
+    """Resolve FastAPI's lazy included routers before checking SlowAPI limits.
+
+    SlowAPI 0.1.10 only reads top-level route.endpoint, but FastAPI 0.143
+    represents include_router() with endpoint-less groups. Effective contexts
+    preserve inclusion prefixes and expose the actual handler and HTTP methods.
+    Keep this adapter until SlowAPI supports these groups itself.
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        limiter = request.app.state.limiter
+        if not limiter.enabled:
+            return await call_next(request)
+
+        handler = None
+        for route in request.app.routes:
+            contexts = getattr(route, "effective_route_contexts", None)
+            candidates = contexts() if contexts is not None else (route,)
+            for candidate in candidates:
+                match, child_scope = candidate.matches(request.scope)
+                if match == Match.FULL:
+                    handler = child_scope.get("endpoint") or getattr(candidate, "endpoint", None)
+                    break
+            if handler is not None:
+                break
+
+        if _should_exempt(limiter, handler):
+            return await call_next(request)
+        error_response, inject_headers = sync_check_limits(limiter, request, handler, request.app)
+        if error_response is not None:
+            return error_response
+        response = await call_next(request)
+        if inject_headers:
+            response = limiter._inject_headers(response, request.state.view_rate_limit)
+        return response
