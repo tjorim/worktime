@@ -996,6 +996,7 @@
   "personalized_status_today": "Today",
   "personalized_status_team": "Team {team}:",
   "personalized_status_code_label": "Code:",
+  "personalized_status_shift_ended": "Shift ended at {time}",
   "personalized_status_shift_progress": "Shift Progress: {elapsedHours}h / {totalHours}h",
   "personalized_status_shift_progress_aria": "Shift progress: {elapsedHours} of {totalHours} hours",
   "personalized_status_off_day_progress": "Off Day Progress: Day {current} of {total}",

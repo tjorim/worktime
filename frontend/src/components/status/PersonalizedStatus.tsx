@@ -139,13 +139,15 @@ export function PersonalizedStatusContent({
   const effectiveStartTime = isFlexShift ? flexStartTime : currentShiftStartTime;
   const effectiveEndTime = isFlexShift ? flexEndTime : currentShiftEndTime;
 
+  const hasEnded = effectiveEndTime != null && !today.isBefore(effectiveEndTime);
+
   // Shift progress percentage (elapsed / total duration)
   const shiftProgress = useMemo(() => {
     if (!effectiveStartTime || !effectiveEndTime) return null;
     const totalSeconds = effectiveEndTime.diff(effectiveStartTime, "second");
     if (totalSeconds <= 0) return null;
     const elapsedSeconds = today.diff(effectiveStartTime, "second");
-    const clampedElapsedSeconds = Math.max(0, elapsedSeconds);
+    const clampedElapsedSeconds = Math.min(totalSeconds, Math.max(0, elapsedSeconds));
     const percentage = Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100));
     // For flex shifts the presence span is fixed (e.g. 8.5h), so show the total
     // verbatim and give elapsed matching one-decimal precision — otherwise a
@@ -328,7 +330,8 @@ export function PersonalizedStatusContent({
                 )}
               {currentShift.shift.isWorking &&
                 effectiveStartTime &&
-                today.isAfter(effectiveStartTime) && (
+                today.isAfter(effectiveStartTime) &&
+                !hasEnded && (
                   <>
                     <CountdownBadge
                       countdown={shiftEndCountdown}
@@ -364,6 +367,13 @@ export function PersonalizedStatusContent({
                     )}
                   </>
                 )}
+              {currentShift.shift.isWorking && hasEnded && effectiveEndTime && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {m.personalized_status_shift_ended({
+                    time: formatTimeByPreference(effectiveEndTime, settings.timeFormat),
+                  })}
+                </div>
+              )}
               {showFlexEditor && flexWindow && (
                 <div className="mt-2">
                   <FlexStartEditor

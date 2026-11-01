@@ -989,6 +989,7 @@
   "personalized_status_today": "Vandaag",
   "personalized_status_team": "Team {team}:",
   "personalized_status_code_label": "Code:",
+  "personalized_status_shift_ended": "Dienst geëindigd om {time}",
   "personalized_status_shift_progress": "Dienstvoortgang: {elapsedHours}u / {totalHours}u",
   "personalized_status_shift_progress_aria": "Dienstvoortgang: {elapsedHours} van {totalHours} uur",
   "personalized_status_off_day_progress": "Rustdagvoortgang: dag {current} van {total}",
