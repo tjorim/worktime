@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import { setSyncCollectionAuth } from "@/db/collections";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -269,6 +270,78 @@ describe("EventStoreContext", () => {
   });
 
   describe("importHday", () => {
+    it.each(["2026/01/15 # Replacement", ""])(
+      "preserves individual sync mutations for existing raw-editor/helper imports: %s",
+      async (text) => {
+        const { result } = renderHook(() => useEventStore(), { wrapper });
+        const previous = Array.from({ length: 25 }, (_, index) =>
+          createDateEntry("2025-01-01", `Entry ${index}`),
+        );
+        act(() => result.current.replaceEntries(previous));
+        const fetch = vi.fn(
+          async (_input: RequestInfo | URL, init?: RequestInit) =>
+            new Response(null, { status: init?.method === "POST" ? 200 : 503 }),
+        );
+        const pushes = () => fetch.mock.calls.filter((call) => call[1]?.method === "POST");
+        vi.stubGlobal("fetch", fetch);
+        setSyncCollectionAuth("import-test-user", "token");
+        try {
+          act(() => {
+            result.current.importHday(text);
+          });
+          await waitFor(() => expect(pushes()).toHaveLength(25 + (text ? 1 : 0)));
+          const payloads = pushes().map((call) => JSON.parse(call[1]!.body as string));
+          expect(payloads.every((payload) => payload.time_off_entries.length === 1)).toBe(true);
+          expect(
+            payloads.every(
+              (payload) =>
+                !payload.allow_bulk_delete && payload.declared_delete_total === undefined,
+            ),
+          ).toBe(true);
+          expect(
+            payloads
+              .flatMap((payload) => payload.time_off_entries)
+              .filter((item) => item.action === "delete")
+              .map((item) => item.id)
+              .sort(),
+          ).toEqual(previous.map((entry) => entry.id).sort());
+          await waitFor(() => expect(result.current.entries).toHaveLength(text ? 1 : 0));
+        } finally {
+          setSyncCollectionAuth(null);
+          vi.unstubAllGlobals();
+        }
+      },
+    );
+
+    it("batches explicitly confirmed file replacements with bulk-delete consent", async () => {
+      const { result } = renderHook(() => useEventStore(), { wrapper });
+      act(() =>
+        result.current.replaceEntries(
+          Array.from({ length: 25 }, (_, index) => createDateEntry("2025-01-01", `Entry ${index}`)),
+        ),
+      );
+      const fetch = vi.fn(
+        async (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Response(null, { status: init?.method === "POST" ? 200 : 503 }),
+      );
+      const pushes = () => fetch.mock.calls.filter((call) => call[1]?.method === "POST");
+      vi.stubGlobal("fetch", fetch);
+      setSyncCollectionAuth("import-test-user", "token");
+      try {
+        act(() =>
+          result.current.applyImportedEntries([createDateEntry("2026-01-01", "Replacement")], true),
+        );
+        expect(pushes()).toHaveLength(1);
+        const payload = JSON.parse(pushes()[0]![1]!.body as string);
+        expect(payload.time_off_entries).toHaveLength(26);
+        expect(payload.allow_bulk_delete).toBe(true);
+        await waitFor(() => expect(result.current.entries).toHaveLength(1));
+      } finally {
+        setSyncCollectionAuth(null);
+        vi.unstubAllGlobals();
+      }
+    });
+
     it("should import valid .hday content", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 

@@ -51,6 +51,7 @@ import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
+  MAX_SYNC_PUSH_ITEMS,
   appendToSyncOutbox,
   reportTaskRejections,
   countPushConflicts,
@@ -1117,6 +1118,51 @@ export const timeOffCollection = createCollection(
     },
   }),
 );
+
+/** Push a file import as one request, preserving unchanged rows. */
+export function pushTimeOffImport(
+  current: TimeOffEntry[],
+  target: TimeOffEntry[],
+  allowBulkDelete = false,
+): void {
+  const now = dayjs().toISOString();
+  const previous = new Map(current.map((entry) => [entry.id, entry]));
+  const targetIds = new Set(target.map((entry) => entry.id));
+  const changes: SyncPushPayload["time_off_entries"] = current
+    .filter((entry) => !targetIds.has(entry.id))
+    .map((entry) => ({ id: entry.id, action: "delete", client_updated_at: now }));
+  for (const entry of target) {
+    if (JSON.stringify(previous.get(entry.id)) === JSON.stringify(entry)) continue;
+    changes.push({
+      id: entry.id,
+      action: previous.has(entry.id) ? "update" : "create",
+      client_updated_at: now,
+      entry_kind: entry.entryKind,
+      date: entry.entryKind === "date" ? entry.date : null,
+      start_date: entry.entryKind === "range" ? entry.start : null,
+      end_date: entry.entryKind === "range" ? entry.end : null,
+      weekday: entry.entryKind === "weekly" ? entry.weekday : null,
+      entry_type: entry.entryType,
+      entry_flag: entry.entryFlag,
+      note: entry.note,
+    });
+  }
+  const deleteTotal = changes.filter((change) => change.action === "delete").length;
+  void (async () => {
+    for (let offset = 0; offset < changes.length; offset += MAX_SYNC_PUSH_ITEMS) {
+      await pushAndQueue({
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        gantt_tasks: [],
+        time_off_entries: changes.slice(offset, offset + MAX_SYNC_PUSH_ITEMS),
+        allow_bulk_delete: allowBulkDelete,
+        declared_delete_total: deleteTotal,
+      });
+    }
+  })();
+}
 
 // ---------------------------------------------------------------------------
 // Gantt tasks — migrated

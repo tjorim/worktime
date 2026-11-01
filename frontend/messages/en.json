@@ -996,6 +996,7 @@
   "personalized_status_today": "Today",
   "personalized_status_team": "Team {team}:",
   "personalized_status_code_label": "Code:",
+  "personalized_status_shift_ended": "Shift ended at {time}",
   "personalized_status_shift_progress": "Shift Progress: {elapsedHours}h / {totalHours}h",
   "personalized_status_shift_progress_aria": "Shift progress: {elapsedHours} of {totalHours} hours",
   "personalized_status_off_day_progress": "Off Day Progress: Day {current} of {total}",
@@ -1503,5 +1504,16 @@
   "error_code_task_overlap": "Time range overlaps an existing task.",
   "error_code_task_text_invalid": "Task text must contain 1 to 1,000 characters and cannot be blank.",
   "error_code_task_duration_invalid": "Task duration must be between 0 and 24 hours.",
-  "error_code_task_timezone_required": "Task times must include a time zone."
+  "error_code_task_timezone_required": "Task times must include a time zone.",
+  "timeoff_import_too_large": "Choose a .hday file of at most 1 MB.",
+  "timeoff_import_no_entries": "The file contains no valid entries. Nothing has been changed.",
+  "timeoff_import_preview_title": "Preview time off import",
+  "timeoff_import_merge": "Merge entries",
+  "timeoff_import_replace": "Replace all entries",
+  "timeoff_import_summary": "{added} entries to add; {duplicates} exact duplicates will be skipped. Existing entries will be kept.",
+  "timeoff_import_invalid_line": "Line {line}: {reason}. This line will be skipped.",
+  "timeoff_import_replace_warning": "This will delete all {count} existing entries and replace them with the valid, unique entries from the file.",
+  "timeoff_import_invalid_date": "invalid date or reversed date range",
+  "timeoff_import_invalid_syntax": "unsupported .hday syntax",
+  "timeoff_import_more": "and {count} more"
 }
