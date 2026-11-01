@@ -1574,8 +1574,8 @@ class TestSyncMultiDeviceFlow:
                     "client_updated_at": _ts(-30 + i),
                     "text": f"Queued task {i}",
                     "label_id": None,
-                    "start_time": "2026-02-01T09:00:00+00:00",
-                    "stop_time": "2026-02-01T10:00:00+00:00",
+                    "start_time": f"2026-02-01T{9 + i:02}:00:00+00:00",
+                    "stop_time": f"2026-02-01T{10 + i:02}:00:00+00:00",
                     "includes_break": False,
                 }
                 for i, task_id in enumerate(task_ids)
@@ -2400,7 +2400,9 @@ class TestSyncCorrectnessFixes:
             },
             headers=headers,
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        assert resp.json()["results"]["tasks"][0]["code"] == "task_duration_invalid"
+        assert resp.json()["results"]["tasks"][0]["status"] == "conflict"
 
     def test_push_task_update_rejects_stop_time_before_effective_start_time(
         self, db_client: TestClient, auth_headers
@@ -2447,7 +2449,9 @@ class TestSyncCorrectnessFixes:
             },
             headers=headers,
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        assert resp.json()["results"]["tasks"][0]["code"] == "task_duration_invalid"
+        assert resp.json()["results"]["tasks"][0]["status"] == "conflict"
 
     def test_push_gantt_task_create_rejects_end_date_before_start_date(
         self, db_client: TestClient, auth_headers

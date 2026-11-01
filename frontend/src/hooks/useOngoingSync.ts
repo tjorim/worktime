@@ -129,6 +129,7 @@ export function useOngoingSync(
   userId: string | null,
   fetchFn: FetchFn | null,
   onIncrementalPull?: (data: SyncPullResponse) => void,
+  onAcceptServer?: (payload: SyncPushPayload, data: SyncPullResponse) => void,
 ): OngoingSyncState & {
   enqueueChange: EnqueueChangeFn;
   triggerPull: TriggerPullFn;
@@ -217,6 +218,10 @@ export function useOngoingSync(
 
   // Keep a stable ref to the latest pull callback so the flush closure does
   // not become stale when `onIncrementalPull` identity changes.
+  const onAcceptServerRef = useRef(onAcceptServer);
+  useEffect(() => {
+    onAcceptServerRef.current = onAcceptServer;
+  }, [onAcceptServer]);
   const onIncrementalPullRef = useRef(onIncrementalPull);
   useEffect(() => {
     onIncrementalPullRef.current = onIncrementalPull;
@@ -666,11 +671,41 @@ export function useOngoingSync(
     (choice) => {
       const payload = conflictedPayloadRef.current;
       const serverFloor = conflictServerTimestampRef.current;
-      // Clear conflict state immediately regardless of choice.
-      conflictedPayloadRef.current = null;
-      conflictServerTimestampRef.current = undefined;
-      setConflictedPayload(null);
-      setConflictCount(0);
+      const clearConflict = () => {
+        conflictedPayloadRef.current = null;
+        conflictServerTimestampRef.current = undefined;
+        setConflictedPayload(null);
+        setConflictCount(0);
+      };
+      if (
+        choice === "keep-server" &&
+        payload &&
+        payload.tasks.length > 0 &&
+        onAcceptServerRef.current &&
+        fetchFn
+      ) {
+        // Rejected creates can become updates after local edits. Neither has a
+        // server row to overwrite it during a merge pull.
+        // Refresh before discarding it, preserving unrelated local-only changes.
+        enqueueQueueRef.current = enqueueQueueRef.current.then(async () => {
+          try {
+            const snapshot = await pullSyncData(fetchFn);
+            if (!mountedRef.current || conflictedPayloadRef.current !== payload) return;
+            if (!snapshot) {
+              setHasSyncError(true);
+              return;
+            }
+            onIncrementalPullRef.current?.(snapshot);
+            onAcceptServerRef.current?.(payload, snapshot);
+            clearConflict();
+          } catch (error) {
+            logger.error("useOngoingSync: accepting server state failed:", error);
+            if (mountedRef.current) setHasSyncError(true);
+          }
+        });
+        return;
+      }
+      clearConflict();
 
       if (choice === "keep-mine" && payload) {
         // Re-push with timestamps bumped to max(server_updated_at, now) so the
@@ -678,7 +713,7 @@ export function useOngoingSync(
         enqueueChange(bumpClientTimestamps(payload, serverFloor));
       }
     },
-    [enqueueChange],
+    [enqueueChange, fetchFn],
   );
 
   if (!isActive) {

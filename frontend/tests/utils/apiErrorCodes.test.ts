@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import * as codes from "@/utils/apiErrorCodes";
-import { ApiError, describeError, type ErrorCodeMessages } from "@/utils/apiError";
+import { ApiError, describeError, getErrorMessage, type ErrorCodeMessages } from "@/utils/apiError";
 
 const backendSource = readFileSync(
   path.resolve(import.meta.dirname, "../../../backend/app/core/errors.py"),
@@ -35,4 +35,27 @@ describe("error code messages", () => {
     );
     expect(describeError(unknown, codes.accessTokenErrorMessages)).toBeNull();
   });
+  it.each(Object.keys(codes.taskValidationErrorMessages))(
+    "translates task rejection %s without exposing diagnostics",
+    (code) => {
+      const message = getErrorMessage(
+        new ApiError({ status: 400, code, message: "Private server diagnostic" }),
+        "Fallback",
+        codes.taskValidationErrorMessages,
+      );
+      expect(message).toBe(codes.taskValidationErrorMessages[code]?.());
+      expect(message).not.toContain("Private server diagnostic");
+      expect(
+        getErrorMessage(
+          new ApiError({
+            status: 400,
+            code: "future_task_code",
+            message: "Private server diagnostic",
+          }),
+          "Fallback",
+          codes.taskValidationErrorMessages,
+        ),
+      ).toBe("Fallback");
+    },
+  );
 });
