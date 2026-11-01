@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatus";
 import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
 import { useTodayActualStart } from "@/hooks/useTodayActualStart";
@@ -25,7 +25,8 @@ const shift = {
   className: "shift-morning",
 };
 
-function show(now: string, start = 7, end = 15, flex = false) {
+function show(now: string, start = 7, end: number | null = 15, flex = false) {
+  vi.setSystemTime(dayjs(now).toDate());
   vi.mocked(useLiveShiftStatus).mockReturnValue({
     today: dayjs(now),
     shiftDay: dayjs("2026-10-29"),
@@ -48,12 +49,18 @@ function show(now: string, start = 7, end = 15, flex = false) {
 
 describe("personalised shift completion", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.mocked(useTodayActualStart).mockReturnValue(null);
     vi.mocked(useFlexStartOverride).mockReturnValue({
       startTime: null,
       setStartTime: vi.fn(),
       clear: vi.fn(),
     });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
   });
 
   it.each([
@@ -72,12 +79,37 @@ describe("personalised shift completion", () => {
     expect(screen.queryByText(`Shift ended at ${String(end).padStart(2, "0")}:00`) !== null).toBe(
       ended,
     );
+    expect(screen.queryByText(/Starts in/) !== null).toBe(!progress && !ended);
+    expect(screen.queryByText(/Ends in/) !== null).toBe(progress);
     if (progress) {
       const elapsed = dayjs(now).diff(dayjs("2026-10-29").hour(start), "hour");
       expect(screen.getByRole("progressbar")).toHaveAccessibleName(
         `Shift progress: ${elapsed} of 8 hours`,
       );
     }
+  });
+
+  it.each([
+    ["day", "2026-10-29T14:59:59", 7, 15, "15:00"],
+    ["night", "2026-10-30T06:59:59", 23, 7, "07:00"],
+  ])(
+    "switches at the %s shift end before the minute clock updates",
+    (_name, now, start, end, time) => {
+      show(now, start, end);
+      expect(screen.getByText(/Ends in/)).toBeInTheDocument();
+      expect(screen.getByRole("progressbar")).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.queryByText(/Ends in/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+      expect(screen.getByText(`Shift ended at ${time}`)).toBeInTheDocument();
+    },
+  );
+
+  it("does not treat a missing end time as a completed shift", () => {
+    show("2026-10-29T12:00", 7, null);
+    expect(screen.queryByText(/Shift ended at/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ends in/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
   it.each(["actual", "manual"])("uses the %s flex start to determine completion", (source) => {

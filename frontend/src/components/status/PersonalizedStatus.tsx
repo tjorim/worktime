@@ -139,8 +139,6 @@ export function PersonalizedStatusContent({
   const effectiveStartTime = isFlexShift ? flexStartTime : currentShiftStartTime;
   const effectiveEndTime = isFlexShift ? flexEndTime : currentShiftEndTime;
 
-  const hasEnded = effectiveEndTime != null && !today.isBefore(effectiveEndTime);
-
   // Shift progress percentage (elapsed / total duration)
   const shiftProgress = useMemo(() => {
     if (!effectiveStartTime || !effectiveEndTime) return null;
@@ -167,6 +165,7 @@ export function PersonalizedStatusContent({
   const countdown = useCountdown(nextShiftStartTime);
   const shiftStartCountdown = useCountdown(effectiveStartTime);
   const shiftEndCountdown = useCountdown(effectiveEndTime);
+  const hasEnded = effectiveEndTime != null && shiftEndCountdown.isExpired;
   const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
 
   // Tooltip details for current shift badge
