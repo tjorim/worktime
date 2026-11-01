@@ -9,7 +9,7 @@ import {
   createViewMonthGrid,
   createViewWeek,
 } from "@schedule-x/calendar";
-import { createDragAndDropPlugin } from "@/features/calendar/dragAndDropAdapter";
+import { localDateTime, createDragAndDropPlugin } from "@/features/calendar/dragAndDropAdapter";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
 import { Alert } from "@/components/ui/alert";
@@ -29,6 +29,8 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import "@/features/calendar/calendar.css";
 import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
+import { withCalendarEventContent } from "@/features/calendar/calendarEventContent";
 
 const EMPTY_EDIT_FORM: TaskEditForm = {
   text: "",
@@ -50,16 +52,6 @@ function calendarDate(value: Temporal.ZonedDateTime | Temporal.PlainDate | strin
   return value.toString().slice(0, 10);
 }
 
-function localDateTime(value: Temporal.ZonedDateTime | Temporal.PlainDate | string): string | null {
-  if (typeof value === "string") {
-    return value.replace(" ", "T");
-  }
-  if (value instanceof Temporal.ZonedDateTime) {
-    return value.toPlainDateTime().toString({ smallestUnit: "minute" });
-  }
-  return null;
-}
-
 function isValidCompletedRange(start: string, stop: string): boolean {
   return Boolean(
     start && stop && dayjs(`2000-01-01T${start}`).isBefore(dayjs(`2000-01-01T${stop}`)),
@@ -72,10 +64,21 @@ interface CalendarViewProps {
 }
 
 /** Unified Schedule-X view for shifts, time-off entries, and time-tracking tasks. */
-export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewProps) {
+export function CalendarView(props: CalendarViewProps) {
+  // The Schedule-X React hook reads configuration only once on mount.
+  const { settings } = useSettings();
+  return <ConfiguredCalendarView key={`${getLocale()}:${settings.timeFormat}`} {...props} />;
+}
+
+function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewProps) {
   const [range, setRange] = useState<CalendarRange>(currentMonthRange);
-  const events = useCalendarRangeData(range);
-  const { scheduleType, myTeam } = useSettings();
+  const rangeEvents = useCalendarRangeData(range);
+  const { scheduleType, myTeam, settings } = useSettings();
+  const locale = getLocale() === "nl" ? "nl-NL" : "en-GB";
+  const events = useMemo(
+    () => rangeEvents.map((event) => withCalendarEventContent(event, locale, settings.timeFormat)),
+    [rangeEvents, locale, settings.timeFormat],
+  );
   // Mirrors useCalendarRangeData's own effective-team check so single-user schedules
   // (e.g. "9-5", teamCount === 1) don't trigger a false "no roster configured" warning.
   const effectiveTeam = scheduleType ? getEffectiveTeam(myTeam, scheduleType) : null;
@@ -151,6 +154,15 @@ export function CalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewPro
     {
       views: [createViewMonthGrid(), createViewWeek(), createViewDay(), createViewMonthAgenda()],
       defaultView: "month-grid",
+      timezone: Temporal.Now.timeZoneId(),
+      locale,
+      weekOptions: {
+        timeAxisFormatOptions: {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: settings.timeFormat === "12h",
+        },
+      },
       calendars: buildCalendarConfig(labels),
       callbacks: {
         onRangeUpdate: (nextRange) => {

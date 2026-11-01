@@ -23,6 +23,48 @@ const morningShift: Shift = {
 };
 
 describe("mapToScheduleXEvents", () => {
+  it.each([
+    ["2026-10-24", "+02:00"],
+    ["2026-10-26", "+01:00"],
+  ])("preserves local shift and task times on %s across Brussels DST", (date, offset) => {
+    vi.mocked(Temporal.Now.timeZoneId)
+      .mockReturnValueOnce("Europe/Brussels")
+      .mockReturnValueOnce("Europe/Brussels")
+      .mockReturnValueOnce("Europe/Brussels")
+      .mockReturnValueOnce("Europe/Brussels");
+    const shift = shiftToEvent({ date: dayjs(date), shift: morningShift }, 1);
+    expect(shift.start.toString()).toBe(`${date}T07:00:00${offset}[Europe/Brussels]`);
+    expect(shift.end.toString()).toBe(`${date}T15:00:00${offset}[Europe/Brussels]`);
+    const task = taskToEvent({
+      id: "dst",
+      text: "Task",
+      label: "work",
+      startTime: `${date}T08:30`,
+      stopTime: `${date}T09:30`,
+    });
+    expect(task.start.toString()).toBe(`${date}T08:30:00${offset}[Europe/Brussels]`);
+  });
+  it("keeps an overnight shift's wall-clock end across the autumn clock change", () => {
+    vi.mocked(Temporal.Now.timeZoneId)
+      .mockReturnValueOnce("Europe/Brussels")
+      .mockReturnValueOnce("Europe/Brussels");
+    const event = shiftToEvent(
+      {
+        date: dayjs("2026-10-24"),
+        shift: {
+          ...morningShift,
+          code: "N",
+          name: "Night",
+          start: 23,
+          end: 7,
+        },
+      },
+      1,
+    );
+    expect(event.start.toString()).toBe("2026-10-24T23:00:00+02:00[Europe/Brussels]");
+    expect(event.end.toString()).toBe("2026-10-25T07:00:00+01:00[Europe/Brussels]");
+  });
+
   it("maps a timed shift", () => {
     const event = shiftToEvent({ date: dayjs("2026-05-31"), shift: morningShift }, 2);
 
