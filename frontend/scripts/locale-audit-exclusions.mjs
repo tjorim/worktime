@@ -56,6 +56,9 @@ export const exclusions = {
   "db/collections.ts": {
     Bearer: "HTTP authorization scheme",
   },
+  "utils/pushNotifications.ts": {
+    Bearer: "HTTP authorization scheme",
+  },
   "hooks/useApiClient.ts": {
     Bearer: "HTTP authorization scheme",
   },
