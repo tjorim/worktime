@@ -69,7 +69,8 @@ class TaskValidationError(ValidationError):
 
 async def lock_task_writes(session: AsyncSession, user_id: int) -> None:
     """Serialize task reads and writes per user before resolving partial updates."""
-    await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+    # NO KEY UPDATE serializes writers without conflicting with child-row FK KEY SHARE locks.
+    await session.execute(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
 
 
 async def validate_task(
@@ -80,6 +81,8 @@ async def validate_task(
     stop: datetime | None,
     *,
     exclude_id: str | None = None,
+    validate_text: bool = True,
+    validate_interval: bool = True,
 ) -> None:
     """Validate new task values. Text is limited to 1,000 characters; intervals to 24 hours.
 
@@ -87,10 +90,12 @@ async def validate_task(
     to now (or their start when future-dated), not indefinitely into planned work.
     Midnight crossing is deliberately allowed; no local timezone is stored.
     """
-    if text is None or not text.strip() or len(text) > 1000:
+    if validate_text and (text is None or not text.strip() or len(text) > 1000):
         raise TaskValidationError(
             ErrorCode.TASK_TEXT_INVALID, "text must contain 1 to 1000 characters and not be blank"
         )
+    if not validate_interval:
+        return
     if start is None or any(
         value.tzinfo is None or value.utcoffset() is None for value in (start, stop) if value is not None
     ):
@@ -560,18 +565,22 @@ async def update_task(
 
     candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)
-    await validate_task(
-        session,
-        user_id,
-        data.get("text", task.text),
-        candidate_start_time,
-        candidate_stop_time,
-        exclude_id=task_id,
-    )
-    if candidate_stop_time is None:
+    candidate_text = data.get("text", task.text)
+    interval_changed = (candidate_start_time, candidate_stop_time) != (task.start_time, task.stop_time)
+    if interval_changed and candidate_stop_time is None:
         running = await get_running_task(session, user_id)
         if running is not None and running.id != task_id:
             raise ConflictError("only one running task is allowed per user")
+    await validate_task(
+        session,
+        user_id,
+        candidate_text,
+        candidate_start_time,
+        candidate_stop_time,
+        exclude_id=task_id,
+        validate_text=candidate_text != task.text,
+        validate_interval=interval_changed,
+    )
 
     # Computed before the setattr loop below overwrites task.start_time with the new value.
     start_time_changed = "start_time" in data and as_utc(candidate_start_time) != as_utc(task.start_time)

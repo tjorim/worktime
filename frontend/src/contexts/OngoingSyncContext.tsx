@@ -41,6 +41,7 @@ import {
   setSyncCollectionTriggerPull,
   applyIncrementalPullToCollections,
   applyPullToCollections,
+  acceptTaskConflictServerState,
 } from "@/db/collections";
 import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
 
@@ -169,6 +170,7 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     userId,
     isAuthenticated ? fetchFn : null,
     onIncrementalPull,
+    acceptTaskConflictServerState,
   );
 
   // Let collection mutation handlers (see db/collections.ts pushAndQueue)

@@ -330,12 +330,12 @@ class TestPlannedTaskReminderScheduler:
         # The first call above already marked ``task`` as handled, so use a fresh due task to
         # make sure this reaches the delivery lookup.
         next_task = await self._make_planned_task(
-            db_session, owner.id, start_time=fixed_now + timedelta(minutes=8), text="Later meeting"
+            db_session, owner.id, start_time=fixed_now + timedelta(minutes=65), text="Later meeting"
         )
-        await scheduler._send_reminder(db_session, next_task, now_utc=fixed_now)
+        await scheduler._send_reminder(db_session, next_task, now_utc=fixed_now + timedelta(hours=1))
         send_mock.assert_not_called()
         await db_session.refresh(next_task)
-        assert next_task.reminder_sent_at == fixed_now
+        assert next_task.reminder_sent_at == fixed_now + timedelta(hours=1)
         assert await list_subscriptions_for_user(db_session, owner.id) == []
         assert len(await list_subscriptions_for_user(db_session, other.id)) == 1
 

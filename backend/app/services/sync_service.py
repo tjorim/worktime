@@ -534,11 +534,18 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
     from app.services.db_service import validate_task
 
     candidate_text = item.text if "text" in provided_fields else task.text
-    # Replayed/metadata-only legacy rows remain syncable. Validate changed content.
-    if (candidate_text, candidate_start_time, candidate_stop_time) != (task.text, task.start_time, task.stop_time):
-        await validate_task(
-            session, user_id, candidate_text, candidate_start_time, candidate_stop_time, exclude_id=task.id
-        )
+    # Restoration activates the interval again, even when its stored values are unchanged.
+    await validate_task(
+        session,
+        user_id,
+        candidate_text,
+        candidate_start_time,
+        candidate_stop_time,
+        exclude_id=task.id,
+        validate_text=candidate_text != task.text,
+        validate_interval=task.deleted_at is not None
+        or (candidate_start_time, candidate_stop_time) != (task.start_time, task.stop_time),
+    )
     if "label_id" in provided_fields:
         await _validate_task_label_reference(session, user_id, item.label_id)
     if "gantt_task_id" in provided_fields:

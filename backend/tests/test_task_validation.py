@@ -171,3 +171,145 @@ async def test_legacy_invalid_rows_still_pull_and_sync_metadata(db_session):
         ),
     )
     assert result.results["tasks"][0].status == "ok"
+
+
+def test_rest_reopening_prioritizes_running_task_conflict(db_client, auth_headers, create_user_factory):
+    headers = owner(db_client, auth_headers, create_user_factory)
+    url = "/api/time-tracking/tasks"
+    completed = db_client.post(url, json=task(), headers=headers).json()
+    assert (
+        db_client.post(url, json=task(start_time="2026-01-05T11:00:00Z", stop_time=None), headers=headers).status_code
+        == 201
+    )
+    response = db_client.put(f"{url}/{completed['id']}", json={"stop_time": None}, headers=headers)
+    assert response.status_code == 409
+    assert response.json()["code"] == "conflict"
+    assert response.json()["detail"] == "only one running task is allowed per user"
+
+
+def test_sync_restore_checks_unchanged_interval_and_preserves_batch(db_client, auth_headers, create_user_factory):
+    headers = owner(db_client, auth_headers, create_user_factory)
+    url = "/api/time-tracking/tasks"
+    original_id = db_client.post(url, json=task(), headers=headers).json()["id"]
+    assert db_client.delete(f"{url}/{original_id}", headers=headers).status_code == 204
+    occupying_id = db_client.post(url, json=task(), headers=headers).json()["id"]
+    valid_id = str(uuid4())
+    response = db_client.post(
+        "/api/sync/push",
+        json={
+            "tasks": [
+                {
+                    "id": original_id,
+                    "action": "update",
+                    "client_updated_at": datetime.now(UTC).isoformat(),
+                    "includes_break": True,
+                },
+                {
+                    "id": valid_id,
+                    "action": "create",
+                    "client_updated_at": datetime.now(UTC).isoformat(),
+                    **task(start_time="2026-01-06T09:00:00Z", stop_time="2026-01-06T10:00:00Z"),
+                },
+            ]
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200
+    rejected, accepted = response.json()["results"]["tasks"]
+    assert rejected["code"] == "task_overlap"
+    assert rejected["conflicting_task_id"] == occupying_id
+    assert accepted["status"] == "ok"
+    rows = {row["id"]: row for row in db_client.get("/api/sync/pull", headers=headers).json()["tasks"]}
+    assert rows[original_id]["deleted_at"] is not None
+    assert valid_id in rows
+
+
+@pytest.mark.asyncio
+async def test_legacy_rest_updates_validate_only_changed_fields(db_session):
+    from app.database.models import TimeTrackingTask
+    from app.schemas import TaskUpdate, UserCreate
+    from app.services.db_service import TaskValidationError, create_user, update_task
+
+    user = await create_user(db_session, UserCreate(username="legacy-rest", display_name="Legacy"))
+    row = TimeTrackingTask(
+        user_id=user.id,
+        text="",
+        start_time=datetime(2026, 1, 1, tzinfo=UTC),
+        stop_time=datetime(2026, 1, 3, tzinfo=UTC),
+    )
+    db_session.add(row)
+    await db_session.commit()
+    await update_task(db_session, user.id, row.id, TaskUpdate(includes_break=True))
+    assert row.includes_break is True
+    # Fixing the interval must not revalidate unchanged legacy text.
+    await update_task(db_session, user.id, row.id, TaskUpdate(stop_time=datetime(2026, 1, 1, 1, tzinfo=UTC)))
+    assert row.text == ""
+    with pytest.raises(TaskValidationError) as error:
+        await update_task(db_session, user.id, row.id, TaskUpdate(text=" " * 1001))
+    assert error.value.code == "task_text_invalid"
+    # Conversely, fixing text must not revalidate an unchanged legacy interval.
+    row.stop_time = datetime(2026, 1, 3, tzinfo=UTC)
+    await db_session.commit()
+    await update_task(db_session, user.id, row.id, TaskUpdate(text="Corrected text"))
+    assert row.text == "Corrected text"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_sync_batches_with_child_inserts_do_not_deadlock(test_db, monkeypatch):
+    import asyncio
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    from app.schemas import SyncPushRequest, UserCreate
+    from app.services import sync_service
+    from app.services.db_service import create_user
+
+    if test_db.dialect.name != "postgresql":
+        pytest.skip("requires PostgreSQL foreign-key row locks")
+    factory = async_sessionmaker(test_db, expire_on_commit=False)
+    async with factory() as session:
+        user = await create_user(session, UserCreate(username="batch-locking", display_name="Batch"))
+        user_id = user.id
+    barrier = asyncio.Barrier(2)
+    original_lock = sync_service.lock_task_writes
+
+    async def lock_after_child_flush(session, user_id):
+        # Both batches hold FK KEY SHARE locks before requesting the writer lock.
+        await session.flush()
+        await barrier.wait()
+        await original_lock(session, user_id)
+
+    monkeypatch.setattr(sync_service, "lock_task_writes", lock_after_child_flush)
+
+    async def push(index):
+        label_id, task_id = str(uuid4()), str(uuid4())
+        async with factory() as session:
+            payload = SyncPushRequest.model_validate(
+                {
+                    "labels": [
+                        {
+                            "id": label_id,
+                            "action": "create",
+                            "name": f"Batch {index}",
+                            "color": "#112233",
+                            "client_updated_at": datetime.now(UTC),
+                        }
+                    ],
+                    "tasks": [
+                        {
+                            "id": task_id,
+                            "action": "create",
+                            "label_id": label_id,
+                            "client_updated_at": datetime.now(UTC),
+                            **task(
+                                start_time=f"2026-01-05T{9 + index:02}:00:00Z",
+                                stop_time=f"2026-01-05T{10 + index:02}:00:00Z",
+                            ),
+                        }
+                    ],
+                }
+            )
+            return await sync_service.push_changes(session, user_id, payload)
+
+    results = await asyncio.wait_for(asyncio.gather(push(0), push(1)), timeout=10)
+    assert all(result.results["tasks"][0].status == "ok" for result in results)

@@ -94,5 +94,8 @@ and optional `conflicting_task_id`, while accepting the remaining valid records.
 The web client shows the translated reason, retains rejected edits for the existing
 conflict resolver, and pulls the server state. Choosing to keep a rejected local
 edit retries validation; it does not override these rules. Replays rejected by LWW
-and unchanged legacy content are not revalidated, so pre-existing invalid rows
-remain readable and syncable. Labels remain optional (#1678).
+and unchanged legacy fields are not revalidated by REST or sync, so pre-existing
+invalid rows remain readable and editable. Restoring a deleted row always validates
+its interval again. Accepting server state refreshes the snapshot before removing
+rejected task creates that are still absent, preserving unrelated local edits.
+Labels remain optional (#1678).
