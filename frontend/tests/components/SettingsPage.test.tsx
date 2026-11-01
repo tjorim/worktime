@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
-import { SettingsContent } from "@/pages/SettingsPage";
+import { SettingsPage, SettingsContent } from "@/pages/SettingsPage";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
@@ -24,11 +24,18 @@ import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiToken
 import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
 import * as m from "@/paraglide/messages.js";
 
+const routeState = vi.hoisted(() => ({ section: "scheduleTeam", navigate: vi.fn() }));
+vi.mock("@/contexts/AppShellContext", () => ({
+  useAppShellContext: () => ({ openAbout: vi.fn(), openShortcuts: vi.fn() }),
+}));
+
 // Stub <Link> so tests don't need a RouterProvider context.
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
+    useSearch: () => ({ section: routeState.section }),
+    useNavigate: () => routeState.navigate,
     Link: ({
       to,
       className,
@@ -76,6 +83,7 @@ afterEach(() => {
   useOngoingSyncContextSpy?.mockRestore();
   useOngoingSyncContextSpy = undefined;
   vi.clearAllMocks();
+  routeState.section = "scheduleTeam";
   vi.unstubAllGlobals();
 
   localStorage.removeItem(USER_STATE_STORAGE_KEY);
@@ -226,6 +234,77 @@ function renderSettingsAdminUsersHarness({
   render(<Harness />);
   return { showSuccessToast };
 }
+
+describe("Settings section URLs", () => {
+  it("falls back to the default section when the router drops an unknown section", () => {
+    // The router's validateSearch removes unknown values before the page reads them.
+    mockAuthenticatedUser();
+    routeState.section = "scheduleTeam";
+    renderWithProviders(<SettingsPage />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: m.schedule_team_section_title() }),
+    ).toBeInTheDocument();
+    expect(routeState.navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps an admin link when the profile request fails", async () => {
+    mockAuthenticatedUser();
+    let profileRequests = 0;
+    server.use(
+      http.get("*/api/me", () => {
+        profileRequests += 1;
+        return HttpResponse.json({ detail: "down" }, { status: 500 });
+      }),
+    );
+    routeState.section = "admin";
+    renderWithProviders(<SettingsPage />);
+    await waitFor(() => expect(profileRequests).toBeGreaterThan(0));
+    // Let the failed request settle so a wrongly-resolved role would have redirected by now.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(routeState.navigate).not.toHaveBeenCalled();
+  });
+
+  it("replaces admin links for non-admins without a blank admin heading", async () => {
+    mockAuthenticatedUser();
+    routeState.section = "admin";
+    renderWithProviders(<SettingsPage />);
+    expect(
+      screen.queryByRole("heading", { name: m.account_admin_users_title() }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("2-shift")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(routeState.navigate).toHaveBeenCalledWith({
+        to: "/settings",
+        search: { section: "scheduleTeam" },
+        replace: true,
+      }),
+    );
+  });
+
+  it("preserves admin links until the admin profile loads", async () => {
+    mockAuthenticatedUser();
+    server.use(
+      http.get("*/api/me", () =>
+        HttpResponse.json({
+          id: 1,
+          username: "admin",
+          display_name: "Admin",
+          is_admin: true,
+          capabilities: { backup_enabled: true },
+        }),
+      ),
+    );
+    routeState.section = "admin";
+    renderWithProviders(<SettingsPage />);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: m.account_admin_users_title() }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("No users found.")).toBeInTheDocument();
+    expect(routeState.navigate).not.toHaveBeenCalled();
+  });
+});
 
 describe("SettingsPage Account Section", () => {
   it("renders only the sign in button when not authenticated", () => {

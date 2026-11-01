@@ -1,10 +1,11 @@
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import * as m from "@/paraglide/messages.js";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const gate = vi.hoisted(() => {
   const state: {
-    mode: "ok" | "slow" | "fail";
+    mode: "ok" | "slow" | "fail" | "render-error";
     release: () => void;
     imports: number;
   } = { mode: "ok", release: () => {}, imports: 0 };
@@ -28,7 +29,12 @@ async function makeRouter(path: string) {
     gate.imports += 1;
     if (gate.mode === "fail") throw new Error("Failed to fetch dynamically imported module");
     if (gate.mode === "slow") await new Promise<void>((resolve) => (gate.release = resolve));
-    return { SettingsPage: () => <p>settings page</p> };
+    return {
+      SettingsPage: () => {
+        if (gate.mode === "render-error") throw new Error("Private diagnostic");
+        return <p>settings page</p>;
+      },
+    };
   });
   const { router: appRouter } = await import("@/router");
   return createRouter({
@@ -65,6 +71,14 @@ describe("lazy secondary routes", () => {
     expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Try Again" })).not.toBeInTheDocument();
     expect(screen.queryByText(/dynamically imported/)).not.toBeInTheDocument();
+  });
+
+  it("translates unexpected route errors without exposing diagnostics", async () => {
+    gate.mode = "render-error";
+    render(<RouterProvider router={await makeRouter("/settings")} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(m.error_boundary_heading());
+    expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
+    expect(screen.queryByText("Private diagnostic")).not.toBeInTheDocument();
   });
 
   it("loads the chunk ahead of navigation on intent preload", async () => {
