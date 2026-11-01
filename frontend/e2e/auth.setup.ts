@@ -1,4 +1,5 @@
 import { test as setup } from "@playwright/test";
+import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 /**
  * Playwright's documented "authenticate once, reuse everywhere" pattern
@@ -56,8 +57,6 @@ function buildFakeOidcUser() {
 // the "select your schedule" prompt, and settings.enableTimeTracking exposes
 // the Time Tracking tab (MainTabs.tsx) without a trip through Settings ->
 // Features. lastUsed also lands the app straight on the Weekly Summary view.
-const userStateStorageKey = "worktime_user_state";
-
 function buildOnboardedUserState() {
   return {
     hasCompletedOnboarding: true,
@@ -92,17 +91,23 @@ function buildOnboardedUserState() {
 setup("authenticate and skip onboarding", async ({ page, baseURL }) => {
   // Navigate first so the localStorage writes land on the app's own origin.
   await page.goto(baseURL ?? "/");
+  const oidcUser = buildFakeOidcUser();
   await page.evaluate(
-    ([oidcKey, oidcUser, userStateKey, userState]) => {
-      window.localStorage.setItem(oidcKey, oidcUser);
-      window.localStorage.setItem(userStateKey, userState);
+    ({ oidcKey, user, stateKey, state, ownerKey, owner }) => {
+      window.localStorage.setItem(oidcKey, user);
+      window.localStorage.setItem(stateKey, state);
+      // These preferences belong to the authenticated fixture user. Without
+      // ownership they represent legacy state, which must not be auto-uploaded.
+      window.localStorage.setItem(ownerKey, owner);
     },
-    [
-      oidcStorageKey,
-      JSON.stringify(buildFakeOidcUser()),
-      userStateStorageKey,
-      JSON.stringify(buildOnboardedUserState()),
-    ] as [string, string, string, string],
+    {
+      oidcKey: oidcStorageKey,
+      user: JSON.stringify(oidcUser),
+      stateKey: USER_STATE_STORAGE_KEY,
+      state: JSON.stringify(buildOnboardedUserState()),
+      ownerKey: USER_STATE_OWNER_STORAGE_KEY,
+      owner: oidcUser.profile.sub,
+    },
   );
   await page.context().storageState({ path: authFile });
 });
