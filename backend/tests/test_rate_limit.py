@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 
-from app.middleware.rate_limit import get_client_ip, handle_rate_limit_exceeded
+from app.middleware.rate_limit import RouterAwareRateLimitMiddleware, get_client_ip, handle_rate_limit_exceeded
 
 
 def _build_app(*, limit: str = "2/minute", enabled: bool = True) -> FastAPI:
@@ -18,7 +19,7 @@ def _build_app(*, limit: str = "2/minute", enabled: bool = True) -> FastAPI:
     app = FastAPI()
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
-    app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(RouterAwareRateLimitMiddleware)
 
     @app.get("/ping")
     async def ping():
@@ -109,3 +110,47 @@ def test_get_client_ip_ignores_x_real_ip_from_untrusted_public_peer():
     request = Request(scope)
 
     assert get_client_ip(request) == "8.8.8.8"
+
+
+def test_real_api_default_limit_and_exemptions():
+    """Exercise lazy included routers, rather than just top-level toy routes."""
+    from app.main import app
+
+    client = TestClient(app)
+    # Authentication failures must also consume the normal API route's bucket.
+    for _ in range(200):
+        response = client.get("/api/me")
+        assert response.status_code == 401
+        assert response.headers["x-ratelimit-limit"] == "200"
+    response = client.get("/api/me")
+    assert response.status_code == 429
+    assert response.json()["code"] == "rate_limited"
+    assert int(response.headers["retry-after"]) > 0
+    assert response.headers["x-ratelimit-remaining"] == "0"
+
+    for _ in range(201):
+        response = client.get("/api/health/liveness")
+        assert response.status_code == 200
+        assert "x-ratelimit-limit" not in response.headers
+        # No auth means the SSE endpoint returns immediately rather than opening
+        # a stream, while still proving its handler bypasses rate limiting.
+        response = client.get("/api/sync/events")
+        assert response.status_code == 401
+        assert "x-ratelimit-limit" not in response.headers
+
+
+def test_authenticated_api_default_limit(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+):
+    user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "limited-user")
+    headers = auth_headers(user_id)
+    for _ in range(200):
+        response = db_client.get("/api/preferences", headers=headers)
+        assert response.status_code == 200
+        assert response.headers["x-ratelimit-limit"] == "200"
+    response = db_client.get("/api/preferences", headers=headers)
+    assert response.status_code == 429
+    assert response.json()["code"] == "rate_limited"
+    assert int(response.headers["retry-after"]) > 0
