@@ -97,5 +97,6 @@ edit retries validation; it does not override these rules. Replays rejected by L
 and unchanged legacy fields are not revalidated by REST or sync, so pre-existing
 invalid rows remain readable and editable. Restoring a deleted row always validates
 its interval again. Accepting server state refreshes the snapshot before removing
-rejected task creates that are still absent, preserving unrelated local edits.
+conflicted tasks that are still absent, including rejected creates later edited
+locally, while preserving unrelated local edits.
 Labels remain optional (#1678).

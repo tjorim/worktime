@@ -4,6 +4,7 @@ import {
   acceptTaskConflictServerState,
   applyIncrementalPullToCollections,
   setSyncCollectionAuth,
+  setSyncCollectionTriggerPull,
   tasksCollection,
 } from "@/db/collections";
 import { useOngoingSync } from "@/hooks/useOngoingSync";
@@ -50,7 +51,9 @@ afterEach(async () => {
     if (tasksCollection.has(id)) await tasksCollection.delete(id).isPersisted.promise;
   }
   localStorage.clear();
+  setSyncCollectionTriggerPull(null);
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("rejected task recovery", () => {
@@ -107,6 +110,46 @@ describe("rejected task recovery", () => {
       unmount();
     },
   );
+
+  it("discards a rejected new task after an edit coalesces its queued create into an update", async () => {
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      const path = new URL(url, "http://localhost").pathname;
+      if (path === "/api/sync/pull") return { ok: true, json: async () => snapshot } as Response;
+      if (path === "/api/sync/push" && init?.method === "POST")
+        return {
+          ok: true,
+          json: async () => ({
+            results: { tasks: [{ id: "rejected", status: "conflict", code: "task_overlap" }] },
+          }),
+        } as Response;
+      return { ok: false, json: async () => null } as Response;
+    });
+    vi.stubGlobal("fetch", fetch);
+    setSyncCollectionAuth("user-1", "test-token");
+    await tasksCollection.preload();
+    await tasksCollection.insert(localTask("rejected")).isPersisted.promise;
+    await tasksCollection.update("rejected", (draft) => {
+      draft.text = "Edited rejected task";
+    }).isPersisted.promise;
+    expect(tasksCollection.has("rejected")).toBe(true);
+    storeSyncCursor("user-1", "2026-01-01T00:00:00Z");
+    const { result, unmount } = renderHook(() =>
+      useOngoingSync(
+        true,
+        "user-1",
+        fetch,
+        applyIncrementalPullToCollections,
+        acceptTaskConflictServerState,
+      ),
+    );
+    await waitFor(() => expect(result.current.conflictCount).toBe(1));
+    expect(result.current.conflictedPayload?.tasks[0]?.action).toBe("update");
+    act(() => result.current.resolveOngoingConflicts("keep-server"));
+    await waitFor(() => expect(result.current.conflictCount).toBe(0));
+    expect(tasksCollection.has("rejected")).toBe(false);
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(3);
+    unmount();
+  });
 
   it("keeps a rejected create when the refreshed server snapshot contains it", async () => {
     await tasksCollection.insert(localTask("rejected")).isPersisted.promise;

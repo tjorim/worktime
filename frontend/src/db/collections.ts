@@ -539,7 +539,7 @@ export function mergeCollectionContents<
   runWriteBatch(collection, items.length > 0, () => collection.utils.writeUpsert(items));
 }
 
-/** Remove only rejected task creates that the server still does not contain. */
+/** Remove conflicted tasks that the refreshed server snapshot does not contain. */
 export function acceptTaskConflictServerState(
   payload: SyncPushPayload,
   data: SyncPullResponse,
@@ -548,9 +548,7 @@ export function acceptTaskConflictServerState(
     data.tasks.filter((task) => task.deleted_at === null).map((task) => task.id),
   );
   const discardedIds = payload.tasks
-    .filter(
-      (task) => task.action === "create" && !serverIds.has(task.id) && tasksCollection.has(task.id),
-    )
+    .filter((task) => !serverIds.has(task.id) && tasksCollection.has(task.id))
     .map((task) => task.id);
   runWriteBatch(tasksCollection, discardedIds.length > 0, () =>
     tasksCollection.utils.writeDelete(discardedIds),

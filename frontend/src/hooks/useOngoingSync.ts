@@ -679,11 +679,13 @@ export function useOngoingSync(
       };
       if (
         choice === "keep-server" &&
-        payload?.tasks.some((task) => task.action === "create") &&
+        payload &&
+        payload.tasks.length > 0 &&
         onAcceptServerRef.current &&
         fetchFn
       ) {
-        // A rejected create has no server row to overwrite it during a merge pull.
+        // Rejected creates can become updates after local edits. Neither has a
+        // server row to overwrite it during a merge pull.
         // Refresh before discarding it, preserving unrelated local-only changes.
         enqueueQueueRef.current = enqueueQueueRef.current.then(async () => {
           try {
