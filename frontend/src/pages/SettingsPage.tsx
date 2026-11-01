@@ -79,8 +79,20 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
   const { openAbout, openShortcuts } = useAppShellContext();
-  const activeSection = search.section ?? "scheduleTeam";
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const requestedSection = search.section ?? "scheduleTeam";
+  const activeSection = resolveSettingsSection(requestedSection, isAdmin === true);
+
+  useEffect(() => {
+    if (requestedSection === activeSection) return;
+    // Keep admin deep links while the account profile is still loading.
+    if (requestedSection === "admin" && isAdmin === null) return;
+    void navigate({
+      to: "/settings",
+      search: { section: activeSection },
+      replace: true,
+    });
+  }, [requestedSection, activeSection, isAdmin, navigate]);
 
   const visibleSections = useMemo(
     () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
@@ -178,6 +190,14 @@ export function SettingsPage() {
   );
 }
 
+function resolveSettingsSection(section: unknown, isAdmin: boolean): SettingsSection {
+  return (
+    SETTINGS_SECTIONS.find(
+      (candidate) => candidate.key === section && (!candidate.adminOnly || isAdmin),
+    )?.key ?? "scheduleTeam"
+  );
+}
+
 export type SettingsSection =
   | "scheduleTeam"
   | "general"
@@ -208,7 +228,7 @@ export function SettingsContent({
   onShowAbout?: () => void;
   onShowShortcuts?: () => void;
   activeSection?: SettingsSection;
-  onAdminStatusChange?: (isAdmin: boolean) => void;
+  onAdminStatusChange?: (isAdmin: boolean | null) => void;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
@@ -314,8 +334,10 @@ export function SettingsContent({
   });
 
   useEffect(() => {
-    onAdminStatusChange?.(isAdmin);
-  }, [isAdmin, onAdminStatusChange]);
+    const status =
+      isValidating || (isAuthenticated && !accountProfile && !profileError) ? null : isAdmin;
+    onAdminStatusChange?.(status);
+  }, [isAdmin, isValidating, isAuthenticated, accountProfile, profileError, onAdminStatusChange]);
   const { syncStatus, retryInSeconds, lastSyncedLabel, backupStatusLabel } = useSettingsSyncStatus({
     isAuthenticated,
     hasSyncError,
@@ -584,7 +606,7 @@ export function SettingsContent({
       />
     ),
   };
-  const sectionContent = sectionRenderers[activeSection]();
+  const sectionContent = sectionRenderers[resolveSettingsSection(activeSection, isAdmin)]();
 
   return (
     <>
