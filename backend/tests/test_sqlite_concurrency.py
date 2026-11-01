@@ -12,9 +12,7 @@ from app.database import engine as database_engine
 async def test_file_sqlite_concurrent_writes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(database_engine, "_engine", None)
     monkeypatch.setattr(database_engine, "_session_factory", None)
-    monkeypatch.setattr(
-        database_engine.settings, "DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
-    )
+    monkeypatch.setattr(database_engine.settings, "DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
     engine, factory = database_engine._build_engine()
     try:
         async with engine.begin() as connection:
@@ -23,9 +21,7 @@ async def test_file_sqlite_concurrent_writes(monkeypatch: pytest.MonkeyPatch, tm
         async def write(worker: int) -> None:
             for index in range(60):
                 async with factory() as session:
-                    await session.execute(
-                        text("INSERT INTO writes (id) VALUES (:id)"), {"id": worker * 60 + index}
-                    )
+                    await session.execute(text("INSERT INTO writes (id) VALUES (:id)"), {"id": worker * 60 + index})
                     await session.commit()
 
         async def read() -> None:
