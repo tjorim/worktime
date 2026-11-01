@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -23,15 +24,15 @@ def _build_engine():
     if _engine is None:
         db_url = settings.resolved_database_url()
         if db_url.startswith("sqlite"):
-            # SQLite (local dev only, no Postgres container needed): a single
-            # shared in-process connection via StaticPool, since SQLite has no
-            # notion of a server-side connection pool and QueuePool's
-            # pool_size/max_overflow kwargs don't apply to it.
+            # In-memory databases need a shared connection to retain their data.
+            # File databases need separate connections so concurrent sessions do
+            # not commit or roll back each other's transactions.
             logger.info("Creating SQLite async engine (local dev)")
+            database = make_url(db_url).database
             _engine = create_async_engine(
                 db_url,
                 echo=settings.DATABASE_ECHO,
-                poolclass=StaticPool,
+                **({"poolclass": StaticPool} if database in (None, "", ":memory:") else {}),
                 connect_args={"check_same_thread": False},
             )
             sqlite.configure_engine(_engine)
