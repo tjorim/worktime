@@ -603,6 +603,32 @@ async def test_work_location_is_folded_into_the_shift_title_not_a_separate_event
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("schedule_type", ["9-5", None])
+@pytest.mark.parametrize("newline", ["\r", "\n", "\r\n"])
+async def test_work_location_summary_escapes_text_before_folding(
+    monkeypatch: pytest.MonkeyPatch, schedule_type: str | None, newline: str
+) -> None:
+    label = f"Café, A; B\\C{newline}X-WT-REVIEW:injected{newline}BEGIN:VEVENT"
+    _patch_ical(
+        monkeypatch,
+        schedule_type=schedule_type,
+        team_number=1 if schedule_type else None,
+        work_locations=[SimpleNamespace(date=date(2026, 8, 24), country_code="FR", label=label)],
+    )
+
+    feed = await ical_service.build_ical_feed(AsyncMock(), 42, today=date(2026, 8, 22))
+
+    # Unfold physical continuation lines before checking the literal TEXT value.
+    unfolded = feed.replace("\r\n ", "")
+    prefix = "Day shift — " if schedule_type else ""
+    escaped_label = r"Café\, A\; B\\C\nX-WT-REVIEW:injected\nBEGIN:VEVENT"
+    assert f"SUMMARY:{prefix}{escaped_label}\r\n" in unfolded
+    assert "\r\nX-WT-REVIEW:" not in feed
+    assert unfolded.split("\r\n").count("BEGIN:VEVENT") == unfolded.split("\r\n").count("END:VEVENT")
+    assert all(len(line.encode("utf-8")) <= 75 for line in feed.split("\r\n"))
+
+
+@pytest.mark.asyncio
 async def test_work_location_and_tracked_time_share_one_fallback_event(monkeypatch: pytest.MonkeyPatch) -> None:
     # No shift configured, so both pieces of info need somewhere to go - they
     # should land on a single event for the day, not one each.
