@@ -135,6 +135,8 @@ export interface SyncRecordResult {
   status: "ok" | "conflict";
   server_updated_at?: string | null;
   conflict_reason?: string | null;
+  code?: string | null;
+  conflicting_task_id?: string | null;
 }
 
 export interface SyncPushResponse {
@@ -314,6 +316,22 @@ function dedupeByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
     map.set(keyFn(item), item);
   }
   return Array.from(map.values());
+}
+
+let taskRejectionHandler: ((code: string) => void) | null = null;
+
+export function setSyncTaskRejectionHandler(handler: ((code: string) => void) | null): void {
+  taskRejectionHandler = handler;
+}
+
+/** Notify once per validation code; diagnostic conflict reasons never reach the UI. */
+export function reportTaskRejections(response: SyncPushResponse): void {
+  const codes = new Set(
+    (response.results?.tasks ?? [])
+      .filter((record) => record.status === "conflict" && record.code)
+      .map((record) => record.code!),
+  );
+  for (const code of codes) taskRejectionHandler?.(code);
 }
 
 /**
@@ -563,7 +581,9 @@ async function pushSinglePayload(
         permanent: isPermanentPushFailure(response.status),
       };
     }
-    return { ok: true, response: (await response.json()) as SyncPushResponse };
+    const result = (await response.json()) as SyncPushResponse;
+    reportTaskRejections(result);
+    return { ok: true, response: result };
   } catch {
     // Network-level failure — always worth retrying.
     return { ok: false, status: null, permanent: false };

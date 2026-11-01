@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
@@ -37,8 +37,8 @@ def test_label_crud_and_delete(
         json={
             "text": "Labeled task",
             "label_id": label_id,
-            "start_time": datetime(2026, 2, 1, 9, 0).isoformat(),
-            "stop_time": datetime(2026, 2, 1, 10, 0).isoformat(),
+            "start_time": datetime(2026, 2, 1, 9, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 2, 1, 10, 0, tzinfo=UTC).isoformat(),
             "includes_break": False,
         },
         headers=headers,
@@ -105,8 +105,8 @@ def test_task_constraints_and_filtering(
             "text": "Invalid Gantt task",
             "label_id": label_id,
             "gantt_task_id": "not-a-real-gantt-task",
-            "start_time": datetime(2026, 2, 1, 8, 0).isoformat(),
-            "stop_time": datetime(2026, 2, 1, 9, 0).isoformat(),
+            "start_time": datetime(2026, 2, 1, 8, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 2, 1, 9, 0, tzinfo=UTC).isoformat(),
         },
         headers=headers,
     )
@@ -118,8 +118,8 @@ def test_task_constraints_and_filtering(
         json={
             "text": "Invalid label",
             "label_id": "not-a-real-label",
-            "start_time": datetime(2026, 2, 1, 8, 0).isoformat(),
-            "stop_time": datetime(2026, 2, 1, 9, 0).isoformat(),
+            "start_time": datetime(2026, 2, 1, 8, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 2, 1, 9, 0, tzinfo=UTC).isoformat(),
             "includes_break": False,
         },
         headers=headers,
@@ -131,7 +131,7 @@ def test_task_constraints_and_filtering(
         json={
             "text": "Running task",
             "label_id": label_id,
-            "start_time": datetime(2026, 2, 2, 9, 0).isoformat(),
+            "start_time": datetime(2026, 2, 2, 9, 0, tzinfo=UTC).isoformat(),
             "stop_time": None,
             "includes_break": False,
         },
@@ -145,7 +145,7 @@ def test_task_constraints_and_filtering(
         json={
             "text": "Second running",
             "label_id": label_id,
-            "start_time": datetime(2026, 2, 2, 10, 0).isoformat(),
+            "start_time": datetime(2026, 2, 2, 10, 0, tzinfo=UTC).isoformat(),
             "stop_time": None,
             "includes_break": False,
         },
@@ -156,7 +156,7 @@ def test_task_constraints_and_filtering(
 
     stop_running_response = db_client.put(
         f"/api/time-tracking/tasks/{running_task_id}?user_id={user_id}",
-        json={"stop_time": datetime(2026, 2, 2, 11, 0).isoformat()},
+        json={"stop_time": datetime(2026, 2, 2, 11, 0, tzinfo=UTC).isoformat()},
         headers=headers,
     )
     assert stop_running_response.status_code == 200
@@ -167,8 +167,8 @@ def test_task_constraints_and_filtering(
             "text": "Filtered task",
             "label_id": label_id,
             "gantt_task_id": gantt_task_id,
-            "start_time": datetime(2026, 2, 3, 12, 0).isoformat(),
-            "stop_time": datetime(2026, 2, 3, 13, 0).isoformat(),
+            "start_time": datetime(2026, 2, 3, 12, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 2, 3, 13, 0, tzinfo=UTC).isoformat(),
             "includes_break": False,
         },
         headers=headers,
@@ -187,8 +187,8 @@ def test_task_constraints_and_filtering(
         json={
             "text": "Other user task",
             "label_id": other_user_label.json()["id"],
-            "start_time": datetime(2026, 2, 3, 14, 0).isoformat(),
-            "stop_time": datetime(2026, 2, 3, 15, 0).isoformat(),
+            "start_time": datetime(2026, 2, 3, 14, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 2, 3, 15, 0, tzinfo=UTC).isoformat(),
             "includes_break": False,
         },
         headers=other_headers,
@@ -274,8 +274,8 @@ def test_get_single_resources(
         json={
             "text": "Single task",
             "label_id": label_id,
-            "start_time": datetime(2026, 3, 1, 9, 0).isoformat(),
-            "stop_time": datetime(2026, 3, 1, 10, 0).isoformat(),
+            "start_time": datetime(2026, 3, 1, 9, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 3, 1, 10, 0, tzinfo=UTC).isoformat(),
             "includes_break": False,
         },
         headers=headers,
@@ -428,8 +428,8 @@ def test_cross_user_cannot_read_modify_or_delete_time_tracking_resources(
         json={
             "text": "Owner task",
             "label_id": label_id,
-            "start_time": datetime(2026, 4, 1, 9, 0).isoformat(),
-            "stop_time": datetime(2026, 4, 1, 10, 0).isoformat(),
+            "start_time": datetime(2026, 4, 1, 9, 0, tzinfo=UTC).isoformat(),
+            "stop_time": datetime(2026, 4, 1, 10, 0, tzinfo=UTC).isoformat(),
             "includes_break": False,
         },
         headers=owner_headers,

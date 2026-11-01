@@ -16,6 +16,11 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { useToast } from "@/contexts/ToastContext";
+import { ApiError, getErrorMessage } from "@/utils/apiError";
+import { taskValidationErrorMessages } from "@/utils/apiErrorCodes";
+import { setSyncTaskRejectionHandler } from "@/utils/syncClient";
+import * as m from "@/paraglide/messages.js";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "./AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -103,6 +108,19 @@ interface OngoingSyncProviderProps {
  * `<SettingsProvider>`, and `<EventStoreProvider>`.
  */
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
+  const { showError } = useToast();
+  useEffect(() => {
+    setSyncTaskRejectionHandler((code) => {
+      showError(
+        getErrorMessage(
+          new ApiError({ status: 400, code }),
+          m.sync_indicator_error(),
+          taskValidationErrorMessages,
+        ),
+      );
+    });
+    return () => setSyncTaskRejectionHandler(null);
+  }, [showError]);
   const { isAuthenticated, userId, getAccessToken } = useAuth();
   const {
     settings,

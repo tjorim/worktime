@@ -77,3 +77,22 @@ For each surface, cover one recognised error (translated reason shown, server te
 absent) and one unknown error (operation fallback shown, server text absent). See
 `tests/utils/apiError.test.ts` and the surface tests that assert
 `queryByText(/<server detail>/)` is absent.
+
+## Time-tracking task validation
+
+REST task writes reject overlaps with 409 (`task_overlap`); `detail.conflicting_task_id`
+identifies the conflicting task. Text must contain non-whitespace content and be at
+most 1,000 characters (`task_text_invalid`, 400). Completed task duration must be
+between zero and 24 elapsed hours (`task_duration_invalid`, 400), and start/stop
+values must include a timezone (`task_timezone_required`, 400). Adjacent intervals
+are allowed. Midnight crossing remains allowed pending #1700. Running timers are
+compared through the current instant, so future planned tasks remain possible;
+the existing single-running-task rule also applies.
+
+Sync push reports these rejections per record as `status: "conflict"`, with `code`
+and optional `conflicting_task_id`, while accepting the remaining valid records.
+The web client shows the translated reason, retains rejected edits for the existing
+conflict resolver, and pulls the server state. Choosing to keep a rejected local
+edit retries validation; it does not override these rules. Replays rejected by LWW
+and unchanged legacy content are not revalidated, so pre-existing invalid rows
+remain readable and syncable. Labels remain optional (#1678).

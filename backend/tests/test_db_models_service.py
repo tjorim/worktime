@@ -138,7 +138,7 @@ async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSessio
         TaskCreate(
             text="Task A",
             label_id=label.id,
-            start_time=datetime(2026, 2, 26, 9, 0),
+            start_time=datetime(2026, 2, 26, 9, 0, tzinfo=UTC),
             stop_time=None,
             includes_break=False,
         ),
@@ -151,7 +151,7 @@ async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSessio
             TaskCreate(
                 text="Task B",
                 label_id=label.id,
-                start_time=datetime(2026, 2, 26, 10, 0),
+                start_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
                 stop_time=None,
                 includes_break=False,
             ),
@@ -235,8 +235,8 @@ async def test_create_task_rejects_negative_duration(db_session: AsyncSession) -
             user.id,
             TaskCreate(
                 text="Bad interval",
-                start_time=datetime(2026, 2, 26, 12, 0),
-                stop_time=datetime(2026, 2, 26, 11, 0),
+                start_time=datetime(2026, 2, 26, 12, 0, tzinfo=UTC),
+                stop_time=datetime(2026, 2, 26, 11, 0, tzinfo=UTC),
                 includes_break=False,
             ),
         )
@@ -249,8 +249,8 @@ async def test_update_task_rejects_negative_duration_with_partial_data(db_sessio
         user.id,
         TaskCreate(
             text="Task",
-            start_time=datetime(2026, 2, 26, 9, 0),
-            stop_time=datetime(2026, 2, 26, 10, 0),
+            start_time=datetime(2026, 2, 26, 9, 0, tzinfo=UTC),
+            stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
             includes_break=False,
         ),
     )
@@ -260,7 +260,7 @@ async def test_update_task_rejects_negative_duration_with_partial_data(db_sessio
             db_session,
             user.id,
             task.id,
-            TaskUpdate.model_construct(stop_time=datetime(2026, 2, 26, 8, 30)),
+            TaskUpdate.model_construct(stop_time=datetime(2026, 2, 26, 8, 30, tzinfo=UTC)),
         )
 
 
@@ -271,8 +271,8 @@ async def test_update_task_resets_reminder_on_an_actual_reschedule(db_session: A
         user.id,
         TaskCreate(
             text="Task",
-            start_time=datetime(2026, 2, 26, 9, 0),
-            stop_time=datetime(2026, 2, 26, 10, 0),
+            start_time=datetime(2026, 2, 26, 9, 0, tzinfo=UTC),
+            stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
             includes_break=False,
         ),
     )
@@ -285,7 +285,7 @@ async def test_update_task_resets_reminder_on_an_actual_reschedule(db_session: A
         db_session,
         user.id,
         task.id,
-        TaskUpdate.model_construct(start_time=datetime(2026, 2, 26, 9, 30)),
+        TaskUpdate.model_construct(start_time=datetime(2026, 2, 26, 9, 30, tzinfo=UTC)),
     )
 
     assert updated.reminder_sent_at is None
@@ -300,11 +300,13 @@ async def test_update_task_does_not_reset_reminder_when_start_time_is_unchanged(
     must not requeue an already-sent reminder into a duplicate notification.
     """
     user = await create_user(db_session, UserCreate(username="reschedule-noop", display_name="No Reschedule"))
-    start_time = datetime(2026, 2, 26, 9, 0)
+    start_time = datetime(2026, 2, 26, 9, 0, tzinfo=UTC)
     task = await create_task(
         db_session,
         user.id,
-        TaskCreate(text="Task", start_time=start_time, stop_time=datetime(2026, 2, 26, 10, 0), includes_break=False),
+        TaskCreate(
+            text="Task", start_time=start_time, stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC), includes_break=False
+        ),
     )
     sent_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
     task.reminder_sent_at = sent_at
@@ -340,8 +342,8 @@ async def test_delete_label_blocked_when_in_use(db_session: AsyncSession) -> Non
         TaskCreate(
             text="Deploy",
             label_id=label.id,
-            start_time=datetime(2026, 2, 26, 12, 0),
-            stop_time=datetime(2026, 2, 26, 13, 0),
+            start_time=datetime(2026, 2, 26, 12, 0, tzinfo=UTC),
+            stop_time=datetime(2026, 2, 26, 13, 0, tzinfo=UTC),
             includes_break=False,
         ),
     )
@@ -482,8 +484,8 @@ async def test_delete_user_removes_all_user_scoped_rows(db_session: AsyncSession
         TaskCreate(
             text="Delete task",
             label_id=label.id,
-            start_time=datetime(2026, 3, 1, 9, 0),
-            stop_time=datetime(2026, 3, 1, 10, 0),
+            start_time=datetime(2026, 3, 1, 9, 0, tzinfo=UTC),
+            stop_time=datetime(2026, 3, 1, 10, 0, tzinfo=UTC),
             includes_break=False,
         ),
     )
@@ -629,7 +631,7 @@ async def test_get_task_is_scoped_to_user(db_session: AsyncSession) -> None:
         owner.id,
         TaskCreate(
             text="Private task",
-            start_time=datetime(2026, 5, 1, 9, 0),
+            start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
             stop_time=None,
             includes_break=False,
         ),
@@ -671,8 +673,8 @@ async def test_soft_deleted_entities_are_tombstoned_and_hidden(db_session: Async
         user.id,
         TaskCreate(
             text="Completed",
-            start_time=datetime(2026, 6, 1, 9, 0),
-            stop_time=datetime(2026, 6, 1, 10, 0),
+            start_time=datetime(2026, 6, 1, 9, 0, tzinfo=UTC),
+            stop_time=datetime(2026, 6, 1, 10, 0, tzinfo=UTC),
             includes_break=False,
         ),
     )

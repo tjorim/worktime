@@ -1499,5 +1499,9 @@
   "school_holidays_network": "Network error: Unable to connect to school holiday API",
   "picker_placeholder": "Select…",
   "picker_open": "Open options",
-  "picker_empty": "No options found."
+  "picker_empty": "No options found.",
+  "error_code_task_overlap": "Time range overlaps an existing task.",
+  "error_code_task_text_invalid": "Task text must contain 1 to 1,000 characters and cannot be blank.",
+  "error_code_task_duration_invalid": "Task duration must be between 0 and 24 hours.",
+  "error_code_task_timezone_required": "Task times must include a time zone."
 }

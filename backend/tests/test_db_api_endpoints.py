@@ -219,7 +219,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
         json={
             "text": "Implement endpoint",
             "label_id": label_id,
-            "start_time": datetime(2026, 1, 1, 9, 0).isoformat(),
+            "start_time": datetime(2026, 1, 1, 9, 0, tzinfo=UTC).isoformat(),
             "stop_time": None,
             "includes_break": False,
         },
@@ -233,7 +233,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
         json={
             "text": "Second running task",
             "label_id": label_id,
-            "start_time": datetime(2026, 1, 1, 10, 0).isoformat(),
+            "start_time": datetime(2026, 1, 1, 10, 0, tzinfo=UTC).isoformat(),
             "stop_time": None,
             "includes_break": False,
         },
@@ -251,7 +251,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
 
     update_task_response = client.put(
         f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
-        json={"stop_time": datetime(2026, 1, 1, 11, 0).isoformat()},
+        json={"stop_time": datetime(2026, 1, 1, 11, 0, tzinfo=UTC).isoformat()},
         headers=headers,
     )
     assert update_task_response.status_code == 200

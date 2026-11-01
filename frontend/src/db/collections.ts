@@ -52,6 +52,9 @@ import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
   appendToSyncOutbox,
+  reportTaskRejections,
+  countPushConflicts,
+  type SyncPushResponse,
   appendToPendingSyncOutbox,
   drainPendingSyncOutbox,
   type GanttTaskSyncRead,
@@ -353,6 +356,12 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     });
     if (!response.ok) {
       throw new Error(`sync push failed: ${response.status}`);
+    }
+    const result = (await response.json()) as SyncPushResponse;
+    reportTaskRejections(result);
+    if (countPushConflicts(result) > 0) {
+      // Preserve rejected local edits for the existing conflict-resolution flow.
+      appendToSyncOutbox(_currentUserId, payload);
     }
     // Refresh lastSyncedAt/outbox/error state right away rather than leaving
     // the sync status badge stale until an unrelated trigger happens to pull.
