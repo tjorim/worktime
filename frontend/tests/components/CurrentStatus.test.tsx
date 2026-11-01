@@ -95,6 +95,7 @@ vi.mock("@/utils/dateTimeUtils", async (importOriginal) => {
     })),
     isSame: vi.fn(() => false),
     isAfter: vi.fn(() => true),
+    isBefore: vi.fn(() => false),
     format: vi.fn(() => "2024-01-15"),
     diff: vi.fn(() => 28800),
     hour: vi.fn(() => ({
