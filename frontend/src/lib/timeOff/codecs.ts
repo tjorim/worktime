@@ -111,8 +111,11 @@ export function createTimeOffEntry(data: TimeOffEntryInput): TimeOffEntry {
   };
 }
 
-export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
-  const parsed = text.trim() ? parseHday(text) : [];
+export function hdayToTimeOffEntries(
+  text: string,
+  onInvalidLine?: (reason: "date" | "syntax") => void,
+): TimeOffImportResult {
+  const parsed = text.trim() ? parseHday(text, onInvalidLine) : [];
   const entries: TimeOffEntry[] = [];
   const skippedLines: string[] = [];
 
@@ -150,6 +153,7 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
     const start = toIsoDate(event.start);
     const end = toIsoDate(event.end ?? event.start);
     if (!isValidRange(start, end)) {
+      onInvalidLine?.("date");
       skippedLines.push(event.raw ?? "");
       continue;
     }

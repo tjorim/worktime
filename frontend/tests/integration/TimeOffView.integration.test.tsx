@@ -15,7 +15,7 @@ import {
   WEEKLY_EVENTS_HDAY,
   EVENT_FLAGS_HDAY,
   COMPLEX_HDAY,
-} from "../fixtures/hday";
+} from "@tests/fixtures/hday";
 
 function renderWithProviders() {
   return render(
@@ -96,6 +96,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([SIMPLE_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Verify all events are rendered in table view
       expect(screen.getByText("Vacation day")).toBeInTheDocument();
@@ -119,6 +120,7 @@ describe("TimeOffView Integration Tests", () => {
       // Find the file input by its accessible name and upload the file
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Wait for import toast
       await screen.findByText(/Imported test.hday/i);
@@ -137,6 +139,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([MULTI_TYPE_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Verify different event types are present (use getAllByText since titles can appear multiple times)
       expect(screen.getAllByText("Regular vacation").length).toBeGreaterThan(0);
@@ -159,6 +162,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([WEEKLY_EVENTS_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Verify weekly events show pattern instead of dates
       expect(screen.getByText("Every Mon")).toBeInTheDocument();
@@ -173,6 +177,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([EVENT_FLAGS_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Verify events are displayed
       expect(screen.getByText("Half day AM")).toBeInTheDocument();
@@ -193,6 +198,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([SIMPLE_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       await user.click(screen.getByRole("button", { name: /Raw \.hday Editor/i }));
 
@@ -374,6 +380,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([COMPLEX_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Verify canonical entries contain all event types
       const entries = getStoredEntries();
@@ -474,6 +481,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([SIMPLE_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // All three events should be visible (no date filtering in table view)
       expect(screen.getByText("Vacation day")).toBeInTheDocument();
@@ -489,6 +497,7 @@ describe("TimeOffView Integration Tests", () => {
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([MULTI_TYPE_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
+      await user.click(await screen.findByRole("button", { name: "Merge entries" }));
 
       // Switch to statistics view
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
