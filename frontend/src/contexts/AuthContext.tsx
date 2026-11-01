@@ -1,3 +1,4 @@
+import { clearPushSubscription } from "@/utils/pushNotifications";
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
@@ -204,11 +205,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [oidcAuth, showError]);
 
   const logout = useCallback(() => {
-    oidcAuth.signoutRedirect().catch((error: unknown) => {
-      logger.error("signoutRedirect failed:", error);
-      showError(m.auth_error_signout());
-    });
-  }, [oidcAuth, showError]);
+    void clearPushSubscription(getAccessToken())
+      .then(() => oidcAuth.signoutRedirect())
+      .catch((error: unknown) => {
+        logger.error("signoutRedirect failed:", error);
+        showError(m.auth_error_signout());
+      });
+  }, [oidcAuth, showError, getAccessToken]);
 
   const renewSession = useCallback(async (): Promise<string | null> => {
     try {
