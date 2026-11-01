@@ -3,7 +3,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import { readErrorDetail } from "@/utils/apiClient";
-import { isPushSupported, urlBase64ToUint8Array } from "@/utils/pushNotifications";
+import {
+  getPushRegistrationGeneration,
+  invalidatePushRegistration,
+  isPushSupported,
+  urlBase64ToUint8Array,
+} from "@/utils/pushNotifications";
 import { logger } from "@/utils/logger";
 
 export interface UsePushSubscriptionReturn {
@@ -41,7 +46,7 @@ export interface UsePushSubscriptionReturn {
  */
 export function usePushSubscription(): UsePushSubscriptionReturn {
   const apiFetch = useApiClient();
-  const { userId, isAuthenticated } = useAuth();
+  const { userId, isAuthenticated, isValidating } = useAuth();
   const { notifications } = useSettings().settings;
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
@@ -58,15 +63,18 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
 
   const subscribeToPush = useCallback(async (): Promise<boolean> => {
     if (!isPushSupported()) return false;
+    const generation = getPushRegistrationGeneration();
+    const revoked = () => generation !== getPushRegistrationGeneration();
 
     try {
       const keyResponse = await apiFetch("/api/push/vapid-public-key");
       if (!keyResponse.ok) return false;
       const { publicKey } = (await keyResponse.json()) as { publicKey: string | null };
-      if (!publicKey) return false;
+      if (!publicKey || revoked()) return false;
 
       const registration = await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
+      if (revoked()) return false;
       const isNewSubscription = subscription === null;
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
@@ -75,6 +83,10 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
         });
       }
 
+      if (revoked()) {
+        await subscription.unsubscribe();
+        return false;
+      }
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const subscriptionJson = subscription.toJSON();
       const response = await apiFetch("/api/push/subscribe", {
@@ -86,6 +98,10 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
           timezone,
         }),
       });
+      if (revoked()) {
+        await subscription.unsubscribe();
+        return false;
+      }
       if (!response.ok) {
         logger.warn("Failed to register push subscription:", await readErrorDetail(response));
         // Only a subscription created in this call is rolled back - an existing one
@@ -112,6 +128,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
   }, [apiFetch]);
 
   const unsubscribeFromPush = useCallback(async (): Promise<void> => {
+    invalidatePushRegistration();
     const subscription = await getActiveSubscription();
     setHasActiveSubscription(false);
     if (!subscription) return;
@@ -132,36 +149,12 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     }
   }, [apiFetch, getActiveSubscription]);
 
-  // Reconciles this device's subscription with whichever account is currently signed
-  // in, whenever the account or reminder preferences change (including on mount). A
-  // push subscription is a browser/device-level object, not scoped to whichever app
-  // account is signed in - on a shared device, a subscription registered by one
-  // account would otherwise silently keep belonging to that account's backend row
-  // after a different account signs in, suppressing the new account's foreground
-  // fallback and risking that account's task details being pushed to a device
-  // someone else is now using.
-  //
-  // Re-upserting (rather than guessing from local state whether ownership already
-  // matches) is what actually closes that gap: the backend's upsert is an idempotent
-  // no-op when this device is already correctly registered for the signed-in account,
-  // and safely reassigns ownership when it isn't. Local heuristics (e.g. a
-  // last-known-owner marker) can't tell a pre-existing legitimate subscription apart
-  // from a genuinely stale one, so they either leave real leaks unresolved or tear
-  // down subscriptions that never needed it - re-upserting has neither failure mode.
-  // Never creates a new subscription on its own; it only ever acts on one that already
-  // exists (creating one remains an explicit user action via subscribeToPush).
+  // Browser subscriptions outlive OIDC sessions. Once auth restoration settles,
+  // revoke signed-out/disabled subscriptions and register enabled ones for the
+  // current account. Never create a subscription implicitly.
   useEffect(() => {
-    // Re-upserting requires an OIDC principal server-side (subscribe/vapid-public-key
-    // both gate on require_oidc_principal), so skip entirely when signed out — including
-    // while the OIDC session is still being restored on mount, when isAuthenticated is
-    // momentarily false. Without this, a device with a leftover browser-level
-    // PushSubscription (e.g. from a previous sign-in never cleanly unsubscribed) would
-    // hit those endpoints unauthenticated on every load, 401, and trip the API client's
-    // session-expired/login-redirect handling for a user who isn't even signed in.
-    if (!isAuthenticated) {
-      setHasActiveSubscription(false);
-      return;
-    }
+    if (isValidating) return;
+    if (!isAuthenticated || notifications !== "on") invalidatePushRegistration();
     let cancelled = false;
     void getActiveSubscription().then(async (subscription) => {
       if (cancelled) return;
@@ -169,11 +162,21 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
         setHasActiveSubscription(false);
         return;
       }
-      if (notifications !== "on") {
-        setHasActiveSubscription(true);
+      if (!isAuthenticated || notifications !== "on") {
+        setHasActiveSubscription(false);
+        if (isAuthenticated) {
+          await unsubscribeFromPush();
+        } else {
+          invalidatePushRegistration();
+          // Remote sign-out/expired sessions have no usable credentials. Revoke locally.
+          await subscription.unsubscribe().catch((error: unknown) => {
+            logger.warn("Failed to unsubscribe signed-out browser push:", error);
+          });
+        }
         return;
       }
       const registered = await subscribeToPush();
+      if (!registered && !cancelled) await unsubscribeFromPush();
       if (!cancelled) setHasActiveSubscription(registered);
     });
     return () => {
@@ -182,7 +185,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     // Only re-run when these specific values change; getActiveSubscription and
     // subscribeToPush are stable across renders in practice here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, notifications, isAuthenticated]);
+  }, [userId, notifications, isAuthenticated, isValidating]);
 
   return {
     isSupported: isPushSupported(),

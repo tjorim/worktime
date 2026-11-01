@@ -303,6 +303,35 @@ class TestPlannedTaskReminderScheduler:
         await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
         send_mock.assert_not_called()
 
+    async def test_logout_revocation_prevents_previous_account_reminders(
+        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services import planned_task_reminder_scheduler as scheduler
+
+        owner = await create_user(db_session, UserCreate(username="logout-owner", display_name="Owner"))
+        other = await create_user(db_session, UserCreate(username="logout-other", display_name="Other"))
+        payload = PushSubscriptionCreate(
+            endpoint="https://fcm.googleapis.com/fcm/send/logout",
+            keys=PushSubscriptionKeys(p256dh="a", auth="b"),
+        )
+        await upsert_subscription(db_session, owner.id, payload)
+        fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
+        task = await self._make_planned_task(db_session, owner.id, start_time=fixed_now + timedelta(minutes=5))
+        send_mock = MagicMock(return_value=PushSendResult.SENT)
+        monkeypatch.setattr(scheduler, "send_push", send_mock)
+
+        await delete_subscription(db_session, owner.id, payload.endpoint)
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        send_mock.assert_not_called()
+        assert await list_subscriptions_for_user(db_session, owner.id) == []
+
+        # A later deliberate registration belongs solely to the new account.
+        await upsert_subscription(db_session, other.id, payload)
+        await scheduler._send_reminder(db_session, task, now_utc=fixed_now)
+        send_mock.assert_not_called()
+        assert await list_subscriptions_for_user(db_session, owner.id) == []
+        assert len(await list_subscriptions_for_user(db_session, other.id)) == 1
+
     async def test_skips_a_task_starting_outside_the_lead_window(self, db_session: AsyncSession) -> None:
         user = await create_user(db_session, UserCreate(username="reminder-far-out", display_name="Far Out"))
         fixed_now = datetime(2025, 7, 21, 8, 50, tzinfo=UTC)
