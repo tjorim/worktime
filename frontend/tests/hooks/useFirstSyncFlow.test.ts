@@ -2,7 +2,12 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey } from "@/constants/storageKeys";
+import {
+  USER_STATE_OWNER_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+  getSyncCursorKey,
+  getSyncOutboxKey,
+} from "@/constants/storageKeys";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { tasksCollection, timeOffCollection } from "@/db/collections";
 import * as collections from "@/db/collections";
@@ -103,6 +108,95 @@ describe("useFirstSyncFlow", () => {
 
     // Sync cursor should be set
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe(emptyStatus.server_timestamp);
+  });
+
+  it.each([false, true])(
+    "does not upload A's preferences when B signs in (returning: %s)",
+    async (returning) => {
+      mockFetch.mockImplementation(async (url: string) => ({
+        ok: true,
+        json: async () => (url === "/api/preferences" ? null : emptyStatus),
+      }));
+      const { result, rerender } = renderHook(
+        ({ signedIn, uid }) => useFirstSyncFlow(signedIn, uid, mockFetch),
+        { wrapper, initialProps: { signedIn: true, uid: "user-a" } },
+      );
+      await waitFor(() => expect(result.current.phase).toBe("done"));
+      const pendingA = JSON.stringify([
+        {
+          labels: [],
+          tasks: [
+            {
+              id: "offline-a",
+              action: "create",
+              client_updated_at: "2026-01-01T00:00:00Z",
+              text: "A pending task",
+            },
+          ],
+          templates: [],
+          work_locations: [],
+          time_off_entries: [],
+          gantt_tasks: [],
+        },
+      ]);
+      localStorage.setItem(getSyncOutboxKey("user-a"), pendingA);
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          scheduleType: "2-shift",
+          myTeam: 4,
+          settings: { hdayUsername: "alice", theme: "dark" },
+          _updatedAt: "2099-01-01T00:00:00.000Z",
+        }),
+      );
+      rerender({ signedIn: false, uid: "user-a" });
+      if (returning) localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+      mockFetch.mockClear();
+      rerender({ signedIn: true, uid: "user-b" });
+      await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+      const pushes = mockFetch.mock.calls.filter(
+        ([url, init]) => url === "/api/preferences" && init?.method === "PUT",
+      );
+      expect(JSON.stringify(pushes)).not.toContain("2-shift");
+      expect(JSON.stringify(pushes)).not.toContain("alice");
+      expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).not.toContain("alice");
+      expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toMatchObject({
+        settings: { theme: "dark" },
+      });
+      expect(localStorage.getItem(getSyncOutboxKey("user-a"))).toBe(pendingA);
+      expect(localStorage.getItem(getSyncOutboxKey("user-b"))).toBeNull();
+    },
+  );
+
+  it("loads B's older account preferences instead of pushing A's newer copy", async () => {
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ scheduleType: "2-shift", _updatedAt: "2099-01-01T00:00:00Z" }),
+    );
+    const data = { scheduleType: "3-shift", _updatedAt: "2026-01-01T00:00:00Z" };
+    mockFetch.mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url === "/api/preferences" ? { data, client_updated_at: data._updatedAt } : emptyStatus,
+    }));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toMatchObject(data);
+    expect(mockFetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  });
+
+  it("keeps sync disabled if B's account preferences cannot be fetched", async () => {
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ scheduleType: "2-shift" }));
+    localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+    mockFetch.mockResolvedValue({ ok: false });
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.isSyncEstablished).toBe(false);
+    expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe("user-a");
+    expect(mockFetch.mock.calls.filter(([url]) => url === "/api/preferences")).toHaveLength(1);
+    expect(mockFetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
   });
 
   it("pushes preferences-only local state without treating it as an entity conflict", async () => {

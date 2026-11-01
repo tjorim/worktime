@@ -44,6 +44,7 @@ import {
   storeSyncCursor,
   syncStatusHasEntityData,
   type FetchFn,
+  type PreferencesResponse,
   type SyncPullResponse,
   type SyncPushPayload,
   type SyncStatusResponse,
@@ -53,6 +54,7 @@ import {
   mergePullIntoCollections,
   preloadSyncCollections,
 } from "@/db/collections";
+import { USER_STATE_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
 import { logger } from "@/utils/logger";
 import {
   countSyncPayloadEntities,
@@ -211,6 +213,7 @@ export function useFirstSyncFlow(
   userId: string | null,
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
+  const [preparedForUser, setPreparedForUser] = useState<string | null>(null);
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
 
   // Guard against running the flow more than once per mount when deps change.
@@ -241,11 +244,27 @@ export function useFirstSyncFlow(
     async (uid: string, fetch: (url: string, init?: RequestInit) => Promise<Response>) => {
       // Skip if we already ran for this user in this session.
       if (flowStartedForUser.current === uid) return;
-      // Skip if a sync cursor already exists for this user.
-      if (hasSyncCursor(uid)) return;
-
       flowStartedForUser.current = uid;
       setPhase("checking");
+
+      // A browser-wide preferences blob must never be offered to another
+      // account's last-write-wins reconciliation. Restore that account's copy
+      // (or defaults for an empty account) before enabling any sync, including
+      // when this account already has a cursor on this device.
+      const owner = localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY);
+      if (owner !== null && owner !== uid) {
+        const response = await fetch("/api/preferences");
+        if (!response.ok) throw new Error("Account preferences could not be loaded");
+        const serverPrefs = (await response.json()) as PreferencesResponse | null;
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+        applyPreferencesPull(serverPrefs?.data ?? {});
+      }
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, uid);
+      setPreparedForUser(uid);
+      if (hasSyncCursor(uid)) {
+        setPhase("idle");
+        return;
+      }
 
       const diagnostics = createSyncAttemptDiagnostics();
       diagnosticsRef.current = diagnostics;
@@ -635,6 +654,7 @@ export function useFirstSyncFlow(
   useEffect(() => {
     if (!isAuthenticated) {
       setPhase("idle");
+      setPreparedForUser(null);
       flowStartedForUser.current = null;
       conflictResolutionForUserRef.current = null;
       capturedServerDataRef.current = null;
@@ -662,7 +682,8 @@ export function useFirstSyncFlow(
   //  a) The first-sync flow just finished (phase === "done"), OR
   //  b) A cursor already existed when the component mounted (phase === "idle" with cursor present)
   const isSyncEstablished =
-    phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId));
+    preparedForUser === userId &&
+    (phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId)));
 
   return { phase, isSyncEstablished, resolveConflict, conflictCounts, dismiss };
 }

@@ -1,3 +1,5 @@
+/** OIDC subject whose account preferences are currently stored on this device. */
+export const USER_STATE_OWNER_STORAGE_KEY = "worktime_user_state_owner";
 export const USER_STATE_STORAGE_KEY = "worktime_user_state";
 export const SYNC_CURSOR_KEY_PREFIX = "worktime_sync_cursor_";
 export const SYNC_OUTBOX_KEY_PREFIX = "worktime_sync_outbox_";
