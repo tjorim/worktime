@@ -3,7 +3,6 @@ import {
   CircleCheckIcon,
   CloudDownloadIcon,
   CloudUploadIcon,
-  DownloadIcon,
   FileLockIcon,
   FileXIcon,
   PencilIcon,
@@ -22,11 +21,13 @@ import { IconButton } from "@/components/shared/IconButton";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
 import {
+  timeOffEntriesToHday,
   buildTimeOffEntryForRange,
   createWeeklyTimeOffEntry,
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
+import { MAX_HDAY_IMPORT_BYTES, previewTimeOffImport } from "@/lib/timeOff/importPreview";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { useHdayHelper } from "@/contexts/HdayHelperContext";
 import { useLastUsed } from "@/contexts/LastUsedContext";
@@ -105,8 +106,16 @@ const AUTO_PUSH_DEBOUNCE_MS = 3000;
 export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffViewProps) {
   const { options: hdayHelperOptions, helperConnectionStatus } = useHdayHelper();
   const helpText = getViewModeHelpText();
-  const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
-    useEventStore();
+  const {
+    rawText,
+    entries,
+    addEntries,
+    updateEntry,
+    deleteEntry,
+    deleteEntries,
+    importHday,
+    applyImportedEntries,
+  } = useEventStore();
   const { lastUsed, updateLastTimeOffView } = useLastUsed();
   const { settings } = useSettings();
   const { preferences: devicePreferences, setPreferences: setDevicePreferences } =
@@ -533,6 +542,32 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     setRawEditorSkippedLines([]);
   }, [rawText]);
 
+  const [pendingImport, setPendingImport] = useState<{ text: string; name: string } | null>(null);
+  const [replaceImport, setReplaceImport] = useState(false);
+  const importPreview = useMemo(
+    () => (pendingImport ? previewTimeOffImport(pendingImport.text, entries) : null),
+    [pendingImport, entries],
+  );
+  const confirmImport = () => {
+    if (!pendingImport || !importPreview) return;
+    if (!importPreview.entries.length) {
+      setPendingImport(null);
+      return;
+    }
+    const previous = structuredClone(entries);
+    applyImportedEntries(
+      replaceImport ? importPreview.entries : [...entries, ...importPreview.additions],
+      replaceImport,
+    );
+    setSelectedIds(new Set());
+    setIsRawEditorDirty(false);
+    toast.showUndo(m.timeoff_imported({ name: pendingImport.name }), () =>
+      applyImportedEntries(previous, true),
+    );
+    setPendingImport(null);
+    setReplaceImport(false);
+  };
+
   const handleImport = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -540,27 +575,22 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = "";
 
     try {
-      const text = await file.text();
-      const result = importHday(text);
-      setRawEditorText(text);
-      setSelectedIds(new Set()); // Clear selection after import
-      setIsRawEditorDirty(false); // Reset raw editor dirty state
-      setRawEditorError(undefined);
-      setRawEditorSkippedLines(result.skippedLines);
-      if (result.skippedLines.length > 0) {
-        const skippedMsg =
-          result.skippedLines.length === 1
-            ? m.timeoff_hday_skipped_one()
-            : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
-        toast.showWarning(
-          `${m.timeoff_imported({ name: file.name })} ${skippedMsg}`,
-          TriangleAlertIcon,
-        );
-      } else {
-        toast.showSuccess(m.timeoff_imported({ name: file.name }), DownloadIcon);
+      if (file.size > MAX_HDAY_IMPORT_BYTES) {
+        toast.showError(m.timeoff_import_too_large());
+        return;
       }
+      const text = await file.text();
+      const preview = previewTimeOffImport(text, entries);
+      if (!preview.entries.length) {
+        toast.showError(m.timeoff_import_no_entries());
+        if (preview.invalidLines.length) setPendingImport({ text, name: file.name });
+        return;
+      }
+      setReplaceImport(false);
+      setPendingImport({ text, name: file.name });
     } catch (error) {
       logger.error("Failed to import .hday file:", error);
       setRawEditorError(m.timeoff_import_failed());
@@ -963,6 +993,64 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
         variant="warning"
         onConfirm={handleConfirmResetForm}
         onCancel={() => setShowResetConfirm(false)}
+      />
+
+      <ConfirmationDialog
+        isOpen={pendingImport !== null}
+        title={m.timeoff_import_preview_title()}
+        confirmLabel={
+          !importPreview?.entries.length
+            ? m.close()
+            : replaceImport
+              ? m.timeoff_import_replace()
+              : m.timeoff_import_merge()
+        }
+        cancelLabel={m.cancel()}
+        variant={replaceImport ? "danger" : "primary"}
+        onCancel={() => {
+          setPendingImport(null);
+          setReplaceImport(false);
+        }}
+        onConfirm={confirmImport}
+        message={
+          importPreview && (
+            <>
+              <p>
+                {!importPreview.entries.length
+                  ? m.timeoff_import_no_entries()
+                  : replaceImport
+                    ? m.timeoff_import_replace_warning({ count: entries.length })
+                    : m.timeoff_import_summary({
+                        added: importPreview.additions.length,
+                        duplicates: importPreview.duplicates,
+                      })}
+              </p>
+              <ul>
+                {(replaceImport ? importPreview.entries : importPreview.additions).map((entry) => (
+                  <li key={entry.id}>{timeOffEntriesToHday([entry])}</li>
+                ))}
+              </ul>
+              <ul>
+                {importPreview.invalidLines.map(({ line, reason }) => (
+                  <li key={line}>
+                    {m.timeoff_import_invalid_line({
+                      line,
+                      reason:
+                        reason === "date"
+                          ? m.timeoff_import_invalid_date()
+                          : m.timeoff_import_invalid_syntax(),
+                    })}
+                  </li>
+                ))}
+              </ul>
+              {!replaceImport && importPreview.entries.length > 0 && (
+                <Button variant="outline" onClick={() => setReplaceImport(true)}>
+                  {m.timeoff_import_replace()}
+                </Button>
+              )}
+            </>
+          )
+        }
       />
 
       {/* Bulk Delete Confirmation Dialog */}

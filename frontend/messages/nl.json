@@ -1499,5 +1499,15 @@
   "school_holidays_network": "Netwerkfout: geen verbinding met de schoolvakanties-API",
   "picker_placeholder": "Selecteer…",
   "picker_open": "Opties openen",
-  "picker_empty": "Geen opties gevonden."
+  "picker_empty": "Geen opties gevonden.",
+  "timeoff_import_too_large": "Kies een .hday-bestand van maximaal 1 MB.",
+  "timeoff_import_no_entries": "Het bestand bevat geen geldige vermeldingen. Er is niets gewijzigd.",
+  "timeoff_import_preview_title": "Afwezigheden importeren: voorbeeld",
+  "timeoff_import_merge": "Vermeldingen samenvoegen",
+  "timeoff_import_replace": "Alle vermeldingen vervangen",
+  "timeoff_import_summary": "{added} vermeldingen toevoegen; {duplicates} exacte duplicaten worden overgeslagen. Bestaande vermeldingen blijven behouden.",
+  "timeoff_import_invalid_line": "Regel {line}: {reason}. Deze regel wordt overgeslagen.",
+  "timeoff_import_replace_warning": "Dit verwijdert alle {count} bestaande vermeldingen en vervangt ze door de geldige, unieke vermeldingen uit het bestand.",
+  "timeoff_import_invalid_date": "ongeldige datum of omgekeerd datumbereik",
+  "timeoff_import_invalid_syntax": "niet-ondersteunde .hday-syntaxis"
 }

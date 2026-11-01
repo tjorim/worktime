@@ -269,6 +269,82 @@ describe("TimeOffView", () => {
       expect(screen.getByRole("button", { name: /Export/i })).toBeInTheDocument();
     });
 
+    it.each([false, true])(
+      "previews file imports, confirms replacement (%s) and supports Undo",
+      async (replace) => {
+        render(
+          <AllProviders>
+            <TimeOffView />
+          </AllProviders>,
+        );
+        const user = userEvent.setup();
+        const upload = async (text: string) => {
+          const file = new File([text], "entries.hday", { type: "text/plain" });
+          vi.spyOn(file, "text").mockResolvedValue(text);
+          await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
+        };
+        await upload("2026/01/01 # Original entry");
+        await user.click(screen.getByRole("button", { name: "Merge entries" }));
+        await upload("2026/02/01 # Imported entry\n2026/02/01 # Imported entry\nbad");
+        const preview = screen.getByRole("dialog");
+        expect(
+          within(preview).getByText(/1 entries to add; 1 exact duplicates/),
+        ).toBeInTheDocument();
+        expect(within(preview).getByText(/Line 3:/)).toBeInTheDocument();
+        expect(screen.getByText("Original entry")).toBeInTheDocument();
+        if (replace) {
+          await user.click(within(preview).getByRole("button", { name: "Replace all entries" }));
+          expect(screen.getByText(/This will delete all 1 existing entries/)).toBeInTheDocument();
+          await user.click(
+            within(screen.getByRole("alertdialog")).getByRole("button", {
+              name: "Replace all entries",
+            }),
+          );
+          expect(screen.queryByText("Original entry")).not.toBeInTheDocument();
+        } else {
+          await user.click(within(preview).getByRole("button", { name: "Merge entries" }));
+          expect(screen.getByText("Original entry")).toBeInTheDocument();
+        }
+        expect(screen.getByText("Imported entry")).toBeInTheDocument();
+        await user.click(screen.getAllByRole("button", { name: "Undo" }).at(-1)!);
+        expect(screen.getByText("Original entry")).toBeInTheDocument();
+        expect(screen.queryByText("Imported entry")).not.toBeInTheDocument();
+      },
+    );
+
+    it.each(["", "invalid"])("rejects files without valid entries: %s", async (text) => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      const file = new File([text], "empty.hday", { type: "text/plain" });
+      vi.spyOn(file, "text").mockResolvedValue(text);
+      await userEvent.setup().upload(screen.getByLabelText(/Import \.hday file/i), file);
+      expect((await screen.findAllByText(m.timeoff_import_no_entries())).length).toBeGreaterThan(0);
+      if (text) {
+        expect(within(screen.getByRole("dialog")).getByText(/Line 1:/)).toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Replace all entries" }),
+        ).not.toBeInTheDocument();
+      } else expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("rejects oversized files before reading them", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      const file = new File([new Uint8Array(1024 * 1024 + 1)], "large.hday", {
+        type: "text/plain",
+      });
+      const read = vi.spyOn(file, "text");
+      await userEvent.setup().upload(screen.getByLabelText(/Import \.hday file/i), file);
+      expect(await screen.findByText(m.timeoff_import_too_large())).toBeInTheDocument();
+      expect(read).not.toHaveBeenCalled();
+    });
+
     it("should show a user-visible error when .hday file import fails", async () => {
       render(
         <AllProviders>

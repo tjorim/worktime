@@ -1499,5 +1499,15 @@
   "school_holidays_network": "Network error: Unable to connect to school holiday API",
   "picker_placeholder": "Select…",
   "picker_open": "Open options",
-  "picker_empty": "No options found."
+  "picker_empty": "No options found.",
+  "timeoff_import_too_large": "Choose a .hday file of at most 1 MB.",
+  "timeoff_import_no_entries": "The file contains no valid entries. Nothing has been changed.",
+  "timeoff_import_preview_title": "Preview time off import",
+  "timeoff_import_merge": "Merge entries",
+  "timeoff_import_replace": "Replace all entries",
+  "timeoff_import_summary": "{added} entries to add; {duplicates} exact duplicates will be skipped. Existing entries will be kept.",
+  "timeoff_import_invalid_line": "Line {line}: {reason}. This line will be skipped.",
+  "timeoff_import_replace_warning": "This will delete all {count} existing entries and replace them with the valid, unique entries from the file.",
+  "timeoff_import_invalid_date": "invalid date or reversed date range",
+  "timeoff_import_invalid_syntax": "unsupported .hday syntax"
 }
