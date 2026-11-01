@@ -57,6 +57,7 @@ import {
 import {
   ANONYMOUS_USER_STATE_OWNER,
   USER_STATE_STORAGE_KEY,
+  USER_STATE_SWITCH_STORAGE_KEY,
   USER_STATE_UNCLAIMED_STORAGE_KEY,
   getAccountPreferencesKey,
   USER_STATE_OWNER_STORAGE_KEY,
@@ -214,6 +215,32 @@ async function pullAndApplyServerPreferencesIfPresent(
   return true;
 }
 
+/** Finish an interrupted replacement before attributing the shared blob to anyone. */
+function resumePreferenceSwitch(): void {
+  const raw = localStorage.getItem(USER_STATE_SWITCH_STORAGE_KEY);
+  if (raw === null) return;
+  const pending = JSON.parse(raw) as { userId?: unknown; data?: unknown };
+  if (
+    typeof pending !== "object" ||
+    pending === null ||
+    typeof pending.userId !== "string" ||
+    pending.userId.length === 0 ||
+    typeof pending.data !== "object" ||
+    pending.data === null ||
+    Array.isArray(pending.data)
+  )
+    throw new Error("Invalid pending preference switch");
+
+  // If ownership was committed but journal cleanup failed, do not replace
+  // any edits made since that successful replacement.
+  if (localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY) !== pending.userId) {
+    if (!applyPreferencesPull(pending.data as Record<string, unknown>))
+      throw new Error("Account preferences could not be stored");
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, pending.userId);
+  }
+  localStorage.removeItem(USER_STATE_SWITCH_STORAGE_KEY);
+}
+
 export function useFirstSyncFlow(
   isAuthenticated: boolean,
   userId: string | null,
@@ -257,6 +284,7 @@ export function useFirstSyncFlow(
       // account's last-write-wins reconciliation. Restore that account's copy
       // (or defaults for an empty account) before enabling any sync, including
       // when this account already has a cursor on this device.
+      resumePreferenceSwitch();
       const owner = localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY);
       const saved = localStorage.getItem(getAccountPreferencesKey(uid));
       const needsRestore =
@@ -285,11 +313,15 @@ export function useFirstSyncFlow(
             throw new Error("Unclaimed preferences already exist");
           localStorage.setItem(backupKey, outgoing);
         }
-        // Invalidate ownership before replacing the shared blob: if either
-        // subsequent write fails, a reload must not claim the wrong copy.
+        // Save the target before invalidating ownership. A partial switch
+        // can then resume without treating either account's copy as legacy
+        // state or overwriting the original unclaimed backup.
+        localStorage.setItem(
+          USER_STATE_SWITCH_STORAGE_KEY,
+          JSON.stringify({ userId: uid, data: incoming }),
+        );
         localStorage.removeItem(USER_STATE_OWNER_STORAGE_KEY);
-        if (!applyPreferencesPull(incoming))
-          throw new Error("Account preferences could not be stored");
+        resumePreferenceSwitch();
       }
       localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, uid);
       setPreparedForUser(uid);

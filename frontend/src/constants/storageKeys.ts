@@ -37,3 +37,6 @@ export const ANONYMOUS_USER_STATE_OWNER = "";
 export function getAccountPreferencesKey(userId: string): string {
   return `${USER_STATE_ACCOUNT_KEY_PREFIX}${userId}`;
 }
+
+/** Incoming account preferences staged until an account switch is committed. */
+export const USER_STATE_SWITCH_STORAGE_KEY = "worktime_user_state_switch";

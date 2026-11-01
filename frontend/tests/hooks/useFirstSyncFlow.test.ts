@@ -8,6 +8,7 @@ import {
   getAccountPreferencesKey,
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
+  USER_STATE_SWITCH_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
 } from "@/constants/storageKeys";
@@ -300,6 +301,107 @@ describe("useFirstSyncFlow", () => {
     await waitFor(() => expect(next.result.current.isSyncEstablished).toBe(true));
     expect(localStorage.getItem(getAccountPreferencesKey("user-a"))).toBe(outgoing);
     expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).toContain("3-shift");
+  });
+
+  it.each([
+    ["replacement", "user-b"],
+    ["owner", "user-b"],
+    ["replacement", "user-c"],
+    ["owner", "user-c"],
+  ])(
+    "recovers a failed %s write with a legacy backup when %s signs in",
+    async (failure, returning) => {
+      const legacy = JSON.stringify({ scheduleType: "legacy" });
+      const outgoing = JSON.stringify({
+        scheduleType: "2-shift",
+        settings: { hdayUsername: "alice" },
+        _updatedAt: "2099-01-01T00:00:00Z",
+      });
+      localStorage.setItem(USER_STATE_UNCLAIMED_STORAGE_KEY, legacy);
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+      localStorage.setItem(USER_STATE_STORAGE_KEY, outgoing);
+      localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+      localStorage.setItem(getSyncCursorKey("user-c"), emptyStatus.server_timestamp);
+      const prefsB = { scheduleType: "3-shift", _updatedAt: emptyStatus.server_timestamp };
+      const prefsNext =
+        returning === "user-b"
+          ? prefsB
+          : { scheduleType: "5-shift", _updatedAt: emptyStatus.server_timestamp };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: prefsB, client_updated_at: prefsB._updatedAt }),
+      });
+      const original = localStorage.setItem;
+      const write = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+        if (
+          (failure === "replacement" && key === USER_STATE_STORAGE_KEY) ||
+          (failure === "owner" && key === USER_STATE_OWNER_STORAGE_KEY && value === "user-b")
+        )
+          throw new DOMException("Quota exceeded", "QuotaExceededError");
+        original(key, value);
+      });
+      const first = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+      try {
+        await waitFor(() => expect(first.result.current.phase).toBe("error"));
+        expect(first.result.current.isSyncEstablished).toBe(false);
+      } finally {
+        write.mockRestore();
+        first.unmount();
+      }
+      const fetchNext = vi.fn(
+        async () =>
+          ({
+            ok: true,
+            json: async () => ({ data: prefsNext, client_updated_at: prefsNext._updatedAt }),
+          }) as Response,
+      );
+      const next = renderHook(() => useFirstSyncFlow(true, returning, fetchNext), { wrapper });
+      await waitFor(() => expect(next.result.current.isSyncEstablished).toBe(true));
+      await reconcilePreferences(fetchNext);
+      expect(localStorage.getItem(USER_STATE_UNCLAIMED_STORAGE_KEY)).toBe(legacy);
+      expect(localStorage.getItem(getAccountPreferencesKey("user-a"))).toBe(outgoing);
+      expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toMatchObject(prefsNext);
+      expect(JSON.stringify(fetchNext.mock.calls)).not.toContain("alice");
+      expect(JSON.stringify(fetchNext.mock.calls)).not.toContain("2-shift");
+      if (returning === "user-c")
+        expect(JSON.stringify(fetchNext.mock.calls)).not.toContain("3-shift");
+    },
+  );
+
+  it("preserves new account edits when only switch-journal cleanup failed", async () => {
+    const legacy = JSON.stringify({ scheduleType: "legacy" });
+    const outgoing = JSON.stringify({ scheduleType: "2-shift" });
+    localStorage.setItem(USER_STATE_UNCLAIMED_STORAGE_KEY, legacy);
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
+    localStorage.setItem(USER_STATE_STORAGE_KEY, outgoing);
+    localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { scheduleType: "3-shift" } }),
+    });
+    const remove = localStorage.removeItem;
+    const cleanup = vi.spyOn(localStorage, "removeItem").mockImplementation((key) => {
+      if (key === USER_STATE_SWITCH_STORAGE_KEY) throw new DOMException("Storage unavailable");
+      remove(key);
+    });
+    const first = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    try {
+      await waitFor(() => expect(first.result.current.phase).toBe("error"));
+      expect(first.result.current.isSyncEstablished).toBe(false);
+      expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe("user-b");
+    } finally {
+      cleanup.mockRestore();
+      first.unmount();
+    }
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ scheduleType: "5-shift" }));
+    const next = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+    await waitFor(() => expect(next.result.current.isSyncEstablished).toBe(true));
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toMatchObject({
+      scheduleType: "5-shift",
+    });
+    expect(localStorage.getItem(USER_STATE_SWITCH_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(USER_STATE_UNCLAIMED_STORAGE_KEY)).toBe(legacy);
+    expect(localStorage.getItem(getAccountPreferencesKey("user-a"))).toBe(outgoing);
   });
 
   it("restores A's unsynced preference edits after A signs in again", async () => {
