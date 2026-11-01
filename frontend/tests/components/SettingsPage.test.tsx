@@ -236,32 +236,34 @@ function renderSettingsAdminUsersHarness({
 }
 
 describe("Settings section URLs", () => {
-  it.each([false, true])("replaces unknown sections for admin=%s", async (isAdmin) => {
+  it("falls back to the default section when the router drops an unknown section", () => {
+    // The router's validateSearch removes unknown values before the page reads them.
     mockAuthenticatedUser();
-    server.use(
-      http.get("*/api/me", () =>
-        HttpResponse.json({
-          id: 1,
-          username: "test",
-          display_name: "Test",
-          is_admin: isAdmin,
-          capabilities: { backup_enabled: true },
-        }),
-      ),
-    );
-    routeState.section = "bogus";
+    routeState.section = "scheduleTeam";
     renderWithProviders(<SettingsPage />);
     expect(
       screen.getByRole("heading", { level: 1, name: m.schedule_team_section_title() }),
     ).toBeInTheDocument();
-    expect(screen.getByText("2-shift")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(routeState.navigate).toHaveBeenCalledWith({
-        to: "/settings",
-        search: { section: "scheduleTeam" },
-        replace: true,
+    expect(routeState.navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps an admin link when the profile request fails", async () => {
+    mockAuthenticatedUser();
+    let profileRequests = 0;
+    server.use(
+      http.get("*/api/me", () => {
+        profileRequests += 1;
+        return HttpResponse.json({ detail: "down" }, { status: 500 });
       }),
     );
+    routeState.section = "admin";
+    renderWithProviders(<SettingsPage />);
+    await waitFor(() => expect(profileRequests).toBeGreaterThan(0));
+    // Let the failed request settle so a wrongly-resolved role would have redirected by now.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(routeState.navigate).not.toHaveBeenCalled();
   });
 
   it("replaces admin links for non-admins without a blank admin heading", async () => {

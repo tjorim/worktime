@@ -334,10 +334,11 @@ export function SettingsContent({
   });
 
   useEffect(() => {
-    const status =
-      isValidating || (isAuthenticated && !accountProfile && !profileError) ? null : isAdmin;
+    // The role stays unknown while the profile is loading or failed to load, so an admin
+    // deep link is kept and only replaced once access is confirmed unavailable.
+    const status = isValidating || (isAuthenticated && !accountProfile) ? null : isAdmin;
     onAdminStatusChange?.(status);
-  }, [isAdmin, isValidating, isAuthenticated, accountProfile, profileError, onAdminStatusChange]);
+  }, [isAdmin, isValidating, isAuthenticated, accountProfile, onAdminStatusChange]);
   const { syncStatus, retryInSeconds, lastSyncedLabel, backupStatusLabel } = useSettingsSyncStatus({
     isAuthenticated,
     hasSyncError,
