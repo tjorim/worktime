@@ -1509,5 +1509,6 @@
   "timeoff_import_invalid_line": "Line {line}: {reason}. This line will be skipped.",
   "timeoff_import_replace_warning": "This will delete all {count} existing entries and replace them with the valid, unique entries from the file.",
   "timeoff_import_invalid_date": "invalid date or reversed date range",
-  "timeoff_import_invalid_syntax": "unsupported .hday syntax"
+  "timeoff_import_invalid_syntax": "unsupported .hday syntax",
+  "timeoff_import_more": "and {count} more"
 }

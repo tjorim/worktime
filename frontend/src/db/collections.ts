@@ -1092,7 +1092,7 @@ export const timeOffCollection = createCollection(
   }),
 );
 
-/** Push an import or its undo as one request, preserving unchanged rows. */
+/** Push a file import as one request, preserving unchanged rows. */
 export function pushTimeOffImport(
   current: TimeOffEntry[],
   target: TimeOffEntry[],

@@ -211,14 +211,38 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     pushTimeOffImport(currentEntries, nextEntries, allowBulkDelete);
   }, []);
 
-  const importHday = useCallback(
-    (text: string) => {
-      const result = hdayToTimeOffEntries(text);
-      applyImportedEntries(result.entries);
-      return result;
-    },
-    [applyImportedEntries],
-  );
+  const importHday = useCallback((text: string) => {
+    const result = hdayToTimeOffEntries(text);
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    const nextEntries = sortEntries(cloneEntries(result.entries));
+    sortedEntriesRef.current = nextEntries;
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(currentEntries, nextEntries);
+    } else {
+      const currentMap = new Map(currentEntries.map((e) => [e.id, e]));
+      const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
+      const toDelete = [...currentMap.keys()].filter(
+        (id) => !result.entries.some((e) => e.id === id),
+      );
+      const hasWork = toDelete.length > 0 || result.entries.length > 0;
+      runMutationBatch(timeOffCollection, hasWork, () => {
+        for (const id of toDelete) {
+          if (collectionIds.has(id)) timeOffCollection.delete(id);
+        }
+        for (const entry of result.entries) {
+          if (!collectionIds.has(entry.id)) {
+            timeOffCollection.insert(entry);
+          } else {
+            timeOffCollection.update(entry.id, (d) => {
+              const { id: _id, ...patch } = entry;
+              Object.assign(d, patch);
+            });
+          }
+        }
+      });
+    }
+    return result;
+  }, []);
 
   const clearAll = useCallback(() => {
     const current = cloneEntries(sortedEntriesRef.current);

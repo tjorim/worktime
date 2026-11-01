@@ -270,7 +270,7 @@ describe("TimeOffView", () => {
     });
 
     it.each([false, true])(
-      "previews file imports, confirms replacement (%s) and supports Undo",
+      "previews file imports and confirms replacement (%s) without offering Undo",
       async (replace) => {
         render(
           <AllProviders>
@@ -306,11 +306,68 @@ describe("TimeOffView", () => {
           expect(screen.getByText("Original entry")).toBeInTheDocument();
         }
         expect(screen.getByText("Imported entry")).toBeInTheDocument();
-        await user.click(screen.getAllByRole("button", { name: "Undo" }).at(-1)!);
-        expect(screen.getByText("Original entry")).toBeInTheDocument();
-        expect(screen.queryByText("Imported entry")).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
       },
     );
+
+    it("pauses background shortcuts throughout import preview and replacement", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView isActive />
+        </AllProviders>,
+      );
+      const user = userEvent.setup();
+      const upload = async (text: string) => {
+        const file = new File([text], "entries.hday", { type: "text/plain" });
+        vi.spyOn(file, "text").mockResolvedValue(text);
+        await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
+      };
+      await upload("2026/01/01 # Original entry");
+      await user.click(screen.getByRole("button", { name: "Merge entries" }));
+      await user.click(screen.getByRole("checkbox", { name: /Select Original entry/i }));
+      await upload("2026/02/01 # Imported entry");
+      for (const key of ["Delete", "Backspace"]) fireEvent.keyDown(document, { key });
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Replace all entries" }));
+      for (const key of ["Delete", "Backspace"]) fireEvent.keyDown(document, { key });
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1);
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleName(
+        m.timeoff_import_preview_title(),
+      );
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+      fireEvent.keyDown(document, { key: "Delete" });
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleName(
+        m.timeoff_delete_selected_title(),
+      );
+    });
+
+    it("bounds large preview lists and keeps import actions outside their scrolling area", async () => {
+      const { container } = render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+      const user = userEvent.setup();
+      const text = Array.from(
+        { length: 100 },
+        (_, index) => `2026/01/01 # Entry ${index}\ninvalid ${index}`,
+      ).join("\n");
+      const file = new File([text], "many.hday", { type: "text/plain" });
+      vi.spyOn(file, "text").mockResolvedValue(text);
+      await user.upload(screen.getByLabelText(/Import \.hday file/i), file);
+      const dialog = screen.getByRole("dialog");
+      const rows = document.querySelector('[data-slot="timeoff-import-preview-rows"]')!;
+      expect(within(rows as HTMLElement).getAllByRole("listitem")).toHaveLength(20);
+      expect(within(rows as HTMLElement).getAllByText("and 90 more")).toHaveLength(2);
+      for (const name of ["Merge entries", "Replace all entries", "Cancel"]) {
+        const button = within(dialog).getByRole("button", { name });
+        expect(button).toBeVisible();
+        expect(rows.contains(button)).toBe(false);
+      }
+      expect(container.querySelectorAll("tbody tr")).toHaveLength(0);
+      await user.click(within(dialog).getByRole("button", { name: "Merge entries" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
 
     it.each(["", "invalid"])("rejects files without valid entries: %s", async (text) => {
       render(

@@ -548,22 +548,25 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     () => (pendingImport ? previewTimeOffImport(pendingImport.text, entries) : null),
     [pendingImport, entries],
   );
+  const previewEntries = importPreview
+    ? replaceImport
+      ? importPreview.entries
+      : importPreview.additions
+    : [];
+  const previewRowLimit = 10;
   const confirmImport = () => {
     if (!pendingImport || !importPreview) return;
     if (!importPreview.entries.length) {
       setPendingImport(null);
       return;
     }
-    const previous = structuredClone(entries);
     applyImportedEntries(
       replaceImport ? importPreview.entries : [...entries, ...importPreview.additions],
       replaceImport,
     );
     setSelectedIds(new Set());
     setIsRawEditorDirty(false);
-    toast.showUndo(m.timeoff_imported({ name: pendingImport.name }), () =>
-      applyImportedEntries(previous, true),
-    );
+    toast.showSuccess(m.timeoff_imported({ name: pendingImport.name }), CircleCheckIcon);
     setPendingImport(null);
     setReplaceImport(false);
   };
@@ -824,7 +827,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       onCancelEditMode: handleCancelEditMode,
     },
     {
-      isActive,
+      isActive: isActive && pendingImport === null,
       showEventModal,
       modalMode,
       editIndex: editEntryId ? 0 : -1,
@@ -1025,29 +1028,43 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
                         duplicates: importPreview.duplicates,
                       })}
               </p>
-              <ul>
-                {(replaceImport ? importPreview.entries : importPreview.additions).map((entry) => (
-                  <li key={entry.id}>{timeOffEntriesToHday([entry])}</li>
-                ))}
-              </ul>
-              <ul>
-                {importPreview.invalidLines.map(({ line, reason }) => (
-                  <li key={line}>
-                    {m.timeoff_import_invalid_line({
-                      line,
-                      reason:
-                        reason === "date"
-                          ? m.timeoff_import_invalid_date()
-                          : m.timeoff_import_invalid_syntax(),
-                    })}
-                  </li>
-                ))}
-              </ul>
               {!replaceImport && importPreview.entries.length > 0 && (
                 <Button variant="outline" onClick={() => setReplaceImport(true)}>
                   {m.timeoff_import_replace()}
                 </Button>
               )}
+              <div className="max-h-48 overflow-y-auto" data-slot="timeoff-import-preview-rows">
+                <ul>
+                  {previewEntries.slice(0, previewRowLimit).map((entry) => (
+                    <li key={entry.id} className="truncate" title={timeOffEntriesToHday([entry])}>
+                      {timeOffEntriesToHday([entry])}
+                    </li>
+                  ))}
+                </ul>
+                {previewEntries.length > previewRowLimit && (
+                  <p>{m.timeoff_import_more({ count: previewEntries.length - previewRowLimit })}</p>
+                )}
+                <ul>
+                  {importPreview.invalidLines.slice(0, previewRowLimit).map(({ line, reason }) => (
+                    <li key={line}>
+                      {m.timeoff_import_invalid_line({
+                        line,
+                        reason:
+                          reason === "date"
+                            ? m.timeoff_import_invalid_date()
+                            : m.timeoff_import_invalid_syntax(),
+                      })}
+                    </li>
+                  ))}
+                </ul>
+                {importPreview.invalidLines.length > previewRowLimit && (
+                  <p>
+                    {m.timeoff_import_more({
+                      count: importPreview.invalidLines.length - previewRowLimit,
+                    })}
+                  </p>
+                )}
+              </div>
             </>
           )
         }

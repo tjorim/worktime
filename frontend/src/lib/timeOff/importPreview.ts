@@ -12,10 +12,13 @@ export function previewTimeOffImport(text: string, existing: TimeOffEntry[]) {
   const additions: TimeOffEntry[] = [];
   text.split(/\r?\n/).forEach((line, index) => {
     if (!line.trim()) return;
-    const result = hdayToTimeOffEntries(line);
+    let reason: "date" | "syntax" = "syntax";
+    const result = hdayToTimeOffEntries(line, (invalidReason) => {
+      reason = invalidReason;
+    });
     const entry = result.entries[0];
     if (!entry) {
-      invalidLines.push({ line: index + 1, reason: /\d{4}\//.test(line) ? "date" : "syntax" });
+      invalidLines.push({ line: index + 1, reason });
       return;
     }
     const key = timeOffEntriesToHday([entry]);

@@ -136,6 +136,7 @@ function parsePrefixFlags(prefix: string): EventFlag[] {
  * - Multiple time/location flags: only the first is kept (others removed)
  *
  * @param text - Raw .hday file content
+ * @param onInvalidLine - Optional callback for syntax and date validation failures
  * @returns An array of parsed HdayEvent objects representing range, weekly or unknown events
  *
  * @example
@@ -155,7 +156,10 @@ function parsePrefixFlags(prefix: string): EventFlag[] {
  *
  * @see toLine For the inverse operation (serializing events back to .hday format)
  */
-export function parseHday(text: string): HdayEvent[] {
+export function parseHday(
+  text: string,
+  onInvalidLine?: (reason: "date" | "syntax") => void,
+): HdayEvent[] {
   const normalizeHdayDate = (value: string): string => {
     const match = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
     if (!match) return value;
@@ -186,6 +190,7 @@ export function parseHday(text: string): HdayEvent[] {
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
       if (!isValidHdayDate(normalizedStart) || !isValidHdayDate(normalizedEnd)) {
+        onInvalidLine?.("date");
         events.push({ type: "unknown", raw: originalLine, flags: ["holiday"] });
         continue;
       }
@@ -231,6 +236,7 @@ export function parseHday(text: string): HdayEvent[] {
     }
 
     // Unknown format - keep as-is
+    onInvalidLine?.("syntax");
     events.push({
       type: "unknown",
       raw: originalLine,

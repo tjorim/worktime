@@ -1509,5 +1509,6 @@
   "timeoff_import_invalid_line": "Regel {line}: {reason}. Deze regel wordt overgeslagen.",
   "timeoff_import_replace_warning": "Dit verwijdert alle {count} bestaande vermeldingen en vervangt ze door de geldige, unieke vermeldingen uit het bestand.",
   "timeoff_import_invalid_date": "ongeldige datum of omgekeerd datumbereik",
-  "timeoff_import_invalid_syntax": "niet-ondersteunde .hday-syntaxis"
+  "timeoff_import_invalid_syntax": "niet-ondersteunde .hday-syntaxis",
+  "timeoff_import_more": "en nog {count} andere"
 }

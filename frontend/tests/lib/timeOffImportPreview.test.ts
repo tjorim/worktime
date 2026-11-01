@@ -42,4 +42,18 @@ describe("time off import preview", () => {
     expect(preview.entries).toHaveLength(1);
     expect(previewTimeOffImport("invalid", []).entries).toEqual([]);
   });
+  it("reports parser and date validation failures without blaming valid dates in malformed syntax", () => {
+    const preview = previewTimeOffImport(
+      "foo 2026/01/01\n2026/01/01 trailing text\nd8 # 2026/01/01\n2026/02/30\n2026/03/02-2026/03/01\n2026/1/1",
+      [],
+    );
+    expect(preview.invalidLines).toEqual([
+      { line: 1, reason: "syntax" },
+      { line: 2, reason: "syntax" },
+      { line: 3, reason: "syntax" },
+      { line: 4, reason: "date" },
+      { line: 5, reason: "date" },
+    ]);
+    expect(preview.entries).toHaveLength(1);
+  });
 });
