@@ -12,7 +12,7 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
-import { preservePreferenceOwner } from "@/utils/preferenceStorage";
+import { preservePreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
@@ -401,15 +401,47 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     defaultUserState,
   );
 
-  const setUserState = useCallback(
-    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
-      markNewAnonymousPreferences();
-      _setRawUserState((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        return preservePreferenceOwner(prev, { ...next, _updatedAt: new Date().toISOString() });
-      });
+  const commitUserState = useCallback(
+    (
+      updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState),
+      accountChange: boolean,
+    ) => {
+      const commit = () => {
+        markNewAnonymousPreferences();
+        // Storage events can arrive after an interaction in an older tab. Read
+        // inside the switch lock so cached data cannot undo another tab's switch.
+        const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+        let previous: WorktimeUserState = defaultUserState;
+        if (raw !== null) {
+          try {
+            previous = JSON.parse(raw) as WorktimeUserState;
+          } catch {
+            // Match the storage hook's fallback for malformed local state.
+          }
+        }
+        const next = typeof updater === "function" ? updater(previous) : updater;
+        _setRawUserState(
+          preservePreferenceOwner(
+            previous,
+            accountChange ? { ...next, _updatedAt: new Date().toISOString() } : next,
+          ),
+        );
+      };
+      // Without Web Locks account switching is disabled, but local settings
+      // must remain usable in browsers without account sync.
+      if (typeof navigator.locks?.request === "function") {
+        void withPreferenceLock(commit).catch((error: unknown) =>
+          logger.error("Failed to save preferences:", error),
+        );
+      } else commit();
     },
     [_setRawUserState],
+  );
+
+  const setUserState = useCallback(
+    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) =>
+      commitUserState(updater, true),
+    [commitUserState],
   );
 
   // `lastUsed` (active tab, last-viewed sub-view per tab) and a handful of
@@ -423,13 +455,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   // comparison pick this device's copy for that reason alone, discarding a
   // genuinely newer settings change synced from elsewhere.
   const setDeviceLocalState = useCallback(
-    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
-      markNewAnonymousPreferences();
-      _setRawUserState((prev) =>
-        preservePreferenceOwner(prev, typeof updater === "function" ? updater(prev) : updater),
-      );
-    },
-    [_setRawUserState],
+    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) =>
+      commitUserState(updater, false),
+    [commitUserState],
   );
 
   const userState: WorktimeUserState = normalizeUserState(rawUserState);

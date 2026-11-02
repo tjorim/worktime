@@ -665,22 +665,28 @@ describe("useFirstSyncFlow", () => {
     expect(JSON.stringify(mockFetch.mock.calls)).not.toContain("alice");
   });
 
-  it("allows explicitly anonymous preferences to join the first account", async () => {
-    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, ANONYMOUS_USER_STATE_OWNER);
-    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ scheduleType: "2-shift" }));
-    mockFetch.mockImplementation(async (url: string) => ({
-      ok: true,
-      json: async () => (url === "/api/preferences" ? null : emptyStatus),
-    }));
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
-    await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
-    expect(
-      mockFetch.mock.calls.some(
-        ([url, init]) =>
-          url === "/api/preferences" && init?.method === "PUT" && init.body.includes("2-shift"),
-      ),
-    ).toBe(true);
-  });
+  it.each([undefined, ANONYMOUS_USER_STATE_OWNER])(
+    "allows anonymous preferences with blob owner %s to join the first account",
+    async (owner) => {
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, ANONYMOUS_USER_STATE_OWNER);
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ scheduleType: "2-shift", _accountOwner: owner }),
+      );
+      mockFetch.mockImplementation(async (url: string) => ({
+        ok: true,
+        json: async () => (url === "/api/preferences" ? null : emptyStatus),
+      }));
+      const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
+      await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
+      expect(
+        mockFetch.mock.calls.some(
+          ([url, init]) =>
+            url === "/api/preferences" && init?.method === "PUT" && init.body.includes("2-shift"),
+        ),
+      ).toBe(true);
+    },
+  );
 
   it("pushes preferences-only local state without treating it as an entity conflict", async () => {
     localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));

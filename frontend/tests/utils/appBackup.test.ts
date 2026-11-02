@@ -20,6 +20,9 @@ import {
 import * as collectionsModule from "@/db/collections";
 import { stripVirtualProps } from "@/db/persistence";
 
+import { getPreferenceOwner } from "@/utils/preferenceStorage";
+import { buildLocalPreferencesPayload } from "@/utils/syncClient";
+
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
 
 function plainCollectionItems<T extends object>(items: T[]): Array<Record<string, unknown>> {
@@ -38,6 +41,11 @@ describe("appBackup", () => {
       expect(payload.version).toBe(1);
       expect(typeof payload.exportedAt).toBe("string");
       expect(new Date(payload.exportedAt).toISOString()).toBe(payload.exportedAt);
+    });
+
+    it("does not export internal preference ownership", () => {
+      localStorage.setItem(USER_STATE_KEY, JSON.stringify({ _accountOwner: "user-a", myTeam: 3 }));
+      expect(buildBackupPayload().userState).toEqual({ myTeam: 3 });
     });
 
     it("omits sections absent from localStorage", () => {
@@ -289,6 +297,28 @@ describe("appBackup", () => {
       expect(JSON.parse(localStorage.getItem(USER_STATE_KEY)!)).toMatchObject(state);
       expect(window.location.reload).toHaveBeenCalledOnce();
     });
+
+    it.each(["user-a", undefined])(
+      "binds imported owner %s to the destination account",
+      async (sourceOwner) => {
+        localStorage.setItem(
+          USER_STATE_KEY,
+          JSON.stringify({ _accountOwner: "user-b", myTeam: 1 }),
+        );
+        await restoreAppBackup({
+          exportedAt: "",
+          version: 1,
+          userState: {
+            _accountOwner: sourceOwner,
+            myTeam: 4,
+          },
+        });
+        expect(getPreferenceOwner()).toBe("user-b");
+        expect(buildLocalPreferencesPayload("user-b")?.data.myTeam).toBe(4);
+        expect(buildLocalPreferencesPayload("user-b")?.data).not.toHaveProperty("_accountOwner");
+        expect(window.location.reload).toHaveBeenCalledOnce();
+      },
+    );
 
     it("stamps a fresh _updatedAt on the restored userState, discarding the export-time one", async () => {
       const exportTimeState = { version: 2, myTeam: 1, _updatedAt: "2020-01-01T00:00:00.000Z" };

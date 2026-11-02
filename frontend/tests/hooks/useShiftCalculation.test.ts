@@ -67,31 +67,31 @@ describe("useShiftCalculation", () => {
   });
 
   describe("Team Selection", () => {
-    it("updates my team", () => {
+    it("updates my team", async () => {
       const { result } = renderHook(() => useShiftCalculation(), {
         wrapper,
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setMyTeam(3);
       });
 
       expect(result.current.myTeam).toBe(3);
     });
 
-    it("clears my team", () => {
+    it("clears my team", async () => {
       const { result } = renderHook(() => useShiftCalculation(), {
         wrapper,
       });
 
       // First set a team
-      act(() => {
+      await act(async () => {
         result.current.setMyTeam(3);
       });
       expect(result.current.myTeam).toBe(3);
 
       // Then clear it
-      act(() => {
+      await act(async () => {
         result.current.setMyTeam(null);
       });
 
@@ -115,12 +115,12 @@ describe("useShiftCalculation", () => {
   });
 
   describe("Shift Data Integration", () => {
-    it("calculates current shift for my team", () => {
+    it("calculates current shift for my team", async () => {
       const { result } = renderHook(() => useShiftCalculation(), {
         wrapper,
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setMyTeam(1);
       });
 
@@ -139,12 +139,12 @@ describe("useShiftCalculation", () => {
       ).toBe(true);
     });
 
-    it("calculates next shift for my team", () => {
+    it("calculates next shift for my team", async () => {
       const { result } = renderHook(() => useShiftCalculation(), {
         wrapper,
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setMyTeam(1);
       });
 

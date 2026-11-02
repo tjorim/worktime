@@ -299,6 +299,11 @@ async function prepareAccountPreferences(
       );
       resumePreferenceSwitch();
     }
+    if (owner === ANONYMOUS_USER_STATE_OWNER) {
+      const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+      if (raw !== null && !applyPreferencesPull(JSON.parse(raw) as Record<string, unknown>, uid))
+        throw new Error("Account preferences could not be stored");
+    }
     if (localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY) !== uid)
       localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, uid);
     return true;

@@ -9,6 +9,8 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 
+import { withPreferenceLock } from "@/utils/preferenceStorage";
+
 describe("SettingsContext unified user state", () => {
   function wrapper({ children }: { children: ReactNode }) {
     return <SettingsProvider>{children}</SettingsProvider>;
@@ -52,6 +54,56 @@ describe("SettingsContext unified user state", () => {
       "user-b",
     );
   });
+
+  it.each(["account", "device"])(
+    "serializes %s edits with a switch before the old tab receives its storage event",
+    async (kind) => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ _accountOwner: "user-a", myTeam: 1 }),
+      );
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await act(async () => {
+        const switching = withPreferenceLock(async () => {
+          await gate;
+          // Another tab commits without this tab receiving its storage event yet.
+          localStorage.setItem(
+            USER_STATE_STORAGE_KEY,
+            JSON.stringify({
+              _accountOwner: "user-b",
+              myTeam: 2,
+              scheduleType: "3-shift",
+              _updatedAt: "2026-01-01T00:00:00Z",
+              settings: { timeFormat: "12h", theme: "light" },
+            }),
+          );
+        });
+        await Promise.resolve();
+        if (kind === "account") result.current.setMyTeam(4);
+        else result.current.updateTheme("dark");
+        expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toEqual({
+          _accountOwner: "user-a",
+          myTeam: 1,
+        });
+        release();
+        await switching;
+        await withPreferenceLock(() => {});
+      });
+      const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(saved._accountOwner).toBe("user-b");
+      expect(saved.scheduleType).toBe("3-shift");
+      expect(saved.settings.timeFormat).toBe("12h");
+      expect(saved.myTeam).toBe(kind === "account" ? 4 : 2);
+      if (kind === "device") {
+        expect(saved.settings.theme).toBe("dark");
+        expect(saved._updatedAt).toBe("2026-01-01T00:00:00Z");
+      }
+    },
+  );
 
   it("provides default values and mutators", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
@@ -123,9 +175,9 @@ describe("SettingsContext unified user state", () => {
     expect(parsed.scheduleType).toBe("5-shift");
   });
 
-  it("resets all user state", () => {
+  it("resets all user state", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
-    act(() => {
+    await act(async () => {
       result.current.setMyTeam(2);
       result.current.setHasCompletedOnboarding(true);
       result.current.resetSettings();
@@ -146,14 +198,14 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.scheduleType).toBe(null);
   });
 
-  it("resetSettings writes the default unified user state", () => {
+  it("resetSettings writes the default unified user state", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
-    act(() => {
+    await act(async () => {
       result.current.setMyTeam(1);
       result.current.setHasCompletedOnboarding(true);
       result.current.updateTimeFormat("12h");
     });
-    act(() => {
+    await act(async () => {
       result.current.resetSettings();
     });
 
@@ -192,20 +244,20 @@ describe("SettingsContext unified user state", () => {
     });
   });
 
-  it("updates theme setting without DOM side effects", () => {
+  it("updates theme setting without DOM side effects", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
 
     // Initially should be 'auto'
     expect(result.current.settings.theme).toBe("auto");
 
     // Update to dark theme
-    act(() => {
+    await act(async () => {
       result.current.updateTheme("dark");
     });
     expect(result.current.settings.theme).toBe("dark");
 
     // Update to light theme
-    act(() => {
+    await act(async () => {
       result.current.updateTheme("light");
     });
     expect(result.current.settings.theme).toBe("light");
@@ -221,9 +273,9 @@ describe("SettingsContext unified user state", () => {
     // _updatedAt, the timestamp sync's last-write-wins reconciliation compares,
     // or a device-local change could make this device's stale settings look
     // "newer" than a real change synced from another device.
-    it("does not stamp _updatedAt when updateTheme changes", () => {
+    it("does not stamp _updatedAt when updateTheme changes", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      act(() => {
+      await act(async () => {
         result.current.updateTheme("dark");
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
@@ -231,9 +283,9 @@ describe("SettingsContext unified user state", () => {
       expect(stored.settings.theme).toBe("dark");
     });
 
-    it("does not stamp _updatedAt when updateNotifications changes", () => {
+    it("does not stamp _updatedAt when updateNotifications changes", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      act(() => {
+      await act(async () => {
         result.current.updateNotifications("on");
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
@@ -241,9 +293,9 @@ describe("SettingsContext unified user state", () => {
       expect(stored.settings.notifications).toBe("on");
     });
 
-    it("still stamps _updatedAt for a real synced setting like updateTimeOffEnabled", () => {
+    it("still stamps _updatedAt for a real synced setting like updateTimeOffEnabled", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      act(() => {
+      await act(async () => {
         result.current.updateTimeOffEnabled(true);
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
@@ -441,7 +493,7 @@ describe("SettingsContext unified user state", () => {
       });
     });
 
-    it("does not re-render settings-only consumers when lastUsed changes", () => {
+    it("does not re-render settings-only consumers when lastUsed changes", async () => {
       const renderSpy = vi.fn();
 
       function SettingsOnlyConsumer() {
@@ -463,7 +515,9 @@ describe("SettingsContext unified user state", () => {
       );
 
       expect(renderSpy).toHaveBeenCalledTimes(1);
-      fireEvent.click(screen.getByRole("button", { name: "Update last used" }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Update last used" }));
+      });
       expect(renderSpy).toHaveBeenCalledTimes(1);
     });
   });
