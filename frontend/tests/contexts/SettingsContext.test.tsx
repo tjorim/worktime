@@ -105,6 +105,73 @@ describe("SettingsContext unified user state", () => {
     },
   );
 
+  it.each([false, true])(
+    "keeps failed edits across later writes (another tab edits same owner=%s)",
+    async (externalEdit) => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          _accountOwner: "user-a",
+          myTeam: 1,
+          settings: { timeFormat: "24h" },
+        }),
+      );
+      const { result } = renderHook(() => ({ settings: useSettings(), last: useLastUsed() }), {
+        wrapper,
+      });
+      const originalSetItem = localStorage.setItem.bind(localStorage);
+      let fail = true;
+      vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+        if (key === USER_STATE_STORAGE_KEY && fail)
+          throw new DOMException("Full", "QuotaExceededError");
+        originalSetItem(key, value);
+      });
+      await act(async () => result.current.settings.setMyTeam(3));
+      expect(result.current.settings.myTeam).toBe(3);
+      if (externalEdit)
+        originalSetItem(
+          USER_STATE_STORAGE_KEY,
+          JSON.stringify({
+            _accountOwner: "user-a",
+            myTeam: 1,
+            settings: { timeFormat: "12h" },
+          }),
+        );
+      await act(async () => result.current.last.updateLastActiveTab("schedule"));
+      expect(result.current.settings.myTeam).toBe(3);
+      if (externalEdit) expect(result.current.settings.settings.timeFormat).toBe("12h");
+      fail = false;
+      await act(async () => result.current.settings.updateTheme("dark"));
+      const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(saved.myTeam).toBe(3);
+      expect(saved._accountOwner).toBe("user-a");
+      expect(saved.lastUsed.activeTab).toBe("schedule");
+      expect(saved.settings.theme).toBe("dark");
+      if (externalEdit) expect(saved.settings.timeFormat).toBe("12h");
+    },
+  );
+
+  it("does not replay failed edits into a different account", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-a", myTeam: 1 }),
+    );
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    const failedWrite = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+      if (key === USER_STATE_STORAGE_KEY) throw new DOMException("Full", "QuotaExceededError");
+      originalSetItem(key, value);
+    });
+    await act(async () => result.current.setMyTeam(3));
+    expect(result.current.myTeam).toBe(3);
+    failedWrite.mockRestore();
+    originalSetItem(USER_STATE_STORAGE_KEY, JSON.stringify({ _accountOwner: "user-b", myTeam: 2 }));
+    await act(async () => result.current.updateTheme("dark"));
+    const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+    expect(saved._accountOwner).toBe("user-b");
+    expect(saved.myTeam).toBe(2);
+  });
+
   it("provides default values and mutators", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     expect(result.current.settings.timeFormat).toBe("24h");

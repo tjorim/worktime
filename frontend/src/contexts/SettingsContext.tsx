@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { LastUsedProvider, type LastUsedContextType } from "@/contexts/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -12,7 +12,11 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
-import { preservePreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
+import {
+  getPreferenceOwner,
+  preservePreferenceOwner,
+  withPreferenceLock,
+} from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
@@ -401,6 +405,11 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     defaultUserState,
   );
 
+  const unsavedEdits = useRef<{
+    owner: string | null;
+    updates: Array<(previous: WorktimeUserState) => WorktimeUserState>;
+  } | null>(null);
+
   const commitUserState = useCallback(
     (
       updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState),
@@ -419,13 +428,25 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             // Match the storage hook's fallback for malformed local state.
           }
         }
-        const next = typeof updater === "function" ? updater(previous) : updater;
-        _setRawUserState(
-          preservePreferenceOwner(
-            previous,
-            accountChange ? { ...next, _updatedAt: new Date().toISOString() } : next,
-          ),
-        );
+        const owner = getPreferenceOwner();
+        const pending = unsavedEdits.current;
+        // Replay only this tab's failed edits, over fresh persisted data. This
+        // retains unrelated edits from another tab, without crossing owners.
+        const updates = pending?.owner === owner ? [...pending.updates] : [];
+        const timestamp = new Date().toISOString();
+        updates.push((state) => {
+          const next = typeof updater === "function" ? updater(state) : updater;
+          return preservePreferenceOwner(
+            state,
+            accountChange ? { ...next, _updatedAt: timestamp } : next,
+          );
+        });
+        for (const update of updates) previous = update(previous);
+        _setRawUserState(previous);
+        unsavedEdits.current =
+          localStorage.getItem(USER_STATE_STORAGE_KEY) === JSON.stringify(previous)
+            ? null
+            : { owner, updates };
       };
       // Without Web Locks account switching is disabled, but local settings
       // must remain usable in browsers without account sync.
