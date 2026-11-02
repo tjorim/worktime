@@ -1,13 +1,22 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { LastUsedProvider, type LastUsedContextType } from "@/contexts/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { CountryCode } from "@/types/countries";
 import { isValidCountryCode } from "@/types/countries";
 
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_OWNER_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+} from "@/constants/storageKeys";
 import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
+import {
+  getPreferenceOwner,
+  preservePreferenceOwner,
+  withPreferenceLock,
+} from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 
 export type TimeFormat = "12h" | "24h";
@@ -367,6 +376,20 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   };
 };
 
+/** Mark only newly created state as anonymous; existing unowned state is legacy. */
+function markNewAnonymousPreferences(): void {
+  try {
+    if (
+      localStorage.getItem(USER_STATE_STORAGE_KEY) === null &&
+      localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY) === null
+    ) {
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, ANONYMOUS_USER_STATE_OWNER);
+    }
+  } catch {
+    // Missing ownership remains unknown, so sign-in will not auto-upload it.
+  }
+}
+
 /**
  * Settings provider that manages the current unified user state in localStorage.
  *
@@ -382,14 +405,71 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     defaultUserState,
   );
 
-  const setUserState = useCallback(
-    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
-      _setRawUserState((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        return { ...next, _updatedAt: new Date().toISOString() };
-      });
+  const unsavedEdits = useRef<{
+    owner: string | null;
+    updates: Array<(previous: WorktimeUserState) => WorktimeUserState>;
+  } | null>(null);
+
+  const commitUserState = useCallback(
+    (
+      updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState),
+      accountChange: boolean,
+    ) => {
+      const commit = () => {
+        markNewAnonymousPreferences();
+        // Storage events can arrive after an interaction in an older tab. Read
+        // inside the switch lock so cached data cannot undo another tab's switch.
+        const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+        let previous: WorktimeUserState = defaultUserState;
+        if (raw !== null) {
+          try {
+            previous = JSON.parse(raw) as WorktimeUserState;
+          } catch {
+            // Match the storage hook's fallback for malformed local state.
+          }
+        }
+        const owner = getPreferenceOwner();
+        const pending = unsavedEdits.current;
+        // Replay only this tab's failed edits, over fresh persisted data. This
+        // retains unrelated edits from another tab, without crossing owners.
+        const updates = pending?.owner === owner ? [...pending.updates] : [];
+        const timestamp = new Date().toISOString();
+        updates.push((state) => {
+          const next = typeof updater === "function" ? updater(state) : updater;
+          const storedTimestamp = isObjectRecord(state) ? state._updatedAt : undefined;
+          // A failed edit may replay over a newer save from another tab.
+          const updatedAt =
+            typeof storedTimestamp === "string" &&
+            Date.parse(storedTimestamp) > Date.parse(timestamp)
+              ? storedTimestamp
+              : timestamp;
+          return preservePreferenceOwner(
+            state,
+            accountChange ? { ...next, _updatedAt: updatedAt } : next,
+          );
+        });
+        for (const update of updates) previous = update(previous);
+        _setRawUserState(previous);
+        unsavedEdits.current =
+          localStorage.getItem(USER_STATE_STORAGE_KEY) === JSON.stringify(previous)
+            ? null
+            : { owner, updates };
+      };
+      // Without Web Locks account switching is disabled, but local settings
+      // must remain usable in browsers without account sync.
+      if (typeof navigator.locks?.request === "function") {
+        void withPreferenceLock(commit).catch((error: unknown) =>
+          logger.error("Failed to save preferences:", error),
+        );
+      } else commit();
     },
     [_setRawUserState],
+  );
+
+  const setUserState = useCallback(
+    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) =>
+      commitUserState(updater, true),
+    [commitUserState],
   );
 
   // `lastUsed` (active tab, last-viewed sub-view per tab) and a handful of
@@ -403,10 +483,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   // comparison pick this device's copy for that reason alone, discarding a
   // genuinely newer settings change synced from elsewhere.
   const setDeviceLocalState = useCallback(
-    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
-      _setRawUserState((prev) => (typeof updater === "function" ? updater(prev) : updater));
-    },
-    [_setRawUserState],
+    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) =>
+      commitUserState(updater, false),
+    [commitUserState],
   );
 
   const userState: WorktimeUserState = normalizeUserState(rawUserState);

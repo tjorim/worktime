@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acceptTaskConflictServerState,
   applyIncrementalPullToCollections,
@@ -7,6 +7,7 @@ import {
   setSyncCollectionTriggerPull,
   tasksCollection,
 } from "@/db/collections";
+import { USER_STATE_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
 import { useOngoingSync } from "@/hooks/useOngoingSync";
 import { storeSyncCursor, type SyncPushPayload, type SyncPullResponse } from "@/utils/syncClient";
 
@@ -43,6 +44,10 @@ const localTask = (id: string) => ({
   startTime: "2026-01-01T09:00",
   stopTime: "2026-01-01T10:00",
   includesBreak: false,
+});
+
+beforeEach(() => {
+  localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-1");
 });
 
 afterEach(async () => {

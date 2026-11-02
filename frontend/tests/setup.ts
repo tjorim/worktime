@@ -42,7 +42,7 @@ if (typeof window !== "undefined") {
   Object.defineProperty(window, "localStorage", {
     writable: true,
     value: {
-      getItem: (key: string) => storage[key] || null,
+      getItem: (key: string) => storage[key] ?? null,
       setItem: (key: string, value: string) => {
         storage[key] = value;
       },
@@ -59,6 +59,24 @@ if (typeof window !== "undefined") {
     },
   });
 }
+
+// Web Locks serialize callbacks across simulated tabs, as browsers do on an origin.
+const preferenceLocks = new Map<string, Promise<unknown>>();
+Object.defineProperty(navigator, "locks", {
+  configurable: true,
+  enumerable: true,
+  value: {
+    request: (name: string, operation: () => unknown) => {
+      const result = (preferenceLocks.get(name) ?? Promise.resolve()).then(operation);
+      preferenceLocks.set(
+        name,
+        result.catch(() => undefined),
+      );
+      return result;
+    },
+  },
+});
+beforeEach(() => preferenceLocks.clear());
 
 // ---------------------------------------------------------------------------
 // TanStack DB collection cleanup helper

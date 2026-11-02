@@ -10,7 +10,7 @@
  */
 
 import { dayjs } from "@/utils/dateTimeUtils";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { ANONYMOUS_USER_STATE_OWNER, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import {
   ganttTasksCollection,
   getSyncCollectionUserId,
@@ -35,6 +35,7 @@ import {
   type FetchFn,
   type SyncPushPayload,
 } from "@/utils/syncClient";
+import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import type { Label } from "@/lib/timeTracking/constants";
@@ -246,7 +247,10 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
 
   if (include.userState) {
     const userState = safeParseJson(USER_STATE_STORAGE_KEY);
-    if (userState !== undefined) payload.userState = userState;
+    if (typeof userState === "object" && userState !== null && !Array.isArray(userState)) {
+      const { _accountOwner: _owner, ...preferences } = userState as Record<string, unknown>;
+      payload.userState = preferences;
+    } else if (userState !== undefined) payload.userState = userState;
   }
 
   if (include.timeOff) {
@@ -438,17 +442,27 @@ export async function restoreAppBackup(
     typeof payload.userState === "object" &&
     payload.userState !== null
   ) {
-    localStorage.setItem(
-      USER_STATE_STORAGE_KEY,
-      JSON.stringify({
-        ...(payload.userState as Record<string, unknown>),
-        // The restore is the newest intent for this device — without this,
-        // reconcilePreferences compares export-time timestamps against the
-        // server's, and any backup older than the account's current server
-        // copy loses the last-write-wins check and gets silently overwritten.
-        _updatedAt: new Date().toISOString(),
-      }),
-    );
+    const restorePreferences = () => {
+      const { _accountOwner: _sourceOwner, ...preferences } = payload.userState as Record<
+        string,
+        unknown
+      >;
+      // A backup carries preferences, not the source account's ownership.
+      const destinationOwner =
+        getSyncCollectionUserId() ?? getPreferenceOwner() ?? ANONYMOUS_USER_STATE_OWNER;
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          ...preferences,
+          _accountOwner: destinationOwner,
+          // Restoring a backup is the newest preference intent on this device.
+          _updatedAt: new Date().toISOString(),
+        }),
+      );
+    };
+    if (typeof navigator.locks?.request === "function")
+      await withPreferenceLock(restorePreferences);
+    else restorePreferences();
   }
 
   if (Array.isArray(payload.timeOff)) {

@@ -361,7 +361,7 @@ export function useOngoingSync(
         if (!mountedRef.current) return;
         if (pullResult) {
           onIncrementalPullRef.current?.(pullResult);
-          await reconcilePreferences(syncFetch);
+          await reconcilePreferences(syncFetch, userId);
           if (!mountedRef.current) return;
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
@@ -576,7 +576,7 @@ export function useOngoingSync(
               // Pull succeeded — now run post-success reconciliation.
               try {
                 onIncrementalPullRef.current?.(pullResult);
-                await reconcilePreferences(fetchFn);
+                await reconcilePreferences(fetchFn, userId);
                 if (!mountedRef.current) return;
                 storeSyncCursor(userId, pullResult.server_timestamp);
                 setLastSyncedAt(pullResult.server_timestamp);

@@ -32,6 +32,7 @@ import {
 } from "@/db/collections";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
+import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
@@ -745,11 +746,12 @@ function withLocalDeviceSettings(incomingSettings: unknown, localSettings: unkno
  * device's local-only changes (a tab switch, a theme toggle) poison the
  * account's synced preferences.
  */
-export function buildLocalPreferencesPayload(): {
+export function buildLocalPreferencesPayload(userId?: string): {
   data: Record<string, unknown>;
   clientUpdatedAt: string;
 } | null {
   try {
+    if (userId !== undefined && getPreferenceOwner() !== userId) return null;
     const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
@@ -757,7 +759,7 @@ export function buildLocalPreferencesPayload(): {
     const stored = parsed as Record<string, unknown>;
     const storedTimestamp =
       typeof stored._updatedAt === "string" ? stored._updatedAt : dayjs().toISOString();
-    const { lastUsed: _lastUsed, settings, ...restTop } = stored;
+    const { lastUsed: _lastUsed, _accountOwner: _owner, settings, ...restTop } = stored;
     return {
       data: { ...restTop, settings: omitDeviceLocalSettings(settings) },
       clientUpdatedAt: storedTimestamp,
@@ -775,23 +777,30 @@ export function buildLocalPreferencesPayload(): {
  * synced blob (or values pushed before this device excluded them) overwrite
  * this device's own navigation state or device-local settings.
  */
-export function applyPreferencesPull(data: Record<string, unknown>): void {
+export function applyPreferencesPull(data: Record<string, unknown>, owner?: string): boolean {
   try {
     const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
     let localLastUsed: unknown;
     let localSettings: unknown;
+    let localOwner: unknown;
     if (raw) {
       try {
         const parsedLocal: unknown = JSON.parse(raw);
         if (isRecord(parsedLocal)) {
           localLastUsed = parsedLocal.lastUsed;
           localSettings = parsedLocal.settings;
+          localOwner = parsedLocal._accountOwner;
         }
       } catch {
         // Malformed local state; nothing to preserve.
       }
     }
-    const { lastUsed: _incomingLastUsed, settings: incomingSettings, ...rest } = data;
+    const {
+      lastUsed: _incomingLastUsed,
+      _accountOwner: _incomingOwner,
+      settings: incomingSettings,
+      ...rest
+    } = data;
     const merged: Record<string, unknown> = {
       ...rest,
       settings: withLocalDeviceSettings(incomingSettings, localSettings),
@@ -799,6 +808,8 @@ export function applyPreferencesPull(data: Record<string, unknown>): void {
     if (localLastUsed !== undefined) {
       merged.lastUsed = localLastUsed;
     }
+    const storedOwner = owner ?? localOwner;
+    if (typeof storedOwner === "string") merged._accountOwner = storedOwner;
     const serialized = JSON.stringify(merged);
     localStorage.setItem(USER_STATE_STORAGE_KEY, serialized);
     if (typeof window !== "undefined") {
@@ -811,8 +822,10 @@ export function applyPreferencesPull(data: Record<string, unknown>): void {
         }),
       );
     }
+    return true;
   } catch {
-    // Ignore storage errors (e.g., private browsing with full storage quota)
+    // Callers switching accounts must fail closed if the old copy remains.
+    return false;
   }
 }
 
@@ -832,29 +845,38 @@ function parseTimestampMs(ts: string | null | undefined): number {
  * that signs in with newer local settings does not silently lose them to an
  * older server copy (and vice versa).
  */
-export async function reconcilePreferences(fetch: FetchFn): Promise<string | null> {
-  const [localPrefs, serverPrefs] = await Promise.all([
-    Promise.resolve(buildLocalPreferencesPayload()),
-    fetchPreferences(fetch),
-  ]);
-
-  const localTimestamp = localPrefs?.clientUpdatedAt ?? null;
-  const serverTimestamp = serverPrefs?.client_updated_at ?? null;
-
-  const localMs = parseTimestampMs(localTimestamp);
-  const serverMs = parseTimestampMs(serverTimestamp);
-
-  if (localPrefs && (!serverPrefs || localMs > serverMs)) {
-    const pushed = await pushPreferences(fetch, localPrefs.data, localPrefs.clientUpdatedAt);
-    return pushed ? localPrefs.clientUpdatedAt : serverTimestamp;
+export async function reconcilePreferences(
+  fetch: FetchFn,
+  userId?: string,
+): Promise<string | null> {
+  if (userId !== undefined && getPreferenceOwner() !== userId) return null;
+  const serverPrefs = await fetchPreferences(fetch);
+  const decide = (): {
+    timestamp: string | null;
+    push?: NonNullable<ReturnType<typeof buildLocalPreferencesPayload>>;
+  } => {
+    if (userId !== undefined && getPreferenceOwner() !== userId) return { timestamp: null };
+    const localPrefs = buildLocalPreferencesPayload(userId);
+    const localTimestamp = localPrefs?.clientUpdatedAt ?? null;
+    const serverTimestamp = serverPrefs?.client_updated_at ?? null;
+    const localMs = parseTimestampMs(localTimestamp);
+    const serverMs = parseTimestampMs(serverTimestamp);
+    if (localPrefs && (!serverPrefs || localMs > serverMs))
+      return { push: localPrefs, timestamp: serverTimestamp };
+    if (serverPrefs && (!localPrefs || serverMs > localMs)) {
+      applyPreferencesPull(serverPrefs.data, userId);
+      return { timestamp: serverTimestamp };
+    }
+    return { timestamp: localTimestamp ?? serverTimestamp };
+  };
+  const decision = userId === undefined ? decide() : await withPreferenceLock(decide);
+  if (decision.push) {
+    const { data, clientUpdatedAt } = decision.push;
+    return (await pushPreferences(fetch, data, clientUpdatedAt))
+      ? clientUpdatedAt
+      : decision.timestamp;
   }
-
-  if (serverPrefs && (!localPrefs || serverMs > localMs)) {
-    applyPreferencesPull(serverPrefs.data);
-    return serverPrefs.client_updated_at;
-  }
-
-  return localTimestamp ?? serverTimestamp;
+  return decision.timestamp;
 }
 
 // ---------------------------------------------------------------------------

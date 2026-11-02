@@ -3,7 +3,14 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useLastUsed } from "@/contexts/LastUsedContext";
 import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_OWNER_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+} from "@/constants/storageKeys";
+
+import { reconcilePreferences } from "@/utils/syncClient";
+import { withPreferenceLock } from "@/utils/preferenceStorage";
 
 describe("SettingsContext unified user state", () => {
   function wrapper({ children }: { children: ReactNode }) {
@@ -14,6 +21,211 @@ describe("SettingsContext unified user state", () => {
     window.localStorage.clear();
     document.body.removeAttribute("data-theme");
     vi.restoreAllMocks();
+  });
+
+  it.each(["account", "device"])("marks new %s settings as anonymous", async (kind) => {
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    await act(async () => {
+      if (kind === "account") result.current.setMyTeam(3);
+      else result.current.updateTheme("dark");
+    });
+    expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe(ANONYMOUS_USER_STATE_OWNER);
+  });
+
+  it("does not claim legacy preferences as anonymous when editing them", async () => {
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ myTeam: 2 }));
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    await act(async () => result.current.setMyTeam(3));
+    expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps the atomic account owner through normal edits and a full reset", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-b", scheduleType: "3-shift" }),
+    );
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    await act(async () => {
+      result.current.setMyTeam(3);
+      result.current.updateTheme("dark");
+      result.current.resetSettings();
+    });
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toHaveProperty(
+      "_accountOwner",
+      "user-b",
+    );
+  });
+
+  it.each(["account", "device"])(
+    "serializes %s edits with a switch before the old tab receives its storage event",
+    async (kind) => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ _accountOwner: "user-a", myTeam: 1 }),
+      );
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await act(async () => {
+        const switching = withPreferenceLock(async () => {
+          await gate;
+          // Another tab commits without this tab receiving its storage event yet.
+          localStorage.setItem(
+            USER_STATE_STORAGE_KEY,
+            JSON.stringify({
+              _accountOwner: "user-b",
+              myTeam: 2,
+              scheduleType: "3-shift",
+              _updatedAt: "2026-01-01T00:00:00Z",
+              settings: { timeFormat: "12h", theme: "light" },
+            }),
+          );
+        });
+        await Promise.resolve();
+        if (kind === "account") result.current.setMyTeam(4);
+        else result.current.updateTheme("dark");
+        expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toEqual({
+          _accountOwner: "user-a",
+          myTeam: 1,
+        });
+        release();
+        await switching;
+        await withPreferenceLock(() => {});
+      });
+      const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(saved._accountOwner).toBe("user-b");
+      expect(saved.scheduleType).toBe("3-shift");
+      expect(saved.settings.timeFormat).toBe("12h");
+      expect(saved.myTeam).toBe(kind === "account" ? 4 : 2);
+      if (kind === "device") {
+        expect(saved.settings.theme).toBe("dark");
+        expect(saved._updatedAt).toBe("2026-01-01T00:00:00Z");
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "keeps failed edits across later writes (another tab edits same owner=%s)",
+    async (externalEdit) => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          _accountOwner: "user-a",
+          myTeam: 1,
+          settings: { timeFormat: "24h" },
+        }),
+      );
+      const { result } = renderHook(() => ({ settings: useSettings(), last: useLastUsed() }), {
+        wrapper,
+      });
+      const originalSetItem = localStorage.setItem.bind(localStorage);
+      let fail = true;
+      vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+        if (key === USER_STATE_STORAGE_KEY && fail)
+          throw new DOMException("Full", "QuotaExceededError");
+        originalSetItem(key, value);
+      });
+      await act(async () => result.current.settings.setMyTeam(3));
+      expect(result.current.settings.myTeam).toBe(3);
+      if (externalEdit)
+        originalSetItem(
+          USER_STATE_STORAGE_KEY,
+          JSON.stringify({
+            _accountOwner: "user-a",
+            myTeam: 1,
+            settings: { timeFormat: "12h" },
+          }),
+        );
+      await act(async () => result.current.last.updateLastActiveTab("schedule"));
+      expect(result.current.settings.myTeam).toBe(3);
+      if (externalEdit) expect(result.current.settings.settings.timeFormat).toBe("12h");
+      fail = false;
+      await act(async () => result.current.settings.updateTheme("dark"));
+      const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(saved.myTeam).toBe(3);
+      expect(saved._accountOwner).toBe("user-a");
+      expect(saved.lastUsed.activeTab).toBe("schedule");
+      expect(saved.settings.theme).toBe("dark");
+      if (externalEdit) expect(saved.settings.timeFormat).toBe("12h");
+    },
+  );
+
+  it("keeps a newer stored timestamp when replaying a failed edit before reconciliation", async () => {
+    const failedAt = "2026-01-01T10:00:00.000Z";
+    const serverAt = "2026-01-01T10:01:00.000Z";
+    const savedAt = "2026-01-01T10:02:00.000Z";
+    vi.spyOn(Date.prototype, "toISOString").mockReturnValue(failedAt);
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-a", myTeam: 1 }),
+    );
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    const failedWrite = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+      if (key === USER_STATE_STORAGE_KEY) throw new DOMException("Full", "QuotaExceededError");
+      originalSetItem(key, value);
+    });
+    await act(async () => result.current.setMyTeam(3));
+    failedWrite.mockRestore();
+    originalSetItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({
+        _accountOwner: "user-a",
+        myTeam: 1,
+        _updatedAt: savedAt,
+        settings: { timeFormat: "12h" },
+      }),
+    );
+    await act(async () => result.current.updateTheme("dark"));
+    const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+    expect(saved._updatedAt).toBe(savedAt);
+    expect(saved.myTeam).toBe(3);
+    expect(saved.settings.timeFormat).toBe("12h");
+    const fetch = vi.fn(
+      async (_url: string, init?: RequestInit) =>
+        ({
+          ok: true,
+          json: async () =>
+            init?.method === "PUT"
+              ? null
+              : {
+                  data: { myTeam: 1, settings: { timeFormat: "24h" } },
+                  client_updated_at: serverAt,
+                },
+        }) as Response,
+    );
+    await act(async () => {
+      await reconcilePreferences(fetch, "user-a");
+    });
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toEqual(saved);
+    const upload = fetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(upload![1]!.body as string)).toMatchObject({
+      client_updated_at: savedAt,
+      data: { myTeam: 3, settings: { timeFormat: "12h" } },
+    });
+  });
+
+  it("does not replay failed edits into a different account", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-a", myTeam: 1 }),
+    );
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    const failedWrite = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+      if (key === USER_STATE_STORAGE_KEY) throw new DOMException("Full", "QuotaExceededError");
+      originalSetItem(key, value);
+    });
+    await act(async () => result.current.setMyTeam(3));
+    expect(result.current.myTeam).toBe(3);
+    failedWrite.mockRestore();
+    originalSetItem(USER_STATE_STORAGE_KEY, JSON.stringify({ _accountOwner: "user-b", myTeam: 2 }));
+    await act(async () => result.current.updateTheme("dark"));
+    const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+    expect(saved._accountOwner).toBe("user-b");
+    expect(saved.myTeam).toBe(2);
   });
 
   it("provides default values and mutators", () => {
@@ -86,9 +298,9 @@ describe("SettingsContext unified user state", () => {
     expect(parsed.scheduleType).toBe("5-shift");
   });
 
-  it("resets all user state", () => {
+  it("resets all user state", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
-    act(() => {
+    await act(async () => {
       result.current.setMyTeam(2);
       result.current.setHasCompletedOnboarding(true);
       result.current.resetSettings();
@@ -109,14 +321,14 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.scheduleType).toBe(null);
   });
 
-  it("resetSettings writes the default unified user state", () => {
+  it("resetSettings writes the default unified user state", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
-    act(() => {
+    await act(async () => {
       result.current.setMyTeam(1);
       result.current.setHasCompletedOnboarding(true);
       result.current.updateTimeFormat("12h");
     });
-    act(() => {
+    await act(async () => {
       result.current.resetSettings();
     });
 
@@ -155,20 +367,20 @@ describe("SettingsContext unified user state", () => {
     });
   });
 
-  it("updates theme setting without DOM side effects", () => {
+  it("updates theme setting without DOM side effects", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
 
     // Initially should be 'auto'
     expect(result.current.settings.theme).toBe("auto");
 
     // Update to dark theme
-    act(() => {
+    await act(async () => {
       result.current.updateTheme("dark");
     });
     expect(result.current.settings.theme).toBe("dark");
 
     // Update to light theme
-    act(() => {
+    await act(async () => {
       result.current.updateTheme("light");
     });
     expect(result.current.settings.theme).toBe("light");
@@ -184,9 +396,9 @@ describe("SettingsContext unified user state", () => {
     // _updatedAt, the timestamp sync's last-write-wins reconciliation compares,
     // or a device-local change could make this device's stale settings look
     // "newer" than a real change synced from another device.
-    it("does not stamp _updatedAt when updateTheme changes", () => {
+    it("does not stamp _updatedAt when updateTheme changes", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      act(() => {
+      await act(async () => {
         result.current.updateTheme("dark");
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
@@ -194,9 +406,9 @@ describe("SettingsContext unified user state", () => {
       expect(stored.settings.theme).toBe("dark");
     });
 
-    it("does not stamp _updatedAt when updateNotifications changes", () => {
+    it("does not stamp _updatedAt when updateNotifications changes", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      act(() => {
+      await act(async () => {
         result.current.updateNotifications("on");
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
@@ -204,9 +416,9 @@ describe("SettingsContext unified user state", () => {
       expect(stored.settings.notifications).toBe("on");
     });
 
-    it("still stamps _updatedAt for a real synced setting like updateTimeOffEnabled", () => {
+    it("still stamps _updatedAt for a real synced setting like updateTimeOffEnabled", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      act(() => {
+      await act(async () => {
         result.current.updateTimeOffEnabled(true);
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
@@ -404,7 +616,7 @@ describe("SettingsContext unified user state", () => {
       });
     });
 
-    it("does not re-render settings-only consumers when lastUsed changes", () => {
+    it("does not re-render settings-only consumers when lastUsed changes", async () => {
       const renderSpy = vi.fn();
 
       function SettingsOnlyConsumer() {
@@ -426,7 +638,9 @@ describe("SettingsContext unified user state", () => {
       );
 
       expect(renderSpy).toHaveBeenCalledTimes(1);
-      fireEvent.click(screen.getByRole("button", { name: "Update last used" }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Update last used" }));
+      });
       expect(renderSpy).toHaveBeenCalledTimes(1);
     });
   });

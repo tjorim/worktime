@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
 import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/syncClient";
 import type { SyncPushPayload } from "@/utils/syncClient";
-import { getSyncCursorKey, getSyncOutboxKey, getSyncQuarantineKey } from "@/constants/storageKeys";
+import {
+  USER_STATE_OWNER_STORAGE_KEY,
+  getSyncCursorKey,
+  getSyncOutboxKey,
+  getSyncQuarantineKey,
+} from "@/constants/storageKeys";
 
 const mockFetch = vi.fn();
 
@@ -32,6 +37,7 @@ const incrementalPullResponse = {
 describe("useOngoingSync", () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-1");
     vi.stubGlobal("navigator", { ...navigator, onLine: true });
   });
 

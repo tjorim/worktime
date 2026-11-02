@@ -44,6 +44,7 @@ import {
   storeSyncCursor,
   syncStatusHasEntityData,
   type FetchFn,
+  type PreferencesResponse,
   type SyncPullResponse,
   type SyncPushPayload,
   type SyncStatusResponse,
@@ -53,6 +54,16 @@ import {
   mergePullIntoCollections,
   preloadSyncCollections,
 } from "@/db/collections";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  USER_STATE_STORAGE_KEY,
+  USER_STATE_SWITCH_STORAGE_KEY,
+  USER_STATE_UNCLAIMED_STORAGE_KEY,
+  USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY,
+  getAccountPreferencesKey,
+  USER_STATE_OWNER_STORAGE_KEY,
+} from "@/constants/storageKeys";
+import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
 import { logger } from "@/utils/logger";
 import {
   countSyncPayloadEntities,
@@ -182,12 +193,12 @@ type MountedCheck = () => boolean;
 async function pushLocalPreferencesIfPresent(
   fetch: FetchFn,
   mounted: MountedCheck,
+  userId: string,
 ): Promise<boolean> {
-  const prefsPayload = buildLocalPreferencesPayload();
-  if (!prefsPayload) return true; // nothing to push — not a failure
+  const prefsPayload = await withPreferenceLock(() => buildLocalPreferencesPayload(userId));
+  if (!prefsPayload) return true;
   const pushed = await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
-  if (!mounted()) return false;
-  return pushed;
+  return mounted() && pushed;
 }
 
 /**
@@ -197,13 +208,113 @@ async function pushLocalPreferencesIfPresent(
 async function pullAndApplyServerPreferencesIfPresent(
   fetch: FetchFn,
   mounted: MountedCheck,
+  userId: string,
 ): Promise<boolean> {
   const serverPrefs = await fetchPreferences(fetch);
-  if (!mounted()) return false;
-  if (serverPrefs) {
-    applyPreferencesPull(serverPrefs.data);
+  return withPreferenceLock(() => {
+    if (!mounted() || getPreferenceOwner() !== userId) return false;
+    return serverPrefs ? applyPreferencesPull(serverPrefs.data, userId) : true;
+  });
+}
+
+/** Retain the latest outgoing edits before any replacement, including a retry. */
+function backUpOutgoingPreferences(): void {
+  const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+  if (raw === null) return;
+  const owner = getPreferenceOwner();
+  if (owner !== null && owner !== ANONYMOUS_USER_STATE_OWNER) {
+    localStorage.setItem(getAccountPreferencesKey(owner), raw);
+    return;
   }
-  return true;
+  const original = localStorage.getItem(USER_STATE_UNCLAIMED_STORAGE_KEY);
+  if (original === null) localStorage.setItem(USER_STATE_UNCLAIMED_STORAGE_KEY, raw);
+  else if (original !== raw) {
+    const history: unknown = JSON.parse(
+      localStorage.getItem(USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY) ?? "[]",
+    );
+    if (!Array.isArray(history) || !history.every((item) => typeof item === "string"))
+      throw new Error("Invalid unclaimed preference history");
+    if (!history.includes(raw))
+      localStorage.setItem(
+        USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY,
+        JSON.stringify([...history, raw]),
+      );
+  }
+}
+
+/** Finish an interrupted replacement before attributing the shared blob to anyone. */
+function resumePreferenceSwitch(): void {
+  const raw = localStorage.getItem(USER_STATE_SWITCH_STORAGE_KEY);
+  if (raw === null) return;
+  const pending = JSON.parse(raw) as { userId?: unknown; data?: unknown };
+  if (
+    typeof pending !== "object" ||
+    pending === null ||
+    typeof pending.userId !== "string" ||
+    pending.userId.length === 0 ||
+    typeof pending.data !== "object" ||
+    pending.data === null ||
+    Array.isArray(pending.data)
+  )
+    throw new Error("Invalid pending preference switch");
+
+  // The blob's atomic owner tells us whether replacement actually happened,
+  // even if the separate owner write failed. Never replay over target edits.
+  if (getPreferenceOwner() !== pending.userId) {
+    backUpOutgoingPreferences();
+    if (!applyPreferencesPull(pending.data as Record<string, unknown>, pending.userId))
+      throw new Error("Account preferences could not be stored");
+  }
+  localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, pending.userId);
+  localStorage.removeItem(USER_STATE_SWITCH_STORAGE_KEY);
+}
+
+/** Prepare before ongoing sync starts; only storage transitions hold the origin lock. */
+async function prepareAccountPreferences(
+  uid: string,
+  fetch: FetchFn,
+  current: MountedCheck,
+): Promise<boolean> {
+  // Only storage transitions hold the lock. A stalled fetch must not prevent
+  // another tab/account from preparing its own preferences.
+  const attempt = (serverData?: Record<string, unknown>): boolean | "fetch" => {
+    if (!current()) return false;
+    resumePreferenceSwitch();
+    const owner = getPreferenceOwner();
+    const needsRestore =
+      owner !== null ||
+      localStorage.getItem(getAccountPreferencesKey(uid)) !== null ||
+      localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
+    if (owner !== uid && owner !== ANONYMOUS_USER_STATE_OWNER && needsRestore) {
+      // Re-read after the fetch: a different tab may have switched accounts
+      // or saved newer edits while the request was in flight.
+      const saved = localStorage.getItem(getAccountPreferencesKey(uid));
+      if (saved === null && serverData === undefined) return "fetch";
+      const incoming =
+        saved === null ? serverData! : (JSON.parse(saved) as Record<string, unknown>);
+      backUpOutgoingPreferences();
+      localStorage.setItem(
+        USER_STATE_SWITCH_STORAGE_KEY,
+        JSON.stringify({ userId: uid, data: incoming }),
+      );
+      resumePreferenceSwitch();
+    }
+    if (owner === ANONYMOUS_USER_STATE_OWNER) {
+      const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+      if (raw !== null && !applyPreferencesPull(JSON.parse(raw) as Record<string, unknown>, uid))
+        throw new Error("Account preferences could not be stored");
+    }
+    if (localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY) !== uid)
+      localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, uid);
+    return true;
+  };
+  const first = await withPreferenceLock(() => attempt());
+  if (first !== "fetch") return first;
+  const response = await fetch("/api/preferences");
+  if (!response.ok) throw new Error("Account preferences could not be loaded");
+  const prefs = (await response.json()) as PreferencesResponse | null;
+  const result = await withPreferenceLock(() => attempt(prefs?.data ?? {}));
+  return result === true;
 }
 
 export function useFirstSyncFlow(
@@ -211,6 +322,7 @@ export function useFirstSyncFlow(
   userId: string | null,
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
+  const [preparedForUser, setPreparedForUser] = useState<string | null>(null);
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
 
   // Guard against running the flow more than once per mount when deps change.
@@ -241,11 +353,24 @@ export function useFirstSyncFlow(
     async (uid: string, fetch: (url: string, init?: RequestInit) => Promise<Response>) => {
       // Skip if we already ran for this user in this session.
       if (flowStartedForUser.current === uid) return;
-      // Skip if a sync cursor already exists for this user.
-      if (hasSyncCursor(uid)) return;
-
       flowStartedForUser.current = uid;
       setPhase("checking");
+
+      // A browser-wide preferences blob must never be offered to another
+      // account's last-write-wins reconciliation. Restore that account's copy
+      // (or defaults for an empty account) before enabling any sync, including
+      // when this account already has a cursor on this device.
+      const prepared = await prepareAccountPreferences(
+        uid,
+        fetch,
+        () => mountedRef.current && flowStartedForUser.current === uid,
+      );
+      if (!prepared || !mountedRef.current || flowStartedForUser.current !== uid) return;
+      setPreparedForUser(uid);
+      if (hasSyncCursor(uid)) {
+        setPhase("idle");
+        return;
+      }
 
       const diagnostics = createSyncAttemptDiagnostics();
       diagnosticsRef.current = diagnostics;
@@ -294,7 +419,7 @@ export function useFirstSyncFlow(
       // side, so reconcile them rather than leaving local settings unsynced.
       if (!localHasData && !serverHasData) {
         diagnosticPhaseRef.current = "preferences";
-        await reconcilePreferences(syncFetch);
+        await reconcilePreferences(syncFetch, uid);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         diagnosticPhaseRef.current = "cursor";
         storeSyncCursor(uid, status.server_timestamp);
@@ -323,7 +448,7 @@ export function useFirstSyncFlow(
         // newer settings from another device, and pushing this device's copy
         // unconditionally would overwrite them.
         diagnosticPhaseRef.current = "preferences";
-        await reconcilePreferences(syncFetch);
+        await reconcilePreferences(syncFetch, uid);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
@@ -358,7 +483,7 @@ export function useFirstSyncFlow(
         // copy outright: this device having no entities says nothing about
         // whether its settings are older than the account's.
         diagnosticPhaseRef.current = "preferences";
-        await reconcilePreferences(syncFetch);
+        await reconcilePreferences(syncFetch, uid);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         diagnosticPhaseRef.current = "cursor";
         storeSyncCursor(uid, pullResult.server_timestamp);
@@ -493,7 +618,7 @@ export function useFirstSyncFlow(
             // Neither side was chosen over the other, so preferences fall back
             // to their own last-write-wins reconciliation.
             diagnosticPhase = "preferences";
-            await reconcilePreferences(fetch);
+            await reconcilePreferences(fetch, uid);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             diagnosticPhase = "cursor";
             storeSyncCursor(uid, merged.server_timestamp);
@@ -555,6 +680,7 @@ export function useFirstSyncFlow(
             const prefsPushed = await pushLocalPreferencesIfPresent(
               fetch,
               () => mountedRef.current && flowStartedForUser.current === uid,
+              uid,
             );
             if (!prefsPushed) {
               if (!mountedRef.current || flowStartedForUser.current !== uid) return;
@@ -595,6 +721,7 @@ export function useFirstSyncFlow(
             const prefsMounted = await pullAndApplyServerPreferencesIfPresent(
               fetch,
               () => mountedRef.current && flowStartedForUser.current === uid,
+              uid,
             );
             if (!prefsMounted) return;
             storeSyncCursor(uid, pullResult.server_timestamp);
@@ -635,6 +762,7 @@ export function useFirstSyncFlow(
   useEffect(() => {
     if (!isAuthenticated) {
       setPhase("idle");
+      setPreparedForUser(null);
       flowStartedForUser.current = null;
       conflictResolutionForUserRef.current = null;
       capturedServerDataRef.current = null;
@@ -662,7 +790,8 @@ export function useFirstSyncFlow(
   //  a) The first-sync flow just finished (phase === "done"), OR
   //  b) A cursor already existed when the component mounted (phase === "idle" with cursor present)
   const isSyncEstablished =
-    phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId));
+    preparedForUser === userId &&
+    (phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId)));
 
   return { phase, isSyncEstablished, resolveConflict, conflictCounts, dismiss };
 }

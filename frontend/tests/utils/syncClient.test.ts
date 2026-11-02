@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyPreferencesPull,
+  reconcilePreferences,
   appendToPendingSyncOutbox,
   appendToSyncOutbox,
   bumpClientTimestamps,
@@ -1566,6 +1567,53 @@ describe("syncClient", () => {
       const result = buildLocalPreferencesPayload();
       expect(result?.data.settings).toEqual({ timeFormat: "24h", enableTimeOff: true });
     });
+  });
+
+  it("discards a preference response if another tab switched accounts during the fetch", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-b", scheduleType: "3-shift" }),
+    );
+    let release!: (response: Response) => void;
+    const fetch = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const pending = reconcilePreferences(fetch, "user-b");
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-c", scheduleType: "5-shift" }),
+    );
+    release({
+      ok: true,
+      json: async () => ({
+        data: { scheduleType: "3-shift" },
+        client_updated_at: "2099-01-01T00:00:00Z",
+      }),
+    } as Response);
+    await expect(pending).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).toContain("5-shift");
+  });
+
+  it("never uploads the internal owner marker or another account's preferences", () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-b", scheduleType: "3-shift" }),
+    );
+    expect(buildLocalPreferencesPayload("user-a")).toBeNull();
+    expect(buildLocalPreferencesPayload("user-b")?.data).toEqual({
+      scheduleType: "3-shift",
+      settings: undefined,
+    });
+    expect(JSON.stringify(buildLocalPreferencesPayload("user-b"))).not.toContain("_accountOwner");
+    applyPreferencesPull({ _accountOwner: "injected", scheduleType: "5-shift" });
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toHaveProperty(
+      "_accountOwner",
+      "user-b",
+    );
   });
 
   describe("applyPreferencesPull", () => {

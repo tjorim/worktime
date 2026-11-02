@@ -38,7 +38,7 @@ own recommended pattern instead — set up once, save the session, reuse it:
   node e2e/open-app.mjs                       # terminal 2 — opens an onboarded window
   ```
 
-`auth.setup.ts` seeds two things into localStorage before saving storageState:
+`auth.setup.ts` seeds three things into localStorage before saving storageState:
 
 1. The same `oidc.user:<authority>:<client_id>` entry a real Keycloak login
    would leave behind (matching `src/config/oidc.ts`'s storage format), so
@@ -47,6 +47,11 @@ own recommended pattern instead — set up once, save the session, reuse it:
    `src/contexts/SettingsContext.tsx`) with `hasCompletedOnboarding: true`,
    a `scheduleType`, and `settings.enableTimeTracking: true` — the same shape
    the app itself persists after a real user finishes the wizard.
+3. The preferences owner (`USER_STATE_OWNER_STORAGE_KEY` in
+   `src/constants/storageKeys.ts`), set to the fake OIDC user's subject. This
+   makes the seeded preferences account-owned rather than unclaimed legacy
+   state, which the account-isolation flow deliberately restores instead of
+   uploading.
 
 This is test/dev tooling only — `src/config/oidc.ts`,
 `src/contexts/AuthContext.tsx`, and `src/contexts/SettingsContext.tsx` are
