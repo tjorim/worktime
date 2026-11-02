@@ -35,7 +35,7 @@ def get_client_ip(request: Request) -> str:
     A missing/malformed forwarded value falls back to the peer. IPv6 /64s
     share one bucket, and IPv4-mapped addresses share their IPv4 bucket.
     """
-    peer = request.client.host if request.client else "unknown"
+    peer = request.client.host if request.client and request.client.host else "unknown"
     try:
         address = ip_address(peer)
     except ValueError:
@@ -127,6 +127,7 @@ class RequestRateLimiter:
             "Retry-After": str(max(1, math.ceil(reset - time.time()))),
         }
         request.state.rate_limit_headers = headers
+        request.state.rate_limit_rejected = bool(blocked)
         if blocked:
             raise RateLimitExceeded(str(item), headers)
 
@@ -141,8 +142,15 @@ class RateLimitHeadersMiddleware:
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
-                for name, value in scope.get("state", {}).get("rate_limit_headers", {}).items():
-                    headers[name] = value
+                state = scope.get("state", {})
+                # A purpose-specific quota can reject an otherwise allowed
+                # general request. Its backoff/headers must take precedence.
+                if message["status"] != 429 or state.get("rate_limit_rejected"):
+                    for name, value in state.get("rate_limit_headers", {}).items():
+                        if name not in headers:
+                            headers[name] = value
+                if message["status"] == 429 and "Cache-Control" not in headers:
+                    headers["Cache-Control"] = "no-store"
             await send(message)
 
         await self.app(scope, receive, send_with_headers)

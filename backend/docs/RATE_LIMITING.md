@@ -26,3 +26,7 @@ and polling clients. Keep existing thresholds and exemptions. Where enforcement
 or bucket grouping changes, `RATE_LIMIT_ENABLED=false` can stage rollout while
 traffic is measured; it is not a shadow-counting mode. Monitor 429 rates when
 enabling enforcement. Mounted MCP applications retain their own policies.
+
+Purpose-specific 429 responses retain their own backoff and quota headers. A
+general allowance never overwrites a stricter endpoint policy or reports a
+positive general balance as the cause of that rejection.

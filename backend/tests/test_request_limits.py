@@ -52,6 +52,10 @@ def build_app(limit="2/minute"):
     async def private():
         raise HTTPException(401)
 
+    @router.get("/backoff")
+    async def backoff():
+        raise HTTPException(429, headers={"Retry-After": "600"})
+
     @router.get("/validated")
     async def validated(value: int):
         return {"value": value}
@@ -183,3 +187,12 @@ def test_empty_router_path_keeps_its_inclusion_prefix():
     assert client.get("/other").status_code == 200
     assert client.get("/other").status_code == 429
     assert client.get("/api/nested").status_code == 200
+
+
+def test_purpose_specific_429_keeps_its_own_backoff():
+    app, _ = build_app()
+    response = TestClient(app).get("/other/backoff")
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "600"
+    assert response.headers["cache-control"] == "no-store"
+    assert "x-ratelimit-remaining" not in response.headers
