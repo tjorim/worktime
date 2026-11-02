@@ -436,9 +436,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         const timestamp = new Date().toISOString();
         updates.push((state) => {
           const next = typeof updater === "function" ? updater(state) : updater;
+          const storedTimestamp = isObjectRecord(state) ? state._updatedAt : undefined;
+          // A failed edit may replay over a newer save from another tab.
+          const updatedAt =
+            typeof storedTimestamp === "string" &&
+            Date.parse(storedTimestamp) > Date.parse(timestamp)
+              ? storedTimestamp
+              : timestamp;
           return preservePreferenceOwner(
             state,
-            accountChange ? { ...next, _updatedAt: timestamp } : next,
+            accountChange ? { ...next, _updatedAt: updatedAt } : next,
           );
         });
         for (const update of updates) previous = update(previous);

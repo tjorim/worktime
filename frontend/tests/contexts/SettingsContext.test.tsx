@@ -9,6 +9,7 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 
+import { reconcilePreferences } from "@/utils/syncClient";
 import { withPreferenceLock } from "@/utils/preferenceStorage";
 
 describe("SettingsContext unified user state", () => {
@@ -150,6 +151,61 @@ describe("SettingsContext unified user state", () => {
       if (externalEdit) expect(saved.settings.timeFormat).toBe("12h");
     },
   );
+
+  it("keeps a newer stored timestamp when replaying a failed edit before reconciliation", async () => {
+    const failedAt = "2026-01-01T10:00:00.000Z";
+    const serverAt = "2026-01-01T10:01:00.000Z";
+    const savedAt = "2026-01-01T10:02:00.000Z";
+    vi.spyOn(Date.prototype, "toISOString").mockReturnValue(failedAt);
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ _accountOwner: "user-a", myTeam: 1 }),
+    );
+    const { result } = renderHook(() => useSettings(), { wrapper });
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    const failedWrite = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+      if (key === USER_STATE_STORAGE_KEY) throw new DOMException("Full", "QuotaExceededError");
+      originalSetItem(key, value);
+    });
+    await act(async () => result.current.setMyTeam(3));
+    failedWrite.mockRestore();
+    originalSetItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({
+        _accountOwner: "user-a",
+        myTeam: 1,
+        _updatedAt: savedAt,
+        settings: { timeFormat: "12h" },
+      }),
+    );
+    await act(async () => result.current.updateTheme("dark"));
+    const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+    expect(saved._updatedAt).toBe(savedAt);
+    expect(saved.myTeam).toBe(3);
+    expect(saved.settings.timeFormat).toBe("12h");
+    const fetch = vi.fn(
+      async (_url: string, init?: RequestInit) =>
+        ({
+          ok: true,
+          json: async () =>
+            init?.method === "PUT"
+              ? null
+              : {
+                  data: { myTeam: 1, settings: { timeFormat: "24h" } },
+                  client_updated_at: serverAt,
+                },
+        }) as Response,
+    );
+    await act(async () => {
+      await reconcilePreferences(fetch, "user-a");
+    });
+    expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toEqual(saved);
+    const upload = fetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(upload![1]!.body as string)).toMatchObject({
+      client_updated_at: savedAt,
+      data: { myTeam: 3, settings: { timeFormat: "12h" } },
+    });
+  });
 
   it("does not replay failed edits into a different account", async () => {
     localStorage.setItem(
