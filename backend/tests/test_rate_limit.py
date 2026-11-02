@@ -8,7 +8,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
+from starlette.applications import Starlette
 from starlette.requests import Request
+from starlette.responses import PlainTextResponse
+from starlette.routing import Route
 
 from app.middleware.rate_limit import RouterAwareRateLimitMiddleware, get_client_ip, handle_rate_limit_exceeded
 
@@ -154,3 +157,23 @@ def test_authenticated_api_default_limit(
     assert response.status_code == 429
     assert response.json()["code"] == "rate_limited"
     assert int(response.headers["retry-after"]) > 0
+
+
+def test_mounted_app_is_served_and_not_limited():
+    """A mounted ASGI app (such as the MCP app) has no function name to key a limit on.
+
+    The middleware must pass it through, as SlowAPIMiddleware did, instead of failing with a 500.
+    """
+    app = _build_app(limit="1/minute")
+
+    async def mounted_page(request: Request) -> PlainTextResponse:
+        return PlainTextResponse("mounted")
+
+    # A Starlette instance, like the MCP app: unlike a plain function it has no __name__.
+    app.mount("/mounted", Starlette(routes=[Route("/anything", mounted_page)]))
+    client = TestClient(app)
+
+    for _ in range(3):
+        response = client.get("/mounted/anything")
+        assert response.status_code == 200
+        assert response.text == "mounted"

@@ -93,15 +93,22 @@ class RouterAwareRateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         handler = None
+        matched = False
         for route in request.app.routes:
             contexts = getattr(route, "effective_route_contexts", None)
             candidates = contexts() if contexts is not None else (route,)
             for candidate in candidates:
                 match, child_scope = candidate.matches(request.scope)
                 if match == Match.FULL:
-                    handler = child_scope.get("endpoint") or getattr(candidate, "endpoint", None)
+                    endpoint = child_scope.get("endpoint") or getattr(candidate, "endpoint", None)
+                    # A mounted ASGI app (the MCP app, for example) reports itself as the
+                    # endpoint but has no function name for SlowAPI to key a limit on, and
+                    # SlowAPI raises AttributeError on it. SlowAPIMiddleware left such
+                    # mounts without a handler, which exempts them; keep that.
+                    handler = endpoint if hasattr(endpoint, "__name__") else None
+                    matched = True
                     break
-            if handler is not None:
+            if matched:
                 break
 
         if _should_exempt(limiter, handler):
