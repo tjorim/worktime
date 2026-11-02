@@ -34,3 +34,10 @@ export const adminUserDeleteErrorMessages: ErrorCodeMessages = {
 export const pebblePairErrorMessages: ErrorCodeMessages = {
   oidc_session_required: () => m.error_code_oidc_session_required(),
 };
+
+export const taskValidationErrorMessages: ErrorCodeMessages = {
+  task_overlap: () => m.error_code_task_overlap(),
+  task_text_invalid: () => m.error_code_task_text_invalid(),
+  task_duration_invalid: () => m.error_code_task_duration_invalid(),
+  task_timezone_required: () => m.error_code_task_timezone_required(),
+};

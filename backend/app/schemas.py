@@ -11,8 +11,6 @@ from urllib.parse import urlparse
 import pycountry
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.utils.datetime import ensure_utc
-
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 
 NonEmptyText = Annotated[str, Field(min_length=1)]
@@ -149,11 +147,6 @@ class TaskCreate(RequestModel):
     stop_time: dt_datetime | None = None
     includes_break: bool = False
 
-    @field_validator("start_time", "stop_time", mode="after")
-    @classmethod
-    def normalize_datetime_tz(cls, value: dt_datetime | None) -> dt_datetime | None:
-        return ensure_utc(value)
-
 
 class TaskRead(BaseModel):
     id: str
@@ -174,11 +167,6 @@ class TaskUpdate(RequestModel):
     start_time: dt_datetime | None = None
     stop_time: dt_datetime | None = None
     includes_break: bool | None = None
-
-    @field_validator("start_time", "stop_time", mode="after")
-    @classmethod
-    def normalize_datetime_tz(cls, value: dt_datetime | None) -> dt_datetime | None:
-        return ensure_utc(value)
 
 
 class TemplateCreate(RequestModel):
@@ -685,6 +673,8 @@ class SyncRecordResult(BaseModel):
     status: Literal["ok", "conflict"]
     server_updated_at: dt_datetime | None = None
     conflict_reason: str | None = None
+    code: str | None = None
+    conflicting_task_id: str | None = None
 
 
 # Sync read schemas — include updated_at and deleted_at for pull responses.

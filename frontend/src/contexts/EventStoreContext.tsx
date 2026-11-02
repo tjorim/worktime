@@ -18,6 +18,7 @@ import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOf
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
   hasSyncCollectionAuth,
+  pushTimeOffImport,
   runMutationBatch,
   runWriteBatch,
   timeOffCollection,
@@ -34,6 +35,7 @@ interface EventStoreContextType {
   deleteEntry: (id: string) => void;
   deleteEntries: (ids: string[]) => void;
   importHday: (text: string) => TimeOffImportResult;
+  applyImportedEntries: (entries: TimeOffEntry[], allowBulkDelete?: boolean) => void;
   clearAll: () => void;
 }
 
@@ -201,6 +203,14 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     }
   }, []);
 
+  const applyImportedEntries = useCallback((entries: TimeOffEntry[], allowBulkDelete = false) => {
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    const nextEntries = sortEntries(cloneEntries(entries));
+    sortedEntriesRef.current = nextEntries;
+    writeLocalSnapshot(currentEntries, nextEntries);
+    pushTimeOffImport(currentEntries, nextEntries, allowBulkDelete);
+  }, []);
+
   const importHday = useCallback((text: string) => {
     const result = hdayToTimeOffEntries(text);
     const currentEntries = cloneEntries(sortedEntriesRef.current);
@@ -260,6 +270,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEntry,
       deleteEntries,
       importHday,
+      applyImportedEntries,
       clearAll,
     }),
     [
@@ -272,6 +283,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEntry,
       deleteEntries,
       importHday,
+      applyImportedEntries,
       clearAll,
     ],
   );

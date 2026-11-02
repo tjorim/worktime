@@ -51,7 +51,11 @@ import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
+  MAX_SYNC_PUSH_ITEMS,
   appendToSyncOutbox,
+  reportTaskRejections,
+  countPushConflicts,
+  type SyncPushResponse,
   appendToPendingSyncOutbox,
   drainPendingSyncOutbox,
   type GanttTaskSyncRead,
@@ -354,6 +358,12 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     if (!response.ok) {
       throw new Error(`sync push failed: ${response.status}`);
     }
+    const result = (await response.json()) as SyncPushResponse;
+    reportTaskRejections(result);
+    if (countPushConflicts(result) > 0) {
+      // Preserve rejected local edits for the existing conflict-resolution flow.
+      appendToSyncOutbox(_currentUserId, payload);
+    }
     // Refresh lastSyncedAt/outbox/error state right away rather than leaving
     // the sync status badge stale until an unrelated trigger happens to pull.
     _triggerPull?.();
@@ -527,6 +537,22 @@ export function mergeCollectionContents<
   },
 >(collection: TCollection, items: TItem[]): void {
   runWriteBatch(collection, items.length > 0, () => collection.utils.writeUpsert(items));
+}
+
+/** Remove conflicted tasks that the refreshed server snapshot does not contain. */
+export function acceptTaskConflictServerState(
+  payload: SyncPushPayload,
+  data: SyncPullResponse,
+): void {
+  const serverIds = new Set(
+    data.tasks.filter((task) => task.deleted_at === null).map((task) => task.id),
+  );
+  const discardedIds = payload.tasks
+    .filter((task) => !serverIds.has(task.id) && tasksCollection.has(task.id))
+    .map((task) => task.id);
+  runWriteBatch(tasksCollection, discardedIds.length > 0, () =>
+    tasksCollection.utils.writeDelete(discardedIds),
+  );
 }
 
 export function applyPullToCollections(data: SyncPullResponse): void {
@@ -1090,6 +1116,51 @@ export const timeOffCollection = createCollection(
     },
   }),
 );
+
+/** Push a file import as one request, preserving unchanged rows. */
+export function pushTimeOffImport(
+  current: TimeOffEntry[],
+  target: TimeOffEntry[],
+  allowBulkDelete = false,
+): void {
+  const now = dayjs().toISOString();
+  const previous = new Map(current.map((entry) => [entry.id, entry]));
+  const targetIds = new Set(target.map((entry) => entry.id));
+  const changes: SyncPushPayload["time_off_entries"] = current
+    .filter((entry) => !targetIds.has(entry.id))
+    .map((entry) => ({ id: entry.id, action: "delete", client_updated_at: now }));
+  for (const entry of target) {
+    if (JSON.stringify(previous.get(entry.id)) === JSON.stringify(entry)) continue;
+    changes.push({
+      id: entry.id,
+      action: previous.has(entry.id) ? "update" : "create",
+      client_updated_at: now,
+      entry_kind: entry.entryKind,
+      date: entry.entryKind === "date" ? entry.date : null,
+      start_date: entry.entryKind === "range" ? entry.start : null,
+      end_date: entry.entryKind === "range" ? entry.end : null,
+      weekday: entry.entryKind === "weekly" ? entry.weekday : null,
+      entry_type: entry.entryType,
+      entry_flag: entry.entryFlag,
+      note: entry.note,
+    });
+  }
+  const deleteTotal = changes.filter((change) => change.action === "delete").length;
+  void (async () => {
+    for (let offset = 0; offset < changes.length; offset += MAX_SYNC_PUSH_ITEMS) {
+      await pushAndQueue({
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        gantt_tasks: [],
+        time_off_entries: changes.slice(offset, offset + MAX_SYNC_PUSH_ITEMS),
+        allow_bulk_delete: allowBulkDelete,
+        declared_delete_total: deleteTotal,
+      });
+    }
+  })();
+}
 
 // ---------------------------------------------------------------------------
 // Gantt tasks — migrated

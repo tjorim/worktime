@@ -17,7 +17,7 @@ import {
   setSyncCollectionTriggerPull,
   tasksCollection,
 } from "@/db/collections";
-import { getSyncOutboxSize } from "@/utils/syncClient";
+import { setSyncTaskRejectionHandler, getSyncOutboxSize } from "@/utils/syncClient";
 import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
 
 const TEST_USER_ID = "user-trigger-pull-1";
@@ -41,6 +41,7 @@ describe("db/collections pushAndQueue triggerPull wiring", () => {
   afterEach(() => {
     setSyncCollectionAuth(null);
     setSyncCollectionTriggerPull(null);
+    setSyncTaskRejectionHandler(null);
     vi.unstubAllGlobals();
   });
 
@@ -55,6 +56,36 @@ describe("db/collections pushAndQueue triggerPull wiring", () => {
     insertLocalTask("task-success-1");
 
     await waitFor(() => expect(triggerPull).toHaveBeenCalledOnce());
+  });
+
+  it("reports a rejected task code and preserves the edit for conflict resolution", async () => {
+    const report = vi.fn();
+    setSyncTaskRejectionHandler(report);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: {
+            tasks: [
+              {
+                id: "task-rejected-1",
+                status: "conflict",
+                code: "task_overlap",
+                conflict_reason: "Private diagnostic",
+              },
+            ],
+          },
+        }),
+      }),
+    );
+    const triggerPull = vi.fn();
+    setSyncCollectionTriggerPull(triggerPull);
+    insertLocalTask("task-rejected-1");
+    await waitFor(() => expect(report).toHaveBeenCalledWith("task_overlap"));
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(getSyncOutboxSize(TEST_USER_ID)).toBe(1);
+    expect(triggerPull).toHaveBeenCalledOnce();
   });
 
   it("does not call triggerPull when the push fails", async () => {

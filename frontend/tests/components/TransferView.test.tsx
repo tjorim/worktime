@@ -153,6 +153,7 @@ const defaultEventStoreReturn = {
   deleteEntry: vi.fn(),
   deleteEntries: vi.fn(),
   importHday: vi.fn(),
+  applyImportedEntries: vi.fn(),
   clearAll: vi.fn(),
 };
 

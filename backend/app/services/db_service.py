@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, overload
 from uuid import uuid4
 
@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import AuditActor, write_audit_entry
+from app.core.errors import ErrorCode
 from app.database.models import (
     Base,
     GanttTask,
@@ -55,6 +56,73 @@ class ConflictError(Exception):
 
 class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
+
+
+class TaskValidationError(ValidationError):
+    """A task rejection with a stable client-facing code."""
+
+    def __init__(self, code: ErrorCode, detail: str, conflicting_task_id: str | None = None):
+        super().__init__(detail)
+        self.code = code
+        self.conflicting_task_id = conflicting_task_id
+
+
+async def lock_task_writes(session: AsyncSession, user_id: int) -> None:
+    """Serialize task reads and writes per user before resolving partial updates."""
+    # NO KEY UPDATE serializes writers without conflicting with child-row FK KEY SHARE locks.
+    await session.execute(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
+
+
+async def validate_task(
+    session: AsyncSession,
+    user_id: int,
+    text: str | None,
+    start: datetime | None,
+    stop: datetime | None,
+    *,
+    exclude_id: str | None = None,
+    validate_text: bool = True,
+    validate_interval: bool = True,
+) -> None:
+    """Validate new task values. Text is limited to 1,000 characters; intervals to 24 hours.
+
+    Intervals are half-open, so adjacent tasks are allowed. Running timers extend
+    to now (or their start when future-dated), not indefinitely into planned work.
+    Midnight crossing is deliberately allowed; no local timezone is stored.
+    """
+    if validate_text and (text is None or not text.strip() or len(text) > 1000):
+        raise TaskValidationError(
+            ErrorCode.TASK_TEXT_INVALID, "text must contain 1 to 1000 characters and not be blank"
+        )
+    if not validate_interval:
+        return
+    if start is None or any(
+        value.tzinfo is None or value.utcoffset() is None for value in (start, stop) if value is not None
+    ):
+        raise TaskValidationError(ErrorCode.TASK_TIMEZONE_REQUIRED, "task timestamps must include a timezone")
+    start = as_utc(start)
+    end = as_utc(stop) if stop is not None else max(start, datetime.now(UTC))
+    if stop is not None and end < start:
+        raise TaskValidationError(ErrorCode.TASK_DURATION_INVALID, "stop_time cannot be earlier than start_time")
+    if stop is not None and end - start > timedelta(hours=24):
+        raise TaskValidationError(ErrorCode.TASK_DURATION_INVALID, "task duration must be between 0 and 24 hours")
+    if start == end:
+        return
+    now = datetime.now(UTC)
+    statement = select(TimeTrackingTask.id).where(
+        TimeTrackingTask.user_id == user_id,
+        TimeTrackingTask.deleted_at.is_(None),
+        TimeTrackingTask.start_time < end,
+        or_(
+            (TimeTrackingTask.stop_time > start) & (TimeTrackingTask.stop_time > TimeTrackingTask.start_time),
+            TimeTrackingTask.stop_time.is_(None) & (TimeTrackingTask.start_time < now) & (start < now),
+        ),
+    )
+    if exclude_id is not None:
+        statement = statement.where(TimeTrackingTask.id != exclude_id)
+    conflict_id = (await session.execute(statement.limit(1))).scalar_one_or_none()
+    if conflict_id is not None:
+        raise TaskValidationError(ErrorCode.TASK_OVERLAP, "time range overlaps an existing task", conflict_id)
 
 
 MAX_USER_LIST_LIMIT = 1000
@@ -378,13 +446,13 @@ async def create_task(
     session: AsyncSession, user_id: int, payload: TaskCreate, *, actor: AuditActor | None = None
 ) -> TimeTrackingTask:
     await _ensure_user_exists(session, user_id)
+    await lock_task_writes(session, user_id)
     await _validate_task_label_reference(session, user_id, payload.label_id)
     await _validate_task_gantt_reference(session, user_id, payload.gantt_task_id)
 
     if payload.stop_time is None and await get_running_task(session, user_id) is not None:
         raise ConflictError("only one running task is allowed per user")
-    if payload.stop_time is not None and payload.stop_time < payload.start_time:
-        raise ValidationError("stop_time cannot be earlier than start_time")
+    await validate_task(session, user_id, payload.text, payload.start_time, payload.stop_time)
 
     task = TimeTrackingTask(user_id=user_id, **payload.model_dump())
     session.add(task)
@@ -485,6 +553,7 @@ async def update_task(
     *,
     actor: AuditActor | None = None,
 ) -> TimeTrackingTask:
+    await lock_task_writes(session, user_id)
     task = await get_task(session, user_id, task_id)
     was_planned_and_upcoming = task.stop_time is not None and task.start_time > datetime.now(UTC)
 
@@ -496,16 +565,22 @@ async def update_task(
 
     candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)
-    if candidate_start_time is None:
-        raise ValidationError("start_time cannot be None")
-    # Normalize to UTC-aware for comparison (PostgreSQL returns aware datetimes;
-    # callers may supply naive datetimes treated as UTC).
-    if candidate_stop_time is not None and as_utc(candidate_stop_time) < as_utc(candidate_start_time):
-        raise ValidationError("stop_time cannot be earlier than start_time")
-    if candidate_stop_time is None:
+    candidate_text = data.get("text", task.text)
+    interval_changed = (candidate_start_time, candidate_stop_time) != (task.start_time, task.stop_time)
+    if interval_changed and candidate_stop_time is None:
         running = await get_running_task(session, user_id)
         if running is not None and running.id != task_id:
             raise ConflictError("only one running task is allowed per user")
+    await validate_task(
+        session,
+        user_id,
+        candidate_text,
+        candidate_start_time,
+        candidate_stop_time,
+        exclude_id=task_id,
+        validate_text=candidate_text != task.text,
+        validate_interval=interval_changed,
+    )
 
     # Computed before the setattr loop below overwrites task.start_time with the new value.
     start_time_changed = "start_time" in data and as_utc(candidate_start_time) != as_utc(task.start_time)

@@ -34,6 +34,7 @@ from app.schemas import (
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
+    TaskValidationError,
     ValidationError,
     create_label,
     create_task,
@@ -59,6 +60,9 @@ router = APIRouter(prefix="/time-tracking", tags=["Time Tracking"])
 
 
 def _handle_error(error: Exception) -> None:
+    if isinstance(error, TaskValidationError):
+        detail = {"message": str(error), "conflicting_task_id": error.conflicting_task_id}
+        raise api_error(409 if error.code == ErrorCode.TASK_OVERLAP else 400, error.code, detail) from error
     if isinstance(error, NotFoundError):
         raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
     if isinstance(error, ConflictError):

@@ -75,7 +75,7 @@ from app.schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
-from app.services.db_service import _validate_task_gantt_reference, apply_time_off_shape
+from app.services.db_service import _validate_task_gantt_reference, apply_time_off_shape, lock_task_writes
 from app.utils.datetime import as_utc
 
 
@@ -447,6 +447,7 @@ async def _push_label(session: AsyncSession, user_id: int, item: LabelSyncItem) 
 
 
 async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) -> SyncRecordResult:
+    await lock_task_writes(session, user_id)
     now = _now()
     task: TimeTrackingTask | None = await session.get(TimeTrackingTask, item.id)
 
@@ -467,20 +468,19 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task is None:
+        from app.services.db_service import validate_task
+
         if item.text is None or item.start_time is None:
             from app.services.db_service import ValidationError
 
             raise ValidationError("text and start_time are required for task create")
-        if item.stop_time is not None and as_utc(item.stop_time) < as_utc(item.start_time):
-            from app.services.db_service import ValidationError
-
-            raise ValidationError("stop_time cannot be earlier than start_time")
         if item.stop_time is None and await _user_has_other_running_task(session, user_id, exclude_id=None):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 conflict_reason="only one running task is allowed per user",
             )
+        await validate_task(session, user_id, item.text, item.start_time, item.stop_time)
         await _validate_task_label_reference(session, user_id, item.label_id)
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
         task = TimeTrackingTask(
@@ -524,10 +524,6 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         item.start_time if "start_time" in provided_fields and item.start_time is not None else task.start_time
     )
     candidate_stop_time = item.stop_time if "stop_time" in provided_fields else task.stop_time
-    if candidate_stop_time is not None and as_utc(candidate_stop_time) < as_utc(candidate_start_time):
-        from app.services.db_service import ValidationError
-
-        raise ValidationError("stop_time cannot be earlier than start_time")
     if candidate_stop_time is None and await _user_has_other_running_task(session, user_id, exclude_id=task.id):
         return SyncRecordResult(
             id=item.id,
@@ -535,6 +531,21 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
             server_updated_at=task.updated_at,
             conflict_reason="only one running task is allowed per user",
         )
+    from app.services.db_service import validate_task
+
+    candidate_text = item.text if "text" in provided_fields else task.text
+    # Restoration activates the interval again, even when its stored values are unchanged.
+    await validate_task(
+        session,
+        user_id,
+        candidate_text,
+        candidate_start_time,
+        candidate_stop_time,
+        exclude_id=task.id,
+        validate_text=candidate_text != task.text,
+        validate_interval=task.deleted_at is not None
+        or (candidate_start_time, candidate_stop_time) != (task.start_time, task.stop_time),
+    )
     if "label_id" in provided_fields:
         await _validate_task_label_reference(session, user_id, item.label_id)
     if "gantt_task_id" in provided_fields:
@@ -984,7 +995,19 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
         results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
 
     for item in changes.tasks:
-        results["tasks"].append(await _push_task(session, user_id, item))
+        from app.services.db_service import TaskValidationError
+
+        try:
+            result = await _push_task(session, user_id, item)
+        except TaskValidationError as error:
+            result = SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                conflict_reason=str(error),
+                code=error.code.value,
+                conflicting_task_id=error.conflicting_task_id,
+            )
+        results["tasks"].append(result)
 
     for item in changes.templates:
         results["templates"].append(await _push_template(session, user_id, item))
