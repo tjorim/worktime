@@ -10,19 +10,20 @@ import os
 from contextlib import asynccontextmanager, suppress
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastmcp.utilities.lifespan import combine_lifespans
-from slowapi.errors import RateLimitExceeded
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from app.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware
 
 from .config import settings
 from .config.cors import get_cors_origins
 from .core.errors import ApiHTTPException, handle_api_http_exception, handle_label_validation_error
 from .database import init_db
-from .middleware.rate_limit import RouterAwareRateLimitMiddleware, handle_rate_limit_exceeded, limiter
+from .middleware.rate_limit import handle_rate_limit_exceeded, limiter, rate_limit
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.request_timing import RequestTimingMiddleware
 from .middleware.timing import TimingMiddleware
@@ -140,6 +141,7 @@ _lifespan = combine_lifespans(lifespan, _mcp_app.lifespan) if _mcp_app is not No
 
 # Create FastAPI application
 app = FastAPI(
+    dependencies=[Depends(rate_limit)],
     title="Worktime Backend API",
     description="API server for Worktime shift tracker and time-off management",
     version=APP_VERSION,
@@ -162,7 +164,14 @@ _cors_kwargs: dict[str, Any] = {
     "allow_credentials": "*" not in cors_origins,
     "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization", "X-Request-ID"],
-    "expose_headers": ["X-Request-ID", "X-Total-Ms"],
+    "expose_headers": [
+        "Retry-After",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+        "X-Request-ID",
+        "X-Total-Ms",
+    ],
 }
 if _mcp_app is not None:
 
@@ -188,7 +197,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
 app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
 app.add_exception_handler(RequestValidationError, handle_label_validation_error)
-app.add_middleware(RouterAwareRateLimitMiddleware)
+app.add_middleware(RateLimitHeadersMiddleware)
 if settings.RATE_LIMIT_ENABLED:
     logger.info(f"✓ Rate limiting enabled ({settings.RATE_LIMIT_DEFAULT} per client IP)")
 else:

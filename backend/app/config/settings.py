@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     DEV_AUTH_MEMBER_TOKEN: str = ""
     DEV_AUTH_SECOND_MEMBER_TOKEN: str = ""
 
-    # Per-client-IP rate limiting (slowapi). RATE_LIMIT_DEFAULT applies to every
+    # Per-client-IP and full-route-template rate limiting (limits). RATE_LIMIT_DEFAULT applies to every
     # /api route unless explicitly exempted (e.g. health probes).
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_DEFAULT: str = "200/minute"

@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.15"
 
 [[package]]
@@ -1787,18 +1787,6 @@ fastapi = [
 ]
 
 [[package]]
-name = "slowapi"
-version = "0.1.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "limits" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/52/24527cf25a8b508926aff53350b0136561dfe86c7125f61526653666e1b2/slowapi-0.1.10.tar.gz", hash = "sha256:d320d5bc04d9f171a77fb16700faf3036d85b00f420f22924c8a225f95bd14f9", size = 13841, upload-time = "2026-06-13T11:59:31.571Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/8b/1d359f38706b4097d9a943bf8bd22599f537de4cbaff1e622d3e3936e164/slowapi-0.1.10-py3-none-any.whl", hash = "sha256:3acb61561dc9d687e3d3669362ff6a439de9ba44e2fed3a9c165da26b4b83e28", size = 14921, upload-time = "2026-06-13T11:59:30.485Z" },
-]
-
-[[package]]
 name = "sqlalchemy"
 version = "2.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2071,6 +2059,7 @@ dependencies = [
     { name = "fastmcp" },
     { name = "firebase-admin" },
     { name = "httpx" },
+    { name = "limits" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pycountry" },
     { name = "pydantic" },
@@ -2078,7 +2067,6 @@ dependencies = [
     { name = "pyjwt", extra = ["crypto"] },
     { name = "python-dotenv" },
     { name = "pywebpush" },
-    { name = "slowapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2103,6 +2091,7 @@ requires-dist = [
     { name = "fastmcp", specifier = "==4.1.4" },
     { name = "firebase-admin", specifier = "==7.7.0" },
     { name = "httpx", specifier = "==0.28.1" },
+    { name = "limits", specifier = "==5.8.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
     { name = "pycountry", specifier = "==26.2.16" },
     { name = "pydantic", specifier = "==2.14.2" },
@@ -2110,7 +2099,6 @@ requires-dist = [
     { name = "pyjwt", extras = ["crypto"], specifier = "==2.13.0" },
     { name = "python-dotenv", specifier = "==1.2.4" },
     { name = "pywebpush", specifier = ">=2.4.0" },
-    { name = "slowapi", specifier = "==0.1.10" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.1.6" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.54.0" },
 ]
