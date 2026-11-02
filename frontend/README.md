@@ -57,3 +57,5 @@ Scenario fixtures include:
 - Sync states (clean/pending local changes/conflict/retryable failure/offline)
 - Work location status/action responses
 - Auth states (signed out/valid/expired/forbidden)
+
+Toolchain versions and coordinated rollout: [Node and pnpm toolchain](../docs/toolchain.md).
