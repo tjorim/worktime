@@ -229,9 +229,9 @@ class WorktimeRepository(
     }
 
     override suspend fun loadDashboard(): DashboardLoadResult {
-        val token = sessionController.getFreshAccessToken() ?: return DashboardLoadResult.LoggedOut
         val timezone = TimeZone.getDefault().id
         return try {
+            val token = sessionController.getFreshAccessToken() ?: return DashboardLoadResult.LoggedOut
             val dashboard = api.getDashboard(authorization = "Bearer $token", timezone = timezone)
             currentUserId = dashboard.identity.id
             // Best-effort: a cache-persistence failure must never turn an already-successful
@@ -363,9 +363,9 @@ class WorktimeRepository(
         }
 
     override suspend fun getWorkLocation(date: LocalDate): MutationResult<WorkLocationRecord?> {
-        val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
-        val userId = currentUserId ?: return MutationResult.Error("Reload your dashboard before making changes")
         return try {
+            val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
+            val userId = requireNotNull(currentUserId) { "Reload your dashboard before making changes" }
             val response =
                 api.getWorkLocation(authorization = "Bearer $token", valueDate = date.toString(), userId = userId)
             if (response.code() == HTTP_NOT_FOUND) {
@@ -563,9 +563,9 @@ class WorktimeRepository(
         conflictMessage: String? = null,
         block: suspend (token: String, userId: Int) -> T
     ): MutationResult<T> {
-        val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
-        val userId = currentUserId ?: return MutationResult.Error("Reload your dashboard before making changes")
         return try {
+            val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
+            val userId = requireNotNull(currentUserId) { "Reload your dashboard before making changes" }
             MutationResult.Success(block(token, userId))
         } catch (error: HttpException) {
             if (error.code() == HTTP_UNAUTHORIZED) {
@@ -583,8 +583,8 @@ class WorktimeRepository(
     }
 
     private suspend fun <T> withAuthorizedToken(block: suspend (token: String) -> T): MutationResult<T> {
-        val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
         return try {
+            val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
             MutationResult.Success(block(token))
         } catch (error: HttpException) {
             if (error.code() == HTTP_UNAUTHORIZED) {

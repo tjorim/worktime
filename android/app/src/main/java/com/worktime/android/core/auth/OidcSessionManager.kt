@@ -7,10 +7,14 @@ import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.SecureSessionStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,19 +111,33 @@ class OidcSessionManager @Inject constructor(
 
     override suspend fun getFreshAccessToken(): String? = tokenMutex.withLock {
         val currentState = authState ?: return null
-        return suspendCancellableCoroutine { continuation ->
+        // AppAuth cannot cancel an in-flight refresh. Keep the mutex until its callback
+        // completes, even if the caller is cancelled, so rotating tokens cannot race.
+        val token = suspendCoroutine<Result<String?>> { continuation ->
             val service = AuthorizationService(context)
             currentState.performActionWithFreshTokens(service) { accessToken, _, exception ->
                 service.dispose()
+                if (authState !== currentState) {
+                    continuation.resume(Result.success(null))
+                    return@performActionWithFreshTokens
+                }
                 if (exception != null || accessToken.isNullOrBlank()) {
-                    completeLogout()
-                    continuation.resume(null)
+                    if (exception?.type == AuthorizationException.TYPE_OAUTH_TOKEN_ERROR &&
+                        exception.code == AuthorizationException.TokenRequestErrors.INVALID_GRANT.code
+                    ) {
+                        completeLogout()
+                        continuation.resume(Result.success(null))
+                    } else {
+                        continuation.resume(Result.failure(IOException("Unable to refresh session", exception)))
+                    }
                     return@performActionWithFreshTokens
                 }
                 persistAuthState(currentState)
-                continuation.resume(accessToken)
+                continuation.resume(Result.success(accessToken))
             }
         }
+        currentCoroutineContext().ensureActive()
+        token.getOrThrow()
     }
 
     override suspend fun logout() {

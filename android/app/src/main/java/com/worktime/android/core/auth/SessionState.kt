@@ -17,6 +17,7 @@ interface SessionController {
 
     suspend fun handleAuthorizationResponse(intent: android.content.Intent?): Result<Unit>
 
+    /** Returns null when sign-in is required; throws IOException for retryable refresh failures. */
     suspend fun getFreshAccessToken(): String?
 
     /**
