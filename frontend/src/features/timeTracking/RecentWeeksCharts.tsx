@@ -1,7 +1,7 @@
 import { CalendarRangeIcon } from "lucide-react";
 import { useMemo, type CSSProperties } from "react";
 import { Icon } from "@/components/shared/Icon";
-import { barY, cell, defineChart, ruleY } from "@tanstack/charts";
+import { barY, cell, defineChart, lineY } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -60,15 +60,17 @@ function RecentWeeksTrendChart({
 
     return defineChart({
       marks: [
-        ...(weeklyTargetHours && weeklyTargetHours > 0
-          ? [
-              ruleY([weeklyTargetHours], {
-                stroke: "var(--wt-success)",
-                strokeOpacity: 0.7,
-                strokeDasharray: "4 3",
-              }),
-            ]
-          : []),
+        lineY(
+          weeks.map((week) => ({
+            week: m.tt_week_short({ week: week.isoWeek }),
+            target: week.targetHours ?? weeklyTargetHours,
+          })),
+          {
+            x: "week",
+            y: "target",
+            stroke: "var(--wt-success)",
+          },
+        ),
         barY(rows, {
           x: "week",
           y: "hours",

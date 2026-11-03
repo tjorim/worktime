@@ -1517,5 +1517,9 @@
   "timeoff_import_replace_warning": "Dit verwijdert alle {count} bestaande vermeldingen en vervangt ze door de geldige, unieke vermeldingen uit het bestand.",
   "timeoff_import_invalid_date": "ongeldige datum of omgekeerd datumbereik",
   "timeoff_import_invalid_syntax": "niet-ondersteunde .hday-syntaxis",
-  "timeoff_import_more": "en nog {count} andere"
+  "timeoff_import_more": "en nog {count} andere",
+  "timeoff_statistics_counting_note": "Telt ingeroosterde werkdagen zonder feestdagen, voor het hele jaar inclusief herhalingen. Elke halve dag telt één keer; bij overlap geldt de volgorde van de gebeurtenistypen in het overzicht.",
+  "tt_no_target_week": "Geen doel deze week: roostervrije dagen, verlof of feestdagen.",
+  "stats_holidays_loading": "Feestdagen worden geladen. Totalen en doelen kunnen nog wijzigen.",
+  "stats_holidays_unavailable": "Feestdagen konden niet worden geladen. Totalen en doelen kunnen te hoog zijn tot dat lukt."
 }

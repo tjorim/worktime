@@ -15,10 +15,15 @@ export interface PublicHoliday {
   types: string[];
 }
 
-const toHolidayMap = (holidays: PublicHoliday[]) => {
+/** Regional holidays (`global: false` or limited to counties) only apply to part of a country. */
+export const isNationwideHoliday = (holiday: PublicHoliday) =>
+  holiday.global !== false && !holiday.counties?.length;
+
+const toHolidayMap = (holidays: PublicHoliday[], nationwideOnly = false) => {
   const map = new Map<string, PublicHolidayInfo>();
 
   holidays.forEach((holiday) => {
+    if (nationwideOnly && !isNationwideHoliday(holiday)) return;
     map.set(formatHdayDate(dayjs(holiday.date)), {
       name: holiday.name,
       localName: holiday.localName,
@@ -28,15 +33,19 @@ const toHolidayMap = (holidays: PublicHoliday[]) => {
   return map;
 };
 
-export function usePublicHolidays(year: number, enabled: boolean = true) {
+export function usePublicHolidays(
+  year: number,
+  enabled: boolean = true,
+  country: string = DEFAULT_COUNTRY,
+) {
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
   const isEnabled = enabled && isValidYear;
   const params = useMemo(
     () => ({
-      country: DEFAULT_COUNTRY,
+      country,
       year: String(year),
     }),
-    [year],
+    [year, country],
   );
 
   const { holidays, loading, error } = useOpenHolidays<PublicHoliday>({
@@ -54,5 +63,10 @@ export function usePublicHolidays(year: number, enabled: boolean = true) {
     [holidays, isEnabled],
   );
 
-  return { publicHolidayMap, loading, error };
+  const nationwideHolidayMap = useMemo(
+    () => (isEnabled ? toHolidayMap(holidays, true) : new Map<string, PublicHolidayInfo>()),
+    [holidays, isEnabled],
+  );
+
+  return { publicHolidayMap, nationwideHolidayMap, loading, error };
 }

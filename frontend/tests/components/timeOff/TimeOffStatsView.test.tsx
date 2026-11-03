@@ -1,8 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { dayjs } from "@/utils/dateTimeUtils";
 import userEvent from "@testing-library/user-event";
 import { TimeOffStatsView } from "@/components/timeOff/TimeOffStatsView";
 import { buildTimeOffEntryForRange } from "@/lib/timeOff/codecs";
+
+vi.mock("@/hooks/useStatisticsWorkingDays", () => ({
+  useStatisticsWorkingDays: () => ({ team: 1, schedule: "9-5", holidays: new Map() }),
+}));
 
 describe("TimeOffStatsView", () => {
   const currentYear = new Date().getFullYear();
@@ -50,7 +55,10 @@ describe("TimeOffStatsView", () => {
     it("shows total days count", () => {
       const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`)];
       render(<TimeOffStatsView entries={entries} />);
-      expect(screen.getByText("3")).toBeInTheDocument();
+      const expected = [15, 16, 17].filter(
+        (day) => dayjs(`${currentYear}-01-${day}`).isoWeekday() <= 5,
+      ).length;
+      expect(screen.getByText(String(expected))).toBeInTheDocument();
       expect(screen.getByText(new RegExp(`days logged in ${currentYear}`))).toBeInTheDocument();
     });
   });
@@ -137,8 +145,11 @@ describe("TimeOffStatsView", () => {
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       await user.selectOptions(yearSelect, (currentYear - 1).toString());
 
-      // Previous year had 3 days
-      expect(screen.getByText("3")).toBeInTheDocument();
+      // Only scheduled weekdays contribute in the previous year.
+      const expected = [15, 16, 17].filter(
+        (day) => dayjs(`${currentYear - 1}-01-${day}`).isoWeekday() <= 5,
+      ).length;
+      expect(screen.getByText(String(expected))).toBeInTheDocument();
       expect(screen.getByText(new RegExp(`days logged in ${currentYear - 1}`))).toBeInTheDocument();
     });
   });

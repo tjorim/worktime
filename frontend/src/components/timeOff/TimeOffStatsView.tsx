@@ -15,6 +15,9 @@ import {
 } from "@/utils/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
 
+import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
+import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
+
 interface TimeOffStatsViewProps {
   entries: TimeOffEntry[];
 }
@@ -33,9 +36,10 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
     }
   }
 
+  const workingDays = useStatisticsWorkingDays(selectedYear);
   const stats = useMemo(
-    () => calculateVacationStats(entries, selectedYear),
-    [entries, selectedYear],
+    () => calculateVacationStats(entries, selectedYear, workingDays),
+    [entries, selectedYear, workingDays],
   );
 
   const filteredTypes = useMemo(() => stats.byType.filter((type) => type.days > 0), [stats.byType]);
@@ -65,6 +69,8 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
         </div>
       </CardHeader>
       <CardContent>
+        <p className="text-sm text-muted-foreground">{m.timeoff_statistics_counting_note()}</p>
+        <HolidayStatusNotice status={workingDays.holidayStatus} />
         <div className="mb-4 flex items-baseline gap-2">
           <span className="text-2xl font-bold">{formatVacationValue(stats.totalDays)}</span>
           <span className="text-sm text-muted-foreground">

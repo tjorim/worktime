@@ -116,13 +116,7 @@ export function WeeklyDataView({
           ) : (
             <div className="mb-2 flex items-center justify-between">
               <span className="font-semibold">{m.tt_weekly_progress()}</span>
-              <span className="text-muted-foreground">
-                {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} /{" "}
-                {m.tt_hours_value({ hours: "0.0" })}
-                <Badge variant="secondary" className="ml-2">
-                  {m.tt_target_unavailable()}
-                </Badge>
-              </span>
+              <span className="text-muted-foreground">{m.tt_no_target_week()}</span>
             </div>
           )}
         </div>
