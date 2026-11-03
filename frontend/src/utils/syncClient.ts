@@ -869,6 +869,12 @@ export async function reconcilePreferences(
       applyPreferencesPull(serverPrefs.data, userId);
       return { timestamp: serverTimestamp };
     }
+    // Undated local state ties with an epoch-dated server copy. Let the server
+    // win once and stamp it, so devices converge and later cycles are no-ops.
+    if (serverPrefs && localPrefs && localPrefs.data._updatedAt === undefined) {
+      applyPreferencesPull({ ...serverPrefs.data, _updatedAt: serverTimestamp }, userId);
+      return { timestamp: serverTimestamp };
+    }
     return { timestamp: localTimestamp ?? serverTimestamp };
   };
   const decision = userId === undefined ? decide() : await withPreferenceLock(decide);

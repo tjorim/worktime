@@ -1603,6 +1603,34 @@ describe("syncClient", () => {
     expect(fetch.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(2);
   });
 
+  it("lets the server copy win when an undated device ties with the epoch-dated server", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ hasCompletedOnboarding: true, scheduleType: "local" }),
+    );
+    const fetch = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({
+            data: { hasCompletedOnboarding: true, scheduleType: "server" },
+            client_updated_at: "1970-01-01T00:00:00.000Z",
+          }),
+        }) as Response,
+    );
+    await reconcilePreferences(fetch);
+    const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}");
+    expect(stored.scheduleType).toBe("server");
+    expect(stored._updatedAt).toBe("1970-01-01T00:00:00.000Z");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    await reconcilePreferences(fetch);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(
+      fetch.mock.calls.filter(([, init]) => (init as RequestInit)?.method === "PUT"),
+    ).toHaveLength(0);
+    setItem.mockRestore();
+  });
+
   it("discards a preference response if another tab switched accounts during the fetch", async () => {
     localStorage.setItem(
       USER_STATE_STORAGE_KEY,
