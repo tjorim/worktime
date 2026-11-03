@@ -5,6 +5,7 @@ import { apiFetch } from "@/utils/apiClient";
 import { ApiError } from "@/utils/apiError";
 
 const auth = vi.hoisted(() => ({
+  userId: "alice",
   getAccessToken: vi.fn(),
   logout: vi.fn(),
   triggerLogin: vi.fn(),
@@ -31,9 +32,32 @@ vi.mock("@/utils/apiClient", () => ({
 describe("useApiClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.userId = "alice";
     auth.getAccessToken.mockReturnValue("token-123");
     auth.renewSession.mockResolvedValue(null);
     vi.mocked(apiFetch).mockResolvedValue(new Response(null, { status: 200 }));
+  });
+
+  it("does not retry or redirect after the account changes during renewal", async () => {
+    vi.mocked(apiFetch).mockRejectedValue(new ApiError({ status: 401, message: "Unauthorized" }));
+    let finish!: (value: string) => void;
+    auth.renewSession.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { result, rerender } = renderHook(() => useApiClient());
+    const request = result.current("/api/data");
+    const rejected = expect(request).rejects.toThrow("Unauthorized");
+    await Promise.resolve();
+    auth.userId = "bob";
+    rerender();
+    finish("alice-fresh");
+    await rejected;
+    expect(apiFetch).toHaveBeenCalledOnce();
+    expect(toast.showWarning).not.toHaveBeenCalled();
+    expect(auth.triggerLogin).not.toHaveBeenCalled();
   });
 
   it("adds the current access token to requests", async () => {
@@ -97,6 +121,7 @@ describe("useApiClient", () => {
     expect(response.status).toBe(200);
     expect(calls).toBe(2);
     expect(auth.renewSession).toHaveBeenCalledOnce();
+    expect(auth.renewSession).toHaveBeenCalledWith("token-123");
     expect(toast.showWarning).not.toHaveBeenCalled();
     expect(auth.triggerLogin).not.toHaveBeenCalled();
   });
