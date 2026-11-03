@@ -1536,6 +1536,15 @@ describe("syncClient", () => {
       expect(result?.clientUpdatedAt).toBeTruthy();
     });
 
+    it("uses a stable epoch timestamp when local state has no _updatedAt", () => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ hasCompletedOnboarding: true }),
+      );
+      expect(buildLocalPreferencesPayload()?.clientUpdatedAt).toBe("1970-01-01T00:00:00.000Z");
+      expect(buildLocalPreferencesPayload()?.clientUpdatedAt).toBe("1970-01-01T00:00:00.000Z");
+    });
+
     it("returns null for invalid JSON in localStorage", () => {
       localStorage.setItem(USER_STATE_STORAGE_KEY, "not-valid-json{");
       expect(buildLocalPreferencesPayload()).toBeNull();
@@ -1567,6 +1576,59 @@ describe("syncClient", () => {
       const result = buildLocalPreferencesPayload();
       expect(result?.data.settings).toEqual({ timeFormat: "24h", enableTimeOff: true });
     });
+  });
+
+  it("uploads undated preferences once, then only after a synced setting changes", async () => {
+    const data = { hasCompletedOnboarding: true };
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(data));
+    let server: { data: Record<string, unknown>; client_updated_at: string } | null = null;
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PUT") server = JSON.parse(init.body as string);
+      return { ok: true, json: async () => server } as Response;
+    });
+    await reconcilePreferences(fetch);
+    await reconcilePreferences(fetch);
+    await reconcilePreferences(fetch);
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(1);
+
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({
+        ...data,
+        scheduleType: "9-5",
+        _updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    await reconcilePreferences(fetch);
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(2);
+  });
+
+  it("lets the server copy win when an undated device ties with the epoch-dated server", async () => {
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({ hasCompletedOnboarding: true, scheduleType: "local" }),
+    );
+    const fetch = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({
+            data: { hasCompletedOnboarding: true, scheduleType: "server" },
+            client_updated_at: "1970-01-01T00:00:00.000Z",
+          }),
+        }) as Response,
+    );
+    await reconcilePreferences(fetch);
+    const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}");
+    expect(stored.scheduleType).toBe("server");
+    expect(stored._updatedAt).toBe("1970-01-01T00:00:00.000Z");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    await reconcilePreferences(fetch);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(
+      fetch.mock.calls.filter(([, init]) => (init as RequestInit)?.method === "PUT"),
+    ).toHaveLength(0);
+    setItem.mockRestore();
   });
 
   it("discards a preference response if another tab switched accounts during the fetch", async () => {

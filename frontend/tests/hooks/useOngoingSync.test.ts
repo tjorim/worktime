@@ -5,6 +5,7 @@ import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/
 import type { SyncPushPayload } from "@/utils/syncClient";
 import {
   USER_STATE_OWNER_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
   getSyncQuarantineKey,
@@ -44,6 +45,28 @@ describe("useOngoingSync", () => {
   afterEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it("does not PUT undated unchanged preferences across consecutive sync cycles", async () => {
+    const data = { hasCompletedOnboarding: true };
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(data));
+    vi.stubGlobal("navigator", { ...navigator, onLine: false });
+    mockFetch.mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url === "/api/preferences"
+          ? { data, client_updated_at: "2026-01-01T00:00:00.000Z" }
+          : incrementalPullResponse,
+    }));
+    const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+    for (let cycle = 0; cycle < 2; cycle++) {
+      await act(async () => {
+        result.current.triggerPull();
+      });
+      await waitFor(() => expect(result.current.isSyncing).toBe(false));
+    }
+    expect(mockFetch.mock.calls.filter(([url]) => url === "/api/preferences")).toHaveLength(2);
+    expect(mockFetch.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(0);
   });
 
   it("returns no-op state when isSyncEstablished is false", () => {
