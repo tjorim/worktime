@@ -34,7 +34,10 @@ import com.worktime.android.data.model.WorkContext
 import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
+import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +58,19 @@ import retrofit2.HttpException
 import retrofit2.Response
 
 class WorktimeRepositoryTest {
+    @Test
+    fun refreshFailureReturnsRetryableErrorsInsteadOfLoggedOut() = runTest {
+        val session = mockk<SessionController>()
+        every { session.sessionState } returns MutableStateFlow(SessionState.Authenticated(true))
+        coEvery { session.getFreshAccessToken() } throws IOException("offline")
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = session)
+
+        assertTrue(repository.loadDashboard() is DashboardLoadResult.Error)
+        assertTrue(repository.getWorkLocation(LocalDate.now()) is MutationResult.Error)
+        assertTrue(repository.getRunningTask() is MutationResult.Error)
+        assertTrue(repository.listLabels() is MutationResult.Error)
+    }
+
     @Test
     fun loadDashboardReturnsLoggedOutWhenNoTokenExists() = runTest {
         val repository =
