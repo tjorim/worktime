@@ -304,6 +304,7 @@ describe("appBackup", () => {
       { version: 1, workLocations: { "2026": { "2026-02-30": { countryCode: "NL" } } } },
     ])("rejects malformed backup %j before changing any data", async (invalid) => {
       vi.spyOn(window.location, "reload").mockImplementation(() => {});
+      labelsCollection.insert({ id: "l1", name: "Work", color: "#198754" });
       localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 5 }));
       const before = buildBackupPayload();
       const payload = { ...invalid, exportedAt: "", userState: { myTeam: 1 } };
@@ -313,6 +314,30 @@ describe("appBackup", () => {
       ).rejects.toThrow();
       expect(buildBackupPayload()).toMatchObject({ ...before, exportedAt: expect.any(String) });
       expect(window.location.reload).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { userState: { settings: { timeFormat: "bad" } } },
+      { userState: { lastUsed: { scheduleView: [] } } },
+      {
+        tasks: [
+          {
+            id: "t",
+            text: "T",
+            label: "l1",
+            startTime: "2026-01-01T09:00",
+            stopTime: "2026-01-01T09:00",
+          },
+        ],
+      },
+      { templates: [{ id: "t", text: "   ", label: "", start: "09:00", stop: "17:00" }] },
+    ])("rejects records that readers or sync would discard: %j", async (sections) => {
+      labelsCollection.insert({ id: "l1", name: "Work", color: "#198754" });
+      const payload = { version: 1 as const, exportedAt: "", ...sections };
+      expect(validateAppBackupPayload(payload)).toBe(false);
+      const before = localStorage.getItem(USER_STATE_KEY);
+      await expect(restoreAppBackup(payload)).rejects.toThrow();
+      expect(localStorage.getItem(USER_STATE_KEY)).toBe(before);
     });
 
     it("accepts a full payload", () => {
@@ -527,7 +552,7 @@ describe("appBackup", () => {
                 updated_at: "2026-01-01T00:00:00Z",
               },
             ],
-            tasks: [{ id: "untouched", deleted_at: null }],
+            tasks: [{ id: "untouched", label_id: "server-only", deleted_at: null }],
           };
           mockFetch
             .mockResolvedValueOnce({ ok: true, json: async () => server })
@@ -540,12 +565,15 @@ describe("appBackup", () => {
               ? { tasks: [], templates: [], timeOff: [], workLocations: {}, ganttTasks: [] }
               : {}),
           };
+          mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
           await restoreAppBackup(payload, mockFetch);
-          expect(mockFetch).toHaveBeenCalledTimes(2);
+          expect(mockFetch).toHaveBeenCalledTimes(all ? 3 : 2);
           const body = JSON.parse(mockFetch.mock.calls[1]![1].body);
-          expect(body.labels).toEqual([
+          const labelBody = JSON.parse(mockFetch.mock.calls[all ? 2 : 1]![1].body);
+          expect(labelBody.labels).toEqual([
             expect.objectContaining({ id: "server-only", action: "delete" }),
           ]);
+          if (all) expect(body.labels).toEqual([]);
           expect(body.tasks).toEqual(
             all ? [expect.objectContaining({ id: "untouched", action: "delete" })] : [],
           );

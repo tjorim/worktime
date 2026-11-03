@@ -43,7 +43,7 @@ import { isValidRawGanttTask } from "@/types/gantt";
 import { isLabelInput } from "@/lib/timeTracking/constants";
 import { isValidTimeString } from "@/lib/timeTracking/timeUtils";
 import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
-import { hasIsoAlpha2Format } from "@/types/countries";
+import { hasIsoAlpha2Format, isValidCountryCode } from "@/types/countries";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
@@ -381,6 +381,45 @@ export function getAppBackupValidationError(
       }
     }
   }
+  if (isRecord(parsed.userState)) {
+    const state = parsed.userState;
+    const settings = isRecord(state.settings) ? state.settings : {};
+    const lastUsed = isRecord(state.lastUsed) ? state.lastUsed : {};
+    const enums: Array<[Record<string, unknown>, string, string[]]> = [
+      [settings, "timeFormat", ["12h", "24h"]],
+      [settings, "theme", ["light", "dark", "auto"]],
+      [settings, "notifications", ["on", "off"]],
+      [
+        lastUsed,
+        "activeTab",
+        ["calendar", "unified-calendar", "schedule", "timeoff", "timetracking", "gantt"],
+      ],
+      [lastUsed, "scheduleView", ["schedule", "transfer"]],
+      [lastUsed, "timeOffView", ["table", "stats", "team"]],
+      [lastUsed, "timeTrackingView", ["daily", "weekly"]],
+      [lastUsed, "ganttViewMode", ["Day", "Week", "Month", "Year"]],
+      [lastUsed, "ganttView", ["chart", "table"]],
+    ];
+    if (
+      enums.some(
+        ([record, key, values]) =>
+          key in record &&
+          (typeof record[key] !== "string" || !values.includes(record[key] as string)),
+      )
+    )
+      return fail("userState");
+    for (const key of ["homeCountry", "officeCountry"])
+      if (settings[key] != null && !isValidCountryCode(settings[key])) return fail("userState");
+    if (settings.hdayUsername != null && typeof settings.hdayUsername !== "string")
+      return fail("userState");
+    if (lastUsed.otherSchedule != null && !isValidScheduleType(lastUsed.otherSchedule))
+      return fail("userState");
+    if (
+      lastUsed.otherTeam != null &&
+      (typeof lastUsed.otherTeam !== "number" || !Number.isFinite(lastUsed.otherTeam))
+    )
+      return fail("userState");
+  }
   for (const section of ["tasks", "templates", "labels", "ganttTasks", "timeOff"] as const) {
     if (!(section in parsed)) continue;
     const rows = parsed[section];
@@ -394,20 +433,21 @@ export function getAppBackupValidationError(
         case "tasks":
           valid =
             typeof row.text === "string" &&
-            typeof row.label === "string" &&
+            nonempty(row.label) &&
             validTimestamp(row.startTime) &&
             (row.stopTime == null ||
               (validTimestamp(row.stopTime) &&
-                Date.parse(row.stopTime) >= Date.parse(row.startTime as string))) &&
+                row.stopTime.slice(0, 10) === (row.startTime as string).slice(0, 10) &&
+                Date.parse(row.stopTime) > Date.parse(row.startTime as string))) &&
             (row.includesBreak === undefined || typeof row.includesBreak === "boolean") &&
             (row.ganttTaskId === undefined || nonempty(row.ganttTaskId));
           break;
         case "templates":
           valid =
-            typeof row.text === "string" &&
+            nonempty(row.text) &&
             typeof row.label === "string" &&
-            isValidTimeString(row.start) &&
-            isValidTimeString(row.stop);
+            validClock(row.start) &&
+            validClock(row.stop);
           break;
         case "labels":
           valid = isLabelInput(row);
@@ -495,13 +535,18 @@ function validDate(value: unknown): value is string {
     dayjs(value, "YYYY-MM-DD", true).format("YYYY-MM-DD") === value
   );
 }
+function validClock(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) &&
+    isValidTimeString(value)
+  );
+}
 function validTimestamp(value: unknown): value is string {
   return (
     typeof value === "string" &&
     validDate(value.slice(0, 10)) &&
-    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?$/.test(
-      value,
-    ) &&
+    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) &&
     Number.isFinite(Date.parse(value))
   );
 }

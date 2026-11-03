@@ -606,6 +606,37 @@ export async function pushSyncPayloadDetailed(
   payload: SyncPushPayload,
   syncCursor?: string,
 ): Promise<PushOutcome> {
+  // Labels cannot be deleted until referring records have been removed or
+  // relinked. Keep this at the shared push boundary so outbox retries preserve
+  // the same ordering even after several queued payloads have been merged.
+  const labelDeletes = payload.labels.filter((item) => item.action === "delete");
+  const hasReferringChanges = [payload.tasks, payload.templates, payload.gantt_tasks ?? []].some(
+    (items) => items.length > 0,
+  );
+  if (labelDeletes.length > 0 && hasReferringChanges) {
+    const first = await pushSyncPayloadDetailed(
+      fetch,
+      {
+        ...payload,
+        declared_delete_total: countPayloadDeletes(payload),
+        labels: payload.labels.filter((item) => item.action !== "delete"),
+      },
+      syncCursor,
+    );
+    if (!first.ok || countPushConflicts(first.response) > 0) return first;
+    const last = await pushSyncPayloadDetailed(
+      fetch,
+      {
+        ...emptyPushPayload(),
+        allow_bulk_delete: payload.allow_bulk_delete,
+        declared_delete_total: countPayloadDeletes(payload),
+        labels: labelDeletes,
+      },
+      syncCursor,
+    );
+    if (!last.ok) return last;
+    return { ok: true, response: mergePushResponses([first.response, last.response]) };
+  }
   const oversized = PUSH_ENTITY_ORDER.some(
     (key) => (payload[key] ?? []).length > MAX_SYNC_PUSH_ITEMS,
   );

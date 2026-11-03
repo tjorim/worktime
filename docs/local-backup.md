@@ -20,3 +20,14 @@ destination first or include the target domain in the backup before trying again
 A replacement also rejects removing targets still referenced by retained local
 records in omitted source domains. Older backups whose exports already lost
 these fields cannot recover the links.
+
+Task timestamps use the application's local `YYYY-MM-DDTHH:mm` format; stopped
+tasks must end later on the same day. Templates require nonblank text and strict
+`HH:mm` times. Present known preference fields must use their supported values.
+These checks match the readers and sync filters so accepted rows are not dropped
+on reload or upload.
+
+Sync applies referring-record changes before label deletions. Label creation
+still precedes records that reference new labels. This ordering also applies to
+merged outbox retries; an interrupted replacement can safely resend the full
+payload without losing its deferred label deletions.
