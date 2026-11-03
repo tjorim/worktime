@@ -139,7 +139,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     promise: Promise<string | null>;
   } | null>(null);
 
-  const getAccessToken = useCallback(() => sessionRef.current.token, []);
+  // Preserve token-change notifications for consumers whose effects depend on
+  // this getter, while old request callbacks still read the latest session.
+  const getAccessToken = useCallback(() => sessionRef.current.token, [oidcAuth.user]);
 
   const renewSession = useCallback(
     (failedToken?: string | null): Promise<string | null> => {

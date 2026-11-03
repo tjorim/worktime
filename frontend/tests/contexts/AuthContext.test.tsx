@@ -427,7 +427,7 @@ describe("AuthContext", () => {
 
   describe("renewSession", () => {
     it("recovers concurrent 401s while proactive renewal is exchanging a rotating token", async () => {
-      expect(oidcConfig.automaticSilentRenew).toBe(false);
+      expect("automaticSilentRenew" in oidcConfig && oidcConfig.automaticSilentRenew).toBe(false);
       mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
       let finish!: (value: unknown) => void;
       let used = false;
@@ -476,6 +476,23 @@ describe("AuthContext", () => {
       expect(await result.current.renewSession("old")).toBeNull();
       expect(await result.current.renewSession("old")).toBe("fresh");
       expect(mockSigninSilent).toHaveBeenCalledTimes(2);
+    });
+
+    it("notifies token-dependent consumers after a same-account token update", () => {
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
+      const { result, rerender } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        ),
+      });
+      const previousGetter = result.current.getAccessToken;
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "fresh" };
+      rerender();
+      expect(result.current.getAccessToken).not.toBe(previousGetter);
+      expect(previousGetter()).toBe("fresh");
+      expect(result.current.getAccessToken()).toBe("fresh");
     });
 
     it("shares rotating-token renewal and reuses its result for late 401s without StrictMode", async () => {
