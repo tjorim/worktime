@@ -363,7 +363,9 @@ async def get_public_holidays(
     Returns 503 if the upstream is unreachable and both caches are cold.
     """
     if country not in {"NL", "BE", "DE", "LU", "FR", "GB"}:
-        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.UNSUPPORTED_COUNTRY, f"Unsupported country code: {country}.")
+        raise api_error(
+            status.HTTP_400_BAD_REQUEST, ErrorCode.UNSUPPORTED_COUNTRY, f"Unsupported country code: {country}."
+        )
     data = await _get_or_fetch_holidays(
         holiday_type="public",
         country=country,
