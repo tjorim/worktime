@@ -445,7 +445,15 @@ export function getAppBackupValidationError(
   const gantt = (parsed.ganttTasks ?? ganttTasksCollection.toArray) as GanttTask[];
   const ganttIds = new Set(gantt.map((row) => row.id));
   for (const section of ["tasks", "templates", "ganttTasks"] as const) {
-    const rows = parsed[section] as Record<string, unknown>[] | undefined;
+    const retained = {
+      tasks: tasksCollection,
+      templates: templatesCollection,
+      ganttTasks: ganttTasksCollection,
+    };
+    const rows = (parsed[section] ??
+      ("labels" in parsed || "ganttTasks" in parsed ? retained[section].toArray : undefined)) as
+      | Record<string, unknown>[]
+      | undefined;
     for (const [index, row] of (rows ?? []).entries()) {
       if (
         (row.label && !labels.has(row.label as string)) ||

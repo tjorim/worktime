@@ -182,6 +182,8 @@ describe("appBackup", () => {
     expect(buildLocalSyncPushPayload().tasks[0]).toMatchObject({ gantt_task_id: "g1" });
     expect(buildLocalSyncPushPayload().gantt_tasks?.[0]).toMatchObject({ label_id: "l1" });
     expect(validateAppBackupPayload({ version: 1, tasks: [task] })).toBe(true);
+    expect(validateAppBackupPayload({ version: 1, labels: [] })).toBe(false);
+    expect(validateAppBackupPayload({ version: 1, ganttTasks: [] })).toBe(false);
     expect(validateAppBackupPayload({ version: 1, tasks: [task], ganttTasks: [] })).toBe(false);
   });
 

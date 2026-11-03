@@ -17,4 +17,6 @@ backups, a referenced target must exist either in the included replacement targe
 domain or, when that domain is omitted, in the current local collection. Missing
 targets reject the entire restore rather than silently removing links. Sync the
 destination first or include the target domain in the backup before trying again.
-Older backups whose exports already lost these fields cannot recover the links.
+A replacement also rejects removing targets still referenced by retained local
+records in omitted source domains. Older backups whose exports already lost
+these fields cannot recover the links.
