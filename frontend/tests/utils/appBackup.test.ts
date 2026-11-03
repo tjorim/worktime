@@ -594,7 +594,9 @@ describe("appBackup", () => {
         // No collection sections in the payload: buildLocalSyncPushPayload()
         // produces an empty push, so there is nothing to reconcile with the
         // server and no reason to round-trip for it.
+        const preload = vi.spyOn(collectionsModule, "preloadSyncCollections");
         await restoreAppBackup({ exportedAt: "", version: 1, userState: {} }, mockFetch);
+        expect(preload).not.toHaveBeenCalled();
 
         expect(mockFetch).not.toHaveBeenCalled();
         expect(window.location.reload).toHaveBeenCalledOnce();

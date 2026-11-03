@@ -323,6 +323,18 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
   return getAppBackupValidationError(parsed) === undefined;
 }
 
+/** Load reference targets only when restoring collection data, never preferences alone. */
+export async function preloadAppBackupCollections(payload: unknown): Promise<void> {
+  if (
+    isRecord(payload) &&
+    ["tasks", "templates", "labels", "ganttTasks", "timeOff", "workLocations"].some(
+      (section) => section in payload,
+    )
+  ) {
+    await preloadSyncCollections();
+  }
+}
+
 /** Returns a section and one-based record position, never imported diagnostic text. */
 export function getAppBackupValidationError(
   parsed: unknown,
@@ -568,7 +580,7 @@ export async function restoreAppBackup(
   fetchFn?: FetchFn,
 ): Promise<void> {
   // Complete preflight before preferences or any collection can be replaced.
-  await preloadSyncCollections();
+  await preloadAppBackupCollections(payload);
   if (!validateAppBackupPayload(payload)) throw new Error("Invalid app backup");
   if (
     payload.userState !== undefined &&
@@ -666,7 +678,6 @@ export async function restoreAppBackup(
     // in full to build the replace payload below — an unmounted collection
     // reads as empty, which buildKeepLocalReplacePayload would otherwise
     // read as "delete everything the server has for this domain".
-    await preloadSyncCollections();
     const localPayload = buildLocalSyncPushPayload();
     // Included empty domains still need server-only deletes. Preferences alone
     // do not require a domain reconciliation.

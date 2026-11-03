@@ -1,4 +1,3 @@
-import { preloadSyncCollections } from "@/db/collections";
 import {
   CalendarDaysIcon,
   CircleUserIcon,
@@ -26,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import {
   getAppBackupValidationError,
+  preloadAppBackupCollections,
   validateAppBackupPayload,
   restoreAppBackup,
 } from "@/utils/appBackup";
@@ -385,7 +385,14 @@ export function SettingsContent({
       event.target.value = "";
       return;
     }
-    await preloadSyncCollections();
+    try {
+      await preloadAppBackupCollections(parsed);
+    } catch (error) {
+      logger.error("Failed to load backup reference targets:", error);
+      toast.showError(m.restore_failed());
+      event.target.value = "";
+      return;
+    }
     const validationError = getAppBackupValidationError(parsed);
     if (!validateAppBackupPayload(parsed)) {
       const sectionLabels: Record<string, string> = {
