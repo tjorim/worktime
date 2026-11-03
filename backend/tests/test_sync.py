@@ -19,8 +19,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.database.models import TimeTrackingTask
-from app.schemas import TaskSyncItem, UserCreate
-from app.services.db_service import create_user
+from app.schemas import LabelCreate, TaskSyncItem, UserCreate
+from app.services.db_service import create_label, create_user
 from app.services.sync_service import _push_task
 from app.utils.sse_manager import SyncEventManager, _redact_credentials
 from tests.task_helpers import label_id_for, task_payload
@@ -2705,6 +2705,8 @@ class TestSyncCorrectnessFixes:
             user = await create_user(setup_session, UserCreate(username="race-user", display_name="Race"))
             await setup_session.commit()
             user_id = user.id
+            label = await create_label(setup_session, user_id, LabelCreate(name="Work", color="#112233"))
+            label_id = label.id
 
         session_a = factory()
         session_b = factory()
@@ -2716,6 +2718,7 @@ class TestSyncCorrectnessFixes:
                     id=str(uuid4()),
                     user_id=user_id,
                     text="Racer A",
+                    label_id=label_id,
                     start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
                     stop_time=None,
                     client_updated_at=datetime.now(UTC),
@@ -2735,6 +2738,7 @@ class TestSyncCorrectnessFixes:
                 action="create",
                 client_updated_at=datetime.now(UTC),
                 text="Racer B",
+                label_id=label_id,
                 start_time=datetime(2026, 2, 1, 9, 5, tzinfo=UTC),
                 stop_time=None,
             )
@@ -2776,10 +2780,13 @@ class TestSyncCorrectnessFixes:
         factory = async_sessionmaker(test_db, expire_on_commit=False)
         async with factory() as setup_session:
             user = await create_user(setup_session, UserCreate(username="reopen-race-user", display_name="Race"))
+            label = await create_label(setup_session, user.id, LabelCreate(name="Work", color="#112233"))
+            label_id = label.id
             completed_task = TimeTrackingTask(
                 id=str(uuid4()),
                 user_id=user.id,
                 text="Completed earlier",
+                label_id=label_id,
                 start_time=datetime(2026, 2, 1, 7, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 2, 1, 8, 0, tzinfo=UTC),
                 client_updated_at=datetime.now(UTC),
@@ -2799,6 +2806,7 @@ class TestSyncCorrectnessFixes:
                     id=str(uuid4()),
                     user_id=user_id,
                     text="Racer A",
+                    label_id=label_id,
                     start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
                     stop_time=None,
                     client_updated_at=datetime.now(UTC),
