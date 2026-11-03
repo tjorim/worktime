@@ -8,6 +8,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { calculateAdjustedWeeklyTarget } from "@/utils/statisticsWorkingDays";
+import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
 import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
@@ -129,6 +130,8 @@ export function TimeTrackingView({
           ]}
         />
       </div>
+
+      {viewMode === "weekly" && <HolidayStatusNotice status={workingDays.holidayStatus} />}
 
       {viewMode === "daily" && (
         <TimeTrackingDailyView

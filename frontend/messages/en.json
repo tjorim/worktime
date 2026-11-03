@@ -1517,5 +1517,7 @@
   "timeoff_import_invalid_syntax": "unsupported .hday syntax",
   "timeoff_import_more": "and {count} more",
   "timeoff_statistics_counting_note": "Counts scheduled working days excluding public holidays, for the whole year including recurring entries. Each half-day is counted once; overlaps use the event order shown in the breakdown.",
-  "tt_no_target_week": "No target this week: scheduled days off, time off or public holidays."
+  "tt_no_target_week": "No target this week: scheduled days off, time off or public holidays.",
+  "stats_holidays_loading": "Loading public holidays. Totals and targets may change.",
+  "stats_holidays_unavailable": "Public holidays could not be loaded. Totals and targets may be too high until they are."
 }

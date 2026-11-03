@@ -15,6 +15,7 @@ import {
 } from "@/utils/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
 
+import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
 import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
 
 interface TimeOffStatsViewProps {
@@ -69,6 +70,7 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">{m.timeoff_statistics_counting_note()}</p>
+        <HolidayStatusNotice status={workingDays.holidayStatus} />
         <div className="mb-4 flex items-baseline gap-2">
           <span className="text-2xl font-bold">{formatVacationValue(stats.totalDays)}</span>
           <span className="text-sm text-muted-foreground">

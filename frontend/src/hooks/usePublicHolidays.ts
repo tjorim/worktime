@@ -15,10 +15,15 @@ export interface PublicHoliday {
   types: string[];
 }
 
-const toHolidayMap = (holidays: PublicHoliday[]) => {
+/** Regional holidays (`global: false` or limited to counties) only apply to part of a country. */
+export const isNationwideHoliday = (holiday: PublicHoliday) =>
+  holiday.global !== false && !holiday.counties?.length;
+
+const toHolidayMap = (holidays: PublicHoliday[], nationwideOnly = false) => {
   const map = new Map<string, PublicHolidayInfo>();
 
   holidays.forEach((holiday) => {
+    if (nationwideOnly && !isNationwideHoliday(holiday)) return;
     map.set(formatHdayDate(dayjs(holiday.date)), {
       name: holiday.name,
       localName: holiday.localName,
@@ -58,5 +63,10 @@ export function usePublicHolidays(
     [holidays, isEnabled],
   );
 
-  return { publicHolidayMap, loading, error };
+  const nationwideHolidayMap = useMemo(
+    () => (isEnabled ? toHolidayMap(holidays, true) : new Map<string, PublicHolidayInfo>()),
+    [holidays, isEnabled],
+  );
+
+  return { publicHolidayMap, nationwideHolidayMap, loading, error };
 }
