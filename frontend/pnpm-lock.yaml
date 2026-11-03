@@ -468,11 +468,6 @@ packages:
     resolution: {integrity: sha512-EMCx3AGZ3WfAl6ht7AyQoPm2Lh+BGYEMdc4Q6Hf7uSCDOZFuLq44qNwL+iaim8VlyYhRAo4X43+weadK8ZB4Yg==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/parser@7.29.11':
-    resolution: {integrity: sha512-OZ6+oaK7GMyg3IfCpj8JOmn8n+w2rJbDT0LLfVDTLb1ZFeKDh3AiNELgCMUw175IJHSkLl74hG0M0VLsvx+gag==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
-
   '@babel/parser@7.29.12':
     resolution: {integrity: sha512-WJ7JBp/Q4+z/ImydtI7jS6NVco5++632ExBemSX+Ysb+G1lCwQ5BVo3SY+jGGOcZXI4ZccbZSUSJLNBW6eEpJg==}
     engines: {node: '>=6.0.0'}
@@ -5376,7 +5371,7 @@ snapshots:
       '@babel/helper-compilation-targets': 7.29.7
       '@babel/helper-module-transforms': 7.29.7(@babel/core@7.29.7)
       '@babel/helpers': 7.29.10
-      '@babel/parser': 7.29.11
+      '@babel/parser': 7.29.12
       '@babel/template': 7.29.7
       '@babel/traverse': 7.29.12
       '@babel/types': 7.29.11
@@ -5513,10 +5508,6 @@ snapshots:
   '@babel/helpers@7.29.10':
     dependencies:
       '@babel/template': 7.29.7
-      '@babel/types': 7.29.11
-
-  '@babel/parser@7.29.11':
-    dependencies:
       '@babel/types': 7.29.11
 
   '@babel/parser@7.29.12':
@@ -6044,7 +6035,7 @@ snapshots:
   '@babel/template@7.29.7':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/parser': 7.29.11
+      '@babel/parser': 7.29.12
       '@babel/types': 7.29.11
 
   '@babel/traverse@7.29.12':
@@ -6296,7 +6287,7 @@ snapshots:
 
   '@inlang/plugin-m-function-matcher@2.4.0':
     dependencies:
-      '@babel/parser': 7.29.11
+      '@babel/parser': 7.29.12
       '@inlang/sdk': 4.1.0
       svelte: 5.57.3
     transitivePeerDependencies:
@@ -6988,7 +6979,7 @@ snapshots:
   '@shadcn/registry@0.2.1':
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/parser': 7.29.11
+      '@babel/parser': 7.29.12
       '@babel/plugin-transform-typescript': 7.29.9(@babel/core@7.29.7)
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
       '@dotenvx/dotenvx': 1.75.1
@@ -9293,7 +9284,7 @@ snapshots:
   shadcn@4.23.0:
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/parser': 7.29.11
+      '@babel/parser': 7.29.12
       '@babel/plugin-transform-typescript': 7.29.9(@babel/core@7.29.7)
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
       '@dotenvx/dotenvx': 1.75.1
