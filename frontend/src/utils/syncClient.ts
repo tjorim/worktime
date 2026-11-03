@@ -757,8 +757,10 @@ export function buildLocalPreferencesPayload(userId?: string): {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
     const stored = parsed as Record<string, unknown>;
+    // Undated state must not become newer on every sync cycle. Existing
+    // server preferences win; an empty server can still receive an initial copy.
     const storedTimestamp =
-      typeof stored._updatedAt === "string" ? stored._updatedAt : dayjs().toISOString();
+      typeof stored._updatedAt === "string" ? stored._updatedAt : "1970-01-01T00:00:00.000Z";
     const { lastUsed: _lastUsed, _accountOwner: _owner, settings, ...restTop } = stored;
     return {
       data: { ...restTop, settings: omitDeviceLocalSettings(settings) },
