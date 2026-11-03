@@ -4697,8 +4697,8 @@ packages:
     resolution: {integrity: sha512-NPOYrDVbvtuTo5m9InqKE7O6wBASON46OabjyqLUGPvoXNDYp0pReuFYkqOQwGsoj1OpZVj6mIdnRRgt5O1/gQ==}
     engines: {node: '>=20'}
 
-  set-cookie-parser@3.1.2:
-    resolution: {integrity: sha512-5/r/lTwbJ3zQ+qwdUFZYeRNqda7P5HD8zQKqlSjdGt1/S0cjLAphHusj4Y58ahDtWn/g32xrIS58/ikOvwl0Lw==}
+  set-cookie-parser@3.2.2:
+    resolution: {integrity: sha512-df017qMeYuXo4emL09nlyMpi2i2MtEIKS/6jtXH3vmjFgIRsOi852/5RmhJ4EkvN3ZF8jXadM/EkTPXgc8yPIw==}
 
   set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -8285,7 +8285,7 @@ snapshots:
   headers-polyfill@5.0.1:
     dependencies:
       '@types/set-cookie-parser': 2.4.10
-      set-cookie-parser: 3.1.2
+      set-cookie-parser: 3.2.2
 
   human-signals@2.1.0: {}
 
@@ -9250,7 +9250,7 @@ snapshots:
 
   seroval@1.7.2: {}
 
-  set-cookie-parser@3.1.2: {}
+  set-cookie-parser@3.2.2: {}
 
   set-function-length@1.2.2:
     dependencies:
