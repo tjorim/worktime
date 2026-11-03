@@ -25,6 +25,7 @@ type TimeTrackingWeeklyViewProps = {
   labels: Label[];
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
+  targetForWeek?: (date: string) => { weeklyHours: number; workingDays: number };
   weeklyTargetHours?: number;
   weeklyWorkingDays?: number;
   onSwitchToDaily?: (date: string) => void;
@@ -35,6 +36,7 @@ export function TimeTrackingWeeklyView({
   labels,
   selectedDate,
   onSelectedDateChange,
+  targetForWeek,
   weeklyTargetHours,
   weeklyWorkingDays,
   onSwitchToDaily,
@@ -79,7 +81,11 @@ export function TimeTrackingWeeklyView({
     defaultLabelColor,
   });
 
-  const recentWeeks = useRecentWeeks(tasks, start, liveTime);
+  const rawRecentWeeks = useRecentWeeks(tasks, start, liveTime);
+  const recentWeeks = rawRecentWeeks.map((week) => ({
+    ...week,
+    targetHours: targetForWeek?.(week.start).weeklyHours,
+  }));
 
   const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
   const weeklyProgressPercent =
@@ -119,6 +125,9 @@ export function TimeTrackingWeeklyView({
         </div>
       </CardHeader>
       <CardContent>
+        {weeklyTargetHours === 0 && summary.rows.length === 0 && (
+          <p className="text-sm text-muted-foreground">{m.tt_no_target_week()}</p>
+        )}
         {summary.rows.length === 0 && (
           <EmptyState
             icon={ChartColumnIcon}

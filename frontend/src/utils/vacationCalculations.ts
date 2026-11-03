@@ -10,8 +10,13 @@ import {
   UmbrellaIcon,
 } from "lucide-react";
 import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
-import { dayjs } from "./dateTimeUtils";
+import { isTimeOffDateEntry, isTimeOffRangeEntry } from "@/lib/timeOff/types";
+import { dayjs } from "@/utils/dateTimeUtils";
+import {
+  statisticsWorkingDays,
+  timeOffHalves,
+  type WorkingDayOptions,
+} from "@/utils/statisticsWorkingDays";
 import * as m from "@/paraglide/messages.js";
 
 export type EventTypeKey =
@@ -82,52 +87,6 @@ export interface VacationYearStats {
 const isHalfDay = (flag?: TimeOffEntryFlag | null): boolean =>
   flag === "half_am" || flag === "half_pm";
 
-const getDayWeight = (flag?: TimeOffEntryFlag | null): number => (isHalfDay(flag) ? 0.5 : 1);
-
-const getEventTypeKey = (entryType: TimeOffEntry["entryType"]): EventTypeKey => {
-  return entryType === "vacation" ? "holiday" : entryType;
-};
-
-const isDateInYear = (date: string, year: number): boolean => {
-  const parsed = dayjs(date);
-  if (!parsed.isValid()) return false;
-  const yearStart = dayjs(`${year}-01-01`).startOf("day");
-  const yearEnd = dayjs(`${year}-12-31`).startOf("day");
-  return parsed.isSameOrAfter(yearStart, "day") && parsed.isSameOrBefore(yearEnd, "day");
-};
-
-function countWeeklyOccurrencesInYear(year: number, weekday: number): number {
-  if (weekday < 1 || weekday > 7) return 0;
-  const jan1 = dayjs(`${year}-01-01`).startOf("day");
-  let current = jan1.isoWeekday(weekday);
-  if (current.isBefore(jan1, "day")) current = current.add(7, "day");
-  const end = dayjs(`${year}-12-31`).startOf("day");
-  let count = 0;
-
-  while (current.isSameOrBefore(end, "day")) {
-    count += 1;
-    current = current.add(7, "day");
-  }
-
-  return count;
-}
-
-function countRangeDaysInYear(start: string, end: string, year: number): number {
-  const rangeStart = dayjs(start).startOf("day");
-  const rangeEnd = dayjs(end).startOf("day");
-  if (!rangeStart.isValid() || !rangeEnd.isValid() || rangeEnd.isBefore(rangeStart, "day")) {
-    return 0;
-  }
-
-  const yearStart = dayjs(`${year}-01-01`).startOf("day");
-  const yearEnd = dayjs(`${year}-12-31`).startOf("day");
-  const effectiveStart = rangeStart.isBefore(yearStart, "day") ? yearStart : rangeStart;
-  const effectiveEnd = rangeEnd.isAfter(yearEnd, "day") ? yearEnd : rangeEnd;
-  if (effectiveEnd.isBefore(effectiveStart, "day")) return 0;
-
-  return effectiveEnd.diff(effectiveStart, "day") + 1;
-}
-
 export const getAvailableYears = (
   entries: TimeOffEntry[] | undefined,
   fallbackYear: number,
@@ -163,6 +122,7 @@ export const getAvailableYears = (
 export const calculateVacationStats = (
   entries: TimeOffEntry[] | undefined,
   year: number,
+  options: WorkingDayOptions = { team: 1, schedule: "9-5", holidays: new Map() },
 ): VacationYearStats => {
   const totals: Record<EventTypeKey, number> = {
     holiday: 0,
@@ -189,32 +149,22 @@ export const calculateVacationStats = (
     };
   }
 
-  entries.forEach((entry) => {
-    const typeKey = getEventTypeKey(entry.entryType);
-    const dayValue = getDayWeight(entry.entryFlag);
-    if (isTimeOffWeeklyEntry(entry)) {
-      const occurrences = countWeeklyOccurrencesInYear(year, entry.weekday);
-      const totalForEntry = occurrences * dayValue;
-      totals[typeKey] += totalForEntry;
-      totalDays += totalForEntry;
-      return;
+  const ordered = [...entries].sort(
+    (a, b) =>
+      EVENT_TYPE_ORDER.indexOf(a.entryType === "vacation" ? "holiday" : a.entryType) -
+      EVENT_TYPE_ORDER.indexOf(b.entryType === "vacation" ? "holiday" : b.entryType),
+  );
+  for (const { date } of statisticsWorkingDays(
+    dayjs(`${year}-01-01`),
+    dayjs(`${year}-12-31`),
+    options,
+  )) {
+    for (const entry of timeOffHalves(date, ordered)) {
+      if (!entry) continue;
+      totals[entry.entryType === "vacation" ? "holiday" : entry.entryType] += 0.5;
+      totalDays += 0.5;
     }
-
-    if (isTimeOffDateEntry(entry)) {
-      if (!isDateInYear(entry.date, year)) return;
-      totals[typeKey] += dayValue;
-      totalDays += dayValue;
-      return;
-    }
-
-    if (isTimeOffRangeEntry(entry)) {
-      const daysInYear = countRangeDaysInYear(entry.start, entry.end, year);
-      if (daysInYear === 0) return;
-      const totalForEntry = daysInYear * dayValue;
-      totals[typeKey] += totalForEntry;
-      totalDays += totalForEntry;
-    }
-  });
+  }
 
   return {
     year,

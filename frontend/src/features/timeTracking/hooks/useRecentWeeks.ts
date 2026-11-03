@@ -18,6 +18,7 @@ export type RecentWeek = {
   start: string;
   isoWeek: number;
   hours: number;
+  targetHours?: number;
   days: RecentWeekDay[];
 };
 

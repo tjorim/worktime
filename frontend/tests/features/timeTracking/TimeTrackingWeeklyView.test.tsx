@@ -210,6 +210,8 @@ describe("TimeTrackingWeeklyView Component", () => {
       });
 
       expect(container.textContent).not.toContain("NaN");
+      expect(screen.getByText(/No target this week:/)).toBeInTheDocument();
+      expect(screen.queryByText(/4\.0h \/ 0\.0h/)).not.toBeInTheDocument();
       expect(screen.getByLabelText(/Monday: 4\.0 hours, 0% of daily target/i)).toBeInTheDocument();
     });
 

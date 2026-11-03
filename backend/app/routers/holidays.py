@@ -352,7 +352,7 @@ def compute_paydates(year: int, holidays: list[Any]) -> list[str]:
 @router.get("/holidays/public")
 async def get_public_holidays(
     year: YearQuery,
-    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
+    country: Annotated[str, Query(description="Country ISO code")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return public holidays for a country/year, proxied from date.nager.at.
@@ -362,7 +362,8 @@ async def get_public_holidays(
     Staleness windows: 24 h for the current and future years, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
     """
-    country = _normalize_country(country)
+    if country not in {"NL", "BE", "DE", "LU", "FR", "GB"}:
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.UNSUPPORTED_COUNTRY, f"Unsupported country code: {country}.")
     data = await _get_or_fetch_holidays(
         holiday_type="public",
         country=country,

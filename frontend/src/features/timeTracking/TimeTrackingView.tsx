@@ -7,7 +7,9 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { calculateWeeklyShiftTarget } from "@/utils/shiftCalculations";
+import { calculateAdjustedWeeklyTarget } from "@/utils/statisticsWorkingDays";
+import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
+import { useEventStore } from "@/contexts/EventStoreContext";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import { TimeTrackingDailyView } from "./TimeTrackingDailyView";
 import { TimeTrackingWeeklyView } from "./TimeTrackingWeeklyView";
@@ -98,12 +100,15 @@ export function TimeTrackingView({
     () => getEffectiveTeam(myTeam, scheduleType),
     [myTeam, scheduleType],
   );
+  const workingDays = useStatisticsWorkingDays(dayjs(selectedWeeklyDate).year());
+  const { entries } = useEventStore();
+  const targetForWeek = useCallback(
+    (date: string) => calculateAdjustedWeeklyTarget(date, workingDays, entries),
+    [workingDays, entries],
+  );
   const weeklyTarget = useMemo(
-    () =>
-      effectiveTeam != null
-        ? calculateWeeklyShiftTarget(selectedWeeklyDate, effectiveTeam, scheduleType)
-        : null,
-    [selectedWeeklyDate, effectiveTeam, scheduleType],
+    () => (effectiveTeam != null ? targetForWeek(selectedWeeklyDate) : null),
+    [selectedWeeklyDate, effectiveTeam, targetForWeek],
   );
 
   return (
@@ -148,6 +153,7 @@ export function TimeTrackingView({
           labels={labels}
           selectedDate={selectedWeeklyDate}
           onSelectedDateChange={setSelectedWeeklyDate}
+          targetForWeek={effectiveTeam != null ? targetForWeek : undefined}
           weeklyTargetHours={weeklyTarget?.weeklyHours}
           weeklyWorkingDays={weeklyTarget?.workingDays}
           onSwitchToDaily={(date) => {

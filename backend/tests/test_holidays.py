@@ -318,14 +318,23 @@ class TestGetPublicHolidays:
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1
 
+    @pytest.mark.parametrize("country", ["NL", "BE", "DE", "LU", "FR", "GB"])
+    def test_home_country_public_holidays(self, db_client: TestClient, country: str):
+        with patch("app.routers.holidays._get_or_fetch_holidays", new_callable=AsyncMock) as fetch:
+            fetch.return_value = SAMPLE_PUBLIC_HOLIDAYS
+            response = db_client.get(f"/api/holidays/public?country={country}&year=2026")
+        assert response.status_code == 200
+        assert fetch.call_args.kwargs["country"] == country
+        assert fetch.call_args.kwargs["upstream_url"].endswith(f"/2026/{country}")
+
     def test_unsupported_country_returns_400(self, db_client: TestClient):
         """Unsupported country codes are rejected with a clear 400 response."""
-        response = db_client.get("/api/holidays/public?country=BE&year=2026")
+        response = db_client.get("/api/holidays/public?country=XX&year=2026")
 
         assert response.status_code == 400
         assert response.json() == {
             "code": "unsupported_country",
-            "detail": "Unsupported country code: BE. Only NL is supported.",
+            "detail": "Unsupported country code: XX.",
         }
 
     @pytest.mark.parametrize(

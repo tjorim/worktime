@@ -79,7 +79,7 @@ describe("vacationCalculations", () => {
         [
           rangeEntry("2025-01-15", "2025-01-17", "business"),
           rangeEntry("2025-02-10", "2025-02-11", "course"),
-          dateEntry("2025-03-01", "ill"),
+          dateEntry("2025-03-03", "ill"),
         ],
         2025,
       );
@@ -90,9 +90,9 @@ describe("vacationCalculations", () => {
       expect(stats.byType.find((t) => t.key === "ill")?.days).toBe(1);
     });
 
-    it("counts range entries across all covered days", () => {
+    it("counts range entries across scheduled working days", () => {
       const stats = calculateVacationStats([rangeEntry("2025-01-15", "2025-01-20")], 2025);
-      expect(stats.totalDays).toBe(6);
+      expect(stats.totalDays).toBe(4);
     });
 
     it("handles half-day flags", () => {
@@ -115,8 +115,8 @@ describe("vacationCalculations", () => {
     it("clamps range entries to the selected year", () => {
       const stats2024 = calculateVacationStats([rangeEntry("2024-12-28", "2025-01-05")], 2024);
       const stats2025 = calculateVacationStats([rangeEntry("2024-12-28", "2025-01-05")], 2025);
-      expect(stats2024.byType.find((t) => t.key === "holiday")?.days).toBe(4);
-      expect(stats2025.byType.find((t) => t.key === "holiday")?.days).toBe(5);
+      expect(stats2024.byType.find((t) => t.key === "holiday")?.days).toBe(2);
+      expect(stats2025.byType.find((t) => t.key === "holiday")?.days).toBe(3);
     });
 
     it("ignores invalid inverted ranges", () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
@@ -19,15 +20,19 @@ import {
 
 function renderWithProviders() {
   return render(
-    <ToastProvider>
-      <HdayHelperProvider>
-        <SettingsProvider>
-          <EventStoreProvider>
-            <TimeOffView />
-          </EventStoreProvider>
-        </SettingsProvider>
-      </HdayHelperProvider>
-    </ToastProvider>,
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <ToastProvider>
+        <HdayHelperProvider>
+          <SettingsProvider>
+            <EventStoreProvider>
+              <TimeOffView />
+            </EventStoreProvider>
+          </SettingsProvider>
+        </HdayHelperProvider>
+      </ToastProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -490,6 +495,10 @@ describe("TimeOffView Integration Tests", () => {
     });
 
     it("displays events grouped by type in statistics view", async () => {
+      localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({ scheduleType: "9-5", hasCompletedOnboarding: true }),
+      );
       const user = userEvent.setup();
       renderWithProviders();
 
