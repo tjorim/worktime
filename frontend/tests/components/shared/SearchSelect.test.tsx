@@ -27,6 +27,22 @@ function Picker() {
 }
 
 describe("SearchSelect", () => {
+  it("marks required pickers and removes the clear action", () => {
+    render(
+      <SearchSelect
+        required
+        aria-label="Label"
+        options={options}
+        value={options[0]!}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Label" })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Clear selection" })).not.toBeInTheDocument();
+  });
   it("resolves recreated options, filters, selects with the keyboard and clears", async () => {
     const user = userEvent.setup();
     render(<Picker />);

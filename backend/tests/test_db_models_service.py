@@ -70,6 +70,7 @@ from app.services.db_service import (
 from app.services.db_service import (
     ValidationError as ServiceValidationError,
 )
+from tests.task_helpers import task_payload, template_payload
 
 
 def test_schema_validates_color_and_country_code() -> None:
@@ -233,7 +234,9 @@ async def test_create_task_rejects_negative_duration(db_session: AsyncSession) -
         await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Bad interval",
                 start_time=datetime(2026, 2, 26, 12, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 2, 26, 11, 0, tzinfo=UTC),
@@ -247,7 +250,9 @@ async def test_update_task_rejects_negative_duration_with_partial_data(db_sessio
     task = await create_task(
         db_session,
         user.id,
-        TaskCreate(
+        await task_payload(
+            db_session,
+            user.id,
             text="Task",
             start_time=datetime(2026, 2, 26, 9, 0, tzinfo=UTC),
             stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
@@ -269,7 +274,9 @@ async def test_update_task_resets_reminder_on_an_actual_reschedule(db_session: A
     task = await create_task(
         db_session,
         user.id,
-        TaskCreate(
+        await task_payload(
+            db_session,
+            user.id,
             text="Task",
             start_time=datetime(2026, 2, 26, 9, 0, tzinfo=UTC),
             stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
@@ -304,8 +311,13 @@ async def test_update_task_does_not_reset_reminder_when_start_time_is_unchanged(
     task = await create_task(
         db_session,
         user.id,
-        TaskCreate(
-            text="Task", start_time=start_time, stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC), includes_break=False
+        await task_payload(
+            db_session,
+            user.id,
+            text="Task",
+            start_time=start_time,
+            stop_time=datetime(2026, 2, 26, 10, 0, tzinfo=UTC),
+            includes_break=False,
         ),
     )
     sent_at = datetime(2026, 2, 26, 8, 50, tzinfo=UTC)
@@ -629,7 +641,9 @@ async def test_get_task_is_scoped_to_user(db_session: AsyncSession) -> None:
     task = await create_task(
         db_session,
         owner.id,
-        TaskCreate(
+        await task_payload(
+            db_session,
+            owner.id,
             text="Private task",
             start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
             stop_time=None,
@@ -651,7 +665,9 @@ async def test_get_template_is_scoped_to_user(db_session: AsyncSession) -> None:
     template = await create_template(
         db_session,
         owner.id,
-        TemplateCreate(
+        await template_payload(
+            db_session,
+            owner.id,
             text="Reusable",
             start_time=time(9, 0),
             stop_time=time(17, 0),
@@ -671,7 +687,9 @@ async def test_soft_deleted_entities_are_tombstoned_and_hidden(db_session: Async
     task = await create_task(
         db_session,
         user.id,
-        TaskCreate(
+        await task_payload(
+            db_session,
+            user.id,
             text="Completed",
             start_time=datetime(2026, 6, 1, 9, 0, tzinfo=UTC),
             stop_time=datetime(2026, 6, 1, 10, 0, tzinfo=UTC),
@@ -681,7 +699,7 @@ async def test_soft_deleted_entities_are_tombstoned_and_hidden(db_session: Async
     template = await create_template(
         db_session,
         user.id,
-        TemplateCreate(text="Template", start_time=time(9, 0), stop_time=time(10, 0)),
+        await template_payload(db_session, user.id, text="Template", start_time=time(9, 0), stop_time=time(10, 0)),
     )
     location = await create_or_update_work_location(
         db_session,
@@ -699,9 +717,9 @@ async def test_soft_deleted_entities_are_tombstoned_and_hidden(db_session: Async
         ),
     )
 
-    await delete_label(db_session, user.id, label.id)
     await delete_task(db_session, user.id, task.id)
     await delete_template(db_session, user.id, template.id)
+    await delete_label(db_session, user.id, label.id)
     await delete_work_location(db_session, user.id, location.date)
     await delete_gantt_task(db_session, user.id, gantt_task.id)
 

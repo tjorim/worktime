@@ -237,8 +237,8 @@ async def update_time_tracking_task(
 
     Omit any parameter to leave it unchanged. Set clear_stop_time=True to
     reopen the task (make it running again) instead of passing a stop_time;
-    set clear_label_id=True to unlink its label. Both take precedence over
-    the corresponding value parameter when true.
+    labels are required, so clear_label_id=True is rejected. clear_stop_time
+    takes precedence over stop_time when true.
 
     Side effects: updates the specified TimeTrackingTask row. Authorization
     is enforced — the task must belong to the caller. Reopening a task

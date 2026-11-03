@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 import pycountry
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 
@@ -141,7 +142,7 @@ class LabelUpdate(RequestModel):
 
 class TaskCreate(RequestModel):
     text: str
-    label_id: str | None = None
+    label_id: str = Field(min_length=1, pattern=r"\S")
     gantt_task_id: str | None = None
     start_time: dt_datetime
     stop_time: dt_datetime | None = None
@@ -161,17 +162,24 @@ class TaskRead(BaseModel):
 
 
 class TaskUpdate(RequestModel):
-    label_id: str | None = None
+    label_id: Annotated[str, Field(min_length=1, pattern=r"\S")] | SkipJsonSchema[None] = None
     gantt_task_id: str | None = None
     text: str | None = None
     start_time: dt_datetime | None = None
     stop_time: dt_datetime | None = None
     includes_break: bool | None = None
 
+    @field_validator("label_id")
+    @classmethod
+    def require_label(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("A label is required")
+        return value
+
 
 class TemplateCreate(RequestModel):
     text: str
-    label_id: str | None = None
+    label_id: str = Field(min_length=1, pattern=r"\S")
     start_time: dt_time
     stop_time: dt_time
 
@@ -188,9 +196,16 @@ class TemplateRead(BaseModel):
 
 class TemplateUpdate(RequestModel):
     text: str | None = None
-    label_id: str | None = None
+    label_id: Annotated[str, Field(min_length=1, pattern=r"\S")] | SkipJsonSchema[None] = None
     start_time: dt_time | None = None
     stop_time: dt_time | None = None
+
+    @field_validator("label_id")
+    @classmethod
+    def require_label(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("A label is required")
+        return value
 
 
 class WorkLocationCreate(RequestModel):

@@ -21,7 +21,7 @@ describe("TemplateModal", () => {
   it("describes disabled label selection when no labels exist", () => {
     render(<TemplateModal {...baseProps} labels={[]} />);
 
-    const labelSelect = screen.getByLabelText(/^Label$/i);
+    const labelSelect = screen.getByLabelText(/^Label \*$/i);
     expect(labelSelect).toBeDisabled();
     expect(labelSelect).toHaveAttribute("aria-describedby", "templateLabelHelp");
     expect(
@@ -42,7 +42,7 @@ describe("TemplateModal", () => {
       />,
     );
 
-    const labelSelect = screen.getByLabelText(/^Label$/i);
+    const labelSelect = screen.getByLabelText(/^Label \*$/i);
     expect(labelSelect).toBeEnabled();
     expect(labelSelect).not.toHaveAttribute("aria-describedby");
     expect(

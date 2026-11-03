@@ -340,9 +340,10 @@ class WorktimeMcpBackend:
     async def start_time_entry(
         self,
         text: str,
+        label_id: str,
         start_time: datetime | None = None,
-        label_id: str | None = None,
     ) -> dict[str, Any]:
+        """Start a running task. Requires an existing label_id; use list_labels first."""
         async with self._tool_context() as (context, db):
             return await time_tracking.start_time_entry(context, db, text, start_time, label_id)
 
@@ -356,10 +357,11 @@ class WorktimeMcpBackend:
         self,
         text: str,
         start_time: datetime,
+        label_id: str,
         stop_time: datetime | None = None,
         includes_break: bool = False,
-        label_id: str | None = None,
     ) -> dict[str, Any]:
+        """Create a task. Requires an existing label_id; use list_labels first."""
         async with self._tool_context() as (context, db):
             return await time_tracking.create_time_tracking_task(
                 context, db, text, start_time, stop_time, includes_break, label_id
@@ -377,6 +379,7 @@ class WorktimeMcpBackend:
         clear_stop_time: bool = False,
         clear_label_id: bool = False,
     ) -> dict[str, Any]:
+        """Update a task, preserving its required label when omitted. Clearing its label is rejected."""
         async with self._tool_context() as (context, db):
             return await time_tracking.update_time_tracking_task(
                 context,

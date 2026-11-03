@@ -27,7 +27,7 @@ for (const theme of ["light", "dark"]) {
       }, testInfo) => {
         await page.setViewportSize({ width, height: 600 });
         await page.goto(`/e2e/fixtures/dialog-pickers.html?mode=${mode}&theme=${theme}`);
-        const picker = page.getByRole("combobox", { name: "Label", exact: true });
+        const picker = page.getByRole("combobox", { name: "Label *", exact: true });
         await picker.click();
         const list = page.getByRole("listbox");
         await expect(list).toBeVisible();

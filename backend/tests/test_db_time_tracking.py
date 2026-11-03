@@ -54,12 +54,13 @@ def test_label_crud_and_delete(
     assert delete_label_response.status_code == 409
     assert delete_label_response.json()["code"] == "conflict"
 
-    # Remove the label from the task, then deletion succeeds
-    db_client.put(
-        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
-        json={"label_id": None},
-        headers=headers,
+    # Required labels cannot be cleared; delete the task before deleting its label
+    rejected = db_client.put(
+        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}", json={"label_id": None}, headers=headers
     )
+    assert rejected.status_code == 422
+    assert rejected.json()["code"] == "label_required"
+    db_client.delete(f"/api/time-tracking/tasks/{task_id}", headers=headers)
     delete_label_response = db_client.delete(
         f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         headers=headers,
@@ -124,7 +125,8 @@ def test_task_constraints_and_filtering(
         },
         headers=headers,
     )
-    assert invalid_label_task.status_code == 404
+    assert invalid_label_task.status_code == 400
+    assert invalid_label_task.json()["code"] == "label_required"
 
     running_task = db_client.post(
         f"/api/time-tracking/tasks?user_id={user_id}",

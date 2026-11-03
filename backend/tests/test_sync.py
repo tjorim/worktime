@@ -19,10 +19,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.database.models import TimeTrackingTask
-from app.schemas import TaskSyncItem, UserCreate
-from app.services.db_service import create_user
+from app.schemas import LabelCreate, TaskSyncItem, UserCreate
+from app.services.db_service import create_label, create_user
 from app.services.sync_service import _push_task
 from app.utils.sse_manager import SyncEventManager, _redact_credentials
+from tests.task_helpers import label_id_for, task_payload
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -300,6 +301,7 @@ class TestSyncPush:
             ],
             "templates": [
                 {
+                    "label_id": label_id_for(db_client, headers),
                     "id": template_id,
                     "action": "create",
                     "client_updated_at": _ts(-5),
@@ -502,6 +504,7 @@ class TestSyncPush:
                 "id",
                 str(uuid4()),
                 {
+                    "label_id": label_id_for(db_client, headers),
                     "id": "",
                     "text": "Replay task",
                     "start_time": "2026-08-01T09:00:00+00:00",
@@ -512,7 +515,13 @@ class TestSyncPush:
                 "templates",
                 "id",
                 str(uuid4()),
-                {"id": "", "text": "Replay template", "start_time": "09:00:00", "stop_time": "10:00:00"},
+                {
+                    "label_id": label_id_for(db_client, headers),
+                    "id": "",
+                    "text": "Replay template",
+                    "start_time": "09:00:00",
+                    "stop_time": "10:00:00",
+                },
             ),
             (
                 "gantt_tasks",
@@ -587,6 +596,7 @@ class TestSyncPush:
             json={
                 "tasks": [
                     {
+                        "label_id": label_id_for(db_client, owner_headers),
                         "id": task_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
@@ -613,10 +623,10 @@ class TestSyncPush:
             },
             headers=owner_headers,
         )
-        assert update_resp.status_code == 400
-        assert "label not found" in update_resp.json()["detail"]
+        assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["tasks"][0]["code"] == "label_required"
 
-    def test_push_task_allows_explicit_nullable_clears(self, db_client: TestClient, auth_headers) -> None:
+    def test_push_task_rejects_clearing_required_label(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-clear-user")
         headers = auth_headers(user_id)
@@ -665,12 +675,13 @@ class TestSyncPush:
             headers=headers,
         )
         assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["tasks"][0]["code"] == "label_required"
 
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         task = next(item for item in pull_resp.json()["tasks"] if item["id"] == task_id)
-        assert task["label_id"] is None
-        assert task["stop_time"] is None
+        assert task["label_id"] == label_id
+        assert task["stop_time"] is not None
 
     def test_work_location_sync(self, db_client: TestClient, auth_headers) -> None:
         """Work locations are synced using date as the natural key."""
@@ -766,6 +777,7 @@ class TestSyncPush:
             json={
                 "templates": [
                     {
+                        "label_id": label_id_for(db_client, owner_headers),
                         "id": template_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
@@ -793,10 +805,10 @@ class TestSyncPush:
             },
             headers=owner_headers,
         )
-        assert update_resp.status_code == 400
-        assert "label not found" in update_resp.json()["detail"]
+        assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["templates"][0]["code"] == "label_required"
 
-    def test_push_template_allows_explicit_nullable_clears(self, db_client: TestClient, auth_headers) -> None:
+    def test_push_template_rejects_clearing_required_label(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "template-clear-user")
         headers = auth_headers(user_id)
@@ -844,11 +856,12 @@ class TestSyncPush:
             headers=headers,
         )
         assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["templates"][0]["code"] == "label_required"
 
         pull_resp = db_client.get("/api/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         template = next(item for item in pull_resp.json()["templates"] if item["id"] == template_id)
-        assert template["label_id"] is None
+        assert template["label_id"] == label_id
 
     def test_transaction_atomicity_rolls_back_on_failure(self, db_client: TestClient, auth_headers) -> None:
         """A validation error in one item aborts the whole batch."""
@@ -1573,7 +1586,7 @@ class TestSyncMultiDeviceFlow:
                     "action": "create",
                     "client_updated_at": _ts(-30 + i),
                     "text": f"Queued task {i}",
-                    "label_id": None,
+                    "label_id": label_id_for(db_client, headers),
                     "start_time": f"2026-02-01T{9 + i:02}:00:00+00:00",
                     "stop_time": f"2026-02-01T{10 + i:02}:00:00+00:00",
                     "includes_break": False,
@@ -1642,7 +1655,7 @@ class TestSyncMultiDeviceFlow:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Status Task",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-03-01T08:00:00+00:00",
                         "stop_time": None,
                         "includes_break": False,
@@ -1654,7 +1667,7 @@ class TestSyncMultiDeviceFlow:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Status Template",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "08:00:00",
                         "stop_time": "12:00:00",
                     }
@@ -2391,7 +2404,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Inverted range",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T10:00:00+00:00",
                         "stop_time": "2026-02-01T09:00:00+00:00",
                         "includes_break": False,
@@ -2422,7 +2435,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-10),
                         "text": "Valid range",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": "2026-02-01T10:00:00+00:00",
                         "includes_break": False,
@@ -2560,7 +2573,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-10),
                         "text": "Device A running task",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": None,
                         "includes_break": False,
@@ -2582,7 +2595,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Device B running task",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T09:05:00+00:00",
                         "stop_time": None,
                         "includes_break": False,
@@ -2620,7 +2633,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-20),
                         "text": "Already running",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": None,
                         "includes_break": False,
@@ -2630,7 +2643,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-20),
                         "text": "Completed earlier",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T07:00:00+00:00",
                         "stop_time": "2026-02-01T08:00:00+00:00",
                         "includes_break": False,
@@ -2692,6 +2705,8 @@ class TestSyncCorrectnessFixes:
             user = await create_user(setup_session, UserCreate(username="race-user", display_name="Race"))
             await setup_session.commit()
             user_id = user.id
+            label = await create_label(setup_session, user_id, LabelCreate(name="Work", color="#112233"))
+            label_id = label.id
 
         session_a = factory()
         session_b = factory()
@@ -2703,6 +2718,7 @@ class TestSyncCorrectnessFixes:
                     id=str(uuid4()),
                     user_id=user_id,
                     text="Racer A",
+                    label_id=label_id,
                     start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
                     stop_time=None,
                     client_updated_at=datetime.now(UTC),
@@ -2722,6 +2738,7 @@ class TestSyncCorrectnessFixes:
                 action="create",
                 client_updated_at=datetime.now(UTC),
                 text="Racer B",
+                label_id=label_id,
                 start_time=datetime(2026, 2, 1, 9, 5, tzinfo=UTC),
                 stop_time=None,
             )
@@ -2763,10 +2780,13 @@ class TestSyncCorrectnessFixes:
         factory = async_sessionmaker(test_db, expire_on_commit=False)
         async with factory() as setup_session:
             user = await create_user(setup_session, UserCreate(username="reopen-race-user", display_name="Race"))
+            label = await create_label(setup_session, user.id, LabelCreate(name="Work", color="#112233"))
+            label_id = label.id
             completed_task = TimeTrackingTask(
                 id=str(uuid4()),
                 user_id=user.id,
                 text="Completed earlier",
+                label_id=label_id,
                 start_time=datetime(2026, 2, 1, 7, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 2, 1, 8, 0, tzinfo=UTC),
                 client_updated_at=datetime.now(UTC),
@@ -2786,6 +2806,7 @@ class TestSyncCorrectnessFixes:
                     id=str(uuid4()),
                     user_id=user_id,
                     text="Racer A",
+                    label_id=label_id,
                     start_time=datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
                     stop_time=None,
                     client_updated_at=datetime.now(UTC),
@@ -2857,7 +2878,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": bogus_future,
                         "text": "Created with a broken clock",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": "2026-02-01T10:00:00+00:00",
                         "includes_break": False,
@@ -3233,7 +3254,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-60),
                         "text": "Original",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": "2026-02-01T10:00:00+00:00",
                         "includes_break": False,
@@ -3298,7 +3319,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Linked to gantt",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "gantt_task_id": gantt_id,
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": "2026-02-01T10:00:00+00:00",
@@ -3353,7 +3374,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Dangling gantt reference",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, headers),
                         "gantt_task_id": str(uuid4()),  # does not exist
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": "2026-02-01T10:00:00+00:00",
@@ -3391,7 +3412,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-10),
                         "text": "Owner's task",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, owner_headers),
                         "start_time": "2026-02-01T09:00:00+00:00",
                         "stop_time": "2026-02-01T10:00:00+00:00",
                         "includes_break": False,
@@ -3417,7 +3438,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "text": "Unrelated task in the same batch",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, prober_headers),
                         "start_time": "2026-02-01T11:00:00+00:00",
                         "stop_time": "2026-02-01T12:00:00+00:00",
                         "includes_break": False,
@@ -3457,7 +3478,7 @@ class TestSyncCorrectnessFixes:
                         "action": "create",
                         "client_updated_at": _ts(-10),
                         "text": "Owner's template",
-                        "label_id": None,
+                        "label_id": label_id_for(db_client, owner_headers),
                         "start_time": "09:00:00",
                         "stop_time": "10:00:00",
                     }
@@ -3507,6 +3528,7 @@ class TestSyncCorrectnessFixes:
     async def test_push_task_update_resets_reminder_on_an_actual_reschedule(self, db_session: AsyncSession) -> None:
         user = await create_user(db_session, UserCreate(username="sync-reschedule-reset", display_name="Reset"))
         create_item = TaskSyncItem(
+            label_id=(await task_payload(db_session, user.id, text="Fixture", start_time=datetime.now(UTC))).label_id,
             id=str(uuid4()),
             action="create",
             client_updated_at=datetime.now(UTC) - timedelta(minutes=30),
@@ -3549,6 +3571,7 @@ class TestSyncCorrectnessFixes:
         user = await create_user(db_session, UserCreate(username="sync-reschedule-noop", display_name="No Reset"))
         start_time = datetime(2026, 2, 1, 9, 0, tzinfo=UTC)
         create_item = TaskSyncItem(
+            label_id=(await task_payload(db_session, user.id, text="Fixture", start_time=datetime.now(UTC))).label_id,
             id=str(uuid4()),
             action="create",
             client_updated_at=datetime.now(UTC) - timedelta(minutes=30),

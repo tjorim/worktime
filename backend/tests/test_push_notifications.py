@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
 from app.database.models import PushSubscription
-from app.schemas import PushSubscriptionCreate, PushSubscriptionKeys, TaskCreate, TaskUpdate, UserCreate
+from app.schemas import PushSubscriptionCreate, PushSubscriptionKeys, TaskUpdate, UserCreate
 from app.services.db_service import create_task, create_user, update_task
 from app.services.push_service import PushSendResult
 from app.services.push_subscription_service import (
@@ -33,6 +33,7 @@ from app.services.push_subscription_service import (
     list_subscriptions_for_user,
     upsert_subscription,
 )
+from tests.task_helpers import task_payload
 
 
 def _subscribe_payload(endpoint: str = "https://fcm.googleapis.com/fcm/send/ep1", **overrides: object) -> dict:
@@ -264,7 +265,9 @@ class TestPlannedTaskReminderScheduler:
         return await create_task(
             db_session,
             user_id,
-            TaskCreate(text=text, start_time=start_time, stop_time=start_time + timedelta(hours=1)),
+            await task_payload(
+                db_session, user_id, text=text, start_time=start_time, stop_time=start_time + timedelta(hours=1)
+            ),
         )
 
     async def test_finds_and_sends_for_a_task_starting_within_the_lead_window(
@@ -354,7 +357,7 @@ class TestPlannedTaskReminderScheduler:
         await create_task(
             db_session,
             user.id,
-            TaskCreate(text="Working", start_time=fixed_now + timedelta(minutes=5)),
+            await task_payload(db_session, user.id, text="Working", start_time=fixed_now + timedelta(minutes=5)),
         )
 
         from app.services import planned_task_reminder_scheduler as scheduler

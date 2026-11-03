@@ -56,6 +56,7 @@ class ErrorCode(StrEnum):
     VALIDATION_FAILED = "validation_failed"
     CONFLICT = "conflict"
     TASK_OVERLAP = "task_overlap"
+    LABEL_REQUIRED = "label_required"
     TASK_TEXT_INVALID = "task_text_invalid"
     TASK_DURATION_INVALID = "task_duration_invalid"
     TASK_TIMEZONE_REQUIRED = "task_timezone_required"
@@ -110,3 +111,16 @@ async def handle_api_http_exception(request: Request, exc: Exception) -> JSONRes
         status_code=exc.status_code,
         headers=exc.headers,
     )
+
+
+async def handle_label_validation_error(request: Request, exc: Exception):
+    """Keep missing/empty create labels machine-readable alongside schema validation."""
+    from fastapi.exception_handlers import request_validation_exception_handler
+    from fastapi.exceptions import RequestValidationError
+
+    assert isinstance(exc, RequestValidationError)
+    if request.url.path.startswith("/api/time-tracking/") and any(
+        error["loc"][:2] == ("body", "label_id") for error in exc.errors()
+    ):
+        return JSONResponse(status_code=422, content={"code": "label_required", "detail": "A label is required"})
+    return await request_validation_exception_handler(request, exc)

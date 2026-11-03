@@ -37,6 +37,7 @@ export const pebblePairErrorMessages: ErrorCodeMessages = {
 
 export const taskValidationErrorMessages: ErrorCodeMessages = {
   task_overlap: () => m.error_code_task_overlap(),
+  label_required: () => m.tt_error_configure_label(),
   task_text_invalid: () => m.error_code_task_text_invalid(),
   task_duration_invalid: () => m.error_code_task_duration_invalid(),
   task_timezone_required: () => m.error_code_task_timezone_required(),

@@ -112,9 +112,10 @@ export function TaskEditModal({
               />
             </Field>
             <Field className="mb-4">
-              <FieldLabel htmlFor="editTaskLabel">{m.form_label()}</FieldLabel>
+              <FieldLabel htmlFor="editTaskLabel">{m.form_label()} *</FieldLabel>
               <SearchSelect
                 inputId="editTaskLabel"
+                required
                 placeholder={m.tt_select_label()}
                 options={labels.map((l) => ({ value: l.id, label: l.name }))}
                 value={selectedLabelOption}

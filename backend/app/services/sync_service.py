@@ -75,7 +75,13 @@ from app.schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
-from app.services.db_service import _validate_task_gantt_reference, apply_time_off_shape, lock_task_writes
+from app.services.db_service import (
+    TaskValidationError,
+    _validate_task_gantt_reference,
+    apply_time_off_shape,
+    lock_task_writes,
+    require_task_label,
+)
 from app.utils.datetime import as_utc
 
 
@@ -481,7 +487,7 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
                 conflict_reason="only one running task is allowed per user",
             )
         await validate_task(session, user_id, item.text, item.start_time, item.stop_time)
-        await _validate_task_label_reference(session, user_id, item.label_id)
+        await require_task_label(session, user_id, item.label_id)
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
         task = TimeTrackingTask(
             id=item.id,
@@ -546,8 +552,7 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         validate_interval=task.deleted_at is not None
         or (candidate_start_time, candidate_stop_time) != (task.start_time, task.stop_time),
     )
-    if "label_id" in provided_fields:
-        await _validate_task_label_reference(session, user_id, item.label_id)
+    await require_task_label(session, user_id, item.label_id if "label_id" in provided_fields else task.label_id)
     if "gantt_task_id" in provided_fields:
         await _validate_task_gantt_reference(session, user_id, item.gantt_task_id)
 
@@ -619,7 +624,7 @@ async def _push_template(session: AsyncSession, user_id: int, item: TemplateSync
             from app.services.db_service import ValidationError
 
             raise ValidationError("text, start_time and stop_time are required for template create")
-        await _validate_task_label_reference(session, user_id, item.label_id)
+        await require_task_label(session, user_id, item.label_id)
         template = TimeTrackingTemplate(
             id=item.id,
             user_id=user_id,
@@ -648,10 +653,10 @@ async def _push_template(session: AsyncSession, user_id: int, item: TemplateSync
             conflict_reason="server version is newer",
         )
     provided_fields = _get_provided_fields(item)
+    await require_task_label(session, user_id, item.label_id if "label_id" in provided_fields else template.label_id)
     if "text" in provided_fields and item.text is not None:
         template.text = item.text
     if "label_id" in provided_fields:
-        await _validate_task_label_reference(session, user_id, item.label_id)
         template.label_id = item.label_id
     if "start_time" in provided_fields and item.start_time is not None:
         template.start_time = item.start_time
@@ -995,8 +1000,6 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
         results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
 
     for item in changes.tasks:
-        from app.services.db_service import TaskValidationError
-
         try:
             result = await _push_task(session, user_id, item)
         except TaskValidationError as error:
@@ -1010,7 +1013,11 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
         results["tasks"].append(result)
 
     for item in changes.templates:
-        results["templates"].append(await _push_template(session, user_id, item))
+        try:
+            result = await _push_template(session, user_id, item)
+        except TaskValidationError as error:
+            result = SyncRecordResult(id=item.id, status="conflict", conflict_reason=str(error), code=error.code.value)
+        results["templates"].append(result)
 
     for item in changes.work_locations:
         results["work_locations"].append(await _push_work_location(session, user_id, item))

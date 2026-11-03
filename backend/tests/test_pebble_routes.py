@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.routers import pebble
+from tests.task_helpers import labeled_payload
 
 
 def test_pebble_scope_matrix_and_clock_actions(
@@ -29,6 +30,7 @@ def test_pebble_scope_matrix_and_clock_actions(
     assert dashboard.json()["running_task"] is None
     assert denied_clock_in.status_code == 403
 
+    labeled_payload(db_client, auth_headers(user_id), {})
     clocked_in = db_client.post("/api/pebble/actions/clock-in", headers=write_headers)
     assert clocked_in.status_code == 201, clocked_in.text
     running_task_id = clocked_in.json()["id"]
@@ -86,7 +88,9 @@ def test_pebble_dashboard_reports_soonest_planned_task(
             "start_time": start_time.isoformat(),
             "stop_time": stop_time.isoformat() if stop_time else None,
         }
-        response = db_client.post("/api/time-tracking/tasks", json=payload, headers=owner_headers)
+        response = db_client.post(
+            "/api/time-tracking/tasks", json=labeled_payload(db_client, owner_headers, payload), headers=owner_headers
+        )
         assert response.status_code == 201, response.text
         return response.json()["id"]
 
@@ -105,6 +109,46 @@ def test_pebble_dashboard_reports_soonest_planned_task(
     assert body["running_task"]["text"] == "Running"
 
 
+def test_pebble_clock_in_ignores_labels_of_future_planned_tasks(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "pebble-future-label-user")
+    write_headers = auth_headers(user_id, via_pat=True, pat_write=True)
+    owner_headers = auth_headers(user_id)
+    now = datetime.now(UTC)
+
+    def _label(name: str) -> str:
+        response = db_client.post(
+            "/api/time-tracking/labels", headers=owner_headers, json={"name": name, "color": "#112233"}
+        )
+        assert response.status_code == 201, response.text
+        return response.json()["id"]
+
+    past_label, future_label = _label("Past"), _label("Future")
+    for label_id, start, stop in [
+        (past_label, now - timedelta(hours=3), now - timedelta(hours=2)),
+        (future_label, now + timedelta(days=7), now + timedelta(days=7, hours=1)),
+    ]:
+        created = db_client.post(
+            "/api/time-tracking/tasks",
+            headers=owner_headers,
+            json={
+                "text": "Work",
+                "label_id": label_id,
+                "start_time": start.isoformat(),
+                "stop_time": stop.isoformat(),
+            },
+        )
+        assert created.status_code == 201, created.text
+
+    clocked_in = db_client.post("/api/pebble/actions/clock-in", headers=write_headers)
+    assert clocked_in.status_code == 201, clocked_in.text
+    assert clocked_in.json()["label_id"] == past_label
+
+
 def test_pebble_clock_actions_write_delegated_audit_entries(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
@@ -114,6 +158,7 @@ def test_pebble_clock_actions_write_delegated_audit_entries(
     user_id = create_user_factory(db_client, admin_headers, "pebble-audit-user")
     write_headers = auth_headers(user_id, via_pat=True, pat_write=True)
     owner_headers = auth_headers(user_id)
+    labeled_payload(db_client, owner_headers, {})
 
     clocked_in = db_client.post("/api/pebble/actions/clock-in", headers=write_headers)
     assert clocked_in.status_code == 201, clocked_in.text
@@ -138,6 +183,7 @@ def test_keycloak_user_keeps_access_to_pebble_surface(
     admin_headers = auth_headers(1, is_admin=True)
     user_id = create_user_factory(db_client, admin_headers, "pebble-keycloak-user")
     keycloak_headers = auth_headers(user_id)
+    labeled_payload(db_client, keycloak_headers, {})
 
     dashboard = db_client.get("/api/pebble/dashboard", headers=keycloak_headers)
     clocked_in = db_client.post(

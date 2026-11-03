@@ -1521,5 +1521,7 @@
   "timeoff_statistics_counting_note": "Telt ingeroosterde werkdagen zonder feestdagen, voor het hele jaar inclusief herhalingen. Elke halve dag telt één keer; bij overlap geldt de volgorde van de gebeurtenistypen in het overzicht.",
   "tt_no_target_week": "Geen doel deze week: roostervrije dagen, verlof of feestdagen.",
   "stats_holidays_loading": "Feestdagen worden geladen. Totalen en doelen kunnen nog wijzigen.",
-  "stats_holidays_unavailable": "Feestdagen konden niet worden geladen. Totalen en doelen kunnen te hoog zijn tot dat lukt."
+  "stats_holidays_unavailable": "Feestdagen konden niet worden geladen. Totalen en doelen kunnen te hoog zijn tot dat lukt.",
+  "tt_hidden_tasks_notice_other": "{count} opgeslagen tijdregistraties zijn verborgen omdat de gegevens ongeldig zijn of het label ontbreekt. Je opgeslagen gegevens zijn bewaard.",
+  "tt_hidden_tasks_notice_one": "{count} opgeslagen tijdregistratie is verborgen omdat de gegevens ongeldig zijn of het label ontbreekt. Je opgeslagen gegevens zijn bewaard."
 }

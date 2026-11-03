@@ -30,6 +30,7 @@ from app.mcp_server import (
 )
 from app.schemas import GanttTaskCreate, LabelCreate, TaskCreate, TimeOffEntryCreate, UserCreate
 from app.services import db_service, integration_client_service
+from tests.task_helpers import mcp_label_id, task_payload
 
 
 def _token_for_user(user_id: int, *, is_admin: bool = False) -> AccessToken:
@@ -354,7 +355,9 @@ async def test_whoami_and_time_tracking_summary_happy_path(
         await db_service.create_task(
             session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                session,
+                user.id,
                 text="Task from MCP",
                 start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 5, 1, 10, 30, tzinfo=UTC),
@@ -403,7 +406,9 @@ async def test_get_time_tracking_summary_default_window(
         await db_service.create_task(
             session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                session,
+                user.id,
                 text="Recent task",
                 start_time=now - timedelta(days=1),
                 stop_time=now - timedelta(days=1) + timedelta(hours=1),
@@ -412,7 +417,9 @@ async def test_get_time_tracking_summary_default_window(
         await db_service.create_task(
             session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                session,
+                user.id,
                 text="Old task",
                 start_time=now - timedelta(days=60),
                 stop_time=now - timedelta(days=60) + timedelta(hours=1),
@@ -599,13 +606,20 @@ async def test_start_and_stop_time_entry(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
+    with pytest.raises(ToolError, match="label_id"):
+        await backend.start_time_entry(text="Missing label", label_id="")
+
     start_payload = await backend.start_time_entry(
+        label_id=await mcp_label_id(backend),
         text="Working on feature",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
     assert start_payload["text"] == "Working on feature"
     assert start_payload["stop_time"] is None
     assert start_payload["user_id"] == user.id
+
+    with pytest.raises(ToolError, match="label_id"):
+        await backend.update_time_tracking_task(task_id=start_payload["id"], clear_label_id=True)
 
     stop_payload = await backend.stop_time_entry(
         stop_time=datetime(2026, 5, 1, 10, 30, tzinfo=UTC),
@@ -634,12 +648,14 @@ async def test_start_time_entry_blocks_second_running_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.start_time_entry(
+        label_id=await mcp_label_id(backend),
         text="First task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
     )
 
     with pytest.raises(ValueError, match="only one running task"):
         await backend.start_time_entry(
+            label_id=await mcp_label_id(backend),
             text="Second task",
             start_time=datetime(2026, 5, 1, 9, 30, tzinfo=UTC),
         )
@@ -687,7 +703,13 @@ async def test_create_time_tracking_task(
 
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
+    with pytest.raises(ToolError, match="label_id"):
+        await backend.create_time_tracking_task(
+            text="Missing label", label_id="", start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC)
+        )
+
     payload = await backend.create_time_tracking_task(
+        label_id=await mcp_label_id(backend),
         text="Completed task",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
         stop_time=datetime(2026, 5, 1, 11, 0, tzinfo=UTC),
@@ -719,7 +741,9 @@ async def test_update_time_tracking_task(
         task = await db_service.create_task(
             session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                session,
+                user.id,
                 text="Original text",
                 start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
@@ -756,7 +780,9 @@ async def test_update_time_tracking_task_unauthorized(
         task = await db_service.create_task(
             session,
             owner.id,
-            TaskCreate(
+            await task_payload(
+                session,
+                owner.id,
                 text="Owner task",
                 start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
@@ -794,6 +820,7 @@ async def test_create_update_delete_time_tracking_task(
     monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_tracking_task(
+        label_id=await mcp_label_id(backend),
         text="Task to delete",
         start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
         stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
@@ -837,7 +864,9 @@ async def test_delete_time_tracking_task_unauthorized(
         task = await db_service.create_task(
             session,
             owner.id,
-            TaskCreate(
+            await task_payload(
+                session,
+                owner.id,
                 text="Owner's task",
                 start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
                 stop_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),

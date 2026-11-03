@@ -21,9 +21,10 @@ from app.audit.db import (
     list_audit_entries,
     write_audit_entry,
 )
-from app.schemas import LabelCreate, TaskCreate, UserCreate
+from app.schemas import LabelCreate, UserCreate
 from app.services import db_service
 from app.services.db_service import NotFoundError
+from tests.task_helpers import task_payload
 
 
 async def test_write_audit_entry_is_visible_after_caller_commits(db_session: AsyncSession) -> None:
@@ -48,7 +49,7 @@ async def test_create_task_with_actor_writes_audit_entry_in_same_transaction(db_
     task = await db_service.create_task(
         db_session,
         user.id,
-        TaskCreate(text="hello", start_time=datetime.now(UTC)),
+        await task_payload(db_session, user.id, text="hello", start_time=datetime.now(UTC)),
         actor=actor,
     )
 
