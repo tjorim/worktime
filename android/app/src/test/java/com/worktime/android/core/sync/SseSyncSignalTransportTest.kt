@@ -156,6 +156,33 @@ class SseSyncSignalTransportTest {
     }
 
     @Test
+    fun retriesWhenTokenProviderThrowsATransientIoException() {
+        server.enqueue(
+            MockResponse.Builder()
+                .addHeader("Content-Type", "text/event-stream")
+                .body(sseEvent("sync_changed", "2026-08-29T12:00:00Z"))
+                .build()
+        )
+        val signals = LinkedBlockingQueue<String>()
+        var attempts = 0
+
+        val unsubscribe =
+            transport(
+                tokenProvider = {
+                    attempts++
+                    if (attempts == 1) throw java.io.IOException("refresh failed")
+                    "test-token"
+                }
+            ).subscribe(signals::add)
+        try {
+            assertEquals("2026-08-29T12:00:00Z", signals.poll(AWAIT_SECONDS, TimeUnit.SECONDS))
+            assertEquals(2, attempts)
+        } finally {
+            unsubscribe()
+        }
+    }
+
+    @Test
     fun unsubscribeStopsFurtherRequests() {
         server.enqueue(MockResponse.Builder().addHeader("Content-Type", "text/event-stream").body("").build())
         val signals = LinkedBlockingQueue<String>()

@@ -82,8 +82,9 @@ class SseSyncSignalTransport(
                 var retryMs = initialRetryMs
                 var hasConnectedOnce = false
                 while (isActive && !stopped.get()) {
-                    val token = tokenProvider() ?: return@launch
                     try {
+                        // A transient refresh failure surfaces as IOException: retry, don't die.
+                        val token = tokenProvider() ?: return@launch
                         val call =
                             client.newCall(
                                 Request
