@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useLayoutEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { apiFetch } from "@/utils/apiClient";
@@ -21,13 +21,9 @@ export interface AuthenticatedRequestInit extends RequestInit {
  * - Injects the OIDC Bearer token into the `Authorization` header.
  * - On 401 Unauthorized, tries one silent token renewal before giving up — a 401
  *   usually means the access token aged out while the Keycloak session is still
- *   valid, since `automaticSilentRenew`'s proactive timer isn't the only way a
- *   token goes stale. The retry uses the token `renewSession()` just resolved
- *   with directly, rather than reading it back via `getAccessToken()` — the
- *   OIDC user state it comes from hasn't reached a re-render yet at this point,
- *   so `getAccessToken()` would still return the pre-renewal token. Only
- *   redirects to the login page (with a session-expired toast) if the renewal
- *   also fails.
+ *   valid. Proactive and reactive renewal share one flight, and late 401s reuse
+ *   a newer token. Only redirects to the login page (with a session-expired
+ *   toast) if recovery fails for the same account.
  * - Shows an error toast on 403 Forbidden, keeping the session intact.
  *
  * Must be used inside AuthProvider and ToastProvider.
@@ -35,8 +31,12 @@ export interface AuthenticatedRequestInit extends RequestInit {
  * @returns `apiFetch(url, init?)` — a fetch wrapper with error handling.
  */
 export function useApiClient() {
-  const { triggerLogin, getAccessToken, renewSession } = useAuth();
+  const { triggerLogin, getAccessToken, renewSession, userId } = useAuth();
   const { showError, showWarning } = useToast();
+  const currentUserId = useRef(userId);
+  useLayoutEffect(() => {
+    currentUserId.current = userId;
+  }, [userId]);
 
   const authenticatedFetch = useCallback(
     async (url: string, init: AuthenticatedRequestInit = {}): Promise<Response> => {
@@ -68,14 +68,18 @@ export function useApiClient() {
         );
       };
 
+      const requestUserId = currentUserId.current;
+      const requestToken = getAccessToken();
       try {
-        return await attempt();
+        return await attempt(requestToken);
       } catch (error: unknown) {
         if (!isUnauthorizedError(error)) {
           throw error;
         }
 
-        const renewedToken = await renewSession();
+        if (currentUserId.current !== requestUserId) throw error;
+        const renewedToken = await renewSession(requestToken);
+        if (currentUserId.current !== requestUserId) throw error;
         if (renewedToken) {
           try {
             return await attempt(renewedToken);
@@ -88,6 +92,7 @@ export function useApiClient() {
           }
         }
 
+        if (currentUserId.current !== requestUserId) throw error;
         showWarning(m.auth_session_expired());
         if (!suppressUnauthorizedRedirect) {
           triggerLogin();

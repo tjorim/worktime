@@ -1,10 +1,18 @@
 import { clearPushSubscription } from "@/utils/pushNotifications";
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
-import { useToast } from "./ToastContext";
+import { useToast } from "@/contexts/ToastContext";
 import { logger } from "@/utils/logger";
 import { setSyncCollectionAuthResolving } from "@/db/collections";
 import { discardPendingSyncOutbox } from "@/utils/syncClient";
@@ -30,13 +38,11 @@ export interface AuthContextType {
    * Attempts a silent token renewal against the IdP session, resolving with the
    * fresh access token when one was obtained, or null otherwise. Lets callers
    * recover from a single 401 instead of throwing the user out to the login
-   * screen. Returns the token itself — rather than a boolean — because
-   * getAccessToken() would still read the pre-renewal token immediately after:
-   * the OIDC user state this resolves into hasn't reached a re-render yet in
-   * the same synchronous continuation, so a caller re-reading it would retry
-   * with the stale token and force a spurious logout.
+   * screen. Concurrent callers share one renewal. Pass the rejected token to
+   * reuse a newer token if another caller already recovered the session.
+   * The returned token is available before React renders the renewed user.
    */
-  renewSession: () => Promise<string | null>;
+  renewSession: (failedToken?: string | null) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -116,9 +122,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
     showError(m.auth_error_oidc());
   }, [oidcAuth.error, showError]);
 
-  const getAccessToken = useCallback((): string | null => {
-    return oidcAuth.user?.access_token ?? null;
-  }, [oidcAuth.user]);
+  // Keep callbacks usable by requests that started before the latest render.
+  const sessionRef = useRef({ userId, token: oidcAuth.user?.access_token ?? null });
+  const renderedUserRef = useRef(oidcAuth.user);
+  useLayoutEffect(() => {
+    if (renderedUserRef.current === oidcAuth.user) return;
+    renderedUserRef.current = oidcAuth.user;
+    if (sessionRef.current.userId === userId) {
+      sessionRef.current.token = oidcAuth.user?.access_token ?? null;
+    } else {
+      sessionRef.current = { userId, token: oidcAuth.user?.access_token ?? null };
+    }
+  }, [oidcAuth.user, userId]);
+  const renewalRef = useRef<{
+    session: typeof sessionRef.current;
+    promise: Promise<string | null>;
+  } | null>(null);
+
+  // Preserve token-change notifications for consumers whose effects depend on
+  // this getter, while old request callbacks still read the latest session.
+  const getAccessToken = useCallback(() => sessionRef.current.token, [oidcAuth.user]);
+
+  const renewSession = useCallback(
+    (failedToken?: string | null): Promise<string | null> => {
+      const session = sessionRef.current;
+      if (failedToken !== undefined && session.token !== failedToken) {
+        return Promise.resolve(session.token);
+      }
+      if (renewalRef.current?.session === session) {
+        return renewalRef.current.promise;
+      }
+      const startingToken = session.token;
+      const promise = Promise.resolve().then(async () => {
+        try {
+          const renewedUser = await oidcAuth.signinSilent();
+          const current = sessionRef.current;
+          if (current !== session) return null;
+          if (renewedUser?.profile?.sub && renewedUser.profile.sub !== session.userId) return null;
+          current.token = renewedUser?.access_token ?? null;
+          return current.token;
+        } catch (error: unknown) {
+          logger.error("signinSilent failed:", error);
+          const current = sessionRef.current;
+          return current === session && current.token !== startingToken ? current.token : null;
+        } finally {
+          if (renewalRef.current?.promise === promise) renewalRef.current = null;
+        }
+      });
+      renewalRef.current = { session, promise };
+      return promise;
+    },
+    [oidcAuth],
+  );
 
   const triggerLogin = useCallback(() => {
     oidcAuth
@@ -134,13 +189,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
 
-    // `accessTokenExpiring` fires 60s before every expiry, and the timer is
-    // re-armed each time a token is loaded — so with automaticSilentRenew on it
-    // recurs for the whole session. Renewal is about to happen silently and
-    // nothing is wrong yet, so this stays a log line: toasting here told users
-    // to save their work and sign in again every few minutes for no reason.
+    // Own proactive renewal so it shares the same flight as 401 recovery.
     const handleAccessTokenExpiring = () => {
-      logger.debug("OIDC access token is expiring soon; silent renew should follow.");
+      void renewSession();
     };
 
     // These two mean the session is actually gone, so they are worth a toast —
@@ -191,7 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       oidcAuth.events?.removeSilentRenewError(handleSilentRenewError);
       oidcAuth.events?.removeUserLoaded(handleUserLoaded);
     };
-  }, [oidcAuth.events, addToast, removeToast, triggerLogin]);
+  }, [oidcAuth.events, addToast, removeToast, triggerLogin, renewSession]);
 
   const triggerSignup = useCallback(() => {
     // Most OIDC providers handle sign-up via the same redirect flow.
@@ -212,19 +263,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         showError(m.auth_error_signout());
       });
   }, [oidcAuth, showError, getAccessToken]);
-
-  const renewSession = useCallback(async (): Promise<string | null> => {
-    try {
-      // Resolves null when the IdP session is genuinely gone, which is a normal
-      // outcome here rather than an error worth surfacing — the caller decides
-      // what to do next.
-      const renewedUser = await oidcAuth.signinSilent();
-      return renewedUser?.access_token ?? null;
-    } catch (error: unknown) {
-      logger.error("signinSilent failed:", error);
-      return null;
-    }
-  }, [oidcAuth]);
 
   const contextValue = useMemo<AuthContextType>(
     () => ({

@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { oidcConfig } from "@/config/oidc";
+import { useApiClient } from "@/hooks/useApiClient";
+import { apiFetch } from "@/utils/apiClient";
+import { ApiError } from "@/utils/apiError";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
@@ -11,6 +15,8 @@ import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
 
 const mockClearPushSubscription = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock("@/utils/pushNotifications", () => ({ clearPushSubscription: mockClearPushSubscription }));
+
+vi.mock("@/utils/apiClient", () => ({ apiFetch: vi.fn() }));
 
 // Mock react-oidc-context
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
@@ -267,7 +273,7 @@ describe("AuthContext", () => {
     });
 
     it("stays silent while a token is merely approaching expiry", async () => {
-      // automaticSilentRenew re-arms this event once per token, so toasting here
+      // Token loading re-arms this event once per token, so toasting here
       // would nag for the whole session while nothing is actually wrong.
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
 
@@ -420,6 +426,128 @@ describe("AuthContext", () => {
   });
 
   describe("renewSession", () => {
+    it("recovers concurrent 401s while proactive renewal is exchanging a rotating token", async () => {
+      expect("automaticSilentRenew" in oidcConfig && oidcConfig.automaticSilentRenew).toBe(false);
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
+      let finish!: (value: unknown) => void;
+      let used = false;
+      mockSigninSilent.mockImplementation(() => {
+        if (used) return Promise.reject(new Error("invalid_grant"));
+        used = true;
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      });
+      vi.mocked(apiFetch).mockImplementation(async (_url, init) => {
+        if (new Headers(init?.headers).get("Authorization") !== "Bearer fresh") {
+          throw new ApiError({ status: 401, message: "Unauthorized" });
+        }
+        return new Response(null, { status: 200 });
+      });
+      const { result } = renderHook(() => useApiClient(), {
+        wrapper: ({ children }) => (
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        ),
+      });
+      mockAddAccessTokenExpiring.mock.calls.at(-1)![0]();
+      const requests = [result.current("/one"), result.current("/two")];
+      await Promise.resolve();
+      await Promise.resolve();
+      finish({ profile: { sub: "alice" }, access_token: "fresh" });
+      expect((await Promise.all(requests)).map((response) => response.status)).toEqual([200, 200]);
+      expect(mockSigninSilent).toHaveBeenCalledOnce();
+      expect(mockSigninRedirect).not.toHaveBeenCalled();
+    });
+
+    it("clears a failed renewal so a later attempt can succeed", async () => {
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
+      mockSigninSilent
+        .mockRejectedValueOnce(new Error("offline"))
+        .mockResolvedValueOnce({ profile: { sub: "alice" }, access_token: "fresh" });
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        ),
+      });
+      expect(await result.current.renewSession("old")).toBeNull();
+      expect(await result.current.renewSession("old")).toBe("fresh");
+      expect(mockSigninSilent).toHaveBeenCalledTimes(2);
+    });
+
+    it("notifies token-dependent consumers after a same-account token update", () => {
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
+      const { result, rerender } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        ),
+      });
+      const previousGetter = result.current.getAccessToken;
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "fresh" };
+      rerender();
+      expect(result.current.getAccessToken).not.toBe(previousGetter);
+      expect(previousGetter()).toBe("fresh");
+      expect(result.current.getAccessToken()).toBe("fresh");
+    });
+
+    it("shares rotating-token renewal and reuses its result for late 401s without StrictMode", async () => {
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
+      let finish!: (value: unknown) => void;
+      let exchanged = false;
+      mockSigninSilent.mockImplementation(() => {
+        if (exchanged) throw new Error("invalid_grant: refresh token reused");
+        exchanged = true;
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      });
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        ),
+      });
+      const first = result.current.renewSession("old");
+      const second = result.current.renewSession("old");
+      await Promise.resolve();
+      expect(mockSigninSilent).toHaveBeenCalledOnce();
+      finish({ profile: { sub: "alice" }, access_token: "fresh" });
+      expect(await Promise.all([first, second])).toEqual(["fresh", "fresh"]);
+      expect(await result.current.renewSession("old")).toBe("fresh");
+      expect(mockSigninSilent).toHaveBeenCalledOnce();
+    });
+
+    it("does not return an old account's renewal after an account change", async () => {
+      mockOidcAuth.user = { profile: { sub: "alice" }, access_token: "old" };
+      let finish!: (value: unknown) => void;
+      mockSigninSilent.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const { result, rerender } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        ),
+      });
+      const pending = result.current.renewSession("old");
+      await Promise.resolve();
+      mockOidcAuth.user = { profile: { sub: "bob" }, access_token: "bob-token" };
+      rerender();
+      finish({ profile: { sub: "alice" }, access_token: "alice-fresh" });
+      expect(await pending).toBeNull();
+      expect(result.current.getAccessToken()).toBe("bob-token");
+    });
+
     it("resolves with the fresh access token when signinSilent returns a renewed user", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: true };
       const user = userEvent.setup();
