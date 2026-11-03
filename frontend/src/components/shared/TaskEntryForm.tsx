@@ -172,9 +172,10 @@ export function TaskEntryForm({
         </GridItem>
         <GridItem desktopSpan={primaryFieldWidth}>
           <Field>
-            <FieldLabel htmlFor="timeTrackerLabel">{m.form_label()}</FieldLabel>
+            <FieldLabel htmlFor="timeTrackerLabel">{m.form_label()} *</FieldLabel>
             <SearchSelect
               inputId="timeTrackerLabel"
+              required
               disabled={labels.length === 0}
               placeholder={labels.length === 0 ? m.tt_add_labels_first() : m.tt_choose_label()}
               aria-describedby={labels.length === 0 ? "timeTrackerLabelHelp" : undefined}

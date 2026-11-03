@@ -594,7 +594,7 @@ describe("TimeTrackingDailyView", () => {
       renderView();
 
       expect(screen.getByLabelText(/^Task$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^Label$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Label \*$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Start$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Stop$/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Add Task/i })).toBeInTheDocument();
@@ -617,7 +617,7 @@ describe("TimeTrackingDailyView", () => {
       await user.click(screen.getByRole("button", { name: /Use Template/i }));
 
       expect(screen.getByLabelText(/^Task$/i)).toHaveValue("Morning Support");
-      expect(screen.getByLabelText(/^Label$/i)).toHaveValue("Support");
+      expect(screen.getByLabelText(/^Label \*$/i)).toHaveValue("Support");
       expect(screen.getByLabelText(/^Start$/i)).toHaveValue("08:00");
       expect(screen.getByLabelText(/^Stop$/i)).toHaveValue("12:00");
     });
@@ -806,7 +806,7 @@ describe("TimeTrackingDailyView", () => {
       const taskInput = within(dialog).getByLabelText(/^Task$/i);
       await user.clear(taskInput);
       await user.type(taskInput, "Updated Task");
-      await user.click(within(dialog).getByLabelText(/^Label$/i));
+      await user.click(within(dialog).getByLabelText(/^Label \*$/i));
       await user.click(screen.getByRole("option", { name: "Meeting" }));
       await user.clear(within(dialog).getByLabelText(/^Start$/i));
       await user.type(within(dialog).getByLabelText(/^Start$/i), "09:00");
@@ -904,7 +904,7 @@ describe("TimeTrackingDailyView", () => {
       renderView();
 
       expect(screen.getByLabelText(/^Task$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^Label$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Label \*$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Start$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Stop$/i)).toBeInTheDocument();
     });

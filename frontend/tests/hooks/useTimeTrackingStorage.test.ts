@@ -42,6 +42,18 @@ describe("useTimeTrackingStorage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("counts and logs hidden records without removing their stored data", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const id = nextId("unlabeled");
+    tasksCollection.insert({ id, text: "Work", label: "", startTime: "2026-01-05T09:00" });
+    const { result } = renderHook(() => useTimeTrackingStorage());
+    await waitFor(() => expect(result.current.hiddenTaskCount).toBe(1));
+    expect(result.current.tasks).toEqual([]);
+    expect(warn).toHaveBeenCalledWith("Time tracking: 1 invalid stored tasks hidden");
+    expect(tasksCollection.has(id)).toBe(true);
+    warn.mockRestore();
+  });
+
   describe("addTask", () => {
     it("does not block starting a task when only invalid open raw tasks exist", async () => {
       const invalidId = nextId("invalid-open");

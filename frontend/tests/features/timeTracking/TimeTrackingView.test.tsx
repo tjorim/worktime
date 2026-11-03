@@ -10,12 +10,14 @@ const TEST_LABELS = [
   { id: "Support", name: "Support", color: "#c82333" },
 ];
 
+let mockHiddenTaskCount = 0;
 let mockTasks: StoredTimeTrackingTask[] = [];
 
 // Mock the hooks
 vi.mock("@/hooks/useTimeTrackingStorage", () => ({
   useTimeTrackingStorage: vi.fn(() => ({
     tasks: mockTasks,
+    hiddenTaskCount: mockHiddenTaskCount,
     templates: [],
     labels: TEST_LABELS,
     addTask: vi.fn(),
@@ -33,6 +35,7 @@ describe("TimeTrackingView", () => {
   beforeEach(() => {
     localStorage.clear();
     mockTasks = [];
+    mockHiddenTaskCount = 0;
   });
 
   afterEach(() => {
@@ -45,6 +48,13 @@ describe("TimeTrackingView", () => {
         <TimeTrackingView />
       </TestProviders>,
     );
+
+  it("shows how many invalid stored entries are hidden", () => {
+    mockHiddenTaskCount = 2;
+    renderWithSettings();
+    expect(screen.getByRole("status")).toHaveTextContent("2 stored time entries are hidden");
+    expect(screen.getByRole("status")).toHaveTextContent("Your stored data has been kept");
+  });
 
   describe("View Toggle", () => {
     it("should render view toggle buttons", () => {
@@ -149,6 +159,7 @@ describe("TimeTrackingView", () => {
 
     it("clears the pending request when the entry no longer exists", () => {
       mockTasks = [];
+      mockHiddenTaskCount = 0;
       const onClearPendingTaskEdit = vi.fn();
 
       renderWithPendingEdit("missing-task", onClearPendingTaskEdit);

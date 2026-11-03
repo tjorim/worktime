@@ -1,5 +1,6 @@
 import { ChartNoAxesColumnIncreasingIcon, ListChecksIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/contexts/LastUsedContext";
@@ -40,6 +41,7 @@ export function TimeTrackingView({
   const toast = useToast();
   const {
     tasks,
+    hiddenTaskCount,
     templates,
     labels,
     addTask,
@@ -114,6 +116,13 @@ export function TimeTrackingView({
 
   return (
     <div data-slot="time-tracking-view" className="flex flex-col gap-3 py-3">
+      {hiddenTaskCount > 0 && (
+        <Alert role="status" variant="warning">
+          {hiddenTaskCount === 1
+            ? m.tt_hidden_tasks_notice_one({ count: hiddenTaskCount })
+            : m.tt_hidden_tasks_notice_other({ count: hiddenTaskCount })}
+        </Alert>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <ChoiceToggleGroup
           fill

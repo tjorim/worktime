@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
+import { logger } from "@/utils/logger";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { sanitizeLabels, type Label } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
@@ -98,6 +99,13 @@ export function useTimeTrackingStorage() {
       ((rawTaskData ?? []) as StoredTimeTrackingTask[]).filter(isValidRawTask).map(convertToTask),
     [rawTaskData],
   );
+
+  const hiddenTaskCount = (rawTaskData?.length ?? 0) - tasks.length;
+  useEffect(() => {
+    if (hiddenTaskCount > 0) {
+      logger.warn(`Time tracking: ${hiddenTaskCount} invalid stored tasks hidden`);
+    }
+  }, [hiddenTaskCount]);
 
   const templates = useMemo(
     () => (rawTemplateData ?? []) as TimeTrackingTemplate[],
@@ -290,6 +298,7 @@ export function useTimeTrackingStorage() {
   }, []);
 
   return {
+    hiddenTaskCount,
     tasks,
     templates,
     labels,

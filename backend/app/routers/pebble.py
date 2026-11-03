@@ -7,11 +7,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
-from app.database.models import TimeTrackingTask
+from app.database.models import Label, TimeTrackingTask
 from app.read_models import CurrentStatusReadModel, NextShiftsReadModel
 from app.routers.auth import (
     AuthenticatedPrincipal,
@@ -92,11 +93,33 @@ async def pebble_clock_in(
     principal: AuthenticatedPrincipal = Depends(require_pebble_write_principal),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
+    # Prefer the label on the most recently started task; exclude deleted labels.
+    recent = (
+        select(TimeTrackingTask.start_time)
+        .where(
+            TimeTrackingTask.user_id == principal.user_id,
+            TimeTrackingTask.deleted_at.is_(None),
+            TimeTrackingTask.label_id == Label.id,
+        )
+        .order_by(TimeTrackingTask.start_time.desc(), TimeTrackingTask.id.desc())
+        .limit(1)
+        .correlate(Label)
+        .scalar_subquery()
+    )
+    result = await session.execute(
+        select(Label)
+        .where(Label.user_id == principal.user_id, Label.deleted_at.is_(None))
+        .order_by(recent.desc().nulls_last(), Label.created_at.desc(), Label.id)
+        .limit(1)
+    )
+    label = result.scalar_one_or_none()
+    if label is None:
+        raise api_error(409, ErrorCode.LABEL_REQUIRED, "Create a label in Worktime before clocking in")
     try:
         task = await create_task(
             session,
             principal.user_id,
-            TaskCreate(text="Working", start_time=datetime.now(UTC)),
+            TaskCreate(text="Working", label_id=label.id, start_time=datetime.now(UTC)),
             actor=audit_actor_for(principal),
         )
     except ConflictError as error:

@@ -25,6 +25,7 @@ type PickerProps = Pick<AriaAttributes, "aria-label" | "aria-describedby"> & {
 type SearchSelectProps = PickerProps & {
   value: SelectOption | null;
   onChange: (value: SelectOption | null) => void;
+  required?: boolean;
 };
 
 /** Shared single-choice picker. Resolve objects by ID, including options recreated on render. */
@@ -36,12 +37,14 @@ export function SearchSelect({
   placeholder,
   disabled,
   className,
+  required = false,
   ...aria
 }: SearchSelectProps) {
   const anchor = useComboboxAnchor();
   return (
     <div ref={anchor} className={className}>
       <Combobox
+        required={required}
         items={options}
         value={value}
         onValueChange={onChange}
@@ -53,7 +56,9 @@ export function SearchSelect({
           id={inputId}
           placeholder={placeholder ?? m.picker_placeholder()}
           disabled={disabled}
-          showClear
+          required={required}
+          aria-required={required}
+          showClear={!required}
           clearLabel={m.timeoff_clear_selection_aria()}
           triggerLabel={m.picker_open()}
           {...aria}

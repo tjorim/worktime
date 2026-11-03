@@ -6,6 +6,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.task_helpers import labeled_payload, labeled_sync_payload, task_payload
+
 
 def owner(db_client, auth_headers, create_user_factory):
     user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "validation-owner")
@@ -33,10 +35,10 @@ def test_rest_validation_create_and_partial_update(
 ):
     headers = owner(db_client, auth_headers, create_user_factory)
     url = "/api/time-tracking/tasks"
-    response = db_client.post(url, json=task(**changes), headers=headers)
+    response = db_client.post(url, json=labeled_payload(db_client, headers, task(**changes)), headers=headers)
     assert response.status_code == 400
     assert response.json()["code"] == code
-    created = db_client.post(url, json=task(), headers=headers)
+    created = db_client.post(url, json=labeled_payload(db_client, headers, task()), headers=headers)
     assert created.status_code == 201
     task_id = created.json()["id"]
     response = db_client.put(f"{url}/{task_id}", json=changes, headers=headers)
@@ -48,15 +50,19 @@ def test_rest_validation_create_and_partial_update(
 def test_overlap_is_scoped_half_open_and_excludes_self(db_client, auth_headers, create_user_factory):
     headers = owner(db_client, auth_headers, create_user_factory)
     url = "/api/time-tracking/tasks"
-    first = db_client.post(url, json=task(), headers=headers).json()
+    first = db_client.post(url, json=labeled_payload(db_client, headers, task()), headers=headers).json()
     overlap = task(start_time="2026-01-05T10:30:00+01:00", stop_time="2026-01-05T11:30:00+01:00")
-    rejected = db_client.post(url, json=overlap, headers=headers)
+    rejected = db_client.post(url, json=labeled_payload(db_client, headers, overlap), headers=headers)
     assert rejected.status_code == 409
     assert rejected.json()["code"] == "task_overlap"
     assert rejected.json()["detail"]["conflicting_task_id"] == first["id"]
     assert db_client.put(f"{url}/{first['id']}", json={"text": "Edited"}, headers=headers).status_code == 200
     adjacent = db_client.post(
-        url, json=task(start_time="2026-01-05T10:00:00Z", stop_time="2026-01-05T11:00:00Z"), headers=headers
+        url,
+        json=labeled_payload(
+            db_client, headers, task(start_time="2026-01-05T10:00:00Z", stop_time="2026-01-05T11:00:00Z")
+        ),
+        headers=headers,
     )
     assert adjacent.status_code == 201
     moved = db_client.put(
@@ -64,9 +70,14 @@ def test_overlap_is_scoped_half_open_and_excludes_self(db_client, auth_headers, 
     )
     assert moved.status_code == 409
     other_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "other-validation-owner")
-    assert db_client.post(url, json=task(), headers=auth_headers(other_id)).status_code == 201
+    assert (
+        db_client.post(
+            url, json=labeled_payload(db_client, auth_headers(other_id), task()), headers=auth_headers(other_id)
+        ).status_code
+        == 201
+    )
     assert db_client.delete(f"{url}/{first['id']}", headers=headers).status_code == 204
-    assert db_client.post(url, json=task(), headers=headers).status_code == 201
+    assert db_client.post(url, json=labeled_payload(db_client, headers, task()), headers=headers).status_code == 201
 
 
 @pytest.mark.parametrize(("changes", "code"), INVALID)
@@ -76,12 +87,16 @@ def test_sync_rejection_preserves_batch(db_client, auth_headers, create_user_fac
     bad_id, good_id = str(uuid4()), str(uuid4())
     response = db_client.post(
         "/api/sync/push",
-        json={
-            "tasks": [
-                {"id": bad_id, "action": "create", "client_updated_at": timestamp, **task(**changes)},
-                {"id": good_id, "action": "create", "client_updated_at": timestamp, **task()},
-            ]
-        },
+        json=labeled_sync_payload(
+            db_client,
+            headers,
+            {
+                "tasks": [
+                    {"id": bad_id, "action": "create", "client_updated_at": timestamp, **task(**changes)},
+                    {"id": good_id, "action": "create", "client_updated_at": timestamp, **task()},
+                ]
+            },
+        ),
         headers=headers,
     )
     assert response.status_code == 200
@@ -95,7 +110,9 @@ def test_sync_rejection_preserves_batch(db_client, auth_headers, create_user_fac
 def test_duration_boundary_and_midnight_remain_allowed(db_client, auth_headers, create_user_factory):
     headers = owner(db_client, auth_headers, create_user_factory)
     response = db_client.post(
-        "/api/time-tracking/tasks", json=task(text="x" * 1000, stop_time="2026-01-06T09:00:00Z"), headers=headers
+        "/api/time-tracking/tasks",
+        json=labeled_payload(db_client, headers, task(text="x" * 1000, stop_time="2026-01-06T09:00:00Z")),
+        headers=headers,
     )
     assert response.status_code == 201
 
@@ -115,26 +132,35 @@ def test_sync_overlap_update_and_replay(db_client, auth_headers, create_user_fac
             },
         ]
     }
-    assert db_client.post("/api/sync/push", json=payload, headers=headers).status_code == 200
+    assert (
+        db_client.post(
+            "/api/sync/push", json=labeled_sync_payload(db_client, headers, payload), headers=headers
+        ).status_code
+        == 200
+    )
     response = db_client.post(
         "/api/sync/push",
-        json={
-            "tasks": [
-                {
-                    "id": second_id,
-                    "action": "update",
-                    "client_updated_at": datetime.now(UTC).isoformat(),
-                    "start_time": "2026-01-05T09:30:00Z",
-                },
-            ]
-        },
+        json=labeled_sync_payload(
+            db_client,
+            headers,
+            {
+                "tasks": [
+                    {
+                        "id": second_id,
+                        "action": "update",
+                        "client_updated_at": datetime.now(UTC).isoformat(),
+                        "start_time": "2026-01-05T09:30:00Z",
+                    },
+                ]
+            },
+        ),
         headers=headers,
     )
     result = response.json()["results"]["tasks"][0]
     assert result["code"] == "task_overlap"
     assert result["conflicting_task_id"] == first_id
     # An already-stored record replay still follows LWW rather than validating again.
-    replay = db_client.post("/api/sync/push", json=payload, headers=headers)
+    replay = db_client.post("/api/sync/push", json=labeled_sync_payload(db_client, headers, payload), headers=headers)
     assert all(row["code"] is None for row in replay.json()["results"]["tasks"])
 
 
@@ -147,6 +173,7 @@ async def test_legacy_invalid_rows_still_pull_and_sync_metadata(db_session):
 
     user = await create_user(db_session, UserCreate(username="legacy-validation", display_name="Legacy"))
     row = TimeTrackingTask(
+        label_id=(await task_payload(db_session, user.id, text="Fixture", start_time=datetime.now(UTC))).label_id,
         user_id=user.id,
         text="",
         start_time=datetime(2026, 1, 1, tzinfo=UTC),
@@ -176,9 +203,13 @@ async def test_legacy_invalid_rows_still_pull_and_sync_metadata(db_session):
 def test_rest_reopening_prioritizes_running_task_conflict(db_client, auth_headers, create_user_factory):
     headers = owner(db_client, auth_headers, create_user_factory)
     url = "/api/time-tracking/tasks"
-    completed = db_client.post(url, json=task(), headers=headers).json()
+    completed = db_client.post(url, json=labeled_payload(db_client, headers, task()), headers=headers).json()
     assert (
-        db_client.post(url, json=task(start_time="2026-01-05T11:00:00Z", stop_time=None), headers=headers).status_code
+        db_client.post(
+            url,
+            json=labeled_payload(db_client, headers, task(start_time="2026-01-05T11:00:00Z", stop_time=None)),
+            headers=headers,
+        ).status_code
         == 201
     )
     response = db_client.put(f"{url}/{completed['id']}", json={"stop_time": None}, headers=headers)
@@ -190,28 +221,32 @@ def test_rest_reopening_prioritizes_running_task_conflict(db_client, auth_header
 def test_sync_restore_checks_unchanged_interval_and_preserves_batch(db_client, auth_headers, create_user_factory):
     headers = owner(db_client, auth_headers, create_user_factory)
     url = "/api/time-tracking/tasks"
-    original_id = db_client.post(url, json=task(), headers=headers).json()["id"]
+    original_id = db_client.post(url, json=labeled_payload(db_client, headers, task()), headers=headers).json()["id"]
     assert db_client.delete(f"{url}/{original_id}", headers=headers).status_code == 204
-    occupying_id = db_client.post(url, json=task(), headers=headers).json()["id"]
+    occupying_id = db_client.post(url, json=labeled_payload(db_client, headers, task()), headers=headers).json()["id"]
     valid_id = str(uuid4())
     response = db_client.post(
         "/api/sync/push",
-        json={
-            "tasks": [
-                {
-                    "id": original_id,
-                    "action": "update",
-                    "client_updated_at": datetime.now(UTC).isoformat(),
-                    "includes_break": True,
-                },
-                {
-                    "id": valid_id,
-                    "action": "create",
-                    "client_updated_at": datetime.now(UTC).isoformat(),
-                    **task(start_time="2026-01-06T09:00:00Z", stop_time="2026-01-06T10:00:00Z"),
-                },
-            ]
-        },
+        json=labeled_sync_payload(
+            db_client,
+            headers,
+            {
+                "tasks": [
+                    {
+                        "id": original_id,
+                        "action": "update",
+                        "client_updated_at": datetime.now(UTC).isoformat(),
+                        "includes_break": True,
+                    },
+                    {
+                        "id": valid_id,
+                        "action": "create",
+                        "client_updated_at": datetime.now(UTC).isoformat(),
+                        **task(start_time="2026-01-06T09:00:00Z", stop_time="2026-01-06T10:00:00Z"),
+                    },
+                ]
+            },
+        ),
         headers=headers,
     )
     assert response.status_code == 200
@@ -232,6 +267,7 @@ async def test_legacy_rest_updates_validate_only_changed_fields(db_session):
 
     user = await create_user(db_session, UserCreate(username="legacy-rest", display_name="Legacy"))
     row = TimeTrackingTask(
+        label_id=(await task_payload(db_session, user.id, text="Fixture", start_time=datetime.now(UTC))).label_id,
         user_id=user.id,
         text="",
         start_time=datetime(2026, 1, 1, tzinfo=UTC),

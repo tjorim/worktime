@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
 from app.database.models import FcmDeviceToken
-from app.schemas import FcmTokenCreate, TaskCreate, TaskUpdate, UserCreate
+from app.schemas import FcmTokenCreate, TaskUpdate, UserCreate
 from app.services.db_service import create_task, create_user, delete_task, update_task
 from app.services.fcm_device_token_service import (
     delete_token,
@@ -34,6 +34,7 @@ from app.services.fcm_device_token_service import (
 )
 from app.services.fcm_service import FcmSendResult
 from app.services.fcm_wake_service import send_fcm_wake_ping
+from tests.task_helpers import labeled_sync_payload, task_payload
 
 
 def _register_payload(token: str = "test-fcm-token-1") -> dict:
@@ -251,7 +252,9 @@ class TestFcmWakeTriggers:
         await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Team meeting",
                 start_time=datetime.now(UTC) + timedelta(minutes=30),
                 stop_time=datetime.now(UTC) + timedelta(minutes=90),
@@ -272,7 +275,7 @@ class TestFcmWakeTriggers:
         await create_task(
             db_session,
             user.id,
-            TaskCreate(text="Working now", start_time=datetime.now(UTC)),
+            await task_payload(db_session, user.id, text="Working now", start_time=datetime.now(UTC)),
         )
         wake_mock.assert_not_called()
 
@@ -286,7 +289,9 @@ class TestFcmWakeTriggers:
         await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Already started",
                 start_time=datetime.now(UTC) - timedelta(hours=2),
                 stop_time=datetime.now(UTC) - timedelta(hours=1),
@@ -301,7 +306,9 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Team meeting",
                 start_time=datetime.now(UTC) + timedelta(hours=5),
                 stop_time=datetime.now(UTC) + timedelta(hours=6),
@@ -330,7 +337,9 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Team meeting",
                 start_time=datetime.now(UTC) + timedelta(minutes=30),
                 stop_time=datetime.now(UTC) + timedelta(minutes=90),
@@ -350,7 +359,9 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Team meeting",
                 start_time=datetime.now(UTC) + timedelta(minutes=30),
                 stop_time=datetime.now(UTC) + timedelta(minutes=90),
@@ -377,7 +388,9 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Team meeting",
                 start_time=datetime.now(UTC) + timedelta(minutes=30),
                 stop_time=datetime.now(UTC) + timedelta(minutes=90),
@@ -400,7 +413,9 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Team meeting",
                 start_time=datetime.now(UTC) + timedelta(minutes=30),
                 stop_time=datetime.now(UTC) + timedelta(minutes=90),
@@ -420,7 +435,7 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(text="Working now", start_time=datetime.now(UTC)),
+            await task_payload(db_session, user.id, text="Working now", start_time=datetime.now(UTC)),
         )
 
         wake_mock = AsyncMock()
@@ -436,7 +451,9 @@ class TestFcmWakeTriggers:
         task = await create_task(
             db_session,
             user.id,
-            TaskCreate(
+            await task_payload(
+                db_session,
+                user.id,
                 text="Already started",
                 start_time=datetime.now(UTC) - timedelta(hours=2),
                 stop_time=datetime.now(UTC) - timedelta(hours=1),
@@ -463,19 +480,23 @@ class TestFcmWakeTriggers:
         with patch("app.services.fcm_wake_service.send_fcm_wake_ping", new_callable=AsyncMock) as wake_mock:
             response = db_client.post(
                 "/api/sync/push",
-                json={
-                    "tasks": [
-                        {
-                            "id": task_id,
-                            "action": "create",
-                            "client_updated_at": datetime.now(UTC).isoformat(),
-                            "text": "Synced meeting",
-                            "start_time": "2026-02-01T09:00:00+00:00",
-                            "stop_time": "2026-02-01T10:00:00+00:00",
-                            "includes_break": False,
-                        }
-                    ]
-                },
+                json=labeled_sync_payload(
+                    db_client,
+                    headers,
+                    {
+                        "tasks": [
+                            {
+                                "id": task_id,
+                                "action": "create",
+                                "client_updated_at": datetime.now(UTC).isoformat(),
+                                "text": "Synced meeting",
+                                "start_time": "2026-02-01T09:00:00+00:00",
+                                "stop_time": "2026-02-01T10:00:00+00:00",
+                                "includes_break": False,
+                            }
+                        ]
+                    },
+                ),
                 headers=headers,
             )
         assert response.status_code == 200, response.text
@@ -496,17 +517,21 @@ class TestFcmWakeTriggers:
         with patch("app.services.fcm_wake_service.send_fcm_wake_ping", new_callable=AsyncMock) as wake_mock:
             response = db_client.post(
                 "/api/sync/push",
-                json={
-                    "labels": [
-                        {
-                            "id": str(uuid4()),
-                            "action": "create",
-                            "client_updated_at": datetime.now(UTC).isoformat(),
-                            "name": "Label",
-                            "color": "#AABBCC",
-                        }
-                    ]
-                },
+                json=labeled_sync_payload(
+                    db_client,
+                    headers,
+                    {
+                        "labels": [
+                            {
+                                "id": str(uuid4()),
+                                "action": "create",
+                                "client_updated_at": datetime.now(UTC).isoformat(),
+                                "name": "Label",
+                                "color": "#AABBCC",
+                            }
+                        ]
+                    },
+                ),
                 headers=headers,
             )
         assert response.status_code == 200, response.text
@@ -522,7 +547,9 @@ class TestPlannedTaskReminderSchedulerFcmSafetyNet:
         return await create_task(
             db_session,
             user_id,
-            TaskCreate(text=text, start_time=start_time, stop_time=start_time + timedelta(hours=1)),
+            await task_payload(
+                db_session, user_id, text=text, start_time=start_time, stop_time=start_time + timedelta(hours=1)
+            ),
         )
 
     async def test_sends_a_wake_ping_alongside_the_push_notification(

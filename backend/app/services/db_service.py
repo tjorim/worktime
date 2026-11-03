@@ -428,6 +428,15 @@ async def delete_label(session: AsyncSession, user_id: int, label_id: str, *, ac
 # Task operations
 
 
+async def require_task_label(session: AsyncSession, user_id: int, label_id: str | None) -> None:
+    if not label_id or not label_id.strip():
+        raise TaskValidationError(ErrorCode.LABEL_REQUIRED, "A label is required")
+    try:
+        await _ensure_label_for_user(session, user_id, label_id)
+    except NotFoundError:
+        raise TaskValidationError(ErrorCode.LABEL_REQUIRED, "Choose an existing label") from None
+
+
 async def _validate_task_label_reference(session: AsyncSession, user_id: int, label_id: str | None) -> None:
     if label_id is None:
         return
@@ -447,7 +456,7 @@ async def create_task(
 ) -> TimeTrackingTask:
     await _ensure_user_exists(session, user_id)
     await lock_task_writes(session, user_id)
-    await _validate_task_label_reference(session, user_id, payload.label_id)
+    await require_task_label(session, user_id, payload.label_id)
     await _validate_task_gantt_reference(session, user_id, payload.gantt_task_id)
 
     if payload.stop_time is None and await get_running_task(session, user_id) is not None:
@@ -558,8 +567,7 @@ async def update_task(
     was_planned_and_upcoming = task.stop_time is not None and task.start_time > datetime.now(UTC)
 
     data = payload.model_dump(exclude_unset=True)
-    if "label_id" in data:
-        await _validate_task_label_reference(session, user_id, data["label_id"])
+    await require_task_label(session, user_id, data.get("label_id", task.label_id))
     if "gantt_task_id" in data:
         await _validate_task_gantt_reference(session, user_id, data["gantt_task_id"])
 
@@ -640,7 +648,7 @@ async def delete_task(session: AsyncSession, user_id: int, task_id: str, *, acto
 
 async def create_template(session: AsyncSession, user_id: int, payload: TemplateCreate) -> TimeTrackingTemplate:
     await _ensure_user_exists(session, user_id)
-    await _validate_task_label_reference(session, user_id, payload.label_id)
+    await require_task_label(session, user_id, payload.label_id)
 
     template = TimeTrackingTemplate(user_id=user_id, **payload.model_dump())
     session.add(template)
@@ -676,8 +684,7 @@ async def update_template(
     template = await get_template(session, user_id, template_id)
 
     data = payload.model_dump(exclude_unset=True)
-    if "label_id" in data:
-        await _validate_task_label_reference(session, user_id, data["label_id"])
+    await require_task_label(session, user_id, data.get("label_id", template.label_id))
 
     for field, value in data.items():
         setattr(template, field, value)

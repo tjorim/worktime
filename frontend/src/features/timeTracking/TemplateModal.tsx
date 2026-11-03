@@ -99,9 +99,10 @@ export function TemplateModal({
             <form.Field name="label">
               {(field) => (
                 <Field>
-                  <FieldLabel htmlFor="templateLabel">{m.form_label()}</FieldLabel>
+                  <FieldLabel htmlFor="templateLabel">{m.form_label()} *</FieldLabel>
                   <SearchSelect
                     inputId="templateLabel"
+                    required
                     disabled={isLabelSelectionDisabled}
                     placeholder={
                       isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()
