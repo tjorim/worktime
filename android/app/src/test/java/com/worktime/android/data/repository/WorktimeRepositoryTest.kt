@@ -69,6 +69,9 @@ class WorktimeRepositoryTest {
         assertTrue(repository.getWorkLocation(LocalDate.now()) is MutationResult.Error)
         assertTrue(repository.getRunningTask() is MutationResult.Error)
         assertTrue(repository.listLabels() is MutationResult.Error)
+        // Token-only requests go through a separate helper that must also catch the failure.
+        assertTrue(repository.listTimeOffEntries(null, null) is MutationResult.Error)
+        assertTrue(repository.registerFcmToken("fcm") is MutationResult.Error)
     }
 
     @Test
