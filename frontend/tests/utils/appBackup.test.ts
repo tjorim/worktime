@@ -21,7 +21,7 @@ import * as collectionsModule from "@/db/collections";
 import { stripVirtualProps } from "@/db/persistence";
 
 import { getPreferenceOwner } from "@/utils/preferenceStorage";
-import { buildLocalPreferencesPayload } from "@/utils/syncClient";
+import { buildLocalSyncPushPayload, buildLocalPreferencesPayload } from "@/utils/syncClient";
 
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
 
@@ -154,6 +154,37 @@ describe("appBackup", () => {
     });
   });
 
+  it("round-trips linked tasks, Gantt tasks and labels through export and sync", async () => {
+    vi.spyOn(window.location, "reload").mockImplementation(() => {});
+    const label = { id: "l1", name: "Work", color: "#198754" };
+    const gantt = {
+      id: "g1",
+      name: "Plan",
+      label: "l1",
+      start: "2026-01-01",
+      end: "2026-01-02",
+      progress: 0,
+    };
+    const task = {
+      id: "t1",
+      text: "Work",
+      label: "l1",
+      ganttTaskId: "g1",
+      startTime: "2026-01-01T09:00",
+    };
+    labelsCollection.insert(label);
+    ganttTasksCollection.insert(gantt);
+    tasksCollection.insert(task);
+    const payload = buildBackupPayload();
+    expect(payload.tasks).toEqual([task]);
+    expect(payload.ganttTasks).toEqual([gantt]);
+    await restoreAppBackup(payload);
+    expect(buildLocalSyncPushPayload().tasks[0]).toMatchObject({ gantt_task_id: "g1" });
+    expect(buildLocalSyncPushPayload().gantt_tasks?.[0]).toMatchObject({ label_id: "l1" });
+    expect(validateAppBackupPayload({ version: 1, tasks: [task] })).toBe(true);
+    expect(validateAppBackupPayload({ version: 1, tasks: [task], ganttTasks: [] })).toBe(false);
+  });
+
   describe("checkBackupDataPresence", () => {
     it("returns all false when storage is empty", () => {
       const presence = checkBackupDataPresence();
@@ -215,7 +246,71 @@ describe("appBackup", () => {
 
   describe("validateAppBackupPayload", () => {
     it("accepts a minimal payload with only userState", () => {
-      expect(validateAppBackupPayload({ userState: {} })).toBe(true);
+      expect(validateAppBackupPayload({ version: 1, userState: {} })).toBe(true);
+    });
+
+    it.each([
+      {
+        version: 1,
+        labels: [
+          { id: "l", name: "L", color: "#198754" },
+          { id: "l", name: "L", color: "#198754" },
+        ],
+      },
+      {
+        version: 1,
+        templates: [{ id: "t", text: "T", label: "missing", start: "09:00", stop: "17:00" }],
+        labels: [],
+      },
+      {
+        version: 1,
+        ganttTasks: [
+          {
+            id: "g",
+            name: "G",
+            start: "2026-01-01",
+            end: "2026-01-02",
+            progress: 0,
+            dependencies: "missing",
+          },
+        ],
+      },
+      { version: 99, tasks: [] },
+      { version: 1, tasks: [null] },
+      { version: 1, labels: [{ name: "Missing ID", color: "#198754" }] },
+      { version: 1, tasks: [{ id: "t", text: "T", label: "", startTime: "2026-02-30T09:00" }] },
+      {
+        version: 1,
+        timeOff: [
+          {
+            id: "e",
+            entryKind: "weekly",
+            weekday: 1.5,
+            entryType: "vacation",
+            entryFlag: "full_day",
+            note: null,
+          },
+        ],
+      },
+      {
+        version: 1,
+        tasks: [
+          { id: "t", text: "T", label: "", startTime: "2026-01-01T09:00", ganttTaskId: "missing" },
+        ],
+      },
+      { version: 1, labels: [{ id: "l", name: "L", color: "bad" }] },
+      { version: 1, workLocations: { "2026": { "2026-02-30": { countryCode: "NL" } } } },
+    ])("rejects malformed backup %j before changing any data", async (invalid) => {
+      vi.spyOn(window.location, "reload").mockImplementation(() => {});
+      localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 5 }));
+      const before = buildBackupPayload();
+      const payload = { ...invalid, exportedAt: "", userState: { myTeam: 1 } };
+      expect(validateAppBackupPayload(payload)).toBe(false);
+      await expect(
+        restoreAppBackup(payload as Parameters<typeof restoreAppBackup>[0]),
+      ).rejects.toThrow();
+      expect(buildBackupPayload()).toMatchObject({ ...before, exportedAt: expect.any(String) });
+      expect(window.location.reload).not.toHaveBeenCalled();
     });
 
     it("accepts a full payload", () => {
@@ -289,6 +384,7 @@ describe("appBackup", () => {
   describe("restoreAppBackup", () => {
     beforeEach(() => {
       vi.spyOn(window.location, "reload").mockImplementation(() => {});
+      labelsCollection.insert({ id: "l1", name: "Work", color: "#198754" });
     });
 
     it("writes userState to localStorage and reloads", async () => {
@@ -414,6 +510,46 @@ describe("appBackup", () => {
         gantt_tasks: [],
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
+
+      it.each([false, true])(
+        "reconciles explicitly empty domains (all domains: %s)",
+        async (all) => {
+          const server = {
+            ...emptyPullResponse,
+            labels: [
+              {
+                id: "server-only",
+                name: "Old",
+                color: "#198754",
+                deleted_at: null,
+                updated_at: "2026-01-01T00:00:00Z",
+              },
+            ],
+            tasks: [{ id: "untouched", deleted_at: null }],
+          };
+          mockFetch
+            .mockResolvedValueOnce({ ok: true, json: async () => server })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+          const payload = {
+            version: 1 as const,
+            exportedAt: "",
+            labels: [],
+            ...(all
+              ? { tasks: [], templates: [], timeOff: [], workLocations: {}, ganttTasks: [] }
+              : {}),
+          };
+          await restoreAppBackup(payload, mockFetch);
+          expect(mockFetch).toHaveBeenCalledTimes(2);
+          const body = JSON.parse(mockFetch.mock.calls[1]![1].body);
+          expect(body.labels).toEqual([
+            expect.objectContaining({ id: "server-only", action: "delete" }),
+          ]);
+          expect(body.tasks).toEqual(
+            all ? [expect.objectContaining({ id: "untouched", action: "delete" })] : [],
+          );
+          expect(body.allow_bulk_delete).toBe(true);
+        },
+      );
 
       it("pulls, pushes a single keep-local replace payload, then reloads", async () => {
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];

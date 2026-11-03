@@ -1107,7 +1107,8 @@ export class EmptyLocalReplaceError extends Error {
  * delete entries for any server-side records that do not exist locally, so that
  * the server ends up holding exactly what the local device has.
  *
- * Throws `EmptyLocalReplaceError` when `localPayload` holds nothing at all.
+ * Throws `EmptyLocalReplaceError` when `localPayload` holds nothing at all,
+ * unless a confirmed backup restore explicitly opts into `allowEmpty`.
  * "Keep my local data" over an empty local snapshot only ever produces a batch
  * of deletes, and the overwhelmingly likely cause is that the local
  * collections had not finished loading rather than that the user really wants
@@ -1119,8 +1120,9 @@ export class EmptyLocalReplaceError extends Error {
 export function buildKeepLocalReplacePayload(
   localPayload: SyncPushPayload,
   serverData: SyncPullResponse,
+  options?: { allowEmpty: boolean },
 ): SyncPushPayload {
-  if (isEmptyPushPayload(localPayload)) {
+  if (!options?.allowEmpty && isEmptyPushPayload(localPayload)) {
     throw new EmptyLocalReplaceError();
   }
   const now = dayjs().toISOString();

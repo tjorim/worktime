@@ -126,6 +126,8 @@
   "reset_warning_time_off": "Alle geïmporteerde en gemaakte verlofgebeurtenissen (.hday-inhoud) worden verwijderd.",
   "developer_mode_disabled": "Ontwikkelaarsmodus uitgeschakeld",
   "developer_mode_enabled": "Ontwikkelaarsmodus ingeschakeld - bekijk de sectie Informatie",
+  "restore_backup_format": "Back-upformaat/versie",
+  "restore_invalid_record": "Importeren mislukt in {section} (record {record}; 0 betekent de sectie). Controleer de versie, recordvelden en verwijzingen. Er zijn geen gegevens vervangen.",
   "restore_failed": "Importeren mislukt. Selecteer een geldig back-upbestand.",
   "restore_sync_failed": "Lokale gegevens zijn gehersteld, maar synchroniseren met uw account is mislukt. Dit kan automatisch opnieuw worden geprobeerd, of u kunt het herstel opnieuw proberen.",
   "share_success": "Deelvenster geopend of link gekopieerd!",

@@ -133,6 +133,8 @@
   "reset_warning_time_off": "All imported and created time off events (.hday content) will be deleted.",
   "developer_mode_disabled": "Developer mode disabled",
   "developer_mode_enabled": "Developer mode enabled - check Information section",
+  "restore_backup_format": "Backup format/version",
+  "restore_invalid_record": "Import failed in {section} (record {record}; 0 means the section). Check the version, record fields and referenced records. No data was replaced.",
   "restore_failed": "Import failed. Please select a valid backup file.",
   "restore_sync_failed": "Local data restored, but syncing it to your account failed. It may be retried automatically, or you can try restoring again.",
   "share_success": "Share dialog opened or link copied!",
