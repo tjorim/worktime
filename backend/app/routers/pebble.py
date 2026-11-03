@@ -93,12 +93,15 @@ async def pebble_clock_in(
     principal: AuthenticatedPrincipal = Depends(require_pebble_write_principal),
     session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
-    # Prefer the label on the most recently started task; exclude deleted labels.
+    # Prefer the label on the most recently started task (planned future tasks
+    # don't count); exclude deleted labels.
+    now = datetime.now(UTC)
     recent = (
         select(TimeTrackingTask.start_time)
         .where(
             TimeTrackingTask.user_id == principal.user_id,
             TimeTrackingTask.deleted_at.is_(None),
+            TimeTrackingTask.start_time <= now,
             TimeTrackingTask.label_id == Label.id,
         )
         .order_by(TimeTrackingTask.start_time.desc(), TimeTrackingTask.id.desc())
@@ -119,7 +122,7 @@ async def pebble_clock_in(
         task = await create_task(
             session,
             principal.user_id,
-            TaskCreate(text="Working", label_id=label.id, start_time=datetime.now(UTC)),
+            TaskCreate(text="Working", label_id=label.id, start_time=now),
             actor=audit_actor_for(principal),
         )
     except ConflictError as error:

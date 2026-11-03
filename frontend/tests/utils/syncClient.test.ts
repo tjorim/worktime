@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyPreferencesPull,
   reconcilePreferences,
+  reportTaskRejections,
+  setSyncTaskRejectionHandler,
   appendToPendingSyncOutbox,
   appendToSyncOutbox,
   bumpClientTimestamps,
@@ -1641,6 +1643,25 @@ describe("syncClient", () => {
       const result = buildLocalPreferencesPayload();
       expect(result?.data.settings).toEqual({ timeFormat: "24h", enableTimeOff: true });
     });
+  });
+
+  it("reports rejection codes for templates as well as tasks, once per code", () => {
+    const handler = vi.fn();
+    setSyncTaskRejectionHandler(handler);
+    reportTaskRejections({
+      results: {
+        tasks: [{ id: "t1", status: "conflict", code: "label_required" }],
+        templates: [
+          { id: "tpl1", status: "conflict", code: "label_required" },
+          { id: "tpl2", status: "conflict", code: "task_overlap" },
+          { id: "tpl3", status: "ok" },
+        ],
+      },
+    } as never);
+    setSyncTaskRejectionHandler(null);
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenCalledWith("label_required");
+    expect(handler).toHaveBeenCalledWith("task_overlap");
   });
 
   it("uploads undated preferences once, then only after a synced setting changes", async () => {
