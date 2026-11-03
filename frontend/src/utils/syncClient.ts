@@ -497,7 +497,7 @@ function emptyPushPayload(): SyncPushPayload {
  */
 function chunkPushPayload(payload: SyncPushPayload): SyncPushPayload[] {
   const chunks: SyncPushPayload[] = [];
-  const deleteTotal = countPayloadDeletes(payload);
+  const deleteTotal = Math.max(payload.declared_delete_total ?? 0, countPayloadDeletes(payload));
   for (const key of PUSH_ENTITY_ORDER) {
     const items = payload[key] ?? [];
     for (let i = 0; i < items.length; i += MAX_SYNC_PUSH_ITEMS) {
@@ -606,6 +606,53 @@ export async function pushSyncPayloadDetailed(
   payload: SyncPushPayload,
   syncCursor?: string,
 ): Promise<PushOutcome> {
+  // Reference targets cannot be deleted until referring records are removed or
+  // relinked. Keep this at the shared push boundary so outbox retries preserve
+  // the same ordering even after several queued payloads have been merged.
+  const deleteTotal = Math.max(payload.declared_delete_total ?? 0, countPayloadDeletes(payload));
+  const labelDeletes = payload.labels.filter((item) => item.action === "delete");
+  const hasReferringChanges = [payload.tasks, payload.templates, payload.gantt_tasks ?? []].some(
+    (items) => items.length > 0,
+  );
+  const ganttDeletes = (payload.gantt_tasks ?? []).filter((item) => item.action === "delete");
+  const deferred =
+    labelDeletes.length > 0 && hasReferringChanges
+      ? "labels"
+      : ganttDeletes.length > 0 && payload.tasks.length > 0
+        ? "gantt_tasks"
+        : undefined;
+  if (deferred) {
+    const first = await pushSyncPayloadDetailed(
+      fetch,
+      {
+        ...payload,
+        declared_delete_total: deleteTotal,
+        labels:
+          deferred === "labels"
+            ? payload.labels.filter((item) => item.action !== "delete")
+            : payload.labels,
+        gantt_tasks:
+          deferred === "gantt_tasks"
+            ? (payload.gantt_tasks ?? []).filter((item) => item.action !== "delete")
+            : payload.gantt_tasks,
+      },
+      syncCursor,
+    );
+    if (!first.ok || countPushConflicts(first.response) > 0) return first;
+    const last = await pushSyncPayloadDetailed(
+      fetch,
+      {
+        ...emptyPushPayload(),
+        allow_bulk_delete: payload.allow_bulk_delete,
+        declared_delete_total: deleteTotal,
+        labels: deferred === "labels" ? labelDeletes : [],
+        gantt_tasks: deferred === "gantt_tasks" ? ganttDeletes : [],
+      },
+      syncCursor,
+    );
+    if (!last.ok) return last;
+    return { ok: true, response: mergePushResponses([first.response, last.response]) };
+  }
   const oversized = PUSH_ENTITY_ORDER.some(
     (key) => (payload[key] ?? []).length > MAX_SYNC_PUSH_ITEMS,
   );
@@ -1115,7 +1162,8 @@ export class EmptyLocalReplaceError extends Error {
  * delete entries for any server-side records that do not exist locally, so that
  * the server ends up holding exactly what the local device has.
  *
- * Throws `EmptyLocalReplaceError` when `localPayload` holds nothing at all.
+ * Throws `EmptyLocalReplaceError` when `localPayload` holds nothing at all,
+ * unless a confirmed backup restore explicitly opts into `allowEmpty`.
  * "Keep my local data" over an empty local snapshot only ever produces a batch
  * of deletes, and the overwhelmingly likely cause is that the local
  * collections had not finished loading rather than that the user really wants
@@ -1127,8 +1175,9 @@ export class EmptyLocalReplaceError extends Error {
 export function buildKeepLocalReplacePayload(
   localPayload: SyncPushPayload,
   serverData: SyncPullResponse,
+  options?: { allowEmpty: boolean },
 ): SyncPushPayload {
-  if (isEmptyPushPayload(localPayload)) {
+  if (!options?.allowEmpty && isEmptyPushPayload(localPayload)) {
     throw new EmptyLocalReplaceError();
   }
   const now = dayjs().toISOString();

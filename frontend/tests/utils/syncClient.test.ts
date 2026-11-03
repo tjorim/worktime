@@ -58,6 +58,71 @@ describe("syncClient", () => {
     mockFetch.mockReset();
   });
 
+  it("deletes linked tasks before Gantt targets, then their labels", async () => {
+    const deletion = { action: "delete" as const, client_updated_at: "2026-01-01T00:00:00Z" };
+    const payload: SyncPushPayload = {
+      labels: [{ ...deletion, id: "l" }],
+      gantt_tasks: [{ ...deletion, id: "g" }],
+      tasks: [{ ...deletion, id: "t" }],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      allow_bulk_delete: true,
+    };
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    await pushSyncPayload(mockFetch, payload);
+    const bodies = mockFetch.mock.calls.map((call) => JSON.parse(call[1].body));
+    expect(bodies).toHaveLength(3);
+    expect(bodies[0]).toMatchObject({
+      tasks: payload.tasks,
+      gantt_tasks: [],
+      labels: [],
+      declared_delete_total: 3,
+    });
+    expect(bodies[1]).toMatchObject({
+      tasks: [],
+      gantt_tasks: payload.gantt_tasks,
+      labels: [],
+      declared_delete_total: 3,
+    });
+    expect(bodies[2]).toMatchObject({
+      tasks: [],
+      gantt_tasks: [],
+      labels: payload.labels,
+      declared_delete_total: 3,
+    });
+  });
+
+  it("defers label deletes after referring changes, including merged outbox retries", async () => {
+    const payload: SyncPushPayload = {
+      labels: [{ id: "old-label", action: "delete", client_updated_at: "2026-01-01T00:00:00Z" }],
+      tasks: [{ id: "old-task", action: "delete", client_updated_at: "2026-01-01T00:00:00Z" }],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      gantt_tasks: [],
+      allow_bulk_delete: true,
+    };
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) })
+      .mockResolvedValueOnce({ ok: false, status: 500 });
+    expect(await pushSyncPayload(mockFetch, payload)).toBeNull();
+    appendToSyncOutbox("user-1", payload);
+    const queued = dequeueAndMergeSyncOutbox("user-1")!;
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    expect(await pushSyncPayload(mockFetch, queued.merged)).not.toBeNull();
+    const bodies = mockFetch.mock.calls.map((call) => JSON.parse(call[1].body));
+    expect(bodies).toHaveLength(4);
+    for (const offset of [0, 2]) {
+      expect(bodies[offset].labels).toEqual([]);
+      expect(bodies[offset].tasks).toEqual(payload.tasks);
+      expect(bodies[offset + 1].labels).toEqual(payload.labels);
+      expect(bodies[offset + 1].tasks).toEqual([]);
+      expect(bodies[offset].declared_delete_total).toBe(2);
+      expect(bodies[offset + 1].allow_bulk_delete).toBe(true);
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // syncStatusHasData
   // ---------------------------------------------------------------------------

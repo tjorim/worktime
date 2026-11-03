@@ -23,7 +23,12 @@ import { useToast } from "@/contexts/ToastContext";
 import { usePwaInstall } from "@/contexts/PwaInstallContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEventStore } from "@/contexts/EventStoreContext";
-import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
+import {
+  getAppBackupValidationError,
+  preloadAppBackupCollections,
+  validateAppBackupPayload,
+  restoreAppBackup,
+} from "@/utils/appBackup";
 import { logger } from "@/utils/logger";
 import { BackupDialog } from "@/components/BackupDialog";
 import { CONFIG } from "@/utils/config";
@@ -380,8 +385,32 @@ export function SettingsContent({
       event.target.value = "";
       return;
     }
-    if (!validateAppBackupPayload(parsed)) {
+    try {
+      await preloadAppBackupCollections(parsed);
+    } catch (error) {
+      logger.error("Failed to load backup reference targets:", error);
       toast.showError(m.restore_failed());
+      event.target.value = "";
+      return;
+    }
+    const validationError = getAppBackupValidationError(parsed);
+    if (!validateAppBackupPayload(parsed)) {
+      const sectionLabels: Record<string, string> = {
+        version: m.restore_backup_format(),
+        userState: m.backup_include_settings(),
+        tasks: m.backup_include_tasks(),
+        templates: m.backup_include_templates(),
+        labels: m.backup_include_templates(),
+        ganttTasks: m.backup_include_gantt(),
+        timeOff: m.backup_include_time_off(),
+        workLocations: m.backup_include_work_locations(),
+      };
+      toast.showError(
+        m.restore_invalid_record({
+          section: sectionLabels[validationError?.section ?? "version"]!,
+          record: validationError?.record ?? 0,
+        }),
+      );
       event.target.value = "";
       return;
     }

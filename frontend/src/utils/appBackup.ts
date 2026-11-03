@@ -39,10 +39,15 @@ import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorag
 import { logger } from "@/utils/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import type { Label } from "@/lib/timeTracking/constants";
+import { isValidRawGanttTask } from "@/types/gantt";
+import { isLabelInput } from "@/lib/timeTracking/constants";
+import { isValidTimeString } from "@/lib/timeTracking/timeUtils";
+import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
+import { hasIsoAlpha2Format, isValidCountryCode } from "@/types/countries";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { isValidScheduleType } from "./scheduleUtils";
+import { isValidScheduleType } from "@/utils/scheduleUtils";
 
 export type AppBackupPayload = {
   exportedAt: string;
@@ -99,6 +104,7 @@ function toPlainTask(task: StoredTimeTrackingTask): StoredTimeTrackingTask {
     text: task.text,
     label: task.label,
     startTime: task.startTime,
+    ...(task.ganttTaskId ? { ganttTaskId: task.ganttTaskId } : {}),
     ...(task.stopTime ? { stopTime: task.stopTime } : {}),
     ...(task.includesBreak === true ? { includesBreak: true } : {}),
   };
@@ -126,6 +132,7 @@ function toPlainGanttTask(task: GanttTask): GanttTask {
   return {
     id: task.id,
     name: task.name,
+    ...(task.label ? { label: task.label } : {}),
     start: task.start,
     end: task.end,
     progress: task.progress,
@@ -313,56 +320,235 @@ export function downloadAppBackup(date: string, options?: BackupOptions): void {
  * for that format.
  */
 export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPayload {
-  if (!parsed || typeof parsed !== "object") return false;
-  const p = parsed as Record<string, unknown>;
+  return getAppBackupValidationError(parsed) === undefined;
+}
 
-  // Must have at least one recognizable section
-  const hasAnySection =
-    "userState" in p ||
-    "timeOff" in p ||
-    "workLocations" in p ||
-    "tasks" in p ||
-    "templates" in p ||
-    "labels" in p ||
-    "ganttTasks" in p;
-  if (!hasAnySection) return false;
-
-  if ("userState" in p && p.userState !== undefined) {
-    const us = p.userState;
-    if (!us || typeof us !== "object" || Array.isArray(us)) return false;
-    const usObj = us as Record<string, unknown>;
-    if (
-      "scheduleType" in usObj &&
-      usObj.scheduleType !== null &&
-      usObj.scheduleType !== undefined &&
-      !isValidScheduleType(usObj.scheduleType)
-    ) {
-      return false;
-    }
+/** Load reference targets only when restoring collection data, never preferences alone. */
+export async function preloadAppBackupCollections(payload: unknown): Promise<void> {
+  if (
+    isRecord(payload) &&
+    ["tasks", "templates", "labels", "ganttTasks", "timeOff", "workLocations"].some(
+      (section) => section in payload,
+    )
+  ) {
+    await preloadSyncCollections();
   }
+}
 
-  if ("workLocations" in p && p.workLocations !== undefined) {
-    const wl = p.workLocations;
-    if (!wl || typeof wl !== "object" || Array.isArray(wl)) return false;
-    for (const yearData of Object.values(wl as Record<string, unknown>)) {
-      if (!yearData || typeof yearData !== "object" || Array.isArray(yearData)) return false;
-      for (const dayEntry of Object.values(yearData as Record<string, unknown>)) {
-        if (!dayEntry || typeof dayEntry !== "object") return false;
-        const entry = dayEntry as Record<string, unknown>;
-        if (typeof entry.countryCode !== "string") return false;
+/** Returns a section and one-based record position, never imported diagnostic text. */
+export function getAppBackupValidationError(
+  parsed: unknown,
+): { section: string; record: number } | undefined {
+  const fail = (section: string, record = 0) => ({ section, record });
+  if (!isRecord(parsed) || parsed.version !== 1) return fail("version");
+  const sections = [
+    "userState",
+    "timeOff",
+    "workLocations",
+    "tasks",
+    "templates",
+    "labels",
+    "ganttTasks",
+  ];
+  if (!sections.some((section) => section in parsed)) return fail("version");
+  if ("exportedAt" in parsed && typeof parsed.exportedAt !== "string") return fail("version");
+  if ("userState" in parsed) {
+    const state = parsed.userState;
+    if (
+      !isRecord(state) ||
+      (state.scheduleType != null && !isValidScheduleType(state.scheduleType))
+    )
+      return fail("userState");
+    for (const key of [
+      "hasCompletedOnboarding",
+      "accountSyncAnnouncementSeen",
+      "ganttAnnouncementSeen",
+      "crossBorderAnnouncementSeen",
+    ]) {
+      if (key in state && typeof state[key] !== "boolean") return fail("userState");
+    }
+    if (
+      state.myTeam != null &&
+      (!Number.isInteger(state.myTeam) || Number(state.myTeam) < 1 || Number(state.myTeam) > 5)
+    )
+      return fail("userState");
+    for (const key of ["settings", "lastUsed"]) {
+      if (key in state && !isRecord(state[key])) return fail("userState");
+    }
+    if (isRecord(state.settings)) {
+      for (const [key, value] of Object.entries(state.settings)) {
+        if (key.startsWith("enable") && typeof value !== "boolean") return fail("userState");
       }
     }
   }
-
-  if ("timeOff" in p && p.timeOff !== undefined && !Array.isArray(p.timeOff)) {
-    return false;
+  if (isRecord(parsed.userState)) {
+    const state = parsed.userState;
+    const settings = isRecord(state.settings) ? state.settings : {};
+    const lastUsed = isRecord(state.lastUsed) ? state.lastUsed : {};
+    const enums: Array<[Record<string, unknown>, string, string[]]> = [
+      [settings, "timeFormat", ["12h", "24h"]],
+      [settings, "theme", ["light", "dark", "auto"]],
+      [settings, "notifications", ["on", "off"]],
+      [
+        lastUsed,
+        "activeTab",
+        ["calendar", "unified-calendar", "schedule", "timeoff", "timetracking", "gantt"],
+      ],
+      [lastUsed, "scheduleView", ["schedule", "transfer"]],
+      [lastUsed, "timeOffView", ["table", "stats", "team"]],
+      [lastUsed, "timeTrackingView", ["daily", "weekly"]],
+      [lastUsed, "ganttViewMode", ["Day", "Week", "Month", "Year"]],
+      [lastUsed, "ganttView", ["chart", "table"]],
+    ];
+    if (
+      enums.some(
+        ([record, key, values]) =>
+          key in record &&
+          (typeof record[key] !== "string" || !values.includes(record[key] as string)),
+      )
+    )
+      return fail("userState");
+    for (const key of ["homeCountry", "officeCountry"])
+      if (settings[key] != null && !isValidCountryCode(settings[key])) return fail("userState");
+    if (settings.hdayUsername != null && typeof settings.hdayUsername !== "string")
+      return fail("userState");
+    if (lastUsed.otherSchedule != null && !isValidScheduleType(lastUsed.otherSchedule))
+      return fail("userState");
+    if (
+      lastUsed.otherTeam != null &&
+      (typeof lastUsed.otherTeam !== "number" || !Number.isFinite(lastUsed.otherTeam))
+    )
+      return fail("userState");
   }
-  if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;
-  if ("templates" in p && p.templates !== undefined && !Array.isArray(p.templates)) return false;
-  if ("labels" in p && p.labels !== undefined && !Array.isArray(p.labels)) return false;
-  if ("ganttTasks" in p && p.ganttTasks !== undefined && !Array.isArray(p.ganttTasks)) return false;
+  for (const section of ["tasks", "templates", "labels", "ganttTasks", "timeOff"] as const) {
+    if (!(section in parsed)) continue;
+    const rows = parsed[section];
+    if (!Array.isArray(rows)) return fail(section);
+    const ids = new Set<string>();
+    for (const [index, row] of rows.entries()) {
+      if (!isRecord(row) || !nonempty(row.id) || ids.has(row.id)) return fail(section, index + 1);
+      ids.add(row.id);
+      let valid = false;
+      switch (section) {
+        case "tasks":
+          valid =
+            typeof row.text === "string" &&
+            nonempty(row.label) &&
+            validTimestamp(row.startTime) &&
+            (row.stopTime == null ||
+              (validTimestamp(row.stopTime) &&
+                row.stopTime.slice(0, 10) === (row.startTime as string).slice(0, 10) &&
+                Date.parse(row.stopTime) > Date.parse(row.startTime as string))) &&
+            (row.includesBreak === undefined || typeof row.includesBreak === "boolean") &&
+            (row.ganttTaskId === undefined || nonempty(row.ganttTaskId));
+          break;
+        case "templates":
+          valid =
+            nonempty(row.text) &&
+            typeof row.label === "string" &&
+            validClock(row.start) &&
+            validClock(row.stop);
+          break;
+        case "labels":
+          valid = isLabelInput(row);
+          break;
+        case "ganttTasks":
+          valid = isValidRawGanttTask(row) && typeof row.progress === "number";
+          break;
+        case "timeOff":
+          valid =
+            isValidEntryType(row.entryType) &&
+            isValidFlag(row.entryFlag) &&
+            (row.note === null || typeof row.note === "string") &&
+            (row.entryKind === "date"
+              ? validDate(row.date)
+              : row.entryKind === "range"
+                ? validDate(row.start) && validDate(row.end) && row.end >= row.start
+                : row.entryKind === "weekly" &&
+                  Number.isInteger(row.weekday) &&
+                  Number(row.weekday) >= 1 &&
+                  Number(row.weekday) <= 7);
+          break;
+      }
+      if (!valid) return fail(section, index + 1);
+    }
+  }
+  if ("workLocations" in parsed) {
+    if (!isRecord(parsed.workLocations)) return fail("workLocations");
+    for (const [year, days] of Object.entries(parsed.workLocations)) {
+      if (!/^\d{4}$/.test(year) || !isRecord(days)) return fail("workLocations");
+      for (const [index, [date, entry]] of Object.entries(days).entries()) {
+        if (
+          !validDate(date) ||
+          !date.startsWith(year + "-") ||
+          !isRecord(entry) ||
+          !hasIsoAlpha2Format(entry.countryCode) ||
+          (entry.label !== undefined && typeof entry.label !== "string")
+        )
+          return fail("workLocations", index + 1);
+      }
+    }
+  }
+  // Omitted target domains retain their current local records. Included domains
+  // replace them entirely, including an explicit empty array. Never drop a link.
+  const labels = new Set(
+    ((parsed.labels ?? labelsCollection.toArray) as Label[]).map((row) => row.id),
+  );
+  const gantt = (parsed.ganttTasks ?? ganttTasksCollection.toArray) as GanttTask[];
+  const ganttIds = new Set(gantt.map((row) => row.id));
+  for (const section of ["tasks", "templates", "ganttTasks"] as const) {
+    const retained = {
+      tasks: tasksCollection,
+      templates: templatesCollection,
+      ganttTasks: ganttTasksCollection,
+    };
+    const rows = (parsed[section] ??
+      ("labels" in parsed || "ganttTasks" in parsed ? retained[section].toArray : undefined)) as
+      | Record<string, unknown>[]
+      | undefined;
+    for (const [index, row] of (rows ?? []).entries()) {
+      if (
+        (row.label && !labels.has(row.label as string)) ||
+        (section === "tasks" && row.ganttTaskId && !ganttIds.has(row.ganttTaskId as string)) ||
+        (section === "ganttTasks" &&
+          typeof row.dependencies === "string" &&
+          row.dependencies
+            .split(",")
+            .some((id) => id.trim() && (!ganttIds.has(id.trim()) || id.trim() === row.id)))
+      )
+        return fail(section, index + 1);
+    }
+  }
+  return undefined;
+}
 
-  return true;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function nonempty(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function validDate(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    dayjs(value, "YYYY-MM-DD", true).format("YYYY-MM-DD") === value
+  );
+}
+function validClock(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) &&
+    isValidTimeString(value)
+  );
+}
+function validTimestamp(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    validDate(value.slice(0, 10)) &&
+    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) &&
+    Number.isFinite(Date.parse(value))
+  );
 }
 
 function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkLocationEntry[] {
@@ -419,7 +605,8 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
  * last-write-wins for that record) — a silent partial success would let the
  * next regular sync pull quietly revert just those records, leaving the
  * restore looking like it worked when part of it didn't. The restored local
- * state stays in place either way (already durably written). If the pre-push
+ * state stays in place on sync failure (already durably written). Invalid
+ * backups instead throw during preflight, before any restore writes. If the pre-push
  * server pull fails, nothing is queued — there is no server snapshot to diff
  * against, so there is no way to compute which server-only records the
  * replace should delete, and queuing a create-only payload would silently
@@ -429,7 +616,7 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
  * successful sync cycle; a partial per-record conflict is not queued, since
  * re-sending already-accepted records is redundant and the conflicted ones
  * would just conflict again. Either way, callers should surface an error and
- * must not treat a throw as fatal to the local restore. Does not throw for a
+ * must distinguish validation failures from sync failures. Does not throw for a
  * backup that restores no collection data
  * (nothing to push).
  */
@@ -437,6 +624,9 @@ export async function restoreAppBackup(
   payload: AppBackupPayload,
   fetchFn?: FetchFn,
 ): Promise<void> {
+  // Complete preflight before preferences or any collection can be replaced.
+  await preloadAppBackupCollections(payload);
+  if (!validateAppBackupPayload(payload)) throw new Error("Invalid app backup");
   if (
     payload.userState !== undefined &&
     typeof payload.userState === "object" &&
@@ -533,13 +723,10 @@ export async function restoreAppBackup(
     // in full to build the replace payload below — an unmounted collection
     // reads as empty, which buildKeepLocalReplacePayload would otherwise
     // read as "delete everything the server has for this domain".
-    await preloadSyncCollections();
     const localPayload = buildLocalSyncPushPayload();
-    // A backup that restores no collection data has nothing to reconcile —
-    // buildKeepLocalReplacePayload would otherwise throw EmptyLocalReplaceError
-    // for what is really a no-op, and there is no reason to round-trip to the
-    // server for it.
-    if (!isEmptyPushPayload(localPayload)) {
+    // Included empty domains still need server-only deletes. Preferences alone
+    // do not require a domain reconciliation.
+    if (Object.values(includedDomains).some(Boolean)) {
       const serverData = await pullSyncData(fetchFn);
       if (!serverData) {
         // No server snapshot to diff against, so there is no way to compute
@@ -549,7 +736,9 @@ export async function restoreAppBackup(
         // already-written local state is untouched either way.
         throw new Error("restoreAppBackup: failed to pull server data before push");
       }
-      const fullReplacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+      const fullReplacePayload = buildKeepLocalReplacePayload(localPayload, serverData, {
+        allowEmpty: true,
+      });
       // Drop every domain the backup didn't include — both the creates (which
       // just mirror whatever this device's local copy currently holds) and,
       // critically, the deletes buildKeepLocalReplacePayload computed for it.
