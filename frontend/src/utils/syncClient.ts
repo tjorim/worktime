@@ -497,7 +497,7 @@ function emptyPushPayload(): SyncPushPayload {
  */
 function chunkPushPayload(payload: SyncPushPayload): SyncPushPayload[] {
   const chunks: SyncPushPayload[] = [];
-  const deleteTotal = countPayloadDeletes(payload);
+  const deleteTotal = Math.max(payload.declared_delete_total ?? 0, countPayloadDeletes(payload));
   for (const key of PUSH_ENTITY_ORDER) {
     const items = payload[key] ?? [];
     for (let i = 0; i < items.length; i += MAX_SYNC_PUSH_ITEMS) {
@@ -606,20 +606,35 @@ export async function pushSyncPayloadDetailed(
   payload: SyncPushPayload,
   syncCursor?: string,
 ): Promise<PushOutcome> {
-  // Labels cannot be deleted until referring records have been removed or
+  // Reference targets cannot be deleted until referring records are removed or
   // relinked. Keep this at the shared push boundary so outbox retries preserve
   // the same ordering even after several queued payloads have been merged.
+  const deleteTotal = Math.max(payload.declared_delete_total ?? 0, countPayloadDeletes(payload));
   const labelDeletes = payload.labels.filter((item) => item.action === "delete");
   const hasReferringChanges = [payload.tasks, payload.templates, payload.gantt_tasks ?? []].some(
     (items) => items.length > 0,
   );
-  if (labelDeletes.length > 0 && hasReferringChanges) {
+  const ganttDeletes = (payload.gantt_tasks ?? []).filter((item) => item.action === "delete");
+  const deferred =
+    labelDeletes.length > 0 && hasReferringChanges
+      ? "labels"
+      : ganttDeletes.length > 0 && payload.tasks.length > 0
+        ? "gantt_tasks"
+        : undefined;
+  if (deferred) {
     const first = await pushSyncPayloadDetailed(
       fetch,
       {
         ...payload,
-        declared_delete_total: countPayloadDeletes(payload),
-        labels: payload.labels.filter((item) => item.action !== "delete"),
+        declared_delete_total: deleteTotal,
+        labels:
+          deferred === "labels"
+            ? payload.labels.filter((item) => item.action !== "delete")
+            : payload.labels,
+        gantt_tasks:
+          deferred === "gantt_tasks"
+            ? (payload.gantt_tasks ?? []).filter((item) => item.action !== "delete")
+            : payload.gantt_tasks,
       },
       syncCursor,
     );
@@ -629,8 +644,9 @@ export async function pushSyncPayloadDetailed(
       {
         ...emptyPushPayload(),
         allow_bulk_delete: payload.allow_bulk_delete,
-        declared_delete_total: countPayloadDeletes(payload),
-        labels: labelDeletes,
+        declared_delete_total: deleteTotal,
+        labels: deferred === "labels" ? labelDeletes : [],
+        gantt_tasks: deferred === "gantt_tasks" ? ganttDeletes : [],
       },
       syncCursor,
     );

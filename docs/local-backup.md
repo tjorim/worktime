@@ -27,7 +27,7 @@ tasks must end later on the same day. Templates require nonblank text and strict
 These checks match the readers and sync filters so accepted rows are not dropped
 on reload or upload.
 
-Sync applies referring-record changes before label deletions. Label creation
+Sync applies referring-record changes before deleting Gantt targets, then labels. Label creation
 still precedes records that reference new labels. This ordering also applies to
 merged outbox retries; an interrupted replacement can safely resend the full
 payload without losing its deferred label deletions.

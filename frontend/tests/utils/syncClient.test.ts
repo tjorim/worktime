@@ -58,6 +58,41 @@ describe("syncClient", () => {
     mockFetch.mockReset();
   });
 
+  it("deletes linked tasks before Gantt targets, then their labels", async () => {
+    const deletion = { action: "delete" as const, client_updated_at: "2026-01-01T00:00:00Z" };
+    const payload: SyncPushPayload = {
+      labels: [{ ...deletion, id: "l" }],
+      gantt_tasks: [{ ...deletion, id: "g" }],
+      tasks: [{ ...deletion, id: "t" }],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      allow_bulk_delete: true,
+    };
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    await pushSyncPayload(mockFetch, payload);
+    const bodies = mockFetch.mock.calls.map((call) => JSON.parse(call[1].body));
+    expect(bodies).toHaveLength(3);
+    expect(bodies[0]).toMatchObject({
+      tasks: payload.tasks,
+      gantt_tasks: [],
+      labels: [],
+      declared_delete_total: 3,
+    });
+    expect(bodies[1]).toMatchObject({
+      tasks: [],
+      gantt_tasks: payload.gantt_tasks,
+      labels: [],
+      declared_delete_total: 3,
+    });
+    expect(bodies[2]).toMatchObject({
+      tasks: [],
+      gantt_tasks: [],
+      labels: payload.labels,
+      declared_delete_total: 3,
+    });
+  });
+
   it("defers label deletes after referring changes, including merged outbox retries", async () => {
     const payload: SyncPushPayload = {
       labels: [{ id: "old-label", action: "delete", client_updated_at: "2026-01-01T00:00:00Z" }],
