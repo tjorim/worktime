@@ -519,6 +519,7 @@ export function CalendarView({
 
       {crossBorderEnabled && (
         <OtherLocationModal
+          showSetupHint={!settings.homeCountry || !settings.officeCountry}
           show={showOtherLocationModal}
           date={otherLocationDate}
           existing={workLocationMap.get(otherLocationDate.format("YYYY-MM-DD"))}

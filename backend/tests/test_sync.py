@@ -3897,3 +3897,79 @@ def test_gantt_cleanup_preserves_queued_edit(db_client, auth_headers):
     assert task["name"] == "Queued rename"
     assert task["dependencies"] is None
     assert task["updated_at"] > before
+
+
+def test_work_location_iso_validation_per_record(db_client: TestClient, auth_headers) -> None:
+    headers = auth_headers(_create_user(db_client, auth_headers(1, is_admin=True), "wl-iso"))
+    codes = ["XX", "ZZ", "UK", "USA", None, "us", "GB"]
+    response = db_client.post(
+        "/api/sync/push",
+        headers=headers,
+        json={
+            "work_locations": [
+                {"date": f"2026-05-{i + 1:02}", "action": "create", "client_updated_at": _ts(-5), "country_code": code}
+                for i, code in enumerate(codes)
+            ]
+        },
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]["work_locations"]
+    assert all(r["status"] == "conflict" and r["code"] == "validation_failed" for r in results[:5])
+    assert all(r["status"] == "ok" for r in results[5:])
+    rows = db_client.get("/api/sync/pull", headers=headers).json()["work_locations"]
+    assert {row["country_code"] for row in rows} == {"US", "GB"}
+    response = db_client.post(
+        "/api/sync/push",
+        headers=headers,
+        json={
+            "work_locations": [
+                {"date": "2026-05-06", "action": "update", "client_updated_at": _ts(-1), "country_code": "UK"}
+            ]
+        },
+    )
+    assert response.json()["results"]["work_locations"][0]["code"] == "validation_failed"
+
+
+async def test_work_location_legacy_country_is_preserved_until_changed(db_session: AsyncSession) -> None:
+    from datetime import date
+
+    from app.database.models import WorkLocation
+    from app.schemas import WorkLocationSyncItem
+    from app.services.sync_service import _push_work_location
+
+    user = await create_user(db_session, UserCreate(username="legacy-country", display_name="Legacy"))
+    timestamp = datetime.now(UTC) - timedelta(minutes=10)
+    row = WorkLocation(
+        user_id=user.id, date=date(2026, 6, 1), country_code="UK", label="Old", client_updated_at=timestamp
+    )
+    db_session.add(row)
+    await db_session.commit()
+
+    async def push(**fields):
+        return await _push_work_location(
+            db_session,
+            user.id,
+            WorkLocationSyncItem(date=row.date, action="update", client_updated_at=datetime.now(UTC), **fields),
+        )
+
+    assert (await push(country_code="UK", label="New label")).status == "ok"
+    assert row.country_code == "UK"
+    assert row.label == "New label"
+    assert (await push(country_code="ZZ")).code == "validation_failed"
+    assert row.country_code == "UK"
+    row.deleted_at = datetime.now(UTC)
+    assert (await push(label="Restore")).code == "validation_failed"
+    assert row.deleted_at is not None
+    assert (await push(country_code="gb")).status == "ok"
+    assert row.country_code == "GB"
+    assert row.deleted_at is None
+
+
+def test_frontend_worldwide_country_list_matches_iso() -> None:
+    import re
+
+    from app.schemas import ISO_ALPHA2_CODES
+
+    source = (Path(__file__).parents[2] / "frontend/src/types/countries.ts").read_text()
+    codes = source.split("const isoCountryCodes:", 1)[1].split("];", 1)[0]
+    assert set(re.findall(r'"([A-Z]{2})"', codes)) == ISO_ALPHA2_CODES

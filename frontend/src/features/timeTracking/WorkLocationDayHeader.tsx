@@ -77,7 +77,13 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           </Hint>
         )}
       </div>
+      {(!settings.homeCountry || !settings.officeCountry) && (
+        <p className="text-sm">
+          <a href="/settings?section=features">{m.work_location_setup_prompt()}</a>
+        </p>
+      )}
       <OtherLocationModal
+        showSetupHint={!settings.homeCountry || !settings.officeCountry}
         show={showOtherModal}
         date={dayjsDate}
         existing={stored}

@@ -6,127 +6,51 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
 import { toCountryCode } from "@/types/workLocation";
 
-const DATE = dayjs("2026-02-18");
-const cc = (value: string) => toCountryCode(value)!;
-
-function renderModal(props: Partial<React.ComponentProps<typeof OtherLocationModal>> = {}) {
-  const onHide = vi.fn();
+function setup(code?: string) {
   const onConfirm = vi.fn();
-  const renderResult = render(
-    <OtherLocationModal show={true} date={DATE} onHide={onHide} onConfirm={onConfirm} {...props} />,
-  );
-  return { onHide, onConfirm, ...renderResult };
+  const props = {
+    show: true,
+    date: dayjs("2026-02-18"),
+    onHide: vi.fn(),
+    onConfirm,
+    existing: code
+      ? { location: "other" as const, countryCode: toCountryCode(code)!, label: "Legacy label" }
+      : undefined,
+  };
+  return { ...render(<OtherLocationModal {...props} showSetupHint />), props, onConfirm };
 }
 
 describe("OtherLocationModal", () => {
-  it("renders the modal title with the formatted date", () => {
-    renderModal();
-    expect(screen.getByText(/Other Location — Wednesday, Feb 18, 2026/)).toBeInTheDocument();
+  it("selects a worldwide ISO country with the keyboard and saves its code", async () => {
+    const { onConfirm } = setup();
+    const picker = screen.getByRole("combobox", { name: "Country" });
+    await userEvent.type(picker, "Japan");
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("JP", undefined));
   });
-
-  it("renders the country code and label form fields", () => {
-    renderModal();
-    expect(screen.getByLabelText("Country Code")).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Label/)).toBeInTheDocument();
+  it.each(["XX", "ZZ", "UK"])("keeps legacy %s visible and requires correction", (code) => {
+    setup(code);
+    expect(
+      screen.getByText(`Current value: ${code}. Select a country to correct it.`),
+    ).toBeVisible();
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("Legacy label");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
-
-  it("pre-fills country code and label from an existing other-location entry", () => {
-    renderModal({
-      existing: { location: "other", countryCode: cc("DE"), label: "Berlin office" },
-    });
-    expect(screen.getByLabelText("Country Code")).toHaveValue("DE");
-    expect(screen.getByLabelText(/^Label/)).toHaveValue("Berlin office");
-  });
-
-  it("does not pre-fill when existing entry is a home or office location", () => {
-    renderModal({ existing: { location: "home", countryCode: cc("NL") } });
-    expect(screen.getByLabelText("Country Code")).toHaveValue("");
-  });
-
-  it("preserves edits across background updates and initializes on date changes and reopening", () => {
-    const onHide = vi.fn();
-    const onConfirm = vi.fn();
-    const existing = { location: "other" as const, countryCode: cc("DE"), label: "Berlin office" };
-    const props = { show: true, date: DATE, existing, onHide, onConfirm };
-    const { rerender } = render(<OtherLocationModal {...props} />);
-    fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "FR" } });
-    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "My draft" } });
-
-    rerender(
-      <OtherLocationModal {...props} date={dayjs("2026-02-18")} existing={{ ...existing }} />,
-    );
-    expect(screen.getByLabelText("Country Code")).toHaveValue("FR");
-    expect(screen.getByLabelText(/^Label/)).toHaveValue("My draft");
-
-    const synced = { ...existing, countryCode: cc("NL"), label: "Synced office" };
-    rerender(<OtherLocationModal {...props} existing={synced} />);
-    expect(screen.getByLabelText(/^Label/)).toHaveValue("My draft");
-    rerender(<OtherLocationModal {...props} date={DATE.add(1, "day")} existing={synced} />);
-    expect(screen.getByLabelText("Country Code")).toHaveValue("NL");
-    expect(screen.getByLabelText(/^Label/)).toHaveValue("Synced office");
-
-    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "Another draft" } });
-    rerender(<OtherLocationModal {...props} show={false} />);
-    rerender(<OtherLocationModal {...props} existing={synced} />);
-    expect(screen.getByLabelText(/^Label/)).toHaveValue("Synced office");
-  });
-
-  it("auto-uppercases typed country code", async () => {
-    renderModal();
-    const input = screen.getByLabelText("Country Code");
-    await userEvent.type(input, "de");
-    expect(input).toHaveValue("DE");
-  });
-
-  it("limits country code to 2 characters", async () => {
-    renderModal();
-    const input = screen.getByLabelText("Country Code");
-    await userEvent.type(input, "DEU");
-    expect(input).toHaveValue("DE");
-  });
-
-  it("calls onConfirm with countryCode and label when form is submitted with valid code", async () => {
-    const { onConfirm } = renderModal();
-    fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "DE" } });
-    fireEvent.change(screen.getByLabelText(/^Label/), {
-      target: { value: "Berlin office" },
-    });
-    const confirmButton = screen.getByRole("button", { name: /save/i });
-    fireEvent.click(confirmButton);
-    // v2's validator pipeline runs asynchronously even for sync checks, so the
-    // submit handler's effects land a tick after the click event.
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("DE", "Berlin office"));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls onConfirm with undefined label when label is empty", async () => {
-    const { onConfirm } = renderModal();
-    fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "FR" } });
-    const confirmButton = screen.getByRole("button", { name: /save/i });
-    fireEvent.click(confirmButton);
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("FR", undefined));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not call onConfirm when country code is invalid on submit", () => {
-    const { onConfirm } = renderModal();
-    fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "D" } });
-    const confirmButton = screen.getByRole("button", { name: /save/i });
-    fireEvent.click(confirmButton);
+  it("typing an arbitrary code cannot save, and links to setup", async () => {
+    const { onConfirm } = setup();
+    await userEvent.type(screen.getByRole("combobox", { name: "Country" }), "ZZ");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/settings?section=features");
     expect(onConfirm).not.toHaveBeenCalled();
   });
-
-  it("shows validation feedback after blur when code is invalid", () => {
-    renderModal();
-    const input = screen.getByLabelText("Country Code");
-    fireEvent.change(input, { target: { value: "D" } });
-    fireEvent.blur(input);
-    expect(screen.getByText(/Enter a valid 2-letter ISO country code/)).toBeInTheDocument();
-  });
-
-  it("calls onHide when Cancel button is clicked", () => {
-    const { onHide } = renderModal();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onHide).toHaveBeenCalled();
+  it("preserves a draft through background updates and resets on a new date", () => {
+    const { props, rerender } = setup("DE");
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "Draft" } });
+    rerender(<OtherLocationModal {...props} existing={{ ...props.existing!, label: "Synced" }} />);
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("Draft");
+    rerender(<OtherLocationModal {...props} date={props.date.add(1, "day")} />);
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("Legacy label");
   });
 });

@@ -434,10 +434,10 @@
   "calendar_time_off": "Time Off",
   "calendar_location_day_off_notice": "Note: this day is marked as time off.",
   "calendar_public_holiday": "Public Holiday",
-  "other_location_country_code": "Country Code",
+  "other_location_country_code": "Country",
   "other_location_country_placeholder": "e.g. DE",
   "other_location_country_feedback": "Enter a valid 2-letter ISO country code (e.g. DE, US, FR).",
-  "other_location_country_help": "ISO 3166-1 alpha-2 code (2 uppercase letters)",
+  "other_location_country_help": "Search for and select a country.",
   "other_location_label_optional": "(optional)",
   "other_location_label_placeholder": "e.g. Berlin office, Client visit",
   "location_clipboard_unavailable": "Clipboard not available",
@@ -1563,5 +1563,7 @@
   "tt_duration_limit": "Tasks can last up to 24 elapsed hours. Set a stop time within that limit.",
   "error_code_username_invalid": "Use 1–64 letters (A–Z), digits, dots, underscores, @, plus or hyphens for the username, starting with a letter or digit.",
   "error_code_username_reserved": "This username is reserved. Choose another username.",
-  "error_code_display_name_invalid": "Use no more than 150 characters for the display name."
+  "error_code_display_name_invalid": "Use no more than 150 characters for the display name.",
+  "other_location_legacy_country": "Current value: {code}. Select a country to correct it.",
+  "work_location_setup_prompt": "Configure Home and Office in Settings → Features → Cross-Border Setup."
 }

@@ -136,3 +136,12 @@ and display names remain editable, including legacy values outside these rules;
 response schemas and OIDC provisioning remain unrestricted. Renames retain the
 existing permissions pending the owner's decision in #1695 and write a
 transactional `rename_user` audit entry containing old and new usernames.
+
+## Work-location countries
+
+REST upserts validate ISO 3166-1 alpha-2 membership and normalise accepted codes
+to uppercase. Sync applies the same membership check to creates, changed countries
+and restored rows, returning `validation_failed` as a per-record conflict so other
+records in the batch can still succeed. Unchanged legacy codes remain readable
+and can retain annotation edits; replacing them requires a valid ISO code. Stale
+LWW writes and deletes keep their existing behaviour.

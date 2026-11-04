@@ -1,3 +1,4 @@
+import { CountrySelect } from "@/components/shared/CountrySelect";
 import { Input } from "@/components/ui/input";
 import { useLayoutEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Dayjs } from "dayjs";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { hasIsoAlpha2Format } from "@/types/countries";
+import { isIsoCountryCode } from "@/types/countries";
 import type { WorkLocationInfo } from "@/types/workLocation";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
@@ -30,12 +31,13 @@ interface OtherLocationModalProps {
   show: boolean;
   date: Dayjs;
   existing?: WorkLocationInfo;
+  showSetupHint?: boolean;
   onHide: () => void;
   onConfirm: (countryCode: string, label?: string) => void;
 }
 
 /**
- * Modal for setting an "other" work location with a free-text ISO 3166-1 alpha-2
+ * Modal for setting an "other" work location with an ISO 3166-1 alpha-2
  * country code and optional annotation label.
  *
  * Used when neither home nor office location applies — e.g. a worldwide office,
@@ -47,17 +49,16 @@ export function OtherLocationModal({
   existing,
   onHide,
   onConfirm,
+  showSetupHint = false,
 }: OtherLocationModalProps) {
   const form = useForm({
     defaultValues: getInitialOtherLocation(existing),
     onSubmit: ({ value }) => {
-      if (!hasIsoAlpha2Format(value.countryCode)) return;
+      if (!isIsoCountryCode(value.countryCode)) return;
       onConfirm(value.countryCode, value.label.trim() || undefined);
     },
   });
-  const isCodeValid = useSelector(form.atom, (state) =>
-    hasIsoAlpha2Format(state.values.countryCode),
-  );
+  const isCodeValid = useSelector(form.atom, (state) => isIsoCountryCode(state.values.countryCode));
 
   const dateKey = date.format("YYYY-MM-DD");
   const previousDialog = useRef({ show: false, dateKey });
@@ -102,11 +103,16 @@ export function OtherLocationModal({
             </DialogTitle>
           </DialogHeader>
           <div className="min-h-0 overflow-y-auto p-4">
+            {showSetupHint && (
+              <p>
+                <a href="/settings?section=features">{m.work_location_setup_prompt()}</a>
+              </p>
+            )}
             <form.Field
               name="countryCode"
               validators={[
                 {
-                  run: ({ value }) => (hasIsoAlpha2Format(value) ? undefined : "invalid"),
+                  run: ({ value }) => (isIsoCountryCode(value) ? undefined : "invalid"),
                   triggers: ["change", "blur"],
                 },
               ]}
@@ -114,27 +120,23 @@ export function OtherLocationModal({
               {(field) => (
                 <div className="mb-4">
                   <label htmlFor="other-location-country">{m.other_location_country_code()}</label>
-                  <Input
-                    type="text"
-                    placeholder={m.other_location_country_placeholder()}
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value.toUpperCase().slice(0, 2))}
-                    onBlur={field.handleBlur}
-                    maxLength={2}
-                    id="other-location-country"
-                    aria-invalid={field.meta.isTouched && field.errors.length > 0}
-                    autoFocus
-                    aria-required="true"
-                    aria-describedby="other-location-country-feedback"
+                  <CountrySelect
+                    required
+                    describedBy="other-location-country-help"
+                    worldwide
+                    value={field.value || null}
+                    onChange={(code) => field.handleChange(code ?? "")}
+                    inputId="other-location-country"
+                    ariaLabel={m.other_location_country_code()}
                   />
-                  <div
-                    className="text-danger-text text-sm"
-                    hidden={!field.meta.isTouched || field.errors.length === 0}
-                    id="other-location-country-feedback"
-                  >
-                    {m.other_location_country_feedback()}
-                  </div>
-                  <small className="text-muted-foreground">{m.other_location_country_help()}</small>
+                  {field.value && !isIsoCountryCode(field.value) && (
+                    <p className="text-danger-text text-sm">
+                      {m.other_location_legacy_country({ code: field.value })}
+                    </p>
+                  )}
+                  <small id="other-location-country-help" className="text-muted-foreground">
+                    {m.other_location_country_help()}
+                  </small>
                 </div>
               )}
             </form.Field>

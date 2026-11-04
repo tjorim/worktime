@@ -57,6 +57,7 @@ from app.database.models import (
     WorkLocation,
 )
 from app.schemas import (
+    ISO_ALPHA2_CODES,
     GanttTaskSyncItem,
     GanttTaskSyncRead,
     LabelSyncItem,
@@ -713,14 +714,17 @@ async def _push_work_location(session: AsyncSession, user_id: int, item: WorkLoc
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
     if location is None:
-        if item.country_code is None:
-            from app.services.db_service import ValidationError
-
-            raise ValidationError("country_code is required for work_location create")
+        if item.country_code is None or item.country_code.upper() not in ISO_ALPHA2_CODES:
+            return SyncRecordResult(
+                id=date_key,
+                status="conflict",
+                code=ErrorCode.VALIDATION_FAILED,
+                conflict_reason="country_code must be ISO alpha-2",
+            )
         location = WorkLocation(
             user_id=user_id,
             date=item.date,
-            country_code=item.country_code,
+            country_code=item.country_code.upper(),
             label=item.label,
             client_updated_at=_clamp_client_timestamp(item.client_updated_at),
         )
@@ -735,8 +739,19 @@ async def _push_work_location(session: AsyncSession, user_id: int, item: WorkLoc
             conflict_reason="server version is newer",
         )
     provided_fields = _get_provided_fields(item)
-    if "country_code" in provided_fields and item.country_code is not None:
-        location.country_code = item.country_code
+    code = item.country_code if "country_code" in provided_fields else location.country_code
+    # Preserve unchanged legacy values, but validate changed codes and restores.
+    if (("country_code" in provided_fields and code != location.country_code) or location.deleted_at is not None) and (
+        code is None or code.upper() not in ISO_ALPHA2_CODES
+    ):
+        return SyncRecordResult(
+            id=date_key,
+            status="conflict",
+            code=ErrorCode.VALIDATION_FAILED,
+            conflict_reason="country_code must be ISO alpha-2",
+        )
+    if "country_code" in provided_fields and code is not None:
+        location.country_code = code.upper() if code.upper() in ISO_ALPHA2_CODES else code
     if "label" in provided_fields:
         location.label = item.label
     if location.deleted_at is not None:
