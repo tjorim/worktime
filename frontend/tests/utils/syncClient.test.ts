@@ -1695,7 +1695,7 @@ describe("syncClient", () => {
       JSON.stringify({ hasCompletedOnboarding: true, scheduleType: "local" }),
     );
     const fetch = vi.fn(
-      async () =>
+      async (_url: string, _init?: RequestInit) =>
         ({
           ok: true,
           json: async () => ({
@@ -1711,9 +1711,7 @@ describe("syncClient", () => {
     const setItem = vi.spyOn(Storage.prototype, "setItem");
     await reconcilePreferences(fetch);
     expect(setItem).not.toHaveBeenCalled();
-    expect(
-      fetch.mock.calls.filter(([, init]) => (init as RequestInit)?.method === "PUT"),
-    ).toHaveLength(0);
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(0);
     setItem.mockRestore();
   });
 

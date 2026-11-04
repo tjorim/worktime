@@ -152,6 +152,7 @@ describe("CalendarView Integration Tests", () => {
     // Set default mock return values
     mockedUsePublicHolidays.mockReturnValue({
       publicHolidayMap: new Map(),
+      nationwideHolidayMap: new Map(),
       loading: false,
       error: null,
     });
@@ -187,6 +188,7 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUsePublicHolidays.mockReturnValue({
         publicHolidayMap: fixtures.publicHolidayMap,
+        nationwideHolidayMap: fixtures.publicHolidayMap,
         loading: false,
         error: null,
       });
@@ -232,6 +234,7 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUsePublicHolidays.mockReturnValue({
         publicHolidayMap: fixtures.publicHolidayMap,
+        nationwideHolidayMap: fixtures.publicHolidayMap,
         loading: false,
         error: null,
       });
