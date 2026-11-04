@@ -137,7 +137,7 @@ export function CurrentStatus({
             <Button
               variant="link"
               size="sm"
-              className="p-0 text-muted-foreground no-underline shrink-0"
+              className="min-h-11 min-w-11 p-0 text-muted-foreground no-underline shrink-0"
               onClick={() => setExpanded(true)}
               aria-expanded={false}
               aria-label={m.current_status_expand()}
@@ -188,7 +188,7 @@ export function CurrentStatus({
                 <Button
                   variant="link"
                   size="sm"
-                  className="p-0 text-muted-foreground no-underline"
+                  className="min-h-11 min-w-11 p-0 text-muted-foreground no-underline"
                   onClick={() => setExpanded(false)}
                   aria-expanded={true}
                   aria-label={m.current_status_collapse()}

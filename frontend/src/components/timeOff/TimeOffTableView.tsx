@@ -2,7 +2,8 @@ import { getOverlappingEntries } from "@/lib/timeOff/overlap";
 import { TriangleAlertIcon } from "lucide-react";
 import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -119,6 +120,16 @@ export function TimeOffTableView({
   onApplyRawEditor,
   onResetRawEditor,
 }: TimeOffTableViewProps) {
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 639.98px)").matches,
+  );
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639.98px)");
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [search, setSearch] = useState("");
 
@@ -262,12 +273,97 @@ export function TimeOffTableView({
                 value={search}
                 onChange={(event) => handleSearchChange(event.target.value)}
               />
+              {isMobile && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <NativeSelect
+                    aria-label={m.timeoff_sort_by()}
+                    value={sorting[0]?.id ?? "date"}
+                    onChange={(event) =>
+                      setSorting([{ id: event.target.value, desc: sorting[0]?.desc ?? false }])
+                    }
+                  >
+                    <option value="date">{m.timeoff_col_date_pattern()}</option>
+                    <option value="type">{m.timeoff_col_type()}</option>
+                    <option value="title">{m.timeoff_col_title()}</option>
+                    <option value="flags">{m.timeoff_col_flags()}</option>
+                  </NativeSelect>
+                  <NativeSelect
+                    aria-label={m.timeoff_sort_order()}
+                    value={sorting[0]?.desc ? "desc" : "asc"}
+                    onChange={(event) =>
+                      setSorting([
+                        { id: sorting[0]?.id ?? "date", desc: event.target.value === "desc" },
+                      ])
+                    }
+                  >
+                    <option value="asc">{m.timeoff_sort_ascending()}</option>
+                    <option value="desc">{m.timeoff_sort_descending()}</option>
+                  </NativeSelect>
+                </div>
+              )}
               {visibleRows.length === 0 && isFiltering ? (
                 <EmptyState
                   icon={SearchIcon}
                   title={m.timeoff_no_results_title()}
                   description={m.timeoff_no_results_desc()}
                 />
+              ) : isMobile ? (
+                <ul data-slot="timeoff-card-list" className="m-0 mb-3 list-none space-y-3 p-0">
+                  {visibleRows.map(({ original: { entry, flags, title, typeLabel } }) => (
+                    <li key={entry.id} className="rounded-lg border border-border p-3">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          aria-label={m.timeoff_select_event_aria({ name: title })}
+                          checked={selectedIds.has(entry.id)}
+                          onCheckedChange={() => onToggleSelection(entry.id)}
+                        />
+                        <Badge
+                          data-event-type-badge
+                          className={getEventColorUtilities(
+                            flags,
+                            isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
+                          )}
+                        >
+                          {getTimeLocationSymbol(flags)} {typeLabel}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-sm">{renderEntryDisplayDate(entry)}</div>
+                      {entry.note && <p className="my-2 wrap-anywhere">{entry.note}</p>}
+                      {getOverlappingEntries(entry, entries).length > 0 && (
+                        <span className="flex items-center gap-1 text-sm text-warning">
+                          <Icon icon={TriangleAlertIcon} />
+                          {m.timeoff_overlap()}
+                        </span>
+                      )}
+                      {flags.length > 0 && (
+                        <p className="my-2 text-sm text-muted-foreground">{flags.join(", ")}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          className="min-h-11"
+                          onClick={() => onEditEvent(entry.id)}
+                          aria-label={m.timeoff_card_action_aria({ action: m.edit(), name: title })}
+                        >
+                          <Icon icon={PencilIcon} />
+                          {m.edit()}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="min-h-11"
+                          onClick={() => onDeleteEvent(entry.id)}
+                          aria-label={m.timeoff_card_action_aria({
+                            action: m.delete(),
+                            name: title,
+                          })}
+                        >
+                          <Icon icon={TrashIcon} />
+                          {m.delete()}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <Table>
                   <TableHeader>
