@@ -543,6 +543,8 @@ export function CalendarView({
       {timeOffEnabled && (
         <>
           <EventModal
+            entries={entries}
+            editEntryId={editEntryId}
             show={showEventModal}
             mode={modalMode}
             formRef={formRef}

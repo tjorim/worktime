@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import {
@@ -30,6 +30,7 @@ import { getLocale } from "@/paraglide/runtime.js";
 
 export interface DayEvent {
   entry: TimeOffEntry;
+  overlapping?: boolean;
 }
 
 interface DayCellProps {
@@ -332,7 +333,8 @@ export function DayCell({
         entryFlags,
         dayEvent.entry.entryKind === "weekly" ? "weekly" : "range",
       );
-      const label = dayEvent.entry.note || getEventTypeLabel(entryFlags);
+      const title = dayEvent.entry.note || getEventTypeLabel(entryFlags);
+      const label = dayEvent.overlapping ? `${title} · ${m.timeoff_overlap()}` : title;
       const symbol = getTimeLocationSymbol(entryFlags);
       const id = dayEvent.entry.id;
       const keyId = dayEvent.entry.id;
@@ -367,8 +369,10 @@ export function DayCell({
           }}
           onTouchEnd={clearLongPress}
           onTouchMove={handleTouchMove}
+          title={label}
           aria-label={m.daycell_view_event_aria({ label })}
         >
+          {dayEvent.overlapping && <Icon icon={TriangleAlertIcon} className="size-3 shrink-0" />}
           <span className={cn("month-calendar-event-color", colorClass)} />
           <span className="month-calendar-event-label">
             {symbol && (

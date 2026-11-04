@@ -1537,5 +1537,8 @@
   "tt_json_in_use": "Deze labels zijn nog in gebruik en kunnen niet worden verwijderd: {names}.",
   "tt_json_invalid_entries": "Ongeldige items: {count}. Controleer verplichte velden, unieke ID’s, namen, kleuren, tijdsbereiken en bestaande labels. Er is niets toegepast.",
   "tt_json_leave": "Je niet-toegepaste JSON-concept verwijderen en deze pagina verlaten?",
-  "tt_json_current": "Huidige opgeslagen JSON"
+  "tt_json_current": "Huidige opgeslagen JSON",
+  "timeoff_overlap": "Overlappende invoer",
+  "timeoff_overlap_with": "Overlapt met {name} ({dates})",
+  "timeoff_overlap_allowed": "Je kunt deze invoer nog steeds opslaan."
 }

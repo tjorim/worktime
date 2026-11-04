@@ -62,6 +62,18 @@ describe("DayCell", () => {
   });
 
   describe("Rendering", () => {
+    it("includes an overlap warning in the visible chip and accessible button name", () => {
+      render(
+        <DayCell
+          {...defaultProps}
+          events={[{ ...createEntryEvent({ note: "Annual leave" }), overlapping: true }]}
+        />,
+      );
+      expect(
+        screen.getByRole("button", { name: /Annual leave · Overlapping entry/ }),
+      ).toBeVisible();
+      expect(screen.getByText("Annual leave · Overlapping entry")).toBeVisible();
+    });
     it("should render day number", () => {
       render(<DayCell {...defaultProps} />);
       expect(screen.getByText("15")).toBeInTheDocument();
