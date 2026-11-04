@@ -47,7 +47,11 @@ No `VITE_API_DOMAIN` setting is needed or read. For OIDC sign-in, configure the
 `VITE_OIDC_*` variables in `frontend/.env.local` (see `src/config/oidc.ts`) and
 register `http://localhost:5173/auth/callback` and
 `http://localhost:5173/auth/silent-callback` with your provider. The dev auth bypass
-is for API clients; it does not create a browser OIDC session.
+is for API clients; it does not create a browser OIDC session. Optional
+`DEV_AUTH_MEMBER_TOKEN` and `DEV_AUTH_SECOND_MEMBER_TOKEN` add two distinct member
+accounts alongside the existing `DEV_AUTH_BYPASS_TOKEN` admin. All require
+`ENVIRONMENT=development` and an explicitly configured admin bypass; see the
+[local API users workflow](backend/QUICKSTART.md#local-api-users-without-an-identity-provider).
 
 ## What It Does
 

@@ -179,8 +179,22 @@ async def decode_token(token: str) -> dict[str, Any]:
     Raises:
         OIDCTokenError: When the token is missing, expired, or otherwise invalid.
     """
-    if settings.DEV_AUTH_BYPASS_TOKEN and hmac.compare_digest(token, settings.DEV_AUTH_BYPASS_TOKEN):
-        return dict(_DEV_BYPASS_CLAIMS)
+    if settings.ENVIRONMENT == "development" and settings.DEV_AUTH_BYPASS_TOKEN:
+        if hmac.compare_digest(token, settings.DEV_AUTH_BYPASS_TOKEN):
+            return dict(_DEV_BYPASS_CLAIMS)
+        for configured, suffix in (
+            (settings.DEV_AUTH_MEMBER_TOKEN, "member"),
+            (settings.DEV_AUTH_SECOND_MEMBER_TOKEN, "member2"),
+        ):
+            if configured and hmac.compare_digest(token, configured):
+                return {
+                    "sub": f"dev-bypass-{suffix}",
+                    "preferred_username": f"dev{suffix}",
+                    "name": f"Dev {suffix}",
+                    "email": f"dev{suffix}@localhost",
+                    "email_verified": True,
+                    "realm_access": {"roles": ["member"]},
+                }
 
     options: Options = {
         "verify_aud": _OIDC_AUDIENCE is not None,

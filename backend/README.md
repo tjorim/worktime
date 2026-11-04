@@ -66,6 +66,10 @@ Important variables:
 
 See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/config/settings.py` for the full list.
 
+Optional `DEV_AUTH_MEMBER_TOKEN` and `DEV_AUTH_SECOND_MEMBER_TOKEN` provide two local
+member identities; see [Quick Start](QUICKSTART.md#local-api-users-without-an-identity-provider)
+for configuration, guards and the curl workflow. Browser OIDC flows require an IdP.
+
 ## API Groups
 
 Auth is OIDC/Keycloak-based (`app/config/settings.py`, `app/config/oidc_config.py`), plus personal
