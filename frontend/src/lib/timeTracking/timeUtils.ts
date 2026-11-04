@@ -1,3 +1,6 @@
+import type { Dayjs } from "dayjs";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import { logger } from "@/utils/logger";
 /**
  * Mandatory break duration in minutes. Per labor law, employees working more
@@ -21,6 +24,16 @@ export function effectiveDurationHours(rawHours: number, includesBreak?: boolean
   if (!includesBreak) return rawHours;
   const deduction = BREAK_DURATION_MINUTES / 60;
   return Math.max(rawHours - deduction, 0);
+}
+
+/** Actual elapsed hours only: scheduled stops cannot contribute future time.
+ * Keep the existing break policy for completed, scheduled and running tasks.
+ */
+export function actualTaskDurationHours(task: StoredTimeTrackingTask, now: Dayjs): number {
+  const stop = task.stopTime ? dayjs(task.stopTime) : now;
+  const elapsedStop = stop.isAfter(now) ? now : stop;
+  const rawHours = Math.max(elapsedStop.diff(dayjs(task.startTime), "hour", true), 0);
+  return effectiveDurationHours(rawHours, task.includesBreak);
 }
 
 /**
