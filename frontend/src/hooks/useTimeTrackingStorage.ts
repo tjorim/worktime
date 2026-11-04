@@ -6,6 +6,7 @@ import { sanitizeLabels, type Label } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import {
   labelsCollection,
+  replaceTimeTrackingSettings,
   hasSyncCollectionAuth,
   replaceCollectionContents,
   runMutationBatch,
@@ -250,52 +251,14 @@ export function useTimeTrackingStorage() {
     [templates],
   );
 
-  const updateTemplates = useCallback((nextTemplates: TimeTrackingTemplate[]) => {
-    const nextIds = new Set(nextTemplates.map((t) => t.id));
-    const toDelete = (templatesCollection.toArray as TimeTrackingTemplate[]).filter(
-      (t) => !nextIds.has(t.id),
-    );
-    const hasWork = nextTemplates.length > 0 || toDelete.length > 0;
-    runMutationBatch(templatesCollection, hasWork, () => {
-      // Upsert all templates in the new list
-      for (const t of nextTemplates) {
-        if (templatesCollection.has(t.id)) {
-          templatesCollection.update(t.id, (d) => {
-            Object.assign(d, t);
-          });
-        } else {
-          templatesCollection.insert(t);
-        }
-      }
-      // Delete templates not in the new list
-      for (const t of toDelete) {
-        templatesCollection.delete(t.id);
-      }
-    });
-  }, []);
-
-  const updateLabels = useCallback((nextLabels: Label[]) => {
-    const sanitized = sanitizeLabels(nextLabels);
-    const nextIds = new Set(sanitized.map((l) => l.id));
-    const toDelete = (labelsCollection.toArray as Label[]).filter((l) => !nextIds.has(l.id));
-    const hasWork = sanitized.length > 0 || toDelete.length > 0;
-    runMutationBatch(labelsCollection, hasWork, () => {
-      // Upsert all labels in the new list
-      for (const l of sanitized) {
-        if (labelsCollection.has(l.id)) {
-          labelsCollection.update(l.id, (d) => {
-            Object.assign(d, l);
-          });
-        } else {
-          labelsCollection.insert(l);
-        }
-      }
-      // Delete labels not in the new list
-      for (const l of toDelete) {
-        labelsCollection.delete(l.id);
-      }
-    });
-  }, []);
+  const updateTemplates = useCallback(
+    (items: TimeTrackingTemplate[]) => replaceTimeTrackingSettings("templates", items),
+    [],
+  );
+  const updateLabels = useCallback(
+    (items: Label[]) => replaceTimeTrackingSettings("labels", items),
+    [],
+  );
 
   return {
     hiddenTaskCount,

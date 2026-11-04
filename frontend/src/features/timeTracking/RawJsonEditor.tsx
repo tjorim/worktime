@@ -4,6 +4,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 type RawJsonEditorProps = {
   value: string;
+  disabled?: boolean;
+  applyDisabled?: boolean;
   formatHint: string;
   summaryLabel: string;
   headingLabel: string;
@@ -20,6 +22,8 @@ type RawJsonEditorProps = {
 
 export function RawJsonEditor({
   value,
+  disabled,
+  applyDisabled,
   formatHint,
   summaryLabel,
   headingLabel,
@@ -42,12 +46,13 @@ export function RawJsonEditor({
           <Button size="sm" variant="outline" onClick={onCopy}>
             {copyButtonLabel}
           </Button>
-          <Button size="sm" onClick={onApply}>
+          <Button size="sm" disabled={disabled || applyDisabled} onClick={onApply}>
             {applyButtonLabel}
           </Button>
         </div>
       </div>
       <Textarea
+        disabled={disabled}
         rows={8}
         className="field-sizing-fixed font-mono"
         value={value}

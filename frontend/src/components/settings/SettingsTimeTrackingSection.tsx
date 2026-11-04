@@ -10,8 +10,8 @@ type SettingsTimeTrackingSectionProps = {
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
-  onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void;
-  onUpdateLabels: (labels: Label[]) => void;
+  onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void | Promise<void>;
+  onUpdateLabels: (labels: Label[]) => void | Promise<void>;
 };
 
 export function SettingsTimeTrackingSection({

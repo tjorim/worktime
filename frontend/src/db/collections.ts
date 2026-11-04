@@ -32,6 +32,7 @@
  * domain — that creates a competing cache.
  */
 
+import { ApiError } from "@/utils/apiError";
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { queryClient } from "@/lib/queryClient";
@@ -1400,4 +1401,77 @@ const hydrationStarted =
 export function initSyncCollectionPersistence(): Promise<void> {
   startPersistingSyncCollections(SYNC_COLLECTIONS, getSyncCollectionItemKey);
   return hydrationStarted;
+}
+
+/** Bulk settings edits are online transactions: never queue rejected replacements. */
+export async function replaceTimeTrackingSettings(
+  kind: "labels" | "templates",
+  items: Label[] | TimeTrackingTemplate[],
+): Promise<void> {
+  const owner = _currentUserId;
+  if (_isAuthResolving) throw new Error("Authentication is still resolving");
+  const collection = kind === "labels" ? labelsCollection : templatesCollection;
+  const previous = collection.toArray;
+  if (_currentUserId) {
+    const now = dayjs().toISOString();
+    const changes = items.map((item) => ({
+      id: item.id,
+      action: collection.has(item.id) ? ("update" as const) : ("create" as const),
+      client_updated_at: now,
+      ...("name" in item
+        ? { name: item.name, color: item.color }
+        : {
+            text: item.text,
+            label_id: item.label,
+            start_time: `${item.start}:00`,
+            stop_time: `${item.stop}:00`,
+          }),
+    }));
+    const ids = new Set(items.map((item) => item.id));
+    const removed = previous
+      .filter((item) => !ids.has(item.id))
+      .map((item) => ({
+        id: item.id,
+        action: "delete" as const,
+        client_updated_at: now,
+      }));
+    const payload: SyncPushPayload = {
+      labels: [],
+      templates: [],
+      tasks: [],
+      gantt_tasks: [],
+      work_locations: [],
+      time_off_entries: [],
+      [kind]: [...changes, ...removed],
+    };
+    const response = await collectionFetch("/api/sync/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw await ApiError.fromResponse(response);
+    const result = (await response.json()) as SyncPushResponse;
+    if (countPushConflicts(result) > 0) {
+      _triggerPull?.();
+      throw new Error("Settings replacement conflicted");
+    }
+  }
+  if (_currentUserId !== owner) throw new Error("Settings owner changed");
+  // Direct writes only after acceptance; a rejected push leaves local rows intact.
+  if (kind === "labels") {
+    runWriteBatch(labelsCollection, true, () => {
+      const ids = new Set(items.map((item) => item.id));
+      const removed = previous.filter((item) => !ids.has(item.id));
+      if (removed.length) labelsCollection.utils.writeDelete(removed.map((item) => item.id));
+      if (items.length) labelsCollection.utils.writeUpsert(items as Label[]);
+    });
+  } else {
+    runWriteBatch(templatesCollection, true, () => {
+      const ids = new Set(items.map((item) => item.id));
+      const removed = previous.filter((item) => !ids.has(item.id));
+      if (removed.length) templatesCollection.utils.writeDelete(removed.map((item) => item.id));
+      if (items.length) templatesCollection.utils.writeUpsert(items as TimeTrackingTemplate[]);
+    });
+  }
+  _triggerPull?.();
 }

@@ -40,7 +40,7 @@ type TimeTrackingDailyViewProps = {
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   onAddTask: (payload: StoredTimeTrackingTask) => Promise<boolean>;
-  onUpdateLabels: (labels: Label[]) => void;
+  onUpdateLabels: (labels: Label[]) => void | Promise<void>;
   onUpdateTaskTimes: (payload: {
     id: string;
     newStartTime: string;
@@ -439,7 +439,7 @@ export function TimeTrackingDailyView({
     setShowCreateLabelModal(false);
   };
 
-  const handleCreateLabelSubmit = () => {
+  const handleCreateLabelSubmit = async () => {
     const name = normalizeLabelName(createLabelForm.name);
     if (!name) {
       toast.showError(m.tt_label_name_required());
@@ -455,7 +455,12 @@ export function TimeTrackingDailyView({
     }
 
     const newLabel: Label = { id: crypto.randomUUID(), name, color: createLabelForm.color };
-    onUpdateLabels([...labels, newLabel]);
+    try {
+      await onUpdateLabels([...labels, newLabel]);
+    } catch {
+      toast.showError(m.tt_json_save_failed());
+      return;
+    }
     setSelectedLabel(newLabel.id);
     toast.showSuccess(m.tt_label_added());
     setShowCreateLabelModal(false);

@@ -1527,5 +1527,14 @@
   "error_code_gantt_dependency_unknown": "Kies afhankelijkheden die nog bestaan.",
   "error_code_gantt_dependency_self": "Een taak kan niet van zichzelf afhangen.",
   "error_code_gantt_dependency_cycle": "Deze afhankelijkheden vormen een kring.",
-  "account_load_errors": "Sommige accountonderdelen konden niet worden geladen. Je lokale gegevens zijn veilig. Probeer de betreffende onderdelen hieronder opnieuw."
+  "account_load_errors": "Sommige accountonderdelen konden niet worden geladen. Je lokale gegevens zijn veilig. Probeer de betreffende onderdelen hieronder opnieuw.",
+  "tt_json_conflict": "De opgeslagen gegevens zijn gewijzigd. Je concept is bewaard. Controleer de huidige gegevens via JSON kopiëren en behoud daarna je concept om vervanging toe te staan.",
+  "tt_json_keep_draft": "Concept behouden met huidige gegevens",
+  "tt_json_removals": "Verwijderen: {remove}, toevoegen: {add}, wijzigen: {change}. Deze vervanging toepassen?",
+  "tt_json_confirm": "JSON-vervanging bevestigen",
+  "tt_json_save_failed": "Wijzigingen konden niet worden opgeslagen. Je concept is bewaard. Probeer het opnieuw.",
+  "tt_json_in_use": "Deze labels zijn nog in gebruik en kunnen niet worden verwijderd: {names}.",
+  "tt_json_invalid_entries": "Ongeldige items: {count}. Controleer verplichte velden, unieke ID’s, namen, kleuren, tijdsbereiken en bestaande labels. Er is niets toegepast.",
+  "tt_json_leave": "Je niet-toegepaste JSON-concept verwijderen en deze pagina verlaten?",
+  "tt_json_current": "Huidige opgeslagen JSON"
 }

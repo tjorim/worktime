@@ -1,6 +1,8 @@
+import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
+import { getErrorMessage } from "@/utils/apiError";
 import { TagsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/contexts/ToastContext";
@@ -11,6 +13,7 @@ import { JsonExample, RawJsonEditor } from "./RawJsonEditor";
 import { LabelChip } from "./LabelChip";
 import {
   isHexColor,
+  isLabelInput,
   normalizeLabelName,
   sanitizeLabels,
   type Label,
@@ -29,7 +32,7 @@ type LabelsPanelProps = {
   labels: Label[];
   templates: TimeTrackingTemplate[];
   tasks: StoredTimeTrackingTask[];
-  onUpdateLabels: (labels: Label[]) => void;
+  onUpdateLabels: (labels: Label[]) => void | Promise<void>;
 };
 
 const EXAMPLE_LABELS: Label[] = [
@@ -40,7 +43,7 @@ const EXAMPLE_LABELS: Label[] = [
 ];
 const EXAMPLE_LABELS_JSON = JSON.stringify({ labels: EXAMPLE_LABELS }, null, 2);
 
-function validateLabelsImportPayload(parsed: unknown): parsed is { labels?: unknown[] } {
+function validateLabelsImportPayload(parsed: unknown): parsed is { labels: unknown[] } {
   if (!parsed || typeof parsed !== "object") {
     return false;
   }
@@ -49,9 +52,14 @@ function validateLabelsImportPayload(parsed: unknown): parsed is { labels?: unkn
 }
 
 export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: LabelsPanelProps) {
+  const addLabelRef = useRef<HTMLButtonElement>(null);
+  const deleteFocusRef = useRef<HTMLElement | null>(null);
   const [error, setError] = useState("");
   const toast = useToast();
-  const [labelsJson, setLabelsJson] = useState(JSON.stringify({ labels }, null, 2));
+  const draft = useJsonDraft(JSON.stringify({ labels }, null, 2));
+  const { value: labelsJson, setValue: setLabelsJson } = draft;
+  const [pendingJson, setPendingJson] = useState<Label[] | null>(null);
+  const [saving, setSaving] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editLabelId, setEditLabelId] = useState<string | null>(null);
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState<Label | null>(null);
@@ -87,15 +95,6 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     return map;
   }, [labels, templates, tasks]);
 
-  // Re-sync the raw JSON editor whenever `labels` changes externally, as a
-  // same-render response rather than a follow-up effect. The editor still
-  // owns its value the rest of the time (see the onChange handler below).
-  const [prevLabels, setPrevLabels] = useState(labels);
-  if (prevLabels !== labels) {
-    setPrevLabels(labels);
-    setLabelsJson(JSON.stringify({ labels }, null, 2));
-  }
-
   const handleCopy = async () => {
     setError("");
     try {
@@ -106,18 +105,55 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     }
   };
 
+  const saveJson = async (next: Label[]) => {
+    if (saving || draft.conflict) return;
+    setSaving(true);
+    try {
+      await onUpdateLabels(next);
+      draft.saved();
+      toast.showSuccess(m.tt_labels_updated());
+      setPendingJson(null);
+    } catch (error) {
+      setError(getErrorMessage(error, m.tt_json_save_failed()));
+      setPendingJson(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleApplyJson = () => {
     setError("");
-
+    if (saving || draft.conflict) return;
     try {
       const parsed = JSON.parse(labelsJson);
       if (!validateLabelsImportPayload(parsed)) {
         setError(m.tt_invalid_labels_structure());
         return;
       }
+      const next = sanitizeLabels(parsed.labels);
+      const invalid = parsed.labels.filter((item: unknown) => !isLabelInput(item)).length;
+      if (
+        invalid ||
+        next.length !== parsed.labels.length ||
+        new Set(next.map((item) => item.id)).size !== next.length
+      ) {
+        setError(
+          m.tt_json_invalid_entries({ count: invalid || parsed.labels.length - next.length || 1 }),
+        );
+        return;
+      }
+      const blocked = labels.filter(
+        (label) =>
+          !next.some((item) => item.id === label.id) &&
+          (usageByLabelId[label.id]?.tasks || usageByLabelId[label.id]?.templates),
+      );
+      if (blocked.length) {
+        setError(m.tt_json_in_use({ names: blocked.map((item) => item.name).join(", ") }));
+        return;
+      }
 
-      onUpdateLabels(sanitizeLabels(parsed.labels ?? []));
-      toast.showSuccess(m.tt_labels_updated());
+      if (labels.some((item) => !next.some((entry) => entry.id === item.id))) setPendingJson(next);
+      else void saveJson(next);
     } catch {
       setError(m.tt_invalid_labels_format());
     }
@@ -133,7 +169,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     setModalMode("edit");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError("");
 
     const name = normalizeLabelName(labelForm.name);
@@ -156,30 +192,48 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       return;
     }
 
-    if (editLabelId) {
-      const index = labels.findIndex((label) => label.id === editLabelId);
-      if (index === -1) {
-        return;
+    try {
+      if (editLabelId) {
+        const index = labels.findIndex((label) => label.id === editLabelId);
+        if (index === -1) {
+          return;
+        }
+        const nextLabels = [...labels];
+        nextLabels[index] = { id: editLabelId, name, color: labelForm.color };
+        await onUpdateLabels(nextLabels);
+        toast.showSuccess(m.tt_label_updated());
+      } else {
+        await onUpdateLabels([
+          ...labels,
+          { id: crypto.randomUUID(), name, color: labelForm.color },
+        ]);
+        toast.showSuccess(m.tt_label_added());
       }
-      const nextLabels = [...labels];
-      nextLabels[index] = { id: editLabelId, name, color: labelForm.color };
-      onUpdateLabels(nextLabels);
-      toast.showSuccess(m.tt_label_updated());
-    } else {
-      onUpdateLabels([...labels, { id: crypto.randomUUID(), name, color: labelForm.color }]);
-      toast.showSuccess(m.tt_label_added());
-    }
 
-    resetForm();
-    setEditLabelId(null);
-    setModalMode(null);
+      resetForm();
+      setEditLabelId(null);
+      setModalMode(null);
+    } catch (error) {
+      setError(getErrorMessage(error, m.tt_json_save_failed()));
+    }
   };
 
-  const handleConfirmDelete = () => {
-    if (!pendingDeleteLabel) {
+  const handleConfirmDelete = async () => {
+    if (saving || !pendingDeleteLabel) {
       return;
     }
-    onUpdateLabels(labels.filter((item) => item.id !== pendingDeleteLabel.id));
+    setError("");
+    setSaving(true);
+    try {
+      await onUpdateLabels(labels.filter((item) => item.id !== pendingDeleteLabel.id));
+    } catch (error) {
+      setError(getErrorMessage(error, m.tt_json_save_failed()));
+      setPendingDeleteLabel(null);
+      return;
+    } finally {
+      setSaving(false);
+    }
+    deleteFocusRef.current = addLabelRef.current;
     toast.showSuccess(m.tt_label_deleted());
     if (editLabelId === pendingDeleteLabel.id) {
       setEditLabelId(null);
@@ -202,6 +256,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           {m.tt_labels_heading()}
         </h5>
         <Button
+          ref={addLabelRef}
           size="sm"
           onClick={() => {
             setError("");
@@ -302,7 +357,10 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                         size="sm"
                         variant="destructive"
                         aria-label={m.tt_delete_label_aria({ name: label.name })}
-                        onClick={() => setPendingDeleteLabel(label)}
+                        onClick={(event) => {
+                          deleteFocusRef.current = event.currentTarget;
+                          setPendingDeleteLabel(label);
+                        }}
                       >
                         {m.delete()}
                       </Button>
@@ -314,7 +372,21 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           </div>
         )}
 
+        {draft.conflict && (
+          <Alert aria-live="polite">
+            {m.tt_json_conflict()}
+            <JsonExample
+              summaryLabel={m.tt_json_current()}
+              json={JSON.stringify({ labels }, null, 2)}
+            />
+            <Button variant="outline" onClick={draft.reconcile}>
+              {m.tt_json_keep_draft()}
+            </Button>
+          </Alert>
+        )}
         <RawJsonEditor
+          disabled={saving}
+          applyDisabled={draft.conflict}
           summaryLabel={m.tt_raw_json_summary({ label: m.tt_labels_heading().toLowerCase() })}
           headingLabel={m.tt_json_heading({ label: m.tt_labels_heading() })}
           copyButtonLabel={m.tt_copy_json({ label: m.tt_labels_heading() })}
@@ -346,6 +418,29 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       />
 
       <ConfirmationDialog
+        isOpen={pendingJson !== null}
+        title={m.tt_json_confirm()}
+        message={m.tt_json_removals({
+          remove: labels.filter((item) => !pendingJson?.some((next) => next.id === item.id)).length,
+          add: pendingJson?.filter((item) => !labels.some((old) => old.id === item.id)).length ?? 0,
+          change:
+            pendingJson?.filter((item) =>
+              labels.some(
+                (old) => old.id === item.id && JSON.stringify(old) !== JSON.stringify(item),
+              ),
+            ).length ?? 0,
+        })}
+        onConfirm={() => {
+          if (pendingJson) {
+            setPendingJson(null);
+            void saveJson(pendingJson);
+          }
+        }}
+        onCancel={() => setPendingJson(null)}
+      />
+      <ConfirmationDialog
+        confirmDisabled={saving}
+        finalFocus={deleteFocusRef}
         isOpen={pendingDeleteLabel !== null}
         title={m.tt_delete_label_title()}
         message={
