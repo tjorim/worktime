@@ -276,7 +276,9 @@ async def list_users(
     return users, total
 
 
-async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) -> User:
+async def update_user(
+    session: AsyncSession, user_id: int, payload: UserUpdate, *, actor: AuditActor | None = None
+) -> User:
     user = await get_user(session, user_id)
     data = payload.model_dump(exclude_unset=True)
     non_nullable_fields = _get_non_nullable_model_fields(User)
@@ -289,6 +291,16 @@ async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) 
         existing = await get_user_by_username(session, username)
         if existing is not None and existing.id != user_id:
             raise ConflictError("username already exists")
+
+    if username is not None and username != user.username:
+        await _audit(
+            session,
+            actor,
+            action="rename_user",
+            resource_type="user",
+            resource_id=str(user_id),
+            details={"old_username": user.username, "new_username": username},
+        )
 
     for field, value in data.items():
         setattr(user, field, value)

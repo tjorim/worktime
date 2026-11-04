@@ -36,17 +36,12 @@ class UserRegister(RequestModel):
     ``display_name`` is optional; it defaults to the username when omitted.
     Authentication is handled by the OIDC provider; no password is stored locally.
 
-    The username pattern mirrors what OIDC auto-provisioning derives from
-    ``preferred_username``/email claims: it must start with a letter or digit
-    and may contain letters, digits, and ``. _ @ + -`` (no whitespace or
-    control characters).
+    Explicit writes share ``services.user_validation`` with create/update,
+    returning stable error codes. Response schemas and OIDC provisioning do
+    not impose these rules on existing identities.
     """
 
-    username: str = Field(
-        min_length=1,
-        max_length=150,
-        pattern=r"^[A-Za-z0-9][A-Za-z0-9._@+-]*$",
-    )
+    username: str
     display_name: str | None = None
 
 

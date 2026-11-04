@@ -49,3 +49,9 @@ export const taskValidationErrorMessages: ErrorCodeMessages = {
   task_duration_invalid: () => m.error_code_task_duration_invalid(),
   task_timezone_required: () => m.error_code_task_timezone_required(),
 };
+
+export const accountProfileErrorMessages: ErrorCodeMessages = {
+  username_invalid: () => m.error_code_username_invalid(),
+  username_reserved: () => m.error_code_username_reserved(),
+  display_name_invalid: () => m.error_code_display_name_invalid(),
+};

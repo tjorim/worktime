@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { accountDeleteErrorMessages } from "@/utils/apiErrorCodes";
+import { accountDeleteErrorMessages, accountProfileErrorMessages } from "@/utils/apiErrorCodes";
 
 interface AccountProfile {
   id: number;
@@ -106,6 +106,11 @@ export function useSettingsAccount({
       return;
     }
 
+    if (Array.from(nextDisplayName).length > 150) {
+      setProfileError(m.error_code_display_name_invalid());
+      return;
+    }
+
     setIsProfileSaving(true);
     setProfileError(null);
 
@@ -136,7 +141,9 @@ export function useSettingsAccount({
       showSuccessToast(m.account_profile_saved(), UserCheckIcon);
     } catch (error) {
       logger.error("Failed to save account profile:", error);
-      setProfileError(m.account_profile_save_failed());
+      setProfileError(
+        getErrorMessage(error, m.account_profile_save_failed(), accountProfileErrorMessages),
+      );
     } finally {
       setIsProfileSaving(false);
     }

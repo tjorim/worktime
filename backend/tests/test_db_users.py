@@ -103,3 +103,73 @@ def test_admin_cannot_delete_own_account(
     assert response.status_code == 403
     assert response.json()["code"] == "admin_self_delete_forbidden"
     assert response.json()["detail"] == "Admins cannot delete their own account via this endpoint."
+
+
+def test_username_validation(db_client, auth_headers):
+    admin = auth_headers(1, is_admin=True)
+    for name in ["", "   ", "a b/../c", "<script>x</script>", "a" * 65, "é"]:
+        response = db_client.post("/api/users/", json={"username": name, "display_name": "Name"}, headers=admin)
+        assert response.status_code == 400
+        assert response.json()["code"] == "username_invalid"
+    response = db_client.post("/api/users/", json={"username": "x" * 64, "display_name": "x" * 151}, headers=admin)
+    assert response.status_code == 400
+    assert response.json()["code"] == "display_name_invalid"
+    response = db_client.post("/api/users/", json={"username": "x" * 64, "display_name": "x" * 150}, headers=admin)
+    assert response.status_code == 201
+    response = db_client.post(
+        "/api/users/", json={"username": "  valid.name_-9  ", "display_name": "Name"}, headers=admin
+    )
+    assert response.status_code == 201
+    user = response.json()
+    assert user["username"] == "valid.name_-9"
+    for name, code in [
+        ("", "username_invalid"),
+        ("   ", "username_invalid"),
+        ("a b", "username_invalid"),
+        ("a" * 65, "username_invalid"),
+        ("ADMIN", "username_reserved"),
+        ("root", "username_reserved"),
+    ]:
+        response = db_client.put(f"/api/users/{user['id']}", json={"username": name}, headers=auth_headers(user["id"]))
+        assert response.status_code == 400
+        assert response.json()["code"] == code
+    response = db_client.put(f"/api/users/{user['id']}", json={"username": "admin"}, headers=admin)
+    assert response.status_code == 200
+    response = db_client.put(
+        f"/api/users/{user['id']}", json={"display_name": "x" * 151}, headers=auth_headers(user["id"])
+    )
+    assert response.json()["code"] == "display_name_invalid"
+    assert (
+        db_client.put(
+            f"/api/users/{user['id']}",
+            json={"username": "admin", "display_name": "x" * 150},
+            headers=auth_headers(user["id"]),
+        ).status_code
+        == 200
+    )
+
+
+async def test_legacy_username_and_rename_audit(db_client, auth_headers, db_session):
+    from app.database.models import User, AuditEntry
+    from sqlalchemy import select
+
+    user = User(username=" legacy / name ", display_name="x" * 200, settings={})
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    headers = auth_headers(user.id)
+    assert db_client.get(f"/api/users/{user.id}", headers=headers).status_code == 200
+    assert (
+        db_client.put(
+            f"/api/users/{user.id}",
+            json={"username": user.username, "display_name": user.display_name, "settings": {}},
+            headers=headers,
+        ).status_code
+        == 200
+    )
+    response = db_client.put(
+        f"/api/users/{user.id}", json={"username": " repaired "}, headers=auth_headers(user.id, is_admin=True)
+    )
+    assert response.status_code == 200
+    entry = (await db_session.execute(select(AuditEntry).where(AuditEntry.action == "rename_user"))).scalar_one()
+    assert entry.details == {"old_username": " legacy / name ", "new_username": "repaired"}
