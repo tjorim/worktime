@@ -347,6 +347,39 @@ describe("SettingsPage Account Section", () => {
     expect(mockSignoutRedirect).toHaveBeenCalled();
   });
 
+  it("groups account load failures into one notification and retries the profile inline", async () => {
+    mockAuthenticatedUser("Alice");
+    let unavailable = true;
+    server.use(
+      ...["*/api/me", "*/api/access-tokens", "*/api/ical", "*/api/integration-clients"].map(
+        (path) =>
+          http.get(path, () =>
+            unavailable
+              ? new HttpResponse(null, { status: 503 })
+              : HttpResponse.json({
+                  id: 1,
+                  display_name: "Recovered",
+                  username: "alice",
+                  capabilities: { backup_enabled: false },
+                  items: [],
+                  configured: false,
+                }),
+          ),
+      ),
+    );
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+    const banner = await screen.findByText(/Some account sections could not be loaded/);
+    expect(banner).toHaveAttribute("role", "alert");
+    await screen.findByText("Could not load your API tokens right now.");
+    expect(screen.getAllByText(/Some account sections could not be loaded/)).toHaveLength(1);
+    expect(
+      screen.getByText("Could not load your API tokens right now.").closest('[role="note"]'),
+    ).not.toBeNull();
+    unavailable = false;
+    await userEvent.setup().click(screen.getAllByRole("button", { name: "Retry" })[0]!);
+    expect(await screen.findByDisplayValue("Recovered")).toBeInTheDocument();
+  });
+
   it("loads profile details and sync stats for authenticated users", async () => {
     mockAuthenticatedUser("Alice");
 

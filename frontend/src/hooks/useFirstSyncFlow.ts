@@ -32,6 +32,7 @@ import {
   buildKeepLocalReplacePayload,
   buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  syncDatasetsMatch,
   countPushConflicts,
   extractConflictedItems,
   fetchPreferences,
@@ -60,6 +61,7 @@ import {
   USER_STATE_SWITCH_STORAGE_KEY,
   USER_STATE_UNCLAIMED_STORAGE_KEY,
   USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY,
+  SYNC_DISMISSED_SESSION_KEY_PREFIX,
   getAccountPreferencesKey,
   USER_STATE_OWNER_STORAGE_KEY,
 } from "@/constants/storageKeys";
@@ -352,7 +354,11 @@ export function useFirstSyncFlow(
   const runFlow = useCallback(
     async (uid: string, fetch: (url: string, init?: RequestInit) => Promise<Response>) => {
       // Skip if we already ran for this user in this session.
-      if (flowStartedForUser.current === uid) return;
+      if (
+        flowStartedForUser.current === uid ||
+        sessionStorage.getItem(`${SYNC_DISMISSED_SESSION_KEY_PREFIX}${uid}`)
+      )
+        return;
       flowStartedForUser.current = uid;
       setPhase("checking");
 
@@ -511,6 +517,14 @@ export function useFirstSyncFlow(
           code: "conflict_snapshot_failed",
         });
         setPhase("error");
+        return;
+      }
+      if (syncDatasetsMatch(localPayload, serverData)) {
+        applyPullToCollections(serverData);
+        await reconcilePreferences(syncFetch, uid);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+        storeSyncCursor(uid, serverData.server_timestamp);
+        setPhase("done");
         return;
       }
       capturedServerDataRef.current = serverData;
@@ -747,16 +761,17 @@ export function useFirstSyncFlow(
   );
 
   const dismiss = useCallback(() => {
+    if (userId) sessionStorage.setItem(`${SYNC_DISMISSED_SESSION_KEY_PREFIX}${userId}`, "1");
     setPhase("idle");
     capturedStatusRef.current = null;
     capturedServerDataRef.current = null;
     setConflictCounts(null);
-    // Reset so the flow can re-run on next sign-in or page reload.
+    // The session dismissal survives reloads, independently of dataset equality.
     // It will not re-trigger automatically in the current session.
     flowStartedForUser.current = null;
     // Clear the conflict resolution lock.
     conflictResolutionForUserRef.current = null;
-  }, []);
+  }, [userId]);
 
   // Reset the flow state when the user signs out.
   useEffect(() => {

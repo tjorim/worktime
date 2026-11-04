@@ -27,6 +27,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  SYNC_WRITE_ACTIVITY_EVENT,
+  SYNC_OUTBOX_CHANGED_EVENT,
   appendToSyncOutbox,
   bumpClientTimestamps,
   countPushConflicts,
@@ -135,6 +137,7 @@ export function useOngoingSync(
   triggerPull: TriggerPullFn;
   resolveOngoingConflicts: ResolveOngoingConflictsFn;
 } {
+  const [activeWrites, setActiveWrites] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
     if (!userId) return null;
@@ -397,6 +400,28 @@ export function useOngoingSync(
     [isActive, userId, fetchFn, conflictCount, scheduleBackOff, clearBackOff],
   );
 
+  // Collection writes use the same durable outbox, outside this hook.
+  // Observe same-tab writes immediately; storage events only reach other tabs.
+  useEffect(() => {
+    if (!isActive || !userId) return;
+    const refresh = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== userId) return;
+      setOutboxCount(getSyncOutboxSize(userId));
+      setHasSyncError(true);
+      if (retryAfterRef.current === null) scheduleBackOff();
+    };
+    const activity = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId: string; delta: number }>).detail;
+      if (detail.userId === userId) setActiveWrites((count) => Math.max(0, count + detail.delta));
+    };
+    window.addEventListener(SYNC_WRITE_ACTIVITY_EVENT, activity);
+    window.addEventListener(SYNC_OUTBOX_CHANGED_EVENT, refresh);
+    return () => {
+      window.removeEventListener(SYNC_WRITE_ACTIVITY_EVENT, activity);
+      window.removeEventListener(SYNC_OUTBOX_CHANGED_EVENT, refresh);
+    };
+  }, [isActive, userId, scheduleBackOff]);
+
   // Keep a stable ref to the latest flushAndPull so the back-off timer
   // (scheduled outside React's render cycle) never calls a stale closure.
   useEffect(() => {
@@ -453,6 +478,7 @@ export function useOngoingSync(
     setLastSyncedAt(userId ? localStorage.getItem(getSyncCursorKey(userId)) : null);
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
     setQuarantineCount(userId ? getSyncQuarantineSize(userId) : 0);
+    setActiveWrites(0);
     setHasSyncError(false);
     setConflictCount(0);
     conflictedPayloadRef.current = null;
@@ -503,6 +529,7 @@ export function useOngoingSync(
     (change: SyncPushPayload) => {
       if (!isActive || !userId || !fetchFn) return;
 
+      setActiveWrites((count) => count + 1);
       const doEnqueue = async () => {
         // Recorded before the push so the post-push pull (below) can request
         // everything from this point forward — including any concurrent
@@ -539,7 +566,7 @@ export function useOngoingSync(
           setOutboxCount(getSyncOutboxSize(userId));
           setHasSyncError(true);
           if (queued) {
-            scheduleBackOff();
+            if (retryAfterRef.current === null) scheduleBackOff();
           } else {
             // localStorage rejected the write (quota, private browsing). The
             // change is now only in memory; say so rather than showing a
@@ -654,6 +681,8 @@ export function useOngoingSync(
             appendToSyncOutbox(userId, change);
             setOutboxCount(getSyncOutboxSize(userId));
           }
+        } finally {
+          if (mountedRef.current) setActiveWrites((count) => Math.max(0, count - 1));
         }
       });
     },
@@ -735,7 +764,7 @@ export function useOngoingSync(
   return {
     isSyncing,
     lastSyncedAt,
-    outboxCount,
+    outboxCount: outboxCount + activeWrites,
     quarantineCount,
     hasSyncError,
     conflictCount,

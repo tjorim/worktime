@@ -40,6 +40,7 @@ export function useSettingsIntegrationClients({
 }: Params) {
   const [clients, setClients] = useState<IntegrationClient[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [createdClient, setCreatedClient] = useState<CreatedIntegrationClient | null>(null);
@@ -55,6 +56,7 @@ export function useSettingsIntegrationClients({
     async (expectedSession = sessionGeneration.current) => {
       const expectedLoad = ++loadGeneration.current;
       setIsLoading(true);
+      setLoadFailed(false);
       setError(null);
       try {
         const response = await fetchFn("/api/integration-clients");
@@ -72,6 +74,7 @@ export function useSettingsIntegrationClients({
           loadGeneration.current !== expectedLoad
         )
           return;
+        setLoadFailed(true);
         logger.error("Failed to load integration clients:", loadError);
         setError(
           getErrorMessage(
@@ -211,6 +214,8 @@ export function useSettingsIntegrationClients({
   };
 
   return {
+    loadFailed,
+    retry: () => void loadClients(),
     clients,
     isLoading,
     error,

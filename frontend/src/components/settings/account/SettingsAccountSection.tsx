@@ -33,6 +33,7 @@ interface SettingsAccountSectionProps {
   accountId: number | null;
   userId: string | null;
   isAdmin: boolean;
+  onRetryProfile?: () => void;
   profileError: string | null;
   isProfileLoading: boolean;
   profileDraft: string;
@@ -55,6 +56,7 @@ export function SettingsAccountSection({
   accountId,
   userId,
   isAdmin,
+  onRetryProfile,
   profileError,
   isProfileLoading,
   profileDraft,
@@ -93,7 +95,18 @@ export function SettingsAccountSection({
             </Button>
           </div>
 
-          {profileError ? <Alert variant="warning">{profileError}</Alert> : null}
+          {profileError ? (
+            <div>
+              <Alert role={onRetryProfile ? "note" : "alert"} variant="warning">
+                {profileError}
+              </Alert>
+              {onRetryProfile ? (
+                <Button variant="outline" size="sm" onClick={onRetryProfile}>
+                  {m.sync_retry_in_label()}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
 
           <Alert variant="info">
             <div>

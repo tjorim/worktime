@@ -52,6 +52,7 @@ import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
   MAX_SYNC_PUSH_ITEMS,
+  SYNC_WRITE_ACTIVITY_EVENT,
   appendToSyncOutbox,
   reportTaskRejections,
   countPushConflicts,
@@ -349,6 +350,12 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     return;
   }
 
+  const writeUserId = _currentUserId;
+  const notifyActivity = (delta: number) =>
+    window.dispatchEvent(
+      new CustomEvent(SYNC_WRITE_ACTIVITY_EVENT, { detail: { userId: writeUserId, delta } }),
+    );
+  notifyActivity(1);
   try {
     const response = await collectionFetch("/api/sync/push", {
       method: "POST",
@@ -362,14 +369,16 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     reportTaskRejections(result);
     if (countPushConflicts(result) > 0) {
       // Preserve rejected local edits for the existing conflict-resolution flow.
-      appendToSyncOutbox(_currentUserId, payload);
+      appendToSyncOutbox(writeUserId, payload);
     }
     // Refresh lastSyncedAt/outbox/error state right away rather than leaving
     // the sync status badge stale until an unrelated trigger happens to pull.
     _triggerPull?.();
   } catch {
     // Push failed — enqueue to outbox for retry on next sync cycle.
-    appendToSyncOutbox(_currentUserId, payload);
+    appendToSyncOutbox(writeUserId, payload);
+  } finally {
+    notifyActivity(-1);
   }
 }
 

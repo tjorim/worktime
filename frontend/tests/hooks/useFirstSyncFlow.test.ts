@@ -16,7 +16,7 @@ import {
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { tasksCollection, timeOffCollection } from "@/db/collections";
 import { getPreferenceOwner } from "@/utils/preferenceStorage";
-import { reconcilePreferences } from "@/utils/syncClient";
+import { buildLocalSyncPushPayload, reconcilePreferences } from "@/utils/syncClient";
 import * as collections from "@/db/collections";
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -75,6 +75,7 @@ function seedTimeOff() {
 
 describe("useFirstSyncFlow", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     mockFetch.mockReset();
     localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-1");
   });
@@ -877,21 +878,43 @@ describe("useFirstSyncFlow", () => {
     });
   });
 
-  it("dismiss resets phase to idle", async () => {
+  it.each([false, true])(
+    "compares content before suppressing reconciliation (different: %s)",
+    async (different) => {
+      seedTimeOff();
+      const payload = buildLocalSyncPushPayload();
+      const item = payload.time_off_entries[0]!;
+      const snapshot = {
+        ...emptyPullResponse,
+        time_off_entries: [
+          { ...item, id: 1, entry_id: different ? "different-id" : item.id, deleted_at: null },
+        ],
+      };
+      mockFetch.mockImplementation(async (url: string) => ({
+        ok: true,
+        json: async () =>
+          url.includes("/status") ? populatedStatus : url.includes("/pull") ? snapshot : null,
+      }));
+      const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
+      await waitFor(() => expect(result.current.phase).toBe(different ? "conflict" : "done"));
+    },
+  );
+
+  it("dismiss resets phase to idle and survives a remount for this session", async () => {
     seedTasks();
     mockFetch.mockResolvedValue({ ok: true, json: async () => populatedStatus });
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.phase).toBe("conflict");
+    const { result, unmount } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), {
+      wrapper,
     });
-
-    act(() => {
-      result.current.dismiss();
-    });
-
+    await waitFor(() => expect(result.current.phase).toBe("conflict"));
+    act(() => result.current.dismiss());
     expect(result.current.phase).toBe("idle");
+    unmount();
+    mockFetch.mockClear();
+    const remounted = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
+    expect(remounted.result.current.phase).toBe("idle");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("Branch A: pushes preferences after entity sync when local prefs exist", async () => {

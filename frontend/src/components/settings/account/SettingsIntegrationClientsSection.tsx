@@ -29,6 +29,7 @@ const formatDate = (iso: string) => new Intl.DateTimeFormat(getLocale()).format(
 interface Props {
   clients: IntegrationClient[] | null;
   isLoading: boolean;
+  onRetry?: () => void;
   error: string | null;
   isCreating: boolean;
   createdClient: CreatedIntegrationClient | null;
@@ -139,8 +140,13 @@ export function SettingsIntegrationClientsSection(props: Props) {
         </div>
       </div>
       {props.error ? (
-        <Alert variant="destructive" className="mb-3">
+        <Alert role={props.onRetry ? "note" : "alert"} variant="destructive" className="mb-3">
           {props.error}
+          {props.onRetry ? (
+            <Button variant="outline" size="sm" onClick={props.onRetry}>
+              {m.sync_retry_in_label()}
+            </Button>
+          ) : null}
         </Alert>
       ) : null}
       {props.isLoading ? (

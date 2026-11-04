@@ -1,7 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
-import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/syncClient";
+import {
+  SYNC_WRITE_ACTIVITY_EVENT,
+  appendToSyncOutbox,
+  getSyncOutboxSize,
+  storeSyncCursor,
+} from "@/utils/syncClient";
 import type { SyncPushPayload } from "@/utils/syncClient";
 import {
   USER_STATE_OWNER_STORAGE_KEY,
@@ -45,6 +50,43 @@ describe("useOngoingSync", () => {
   afterEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it("reports external offline writes immediately and recovers through automatic retry", async () => {
+    vi.stubGlobal("navigator", { ...navigator, onLine: false });
+    mockFetch.mockResolvedValue({ ok: false, status: 503 });
+    const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+    act(() =>
+      window.dispatchEvent(
+        new CustomEvent(SYNC_WRITE_ACTIVITY_EVENT, { detail: { userId: "user-1", delta: 1 } }),
+      ),
+    );
+    expect(result.current.outboxCount).toBe(1);
+    act(() => {
+      appendToSyncOutbox("user-1", emptySyncPayload());
+      window.dispatchEvent(
+        new CustomEvent(SYNC_WRITE_ACTIVITY_EVENT, { detail: { userId: "user-1", delta: -1 } }),
+      );
+    });
+    expect(result.current.outboxCount).toBe(1);
+    expect(result.current.hasSyncError).toBe(true);
+    expect(result.current.conflictCount).toBe(0);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled(), { timeout: 2500 });
+    expect(getSyncOutboxSize("user-1")).toBe(1);
+    mockFetch.mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.includes("/push")
+          ? emptyPushResponse
+          : url.includes("/pull")
+            ? incrementalPullResponse
+            : {},
+    }));
+    act(() => result.current.triggerPull());
+    await waitFor(() => expect(result.current.hasSyncError).toBe(false));
+    expect(result.current.outboxCount).toBe(0);
+    expect(getSyncOutboxSize("user-1")).toBe(0);
+    expect(result.current.conflictCount).toBe(0);
   });
 
   it("does not PUT undated unchanged preferences across consecutive sync cycles", async () => {
@@ -114,6 +156,24 @@ describe("useOngoingSync", () => {
   });
 
   describe("enqueueChange", () => {
+    it("counts a write before its network request settles", async () => {
+      vi.stubGlobal("navigator", { ...navigator, onLine: false });
+      let settle!: (response: unknown) => void;
+      mockFetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            settle = resolve;
+          }),
+      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
+      act(() => result.current.enqueueChange(emptySyncPayload()));
+      expect(result.current.outboxCount).toBe(1);
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledOnce());
+      await act(async () => settle({ ok: false, status: 503 }));
+      expect(result.current.outboxCount).toBe(1);
+      expect(result.current.hasSyncError).toBe(true);
+    });
+
     it("pushes the change immediately when online and updates lastSyncedAt", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
       const postPushPullResponse = {

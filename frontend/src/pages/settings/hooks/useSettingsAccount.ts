@@ -34,6 +34,7 @@ export function useSettingsAccount({
   const [profileDraft, setProfileDraft] = useState("");
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
@@ -52,12 +53,14 @@ export function useSettingsAccount({
     }
   }
 
+  const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
     if (!isAuthenticated) {
       return;
     }
 
     let isCancelled = false;
+    setProfileLoadFailed(false);
     setIsProfileLoading(true);
     setProfileError(null);
 
@@ -74,6 +77,7 @@ export function useSettingsAccount({
       .catch((error) => {
         if (isCancelled) return;
         logger.error("Failed to load account profile:", error);
+        setProfileLoadFailed(true);
         setProfileError(m.account_profile_load_failed());
       })
       .finally(() => {
@@ -85,7 +89,7 @@ export function useSettingsAccount({
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated, fetchFn]);
+  }, [isAuthenticated, fetchFn, loadAttempt]);
 
   const hasProfileChanges =
     accountProfile !== null &&
@@ -161,6 +165,8 @@ export function useSettingsAccount({
   };
 
   return {
+    profileLoadFailed,
+    retryProfile: () => setLoadAttempt((attempt) => attempt + 1),
     accountProfile,
     profileDraft,
     setProfileDraft,
