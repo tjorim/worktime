@@ -389,12 +389,10 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
  * A query collection drops a mutation's optimistic layer when its handler
  * resolves, so something has to write the change into the synced rows or it
  * would vanish (offline and signed-out edits have no server copy to refetch).
- * TanStack DB used to refetch implicitly after every handler; that is
- * deprecated, and a whole-snapshot refetch from inside a handler can apply a
+ * A whole-snapshot refetch from inside a handler can apply a
  * stale snapshot over a later mutation. Writing the mutation's own rows
  * directly is exact; the server's view still arrives through the pull that
- * `pushAndQueue` triggers. Returning `{ refetch: false }` skips the implicit
- * refetch.
+ * `pushAndQueue` triggers.
  */
 async function pushAndCommit<TItem extends object>(
   payload: SyncPushPayload,
@@ -412,7 +410,7 @@ async function pushAndCommit<TItem extends object>(
       mutations: ReadonlyArray<{ type: string; key: string | number; modified: TItem }>;
     };
   },
-): Promise<{ refetch: false }> {
+): Promise<void> {
   await pushAndQueue(payload);
   for (const m of transaction.mutations) {
     if (m.type !== "delete") {
@@ -426,7 +424,6 @@ async function pushAndCommit<TItem extends object>(
       if (!(err instanceof Error && err.name === "DeleteOperationItemNotFoundError")) throw err;
     }
   }
-  return { refetch: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -838,7 +835,7 @@ export const labelsCollection = createCollection(
     getKey: (label) => label.id,
     staleTime: Infinity,
     queryFn: (): Promise<Label[]> =>
-      syncQueryFn("labels", labelsCollection, (data) =>
+      syncQueryFn<Label>("labels", labelsCollection, (data) =>
         data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
       ),
     onInsert: async ({ transaction, collection }) => {
@@ -908,7 +905,7 @@ export const tasksCollection = createCollection(
     getKey: (task) => task.id,
     staleTime: Infinity,
     queryFn: (): Promise<StoredTimeTrackingTask[]> =>
-      syncQueryFn("tasks", tasksCollection, (data) =>
+      syncQueryFn<StoredTimeTrackingTask>("tasks", tasksCollection, (data) =>
         data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
       ),
     onInsert: async ({ transaction, collection }) => {
@@ -986,7 +983,7 @@ export const templatesCollection = createCollection(
     getKey: (template) => template.id,
     staleTime: Infinity,
     queryFn: (): Promise<TimeTrackingTemplate[]> =>
-      syncQueryFn("templates", templatesCollection, (data) =>
+      syncQueryFn<TimeTrackingTemplate>("templates", templatesCollection, (data) =>
         data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
       ),
     onInsert: async ({ transaction, collection }) => {
@@ -1060,7 +1057,7 @@ export const timeOffCollection = createCollection(
     getKey: (entry) => entry.id,
     staleTime: Infinity,
     queryFn: (): Promise<TimeOffEntry[]> =>
-      syncQueryFn("time-off-entries", timeOffCollection, (data) =>
+      syncQueryFn<TimeOffEntry>("time-off-entries", timeOffCollection, (data) =>
         _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
       ),
     onInsert: async ({ transaction, collection }) => {
@@ -1193,7 +1190,7 @@ export const ganttTasksCollection = createCollection(
     getKey: (task) => task.id,
     staleTime: Infinity,
     queryFn: (): Promise<GanttTask[]> =>
-      syncQueryFn("gantt-tasks", ganttTasksCollection, (data) =>
+      syncQueryFn<GanttTask>("gantt-tasks", ganttTasksCollection, (data) =>
         (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
       ),
     onInsert: async ({ transaction, collection }) => {
@@ -1278,7 +1275,7 @@ export const workLocationsCollection = createCollection(
     getKey: (entry) => entry.date,
     staleTime: Infinity,
     queryFn: (): Promise<WorkLocationEntry[]> =>
-      syncQueryFn("work-locations", workLocationsCollection, (data) =>
+      syncQueryFn<WorkLocationEntry>("work-locations", workLocationsCollection, (data) =>
         data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
       ),
     onInsert: async ({ transaction, collection }) => {

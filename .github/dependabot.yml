@@ -75,6 +75,7 @@ updates:
       # Group TanStack DB packages (must update together or pipelines fail)
       tanstack-db:
         patterns:
+          - "@tanstack/db"
           - "@tanstack/query-db-collection"
           - "@tanstack/react-db"
       # Group Schedule-X packages (calendar component + its plugins)
