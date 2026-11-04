@@ -41,6 +41,8 @@ import {
 } from "@/lib/timeOff/types";
 import { TimeOffToolbar } from "@/components/timeOff/TimeOffToolbar";
 import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
+import { formatDisplayDate } from "@/utils/dateTimeUtils";
+import { getEventFlagLabel } from "@/data/timeoffConstants";
 import type { TimeOffViewMode } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
@@ -149,7 +151,7 @@ export function TimeOffTableView({
           searchText: [
             typeLabel,
             entry.note ?? "",
-            flags.join(" "),
+            flags.map(getEventFlagLabel).join(", "),
             getEntryDisplayDateText(entry),
             getEntryIsoDateText(entry),
           ]
@@ -184,7 +186,7 @@ export function TimeOffTableView({
           header: () => m.timeoff_col_title(),
           sortFn: "text",
         }),
-        columnHelper.accessor((row) => row.flags.join(", "), {
+        columnHelper.accessor((row) => row.flags.map(getEventFlagLabel).join(", "), {
           id: "flags",
           header: () => m.timeoff_col_flags(),
           sortFn: "text",
@@ -336,7 +338,9 @@ export function TimeOffTableView({
                         </span>
                       )}
                       {flags.length > 0 && (
-                        <p className="my-2 text-sm text-muted-foreground">{flags.join(", ")}</p>
+                        <p className="my-2 text-sm text-muted-foreground">
+                          {flags.map(getEventFlagLabel).join(", ")}
+                        </p>
                       )}
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Button
@@ -425,7 +429,7 @@ export function TimeOffTableView({
                           <TableCell>
                             {flags.length ? (
                               <span className="text-sm text-muted-foreground">
-                                {flags.join(", ")}
+                                {flags.map(getEventFlagLabel).join(", ")}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
@@ -485,7 +489,7 @@ export function TimeOffTableView({
 }
 
 function toDisplayDate(value: string): string {
-  return value.replace(/-/g, "/");
+  return formatDisplayDate(value);
 }
 
 const WEEKDAY_MESSAGES = [

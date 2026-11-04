@@ -50,7 +50,8 @@ interface ToastContextType {
   addToast: (message: Omit<ToastMessage, "id">) => string;
   removeToast: (id: string) => void;
   showSuccess: (message: string, icon?: LucideIcon) => void;
-  showError: (message: string, icon?: LucideIcon) => void;
+  /** Show an error toast and return its id so callers can dismiss it later. */
+  showError: (message: string, icon?: LucideIcon) => string;
   showWarning: (message: string, icon?: LucideIcon) => void;
   showInfo: (message: string, icon?: LucideIcon) => void;
   /**
@@ -202,7 +203,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const showError = useCallback(
     (message: string, icon?: LucideIcon) => {
-      addToast({
+      return addToast({
         message,
         variant: "danger",
         icon: icon ?? CircleXIcon,

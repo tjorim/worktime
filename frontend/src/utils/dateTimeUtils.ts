@@ -7,6 +7,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/en-gb";
+import { getLocale } from "@/paraglide/runtime.js";
 
 dayjs.extend(isoWeek);
 dayjs.extend(isLeapYear);
@@ -28,8 +29,33 @@ export const formatISODate = (date: Date): string => {
   return dayjs(date).format("YYYY-MM-DD");
 };
 
-export const formatDisplayDate = (date: Date): string => {
-  return dayjs(date).format("ddd, MMM D");
+/** BCP 47 tag used for every user-facing date and time; British conventions for English. */
+const getDisplayLocale = (): string => (getLocale() === "nl" ? "nl-NL" : "en-GB");
+
+/**
+ * The one user-facing date format: day, abbreviated month, year ("2 Nov 2026" / "2 nov 2026").
+ * Serialization formats (ISO, .hday) stay separate. Returns an em dash for unparseable input.
+ */
+export const formatDisplayDate = (value: string | number | Date | Dayjs): string => {
+  const date = dayjs(value);
+  if (!date.isValid()) return "—";
+  return new Intl.DateTimeFormat(getDisplayLocale(), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date.toDate());
+};
+
+/** The one user-facing timestamp format: `formatDisplayDate` plus a 24-hour time ("2 Nov 2026 22:24"). */
+export const formatDisplayDateTime = (value: string | number | Date | Dayjs): string => {
+  const date = dayjs(value);
+  if (!date.isValid()) return "—";
+  const time = new Intl.DateTimeFormat(getDisplayLocale(), {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date.toDate());
+  return `${formatDisplayDate(date)} ${time}`;
 };
 
 /**

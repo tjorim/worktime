@@ -16,12 +16,8 @@ import {
 } from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
 import type { ApiToken, CreatedApiToken } from "@/pages/settings/hooks/useSettingsApiTokens";
-import { getLocale } from "@/paraglide/runtime.js";
+import { formatDisplayDate } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
-
-function formatTokenDate(iso: string): string {
-  return new Intl.DateTimeFormat(getLocale()).format(new Date(iso));
-}
 
 interface SettingsApiTokensSectionProps {
   apiTokens: ApiToken[] | null;
@@ -147,9 +143,9 @@ export function SettingsApiTokensSection({
                 <div className="font-medium">{token.name}</div>
                 <div className="text-sm text-muted-foreground">
                   •••• {token.token_preview} · {m.api_tokens_created_at_label()}{" "}
-                  {formatTokenDate(token.created_at)} · {m.api_tokens_last_used_label()}{" "}
+                  {formatDisplayDate(token.created_at)} · {m.api_tokens_last_used_label()}{" "}
                   {token.last_used_at
-                    ? formatTokenDate(token.last_used_at)
+                    ? formatDisplayDate(token.last_used_at)
                     : m.api_tokens_last_used_never()}
                 </div>
                 <div className="text-sm text-muted-foreground">

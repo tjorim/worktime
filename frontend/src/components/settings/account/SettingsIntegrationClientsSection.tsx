@@ -21,10 +21,8 @@ import type {
   IntegrationClient,
   IntegrationClientScope,
 } from "@/pages/settings/hooks/useSettingsIntegrationClients";
-import { getLocale } from "@/paraglide/runtime.js";
+import { formatDisplayDate } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
-
-const formatDate = (iso: string) => new Intl.DateTimeFormat(getLocale()).format(new Date(iso));
 
 interface Props {
   clients: IntegrationClient[] | null;
@@ -167,9 +165,9 @@ export function SettingsIntegrationClientsSection(props: Props) {
                 </div>
                 <div className="text-sm text-muted-foreground">
                   •••• {client.key_preview} · {m.api_tokens_created_at_label()}{" "}
-                  {formatDate(client.created_at)} · {m.api_tokens_last_used_label()}{" "}
+                  {formatDisplayDate(client.created_at)} · {m.api_tokens_last_used_label()}{" "}
                   {client.last_used_at
-                    ? formatDate(client.last_used_at)
+                    ? formatDisplayDate(client.last_used_at)
                     : m.api_tokens_last_used_never()}
                 </div>
                 <div className="text-sm text-muted-foreground">

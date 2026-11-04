@@ -340,6 +340,7 @@ export function SettingsContent({
   });
   const teamAuditTrail = useSettingsAuditTrail({
     enabled: activeSection === "admin" && isAuthenticated && isAdmin,
+    resourceOwnerId: accountProfile?.id,
     fetchFn,
   });
 
@@ -538,6 +539,7 @@ export function SettingsContent({
           <>
             <SettingsAuditTrailSection
               {...personalAuditTrail}
+              users={accountProfile ? [accountProfile] : []}
               onLoadMore={() => void personalAuditTrail.loadMore()}
             />
             <SettingsApiTokensSection
@@ -587,6 +589,7 @@ export function SettingsContent({
           />
           <SettingsAuditTrailSection
             {...teamAuditTrail}
+            users={adminUsers}
             teamWide
             onLoadMore={() => void teamAuditTrail.loadMore()}
           />

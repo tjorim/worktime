@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
+import { tasksCollection, ganttTasksCollection, labelsCollection } from "@/db/collections";
 import { ApiError } from "@/utils/apiError";
 
 export interface AuditEntry {
@@ -12,6 +13,7 @@ export interface AuditEntry {
   action: string;
   resource_type: string;
   resource_id: string;
+  resource_display_name?: string;
   request_id: string | null;
   details: Record<string, unknown>;
   created_at: string;
@@ -22,10 +24,16 @@ const PAGE_SIZE = 25;
 interface UseSettingsAuditTrailParams {
   enabled: boolean;
   userId?: number;
+  resourceOwnerId?: number;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
-export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsAuditTrailParams) {
+export function useSettingsAuditTrail({
+  enabled,
+  userId,
+  resourceOwnerId = userId,
+  fetchFn,
+}: UseSettingsAuditTrailParams) {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -42,9 +50,26 @@ export function useSettingsAuditTrail({ enabled, userId, fetchFn }: UseSettingsA
       const response = await fetchFn(`/api/audit?${params.toString()}`);
       if (!response.ok) throw await ApiError.fromResponse(response);
       const payload = (await response.json()) as { items?: AuditEntry[] };
-      return payload.items ?? [];
+      return (payload.items ?? []).map((entry) => {
+        // Local collections belong to the signed-in account. Never resolve another
+        // user's ids against them in the team-wide trail; deleted items retain ids.
+        if (resourceOwnerId === undefined || entry.actor_user_id !== resourceOwnerId) return entry;
+        const collection =
+          entry.resource_type === "time_tracking_task"
+            ? tasksCollection
+            : entry.resource_type === "gantt_task"
+              ? ganttTasksCollection
+              : entry.resource_type === "label"
+                ? labelsCollection
+                : null;
+        const resource = collection?.toArray.find((item) => item.id === entry.resource_id);
+        const name =
+          resource &&
+          ("text" in resource ? resource.text : "name" in resource ? resource.name : undefined);
+        return typeof name === "string" ? { ...entry, resource_display_name: name } : entry;
+      });
     },
-    [fetchFn, userId],
+    [fetchFn, userId, resourceOwnerId],
   );
 
   // Reset the loaded entries the moment the trail becomes disabled, rather

@@ -24,8 +24,9 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
+import { getEventFlagLabel } from "@/data/timeoffConstants";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
-import { getWeekdayName } from "@/utils/dateTimeUtils";
+import { formatDisplayDate, getWeekdayName } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 type FlagRadioProps = {
@@ -50,32 +51,6 @@ function FlagRadio({ id, label, value }: FlagRadioProps) {
       </FieldLabel>
     </Field>
   );
-}
-
-/**
- * Get human-readable label for an event flag.
- * Used for displaying flags as badges in view mode.
- *
- * @param flag - The event flag key
- * @returns Human-readable label for the flag
- */
-function getFlagLabel(flag: EventFlag): string {
-  const labels: Record<string, () => string> = {
-    business: m.timeoff_flag_business,
-    course: m.timeoff_flag_course,
-    in: m.timeoff_flag_in,
-    weekend: m.timeoff_flag_weekend,
-    birthday: m.timeoff_flag_birthday,
-    holiday: m.timeoff_flag_holiday,
-    ill: m.timeoff_flag_ill,
-    other: m.timeoff_flag_other,
-    half_am: m.timeoff_flag_half_am,
-    half_pm: m.timeoff_flag_half_pm,
-    onsite: m.timeoff_flag_onsite,
-    no_fly: m.timeoff_flag_no_fly,
-    can_fly: m.timeoff_flag_can_fly,
-  };
-  return labels[flag]?.() ?? flag;
 }
 
 /**
@@ -155,7 +130,7 @@ function FlagSection<Flag extends EventFlag | "none">({
             .filter((f) => flagGroup.includes(f))
             .map((flag) => (
               <Badge key={flag} variant="secondary">
-                {getFlagLabel(flag)}
+                {getEventFlagLabel(flag)}
               </Badge>
             ))}
           {!eventFlags.some((f) => flagGroup.includes(f)) && (
@@ -334,8 +309,8 @@ export function EventModal({
                               entry.entryKind === "weekly"
                                 ? m.timeoff_every_weekday({ day: getWeekdayName(entry.weekday) })
                                 : entry.entryKind === "date"
-                                  ? entry.date
-                                  : `${entry.start} – ${entry.end}`,
+                                  ? formatDisplayDate(entry.date)
+                                  : `${formatDisplayDate(entry.start)} – ${formatDisplayDate(entry.end)}`,
                           })}
                         </div>
                       ))}
@@ -359,15 +334,18 @@ export function EventModal({
                             : ""
                           : eventStart
                             ? eventEnd && eventEnd !== eventStart
-                              ? "· " + eventStart + " → " + eventEnd
-                              : "· " + eventStart
+                              ? "· " +
+                                formatDisplayDate(eventStart) +
+                                " → " +
+                                formatDisplayDate(eventEnd)
+                              : "· " + formatDisplayDate(eventStart)
                             : m.event_modal_select_date()}
                       </div>
                       {eventTitle && <div className="text-muted-foreground">{eventTitle}</div>}
                       {eventFlags.length > 0 && (
                         <div className="text-sm text-muted-foreground">
                           {m.event_modal_flags_label({
-                            flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
+                            flags: eventFlags.map((flag) => getEventFlagLabel(flag)).join(", "),
                           })}
                         </div>
                       )}

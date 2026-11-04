@@ -295,6 +295,8 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
+  // Tracks the form validation toast so it never lingers beside a later success toast.
+  const validationToastIdRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Pull/push concurrency guard, shared by both: a pull racing a push (or
   // vice versa) could apply a stale GET after a newer PUT completes, or send
@@ -383,8 +385,10 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   };
 
   const handleSubmitEvent = () => {
+    if (validationToastIdRef.current) toast.removeToast(validationToastIdRef.current);
+    validationToastIdRef.current = null;
     if (!validateForm()) {
-      toast.showError(m.timeoff_fix_validation());
+      validationToastIdRef.current = toast.showError(m.timeoff_fix_validation());
       return;
     }
 

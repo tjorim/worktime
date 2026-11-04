@@ -7,7 +7,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 interface UseSettingsSyncStatusParams {
@@ -95,9 +95,7 @@ export function useSettingsSyncStatus({
     () => ({
       retryInSeconds:
         retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - now) / 1_000)) : null,
-      lastSyncedLabel: lastSyncedAt
-        ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
-        : m.sync_never_synced(),
+      lastSyncedLabel: lastSyncedAt ? formatDisplayDateTime(lastSyncedAt) : m.sync_never_synced(),
       backupStatusLabel:
         backupEnabled === true
           ? m.sync_backup_status_enabled()

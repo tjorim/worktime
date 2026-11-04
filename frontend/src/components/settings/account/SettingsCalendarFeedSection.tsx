@@ -11,7 +11,7 @@ import {
 } from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
+import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
 import { logger } from "@/utils/logger";
 import { ApiError } from "@/utils/apiError";
 
@@ -175,10 +175,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
               <div className="font-medium">
                 {lastFetchedAt
                   ? m.calendar_feed_last_fetched({
-                      date: new Intl.DateTimeFormat(getLocale(), {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      }).format(new Date(lastFetchedAt)),
+                      date: formatDisplayDateTime(lastFetchedAt),
                     })
                   : m.calendar_feed_never_fetched()}
               </div>

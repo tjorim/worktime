@@ -109,9 +109,9 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
 
       // Verify dates appear in table
-      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText(/2025\/02\/10/)).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/03/20")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("15 Jan 2025")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText(/10 Feb 2025/)).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("20 Mar 2025")).toBeInTheDocument();
     });
 
     it("imports .hday content via file upload and renders events correctly", async () => {
@@ -153,10 +153,12 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getAllByText("In office").length).toBeGreaterThan(0);
 
       // Verify type labels appear in badges  - note that badges show title if present
-      // Check the flags column which shows the raw flag names
+      // The flags column shows translated labels, never raw flag keys
       const table = screen.getByRole("table");
-      expect(within(table).getByText("business")).toBeInTheDocument();
-      expect(within(table).getByText("course")).toBeInTheDocument();
+      expect(within(table).getAllByText("Business trip").length).toBeGreaterThan(0);
+      expect(within(table).getAllByText("Training/Course").length).toBeGreaterThan(0);
+      expect(within(table).queryByText("course")).not.toBeInTheDocument();
+      expect(within(table).queryByText("business")).not.toBeInTheDocument();
     });
 
     it("imports weekly events and displays them correctly", async () => {
@@ -224,7 +226,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
 
       expect(screen.getByText("Christmas Eve")).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/12/24")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("24 Dec 2025")).toBeInTheDocument();
     });
   });
 
@@ -249,7 +251,7 @@ describe("TimeOffView Integration Tests", () => {
       // === READ ===
       // Verify event appears in table
       expect(screen.getByText("Summer vacation")).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/06/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("15 Jun 2025")).toBeInTheDocument();
 
       // Verify collection-backed persistence
       const entries = getStoredEntries();
