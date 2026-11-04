@@ -272,6 +272,8 @@ export function SettingsContent({
     setMyTeam,
     updateTimeFormat,
     updateTheme,
+    appearance,
+    updateHighContrast,
     updateNotifications,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
@@ -612,6 +614,8 @@ export function SettingsContent({
       <SettingsGeneralSection
         timeFormat={settings.timeFormat}
         theme={settings.theme}
+        highContrast={appearance.highContrast}
+        onHighContrastChange={updateHighContrast}
         locale={getLocale() === "nl" ? "nl" : "en"}
         notificationsEnabled={settings.notifications === "on"}
         onTimeFormatChange={updateTimeFormat}

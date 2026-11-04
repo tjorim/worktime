@@ -206,3 +206,16 @@ describe("palette wiring", () => {
     }
   });
 });
+
+describe.each(THEMES)("high-contrast event palette (%s)", (theme) => {
+  it("preserves distinct AA event colours when appearance overrides are enabled", () => {
+    const tokens = readFileSync(path.resolve(__dirname, "../../src/styles/tokens.css"), "utf8");
+    const overrides = tokens.slice(tokens.indexOf("/* Appearance overrides"));
+    // High contrast must not flatten the semantic palette or override its text independently.
+    expect(overrides).toContain('[data-high-contrast="true"]');
+    expect(overrides).not.toMatch(/--wt-event-/);
+    for (const { bg, fg } of Object.values(palette[theme])) {
+      expect(contrastRatio(bg, fg)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});

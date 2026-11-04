@@ -5,6 +5,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 export type DismissibleHint = "unifiedCalendar";
 
 export interface DevicePreferences {
+  appearance?: { highContrast?: boolean };
   dismissedHints?: Partial<Record<DismissibleHint, boolean>>;
   flexStartOverride?: { date: string; time: string } | null;
   hdayHelper?: { url: string | null };

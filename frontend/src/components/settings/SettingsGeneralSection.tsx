@@ -11,6 +11,8 @@ import * as m from "@/paraglide/messages.js";
 interface SettingsGeneralSectionProps {
   timeFormat: "12h" | "24h";
   theme: "light" | "dark" | "auto";
+  highContrast: boolean;
+  onHighContrastChange: (value: boolean) => void;
   locale: "en" | "nl";
   notificationsEnabled: boolean;
   onTimeFormatChange: (format: "12h" | "24h") => void;
@@ -20,6 +22,8 @@ interface SettingsGeneralSectionProps {
 }
 
 export function SettingsGeneralSection({
+  highContrast,
+  onHighContrastChange,
   timeFormat,
   theme,
   locale,
@@ -55,6 +59,13 @@ export function SettingsGeneralSection({
             ]}
           />
         </SettingsRow>
+        <SettingsSwitchRow
+          id="toggle-high-contrast"
+          title={m.high_contrast_label()}
+          description={m.high_contrast_description()}
+          checked={highContrast}
+          onCheckedChange={(value) => onHighContrastChange(value)}
+        />
         <SettingsRow title={m.language_label()} description={m.language_description()}>
           <ChoiceRadioGroup
             label={m.language_label()}

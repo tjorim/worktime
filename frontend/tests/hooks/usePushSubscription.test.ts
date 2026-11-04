@@ -41,6 +41,8 @@ function mockSettings(overrides: Partial<UserSettings> = {}): void {
     settings: { ...defaultSettings, ...overrides },
     updateTimeFormat: vi.fn(),
     updateTheme: vi.fn(),
+    appearance: { highContrast: false },
+    updateHighContrast: vi.fn(),
     updateNotifications: vi.fn(),
     updateTimeOffEnabled: vi.fn(),
     updateTimeTrackingEnabled: vi.fn(),

@@ -1608,5 +1608,7 @@
   "account_export_failed": "Could not download your account data right now.",
   "account_export_unavailable": "Your account details must load before you can download your data.",
   "tt_task_name_hint": "Optional for Start Now, which names it “{name}”. Required for completed tasks.",
-  "calendar_keyboard_hint": "Keyboard: arrow keys move between days, Home and End go to the start and end of the week, Page Up and Page Down change month, Enter opens the day menu."
+  "calendar_keyboard_hint": "Keyboard: arrow keys move between days, Home and End go to the start and end of the week, Page Up and Page Down change month, Enter opens the day menu.",
+  "high_contrast_label": "High contrast",
+  "high_contrast_description": "Use stronger text and borders on this device."
 }

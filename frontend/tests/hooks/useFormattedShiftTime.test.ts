@@ -26,6 +26,8 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
   } as const,
   updateTimeFormat: vi.fn(),
   updateTheme: vi.fn(),
+  appearance: { highContrast: false },
+  updateHighContrast: vi.fn(),
   updateNotifications: vi.fn(),
   updateTimeOffEnabled: vi.fn(),
   updateTimeTrackingEnabled: vi.fn(),

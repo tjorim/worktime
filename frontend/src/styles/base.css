@@ -252,3 +252,23 @@
     outline: 0 !important;
   }
 }
+
+/* Keep lifecycle events firing while suppressing nonessential motion, including utilities. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--wt-focus-color);
+    outline-offset: 2px;
+  }
+}

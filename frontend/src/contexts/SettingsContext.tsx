@@ -1,3 +1,4 @@
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
@@ -62,7 +63,14 @@ export interface UserSettings {
   hdayUsername: string | null;
 }
 
+export function normalizeAppearance(value: unknown): { highContrast: boolean } {
+  const appearance = isObjectRecord(value) ? value : {};
+  return { highContrast: appearance.highContrast === true };
+}
+
 interface SettingsContextType {
+  appearance: { highContrast: boolean };
+  updateHighContrast: (value: boolean) => void;
   settings: UserSettings;
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
@@ -396,6 +404,18 @@ function markNewAnonymousPreferences(): void {
  * Provides app-wide settings, onboarding state, and last-used UI preferences.
  */
 export function SettingsProvider({ children }: SettingsProviderProps) {
+  const { preferences, setPreferences } = useDevicePreferences();
+  // Missing fields in older device preferences migrate to the normal appearance.
+  const appearance = useStableShallowObject(normalizeAppearance(preferences?.appearance));
+  const updateHighContrast = useCallback(
+    (highContrast: boolean) => {
+      setPreferences((previous) => ({
+        ...previous,
+        appearance: { ...normalizeAppearance(previous?.appearance), highContrast },
+      }));
+    },
+    [setPreferences],
+  );
   // Unified user state in a single localStorage key.
   // _setRawUserState is the raw setter; setUserState wraps it to inject _updatedAt
   // so that buildLocalPreferencesPayload in syncClient.ts can use the actual
@@ -581,7 +601,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const resetSettings = useCallback(() => {
     setUserState(defaultUserState);
-  }, [setUserState]);
+    setPreferences((previous) => ({ ...previous, appearance: normalizeAppearance(null) }));
+  }, [setUserState, setPreferences]);
 
   const setMyTeam = useCallback(
     (team: number | null) => {
@@ -701,6 +722,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const contextValue: SettingsContextType = useMemo(
     () => ({
       settings: stableSettings,
+      appearance,
+      updateHighContrast,
       updateTimeFormat,
       updateTheme,
       updateNotifications,
@@ -730,6 +753,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     }),
     [
       stableSettings,
+      appearance,
+      updateHighContrast,
       userState.myTeam,
       userState.scheduleType,
       userState.hasCompletedOnboarding,
