@@ -1548,5 +1548,12 @@
   "tt_json_current": "Huidige opgeslagen JSON",
   "timeoff_overlap": "Overlappende invoer",
   "timeoff_overlap_with": "Overlapt met {name} ({dates})",
-  "timeoff_overlap_allowed": "Je kunt deze invoer nog steeds opslaan."
+  "timeoff_overlap_allowed": "Je kunt deze invoer nog steeds opslaan.",
+  "not_found_title": "Pagina niet gevonden",
+  "not_found_description": "Deze pagina bestaat niet of is mogelijk verplaatst.",
+  "back_to_worktime": "Terug naar Worktime",
+  "auth_failed_title": "Aanmelden mislukt",
+  "auth_failed_description": "We konden je niet aanmelden. Je hebt mogelijk geannuleerd, of de aanmelddienst kon het verzoek niet afronden. Probeer het opnieuw.",
+  "auth_retry_signin": "Opnieuw aanmelden",
+  "date_code_label": "Datumcode:"
 }

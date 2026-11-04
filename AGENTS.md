@@ -27,6 +27,10 @@ pnpm build
 
 Do not manually edit `CHANGELOG.md` or files under `public/assets/icons/`.
 
+The frontend uses port 5173 (strict) and proxies `/api` to the backend on
+`127.0.0.1:8000`, including SSE. Start both servers; see README Quick Start for
+SQLite setup and OIDC callback URLs. `VITE_API_DOMAIN` is not supported.
+
 ### Backend (`cd backend`)
 
 ```bash

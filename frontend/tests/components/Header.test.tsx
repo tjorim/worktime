@@ -36,6 +36,11 @@ describe("Header", () => {
       expect(await screen.findByText("Worktime")).toBeInTheDocument();
     });
 
+    it("exposes sign-in directly in the anonymous header", async () => {
+      render(<App />);
+      expect(await screen.findByRole("button", { name: "Sign In" })).toBeInTheDocument();
+    });
+
     it("renders Settings button", () => {
       render(<App />);
       expect(screen.getByLabelText("Settings")).toBeInTheDocument();

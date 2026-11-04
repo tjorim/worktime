@@ -1,18 +1,35 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useAuth as useOidcAuth } from "react-oidc-context";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import * as m from "@/paraglide/messages.js";
 
 export function AuthCallbackPage() {
-  const { isValidating } = useAuth();
+  const { isValidating, triggerLogin } = useAuth();
+  const { error } = useOidcAuth();
+  const failed = Boolean(error) || new URLSearchParams(window.location.search).has("error");
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isValidating && window.location.pathname === "/auth/callback") {
+    if (!failed && !isValidating && window.location.pathname === "/auth/callback") {
       navigate({ to: "/", replace: true });
     }
-  }, [isValidating, navigate]);
+  }, [failed, isValidating, navigate]);
+
+  if (failed) {
+    return (
+      <main id="main-content" className="mx-auto max-w-2xl px-3 py-12 text-center">
+        <h1 className="text-2xl">{m.auth_failed_title()}</h1>
+        <p role="alert">{m.auth_failed_description()}</p>
+        <div className="flex flex-wrap justify-center items-center gap-4">
+          <Button onClick={triggerLogin}>{m.auth_retry_signin()}</Button>
+          <Link to="/">{m.back_to_worktime()}</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main

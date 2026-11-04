@@ -4,6 +4,7 @@ import { RouteError, RoutePending } from "@/components/RouteStatus";
 import { preloadSyncCollections } from "@/db/collections";
 import { lazyRoute } from "@/lib/lazyRoute";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 import { HomePage } from "@/pages/HomePage";
 import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
 
@@ -17,6 +18,7 @@ const PebblePairPage = lazyRoute(() => import("@/pages/PebblePairPage"), "Pebble
 
 const rootRoute = createRootRoute({
   component: AppLayout,
+  notFoundComponent: NotFoundPage,
 });
 
 const homeRoute = createRoute({

@@ -206,7 +206,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 8000,
+    port: 5173,
+    strictPort: true,
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8000", changeOrigin: true },
+    },
     open: true,
     cors: true,
   },

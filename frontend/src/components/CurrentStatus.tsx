@@ -1,10 +1,9 @@
 import { CalendarIcon, CalendarPlusIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import { useEffect, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
-import { Hint } from "@/components/ui/tooltip";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
@@ -16,6 +15,11 @@ import { GenericStatusContent } from "@/components/status/GenericStatus";
 import { SetupActionButton } from "@/components/shared/SetupActionButton";
 import { ShiftTimeline } from "@/components/ShiftTimeline";
 import * as m from "@/paraglide/messages.js";
+
+// Keep optional help out of the initial Base UI dependency closure.
+const DateCodeHelp = lazy(() =>
+  import("@/components/shared/DateCodeHelp").then((module) => ({ default: module.DateCodeHelp })),
+);
 
 interface CurrentStatusProps {
   myTeam: number | null;
@@ -40,7 +44,6 @@ export function CurrentStatus({
   onChangeSchedule,
   variant = "full",
 }: CurrentStatusProps) {
-  const dateTooltipId = useId();
   const { settings, scheduleType } = useSettings();
   const liveTime = useLiveTime({ precision: "minute" });
   const today = liveTime;
@@ -148,6 +151,14 @@ export function CurrentStatus({
     );
   }
 
+  const dateLabel = (
+    <>
+      <Icon icon={CalendarIcon} className="mr-1" />
+      {m.date_code_label()} {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
+      {formatTimeByPreference(liveTime, settings.timeFormat)}
+    </>
+  );
+
   return (
     <div className="mb-6">
       <Card>
@@ -157,32 +168,19 @@ export function CurrentStatus({
             <div className="flex flex-wrap items-center gap-4">
               <CardTitle className="mb-0">{m.schedule_current_status()}</CardTitle>
               <div className="text-muted-foreground">
-                <Hint
-                  placement="bottom"
-                  content={
-                    <div id={dateTooltipId}>
-                      <strong>{m.current_status_date_format()}</strong>
-                      <br />
-                      {m.current_status_yy_help()}
-                      <br />
-                      {m.current_status_ww_help()}
-                      <br />
-                      {m.current_status_d_help()}
-                      <br />
-                      <em>
-                        {m.current_status_today_code({ code: formatYYWWD(today) })}
-                        <br />
-                        {m.current_status_shift_day_code({ code: formatYYWWD(currentShiftDay) })}
-                      </em>
-                    </div>
-                  }
-                >
-                  <small className="cursor-help underline decoration-dotted">
-                    <Icon icon={CalendarIcon} className="mr-1" />
-                    {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
-                    {formatTimeByPreference(liveTime, settings.timeFormat)}
-                  </small>
-                </Hint>
+                <Suspense fallback={<small>{dateLabel}</small>}>
+                  <DateCodeHelp
+                    todayCode={formatYYWWD(today)}
+                    shiftDayCode={formatYYWWD(currentShiftDay)}
+                  >
+                    <button
+                      type="button"
+                      className="text-sm underline decoration-dotted rounded focus-visible:ring-3 focus-visible:ring-ring"
+                    >
+                      {dateLabel}
+                    </button>
+                  </DateCodeHelp>
+                </Suspense>
               </div>
             </div>
             <div className="flex items-center gap-2">
