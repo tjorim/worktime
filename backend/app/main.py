@@ -197,7 +197,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
 app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
 app.add_exception_handler(RequestValidationError, handle_label_validation_error)
-app.add_middleware(RateLimitHeadersMiddleware)
+app.add_middleware(RateLimitHeadersMiddleware, owner=app, check_before_body=rate_limit)
 if settings.RATE_LIMIT_ENABLED:
     logger.info(f"✓ Rate limiting enabled ({settings.RATE_LIMIT_DEFAULT} per client IP)")
 else:
