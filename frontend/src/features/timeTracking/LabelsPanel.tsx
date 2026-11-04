@@ -32,7 +32,7 @@ type LabelsPanelProps = {
   labels: Label[];
   templates: TimeTrackingTemplate[];
   tasks: StoredTimeTrackingTask[];
-  onUpdateLabels: (labels: Label[]) => void | Promise<void>;
+  onUpdateLabels: (labels: Label[], confirmedRemoval?: boolean) => void | Promise<void>;
 };
 
 const EXAMPLE_LABELS: Label[] = [
@@ -105,11 +105,11 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     }
   };
 
-  const saveJson = async (next: Label[]) => {
+  const saveJson = async (next: Label[], confirmedRemoval = false) => {
     if (saving || draft.conflict) return;
     setSaving(true);
     try {
-      await onUpdateLabels(next);
+      await onUpdateLabels(next, confirmedRemoval);
       draft.saved();
       toast.showSuccess(m.tt_labels_updated());
       setPendingJson(null);
@@ -225,7 +225,10 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     setError("");
     setSaving(true);
     try {
-      await onUpdateLabels(labels.filter((item) => item.id !== pendingDeleteLabel.id));
+      await onUpdateLabels(
+        labels.filter((item) => item.id !== pendingDeleteLabel.id),
+        true,
+      );
     } catch (error) {
       setError(getErrorMessage(error, m.tt_json_save_failed()));
       setPendingDeleteLabel(null);
@@ -433,7 +436,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         onConfirm={() => {
           if (pendingJson) {
             setPendingJson(null);
-            void saveJson(pendingJson);
+            void saveJson(pendingJson, true);
           }
         }}
         onCancel={() => setPendingJson(null)}

@@ -63,3 +63,27 @@ test("dirty drafts guard route changes and history separately", async ({ page })
   await page.getByRole("button", { name: "Leave editors" }).click();
   await expect(page.getByText("Other page")).toBeVisible();
 });
+
+for (const theme of ["light", "dark"]) {
+  for (const width of [1280, 390]) {
+    test(`partial replacement shows saved data and keeps draft (${theme}, ${width})`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 850 });
+      await page.goto(`/e2e/fixtures/label-editors.html?theme=${theme}&partial`);
+      await page.getByText("Raw labels JSON (import/export)", { exact: true }).click();
+      const editor = page.getByRole("textbox", { name: "Labels JSON", exact: true });
+      const draft = JSON.stringify({ labels: [{ id: "new", name: "New", color: "#123456" }] });
+      await editor.fill(draft);
+      await page.getByRole("button", { name: "Apply Labels JSON", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Confirm", exact: true }).click();
+      await expect(page.getByText(/Server results: 1 accepted, 1 conflicted/)).toBeVisible();
+      await expect(editor).toHaveValue(draft);
+      await expect(page.getByText(/The saved data changed/)).toBeVisible();
+      await page.screenshot({
+        path: `../docs/screenshots/1697/${theme}-${width}-partial.png`,
+        fullPage: true,
+      });
+    });
+  }
+}

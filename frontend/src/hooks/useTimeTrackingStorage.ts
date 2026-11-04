@@ -252,11 +252,13 @@ export function useTimeTrackingStorage() {
   );
 
   const updateTemplates = useCallback(
-    (items: TimeTrackingTemplate[]) => replaceTimeTrackingSettings("templates", items),
+    (items: TimeTrackingTemplate[], confirmedRemoval = false) =>
+      replaceTimeTrackingSettings("templates", items, confirmedRemoval),
     [],
   );
   const updateLabels = useCallback(
-    (items: Label[]) => replaceTimeTrackingSettings("labels", items),
+    (items: Label[], confirmedRemoval = false) =>
+      replaceTimeTrackingSettings("labels", items, confirmedRemoval),
     [],
   );
 

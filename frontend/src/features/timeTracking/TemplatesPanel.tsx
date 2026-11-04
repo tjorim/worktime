@@ -21,7 +21,10 @@ type TemplatesPanelProps = {
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
-  onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void | Promise<void>;
+  onUpdateTemplates: (
+    templates: TimeTrackingTemplate[],
+    confirmedRemoval?: boolean,
+  ) => void | Promise<void>;
 };
 
 const EXAMPLE_TEMPLATES: TimeTrackingTemplate[] = [
@@ -129,11 +132,11 @@ export function TemplatesPanel({
     }
   };
 
-  const saveJson = async (next: TimeTrackingTemplate[]) => {
+  const saveJson = async (next: TimeTrackingTemplate[], confirmedRemoval = false) => {
     if (saving || draft.conflict) return;
     setSaving(true);
     try {
-      await onUpdateTemplates(next);
+      await onUpdateTemplates(next, confirmedRemoval);
       draft.saved();
       toast.showSuccess(m.tt_templates_updated());
       setPendingJson(null);
@@ -366,7 +369,7 @@ export function TemplatesPanel({
         onConfirm={() => {
           if (pendingJson) {
             setPendingJson(null);
-            void saveJson(pendingJson);
+            void saveJson(pendingJson, true);
           }
         }}
         onCancel={() => setPendingJson(null)}

@@ -32,7 +32,7 @@
  * domain — that creates a competing cache.
  */
 
-import { ApiError } from "@/utils/apiError";
+import { ApiError, SettingsReplacementError } from "@/utils/apiError";
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { queryClient } from "@/lib/queryClient";
@@ -1403,18 +1403,61 @@ export function initSyncCollectionPersistence(): Promise<void> {
   return hydrationStarted;
 }
 
-/** Bulk settings edits are online transactions: never queue rejected replacements. */
+/** Online settings edits never queue destructive retries; pushes can partially commit. */
 export async function replaceTimeTrackingSettings(
   kind: "labels" | "templates",
   items: Label[] | TimeTrackingTemplate[],
+  confirmedRemoval = false,
 ): Promise<void> {
   const owner = _currentUserId;
   if (_isAuthResolving) throw new Error("Authentication is still resolving");
   const collection = kind === "labels" ? labelsCollection : templatesCollection;
   const previous = collection.toArray;
+  const ids = new Set(items.map((item) => item.id));
+  const removedItems = previous.filter((item) => !ids.has(item.id));
+  if (_currentUserId && kind === "labels") {
+    // Creates/renames precede removals on the server, so even a name being
+    // removed by this replacement still conflicts until a separate save.
+    const names = new Set<string>();
+    for (const item of items as Label[]) {
+      if (
+        names.has(item.name) ||
+        previous.some((old) => "name" in old && old.id !== item.id && old.name === item.name)
+      ) {
+        throw new Error("Duplicate label name");
+      }
+      names.add(item.name);
+    }
+    const references = [
+      ...tasksCollection.toArray,
+      ...templatesCollection.toArray,
+      ...ganttTasksCollection.toArray,
+    ];
+    if (removedItems.some((item) => references.some((reference) => reference.label === item.id))) {
+      throw new Error("Label is in use");
+    }
+  } else if (
+    _currentUserId &&
+    kind === "templates" &&
+    (items as TimeTrackingTemplate[]).some((item) => !labelsCollection.has(item.label))
+  ) {
+    throw new Error("Unknown template label");
+  }
   if (_currentUserId) {
     const now = dayjs().toISOString();
-    const changes = items.map((item) => ({
+    const changedItems = items.filter((item) => {
+      const old = previous.find((row) => row.id === item.id);
+      if (!old) return true;
+      return "name" in item && "name" in old
+        ? item.name !== old.name || item.color !== old.color
+        : "text" in item &&
+            "text" in old &&
+            (item.text !== old.text ||
+              item.label !== old.label ||
+              item.start !== old.start ||
+              item.stop !== old.stop);
+    });
+    const changes = changedItems.map((item) => ({
       id: item.id,
       action: collection.has(item.id) ? ("update" as const) : ("create" as const),
       client_updated_at: now,
@@ -1427,33 +1470,55 @@ export async function replaceTimeTrackingSettings(
             stop_time: `${item.stop}:00`,
           }),
     }));
-    const ids = new Set(items.map((item) => item.id));
-    const removed = previous
-      .filter((item) => !ids.has(item.id))
-      .map((item) => ({
-        id: item.id,
-        action: "delete" as const,
-        client_updated_at: now,
-      }));
-    const payload: SyncPushPayload = {
-      labels: [],
-      templates: [],
-      tasks: [],
-      gantt_tasks: [],
-      work_locations: [],
-      time_off_entries: [],
-      [kind]: [...changes, ...removed],
-    };
-    const response = await collectionFetch("/api/sync/push", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw await ApiError.fromResponse(response);
-    const result = (await response.json()) as SyncPushResponse;
-    if (countPushConflicts(result) > 0) {
-      _triggerPull?.();
-      throw new Error("Settings replacement conflicted");
+    const removed = removedItems.map((item) => ({
+      id: item.id,
+      action: "delete" as const,
+      client_updated_at: now,
+    }));
+    const diff = [...changes, ...removed];
+    let sent = false;
+    let applied = 0;
+    let conflicts = 0;
+    try {
+      for (let offset = 0; offset < diff.length; offset += MAX_SYNC_PUSH_ITEMS) {
+        if (_currentUserId !== owner) throw new Error("Settings owner changed");
+        const payload: SyncPushPayload = {
+          labels: [],
+          templates: [],
+          tasks: [],
+          gantt_tasks: [],
+          work_locations: [],
+          time_off_entries: [],
+          [kind]: diff.slice(offset, offset + MAX_SYNC_PUSH_ITEMS),
+          declared_delete_total: removed.length,
+          ...(confirmedRemoval && removed.length > 0 ? { allow_bulk_delete: true } : {}),
+        };
+        const response = await collectionFetch("/api/sync/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw await ApiError.fromResponse(response);
+        sent = true;
+        const result = (await response.json()) as SyncPushResponse;
+        applied += Object.values(result.results)
+          .flat()
+          .filter((record) => record.status === "ok").length;
+        conflicts += countPushConflicts(result);
+        if (conflicts > 0) throw new Error("Settings replacement conflicted");
+      }
+    } catch (error) {
+      if (sent && _currentUserId === owner) {
+        try {
+          const snapshot = await fetchSyncSnapshot();
+          if (_currentUserId === owner) applyPullToCollections(snapshot);
+        } catch (refreshError) {
+          logger.warn("Could not refresh partially applied settings", refreshError);
+        }
+        _triggerPull?.();
+        throw new SettingsReplacementError(applied, conflicts);
+      }
+      throw error;
     }
   }
   if (_currentUserId !== owner) throw new Error("Settings owner changed");

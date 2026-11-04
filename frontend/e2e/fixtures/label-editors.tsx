@@ -9,6 +9,7 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
 import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
+import { SettingsReplacementError } from "@/utils/apiError";
 import { ToastProvider } from "@/contexts/ToastContext";
 import "@/styles/tailwind.css";
 const params = new URLSearchParams(location.search);
@@ -30,7 +31,18 @@ function Fixture() {
         <button onClick={() => setLabels([{ id: "b", name: "Updated", color: "#123456" }])}>
           Simulate refresh
         </button>
-        <LabelsPanel labels={labels} tasks={[]} templates={[]} onUpdateLabels={setLabels} />
+        <LabelsPanel
+          labels={labels}
+          tasks={[]}
+          templates={[]}
+          onUpdateLabels={(next) => {
+            if (params.has("partial")) {
+              setLabels([]);
+              throw new SettingsReplacementError(1, 1);
+            }
+            setLabels(next);
+          }}
+        />
         <TemplatesPanel
           labels={labels}
           templates={[]}

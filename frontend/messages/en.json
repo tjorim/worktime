@@ -1532,6 +1532,7 @@
   "tt_json_keep_draft": "Keep draft against current data",
   "tt_json_removals": "Remove {remove}, add {add}, change {change}. Apply this replacement?",
   "tt_json_confirm": "Confirm JSON replacement",
+  "tt_json_partial": "Saving stopped. Server results: {applied} accepted, {conflicts} conflicted. Your draft is kept. Compare it with the current saved JSON before trying again.",
   "tt_json_save_failed": "Could not save changes. Your draft has been kept. Try again.",
   "tt_json_in_use": "These labels are still in use and cannot be removed: {names}.",
   "tt_json_invalid_entries": "Invalid entries: {count}. Check required fields, unique IDs, names, colours, time ranges and existing labels. Nothing was applied.",

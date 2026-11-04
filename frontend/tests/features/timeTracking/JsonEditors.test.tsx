@@ -107,7 +107,7 @@ for (const kind of ["labels", "templates"] as const) {
       await user.paste(JSON.stringify({ [kind]: [] }));
       await user.click(screen.getByRole("button", { name: new RegExp(`Apply ${kind} JSON`, "i") }));
       await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm" }));
-      expect(save).toHaveBeenCalledWith([]);
+      expect(save).toHaveBeenCalledWith([], true);
       expect(await screen.findByText(new RegExp(`${kind} updated\\.`, "i"))).toBeVisible();
     });
     it("rejects invalid entries rather than silently dropping them", async () => {
