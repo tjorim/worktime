@@ -11,7 +11,7 @@ import {
   useDataTable,
 } from "@/hooks/useDataTable";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
+import { formatDisplayDateTime as formatTimestamp } from "@/utils/dateTimeUtils";
 
 export interface AdminUserRow {
   id: number;
@@ -27,18 +27,6 @@ interface AdminUsersTableProps {
   deletingAdminUserId: number | null;
   onRequestDelete: (userId: number) => void;
 }
-
-const formatTimestamp = (value: string): string => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  const locale = getLocale() === "nl" ? "nl-NL" : "en-US";
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(parsed);
-};
 
 const columnHelper = createDataColumnHelper<AdminUserRow>();
 

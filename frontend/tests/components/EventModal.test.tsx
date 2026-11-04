@@ -61,7 +61,7 @@ describe("EventModal", () => {
       note: "Autumn break",
     } as const;
     const handlers = renderModal({ entries: [entry] });
-    expect(screen.getByRole("status")).toHaveTextContent("Overlaps with Autumn break (2026-03-02)");
+    expect(screen.getByRole("status")).toHaveTextContent("Overlaps with Autumn break (2 Mar 2026)");
     expect(screen.getByRole("status")).toHaveTextContent("You can still save this entry.");
     await userEvent.click(screen.getByRole("button", { name: /^Add$/ }));
     expect(handlers.onSubmit).toHaveBeenCalledOnce();
@@ -85,20 +85,20 @@ describe("EventModal", () => {
   it("exposes each flag section as a labelled radio group with the current flag selected", () => {
     renderModal({ eventFlags: ["business", "onsite"] });
 
-    const typeGroup = screen.getByRole("radiogroup", { name: "Type Flags" });
+    const typeGroup = screen.getByRole("radiogroup", { name: "Category" });
     expect(within(typeGroup).getByRole("radio", { name: "Business trip" })).toBeChecked();
     expect(within(typeGroup).getByRole("radio", { name: "Holiday (default)" })).not.toBeChecked();
 
-    const locationGroup = screen.getByRole("radiogroup", { name: "Time / Location Flags" });
+    const locationGroup = screen.getByRole("radiogroup", { name: "Time and location" });
     expect(within(locationGroup).getByRole("radio", { name: "Onsite" })).toBeChecked();
   });
 
   it("selects the neutral option when a section has no flag", () => {
     renderModal({ eventFlags: [] });
 
-    const typeGroup = screen.getByRole("radiogroup", { name: "Type Flags" });
+    const typeGroup = screen.getByRole("radiogroup", { name: "Category" });
     expect(within(typeGroup).getByRole("radio", { name: "Holiday (default)" })).toBeChecked();
-    const locationGroup = screen.getByRole("radiogroup", { name: "Time / Location Flags" });
+    const locationGroup = screen.getByRole("radiogroup", { name: "Time and location" });
     expect(within(locationGroup).getByRole("radio", { name: "Full day" })).toBeChecked();
   });
 

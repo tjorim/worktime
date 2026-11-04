@@ -120,7 +120,7 @@ describe("TimeOffTableView", () => {
     expect(bodyRows()[0]).toHaveTextContent("Conference");
 
     await user.clear(search);
-    await user.type(search, "2026/01");
+    await user.type(search, "2026-01");
     expect(bodyRows()).toHaveLength(1);
     expect(bodyRows()[0]).toHaveTextContent("Ski trip");
   });
@@ -349,8 +349,8 @@ describe("mobile Time Off cards", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     const cards = screen.getByRole("list");
     expect(within(cards).getAllByRole("listitem")).toHaveLength(3);
-    expect(cards).toHaveTextContent("2026/01/05");
-    expect(cards).toHaveTextContent("2026/01/09");
+    expect(cards).toHaveTextContent("5 Jan 2026");
+    expect(cards).toHaveTextContent("9 Jan 2026");
     expect(cards).toHaveTextContent("Every Wed");
     expect(cards).toHaveTextContent("Overlapping entry");
     await userEvent.click(screen.getByRole("button", { name: "Edit: Ski trip" }));
@@ -376,4 +376,15 @@ describe("mobile Time Off cards", () => {
     expect(screen.getByRole("list")).toHaveTextContent("Day 21");
     expect(screen.getByRole("list")).not.toHaveTextContent("Day 20");
   });
+});
+
+it.each(["en", "nl"] as const)("renders translated flags in the table (%s)", (locale) => {
+  setLocale(locale, { reload: false });
+  renderTable({ entries: [{ ...entries[1]!, entryType: "course", entryFlag: "half_am" }] });
+  const row = bodyRows()[0]!;
+  expect(row).toHaveTextContent(
+    locale === "en" ? "Training/Course, AM (half day)" : "Training/Cursus, Ochtend (halve dag)",
+  );
+  expect(row).not.toHaveTextContent("half_am");
+  setLocale("en", { reload: false });
 });

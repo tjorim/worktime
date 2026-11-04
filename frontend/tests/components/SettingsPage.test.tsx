@@ -1032,7 +1032,7 @@ describe("SettingsPage Data Section", () => {
     await user.click(
       screen.getByRole("button", { name: new RegExp(`^${m.reset_settings_label()}`) }),
     );
-    const resetDialog = screen.getByRole("dialog");
+    const resetDialog = screen.getByRole("alertdialog");
 
     const clearTimeTracking = within(resetDialog).getByRole("checkbox", {
       name: m.reset_also_clear_time_tracking(),
@@ -1087,7 +1087,7 @@ describe("SettingsPage Data Section", () => {
     await user.click(
       screen.getByRole("button", { name: new RegExp(`^${m.reset_settings_label()}`) }),
     );
-    const resetDialog = screen.getByRole("dialog");
+    const resetDialog = screen.getByRole("alertdialog");
     await user.click(within(resetDialog).getByRole("button", { name: m.reset_now() }));
 
     await waitFor(() => {

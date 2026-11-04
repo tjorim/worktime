@@ -390,7 +390,7 @@ describe("TransferView", () => {
       // Check for badges and icons for team direction
       expectMyTeamBadgeInTransferHeader(1);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/15 Jan 2025/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Evening/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Handover/).length).toBeGreaterThan(0);
@@ -469,8 +469,8 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} />);
 
       // Check that both transfers are displayed
-      expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Thu, Jan 16/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/15 Jan 2025/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/16 Jan 2025/).length).toBeGreaterThan(0);
 
       // Check shift types
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
@@ -566,8 +566,8 @@ describe("TransferView", () => {
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
-      expect(screen.queryByText(/Wed, Jan 15 to Wed, Jan 15/)).not.toBeInTheDocument();
+      expect(screen.getAllByText(/15 Jan 2025/).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/15 Jan 2025 to 15 Jan 2025/)).not.toBeInTheDocument();
     });
 
     it("groups transfer history into accordion buckets", () => {

@@ -3,7 +3,7 @@ import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TableSearchInput } from "@/components/shared/TableSearchInput";
 import { Progress } from "@/components/ui/progress";
@@ -17,7 +17,6 @@ import {
   DATA_TABLE_DEFAULT_PAGE_SIZE,
   useDataTable,
 } from "@/hooks/useDataTable";
-import { dayjs } from "@/utils/dateTimeUtils";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
 import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
@@ -29,7 +28,7 @@ import {
 } from "@/lib/timeTracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
+import { formatDisplayDate as formatDate } from "@/utils/dateTimeUtils";
 
 interface GanttTableViewProps {
   tasks: GanttTask[];
@@ -94,17 +93,6 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
     [deletingTask, timeTrackingTasks],
   );
 
-  const locale = getLocale();
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
-    [locale],
-  );
-
-  const formatDate = useCallback(
-    (isoDate: string) => dateFormatter.format(dayjs(isoDate).toDate()),
-    [dateFormatter],
-  );
-
   const rows = useMemo<GanttRow[]>(() => {
     const dependentsById = new Map<string, TaskLink[]>();
     const dependsOnById = new Map<string, TaskLink[]>();
@@ -153,7 +141,7 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
           .toLowerCase(),
       };
     });
-  }, [tasks, labelNameById, taskNames, loggedMinutesByTaskId, formatDate]);
+  }, [tasks, labelNameById, taskNames, loggedMinutesByTaskId]);
 
   // Columns only drive headers, sorting and search. Body cells are rendered
   // directly below: TanStack renders `cell` functions as components, so a

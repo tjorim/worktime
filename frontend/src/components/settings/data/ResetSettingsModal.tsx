@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 import * as m from "@/paraglide/messages.js";
 
 interface ResetSettingsModalProps {
@@ -31,16 +31,16 @@ export function ResetSettingsModal({
   onChangeClearTimeOffData,
 }: ResetSettingsModalProps) {
   return (
-    <Dialog
+    <AlertDialog
       open={show}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.reset_settings_modal_title()}</DialogTitle>
-        </DialogHeader>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{m.reset_settings_modal_title()}</AlertDialogTitle>
+        </AlertDialogHeader>
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
           <p className="m-0">{m.reset_settings_modal_body()}</p>
           <FieldGroup className="gap-2">
@@ -73,15 +73,15 @@ export function ResetSettingsModal({
             </Alert>
           )}
         </div>
-        <DialogFooter>
+        <AlertDialogFooter>
           <Button variant="outline" onClick={onClose}>
             {m.cancel()}
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
             {m.reset_now()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

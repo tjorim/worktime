@@ -447,7 +447,7 @@ describe("TimeOffView", () => {
 
       // Check event appears in table
       expect(screen.getByText("Test vacation")).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("15 Jan 2025")).toBeInTheDocument();
     });
 
     it("should display event type badge", async () => {
@@ -541,6 +541,25 @@ describe("TimeOffView", () => {
       expect(screen.getByText(/Start date is required/i)).toBeInTheDocument();
     });
 
+    it("removes the validation toast once a later submit succeeds", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+      expect(screen.getByText(m.timeoff_fix_validation())).toBeInTheDocument();
+
+      await user.type(screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i), "2025-01-15");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      expect(await screen.findByText(m.timeoff_event_added())).toBeInTheDocument();
+      expect(screen.queryByText(m.timeoff_fix_validation())).not.toBeInTheDocument();
+    });
+
     it("should show live preview of .hday line", async () => {
       render(
         <AllProviders>
@@ -560,7 +579,7 @@ describe("TimeOffView", () => {
       await user.type(titleInput, "Preview test");
 
       // Check preview section - use getAllByText since date might appear multiple times
-      expect(screen.getByText(/Raw line/i)).toBeInTheDocument();
+      expect(screen.getByText(/\.hday line/i)).toBeInTheDocument();
       const dateMatches = screen.getAllByText(/2025\/01\/15/i);
       expect(dateMatches.length).toBeGreaterThan(0);
     });
@@ -781,7 +800,7 @@ describe("TimeOffView", () => {
       await user.click(pullButton);
 
       expect(await screen.findByText(m.timeoff_pulled({ username: "jsmith" }))).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("15 Jan 2025")).toBeInTheDocument();
     });
 
     it("shows a not-found message when the helper has no file for the username yet", async () => {
@@ -1343,7 +1362,7 @@ describe("TimeOffView", () => {
       // Neither the success toast nor alice's imported entry should appear —
       // the response belongs to a target the user has already left.
       expect(screen.queryByText(m.timeoff_pulled({ username: "alice" }))).not.toBeInTheDocument();
-      expect(screen.queryByText("2025/03/03")).not.toBeInTheDocument();
+      expect(screen.queryByText("3 Mar 2025")).not.toBeInTheDocument();
     });
 
     it("discards a push response for a username the user has since switched away from", async () => {
@@ -1466,7 +1485,7 @@ describe("TimeOffView", () => {
 
       expect(await screen.findByText(m.timeoff_pulled({ username: "jsmith" }))).toBeInTheDocument();
       expect(screen.queryByText(m.timeoff_hday_changed_remotely())).not.toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/07/04")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("4 Jul 2025")).toBeInTheDocument();
     });
 
     it("dismissing the banner hides it without pulling", async () => {

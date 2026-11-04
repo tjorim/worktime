@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
 
+vi.mock("@/db/collections", () => ({
+  tasksCollection: { toArray: [{ id: "entry-30", text: "Write report" }] },
+  ganttTasksCollection: { toArray: [] },
+  labelsCollection: { toArray: [] },
+}));
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((promiseResolve) => {
@@ -56,8 +62,8 @@ describe("SettingsAuditTrailSection", () => {
 
     render(<Harness fetchFn={fetchFn} userId={7} />);
 
-    expect(await screen.findByText("update · time entry entry-30")).toBeInTheDocument();
-    expect(screen.getByText("integration:Pebble (integration client)")).toBeInTheDocument();
+    expect(await screen.findByText("Updated · Time entry entry-30")).toBeInTheDocument();
+    expect(screen.getByText("Pebble")).toBeInTheDocument();
     expect(fetchFn).toHaveBeenCalledWith("/api/audit?limit=25&user_id=7");
   });
 
@@ -74,7 +80,7 @@ describe("SettingsAuditTrailSection", () => {
     render(<Harness fetchFn={fetchFn} teamWide />);
     await user.click(await screen.findByRole("button", { name: "Load more" }));
 
-    expect(await screen.findByText("update · time entry entry-75")).toBeInTheDocument();
+    expect(await screen.findByText("Updated · Time entry entry-75")).toBeInTheDocument();
     await waitFor(() => {
       expect(fetchFn).toHaveBeenLastCalledWith("/api/audit?limit=25&before_id=76");
     });
@@ -99,7 +105,7 @@ describe("SettingsAuditTrailSection", () => {
 
     await user.click(await screen.findByRole("button", { name: "Load more" }));
     rerender(<Harness fetchFn={renewedFetch} teamWide />);
-    expect(await screen.findByText("update · time entry entry-200")).toBeInTheDocument();
+    expect(await screen.findByText("Updated · Time entry entry-200")).toBeInTheDocument();
 
     await act(async () => {
       stalePage.resolve(
@@ -110,7 +116,56 @@ describe("SettingsAuditTrailSection", () => {
       await stalePage.promise;
     });
 
-    expect(screen.queryByText("update · time entry entry-75")).not.toBeInTheDocument();
-    expect(screen.queryByText("update · time entry entry-100")).not.toBeInTheDocument();
+    expect(screen.queryByText("Updated · Time entry entry-75")).not.toBeInTheDocument();
+    expect(screen.queryByText("Updated · Time entry entry-100")).not.toBeInTheDocument();
   });
+});
+
+it("uses names and preserves fallback ids without CSS capitalisation", () => {
+  const named = {
+    ...entry(1),
+    actor_label: "user:7",
+    resource_type: "time_tracking_task",
+    action: "create_task",
+    resource_display_name: "Write report",
+  };
+  render(
+    <SettingsAuditTrailSection
+      entries={[named, { ...entry(2), resource_id: "a8ff-Ae1d1c24" }]}
+      users={[{ id: 7, display_name: "Alex" }]}
+      isLoading={false}
+      isLoadingMore={false}
+      error={null}
+      hasMore={false}
+      onLoadMore={() => {}}
+    />,
+  );
+  expect(screen.getByText("Created · Task Write report")).toBeVisible();
+  expect(screen.getByText("Alex")).toBeVisible();
+  expect(screen.getByText("Pebble")).toBeVisible();
+  const fallback = screen.getByText("Updated · Time entry a8ff-Ae1d1c24");
+  expect(fallback).toBeVisible();
+  expect(fallback).not.toHaveClass("capitalize");
+});
+
+it("resolves existing personal task names and avoids cross-account name collisions", async () => {
+  const fetchFn = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          items: [
+            { ...entry(30), resource_type: "time_tracking_task" },
+            {
+              ...entry(31),
+              actor_user_id: 8,
+              resource_id: "entry-30",
+              resource_type: "time_tracking_task",
+            },
+          ],
+        }),
+      ),
+  );
+  render(<Harness fetchFn={fetchFn} userId={7} />);
+  expect(await screen.findByText("Updated · Task Write report")).toBeVisible();
+  expect(screen.getByText("Updated · Task entry-30")).toBeVisible();
 });

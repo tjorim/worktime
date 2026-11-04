@@ -58,9 +58,9 @@ describe("GanttTableView", () => {
 
     const rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
     expect(rows[1]).not.toHaveTextContent("2026-06-01");
-    expect(rows[1]).toHaveTextContent("Jun 1, 2026");
+    expect(rows[1]).toHaveTextContent("1 Jun 2026");
     expect(rows[2]).not.toHaveTextContent("2026-06-05");
-    expect(rows[2]).toHaveTextContent("Jun 5, 2026");
+    expect(rows[2]).toHaveTextContent("5 Jun 2026");
   });
 
   it("passes user-defined label colors through CSS variables", () => {
@@ -247,7 +247,7 @@ describe("GanttTableView", () => {
       render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
       const search = screen.getByRole("searchbox");
 
-      await user.type(search, "Jun 5");
+      await user.type(search, "5 Jun");
       expect(bodyRows()).toHaveLength(1);
       expect(bodyRows()[0]).toHaveTextContent("Write release notes");
 

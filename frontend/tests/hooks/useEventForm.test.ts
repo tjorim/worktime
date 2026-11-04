@@ -39,7 +39,7 @@ describe("useEventForm validation", () => {
     act(() => {
       result.current.validateForm();
     });
-    expect(result.current.endDateError).toBe("End date must be after start date");
+    expect(result.current.endDateError).toBe("End date must be on or after the start date");
   });
 
   it("uses the active locale for validation errors", async () => {

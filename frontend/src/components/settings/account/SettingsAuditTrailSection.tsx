@@ -10,10 +10,16 @@ import {
 } from "@/components/settings/SettingsParts";
 import type { AuditEntry } from "@/pages/settings/hooks/useSettingsAuditTrail";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
+import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
+import {
+  getAuditActionLabel,
+  getAuditResourceLabel,
+  getAuditActorLabel,
+} from "@/utils/auditPresentation";
 
 interface SettingsAuditTrailSectionProps {
   entries: AuditEntry[];
+  users?: ReadonlyArray<{ id: number; display_name: string }>;
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
@@ -22,19 +28,9 @@ interface SettingsAuditTrailSectionProps {
   onLoadMore: () => void;
 }
 
-const formatTimestamp = (value: string): string => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat(getLocale() === "nl" ? "nl-NL" : "en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(parsed);
-};
-
-const humanize = (value: string): string => value.replaceAll("_", " ");
-
 export function SettingsAuditTrailSection({
   entries,
+  users = [],
   isLoading,
   isLoadingMore,
   error,
@@ -67,12 +63,12 @@ export function SettingsAuditTrailSection({
                   className="flex flex-col items-start justify-between gap-2 px-3 py-2 first:pt-2 last:pb-2 md:flex-row md:gap-3"
                 >
                   <div className="min-w-0 text-sm">
-                    <div className="font-medium capitalize">
-                      {humanize(entry.action)} · {humanize(entry.resource_type)} {entry.resource_id}
+                    <div className="font-medium break-words">
+                      {getAuditActionLabel(entry.action)} ·{" "}
+                      {getAuditResourceLabel(entry.resource_type)}{" "}
+                      {entry.resource_display_name || entry.resource_id}
                     </div>
-                    <div className="text-muted-foreground">
-                      {entry.actor_label} ({humanize(entry.auth_source)})
-                    </div>
+                    <div className="text-muted-foreground">{getAuditActorLabel(entry, users)}</div>
                     {hasDetails ? (
                       <details className="mt-1">
                         <summary className="min-h-6 pointer-coarse:min-h-11 cursor-pointer text-muted-foreground">
@@ -86,7 +82,7 @@ export function SettingsAuditTrailSection({
                     className="text-sm whitespace-nowrap text-muted-foreground"
                     dateTime={entry.created_at}
                   >
-                    {formatTimestamp(entry.created_at)}
+                    {formatDisplayDateTime(entry.created_at)}
                   </time>
                 </SettingsItem>
               );
