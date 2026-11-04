@@ -232,7 +232,7 @@ describe("TimelineProgressBar", () => {
           isToday
         />,
       );
-      expect(screen.getByTestId("now-line")).toBeInTheDocument();
+      expect(screen.getByTestId("now-line")).toHaveAttribute("role", "img");
     });
 
     it("has an aria-label showing the current time", () => {

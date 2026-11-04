@@ -197,6 +197,10 @@ export function GanttChart({
           onProgressChangeRef.current(taskId, progress);
         },
         on_view_change: (mode) => {
+          // Frappe recreates this unlabeled select on each render and refresh.
+          container
+            .querySelector(".viewmode-select")
+            ?.setAttribute("aria-label", m.gantt_toggle_view_aria());
           onViewModeChangeRef.current?.(mode as GanttViewMode);
         },
       });

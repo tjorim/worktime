@@ -1,3 +1,4 @@
+import { contrastRatio } from "@tests/utils/eventPalette";
 import { describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
 import {
@@ -134,6 +135,24 @@ describe("mapToScheduleXEvents", () => {
 
     expect(event.end).toBe(now);
     expect(event.isRunning).toBe(true);
+  });
+
+  it("keeps every Schedule-X event palette at WCAG AA text contrast in both themes", () => {
+    const config = buildCalendarConfig([
+      { id: "orange", name: "Orange", color: "#f97316" },
+      { id: "pale", name: "Pale", color: "#abcdef" },
+      { id: "dark", name: "Dark", color: "#123456" },
+    ]);
+    for (const calendar of Object.values(config)) {
+      for (const colors of [calendar.lightColors!, calendar.darkColors!]) {
+        expect(
+          contrastRatio(
+            colors.container,
+            colors.onContainer.replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i, "#$1$1$2$2$3$3"),
+          ),
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 
   it("reuses configured time-tracking label colors", () => {

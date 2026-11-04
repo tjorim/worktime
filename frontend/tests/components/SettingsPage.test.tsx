@@ -853,7 +853,7 @@ describe("SettingsPage Admin Section", () => {
     const memberRow = (await screen.findByText("member-user")).closest("tr");
     expect(memberRow).not.toBeNull();
 
-    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
+    await user.click(within(memberRow!).getByRole("button", { name: "Delete Member User" }));
 
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Delete account?")).toBeInTheDocument();
@@ -907,7 +907,7 @@ describe("SettingsPage Admin Section", () => {
     const memberRow = (await screen.findByText("member-user")).closest("tr");
     expect(memberRow).not.toBeNull();
 
-    await user.click(within(memberRow!).getByRole("button", { name: "Delete" }));
+    await user.click(within(memberRow!).getByRole("button", { name: "Delete Member User" }));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
@@ -948,7 +948,7 @@ describe("SettingsPage Admin Section", () => {
       within(row).queryByText("admin-user"),
     );
     expect(adminRow).not.toBeNull();
-    expect(within(adminRow!).getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(within(adminRow!).getByRole("button", { name: "Delete Admin User" })).toBeDisabled();
   });
 });
 

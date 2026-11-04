@@ -179,6 +179,7 @@ export function AdminUsersTable({
                           ? m.account_admin_users_delete_self_blocked()
                           : undefined
                       }
+                      aria-label={m.delete_with_name({ name: user.display_name || user.username })}
                       onClick={() => onRequestDelete(user.id)}
                     >
                       {deletingAdminUserId === user.id

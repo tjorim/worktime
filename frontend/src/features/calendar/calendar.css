@@ -1,7 +1,11 @@
 @import "@schedule-x/theme-default/dist/index.css" layer(vendor);
 
 @layer vendor {
-  [data-slot="unified-calendar"] {
+  [data-slot="unified-calendar"],
+  [data-slot="unified-calendar"] .sx__calendar {
+    --sx-color-neutral: var(--wt-theme-muted-foreground);
+    --sx-color-neutral-variant: var(--wt-theme-muted-foreground);
+    --sx-internal-color-text: var(--wt-theme-foreground);
     --sx-color-primary: var(--wt-theme-primary);
     --sx-color-on-primary: var(--wt-theme-primary-foreground);
     --sx-color-primary-container: var(--wt-theme-accent);
@@ -31,5 +35,11 @@
 
   [data-slot="unified-calendar"] .sx-react-calendar-wrapper {
     min-height: 42rem;
+  }
+
+  [data-slot="unified-calendar"] .sx__date-input-chevron-wrapper {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    justify-content: center;
   }
 }

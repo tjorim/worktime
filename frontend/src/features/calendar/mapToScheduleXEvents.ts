@@ -1,6 +1,6 @@
 import type { CalendarEvent, CalendarType } from "@schedule-x/calendar";
 import { Temporal } from "temporal-polyfill";
-import type { Label } from "@/lib/timeTracking/constants";
+import { getContrastingTextColor, type Label } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/timeOff/types";
 import { SHIFT_CODES, type ShiftCode } from "@/data/rosters";
@@ -34,8 +34,8 @@ type DatedShift = Pick<ShiftResult, "date" | "shift">;
 function createCalendarColors(color: string): CalendarType {
   return {
     colorName: color.replace("#", ""),
-    lightColors: { main: color, container: color, onContainer: "#fff" },
-    darkColors: { main: color, container: color, onContainer: "#fff" },
+    lightColors: { main: color, container: color, onContainer: getContrastingTextColor(color) },
+    darkColors: { main: color, container: color, onContainer: getContrastingTextColor(color) },
   };
 }
 
