@@ -150,8 +150,9 @@ def test_username_validation(db_client, auth_headers):
 
 
 async def test_legacy_username_and_rename_audit(db_client, auth_headers, db_session):
-    from app.database.models import User, AuditEntry
     from sqlalchemy import select
+
+    from app.database.models import AuditEntry, User
 
     user = User(username=" legacy / name ", display_name="x" * 200, settings={})
     db_session.add(user)
