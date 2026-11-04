@@ -212,11 +212,13 @@ export function MainTabs({
                 <TabsTrigger
                   key={key}
                   value={key}
-                  className="min-h-11 min-w-0 flex-col sm:flex-row flex-1 sm:flex-none whitespace-normal px-1 sm:px-3"
+                  className="min-h-11 min-w-0 flex-col sm:flex-row flex-1 sm:flex-none whitespace-nowrap px-1 sm:px-3"
                   aria-label={labels[key]}
                 >
                   <Icon icon={icons[key]} />
-                  <span className="text-xs sm:text-sm wrap-anywhere">{labels[key]}</span>
+                  <span className="block max-w-full truncate text-xs sm:text-sm">
+                    {labels[key]}
+                  </span>
                 </TabsTrigger>
               );
             })}

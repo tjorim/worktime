@@ -75,7 +75,7 @@ export function SettingsAuditTrailSection({
                     </div>
                     {hasDetails ? (
                       <details className="mt-1">
-                        <summary className="cursor-pointer text-muted-foreground">
+                        <summary className="min-h-6 pointer-coarse:min-h-11 cursor-pointer text-muted-foreground">
                           {m.audit_trail_details()}
                         </summary>
                         <code className="text-sm break-all">{JSON.stringify(entry.details)}</code>

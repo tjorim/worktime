@@ -328,3 +328,52 @@ describe("TimeOffTableView", () => {
     expect(pageSize).not.toHaveAttribute("style");
   });
 });
+
+describe("mobile Time Off cards", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function mobile() {
+    vi.spyOn(window, "matchMedia").mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaQueryList);
+  }
+
+  it("shows dates, flags and reachable actions and keeps the shared search", async () => {
+    mobile();
+    const onEditEvent = vi.fn();
+    const onDeleteEvent = vi.fn();
+    const onToggleSelection = vi.fn();
+    renderTable({ onEditEvent, onDeleteEvent, onToggleSelection });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const cards = screen.getByRole("list");
+    expect(within(cards).getAllByRole("listitem")).toHaveLength(3);
+    expect(cards).toHaveTextContent("2026/01/05");
+    expect(cards).toHaveTextContent("2026/01/09");
+    expect(cards).toHaveTextContent("Every Wed");
+    expect(cards).toHaveTextContent("Overlapping entry");
+    await userEvent.click(screen.getByRole("button", { name: "Edit: Ski trip" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete: Ski trip" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Ski trip" }));
+    expect(onEditEvent).toHaveBeenCalledWith("range");
+    expect(onDeleteEvent).toHaveBeenCalledWith("range");
+    expect(onToggleSelection).toHaveBeenCalledWith("range");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Sort by" }), "title");
+    expect(within(cards).getAllByRole("listitem")[1]).toHaveTextContent("Conference");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Sort order" }), "desc");
+    expect(within(cards).getAllByRole("listitem")[0]).toHaveTextContent("Ski trip");
+    await userEvent.type(screen.getByRole("searchbox"), "Conference");
+    expect(within(cards).getAllByRole("listitem")).toHaveLength(1);
+    expect(cards).not.toHaveTextContent("Ski trip");
+  });
+
+  it("paginates cards through the existing table model", async () => {
+    mobile();
+    renderTable({ entries: manyEntries, eventCount: manyEntries.length });
+    expect(within(screen.getByRole("list")).getAllByRole("listitem")).toHaveLength(20);
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByRole("list")).toHaveTextContent("Day 21");
+    expect(screen.getByRole("list")).not.toHaveTextContent("Day 20");
+  });
+});
