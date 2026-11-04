@@ -462,7 +462,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await findModalTitle(/Welcome to Worktime/i);
-      await waitFor(() => expect(screen.getByText(/Step 1 of 9/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/Step 1 of 8/i)).toBeInTheDocument());
       unmount();
 
       // Change-schedule mode with team selection - 2 steps

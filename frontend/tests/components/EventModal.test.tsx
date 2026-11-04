@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRef } from "react";
+import { createRef, useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EventModal } from "@/components/EventModal";
@@ -145,5 +145,54 @@ describe("EventModal", () => {
     renderModal({ mode: "add" });
 
     expect(screen.getByLabelText("Comment (optional)")).toHaveAttribute("maxlength", "1000");
+  });
+
+  it("moves focus to the first invalid date field and announces its error on a failed Add", async () => {
+    function Harness() {
+      const [startError, setStartError] = useState("");
+      return (
+        <EventModal
+          show
+          formRef={createRef<HTMLDivElement>()}
+          eventType="range"
+          eventWeekday={1}
+          eventStart=""
+          eventEnd=""
+          eventTitle=""
+          eventFlags={[]}
+          startDateError={startError}
+          endDateError=""
+          previewLine=""
+          typeFlagOptions={getTypeFlagOptions()}
+          timeLocationFlagOptions={getTimeLocationFlagOptions()}
+          typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
+          timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
+          onHide={vi.fn()}
+          onEntered={vi.fn()}
+          onEventTypeChange={vi.fn()}
+          onEventTitleChange={vi.fn()}
+          onEventWeekdayChange={vi.fn()}
+          onStartDateChange={vi.fn()}
+          onEndDateChange={vi.fn()}
+          onTypeFlagChange={vi.fn()}
+          onTimeFlagChange={vi.fn()}
+          onResetForm={vi.fn()}
+          onSubmit={() => setStartError("Start date is required")}
+        />
+      );
+    }
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: /^Add$/ }));
+
+    const start = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+    expect(start).toHaveFocus();
+    expect(start).toHaveAccessibleDescription("Start date is required");
+    expect(screen.getByRole("alert")).toHaveTextContent("Start date is required");
+
+    // Pressing Add again with the same error returns focus to the field.
+    await user.click(screen.getByRole("button", { name: /^Add$/ }));
+    expect(start).toHaveFocus();
   });
 });

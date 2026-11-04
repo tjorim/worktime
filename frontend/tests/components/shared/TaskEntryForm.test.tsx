@@ -56,3 +56,57 @@ describe("TaskEntryForm timer controls", () => {
     expect(screen.queryByRole("button", { name: /Stop Timer/i })).not.toBeInTheDocument();
   });
 });
+
+describe("TaskEntryForm disabled-action reasons", () => {
+  it("prints why Add Task is disabled and associates it with the focusable wrapper", () => {
+    render(<TaskEntryForm {...baseProps} addDisabledReason="Enter a task name first." />);
+
+    const reason = screen.getByText("Add Task: Enter a task name first.");
+    expect(reason).toBeVisible();
+    const button = screen.getByRole("button", { name: "Add Task" });
+    expect(button).toBeDisabled();
+    expect(button.parentElement).toHaveAttribute("aria-describedby", reason.id);
+  });
+
+  it("prints why Start Now is disabled when the timer cannot start", () => {
+    render(
+      <TaskEntryForm
+        {...baseProps}
+        startDisabledReason="Select a label first."
+        addDisabledReason="Enter a task name first."
+      />,
+    );
+
+    expect(screen.getByText("Start Now: Select a label first.")).toBeVisible();
+    expect(screen.getByText("Add Task: Enter a task name first.")).toBeVisible();
+  });
+
+  it("shows no reason once the actions are enabled", () => {
+    render(
+      <TaskEntryForm
+        {...baseProps}
+        canSubmit
+        canStartNow
+        startDisabledReason="Select a label first."
+        addDisabledReason="Enter a task name first."
+      />,
+    );
+
+    expect(screen.queryByText(/Enter a task name first/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Select a label first/)).not.toBeInTheDocument();
+  });
+
+  it("does not describe a hidden Start Now button when timer controls are off", () => {
+    render(
+      <TaskEntryForm
+        {...baseProps}
+        showTimerControls={false}
+        startDisabledReason="Use Time Tracking to start a live timer."
+        addDisabledReason="Enter a task, label, and valid time range."
+      />,
+    );
+
+    expect(screen.queryByText(/live timer/)).not.toBeInTheDocument();
+    expect(screen.getByText(/valid time range/)).toBeVisible();
+  });
+});

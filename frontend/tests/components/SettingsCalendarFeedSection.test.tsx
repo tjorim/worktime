@@ -81,4 +81,49 @@ describe("SettingsCalendarFeedSection", () => {
     expect(fetchFn).toHaveBeenLastCalledWith("/api/ical", { method: "POST" });
     expect(await screen.findByDisplayValue(/wtical_replacement\.ics$/)).toBeInTheDocument();
   });
+
+  it("shows which link is active after a reload", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ configured: true, token_preview: "f3a9", last_used_at: null }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    renderSection(fetchFn);
+
+    expect(await screen.findByText("Active link ends in f3a9.")).toBeInTheDocument();
+  });
+
+  it("asks for confirmation before revoking the subscription", async () => {
+    const fetchFn = vi.fn(async (_input: string, init?: RequestInit) =>
+      init?.method === "DELETE"
+        ? new Response(null, { status: 204 })
+        : new Response(JSON.stringify({ configured: true, token_preview: "f3a9" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+    );
+    renderSection(fetchFn);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Revoke" }));
+
+    // Nothing is sent until the user confirms.
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("Revoke the calendar link?")).toBeInTheDocument();
+    expect(fetchFn).not.toHaveBeenCalledWith("/api/ical", { method: "DELETE" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(fetchFn).not.toHaveBeenCalledWith("/api/ical", { method: "DELETE" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Revoke" }),
+    );
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledWith("/api/ical", { method: "DELETE" }));
+  });
 });

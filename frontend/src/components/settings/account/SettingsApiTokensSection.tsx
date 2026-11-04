@@ -3,7 +3,7 @@ import { Icon } from "@/components/shared/Icon";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import {
@@ -15,7 +15,11 @@ import {
   SettingsSecret,
 } from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
-import type { ApiToken, CreatedApiToken } from "@/pages/settings/hooks/useSettingsApiTokens";
+import {
+  API_TOKEN_NAME_MAX_LENGTH,
+  type ApiToken,
+  type CreatedApiToken,
+} from "@/pages/settings/hooks/useSettingsApiTokens";
 import { formatDisplayDate } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
@@ -80,8 +84,12 @@ export function SettingsApiTokensSection({
     <SettingsSection icon={KeyIcon} title={m.api_tokens_section_title()}>
       <SettingsHint className="mb-3">{m.api_tokens_description()}</SettingsHint>
 
+      {/* Announce the result without putting the secret itself in a live region. */}
+      <div role="status" className="sr-only">
+        {createdApiToken ? m.api_tokens_created_title() : ""}
+      </div>
       {createdApiToken ? (
-        <Alert variant="success" className="mb-3 gap-2">
+        <Alert role="note" variant="success" className="mb-3 gap-2">
           <div className="font-medium">{m.api_tokens_created_title()}</div>
           <div>{m.api_tokens_created_warning()}</div>
           <div>{m.api_tokens_pebble_guidance()}</div>
@@ -107,12 +115,21 @@ export function SettingsApiTokensSection({
             value={nameDraft}
             onChange={(event) => setNameDraft(event.target.value)}
             placeholder={m.api_tokens_name_placeholder()}
+            maxLength={API_TOKEN_NAME_MAX_LENGTH}
+            aria-describedby="api-token-name-help"
             disabled={isCreatingApiToken}
           />
-          <Button onClick={handleGenerate} disabled={isCreatingApiToken || nameDraft.trim() === ""}>
+          <Button
+            onClick={handleGenerate}
+            disabled={isCreatingApiToken || nameDraft.trim() === ""}
+            aria-describedby="api-token-name-help"
+          >
             {isCreatingApiToken ? m.api_tokens_generating_btn() : m.api_tokens_generate_btn()}
           </Button>
         </div>
+        <FieldDescription id="api-token-name-help">
+          {m.api_tokens_name_help({ max: API_TOKEN_NAME_MAX_LENGTH })}
+        </FieldDescription>
       </Field>
 
       <div className="flex flex-col gap-2">

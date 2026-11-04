@@ -381,7 +381,7 @@ describe("WelcomeWizard Configuration System", () => {
   });
 
   describe("Step Configuration - Step Counting", () => {
-    it("should count 9 total steps in onboarding with team selection", () => {
+    it("should count 8 total steps in onboarding with team selection (the team picker is part of the schedule step)", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
@@ -389,7 +389,7 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const totalSteps = getTotalSteps(context);
-      expect(totalSteps).toBe(9);
+      expect(totalSteps).toBe(8);
     });
 
     it("should count 8 total steps in onboarding without team selection", () => {
@@ -437,6 +437,31 @@ describe("WelcomeWizard Configuration System", () => {
     });
   });
 
+  describe("Step Configuration - Stable counter", () => {
+    it("keeps the onboarding total and every step index identical whether or not the roster has teams", () => {
+      const withTeams: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: true,
+        enableTimeOff: true,
+      };
+      const withoutTeams: WizardContext = { ...withTeams, shouldShowTeamSelection: false };
+
+      expect(getTotalSteps(withTeams)).toBe(getTotalSteps(withoutTeams));
+      for (const step of [
+        "welcome",
+        "features",
+        "schedule-selection",
+        "timeoff-setup",
+        "time-tracking-setup",
+        "gantt-setup",
+        "work-location-setup",
+        "account-setup",
+      ] as const) {
+        expect(getStepIndex(step, withTeams)).toBe(getStepIndex(step, withoutTeams));
+      }
+    });
+  });
+
   describe("Step Configuration - Step Indexing", () => {
     it("should correctly index steps in onboarding with team selection", () => {
       const context: WizardContext = {
@@ -448,12 +473,12 @@ describe("WelcomeWizard Configuration System", () => {
       expect(getStepIndex("welcome", context)).toBe(1);
       expect(getStepIndex("features", context)).toBe(2);
       expect(getStepIndex("schedule-selection", context)).toBe(3);
-      expect(getStepIndex("team-selection", context)).toBe(4);
-      expect(getStepIndex("timeoff-setup", context)).toBe(5);
-      expect(getStepIndex("time-tracking-setup", context)).toBe(6);
-      expect(getStepIndex("gantt-setup", context)).toBe(7);
-      expect(getStepIndex("work-location-setup", context)).toBe(8);
-      expect(getStepIndex("account-setup", context)).toBe(9);
+      expect(getStepIndex("team-selection", context)).toBe(3);
+      expect(getStepIndex("timeoff-setup", context)).toBe(4);
+      expect(getStepIndex("time-tracking-setup", context)).toBe(5);
+      expect(getStepIndex("gantt-setup", context)).toBe(6);
+      expect(getStepIndex("work-location-setup", context)).toBe(7);
+      expect(getStepIndex("account-setup", context)).toBe(8);
     });
 
     it("should correctly index steps in onboarding without team selection", () => {

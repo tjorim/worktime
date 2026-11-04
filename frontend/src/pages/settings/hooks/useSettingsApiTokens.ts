@@ -4,6 +4,9 @@ import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { accessTokenErrorMessages } from "@/utils/apiErrorCodes";
 
+/** Matches `AccessTokenCreate.name` (`max_length=100`) in the backend schema. */
+export const API_TOKEN_NAME_MAX_LENGTH = 100;
+
 export interface ApiToken {
   id: string;
   name: string;
@@ -78,6 +81,10 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       setCreateApiTokenError(m.api_tokens_name_required());
       return;
     }
+    if (trimmedName.length > API_TOKEN_NAME_MAX_LENGTH) {
+      setCreateApiTokenError(m.api_tokens_name_invalid({ max: API_TOKEN_NAME_MAX_LENGTH }));
+      return;
+    }
 
     setIsCreatingApiToken(true);
     setCreateApiTokenError(null);
@@ -99,8 +106,11 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       await loadApiTokens();
     } catch (error) {
       logger.error("Failed to create API token:", error);
+      // The only user-editable field is the name, so a 422 means it was rejected.
       setCreateApiTokenError(
-        getErrorMessage(error, m.api_tokens_create_failed(), accessTokenErrorMessages),
+        error instanceof ApiError && error.status === 422
+          ? m.api_tokens_name_invalid({ max: API_TOKEN_NAME_MAX_LENGTH })
+          : getErrorMessage(error, m.api_tokens_create_failed(), accessTokenErrorMessages),
       );
     } finally {
       setIsCreatingApiToken(false);

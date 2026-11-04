@@ -19,7 +19,7 @@ describe("PrivacyPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Privacy policy" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "What Worktime stores" })).toBeInTheDocument();
-    expect(screen.getByText(/export your account data as JSON/i)).toBeInTheDocument();
+    expect(screen.getByText(/download your full account data as JSON/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Signing in" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Third-party services and API communication" }),

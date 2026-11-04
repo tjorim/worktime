@@ -98,6 +98,12 @@ export function Step3ScheduleSelection({
         })}
       </div>
 
+      {selectedSchedule ? null : (
+        <p id="wizard-schedule-required" className="mb-4 text-sm text-muted-foreground">
+          {m.wizard_schedule_required()}
+        </p>
+      )}
+
       <WizardActions
         start={
           <Button variant="outline" size="lg" onClick={onPrev}>
@@ -106,7 +112,12 @@ export function Step3ScheduleSelection({
           </Button>
         }
         end={
-          <Button size="lg" onClick={onNext} disabled={!selectedSchedule}>
+          <Button
+            size="lg"
+            onClick={onNext}
+            disabled={!selectedSchedule}
+            aria-describedby={selectedSchedule ? undefined : "wizard-schedule-required"}
+          >
             {continueLabel} <Icon icon={ArrowRightIcon} />
           </Button>
         }

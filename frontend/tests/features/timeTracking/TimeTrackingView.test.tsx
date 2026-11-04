@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingView } from "@/features/timeTracking/TimeTrackingView";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
@@ -12,6 +12,7 @@ const TEST_LABELS = [
 
 let mockHiddenTaskCount = 0;
 let mockTasks: StoredTimeTrackingTask[] = [];
+let mockLabels = TEST_LABELS;
 
 // Mock the hooks
 vi.mock("@/hooks/useTimeTrackingStorage", () => ({
@@ -19,7 +20,7 @@ vi.mock("@/hooks/useTimeTrackingStorage", () => ({
     tasks: mockTasks,
     hiddenTaskCount: mockHiddenTaskCount,
     templates: [],
-    labels: TEST_LABELS,
+    labels: mockLabels,
     addTask: vi.fn(),
     updateTaskTimes: vi.fn(),
     removeTask: vi.fn(),
@@ -35,6 +36,7 @@ describe("TimeTrackingView", () => {
   beforeEach(() => {
     localStorage.clear();
     mockTasks = [];
+    mockLabels = TEST_LABELS;
     mockHiddenTaskCount = 0;
   });
 
@@ -96,6 +98,28 @@ describe("TimeTrackingView", () => {
       expect(screen.getByRole("button", { name: /Go to previous day/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^Go to today$/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Go to next day/i })).toBeInTheDocument();
+    });
+  });
+
+  describe("Add Task disabled reason", () => {
+    it("prints the next missing requirement under the form", () => {
+      renderWithSettings();
+
+      expect(screen.getByText("Add Task: Enter a task name first.")).toBeVisible();
+
+      fireEvent.change(screen.getByLabelText("Task"), { target: { value: "Write report" } });
+
+      expect(screen.getByText("Add Task: Enter both start and stop times.")).toBeVisible();
+      expect(screen.queryByText("Add Task: Enter a task name first.")).not.toBeInTheDocument();
+    });
+
+    it("explains a missing label instead of leaving Add Task disabled without a reason", () => {
+      mockLabels = [];
+      renderWithSettings();
+
+      fireEvent.change(screen.getByLabelText("Task"), { target: { value: "Write report" } });
+
+      expect(screen.getByText("Add Task: Select a label first.")).toBeVisible();
     });
   });
 
