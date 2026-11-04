@@ -1,10 +1,12 @@
 import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
-import { getErrorMessage } from "@/utils/apiError";
+import { getErrorMessage, type ErrorCodeMessages } from "@/utils/apiError";
 import { TagsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { NativeSelect } from "@/components/ui/native-select";
 import { useToast } from "@/contexts/ToastContext";
 import { Hint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -20,6 +22,7 @@ import {
 } from "@/lib/timeTracking/constants";
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 
@@ -32,7 +35,17 @@ type LabelsPanelProps = {
   labels: Label[];
   templates: TimeTrackingTemplate[];
   tasks: StoredTimeTrackingTask[];
+  ganttTasks: Pick<GanttTask, "label">[];
   onUpdateLabels: (labels: Label[], confirmedRemoval?: boolean) => void | Promise<void>;
+  /** Move everything off a label onto another, then delete the label. */
+  onReassignAndDeleteLabel: (labelId: string, replacementId: string) => Promise<void>;
+};
+
+type LabelUsage = { templates: number; tasks: number; ganttTasks: number };
+
+// A reassignment that stopped part-way reports through the settings replacement code.
+const REASSIGN_ERROR_MESSAGES: ErrorCodeMessages = {
+  SETTINGS_PARTIAL: () => m.tt_label_reassign_failed(),
 };
 
 const EXAMPLE_LABELS: Label[] = [
@@ -51,7 +64,14 @@ function validateLabelsImportPayload(parsed: unknown): parsed is { labels: unkno
   return Array.isArray(payload.labels);
 }
 
-export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: LabelsPanelProps) {
+export function LabelsPanel({
+  labels,
+  templates,
+  tasks,
+  ganttTasks,
+  onUpdateLabels,
+  onReassignAndDeleteLabel,
+}: LabelsPanelProps) {
   const addLabelRef = useRef<HTMLButtonElement>(null);
   const deleteFocusRef = useRef<HTMLElement | null>(null);
   const [error, setError] = useState("");
@@ -63,11 +83,16 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editLabelId, setEditLabelId] = useState<string | null>(null);
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState<Label | null>(null);
+  const [replacementId, setReplacementId] = useState("");
   const [labelForm, setLabelForm] = useState<LabelFormState>({
     name: "",
     color: labels[0]?.color ?? "#3B82F6",
   });
   const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
+  const listFormat = useMemo(
+    () => new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" }),
+    [],
+  );
 
   const resetForm = () =>
     setLabelForm({
@@ -76,9 +101,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     });
 
   const usageByLabelId = useMemo(() => {
-    const map: Record<string, { templates: number; tasks: number }> = {};
+    const map: Record<string, LabelUsage> = {};
     for (const label of labels) {
-      map[label.id] = { templates: 0, tasks: 0 };
+      map[label.id] = { templates: 0, tasks: 0, ganttTasks: 0 };
     }
     for (const template of templates) {
       const entry = map[template.label];
@@ -92,8 +117,40 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         entry.tasks++;
       }
     }
+    for (const task of ganttTasks) {
+      const entry = task.label ? map[task.label] : undefined;
+      if (entry) {
+        entry.ganttTasks++;
+      }
+    }
     return map;
-  }, [labels, templates, tasks]);
+  }, [labels, templates, tasks, ganttTasks]);
+
+  const describeUsage = (usage: LabelUsage | undefined): string => {
+    const parts: string[] = [];
+    if (usage?.templates) {
+      parts.push(
+        pluralRules.select(usage.templates) === "one"
+          ? m.tt_template_count_one({ count: usage.templates })
+          : m.tt_template_count_other({ count: usage.templates }),
+      );
+    }
+    if (usage?.tasks) {
+      parts.push(
+        pluralRules.select(usage.tasks) === "one"
+          ? m.tt_task_count_one({ count: usage.tasks })
+          : m.tt_task_count_other({ count: usage.tasks }),
+      );
+    }
+    if (usage?.ganttTasks) {
+      parts.push(
+        pluralRules.select(usage.ganttTasks) === "one"
+          ? m.tt_gantt_task_count_one({ count: usage.ganttTasks })
+          : m.tt_gantt_task_count_other({ count: usage.ganttTasks }),
+      );
+    }
+    return listFormat.format(parts);
+  };
 
   const handleCopy = async () => {
     setError("");
@@ -145,7 +202,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       const blocked = labels.filter(
         (label) =>
           !next.some((item) => item.id === label.id) &&
-          (usageByLabelId[label.id]?.tasks || usageByLabelId[label.id]?.templates),
+          (usageByLabelId[label.id]?.tasks ||
+            usageByLabelId[label.id]?.templates ||
+            usageByLabelId[label.id]?.ganttTasks),
       );
       if (blocked.length) {
         setError(m.tt_json_in_use({ names: blocked.map((item) => item.name).join(", ") }));
@@ -218,33 +277,60 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     }
   };
 
+  const closeDeleteDialog = () => {
+    setPendingDeleteLabel(null);
+    setReplacementId("");
+  };
+
   const handleConfirmDelete = async () => {
     if (saving || !pendingDeleteLabel) {
+      return;
+    }
+    const label = pendingDeleteLabel;
+    const usage = describeUsage(usageByLabelId[label.id]);
+    const replacement = usage ? labels.find((item) => item.id === replacementId) : undefined;
+    if (usage && !replacement) {
       return;
     }
     setError("");
     setSaving(true);
     try {
-      await onUpdateLabels(
-        labels.filter((item) => item.id !== pendingDeleteLabel.id),
-        true,
-      );
+      if (replacement) {
+        await onReassignAndDeleteLabel(label.id, replacement.id);
+      } else {
+        await onUpdateLabels(
+          labels.filter((item) => item.id !== label.id),
+          true,
+        );
+      }
     } catch (error) {
-      setError(getErrorMessage(error, m.tt_json_save_failed()));
-      setPendingDeleteLabel(null);
+      setError(
+        replacement
+          ? getErrorMessage(error, m.tt_label_reassign_failed(), REASSIGN_ERROR_MESSAGES)
+          : getErrorMessage(error, m.tt_json_save_failed()),
+      );
+      closeDeleteDialog();
       return;
     } finally {
       setSaving(false);
     }
     deleteFocusRef.current = addLabelRef.current;
-    toast.showSuccess(m.tt_label_deleted());
-    if (editLabelId === pendingDeleteLabel.id) {
+    toast.showSuccess(
+      replacement
+        ? m.tt_label_reassigned_deleted({ usage, target: replacement.name, name: label.name })
+        : m.tt_label_deleted(),
+    );
+    if (editLabelId === label.id) {
       setEditLabelId(null);
       resetForm();
       setModalMode(null);
     }
-    setPendingDeleteLabel(null);
+    closeDeleteDialog();
   };
+
+  const deleteUsage = pendingDeleteLabel
+    ? describeUsage(usageByLabelId[pendingDeleteLabel.id])
+    : "";
 
   return (
     <div className="rounded-lg border border-border p-3">
@@ -300,29 +386,15 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border">
             {labels.map((label) => {
-              const usage = usageByLabelId[label.id];
-              const usageParts: string[] = [];
-              if (usage?.templates) {
-                usageParts.push(
-                  pluralRules.select(usage.templates) === "one"
-                    ? m.tt_template_count_one({ count: usage.templates })
-                    : m.tt_template_count_other({ count: usage.templates }),
-                );
-              }
-              if (usage?.tasks) {
-                usageParts.push(
-                  pluralRules.select(usage.tasks) === "one"
-                    ? m.tt_task_count_one({ count: usage.tasks })
-                    : m.tt_task_count_other({ count: usage.tasks }),
-                );
-              }
-              const isInUse = usageParts.length > 0;
+              const usageText = describeUsage(usageByLabelId[label.id]);
+              const isInUse = usageText !== "";
+              const canReassign = labels.length > 1;
               return (
                 <div key={label.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
                   <LabelChip color={label.color}>{label.name}</LabelChip>
                   {isInUse && (
                     <span className="text-sm text-muted-foreground">
-                      {m.tt_label_used_by({ context: usageParts.join(` ${m.tt_and()} `) })}
+                      {m.tt_label_used_by({ context: usageText })}
                     </span>
                   )}
                   <div className="ml-auto flex gap-2">
@@ -334,13 +406,11 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                     >
                       {m.edit()}
                     </Button>
-                    {isInUse ? (
+                    {isInUse && !canReassign ? (
                       <Hint
                         content={
                           <div id={`delete-label-${label.id}`}>
-                            {m.tt_label_in_use_tooltip({
-                              usage: usageParts.join(` ${m.tt_and()} `),
-                            })}
+                            {m.tt_label_in_use_tooltip({ usage: usageText })}
                           </div>
                         }
                       >
@@ -362,6 +432,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                         aria-label={m.tt_delete_label_aria({ name: label.name })}
                         onClick={(event) => {
                           deleteFocusRef.current = event.currentTarget;
+                          setReplacementId("");
                           setPendingDeleteLabel(label);
                         }}
                       >
@@ -442,17 +513,52 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         onCancel={() => setPendingJson(null)}
       />
       <ConfirmationDialog
-        confirmDisabled={saving}
+        confirmDisabled={saving || (deleteUsage !== "" && replacementId === "")}
         finalFocus={deleteFocusRef}
         isOpen={pendingDeleteLabel !== null}
         title={m.tt_delete_label_title()}
         message={
-          pendingDeleteLabel ? m.tt_delete_item_message({ name: pendingDeleteLabel.name }) : ""
+          pendingDeleteLabel ? (
+            deleteUsage ? (
+              <div className="flex flex-col gap-3">
+                <p className="mb-0">
+                  {m.tt_reassign_label_message({
+                    name: pendingDeleteLabel.name,
+                    usage: deleteUsage,
+                  })}
+                </p>
+                <Field>
+                  <FieldLabel htmlFor="reassignLabelTarget">
+                    {m.tt_reassign_label_field()}
+                  </FieldLabel>
+                  <NativeSelect
+                    id="reassignLabelTarget"
+                    className="h-9 w-full"
+                    value={replacementId}
+                    onChange={(event) => setReplacementId(event.target.value)}
+                  >
+                    <option value="">{m.tt_select_label()}</option>
+                    {labels
+                      .filter((item) => item.id !== pendingDeleteLabel.id)
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                  </NativeSelect>
+                </Field>
+              </div>
+            ) : (
+              m.tt_delete_item_message({ name: pendingDeleteLabel.name })
+            )
+          ) : (
+            ""
+          )
         }
-        confirmLabel={m.delete()}
+        confirmLabel={deleteUsage ? m.tt_reassign_label_confirm() : m.delete()}
         variant="danger"
         onConfirm={handleConfirmDelete}
-        onCancel={() => setPendingDeleteLabel(null)}
+        onCancel={closeDeleteDialog}
       />
     </div>
   );

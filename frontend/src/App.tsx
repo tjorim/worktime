@@ -26,7 +26,8 @@ import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getScheduleChangeTeamAction, getScheduleConfig } from "@/utils/scheduleUtils";
+import { useScheduleChange } from "@/hooks/useScheduleChange";
+import { getScheduleConfig } from "@/utils/scheduleUtils";
 
 import * as m from "@/paraglide/messages.js";
 import { router } from "@/router";
@@ -54,9 +55,9 @@ function AppContent() {
     setCrossBorderAnnouncementSeen,
     completeOnboardingWithSchedule,
     scheduleType,
-    setScheduleType,
     settings,
   } = useSettings();
+  const changeSchedule = useScheduleChange();
   const { lastUsed, updateLastActiveTab } = useLastUsed();
   // Show the wizard from the first render if onboarding hasn't been
   // completed yet, matching the effect below that keeps it open/closed as
@@ -246,14 +247,7 @@ function AppContent() {
   const handleScheduleSelect = (schedule: ScheduleOption) => {
     try {
       getScheduleConfig(schedule);
-      const teamAction = getScheduleChangeTeamAction(scheduleType, schedule, myTeam);
-      if (teamAction !== "keep") {
-        setMyTeam(null);
-        if (teamAction === "clear-and-prompt") {
-          showInfo(m.schedule_team_reset_changed());
-        }
-      }
-      setScheduleType(schedule);
+      changeSchedule(schedule);
     } catch (error) {
       logger.error("Failed to change schedule:", error);
       showError(m.schedule_change_failed());

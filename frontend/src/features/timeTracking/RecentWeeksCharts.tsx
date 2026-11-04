@@ -45,6 +45,8 @@ interface RecentWeeksChartsProps {
   weeks: RecentWeek[];
   weeklyTargetHours?: number;
   targetDaily: number;
+  /** Hide the built-in heading when a surrounding disclosure already titles the charts. */
+  showHeading?: boolean;
 }
 
 function RecentWeeksTrendChart({
@@ -167,13 +169,16 @@ export function RecentWeeksCharts({
   weeks,
   weeklyTargetHours,
   targetDaily,
+  showHeading = true,
 }: RecentWeeksChartsProps) {
   return (
     <div className="mb-4">
-      <h6 className="mb-3 text-base font-medium text-muted-foreground uppercase">
-        <Icon icon={CalendarRangeIcon} className="mr-2" />
-        {m.tt_trend_chart_heading()}
-      </h6>
+      {showHeading && (
+        <h6 className="mb-3 text-base font-medium text-muted-foreground uppercase">
+          <Icon icon={CalendarRangeIcon} className="mr-2" />
+          {m.tt_trend_chart_heading()}
+        </h6>
+      )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="min-w-0">
           <RecentWeeksTrendChart weeks={weeks} weeklyTargetHours={weeklyTargetHours} />

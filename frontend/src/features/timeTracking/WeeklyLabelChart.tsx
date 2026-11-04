@@ -25,6 +25,8 @@ interface WeeklyLabelChartProps {
   /** Ordered by hours, descending; the order is also the stacking and legend order. */
   labelPercentages: LabelPercentage[];
   targetDaily: number;
+  /** Hide the built-in heading when a surrounding disclosure already titles the chart. */
+  showHeading?: boolean;
 }
 
 /** Daily hours stacked by category, with a legend that shows, hides and highlights categories. */
@@ -33,6 +35,7 @@ export function WeeklyLabelChart({
   dailyTotals,
   labelPercentages,
   targetDaily,
+  showHeading = true,
 }: WeeklyLabelChartProps) {
   // Hidden (not visible) categories are stored so a category that appears later defaults to shown.
   const [hiddenLabels, setHiddenLabels] = useState<readonly string[]>([]);
@@ -101,10 +104,12 @@ export function WeeklyLabelChart({
 
   return (
     <div className="mb-4">
-      <h6 className="mb-3 text-base font-medium text-muted-foreground uppercase">
-        <Icon icon={ChartColumnStackedIcon} className="mr-2" />
-        {m.tt_label_chart_heading()}
-      </h6>
+      {showHeading && (
+        <h6 className="mb-3 text-base font-medium text-muted-foreground uppercase">
+          <Icon icon={ChartColumnStackedIcon} className="mr-2" />
+          {m.tt_label_chart_heading()}
+        </h6>
+      )}
       <div className="min-w-0">
         <Chart
           definition={definition}

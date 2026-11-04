@@ -33,8 +33,8 @@ import {
 import { logger } from "@/utils/logger";
 import { BackupDialog } from "@/components/BackupDialog";
 import { CONFIG } from "@/utils/config";
-import { getScheduleChangeTeamAction } from "@/utils/scheduleUtils";
-import { type ScheduleOption } from "@/data/rosters";
+import { useGanttTasks } from "@/hooks/useGanttTasks";
+import { useScheduleChange } from "@/hooks/useScheduleChange";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
@@ -85,6 +85,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
   const { openAbout, openShortcuts } = useAppShellContext();
+  const { showWarning } = useToast();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const requestedSection = search.section ?? "scheduleTeam";
   const activeSection = resolveSettingsSection(requestedSection, isAdmin === true);
@@ -93,12 +94,16 @@ export function SettingsPage() {
     if (requestedSection === activeSection) return;
     // Keep admin deep links while the account profile is still loading.
     if (requestedSection === "admin" && isAdmin === null) return;
+    // Say why the page changed instead of silently landing somewhere else.
+    if (requestedSection === "admin" && isAdmin === false) {
+      showWarning(m.settings_section_unavailable());
+    }
     void navigate({
       to: "/settings",
       search: { section: activeSection },
       replace: true,
     });
-  }, [requestedSection, activeSection, isAdmin, navigate]);
+  }, [requestedSection, activeSection, isAdmin, navigate, showWarning]);
 
   const visibleSections = useMemo(
     () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
@@ -261,7 +266,6 @@ export function SettingsContent({
     scheduleType,
     myTeam,
     setMyTeam,
-    setScheduleType,
     updateTimeFormat,
     updateTheme,
     updateNotifications,
@@ -433,16 +437,7 @@ export function SettingsContent({
     }
   };
 
-  const handleScheduleChange = (schedule: ScheduleOption) => {
-    const teamAction = getScheduleChangeTeamAction(scheduleType, schedule, myTeam);
-    if (teamAction !== "keep") {
-      setMyTeam(null);
-      if (teamAction === "clear-and-prompt") {
-        toast?.showInfo(m.schedule_team_reset_changed());
-      }
-    }
-    setScheduleType(schedule);
-  };
+  const handleScheduleChange = useScheduleChange();
 
   const handleNotificationsChange = async (enabled: boolean) => {
     if (!enabled) {
@@ -710,18 +705,22 @@ function SettingsTimeTrackingSectionContainer() {
     deleteTemplate,
     updateTemplates,
     updateLabels,
+    reassignAndDeleteLabel,
   } = useTimeTrackingStorage();
+  const { tasks: ganttTasks } = useGanttTasks();
 
   return (
     <SettingsTimeTrackingSection
       labels={labels}
       templates={templates}
       tasks={tasks}
+      ganttTasks={ganttTasks}
       onAddTemplate={addTemplate}
       onUpdateTemplate={updateTemplate}
       onDeleteTemplate={deleteTemplate}
       onUpdateTemplates={updateTemplates}
       onUpdateLabels={updateLabels}
+      onReassignAndDeleteLabel={reassignAndDeleteLabel}
     />
   );
 }

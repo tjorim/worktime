@@ -23,17 +23,21 @@ test.describe("Weekly time-tracking summary (authenticated)", () => {
     await expect(page.getByText("Weekly Overview")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Hours at a Glance" })).toBeVisible();
     await expect(page.getByText("Deep work").first()).toBeVisible();
-    await expect(page.getByText("Total Hours").first()).toBeVisible();
+    await expect(page.getByText("Weekly Progress").first()).toBeVisible();
+    await expect(page.getByText("Avg. Daily Hours")).toBeVisible();
   });
 
   test("category chart legend hides and shows a category", async ({ page }) => {
     await page.clock.setFixedTime(new Date(2026, 8, 30, 15, 0, 0));
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Recent Weeks" })).toBeVisible();
+    // The per-day category chart is folded away until asked for.
+    const trigger = page.getByRole("button", { name: "Hours by Category" });
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click();
     const section = page
-      .locator("div.mb-4", { has: page.getByRole("heading", { name: "Hours by Category" }) })
-      .last();
+      .locator('[data-slot="accordion-content"]')
+      .filter({ has: page.getByRole("button", { name: /Meetings/ }) });
     const meetings = section.getByRole("button", { name: /Meetings/ });
 
     await expect(meetings).toHaveAttribute("aria-pressed", "true");

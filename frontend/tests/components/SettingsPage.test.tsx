@@ -281,6 +281,8 @@ describe("Settings section URLs", () => {
         replace: true,
       }),
     );
+    // The redirect is explained rather than silent.
+    expect(await screen.findByText(m.settings_section_unavailable())).toBeVisible();
   });
 
   it("preserves admin links until the admin profile loads", async () => {
@@ -1176,6 +1178,60 @@ describe("SettingsPage Schedule & Team Section", () => {
     await user.click(teamSelector);
     await user.click(screen.getByRole("option", { name: "Team 1" }));
     expect(teamSelector).toHaveTextContent("Team 1");
+  });
+});
+
+describe("SettingsPage schedule switching", () => {
+  const seedTeam = () =>
+    localStorage.setItem(
+      USER_STATE_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        hasCompletedOnboarding: true,
+        myTeam: 3,
+        scheduleType: "5-shift",
+        settings: {},
+      }),
+    );
+  const storedState = () => JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY) ?? "{}");
+
+  it("offers Undo that restores both the schedule and the team after switching away", async () => {
+    seedTeam();
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
+
+    await user.click(screen.getByText("2-shift"));
+
+    await waitFor(() => expect(storedState().myTeam).toBeNull());
+    expect(storedState().scheduleType).toBe("2-shift");
+    expect(await screen.findByText(m.schedule_team_reset_changed())).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: m.toast_undo() }));
+
+    await waitFor(() => expect(storedState().myTeam).toBe(3));
+    expect(storedState().scheduleType).toBe("5-shift");
+  });
+
+  it("also offers Undo when the new schedule has no teams", async () => {
+    seedTeam();
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
+
+    await user.click(screen.getByText("9-5"));
+
+    expect(await screen.findByText(m.schedule_team_reset_no_teams())).toBeVisible();
+    await user.click(screen.getByRole("button", { name: m.toast_undo() }));
+    await waitFor(() => expect(storedState().myTeam).toBe(3));
+    expect(storedState().scheduleType).toBe("5-shift");
+  });
+
+  it("does not announce anything when no team was selected", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="scheduleTeam" />);
+
+    await user.click(screen.getByText("2-shift"));
+
+    expect(screen.queryByRole("button", { name: m.toast_undo() })).not.toBeInTheDocument();
   });
 });
 

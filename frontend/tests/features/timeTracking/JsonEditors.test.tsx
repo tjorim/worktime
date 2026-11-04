@@ -21,6 +21,8 @@ for (const kind of ["labels", "templates"] as const) {
         labels={source as typeof labels}
         templates={[]}
         tasks={[]}
+        ganttTasks={[]}
+        onReassignAndDeleteLabel={vi.fn()}
         onUpdateLabels={save}
       />
     ) : (
@@ -133,7 +135,14 @@ it("refuses removing an in-use label", async () => {
   const save = vi.fn();
   render(
     <ToastProvider>
-      <LabelsPanel labels={labels} templates={templates} tasks={[]} onUpdateLabels={save} />
+      <LabelsPanel
+        labels={labels}
+        templates={templates}
+        tasks={[]}
+        ganttTasks={[]}
+        onReassignAndDeleteLabel={vi.fn()}
+        onUpdateLabels={save}
+      />
     </ToastProvider>,
   );
   await user.click(screen.getByText(/Raw labels JSON/));
@@ -147,7 +156,16 @@ it("refuses removing an in-use label", async () => {
 it("focuses Add Label after the final delete trigger is removed", async () => {
   function Stateful() {
     const [items, setItems] = useState(labels);
-    return <LabelsPanel labels={items} templates={[]} tasks={[]} onUpdateLabels={setItems} />;
+    return (
+      <LabelsPanel
+        labels={items}
+        templates={[]}
+        tasks={[]}
+        ganttTasks={[]}
+        onReassignAndDeleteLabel={vi.fn()}
+        onUpdateLabels={setItems}
+      />
+    );
   }
   const user = userEvent.setup();
   render(
@@ -168,6 +186,8 @@ it("failed deletion announces failure and returns focus to its surviving trigger
         labels={labels}
         templates={[]}
         tasks={[]}
+        ganttTasks={[]}
+        onReassignAndDeleteLabel={vi.fn()}
         onUpdateLabels={vi.fn().mockRejectedValue(new Error("private"))}
       />
     </ToastProvider>,

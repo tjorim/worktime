@@ -1540,3 +1540,113 @@ export async function replaceTimeTrackingSettings(
   }
   _triggerPull?.();
 }
+
+/**
+ * Move every task, template and Gantt task off `labelId` onto `replacementId`,
+ * then delete `labelId`.
+ *
+ * The server refuses to delete a label that is still referenced and applies a
+ * push's label deletions before its task updates, so this is two steps: the
+ * reassignment (label-only partial updates, split into chunks like any push),
+ * then the ordinary label removal. A failure part-way leaves the moved records
+ * on the replacement label and the old label in place, so retrying is safe.
+ * Online, a record the server has since changed is reported as a conflict and
+ * stops the operation before anything is deleted.
+ */
+export async function reassignAndDeleteLabel(
+  labelId: string,
+  replacementId: string,
+): Promise<void> {
+  const owner = _currentUserId;
+  if (_isAuthResolving) throw new Error("Authentication is still resolving");
+  if (labelId === replacementId || !labelsCollection.has(labelId)) {
+    throw new Error("Unknown label");
+  }
+  if (!labelsCollection.has(replacementId)) throw new Error("Unknown replacement label");
+
+  const tasks = tasksCollection.toArray.filter((task) => task.label === labelId);
+  const templates = templatesCollection.toArray.filter((template) => template.label === labelId);
+  const ganttTasks = ganttTasksCollection.toArray.filter((task) => task.label === labelId);
+
+  if (owner) {
+    const now = dayjs().toISOString();
+    const toItem = (id: string) => ({
+      id,
+      action: "update" as const,
+      client_updated_at: now,
+      label_id: replacementId,
+    });
+    const taskItems = tasks.map((task) => toItem(task.id));
+    const templateItems = templates.map((template) => toItem(template.id));
+    const ganttItems = ganttTasks.map((task) => toItem(task.id));
+    const total = taskItems.length + templateItems.length + ganttItems.length;
+    const chunks = Math.ceil(
+      Math.max(taskItems.length, templateItems.length, ganttItems.length) / MAX_SYNC_PUSH_ITEMS,
+    );
+    let sent = false;
+    let applied = 0;
+    let conflicts = 0;
+    try {
+      for (let chunk = 0; chunk < chunks; chunk++) {
+        if (_currentUserId !== owner) throw new Error("Settings owner changed");
+        const from = chunk * MAX_SYNC_PUSH_ITEMS;
+        const to = from + MAX_SYNC_PUSH_ITEMS;
+        const payload: SyncPushPayload = {
+          labels: [],
+          tasks: taskItems.slice(from, to),
+          templates: templateItems.slice(from, to),
+          work_locations: [],
+          time_off_entries: [],
+          gantt_tasks: ganttItems.slice(from, to),
+        };
+        const response = await collectionFetch("/api/sync/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw await ApiError.fromResponse(response);
+        sent = true;
+        const result = (await response.json()) as SyncPushResponse;
+        applied += Object.values(result.results)
+          .flat()
+          .filter((record) => record.status === "ok").length;
+        conflicts += countPushConflicts(result);
+        if (conflicts > 0) throw new SettingsReplacementError(applied, conflicts);
+      }
+    } catch (error) {
+      if (sent && _currentUserId === owner) {
+        try {
+          applyPullToCollections(await fetchSyncSnapshot());
+        } catch (refreshError) {
+          logger.warn("Could not refresh partially reassigned label", refreshError);
+        }
+        _triggerPull?.();
+        if (error instanceof SettingsReplacementError) throw error;
+        throw new SettingsReplacementError(applied, total - applied);
+      }
+      throw error;
+    }
+  }
+  if (_currentUserId !== owner) throw new Error("Settings owner changed");
+
+  // Accepted by the server (or local-only): fold the move into the local rows
+  // so the label's usage check below sees them on the replacement label.
+  runWriteBatch(tasksCollection, tasks.length > 0, () =>
+    tasksCollection.utils.writeUpsert(tasks.map((task) => ({ ...task, label: replacementId }))),
+  );
+  runWriteBatch(templatesCollection, templates.length > 0, () =>
+    templatesCollection.utils.writeUpsert(
+      templates.map((template) => ({ ...template, label: replacementId })),
+    ),
+  );
+  runWriteBatch(ganttTasksCollection, ganttTasks.length > 0, () =>
+    ganttTasksCollection.utils.writeUpsert(
+      ganttTasks.map((task) => ({ ...task, label: replacementId })),
+    ),
+  );
+
+  await replaceTimeTrackingSettings(
+    "labels",
+    labelsCollection.toArray.filter((label) => label.id !== labelId),
+  );
+}
