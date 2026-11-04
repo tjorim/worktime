@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
@@ -68,6 +68,8 @@ describe("TimeTrackingDailyView", () => {
     vi.unstubAllGlobals();
   });
 
+  beforeEach(() => sessionStorage.clear());
+
   const renderView = (overrides: Partial<typeof mockProps> = {}) => {
     return render(
       <TestProviders>
@@ -110,6 +112,136 @@ describe("TimeTrackingDailyView", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Add Task$/i }));
     expect(screen.getByText(/overlaps/i)).toBeInTheDocument();
     expect(mockProps.onAddTask).toHaveBeenCalledTimes(1);
+  });
+
+  describe("Timer precision and short-task rules (#1699)", () => {
+    const runningAt = (startTime: string): StoredTimeTrackingTask => ({
+      id: "run",
+      text: "Working",
+      label: "Development",
+      startTime,
+    });
+
+    it("counts from 00:00:00 right after Start Now, although the task is stored per minute", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:40"));
+      vi.stubGlobal("crypto", { randomUUID: () => "run" } as unknown as Crypto);
+      const view = renderView();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /Start Now/i }));
+      });
+      expect(mockProps.onAddTask).toHaveBeenCalledWith(
+        expect.objectContaining({ startTime: "2025-01-01T10:15" }),
+      );
+      view.rerender(
+        <TestProviders>
+          <TimeTrackingDailyView {...mockProps} tasks={[runningAt("2025-01-01T10:15")]} />
+        </TestProviders>,
+      );
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:00:00/ })).toBeInTheDocument();
+      await act(async () => {
+        vi.setSystemTime(new Date("2025-01-01T10:15:42"));
+        await vi.advanceTimersByTimeAsync(1100);
+      });
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:00:0[2-3]/ })).toBeInTheDocument();
+    });
+
+    it("still counts from the stored minute for a task started elsewhere", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:40"));
+      renderView({ tasks: [runningAt("2025-01-01T10:15")] });
+      expect(screen.getByRole("button", { name: /Stop Timer · 00:00:40/ })).toBeInTheDocument();
+    });
+
+    it("measures the one-minute rule from the real start, so a timer that ran 15 seconds is not saved", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:50"));
+      vi.stubGlobal("crypto", { randomUUID: () => "run" } as unknown as Crypto);
+      const view = renderView();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /Start Now/i }));
+      });
+      vi.setSystemTime(new Date("2025-01-01T10:16:05"));
+      view.rerender(
+        <TestProviders>
+          <TimeTrackingDailyView {...mockProps} tasks={[runningAt("2025-01-01T10:15")]} />
+        </TestProviders>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/ }));
+      expect(mockProps.onUpdateTaskTimes).not.toHaveBeenCalled();
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(/whole minutes/);
+      // Cancel keeps the timer running; nothing is discarded or saved.
+      fireEvent.click(screen.getByRole("button", { name: /Cancel/ }));
+      expect(mockProps.onRemoveTask).not.toHaveBeenCalled();
+      expect(mockProps.onUpdateTaskTimes).not.toHaveBeenCalled();
+    });
+
+    it("saves a task that really ran a full minute", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:10"));
+      vi.stubGlobal("crypto", { randomUUID: () => "run" } as unknown as Crypto);
+      const view = renderView();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /Start Now/i }));
+      });
+      vi.setSystemTime(new Date("2025-01-01T10:16:10"));
+      view.rerender(
+        <TestProviders>
+          <TimeTrackingDailyView {...mockProps} tasks={[runningAt("2025-01-01T10:15")]} />
+        </TestProviders>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/ }));
+      expect(mockProps.onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "run",
+        newStartTime: "2025-01-01T10:15",
+        newStopTime: "2025-01-01T10:16",
+      });
+    });
+
+    it("documents the empty-name rule next to the task field", () => {
+      renderView();
+      const field = screen.getByLabelText(/^Task$/i);
+      expect(field).toHaveAccessibleDescription(
+        "Optional for Start Now, which names it “Untitled task”. Required for completed tasks.",
+      );
+    });
+
+    it("still requires a name for completed tasks", () => {
+      renderView();
+      fireEvent.change(screen.getByLabelText(/^Start$/i), { target: { value: "08:00" } });
+      fireEvent.change(screen.getByLabelText(/^Stop$/i), { target: { value: "09:00" } });
+      expect(screen.getByRole("button", { name: /^Add Task$/i })).toBeDisabled();
+    });
+
+    it("never opens the adjust-plans dialog by itself when the timer overruns a plan", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:30"));
+      const tasks: StoredTimeTrackingTask[] = [
+        runningAt("2025-01-01T10:15"),
+        {
+          id: "plan",
+          text: "Plan",
+          label: "Development",
+          startTime: "2025-01-01T10:16",
+          stopTime: "2025-01-01T10:30",
+        },
+      ];
+      const view = renderView({ tasks, selectedDate: "2025-01-01" });
+      const input = screen.getByLabelText(/^Task$/i);
+      input.focus();
+      fireEvent.change(input, { target: { value: "Typing" } });
+      vi.setSystemTime(new Date("2025-01-01T10:17:00"));
+      view.rerender(
+        <TestProviders>
+          <TimeTrackingDailyView {...mockProps} tasks={tasks} selectedDate="2025-01-01" />
+        </TestProviders>,
+      );
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(input).toHaveFocus();
+      // It only opens on an explicit stop.
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/ }));
+      expect(screen.getByRole("dialog")).toHaveTextContent(/Stop timer and adjust plans/);
+    });
   });
 
   describe("Quick Timer", () => {

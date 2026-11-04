@@ -18,6 +18,7 @@ import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "@/components/shared/TaskEntryForm";
+import { getTimerStart, rememberExactTimerStart } from "@/utils/timerStart";
 import { StopTimerConflictDialog } from "./StopTimerConflictDialog";
 import { LabelModal } from "./LabelModal";
 import {
@@ -158,8 +159,9 @@ export function TimeTrackingDailyView({
     const startTime = dayjs(task.startTime);
     return !liveTime.isBefore(startTime) && liveTime.isBefore(dayjs(task.stopTime));
   });
-  const timerElapsed = runningTask
-    ? formatDuration(liveTime.diff(dayjs(runningTask.startTime), "second"))
+  const timerStart = runningTask ? getTimerStart(runningTask) : undefined;
+  const timerElapsed = timerStart
+    ? formatDuration(Math.max(0, liveTime.diff(timerStart, "second")))
     : undefined;
   const isRunningTaskVisible = runningTask
     ? dailyTasks.some((task) => task.id === runningTask.id)
@@ -245,8 +247,9 @@ export function TimeTrackingDailyView({
     const now = dayjs();
     const startTime = now.format("YYYY-MM-DDTHH:mm");
     const startDate = now.format("YYYY-MM-DD");
+    const taskId = crypto.randomUUID();
     const added = await onAddTask({
-      id: crypto.randomUUID(),
+      id: taskId,
       text: text.trim() || m.tt_default_task_name(),
       label: selectedLabel,
       ganttTaskId: selectedGanttTaskId || undefined,
@@ -256,6 +259,7 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_task_already_running_start());
       return;
     }
+    rememberExactTimerStart(taskId, now);
     onSelectedDateChange(startDate);
     setText("");
     setSelectedGanttTaskId("");
@@ -291,7 +295,8 @@ export function TimeTrackingDailyView({
       });
       return;
     }
-    if (now.diff(startDayjs, "minute") < 1) {
+    // Measure from the real click time when known, so the rule matches the timer the user saw.
+    if (now.diff(getTimerStart(runningTask), "minute", true) < 1) {
       setShowDiscardConfirm(true);
       return;
     }

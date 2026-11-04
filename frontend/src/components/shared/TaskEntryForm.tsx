@@ -163,6 +163,11 @@ export function TaskEntryForm({
       ) : showTimerControls ? (
         <p className="text-sm text-muted-foreground mb-2">{m.tt_quick_timer_desc()}</p>
       ) : null}
+      {showTimerControls && (
+        <p id="timeTrackerTaskHelp" className="text-sm text-muted-foreground mb-2">
+          {m.tt_task_name_hint({ name: m.tt_default_task_name() })}
+        </p>
+      )}
       <Grid className="gap-4 items-end">
         <GridItem desktopSpan={primaryFieldWidth}>
           <Field>
@@ -172,6 +177,7 @@ export function TaskEntryForm({
               value={text}
               onChange={(e) => onTextChange(e.target.value)}
               aria-required="true"
+              aria-describedby={showTimerControls ? "timeTrackerTaskHelp" : undefined}
             />
           </Field>
         </GridItem>

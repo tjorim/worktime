@@ -136,6 +136,132 @@ describe("MonthCalendar", () => {
     });
   });
 
+  describe("Keyboard grid navigation (#1699)", () => {
+    // January 2025 starts on Wednesday, so the grid is Mon 30 Dec .. Sun 9 Feb (6 rows).
+    const renderGrid = (props = {}) => {
+      render(<MonthCalendar {...defaultProps} {...props} />);
+      return screen.getAllByRole("gridcell");
+    };
+    const onlyTabStop = (cells: HTMLElement[]) => cells.filter((cell) => cell.tabIndex === 0);
+
+    it("moves a week with ArrowDown and ArrowUp and a day with ArrowLeft and ArrowRight", async () => {
+      const user = userEvent.setup();
+      const cells = renderGrid();
+      cells[10]!.focus();
+      await user.keyboard("{ArrowDown}");
+      expect(cells[17]).toHaveFocus();
+      await user.keyboard("{ArrowUp}{ArrowRight}");
+      expect(cells[11]).toHaveFocus();
+      await user.keyboard("{ArrowLeft}");
+      expect(cells[10]).toHaveFocus();
+      expect(onlyTabStop(cells)).toEqual([cells[10]]);
+    });
+
+    it("starts from the clicked day, not from the remembered one", async () => {
+      const user = userEvent.setup();
+      const cells = renderGrid();
+      await user.click(cells[20]!);
+      await user.keyboard("{ArrowUp}");
+      expect(cells[13]).toHaveFocus();
+    });
+
+    it("goes to the start and end of the week with Home and End, and the grid with Ctrl", async () => {
+      const user = userEvent.setup();
+      const cells = renderGrid();
+      cells[10]!.focus();
+      await user.keyboard("{Home}");
+      expect(cells[7]).toHaveFocus();
+      await user.keyboard("{End}");
+      expect(cells[13]).toHaveFocus();
+      await user.keyboard("{Control>}{End}{/Control}");
+      expect(cells[cells.length - 1]).toHaveFocus();
+      await user.keyboard("{Control>}{Home}{/Control}");
+      expect(cells[0]).toHaveFocus();
+    });
+
+    it("stays on the edge and still consumes the key so the page does not scroll", async () => {
+      const user = userEvent.setup();
+      const outer = vi.fn();
+      const cells = renderGrid();
+      cells[2]!.focus();
+      document.addEventListener("keydown", outer);
+      await user.keyboard("{ArrowUp}");
+      document.removeEventListener("keydown", outer);
+      expect(cells[2]).toHaveFocus();
+      expect(outer.mock.calls[0]![0].defaultPrevented).toBe(true);
+      cells[cells.length - 2]!.focus();
+      await user.keyboard("{ArrowDown}");
+      expect(cells[cells.length - 2]).toHaveFocus();
+    });
+
+    it("changes month with PageDown and PageUp and keeps focus on the same day of the month", async () => {
+      const user = userEvent.setup();
+      const onMonthChange = vi.fn();
+      const props = { onMonthChange };
+      const january = dayjs("2025-01-15");
+      const { rerender } = render(<MonthCalendar {...defaultProps} {...props} month={january} />);
+      const cells = screen.getAllByRole("gridcell");
+      cells[16]!.focus(); // Wed 15 Jan
+      await user.keyboard("{PageDown}");
+      expect(onMonthChange).toHaveBeenCalledTimes(1);
+      expect(onMonthChange.mock.calls[0]![0].format("YYYY-MM")).toBe("2025-02");
+      rerender(
+        <MonthCalendar {...defaultProps} {...props} month={onMonthChange.mock.calls[0]![0]} />,
+      );
+      const focused = document.activeElement as HTMLElement;
+      expect(focused).toHaveAttribute("role", "gridcell");
+      expect(focused).toHaveTextContent(/February 15, 2025/);
+      expect(screen.getAllByRole("gridcell").filter((c) => c.tabIndex === 0)).toEqual([focused]);
+      await user.keyboard("{PageUp}");
+      expect(onMonthChange.mock.calls[1]![0].format("YYYY-MM")).toBe("2025-01");
+    });
+
+    it("does not pull focus into the grid when the month changes with the mouse", async () => {
+      const user = userEvent.setup();
+      const onMonthChange = vi.fn();
+      const { rerender } = render(
+        <MonthCalendar {...defaultProps} onMonthChange={onMonthChange} />,
+      );
+      const next = screen.getByRole("button", { name: "Next month" });
+      await user.click(next);
+      rerender(
+        <MonthCalendar
+          {...defaultProps}
+          onMonthChange={onMonthChange}
+          month={dayjs("2025-02-15")}
+        />,
+      );
+      expect(next).toHaveFocus();
+    });
+
+    it("lets Enter on an event open the event, not the day menu, and navigates from there", async () => {
+      const user = userEvent.setup();
+      const entry = createDateEntry({ note: "Test vacation" });
+      const cells = renderGrid({ entries: [entry] });
+      const event = screen.getByRole("button", { name: /View Test vacation/i });
+      event.focus();
+      await user.keyboard("{Enter}");
+      expect(mockOnViewEvent).toHaveBeenCalledWith(entry.id);
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      const index = cells.findIndex((cell) => cell.contains(event));
+      await user.keyboard("{ArrowDown}");
+      expect(cells[index + 7]).toHaveFocus();
+    });
+
+    it("opens the day menu with Enter on the cell", async () => {
+      const user = userEvent.setup();
+      const cells = renderGrid();
+      cells[10]!.focus();
+      await user.keyboard("{Enter}");
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    it("describes the keyboard model on the grid", () => {
+      renderGrid();
+      expect(screen.getByRole("grid")).toHaveAccessibleDescription(/arrow keys move between days/i);
+    });
+  });
+
   describe("Month Navigation", () => {
     it("should call onMonthChange when clicking previous month", async () => {
       const user = userEvent.setup();
