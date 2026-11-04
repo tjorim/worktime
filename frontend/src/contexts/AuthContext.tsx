@@ -177,7 +177,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const triggerLogin = useCallback(() => {
     oidcAuth
-      .signinRedirect({ state: { returnTo: window.location.pathname } })
+      .signinRedirect({
+        state: {
+          returnTo: window.location.pathname === "/auth/callback" ? "/" : window.location.pathname,
+        },
+      })
       .catch((error: unknown) => {
         logger.error("signinRedirect failed:", error);
         showError(m.auth_error_redirect_signin());

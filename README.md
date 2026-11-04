@@ -32,12 +32,22 @@ pnpm dev
 ```bash
 cd backend
 uv sync
+export DATABASE_URL=sqlite+aiosqlite:///./dev.db
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
 - Frontend dev server: `http://localhost:5173`
 - Backend API/docs: `http://localhost:8000/docs`
+
+Run both servers in separate terminals. Vite proxies `/api` (including SSE) to
+`http://127.0.0.1:8000`; browser requests stay on the frontend origin. Port 5173 is
+strict, so a busy port produces an error instead of silently changing the URL.
+No `VITE_API_DOMAIN` setting is needed or read. For OIDC sign-in, configure the
+`VITE_OIDC_*` variables in `frontend/.env.local` (see `src/config/oidc.ts`) and
+register `http://localhost:5173/auth/callback` and
+`http://localhost:5173/auth/silent-callback` with your provider. The dev auth bypass
+is for API clients; it does not create a browser OIDC session.
 
 ## What It Does
 

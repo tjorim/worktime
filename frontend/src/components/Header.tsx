@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, RotateCcwClockIcon, SettingsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
@@ -14,6 +15,7 @@ import * as m from "@/paraglide/messages.js";
  * @returns The header React element containing the app title and Settings button
  */
 export function Header() {
+  const { isAuthenticated, isValidating, triggerLogin } = useAuth();
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   const navigate = useNavigate();
   const router = useRouter();
@@ -70,6 +72,16 @@ export function Header() {
           </button>
           <div className="flex items-center gap-3 ml-auto">
             <SyncStatusIndicator />
+            {!isAuthenticated && !isValidating && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground"
+                onClick={triggerLogin}
+              >
+                {m.account_sign_in_btn()}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

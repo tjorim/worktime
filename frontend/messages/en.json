@@ -1548,5 +1548,12 @@
   "tt_json_current": "Current saved JSON",
   "timeoff_overlap": "Overlapping entry",
   "timeoff_overlap_with": "Overlaps with {name} ({dates})",
-  "timeoff_overlap_allowed": "You can still save this entry."
+  "timeoff_overlap_allowed": "You can still save this entry.",
+  "not_found_title": "Page not found",
+  "not_found_description": "This page does not exist or may have moved.",
+  "back_to_worktime": "Back to Worktime",
+  "auth_failed_title": "Sign-in failed",
+  "auth_failed_description": "We could not complete your sign-in. You may have cancelled it, or the sign-in service could not finish the request. Please try again.",
+  "auth_retry_signin": "Try signing in again",
+  "date_code_label": "Date code:"
 }

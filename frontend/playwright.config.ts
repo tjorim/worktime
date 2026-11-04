@@ -40,7 +40,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "pnpm exec vite --no-open",
+      command: "pnpm exec vite --no-open --port 8000",
       url: "http://localhost:8000",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

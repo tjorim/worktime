@@ -6,6 +6,9 @@ import { preloadSyncCollections } from "@/db/collections";
 import { router as appRouter } from "@/router";
 import { Header } from "@/components/Header";
 
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({ isAuthenticated: true, isValidating: false, triggerLogin: vi.fn() }),
+}));
 vi.mock("@/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
 vi.mock("@/components/AppLayout", () => ({ AppLayout: () => <Header /> }));
 vi.mock("@/contexts/AppShellContext", () => ({

@@ -364,6 +364,13 @@ describe("AuthContext", () => {
   });
 
   describe("triggerLogin", () => {
+    it("retries a failed callback with home as the return destination", async () => {
+      window.history.replaceState(null, "", "/auth/callback?error=access_denied");
+      renderWithProviders(<AuthActions />);
+      await userEvent.click(screen.getByText("triggerLogin"));
+      expect(mockSigninRedirect).toHaveBeenCalledWith({ state: { returnTo: "/" } });
+      window.history.replaceState(null, "", "/");
+    });
     it("calls signinRedirect when triggerLogin is invoked", async () => {
       mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: false, user: null };
       const user = userEvent.setup();
