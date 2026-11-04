@@ -4,7 +4,7 @@ import App from "./App";
 import "./styles/tailwind.css";
 import { getLocale } from "./paraglide/runtime.js";
 import { logger } from "@/utils/logger";
-import { initSyncCollectionPersistence } from "@/db/collections";
+import { initSyncCollectionPersistence, tasksCollection } from "@/db/collections";
 
 // Set the HTML lang attribute based on the current locale
 document.documentElement.lang = getLocale();
@@ -25,6 +25,12 @@ async function enableMocking(): Promise<void> {
     envScenarioId: import.meta.env.VITE_MSW_SCENARIO,
   });
   await worker.start({ onUnhandledFrame: "warn" });
+}
+
+// E2E hook: lets specs seed and read tasks through the app's own collection instance. Only in
+// the MSW e2e mode; the guard is replaced at build time, so production bundles drop it.
+if (import.meta.env.VITE_MSW === "true") {
+  (window as unknown as { __worktimeTest?: unknown }).__worktimeTest = { tasksCollection };
 }
 
 const container = document.getElementById("root");
