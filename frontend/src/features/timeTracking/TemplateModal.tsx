@@ -148,6 +148,7 @@ export function TemplateModal({
                       aria-required="true"
                       required
                     />
+                    <FieldDescription>{m.tt_overnight_hint()}</FieldDescription>
                   </Field>
                 )}
               </form.Field>

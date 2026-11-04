@@ -30,7 +30,13 @@ import {
   type Label,
 } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
-import { BREAK_DURATION_MINUTES, isValidRange, overlaps } from "@/lib/timeTracking/timeUtils";
+import {
+  BREAK_DURATION_MINUTES,
+  isValidRange,
+  isValidTaskInterval,
+  overlapsTaskInterval,
+  taskStopTime,
+} from "@/lib/timeTracking/timeUtils";
 import { useDailyTaskSummary } from "./hooks/useDailyTaskSummary";
 
 type TimeTrackingDailyViewProps = {
@@ -147,7 +153,7 @@ export function TimeTrackingDailyView({
   }
 
   const { dailyTasks, runningTask } = useDailyTaskSummary(tasks, date);
-  const nowFallsInsideTask = dailyTasks.some((task) => {
+  const nowFallsInsideTask = tasks.some((task) => {
     if (!task.stopTime || task.id === runningTask?.id) return false;
     const startTime = dayjs(task.startTime);
     return !liveTime.isBefore(startTime) && liveTime.isBefore(dayjs(task.stopTime));
@@ -192,12 +198,12 @@ export function TimeTrackingDailyView({
       setError(m.tt_error_stop_after_start());
       return;
     }
-    const dailyForOverlap = dailyTasks.map((t) => ({
-      id: t.id,
-      start: dayjs(t.startTime).format("HH:mm"),
-      stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
-    }));
-    if (overlaps(start, stop, dailyForOverlap)) {
+    const stopTime = taskStopTime(date, start, stop);
+    if (!isValidTaskInterval(`${date}T${start}`, stopTime)) {
+      setError(m.tt_duration_limit());
+      return;
+    }
+    if (overlapsTaskInterval(`${date}T${start}`, stopTime, tasks)) {
       setError(m.tt_error_time_overlap());
       return;
     }
@@ -208,7 +214,7 @@ export function TimeTrackingDailyView({
       label: selectedLabel,
       ganttTaskId: selectedGanttTaskId || undefined,
       startTime: `${date}T${start}`,
-      stopTime: `${date}T${stop}`,
+      stopTime,
     });
     if (!added) {
       setError(m.tt_error_task_already_running());
@@ -259,13 +265,9 @@ export function TimeTrackingDailyView({
     }
     setError("");
     const startDayjs = dayjs(runningTask.startTime);
-    const startDate = startDayjs.format("YYYY-MM-DD");
     const now = dayjs();
-    if (!now.isSame(startDayjs, "day")) {
-      setEditRequest({
-        task: runningTask,
-        info: m.tt_task_spans_midnight({ date: startDate }),
-      });
+    if (now.diff(startDayjs, "hour", true) > 24) {
+      setEditRequest({ task: runningTask, info: m.tt_duration_limit() });
       return;
     }
     if (now.isBefore(startDayjs)) {
@@ -302,7 +304,11 @@ export function TimeTrackingDailyView({
   const handleResolveStopConflict = (stopTime: string) => {
     if (!stopConflict) return;
     const taskDate = dayjs(stopConflict.runningTask.startTime).format("YYYY-MM-DD");
-    const stopDateTime = `${taskDate}T${stopTime}`;
+    const stopDateTime = taskStopTime(
+      taskDate,
+      dayjs(stopConflict.runningTask.startTime).format("HH:mm"),
+      stopTime,
+    );
 
     for (const plannedTask of stopConflict.tasks) {
       if (!plannedTask.stopTime || !dayjs(plannedTask.startTime).isBefore(stopDateTime)) continue;
@@ -366,8 +372,12 @@ export function TimeTrackingDailyView({
     const taskDate = tasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
     const originalTask = tasks.find((item) => item.id === payload.id);
     const newStartTime = `${taskDate}T${payload.start}`;
-    const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
+    const newStopTime = payload.stop ? taskStopTime(taskDate, payload.start, payload.stop) : null;
 
+    if (newStopTime && !isValidTaskInterval(newStartTime, newStopTime)) {
+      setError(m.tt_duration_limit());
+      return false;
+    }
     if (
       originalTask &&
       dayjs(originalTask.startTime).isAfter(liveTime) &&
@@ -377,16 +387,15 @@ export function TimeTrackingDailyView({
       return false;
     }
 
-    const sameDayTasks = tasks.filter(
-      (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
-    );
-    const dailyForOverlap = sameDayTasks.map((task) => ({
-      id: task.id,
-      start: dayjs(task.startTime).format("HH:mm"),
-      stop: (task.stopTime ? dayjs(task.stopTime) : liveTime).format("HH:mm"),
-    }));
-    const overlapStop = payload.stop || liveTime.format("HH:mm");
-    if (overlaps(payload.start, overlapStop, dailyForOverlap, payload.id)) {
+    if (
+      overlapsTaskInterval(
+        newStartTime,
+        newStopTime ?? liveTime.format("YYYY-MM-DDTHH:mm"),
+        tasks,
+        payload.id,
+        liveTime,
+      )
+    ) {
       setError(m.tt_error_time_overlap());
       return false;
     }

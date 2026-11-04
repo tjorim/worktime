@@ -488,7 +488,7 @@ describe("useTimeTrackingStorage", () => {
       });
     });
 
-    it("filters out tasks with cross-day date ranges", async () => {
+    it("preserves tasks with cross-day date ranges", async () => {
       const taskId = nextId("cross-day");
       tasksCollection.insert({
         id: taskId,
@@ -501,7 +501,7 @@ describe("useTimeTrackingStorage", () => {
       const { result } = renderHook(() => useTimeTrackingStorage());
 
       await waitFor(() => {
-        expect(result.current.tasks.some((task) => task.id === taskId)).toBe(false);
+        expect(result.current.tasks.some((task) => task.id === taskId)).toBe(true);
       });
     });
 

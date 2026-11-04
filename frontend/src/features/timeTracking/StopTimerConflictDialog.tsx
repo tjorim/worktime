@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { taskStopTime } from "@/lib/timeTracking/timeUtils";
+import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -34,21 +35,27 @@ export function StopTimerConflictDialog({
   // Captured on mount; the parent remounts this dialog with a key for each conflict.
   const [stopTime, setStopTime] = useState(initialStopTime);
   const startTime = runningTask ? dayjs(runningTask.startTime).format("HH:mm") : "";
-  const isValid = Boolean(stopTime && stopTime > startTime && stopTime <= initialStopTime);
-
-  const effects = useMemo(
-    () =>
-      isValid
-        ? conflictingTasks.map((task) => {
-            const taskStart = dayjs(task.startTime).format("HH:mm");
-            const taskStop = task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "";
-            const outcome =
-              stopTime <= taskStart ? "unchanged" : stopTime < taskStop ? "shortened" : "removed";
-            return { task, taskStart, taskStop, outcome };
-          })
-        : [],
-    [conflictingTasks, isValid, stopTime],
+  const date = runningTask ? dayjs(runningTask.startTime).format("YYYY-MM-DD") : "";
+  const resolvedStop = taskStopTime(date, startTime, stopTime);
+  const isValid = Boolean(
+    stopTime &&
+    stopTime !== startTime &&
+    dayjs(resolvedStop).isAfter(dayjs(runningTask?.startTime)) &&
+    !dayjs(resolvedStop).isAfter(dayjs(taskStopTime(date, startTime, initialStopTime))),
   );
+
+  const effects = isValid
+    ? conflictingTasks.map((task) => {
+        const taskStart = dayjs(task.startTime).format("HH:mm");
+        const taskStop = task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "";
+        const outcome = !dayjs(resolvedStop).isAfter(dayjs(task.startTime))
+          ? "unchanged"
+          : dayjs(resolvedStop).isBefore(dayjs(task.stopTime))
+            ? "shortened"
+            : "removed";
+        return { task, taskStart, taskStop, outcome };
+      })
+    : [];
 
   return (
     <Dialog
@@ -69,8 +76,6 @@ export function StopTimerConflictDialog({
               id="stopTimerConflictTime"
               type="time"
               value={stopTime}
-              min={startTime}
-              max={initialStopTime}
               onChange={(event) => setStopTime(event.target.value)}
               aria-invalid={Boolean(stopTime) && !isValid}
               aria-describedby="stopTimerConflictRange"

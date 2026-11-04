@@ -53,3 +53,29 @@ describe("actual hours across weekly reports", () => {
     expect(week?.days[2]?.hours).toBe(expected);
   });
 });
+
+it("attributes a Sunday night and its one break to the start week", () => {
+  const task = {
+    id: "night",
+    text: "Night",
+    label: "work",
+    startTime: "2026-01-04T23:00",
+    stopTime: "2026-01-05T07:00",
+    includesBreak: true,
+  };
+  const base = {
+    tasks: [task],
+    labels: [{ id: "work", name: "Work", color: "blue" }],
+    liveTime: dayjs("2026-01-06"),
+    defaultLabelColor: "blue",
+  };
+  const { result } = renderHook(() =>
+    useWeeklyTimeTrackingSummary({ ...base, start: "2025-12-29", end: "2026-01-04" }),
+  );
+  expect(result.current.weekTotal).toBe(7.5);
+  expect(result.current.dailyTotals["2026-01-04"]?.Work).toBe(7.5);
+  const next = renderHook(() =>
+    useWeeklyTimeTrackingSummary({ ...base, start: "2026-01-05", end: "2026-01-11" }),
+  );
+  expect(next.result.current.weekTotal).toBe(0);
+});

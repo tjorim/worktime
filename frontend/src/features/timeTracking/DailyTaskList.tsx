@@ -24,7 +24,13 @@ import { LabelChip } from "./LabelChip";
 import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import type { GanttTask } from "@/types/gantt";
-import { BREAK_DURATION_MINUTES, isValidRange, overlaps } from "@/lib/timeTracking/timeUtils";
+import {
+  BREAK_DURATION_MINUTES,
+  isValidRange,
+  isValidTaskInterval,
+  overlapsTaskInterval,
+  taskStopTime,
+} from "@/lib/timeTracking/timeUtils";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { cn } from "@/lib/utils";
@@ -314,17 +320,21 @@ export function DailyTaskList({
       return `${m.tt_unable_to_update_task()} ${m.tt_error_stop_after_start()}`;
     }
     const taskDate = dayjs(editingTask.startTime).format("YYYY-MM-DD");
-    const tasksForOverlap = validationTasks
-      .filter((task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate)
-      .map((task) => ({
-        id: task.id,
-        start: dayjs(task.startTime).format("HH:mm"),
-        stop: task.stopTime
-          ? dayjs(task.stopTime).format("HH:mm")
-          : (liveTime ?? dayjs()).format("HH:mm"),
-      }));
-    const effectiveStop = editForm.stop || (liveTime ?? dayjs()).format("HH:mm");
-    if (overlaps(editForm.start, effectiveStop, tasksForOverlap, editingTask.id)) {
+    const effectiveStop = editForm.stop
+      ? taskStopTime(taskDate, editForm.start, editForm.stop)
+      : (liveTime ?? dayjs()).format("YYYY-MM-DDTHH:mm");
+    if (editForm.stop && !isValidTaskInterval(`${taskDate}T${editForm.start}`, effectiveStop)) {
+      return m.tt_duration_limit();
+    }
+    if (
+      overlapsTaskInterval(
+        `${taskDate}T${editForm.start}`,
+        effectiveStop,
+        validationTasks,
+        editingTask.id,
+        liveTime ?? dayjs(),
+      )
+    ) {
       return `${m.tt_unable_to_update_task()} ${m.tt_error_time_overlap()}`;
     }
     return "";
@@ -531,7 +541,9 @@ export function DailyTaskList({
             const startDisplay = dayjs(task.startTime).format("HH:mm");
             const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
             const stopDisplay = task.stopTime
-              ? effectiveStopTime.format("HH:mm")
+              ? effectiveStopTime.isSame(dayjs(task.startTime), "day")
+                ? effectiveStopTime.format("HH:mm")
+                : `${effectiveStopTime.format("HH:mm")} (${effectiveStopTime.format("YYYY-MM-DD")})`
               : m.tt_running_status();
             const labelColor = colorByLabelId[task.label];
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;

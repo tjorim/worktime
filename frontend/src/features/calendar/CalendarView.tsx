@@ -1,3 +1,4 @@
+import { isValidRange, isValidTaskInterval, taskStopTime } from "@/lib/timeTracking/timeUtils";
 import { InfoIcon, TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import "temporal-polyfill/global";
@@ -53,9 +54,7 @@ function calendarDate(value: Temporal.ZonedDateTime | Temporal.PlainDate | strin
 }
 
 function isValidCompletedRange(start: string, stop: string): boolean {
-  return Boolean(
-    start && stop && dayjs(`2000-01-01T${start}`).isBefore(dayjs(`2000-01-01T${stop}`)),
-  );
+  return isValidRange(start, stop);
 }
 
 interface CalendarViewProps {
@@ -177,8 +176,12 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
           const renderedStopTime = localDateTime(event.end);
           if (!task || !startTime || !renderedStopTime) return;
           const stopTime = task.stopTime ? renderedStopTime : undefined;
-          if (stopTime && !dayjs(startTime).isSame(dayjs(stopTime), "day")) {
-            toast.showError(m.calendar_task_spans_days());
+          if (
+            stopTime &&
+            (!dayjs(stopTime).isAfter(dayjs(startTime)) ||
+              dayjs(stopTime).diff(dayjs(startTime), "hour", true) > 24)
+          ) {
+            toast.showError(m.tt_duration_limit());
             setTimeout(() => {
               calendarApp?.events.set(eventRef.current);
             }, 0);
@@ -279,11 +282,29 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
       setEditError(m.calendar_task_stop_after_start());
       return;
     }
+    if (
+      editForm.stop &&
+      !isValidTaskInterval(
+        `${dayjs(selectedTask.startTime).format("YYYY-MM-DD")}T${editForm.start}`,
+        taskStopTime(
+          dayjs(selectedTask.startTime).format("YYYY-MM-DD"),
+          editForm.start,
+          editForm.stop,
+        ),
+      )
+    ) {
+      setEditError(m.tt_duration_limit());
+      return;
+    }
     updateTaskTimes({
       id: selectedTask.id,
       newStartTime: `${dayjs(selectedTask.startTime).format("YYYY-MM-DD")}T${editForm.start}`,
       newStopTime: editForm.stop
-        ? `${dayjs(selectedTask.startTime).format("YYYY-MM-DD")}T${editForm.stop}`
+        ? taskStopTime(
+            dayjs(selectedTask.startTime).format("YYYY-MM-DD"),
+            editForm.start,
+            editForm.stop,
+          )
         : undefined,
       newText: editForm.text.trim(),
       newLabel: editForm.label,
@@ -297,12 +318,16 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
   );
   const saveNewTask = async () => {
     if (!canAddTask) return;
+    if (!isValidTaskInterval(`${addDate}T${addStart}`, taskStopTime(addDate, addStart, addStop))) {
+      toast.showError(m.tt_duration_limit());
+      return;
+    }
     await addTask({
       id: crypto.randomUUID(),
       text: addText.trim(),
       label: addLabel,
       startTime: `${addDate}T${addStart}`,
-      stopTime: `${addDate}T${addStop}`,
+      stopTime: taskStopTime(addDate, addStart, addStop),
     });
     setAddDate("");
   };

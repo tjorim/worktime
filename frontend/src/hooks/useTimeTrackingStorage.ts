@@ -1,3 +1,4 @@
+import { isValidTaskInterval } from "@/lib/timeTracking/timeUtils";
 import { useCallback, useEffect, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { logger } from "@/utils/logger";
@@ -38,11 +39,7 @@ function isValidTaskDateRange(startTime: string, stopTime?: string | null): bool
     return false;
   }
 
-  if (!start.isSame(stop, "day")) {
-    return false;
-  }
-
-  return start.isBefore(stop);
+  return isValidTaskInterval(startTime, stopTime);
 }
 
 function isValidRawTask(value: unknown): value is RawTask {
