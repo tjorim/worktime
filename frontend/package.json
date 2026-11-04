@@ -121,5 +121,6 @@
   "engines": {
     "node": ">=26.0.0"
   },
-  "packageManager": "pnpm@12.16.1"
+  "packageManager": "pnpm@12.16.1",
+  "//": "@schedule-x/drag-and-drop stays on the last free v3 release; v4 is premium. Calendar v4 uses dragAndDropAdapter.ts (regression: e2e/calendar-dnd.spec.ts)."
 }

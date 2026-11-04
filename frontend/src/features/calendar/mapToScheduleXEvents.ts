@@ -134,7 +134,8 @@ export function taskToEvent(
   now: Temporal.ZonedDateTime = Temporal.Now.zonedDateTimeISO(),
 ): CalendarEvent {
   return {
-    id: `task:${task.id}`,
+    // The v3 drag plugin uses this ID in an unescaped CSS ID selector.
+    id: `task-${task.id}`,
     title: task.text,
     start: toZonedDateTime(task.startTime),
     end: task.stopTime ? toZonedDateTime(task.stopTime) : now,

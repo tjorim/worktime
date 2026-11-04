@@ -112,7 +112,7 @@ describe("mapToScheduleXEvents", () => {
     });
 
     expect(event).toMatchObject({
-      id: "task:task-1",
+      id: "task-task-1",
       title: "Write tests",
       calendarId: "Development",
       taskId: "task-1",

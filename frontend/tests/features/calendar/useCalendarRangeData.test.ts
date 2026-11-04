@@ -62,7 +62,7 @@ describe("useCalendarRangeData", () => {
         "shift:1:2026-05-25",
         "shift:1:2026-05-26",
         "time-off:leave-in-range",
-        "task:task-in-range",
+        "task-task-in-range",
       ]);
     });
   });
