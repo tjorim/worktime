@@ -188,12 +188,16 @@ describe("TimeTrackingView Integration Tests", () => {
 
       renderWithSettings();
 
-      // Verify weekly summary shows correct totals (now in new format)
-      expect(screen.getByText(/6\.00 hours/i)).toBeInTheDocument(); // Development total
-      expect(screen.getByText(/3\.00 hours/i)).toBeInTheDocument(); // Support total
-      expect(screen.getByText(/9\.00 hours/i)).toBeInTheDocument(); // Week total
+      // Category totals are always visible, once each.
+      expect(screen.getByText(/6\.0 hours/i)).toBeInTheDocument(); // Development total
+      expect(screen.getByText(/3\.0 hours/i)).toBeInTheDocument(); // Support total
 
-      // Verify table shows per-day breakdown
+      // The per-day table and its totals row open on demand.
+      fireEvent.click(screen.getByRole("button", { name: "Detailed Breakdown" }));
+      const totals = Array.from(document.querySelectorAll("tfoot tr > *"), (cell) =>
+        cell.textContent?.trim(),
+      );
+      expect(totals).toEqual(expect.arrayContaining(["6.00", "3.00", "9.00"]));
       expect(screen.getByText(/Monday/i)).toBeInTheDocument();
       expect(screen.getByText(/Tuesday/i)).toBeInTheDocument();
       expect(screen.getByText(/Wednesday/i)).toBeInTheDocument();
@@ -419,7 +423,7 @@ describe("TimeTrackingView Integration Tests", () => {
       renderWithSettings();
 
       // Verify weekly summary shows Support in the initial week (new format)
-      const hoursElements = screen.getAllByText(/2\.00 hours/i);
+      const hoursElements = screen.getAllByText(/2\.0 hours/i);
       expect(hoursElements.length).toBeGreaterThan(0);
       // Week 3 has Support task (appears in multiple places)
       const supportElements = screen.getAllByText(/Support/i);
@@ -428,7 +432,7 @@ describe("TimeTrackingView Integration Tests", () => {
       fireEvent.click(screen.getByRole("button", { name: /Go to previous week/i }));
 
       // After navigating to week 2, we should see Development task
-      const hoursElements2 = screen.getAllByText(/2\.00 hours/i);
+      const hoursElements2 = screen.getAllByText(/2\.0 hours/i);
       expect(hoursElements2.length).toBeGreaterThan(0);
       const devElements = screen.getAllByText(/Development/i);
       expect(devElements.length).toBeGreaterThan(0);

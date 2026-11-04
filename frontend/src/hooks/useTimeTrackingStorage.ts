@@ -7,6 +7,7 @@ import { sanitizeLabels, type Label } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import {
   labelsCollection,
+  reassignAndDeleteLabel,
   replaceTimeTrackingSettings,
   hasSyncCollectionAuth,
   replaceCollectionContents,
@@ -260,6 +261,7 @@ export function useTimeTrackingStorage() {
   );
 
   return {
+    reassignAndDeleteLabel,
     hiddenTaskCount,
     tasks,
     templates,

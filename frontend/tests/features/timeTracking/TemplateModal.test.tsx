@@ -26,7 +26,7 @@ describe("TemplateModal", () => {
     expect(labelSelect).toHaveAttribute("aria-describedby", "templateLabelHelp");
     expect(
       screen.getByText(
-        /Add at least one label in Time Tracking Settings before creating templates\./i,
+        /Add at least one label under Settings → Labels & templates before creating templates\./i,
       ),
     ).toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe("TemplateModal", () => {
     expect(labelSelect).not.toHaveAttribute("aria-describedby");
     expect(
       screen.queryByText(
-        /Add at least one label in Time Tracking Settings before creating templates\./i,
+        /Add at least one label under Settings → Labels & templates before creating templates\./i,
       ),
     ).not.toBeInTheDocument();
   });

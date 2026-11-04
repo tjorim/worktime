@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingWeeklyView } from "@/features/timeTracking/TimeTrackingWeeklyView";
 import { SettingsProvider } from "@/contexts/SettingsContext";
@@ -45,7 +45,16 @@ describe("TimeTrackingWeeklyView Component", () => {
     onSelectedDateChange: vi.fn(),
   };
 
-  const renderPanel = (
+  /** The detail blocks start collapsed; most tests look inside them, so open them all. */
+  const expandDetails = () => {
+    for (const trigger of document.querySelectorAll<HTMLElement>(
+      '[data-slot="accordion-trigger"][aria-expanded="false"]',
+    )) {
+      fireEvent.click(trigger);
+    }
+  };
+
+  const renderCollapsedPanel = (
     extraProps: Partial<React.ComponentProps<typeof TimeTrackingWeeklyView>> = {},
   ) =>
     render(
@@ -53,6 +62,21 @@ describe("TimeTrackingWeeklyView Component", () => {
         <TimeTrackingWeeklyView {...defaultProps} {...extraProps} />
       </SettingsProvider>,
     );
+
+  /** The footer row of the detailed table, keyed by its column header. */
+  const footerTotals = () => {
+    const headers = Array.from(document.querySelectorAll("thead th"), (cell) => cell.textContent);
+    const cells = Array.from(document.querySelectorAll("tfoot tr > *"), (cell) => cell.textContent);
+    return Object.fromEntries(headers.map((header, index) => [header, cells[index]]));
+  };
+
+  const renderPanel = (
+    extraProps: Partial<React.ComponentProps<typeof TimeTrackingWeeklyView>> = {},
+  ) => {
+    const result = renderCollapsedPanel(extraProps);
+    expandDetails();
+    return result;
+  };
 
   describe("Empty State Handling", () => {
     it("shows informative message when week has no data", () => {
@@ -137,9 +161,11 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks });
 
-      const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
-      expect(summarySection).toHaveTextContent("Support: 3.00 hours");
-      expect(summarySection).toHaveTextContent("Meeting: 2.00 hours");
+      expect(footerTotals()).toMatchObject({
+        Support: "3.00",
+        Meeting: "2.00",
+        "Total Hours": "5.00",
+      });
     });
 
     it("calculates cumulative week totals correctly", () => {
@@ -150,9 +176,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks });
 
-      // Check the weekly summary section shows correct total
-      const totalElements = screen.getAllByText(/7\.00 hours/i);
-      expect(totalElements.length).toBeGreaterThan(0);
+      expect(footerTotals()["Total Hours"]).toBe("7.00");
     });
 
     it("refreshes weekly totals for running tasks", () => {
@@ -168,15 +192,15 @@ describe("TimeTrackingWeeklyView Component", () => {
         stopTime: null,
       };
 
-      const { container } = renderPanel({ tasks: [runningTask] });
+      renderPanel({ tasks: [runningTask] });
 
-      expect(container.textContent).toContain("6.00 hours");
+      expect(footerTotals()["Total Hours"]).toBe("6.00");
 
       act(() => {
         vi.advanceTimersByTime(2 * 60 * 60 * 1000);
       });
 
-      expect(container.textContent).toContain("8.00 hours");
+      expect(footerTotals()["Total Hours"]).toBe("8.00");
     });
 
     it("applies 30-minute break deduction in weekly totals", () => {
@@ -184,10 +208,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks });
 
-      const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
-      expect(summarySection).toHaveTextContent("Support: 7.50 hours");
-      const deductedTotals = screen.getAllByText(/7\.50 hours/i);
-      expect(deductedTotals).toHaveLength(2);
+      expect(footerTotals()).toMatchObject({ Support: "7.50", "Total Hours": "7.50" });
     });
 
     it("shows weekly progress when weeklyTargetHours is provided", () => {
@@ -231,8 +252,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks });
 
-      // Check the weekly summary section shows correct total
-      expect(screen.getByText(/3\.50 hours/i)).toBeInTheDocument();
+      expect(footerTotals()["Total Hours"]).toBe("3.50");
     });
 
     it("displays key metrics cards", () => {
@@ -343,9 +363,51 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks, selectedDate: "2025-12-29" });
 
-      const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
-      expect(summarySection).toHaveTextContent("Support: 5.00 hours");
-      expect(summarySection).toHaveTextContent("Meeting: 2.00 hours");
+      expect(footerTotals()).toMatchObject({ Support: "5.00", Meeting: "2.00" });
+    });
+  });
+
+  describe("folded detail", () => {
+    const mondayTask = () => [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];
+
+    it("keeps the detail collapsed so each total is shown once by default", () => {
+      renderCollapsedPanel({ tasks: mondayTask(), weeklyTargetHours: 40 });
+
+      expect(screen.getByRole("heading", { name: "Category Breakdown" })).toBeInTheDocument();
+      expect(screen.getByText("Hours at a Glance")).toBeInTheDocument();
+      for (const name of [
+        "Recent Weeks",
+        "Daily Breakdown",
+        "Detailed Breakdown",
+        "Hours by Category",
+      ]) {
+        expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
+      }
+      expect(document.querySelector("table")).not.toBeInTheDocument();
+      expect(document.querySelector(".progress-ring")).not.toBeInTheDocument();
+      expect(screen.queryByText("Weekly Summary")).not.toBeInTheDocument();
+    });
+
+    it("reveals the day-by-day table with its totals on demand", () => {
+      renderCollapsedPanel({ tasks: mondayTask() });
+
+      fireEvent.click(screen.getByRole("button", { name: "Detailed Breakdown" }));
+
+      expect(document.querySelector("table")).toBeInTheDocument();
+      expect(footerTotals()).toMatchObject({ Support: "3.00", "Total Hours": "3.00" });
+    });
+
+    it("states the week total once when a target shows it in the progress bar", () => {
+      renderCollapsedPanel({ tasks: mondayTask(), weeklyTargetHours: 40 });
+
+      expect(screen.getByText(/3\.0h \/ 40\.0h/)).toBeInTheDocument();
+      expect(screen.queryByText("Total Hours")).not.toBeInTheDocument();
+    });
+
+    it("keeps the total tile when there is no target to show it against", () => {
+      renderCollapsedPanel({ tasks: mondayTask() });
+
+      expect(screen.getByText("Total Hours")).toBeInTheDocument();
     });
   });
 
@@ -377,7 +439,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks, weeklyTargetHours: 40, weeklyWorkingDays: 5 });
 
-      const rings = Array.from(document.querySelectorAll<HTMLElement>("[data-complete]"));
+      const rings = Array.from(document.querySelectorAll<HTMLElement>(".progress-ring"));
       const monday = rings[0]!;
       expect(monday.style.getPropertyValue("--ring-pct")).toBe("100%");
       expect(monday).toHaveAttribute("data-complete", "true");

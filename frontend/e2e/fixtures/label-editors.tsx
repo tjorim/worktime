@@ -34,7 +34,9 @@ function Fixture() {
         <LabelsPanel
           labels={labels}
           tasks={[]}
+          ganttTasks={[]}
           templates={[]}
+          onReassignAndDeleteLabel={async () => {}}
           onUpdateLabels={(next) => {
             if (params.has("partial")) {
               setLabels([]);
