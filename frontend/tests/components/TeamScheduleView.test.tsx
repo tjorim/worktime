@@ -309,6 +309,33 @@ describe("TeamScheduleView", () => {
       expect(storedPreferences().lastHdayTeamId).toBe("eng");
     });
 
+    it("trims whitespace around the ID before requesting and remembering it", async () => {
+      window.localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: HELPER_URL } }),
+      );
+      const requested: string[] = [];
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) => {
+          requested.push(params.teamId as string);
+          return HttpResponse.json(teamHdayPayload(params.teamId as string));
+        }),
+      );
+      const user = userEvent.setup();
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+
+      await user.type(screen.getByLabelText(m.team_id_label()), "  eng  ");
+      await user.click(screen.getByRole("button", { name: m.team_load_btn() }));
+      await screen.findByText("Engineering");
+
+      expect(requested).toEqual(["eng"]);
+      await waitFor(() => expect(storedPreferences().recentHdayTeamIds).toEqual(["eng"]));
+    });
+
     it("requests only the submitted ID while the user types, never a half-typed one", async () => {
       window.localStorage.setItem(
         DEVICE_PREFERENCES_STORAGE_KEY,
