@@ -12,6 +12,23 @@ function renderSection(fetchFn: (input: string, init?: RequestInit) => Promise<R
 }
 
 describe("SettingsCalendarFeedSection", () => {
+  it("clears the parent's load warning when generating after a failed load", async () => {
+    const onLoadError = vi.fn();
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ url_path: "/api/ical/new.ics" })));
+    render(
+      <ToastProvider>
+        <SettingsCalendarFeedSection fetchFn={fetchFn} onLoadError={onLoadError} />
+      </ToastProvider>,
+    );
+    await waitFor(() => expect(onLoadError).toHaveBeenLastCalledWith(true));
+    fireEvent.click(screen.getByRole("button", { name: /generate/i }));
+    expect(await screen.findByDisplayValue(/new.ics$/)).toBeInTheDocument();
+    expect(onLoadError).toHaveBeenLastCalledWith(false);
+  });
+
   it("shows an existing subscription without rotating its secret", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ configured: true, last_used_at: null }), {

@@ -1526,5 +1526,6 @@
   "tt_hidden_tasks_notice_one": "{count} opgeslagen tijdregistratie is verborgen omdat de gegevens ongeldig zijn of het label ontbreekt. Je opgeslagen gegevens zijn bewaard.",
   "error_code_gantt_dependency_unknown": "Kies afhankelijkheden die nog bestaan.",
   "error_code_gantt_dependency_self": "Een taak kan niet van zichzelf afhangen.",
-  "error_code_gantt_dependency_cycle": "Deze afhankelijkheden vormen een kring."
+  "error_code_gantt_dependency_cycle": "Deze afhankelijkheden vormen een kring.",
+  "account_load_errors": "Sommige accountonderdelen konden niet worden geladen. Je lokale gegevens zijn veilig. Probeer de betreffende onderdelen hieronder opnieuw."
 }

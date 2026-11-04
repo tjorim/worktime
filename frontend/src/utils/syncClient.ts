@@ -1279,11 +1279,15 @@ function writeSyncOutbox(userId: string, outbox: SyncPushPayload[]): void {
  * produce multiple entries; dequeueAndMergeSyncOutbox coalesces them by
  * natural key (keeping the newest) before the flush is sent.
  */
+export const SYNC_WRITE_ACTIVITY_EVENT = "worktime-sync-write-activity";
+export const SYNC_OUTBOX_CHANGED_EVENT = "worktime-sync-outbox-changed";
+
 export function appendToSyncOutbox(userId: string, change: SyncPushPayload): boolean {
   try {
     const outbox = readSyncOutbox(userId);
     outbox.push(change);
     writeSyncOutbox(userId, outbox);
+    window.dispatchEvent(new CustomEvent(SYNC_OUTBOX_CHANGED_EVENT, { detail: userId }));
     return true;
   } catch (err) {
     // Storage rejected the write (quota exceeded, private browsing). Report it
@@ -1566,4 +1570,59 @@ export function dequeueAndMergeSyncOutbox(
       }
     },
   };
+}
+
+/** Detect stored rows omitted by upload validation before replacing local collections. */
+export function localSyncPayloadIsComplete(payload: SyncPushPayload): boolean {
+  return [
+    [labelsCollection.toArray, payload.labels],
+    [tasksCollection.toArray, payload.tasks],
+    [templatesCollection.toArray, payload.templates],
+    [workLocationsCollection.toArray, payload.work_locations],
+    [timeOffCollection.toArray, payload.time_off_entries],
+    [ganttTasksCollection.toArray, payload.gantt_tasks],
+  ].every(([stored, pushed]) => stored!.length === pushed!.length);
+}
+
+/** Compare identities and all pushed content, including tombstones; counts alone are insufficient. */
+export function syncDatasetsMatch(local: SyncPushPayload, server: SyncPullResponse): boolean {
+  const keys = [
+    "labels",
+    "tasks",
+    "templates",
+    "work_locations",
+    "time_off_entries",
+    "gantt_tasks",
+  ] as const;
+  return keys.every((key) => {
+    const remote = server[key] ?? [];
+    return (
+      local[key].length === remote.length &&
+      local[key].every((item) => {
+        const localRecord = item as unknown as Record<string, unknown>;
+        const identityField = key === "work_locations" ? "date" : "id";
+        const remoteIdentityField = key === "time_off_entries" ? "entry_id" : identityField;
+        const match = remote.find(
+          (record) =>
+            (record as unknown as Record<string, unknown>)[remoteIdentityField] ===
+            localRecord[identityField],
+        );
+        if (!match || (item.action === "delete") !== Boolean(match.deleted_at)) return false;
+        return Object.entries(item).every(([field, value]) => {
+          if (field === "action" || field === "client_updated_at" || field === identityField)
+            return true;
+          if (key === "tasks" && (field === "start_time" || field === "stop_time")) {
+            const remoteValue = (match as unknown as Record<string, unknown>)[field];
+            if (typeof value === "string" && typeof remoteValue === "string") {
+              return Date.parse(value) === Date.parse(remoteValue);
+            }
+          }
+          return (
+            JSON.stringify(value) ===
+            JSON.stringify((match as unknown as Record<string, unknown>)[field])
+          );
+        });
+      })
+    );
+  });
 }

@@ -40,6 +40,15 @@ describe("SyncStatusIndicator offline state", () => {
     vi.restoreAllMocks();
   });
 
+  it("exposes the automatic retry countdown in visible text and the live region", () => {
+    mocks.sync.hasSyncError = true;
+    mocks.sync.retryAfter = Date.now() + 5000;
+    render(<SyncStatusIndicator />);
+    expect(screen.getByRole("status")).toHaveAccessibleName(/Retrying in 5s/);
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText(/Retrying in 5s/)).toBeVisible();
+  });
+
   it("shows queued offline work ahead of a generic sync error", () => {
     mocks.sync.outboxCount = 3;
     mocks.sync.hasSyncError = true;

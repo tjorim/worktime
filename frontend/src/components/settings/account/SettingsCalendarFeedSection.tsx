@@ -16,20 +16,25 @@ import { logger } from "@/utils/logger";
 import { ApiError } from "@/utils/apiError";
 
 interface Props {
+  onLoadError?: (failed: boolean) => void;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
-export function SettingsCalendarFeedSection({ fetchFn }: Props) {
+export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState<string | null>(null);
   const [configured, setConfigured] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
 
+  const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     let active = true;
     void fetchFn("/api/ical")
       .then(async (response) => {
@@ -39,13 +44,19 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
           last_used_at?: string | null;
         };
         if (active) {
+          setLoadFailed(false);
+          onLoadError?.(false);
           setConfigured(payload.configured);
           setLastFetchedAt(payload.last_used_at ?? null);
         }
       })
       .catch((caught) => {
         logger.error("Failed to load calendar feed status:", caught);
-        if (active) setError(m.calendar_feed_error());
+        if (active) {
+          setError(m.calendar_feed_error());
+          setLoadFailed(true);
+          onLoadError?.(true);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -53,10 +64,12 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
     return () => {
       active = false;
     };
-  }, [fetchFn]);
+  }, [fetchFn, loadAttempt, onLoadError]);
 
   const rotate = async () => {
     setBusy(true);
+    setLoadFailed(false);
+    onLoadError?.(false);
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "POST" });
@@ -75,6 +88,8 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
 
   const revoke = async () => {
     setBusy(true);
+    setLoadFailed(false);
+    onLoadError?.(false);
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "DELETE" });
@@ -123,7 +138,20 @@ export function SettingsCalendarFeedSection({ fetchFn }: Props) {
         <SettingsHint>{m.calendar_feed_description()}</SettingsHint>
         <SettingsHint>{m.calendar_feed_client_guidance()}</SettingsHint>
         <Alert variant="warning">{m.calendar_feed_warning()}</Alert>
-        {error ? <Alert variant="destructive">{error}</Alert> : null}
+        {error ? (
+          <Alert role={loadFailed ? "note" : "alert"} variant="destructive">
+            {error}
+            {loadFailed ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              >
+                {m.sync_retry_in_label()}
+              </Button>
+            ) : null}
+          </Alert>
+        ) : null}
         {url ? (
           <>
             <Input readOnly value={url} aria-label={m.calendar_feed_url_label()} />

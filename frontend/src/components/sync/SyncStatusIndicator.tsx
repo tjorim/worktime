@@ -152,6 +152,13 @@ export function SyncStatusIndicator() {
   // syncing away a nonempty outbox.
   const shouldSpin = isOnline && isSyncing && !hasSyncError && conflictCount === 0;
 
+  const retrySeconds =
+    retryAfter === null ? 0 : Math.max(0, Math.ceil((retryAfter - now) / MS_PER_SECOND));
+  const visibleLabel =
+    hasSyncError && retrySeconds > 0
+      ? `${label} · ${m.sync_indicator_tooltip_retry_in({ seconds: String(retrySeconds) })}`
+      : label;
+
   const indicator = (
     <span
       className={cn(
@@ -162,7 +169,7 @@ export function SyncStatusIndicator() {
         tone === "info" && "bg-info-bg text-info",
       )}
       role="status"
-      aria-label={`${m.sync_indicator_aria_label()}: ${label}`}
+      aria-label={`${m.sync_indicator_aria_label()}: ${visibleLabel}`}
       aria-live="polite"
       aria-atomic="true"
       tabIndex={tooltipText ? 0 : undefined}
@@ -172,7 +179,7 @@ export function SyncStatusIndicator() {
         icon={icon}
         className={shouldSpin ? "animate-spin motion-reduce:animate-none" : undefined}
       />
-      <span className="hidden sm:inline">{label}</span>
+      <span>{visibleLabel}</span>
     </span>
   );
 

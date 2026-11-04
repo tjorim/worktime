@@ -1526,5 +1526,6 @@
   "tt_hidden_tasks_notice_one": "{count} stored time entry is hidden because its data is invalid or its label is missing. Your stored data has been kept.",
   "error_code_gantt_dependency_unknown": "Choose dependencies that still exist.",
   "error_code_gantt_dependency_self": "A task cannot depend on itself.",
-  "error_code_gantt_dependency_cycle": "These dependencies create a cycle."
+  "error_code_gantt_dependency_cycle": "These dependencies create a cycle.",
+  "account_load_errors": "Some account sections could not be loaded. Your local data is safe. Retry the affected sections below."
 }

@@ -26,6 +26,7 @@ function formatTokenDate(iso: string): string {
 interface SettingsApiTokensSectionProps {
   apiTokens: ApiToken[] | null;
   isApiTokensLoading: boolean;
+  onRetry?: () => void;
   apiTokensError: string | null;
   isCreatingApiToken: boolean;
   createApiTokenError: string | null;
@@ -40,6 +41,7 @@ interface SettingsApiTokensSectionProps {
 export function SettingsApiTokensSection({
   apiTokens,
   isApiTokensLoading,
+  onRetry,
   apiTokensError,
   isCreatingApiToken,
   createApiTokenError,
@@ -120,7 +122,16 @@ export function SettingsApiTokensSection({
       <div className="flex flex-col gap-2">
         {createApiTokenError ? <Alert variant="destructive">{createApiTokenError}</Alert> : null}
         {revokeApiTokenError ? <Alert variant="destructive">{revokeApiTokenError}</Alert> : null}
-        {apiTokensError ? <Alert variant="warning">{apiTokensError}</Alert> : null}
+        {apiTokensError ? (
+          <div>
+            <Alert role="note" variant="warning">
+              {apiTokensError}
+            </Alert>
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {m.sync_retry_in_label()}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {isApiTokensLoading ? (

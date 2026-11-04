@@ -40,6 +40,7 @@ export function useSettingsIntegrationClients({
 }: Params) {
   const [clients, setClients] = useState<IntegrationClient[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [createdClient, setCreatedClient] = useState<CreatedIntegrationClient | null>(null);
@@ -55,6 +56,7 @@ export function useSettingsIntegrationClients({
     async (expectedSession = sessionGeneration.current) => {
       const expectedLoad = ++loadGeneration.current;
       setIsLoading(true);
+      setLoadFailed(false);
       setError(null);
       try {
         const response = await fetchFn("/api/integration-clients");
@@ -72,6 +74,7 @@ export function useSettingsIntegrationClients({
           loadGeneration.current !== expectedLoad
         )
           return;
+        setLoadFailed(true);
         logger.error("Failed to load integration clients:", loadError);
         setError(
           getErrorMessage(
@@ -107,6 +110,7 @@ export function useSettingsIntegrationClients({
 
   const createClient = async (name: string, scopes: IntegrationClientScope[]) => {
     if (mutationInFlight.current || createdClient) return;
+    setLoadFailed(false);
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError(m.integration_clients_name_required());
@@ -150,6 +154,7 @@ export function useSettingsIntegrationClients({
     mutationInFlight.current = true;
     const generation = sessionGeneration.current;
     setBusyClientId(clientId);
+    setLoadFailed(false);
     setError(null);
     try {
       const response = await fetchFn(`/api/integration-clients/${clientId}/rotate`, {
@@ -183,6 +188,7 @@ export function useSettingsIntegrationClients({
     mutationInFlight.current = true;
     const generation = sessionGeneration.current;
     setBusyClientId(clientId);
+    setLoadFailed(false);
     setError(null);
     try {
       const response = await fetchFn(`/api/integration-clients/${clientId}`, { method: "DELETE" });
@@ -211,6 +217,8 @@ export function useSettingsIntegrationClients({
   };
 
   return {
+    loadFailed,
+    retry: () => void loadClients(),
     clients,
     isLoading,
     error,

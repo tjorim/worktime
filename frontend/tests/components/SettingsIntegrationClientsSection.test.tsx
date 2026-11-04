@@ -21,6 +21,7 @@ function renderHarness(
     });
     return (
       <SettingsIntegrationClientsSection
+        onRetry={state.loadFailed ? state.retry : undefined}
         clients={state.clients}
         isLoading={state.isLoading}
         error={state.error}
@@ -43,6 +44,22 @@ function renderHarness(
 }
 
 describe("Settings integration clients", () => {
+  it("announces a create failure after a load failure", async () => {
+    renderHarness(async () => jsonResponse({}, { status: 500 }));
+    expect(await screen.findByText(m.integration_clients_load_failed())).toHaveAttribute(
+      "role",
+      "note",
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Client name"), "Home hub");
+    await user.click(screen.getByRole("button", { name: "Create client" }));
+    expect(await screen.findByText(m.integration_clients_create_failed())).toHaveAttribute(
+      "role",
+      "alert",
+    );
+    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
+  });
+
   it("creates a client and only offers admin scope to admins", async () => {
     let created = false;
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {

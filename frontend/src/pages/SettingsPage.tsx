@@ -13,6 +13,7 @@ import { Icon } from "@/components/shared/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -244,6 +245,7 @@ export function SettingsContent({
   const { canInstall, isInstalled, promptInstall } = usePwaInstall();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const fetchFn = useApiClient();
+  const [calendarLoadFailed, setCalendarLoadFailed] = useState(false);
   const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
   const {
     isSyncing,
@@ -273,6 +275,8 @@ export function SettingsContent({
     resetSettings,
   } = useSettings();
   const {
+    profileLoadFailed,
+    retryProfile,
     accountProfile,
     profileDraft,
     setProfileDraft,
@@ -294,6 +298,7 @@ export function SettingsContent({
   });
   const isAdmin = accountProfile?.is_admin ?? false;
   const {
+    retryApiTokens,
     apiTokens,
     isApiTokensLoading,
     apiTokensError,
@@ -488,6 +493,13 @@ export function SettingsContent({
   const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
     account: () => (
       <>
+        {isAuthenticated &&
+        (profileLoadFailed ||
+          apiTokensError ||
+          integrationClients.loadFailed ||
+          calendarLoadFailed) ? (
+          <Alert variant="warning">{m.account_load_errors()}</Alert>
+        ) : null}
         <SettingsAccountSection
           isValidating={isValidating}
           isAuthenticated={isAuthenticated}
@@ -496,6 +508,7 @@ export function SettingsContent({
           accountId={accountProfile?.id ?? null}
           userId={userId}
           isAdmin={isAdmin}
+          onRetryProfile={profileLoadFailed ? retryProfile : undefined}
           profileError={profileError}
           isProfileLoading={isProfileLoading}
           profileDraft={profileDraft}
@@ -528,6 +541,7 @@ export function SettingsContent({
               onLoadMore={() => void personalAuditTrail.loadMore()}
             />
             <SettingsApiTokensSection
+              onRetry={retryApiTokens}
               apiTokens={apiTokens}
               isApiTokensLoading={isApiTokensLoading}
               apiTokensError={apiTokensError}
@@ -540,8 +554,9 @@ export function SettingsContent({
               revokeApiTokenError={revokeApiTokenError}
               onRevokeApiToken={handleRevokeApiToken}
             />
-            <SettingsCalendarFeedSection fetchFn={fetchFn} />
+            <SettingsCalendarFeedSection fetchFn={fetchFn} onLoadError={setCalendarLoadFailed} />
             <SettingsIntegrationClientsSection
+              onRetry={integrationClients.loadFailed ? integrationClients.retry : undefined}
               clients={integrationClients.clients}
               isLoading={integrationClients.isLoading}
               error={integrationClients.error}

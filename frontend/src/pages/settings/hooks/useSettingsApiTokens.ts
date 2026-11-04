@@ -131,6 +131,7 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
   };
 
   return {
+    retryApiTokens: () => void loadApiTokens(),
     apiTokens,
     isApiTokensLoading,
     apiTokensError,
