@@ -15,7 +15,6 @@ below predate that switch.
 - Calendar export (.ics format)
 - Cross-schedule transfer overlap detection
 - Mobile carousel for team browsing
-- Advanced accessibility features (high-contrast mode, font scaling)
 
 ## [2026.9.3] - 2026-09-29
 

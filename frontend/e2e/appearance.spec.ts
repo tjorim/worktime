@@ -4,7 +4,7 @@ import { expectNoAccessibilityViolations } from "./axe";
 import { mkdirSync } from "node:fs";
 
 for (const theme of ["light", "dark"] as const) {
-  test(`appearance controls persist and scale without overflow (${theme})`, async ({ page }) => {
+  test(`high contrast persists and fits without overflow (${theme})`, async ({ page }) => {
     test.setTimeout(90_000);
     await page.addInitScript(
       ({ theme, stateKey }) => {
@@ -19,14 +19,12 @@ for (const theme of ["light", "dark"] as const) {
       { theme, stateKey: USER_STATE_STORAGE_KEY },
     );
     await page.goto("/settings?section=general");
-    await page.getByRole("radio", { name: "Larger", exact: true }).click();
-    await page.getByRole("switch", { name: "High contrast", exact: true }).click();
+    const toggle = page.getByRole("switch", { name: "High contrast", exact: true });
+    await toggle.click();
     await expect(page.locator("html")).toHaveAttribute("data-high-contrast", "true");
-    await expect(page.locator("html")).toHaveCSS("font-size", "20px");
     await expectNoAccessibilityViolations(page, `high contrast ${theme}`);
     await page.reload();
-    await expect(page.getByRole("radio", { name: "Larger", exact: true })).toBeChecked();
-    await expect(page.getByRole("switch", { name: "High contrast", exact: true })).toBeChecked();
+    await expect(toggle).toBeChecked();
     mkdirSync("../docs/screenshots/270", { recursive: true });
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -34,28 +32,16 @@ for (const theme of ["light", "dark"] as const) {
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
         .toBe(true);
       await page.screenshot({
-        path: `../docs/screenshots/270/${theme}-contrast-larger-${width}.png`,
+        path: `../docs/screenshots/270/${theme}-contrast-${width}.png`,
         fullPage: true,
       });
-      if (width === 390) {
-        await page.getByRole("radio", { name: "Larger", exact: true }).scrollIntoViewIfNeeded();
-        await page.screenshot({
-          path: `../docs/screenshots/270/${theme}-contrast-larger-390-viewport.png`,
-        });
-      }
-      await page.getByRole("switch", { name: "High contrast", exact: true }).click();
-      await page.getByRole("radio", { name: "Normal", exact: true }).click();
+      await toggle.click();
+      await expect(page.locator("html")).toHaveAttribute("data-high-contrast", "false");
       await page.screenshot({
         path: `../docs/screenshots/270/${theme}-normal-${width}.png`,
         fullPage: true,
       });
-      await page.getByRole("radio", { name: "Large", exact: true }).click();
-      await page.screenshot({
-        path: `../docs/screenshots/270/${theme}-large-${width}.png`,
-        fullPage: true,
-      });
-      await page.getByRole("radio", { name: "Larger", exact: true }).click();
-      await page.getByRole("switch", { name: "High contrast", exact: true }).click();
+      await toggle.click();
     }
   });
 }

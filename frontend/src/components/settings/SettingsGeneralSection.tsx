@@ -11,9 +11,7 @@ import * as m from "@/paraglide/messages.js";
 interface SettingsGeneralSectionProps {
   timeFormat: "12h" | "24h";
   theme: "light" | "dark" | "auto";
-  fontScale: "normal" | "large" | "larger";
   highContrast: boolean;
-  onFontScaleChange: (value: "normal" | "large" | "larger") => void;
   onHighContrastChange: (value: boolean) => void;
   locale: "en" | "nl";
   notificationsEnabled: boolean;
@@ -24,9 +22,7 @@ interface SettingsGeneralSectionProps {
 }
 
 export function SettingsGeneralSection({
-  fontScale,
   highContrast,
-  onFontScaleChange,
   onHighContrastChange,
   timeFormat,
   theme,
@@ -60,18 +56,6 @@ export function SettingsGeneralSection({
               { value: "auto", label: m.theme_auto(), icon: ContrastIcon },
               { value: "light", label: m.theme_light(), icon: SunIcon },
               { value: "dark", label: m.theme_dark(), icon: MoonIcon },
-            ]}
-          />
-        </SettingsRow>
-        <SettingsRow title={m.font_scale_label()} description={m.font_scale_description()}>
-          <ChoiceRadioGroup
-            label={m.font_scale_label()}
-            value={fontScale}
-            onChange={(value) => onFontScaleChange(value)}
-            options={[
-              { value: "normal", label: m.font_scale_normal() },
-              { value: "large", label: m.font_scale_large() },
-              { value: "larger", label: m.font_scale_larger() },
             ]}
           />
         </SettingsRow>

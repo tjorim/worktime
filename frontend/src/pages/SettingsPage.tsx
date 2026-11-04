@@ -273,7 +273,6 @@ export function SettingsContent({
     updateTimeFormat,
     updateTheme,
     appearance,
-    updateFontScale,
     updateHighContrast,
     updateNotifications,
     updateTimeOffEnabled,
@@ -615,9 +614,7 @@ export function SettingsContent({
       <SettingsGeneralSection
         timeFormat={settings.timeFormat}
         theme={settings.theme}
-        fontScale={appearance.fontScale}
         highContrast={appearance.highContrast}
-        onFontScaleChange={updateFontScale}
         onHighContrastChange={updateHighContrast}
         locale={getLocale() === "nl" ? "nl" : "en"}
         notificationsEnabled={settings.notifications === "on"}

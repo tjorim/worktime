@@ -43,7 +43,6 @@ import { logger } from "@/utils/logger";
 function AppContent() {
   const { appearance } = useSettings();
   useLayoutEffect(() => {
-    document.documentElement.dataset.fontScale = appearance.fontScale;
     document.documentElement.dataset.highContrast = String(appearance.highContrast);
   }, [appearance]);
   const { showSuccess, showInfo, showError } = useToast();

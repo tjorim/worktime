@@ -267,12 +267,6 @@
   }
 }
 @layer base {
-  :root[data-font-scale="large"] {
-    font-size: 112.5%;
-  }
-  :root[data-font-scale="larger"] {
-    font-size: 125%;
-  }
   :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--wt-focus-color);
     outline-offset: 2px;

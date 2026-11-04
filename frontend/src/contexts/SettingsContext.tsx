@@ -63,25 +63,13 @@ export interface UserSettings {
   hdayUsername: string | null;
 }
 
-export type FontScale = "normal" | "large" | "larger";
-
-export function normalizeAppearance(value: unknown): {
-  fontScale: FontScale;
-  highContrast: boolean;
-} {
+export function normalizeAppearance(value: unknown): { highContrast: boolean } {
   const appearance = isObjectRecord(value) ? value : {};
-  return {
-    fontScale:
-      appearance.fontScale === "large" || appearance.fontScale === "larger"
-        ? appearance.fontScale
-        : "normal",
-    highContrast: appearance.highContrast === true,
-  };
+  return { highContrast: appearance.highContrast === true };
 }
 
 interface SettingsContextType {
-  appearance: { fontScale: FontScale; highContrast: boolean };
-  updateFontScale: (value: FontScale) => void;
+  appearance: { highContrast: boolean };
   updateHighContrast: (value: boolean) => void;
   settings: UserSettings;
   updateTimeFormat: (format: TimeFormat) => void;
@@ -419,15 +407,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const { preferences, setPreferences } = useDevicePreferences();
   // Missing fields in older device preferences migrate to the normal appearance.
   const appearance = useStableShallowObject(normalizeAppearance(preferences?.appearance));
-  const updateFontScale = useCallback(
-    (fontScale: FontScale) => {
-      setPreferences((previous) => ({
-        ...previous,
-        appearance: { ...normalizeAppearance(previous?.appearance), fontScale },
-      }));
-    },
-    [setPreferences],
-  );
   const updateHighContrast = useCallback(
     (highContrast: boolean) => {
       setPreferences((previous) => ({
@@ -744,7 +723,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     () => ({
       settings: stableSettings,
       appearance,
-      updateFontScale,
       updateHighContrast,
       updateTimeFormat,
       updateTheme,
@@ -776,7 +754,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [
       stableSettings,
       appearance,
-      updateFontScale,
       updateHighContrast,
       userState.myTeam,
       userState.scheduleType,

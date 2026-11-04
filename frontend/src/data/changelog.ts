@@ -841,5 +841,4 @@ export const futurePlans: string[] = [
   "Calendar export (.ics format)",
   "Cross-schedule transfer overlap detection",
   "Mobile carousel for team browsing",
-  "Advanced accessibility features (high-contrast mode, font scaling)",
 ];

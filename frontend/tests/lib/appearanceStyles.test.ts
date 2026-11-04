@@ -17,9 +17,8 @@ it("globally reduces motion including utility animations and keeps lifecycle eve
   expect(fallback).toContain("*::before");
   expect(fallback).toContain("*::after");
 });
-it("scales the root relative to the browser default", () => {
-  expect(css).toMatch(/data-font-scale="large"[^}]*font-size: 112.5%/);
-  expect(css).toMatch(/data-font-scale="larger"[^}]*font-size: 125%/);
+it("leaves text sizing to the browser instead of an in-app font scale", () => {
+  expect(css).not.toContain("data-font-scale");
 });
 it("high contrast text, links and borders contrast with theme surfaces", () => {
   const tokens = readFileSync(path.resolve(__dirname, "../../src/styles/tokens.css"), "utf8");
