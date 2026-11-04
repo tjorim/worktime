@@ -20,6 +20,7 @@ pnpm lint
 pnpm format          # rewrites files in place (Oxfmt)
 pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm typecheck
+pnpm typecheck:tests   # test files; CI runs this too
 pnpm test
 pnpm build
 ```

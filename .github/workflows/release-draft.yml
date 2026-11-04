@@ -156,6 +156,9 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Typecheck tests
+        run: pnpm run typecheck:tests
+
       - name: Lint
         run: pnpm run lint
 
