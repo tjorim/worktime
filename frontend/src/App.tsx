@@ -1,5 +1,5 @@
 import { CloudCheckIcon, UsersIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { queryClient } from "@/lib/queryClient";
@@ -41,6 +41,11 @@ import { logger } from "@/utils/logger";
  * @returns The application's rendered user interface.
  */
 function AppContent() {
+  const { appearance } = useSettings();
+  useLayoutEffect(() => {
+    document.documentElement.dataset.fontScale = appearance.fontScale;
+    document.documentElement.dataset.highContrast = String(appearance.highContrast);
+  }, [appearance]);
   const { showSuccess, showInfo, showError } = useToast();
   const { isAuthenticated, userId } = useAuth();
   const {
@@ -213,8 +218,8 @@ function AppContent() {
     }
   }
 
-  // Mirror the resolved light/dark theme onto <html data-theme> (styles and vendor widgets key off it)
-  useEffect(() => {
+  // Apply appearance before paint; vendor widgets also consume the resolved theme.
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return;
 
     const applyTheme = () => {

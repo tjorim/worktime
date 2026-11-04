@@ -56,6 +56,7 @@
     SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* --- Motion --- */
+  --wt-focus-color: var(--wt-primary-color);
   --wt-motion-fast: 120ms;
   --wt-motion-base: 180ms;
   --wt-motion-slow: 240ms;
@@ -248,4 +249,28 @@
   /* A deep, desaturated blue instead of the fully-saturated --wt-primary band,
      for an app whose users check it during night shifts. */
   --wt-navbar-bg: #1b3a5c;
+}
+
+/* Appearance overrides retain semantic hues and the independently AA-tested event palette. */
+:root[data-high-contrast="true"] {
+  --wt-focus-color: #0050b3;
+  --wt-body-color: #000000;
+  --wt-secondary-color: #000000;
+  --wt-border-color: #595959;
+  --wt-primary-color: #0050b3;
+  --wt-link-color: #0050b3;
+  --wt-month-calendar-weekday-text: #000000;
+  --wt-month-calendar-day-other-text: #595959;
+  --wt-month-calendar-border: #595959;
+}
+:root[data-high-contrast="true"][data-theme="dark"] {
+  --wt-focus-color: #9ec5fe;
+  --wt-body-color: #ffffff;
+  --wt-secondary-color: #ffffff;
+  --wt-border-color: #bfbfbf;
+  --wt-primary-color: #0d6efd;
+  --wt-link-color: #9ec5fe;
+  --wt-month-calendar-weekday-text: #ffffff;
+  --wt-month-calendar-day-other-text: #bfbfbf;
+  --wt-month-calendar-border: #bfbfbf;
 }

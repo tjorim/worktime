@@ -11,6 +11,10 @@ import * as m from "@/paraglide/messages.js";
 interface SettingsGeneralSectionProps {
   timeFormat: "12h" | "24h";
   theme: "light" | "dark" | "auto";
+  fontScale: "normal" | "large" | "larger";
+  highContrast: boolean;
+  onFontScaleChange: (value: "normal" | "large" | "larger") => void;
+  onHighContrastChange: (value: boolean) => void;
   locale: "en" | "nl";
   notificationsEnabled: boolean;
   onTimeFormatChange: (format: "12h" | "24h") => void;
@@ -20,6 +24,10 @@ interface SettingsGeneralSectionProps {
 }
 
 export function SettingsGeneralSection({
+  fontScale,
+  highContrast,
+  onFontScaleChange,
+  onHighContrastChange,
   timeFormat,
   theme,
   locale,
@@ -55,6 +63,25 @@ export function SettingsGeneralSection({
             ]}
           />
         </SettingsRow>
+        <SettingsRow title={m.font_scale_label()} description={m.font_scale_description()}>
+          <ChoiceRadioGroup
+            label={m.font_scale_label()}
+            value={fontScale}
+            onChange={(value) => onFontScaleChange(value)}
+            options={[
+              { value: "normal", label: m.font_scale_normal() },
+              { value: "large", label: m.font_scale_large() },
+              { value: "larger", label: m.font_scale_larger() },
+            ]}
+          />
+        </SettingsRow>
+        <SettingsSwitchRow
+          id="toggle-high-contrast"
+          title={m.high_contrast_label()}
+          description={m.high_contrast_description()}
+          checked={highContrast}
+          onCheckedChange={(value) => onHighContrastChange(value)}
+        />
         <SettingsRow title={m.language_label()} description={m.language_description()}>
           <ChoiceRadioGroup
             label={m.language_label()}

@@ -139,7 +139,7 @@
   --color-destructive: var(--wt-danger);
   --color-border: var(--wt-theme-border);
   --color-input: var(--wt-border-color);
-  --color-ring: var(--wt-primary-color);
+  --color-ring: var(--wt-focus-color);
   --color-link: var(--wt-link-color);
   --radius-sm: var(--wt-border-radius-sm);
   --radius-md: var(--wt-border-radius);

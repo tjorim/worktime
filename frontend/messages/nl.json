@@ -1608,5 +1608,12 @@
   "account_export_failed": "Uw accountgegevens kunnen nu niet worden gedownload.",
   "account_export_unavailable": "Uw accountgegevens moeten eerst geladen zijn voordat u ze kunt downloaden.",
   "tt_task_name_hint": "Optioneel bij Nu starten, dat de taak “{name}” noemt. Verplicht voor voltooide taken.",
-  "calendar_keyboard_hint": "Toetsenbord: pijltjestoetsen gaan naar een andere dag, Home en End naar het begin en einde van de week, Page Up en Page Down wisselen van maand, Enter opent het dagmenu."
+  "calendar_keyboard_hint": "Toetsenbord: pijltjestoetsen gaan naar een andere dag, Home en End naar het begin en einde van de week, Page Up en Page Down wisselen van maand, Enter opent het dagmenu.",
+  "font_scale_label": "Tekstgrootte",
+  "font_scale_description": "Pas tekst en afstand aan op dit apparaat. Browserzoom blijft beschikbaar.",
+  "font_scale_normal": "Normaal",
+  "font_scale_large": "Groot",
+  "font_scale_larger": "Groter",
+  "high_contrast_label": "Hoog contrast",
+  "high_contrast_description": "Gebruik duidelijkere tekst en randen op dit apparaat."
 }
