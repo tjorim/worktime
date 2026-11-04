@@ -24,27 +24,29 @@ describe("db/collections mutation handlers", () => {
   it("keeps inserted, updated and deleted rows after the handler resolves", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    await tasksCollection.insert(task("commit-1")).isPersisted.promise;
+    await tasksCollection.insert(task("commit-1")).when("settled");
     expect(tasksCollection.get("commit-1")?.text).toBe("Task");
 
-    await tasksCollection.update("commit-1", (draft) => {
-      draft.text = "Renamed";
-    }).isPersisted.promise;
+    await tasksCollection
+      .update("commit-1", (draft) => {
+        draft.text = "Renamed";
+      })
+      .when("settled");
     expect(tasksCollection.get("commit-1")?.text).toBe("Renamed");
 
-    await tasksCollection.delete("commit-1").isPersisted.promise;
+    await tasksCollection.delete("commit-1").when("settled");
     expect(tasksCollection.has("commit-1")).toBe(false);
 
     expect(warn.mock.calls.flat().join(" ")).not.toContain("DEPRECATED");
   });
 
   it("does not throw when a delete targets a row already removed from the synced state", async () => {
-    await tasksCollection.insert(task("commit-2")).isPersisted.promise;
+    await tasksCollection.insert(task("commit-2")).when("settled");
     const deletion = tasksCollection.delete("commit-2");
     // A pull lands between the optimistic delete and the handler's commit.
     tasksCollection.utils.writeDelete("commit-2");
 
-    await expect(deletion.isPersisted.promise).resolves.toBeDefined();
+    await expect(deletion.when("settled")).resolves.toBeDefined();
     expect(tasksCollection.has("commit-2")).toBe(false);
   });
 });

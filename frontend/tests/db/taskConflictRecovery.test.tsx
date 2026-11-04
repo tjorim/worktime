@@ -54,10 +54,10 @@ beforeEach(() => {
 afterEach(async () => {
   setSyncCollectionAuth(null);
   for (const id of ["rejected", "unrelated"]) {
-    if (tasksCollection.has(id)) await tasksCollection.delete(id).isPersisted.promise;
+    if (tasksCollection.has(id)) await tasksCollection.delete(id).when("settled");
   }
   for (const id of ["rejected", "unrelated"]) {
-    if (ganttTasksCollection.has(id)) await ganttTasksCollection.delete(id).isPersisted.promise;
+    if (ganttTasksCollection.has(id)) await ganttTasksCollection.delete(id).when("settled");
   }
   localStorage.clear();
   setSyncCollectionTriggerPull(null);
@@ -91,15 +91,17 @@ describe("rejected task recovery", () => {
       : payload;
     for (const id of ["rejected", "unrelated"]) {
       if (gantt) {
-        await ganttTasksCollection.insert({
-          id,
-          name: id,
-          start: "2026-01-01",
-          end: "2026-01-02",
-          progress: 0,
-        }).isPersisted.promise;
+        await ganttTasksCollection
+          .insert({
+            id,
+            name: id,
+            start: "2026-01-01",
+            end: "2026-01-02",
+            progress: 0,
+          })
+          .when("settled");
       } else {
-        await tasksCollection.insert(localTask(id)).isPersisted.promise;
+        await tasksCollection.insert(localTask(id)).when("settled");
       }
     }
     storeSyncCursor("user-1", "2026-01-01T00:00:00Z");
@@ -170,10 +172,12 @@ describe("rejected task recovery", () => {
     vi.stubGlobal("fetch", fetch);
     setSyncCollectionAuth("user-1", "test-token");
     await tasksCollection.preload();
-    await tasksCollection.insert(localTask("rejected")).isPersisted.promise;
-    await tasksCollection.update("rejected", (draft) => {
-      draft.text = "Edited rejected task";
-    }).isPersisted.promise;
+    await tasksCollection.insert(localTask("rejected")).when("settled");
+    await tasksCollection
+      .update("rejected", (draft) => {
+        draft.text = "Edited rejected task";
+      })
+      .when("settled");
     expect(tasksCollection.has("rejected")).toBe(true);
     storeSyncCursor("user-1", "2026-01-01T00:00:00Z");
     const { result, unmount } = renderHook(() =>
@@ -195,7 +199,7 @@ describe("rejected task recovery", () => {
   });
 
   it("keeps a rejected create when the refreshed server snapshot contains it", async () => {
-    await tasksCollection.insert(localTask("rejected")).isPersisted.promise;
+    await tasksCollection.insert(localTask("rejected")).when("settled");
     acceptTaskConflictServerState(payload, {
       ...snapshot,
       tasks: [
