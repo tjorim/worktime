@@ -107,6 +107,9 @@ class Settings(BaseSettings):
     # validate_production_no_dev_bypass() refuses to start if this is ever
     # set outside ENVIRONMENT=development.
     DEV_AUTH_BYPASS_TOKEN: str = ""
+    # Optional fixed member identities for local role and isolation checks.
+    DEV_AUTH_MEMBER_TOKEN: str = ""
+    DEV_AUTH_SECOND_MEMBER_TOKEN: str = ""
 
     # Per-client-IP rate limiting (slowapi). RATE_LIMIT_DEFAULT applies to every
     # /api route unless explicitly exempted (e.g. health probes).
@@ -204,15 +207,19 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_no_dev_bypass(self) -> Settings:
-        """Refuse to start with DEV_AUTH_BYPASS_TOKEN set outside development.
-
-        This makes it structurally impossible for the auth bypass to be both
-        configured and reachable in production at the same time — belt and
-        suspenders alongside decode_token() itself never checking it unless
-        it's non-empty.
-        """
-        if self.DEV_AUTH_BYPASS_TOKEN and self.ENVIRONMENT != "development":
-            raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside ENVIRONMENT=development.")
+        """Reject development credentials outside development and ambiguous tokens."""
+        tokens = [self.DEV_AUTH_BYPASS_TOKEN, self.DEV_AUTH_MEMBER_TOKEN, self.DEV_AUTH_SECOND_MEMBER_TOKEN]
+        configured = [token for token in tokens if token]
+        if configured and self.ENVIRONMENT != "development":
+            raise ValueError(
+                "DEV_AUTH_BYPASS_TOKEN must not be set outside ENVIRONMENT=development. Other dev tokens are also forbidden."
+            )
+        if (self.DEV_AUTH_MEMBER_TOKEN or self.DEV_AUTH_SECOND_MEMBER_TOKEN) and not self.DEV_AUTH_BYPASS_TOKEN:
+            raise ValueError("Member tokens require DEV_AUTH_BYPASS_TOKEN to be explicitly configured.")
+        if len(configured) != len(set(configured)):
+            raise ValueError("Development auth tokens must be distinct.")
+        if any(token.startswith("wtpat_") or not token.isascii() or token.isspace() for token in tokens[1:] if token):
+            raise ValueError("Development auth tokens must be nonblank ASCII and must not use the PAT prefix.")
         return self
 
     @model_validator(mode="after")

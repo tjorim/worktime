@@ -36,6 +36,53 @@ cp .env.example .env
 | `CACHE_ENABLED` | `true`                  | Enable/disable holiday-response caching         |
 | `CACHE_TTL`     | `10`                    | Cache TTL in seconds                            |
 
+### Local API users without an identity provider
+
+The conservative bypass option from #1709 uses three fixed identities, created on
+first request. It does not test browser sign-in, account switching, refresh,
+revocation or expiry; use a real local OIDC provider for those journeys. No frontend
+switcher or production bundle code is added.
+
+From `backend/`, after installing dependencies:
+
+```bash
+export ENVIRONMENT=development
+export DATABASE_URL=sqlite+aiosqlite:///./dev.db
+export DEV_AUTH_BYPASS_TOKEN=local-admin-secret
+export DEV_AUTH_MEMBER_TOKEN=local-member-secret
+export DEV_AUTH_SECOND_MEMBER_TOKEN=local-second-secret
+uv run alembic upgrade head
+uv run uvicorn app.main:app --host 127.0.0.1 --reload
+```
+
+| Setting | Username | Roles |
+| --- | --- | --- |
+| `DEV_AUTH_BYPASS_TOKEN` | `devuser` | admin (existing behaviour) |
+| `DEV_AUTH_MEMBER_TOKEN` | `devmember` | member |
+| `DEV_AUTH_SECOND_MEMBER_TOKEN` | `devmember2` | member |
+
+All tokens are empty by default. Member tokens require the admin bypass to be
+explicitly configured; configured tokens must be distinct. Member tokens must be
+nonblank ASCII and cannot start with the reserved `wtpat_` prefix. Never use these
+credentials with a production database or expose this development server publicly.
+Every dev token setting refuses startup outside `ENVIRONMENT=development`; token
+resolution also checks the environment on every request. Subjects are fixed and
+independent of token values, so changing a token preserves its local account.
+Existing same-name accounts with other subjects are not adopted.
+
+Switch API identities by changing the header (no database reset required):
+
+```bash
+curl -H "Authorization: Bearer $DEV_AUTH_MEMBER_TOKEN" http://127.0.0.1:8000/api/me
+# Member: 403; substitute $DEV_AUTH_BYPASS_TOKEN for admin: 200.
+curl -i -H "Authorization: Bearer $DEV_AUTH_MEMBER_TOKEN" http://127.0.0.1:8000/api/users/
+curl -H "Authorization: Bearer $DEV_AUTH_SECOND_MEMBER_TOKEN" http://127.0.0.1:8000/api/me
+```
+
+Use the returned IDs to test cross-user isolation on APIs accepting `user_id`.
+These are simulated interactive principals, like the original admin bypass;
+personal access tokens still use their separate authentication and scope rules.
+
 ## Running the Server
 
 ### Quick Start (with run script)

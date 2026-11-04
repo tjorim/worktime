@@ -57,7 +57,12 @@ uv run alembic upgrade head
 > Auth doesn't require a local Keycloak/IdP either — set `DEV_AUTH_BYPASS_TOKEN`
 > to any string and pass it as `Authorization: Bearer <value>`; it's treated as
 > a fixed admin dev user, auto-provisioned on first use. Refuses to start if
-> set outside `ENVIRONMENT=development`.
+> set outside `ENVIRONMENT=development`. Optional `DEV_AUTH_MEMBER_TOKEN` and
+> `DEV_AUTH_SECOND_MEMBER_TOKEN` provision `devmember` and `devmember2` with the
+> `member` role; both require the admin bypass to be configured and distinct tokens.
+> All three settings refuse startup outside development, with a runtime guard too.
+> See `backend/QUICKSTART.md` for the curl/header workflow; this skips browser OIDC,
+> refresh and expiry and adds no frontend switcher.
 
 Besides OIDC sessions, non-interactive clients (currently just the Pebble companion app) authenticate with
 a personal access token (`wtpat_...`, `/api/access-tokens`, managed from Settings > Account > API tokens).
