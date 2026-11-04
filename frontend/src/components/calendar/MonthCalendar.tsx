@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
-import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { dayjs, getWeekdayName } from "@/utils/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
@@ -108,6 +108,7 @@ export function MonthCalendar({
   showOtherLocationAction = false,
   getShiftForDate,
 }: MonthCalendarProps) {
+  const keyboardHintId = useId();
   const sourceEntries = useMemo(() => entries ?? [], [entries]);
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
@@ -120,18 +121,32 @@ export function MonthCalendar({
     return days.findIndex((d) => d.isSame(month, "month"));
   });
 
+  // Imperative focus is requested explicitly (keyboard navigation), never as a side effect of the
+  // focus target changing, so changing month with the mouse does not pull focus into the grid.
+  const [focusRequest, setFocusRequest] = useState<{ index: number } | null>(null);
+  // Page Up/Down change the month; the day to focus once the new month has rendered.
+  const [pendingFocusDay, setPendingFocusDay] = useState<Dayjs | null>(null);
+
   // Reset focused index when month changes, as a same-render response rather
   // than a follow-up effect.
   const [prevMonth, setPrevMonth] = useState(month);
   if (prevMonth !== month) {
     setPrevMonth(month);
+    const pendingIdx =
+      pendingFocusDay && pendingFocusDay.isSame(month, "month")
+        ? days.findIndex((d) => d.isSame(pendingFocusDay, "day"))
+        : -1;
     const todayIdx = days.findIndex((d) => d.isSame(today, "day"));
-    if (todayIdx >= 0) {
+    if (pendingIdx >= 0) {
+      setFocusedIndex(pendingIdx);
+      setFocusRequest({ index: pendingIdx });
+    } else if (todayIdx >= 0) {
       setFocusedIndex(todayIdx);
     } else {
       const firstOfMonth = days.findIndex((d) => d.isSame(month, "month"));
       setFocusedIndex(firstOfMonth >= 0 ? firstOfMonth : 0);
     }
+    if (pendingFocusDay) setPendingFocusDay(null);
   }
 
   // Cell refs for imperative focus. Populated by each cell's ref callback (see
@@ -139,54 +154,76 @@ export function MonthCalendar({
   // needing to be pre-sized here.
   const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Whether the last focusedIndex change was from keyboard nav (should imperatively focus)
-  const shouldFocusRef = useRef(false);
-
   useEffect(() => {
-    if (shouldFocusRef.current) {
-      cellRefs.current[focusedIndex]?.focus();
-      shouldFocusRef.current = false;
-    }
-  }, [focusedIndex]);
+    if (focusRequest) cellRefs.current[focusRequest.index]?.focus();
+  }, [focusRequest]);
 
-  // Arrow-key navigation handler on the grid
-  const handleGridKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      let nextIndex: number | null = null;
+  const cellIndexOf = (target: EventTarget): number => {
+    if (!(target instanceof HTMLElement)) return -1;
+    const cell = target.closest<HTMLDivElement>('[role="gridcell"]');
+    return cell ? cellRefs.current.indexOf(cell) : -1;
+  };
 
+  // Keep the roving tabindex on whichever day has focus, however it got it (click, tap, Tab).
+  const handleGridFocus = (e: React.FocusEvent<HTMLDivElement>) => {
+    const index = cellIndexOf(e.target);
+    if (index >= 0) setFocusedIndex(index);
+  };
+
+  // WAI-ARIA grid keys. Navigation starts from the day that holds focus (the cell itself or an
+  // event button inside it), not from remembered state, so a clicked cell is never out of sync.
+  const handleGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey || e.metaKey || e.shiftKey) return;
+    const current = cellIndexOf(e.target);
+    if (current < 0) return;
+    const rowStart = Math.floor(current / 7) * 7;
+    let nextIndex: number;
+
+    if (e.ctrlKey) {
+      // Ctrl+Home / Ctrl+End: first / last day of the grid.
+      if (e.key === "Home") nextIndex = 0;
+      else if (e.key === "End") nextIndex = days.length - 1;
+      else return;
+    } else {
       switch (e.key) {
         case "ArrowRight":
-          nextIndex = Math.min(focusedIndex + 1, days.length - 1);
+          nextIndex = Math.min(current + 1, days.length - 1);
           break;
         case "ArrowLeft":
-          nextIndex = Math.max(focusedIndex - 1, 0);
+          nextIndex = Math.max(current - 1, 0);
           break;
         case "ArrowDown":
-          nextIndex = Math.min(focusedIndex + 7, days.length - 1);
+          nextIndex = current + 7 < days.length ? current + 7 : current;
           break;
         case "ArrowUp":
-          nextIndex = Math.max(focusedIndex - 7, 0);
+          nextIndex = current >= 7 ? current - 7 : current;
           break;
         case "Home":
-          // First day of current row (row = group of 7)
-          nextIndex = Math.floor(focusedIndex / 7) * 7;
+          nextIndex = rowStart;
           break;
         case "End":
-          // Last day of current row
-          nextIndex = Math.min(Math.floor(focusedIndex / 7) * 7 + 6, days.length - 1);
+          nextIndex = Math.min(rowStart + 6, days.length - 1);
           break;
+        case "PageUp":
+        case "PageDown": {
+          const day = days[current];
+          if (!day) return;
+          e.preventDefault();
+          const step = e.key === "PageUp" ? -1 : 1;
+          setPendingFocusDay(day.add(step, "month"));
+          onMonthChange(month.add(step, "month"));
+          return;
+        }
         default:
-          return; // Don't prevent default for non-navigation keys
+          return; // Leave every other key (Tab, Enter, ...) alone
       }
+    }
 
-      if (nextIndex !== null && nextIndex !== focusedIndex) {
-        e.preventDefault();
-        shouldFocusRef.current = true;
-        setFocusedIndex(nextIndex);
-      }
-    },
-    [focusedIndex, days.length],
-  );
+    // Always consume handled keys so arrows at the edge of the grid do not scroll the page.
+    e.preventDefault();
+    setFocusedIndex(nextIndex);
+    setFocusRequest({ index: nextIndex });
+  };
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -484,10 +521,15 @@ export function MonthCalendar({
         </div>
       </div>
 
+      <p id={keyboardHintId} className="mb-2 text-xs text-muted-foreground pointer-coarse:hidden">
+        {m.calendar_keyboard_hint()}
+      </p>
       <div
         className="month-calendar-grid"
         role="grid"
         aria-label={m.calendar_grid_label({ month: month.format("MMMM YYYY") })}
+        aria-describedby={keyboardHintId}
+        onFocus={handleGridFocus}
         onKeyDown={handleGridKeyDown}
       >
         {/* Weekday header row */}

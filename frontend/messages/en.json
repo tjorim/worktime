@@ -243,7 +243,7 @@
   "tt_reason_enter_start_stop": "Enter both start and stop times.",
   "tt_reason_stop_after_start": "Start and stop times must be different.",
   "tt_discard_task_title": "Discard Task",
-  "tt_discard_task_message": "This task ran for less than 1 minute. Discard it instead of saving?",
+  "tt_discard_task_message": "This task ran for less than 1 minute. Tasks are saved in whole minutes, so it can't be kept. Cancel to keep it running, or discard it.",
   "tt_edit_task_title": "Edit Task",
   "tt_stop_empty_hint": "Leave empty to keep task running",
   "tt_includes_break": "Includes {minutes}min break",
@@ -1606,5 +1606,7 @@
   "account_export_btn": "Download my account data",
   "account_export_busy": "Preparing download…",
   "account_export_failed": "Could not download your account data right now.",
-  "account_export_unavailable": "Your account details must load before you can download your data."
+  "account_export_unavailable": "Your account details must load before you can download your data.",
+  "tt_task_name_hint": "Optional for Start Now, which names it “{name}”. Required for completed tasks.",
+  "calendar_keyboard_hint": "Keyboard: arrow keys move between days, Home and End go to the start and end of the week, Page Up and Page Down change month, Enter opens the day menu."
 }

@@ -298,7 +298,8 @@ export function DayCell({
   // Keyboard handler for the day cell itself
   const handleCellKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
-      if (!onDayContextMenu) return;
+      // Keys pressed on an event button inside the cell belong to that button (Enter opens the event).
+      if (!onDayContextMenu || e.target !== e.currentTarget) return;
       // Enter or Shift+F10 or ContextMenu key opens the day context menu
       if (e.key === "Enter" || (e.key === "F10" && e.shiftKey) || e.key === "ContextMenu") {
         e.preventDefault();

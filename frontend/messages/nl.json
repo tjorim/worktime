@@ -236,7 +236,7 @@
   "tt_reason_enter_start_stop": "Voer zowel start- als stoptijden in.",
   "tt_reason_stop_after_start": "Start- en stoptijd moeten verschillen.",
   "tt_discard_task_title": "Taak verwijderen",
-  "tt_discard_task_message": "Deze taak duurde minder dan 1 minuut. Verwijderen in plaats van opslaan?",
+  "tt_discard_task_message": "Deze taak duurde minder dan 1 minuut. Taken worden in hele minuten opgeslagen, dus deze taak kan niet worden bewaard. Annuleer om de timer te laten lopen, of verwijder de taak.",
   "tt_edit_task_title": "Taak bewerken",
   "tt_stop_empty_hint": "Leeg laten om de taak actief te houden",
   "tt_includes_break": "Inclusief {minutes} min. pauze",
@@ -1606,5 +1606,7 @@
   "account_export_btn": "Mijn accountgegevens downloaden",
   "account_export_busy": "Download voorbereiden…",
   "account_export_failed": "Uw accountgegevens kunnen nu niet worden gedownload.",
-  "account_export_unavailable": "Uw accountgegevens moeten eerst geladen zijn voordat u ze kunt downloaden."
+  "account_export_unavailable": "Uw accountgegevens moeten eerst geladen zijn voordat u ze kunt downloaden.",
+  "tt_task_name_hint": "Optioneel bij Nu starten, dat de taak “{name}” noemt. Verplicht voor voltooide taken.",
+  "calendar_keyboard_hint": "Toetsenbord: pijltjestoetsen gaan naar een andere dag, Home en End naar het begin en einde van de week, Page Up en Page Down wisselen van maand, Enter opent het dagmenu."
 }

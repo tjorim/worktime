@@ -12,6 +12,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
+import { getTimerStart, rememberExactTimerStart } from "@/utils/timerStart";
 import * as m from "@/paraglide/messages.js";
 
 interface MobileQuickActionsProps {
@@ -61,7 +62,7 @@ export function MobileQuickActions({
     if (!runningTask) return null;
     const start = dayjs(runningTask.startTime);
     const crossesDay = !now.isSame(start, "day");
-    const isTooShort = now.diff(start, "minute") < 1;
+    const isTooShort = now.diff(getTimerStart(runningTask), "minute", true) < 1;
     const reachesPlannedTask = tasks.some(
       (task) =>
         task.id !== runningTask.id &&
@@ -132,6 +133,7 @@ export function MobileQuickActions({
         setTimerError(m.mobile_quick_actions_resolve_stop());
         return;
       }
+      rememberExactTimerStart(nextTask.id, now);
       setTaskText("");
       setIsSwitching(false);
       setShow(false);
@@ -142,6 +144,7 @@ export function MobileQuickActions({
       setTimerError(m.tt_error_task_already_running_start());
       return;
     }
+    rememberExactTimerStart(nextTask.id, now);
     setTaskText("");
     setShow(false);
   };

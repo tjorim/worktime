@@ -45,3 +45,9 @@ export const USER_STATE_SWITCH_STORAGE_KEY = "worktime_user_state_switch";
 export const USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY = "worktime_user_state_unclaimed_history";
 
 export const SYNC_DISMISSED_SESSION_KEY_PREFIX = "worktime_sync_dismissed_";
+
+/**
+ * Session-only record of the exact click time of "Start Now". Task start times are stored with minute
+ * precision, so this lets the running timer count from 00:00:00 instead of from the truncated minute.
+ */
+export const TIMER_EXACT_START_STORAGE_KEY = "worktime_timer_exact_start";
