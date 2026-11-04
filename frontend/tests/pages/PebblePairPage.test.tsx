@@ -4,22 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PebblePairPage } from "@/pages/PebblePairPage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
+import * as m from "@/paraglide/messages.js";
 
 vi.mock("@/contexts/AuthContext");
 vi.mock("@/hooks/useApiClient");
-vi.mock("@/paraglide/messages.js", () => ({
-  pebble_pair_title: () => "Pair Pebble Watch",
-  pebble_pair_description: () => "Sign in to link your Pebble companion app.",
-  pebble_pair_connecting: () => "Connecting your watch...",
-  pebble_pair_retry: () => "Retry pairing",
-  pebble_pair_close_instruction: () => "You can close this window.",
-  pebble_pair_failed: () => "Could not pair your watch right now.",
-  error_rate_limited: () => "Too many requests.",
-  error_code_oidc_session_required: () => "This needs a signed-in browser session.",
-  auth_session_expired: () => "Your session has expired.",
-  auth_error_forbidden: () => "Access denied.",
-}));
-
 describe("PebblePairPage", () => {
   const apiFetch = vi.fn();
 
@@ -49,12 +37,12 @@ describe("PebblePairPage", () => {
     const user = userEvent.setup();
     render(<PebblePairPage />);
 
-    expect(await screen.findByText("Could not pair your watch right now.")).toBeInTheDocument();
+    expect(await screen.findByText(m.pebble_pair_failed())).toBeInTheDocument();
     expect(screen.queryByText(/503/)).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Retry pairing" }));
+    await user.click(screen.getByRole("button", { name: m.pebble_pair_retry() }));
 
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("You can close this window.")).toBeInTheDocument();
+    expect(await screen.findByText(m.pebble_pair_close_instruction())).toBeInTheDocument();
   });
 
   it("shows a translated reason for a recognised status", async () => {
@@ -66,7 +54,7 @@ describe("PebblePairPage", () => {
 
     render(<PebblePairPage />);
 
-    expect(await screen.findByText("Too many requests.")).toBeInTheDocument();
+    expect(await screen.findByText(m.error_rate_limited())).toBeInTheDocument();
     expect(screen.queryByText(/Rate limit exceeded/)).not.toBeInTheDocument();
   });
 
@@ -80,7 +68,7 @@ describe("PebblePairPage", () => {
 
     render(<PebblePairPage />);
 
-    expect(await screen.findByText("This needs a signed-in browser session.")).toBeInTheDocument();
+    expect(await screen.findByText(m.error_code_oidc_session_required())).toBeInTheDocument();
     expect(screen.queryByText(/This operation requires/)).not.toBeInTheDocument();
   });
 });
