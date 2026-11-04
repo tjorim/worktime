@@ -128,3 +128,5 @@ request its `email` extra only when email validation is used.
 
 These conventions change validation before a write is executed; they do not
 change retry, ownership, or transaction semantics.
+
+Rate-limit buckets, response headers, exemptions and rollout: [REST rate limiting](docs/RATE_LIMITING.md).

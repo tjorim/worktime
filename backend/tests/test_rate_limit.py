@@ -4,25 +4,24 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
-from app.middleware.rate_limit import RouterAwareRateLimitMiddleware, get_client_ip, handle_rate_limit_exceeded
+from app.middleware.rate_limit import get_client_ip, handle_rate_limit_exceeded, rate_limit
+from app.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware, RequestRateLimiter
 
 
 def _build_app(*, limit: str = "2/minute", enabled: bool = True) -> FastAPI:
     """Build a throwaway app wired the same way as the real one, but with a tiny limit."""
-    limiter = Limiter(key_func=get_client_ip, default_limits=[limit], enabled=enabled)
-    app = FastAPI()
+    limiter = RequestRateLimiter(limit, enabled=enabled)
+    app = FastAPI(dependencies=[Depends(rate_limit)])
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
-    app.add_middleware(RouterAwareRateLimitMiddleware)
+    app.add_middleware(RateLimitHeadersMiddleware)
 
     @app.get("/ping")
     async def ping():
