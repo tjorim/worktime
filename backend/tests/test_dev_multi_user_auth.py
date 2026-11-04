@@ -1,5 +1,7 @@
 """Exercise dev credentials through real authentication, without principal mocks."""
 
+from typing import Any
+
 import pytest
 
 from app.config import oidc_config
@@ -11,14 +13,14 @@ from app.routers.auth import get_bearer_principal
 @pytest.mark.parametrize("environment", ["production"])
 @pytest.mark.parametrize("field", ["DEV_AUTH_BYPASS_TOKEN", "DEV_AUTH_MEMBER_TOKEN", "DEV_AUTH_SECOND_MEMBER_TOKEN"])
 def test_dev_credentials_rejected_outside_development(environment, field):
+    values: dict[str, Any] = {
+        "ENVIRONMENT": environment,
+        "TRUSTED_HOSTS": "localhost",
+        "INTEGRATION_KEY_HASH_SECRET": "test-only-secret",
+        field: "secret",
+    }
     with pytest.raises(ValueError, match="outside ENVIRONMENT=development"):
-        Settings(
-            _env_file=None,
-            ENVIRONMENT=environment,
-            TRUSTED_HOSTS="localhost",
-            INTEGRATION_KEY_HASH_SECRET="test-only-secret",
-            **{field: "secret"},
-        )
+        Settings(_env_file=None, **values)
 
 
 @pytest.mark.parametrize(
@@ -33,9 +35,10 @@ def test_dev_credentials_rejected_outside_development(environment, field):
         {"DEV_AUTH_BYPASS_TOKEN": "admin", "DEV_AUTH_MEMBER_TOKEN": "same", "DEV_AUTH_SECOND_MEMBER_TOKEN": "same"},
     ],
 )
-def test_invalid_dev_configuration(values):
+def test_invalid_dev_configuration(values: dict[str, Any]):
+    kwargs: dict[str, Any] = {"ENVIRONMENT": "development", **values}
     with pytest.raises(ValueError):
-        Settings(_env_file=None, ENVIRONMENT="development", **values)
+        Settings(_env_file=None, **kwargs)
 
 
 @pytest.mark.parametrize("environment", ["production", "staging", "test"])
