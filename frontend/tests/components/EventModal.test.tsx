@@ -109,4 +109,10 @@ describe("EventModal", () => {
     expect(screen.getByLabelText("Comment (optional)")).toBeDisabled();
     expect(screen.getByLabelText("Event type")).toBeDisabled();
   });
+
+  it("limits the comment to the server's note length", () => {
+    renderModal({ mode: "add" });
+
+    expect(screen.getByLabelText("Comment (optional)")).toHaveAttribute("maxlength", "1000");
+  });
 });

@@ -1312,3 +1312,19 @@ describe("single-line note export", () => {
     },
   );
 });
+
+describe("parseHday note limit", () => {
+  it("caps imported notes at the server limit by Unicode characters", () => {
+    const note = `${"a".repeat(999)}😀${"b".repeat(50)}`;
+    const [range, weekly] = parseHday(`2026/01/05 # ${note}\nd1 # ${note}`);
+    for (const event of [range, weekly]) {
+      expect(Array.from(event.title ?? "")).toHaveLength(1000);
+      expect(event.title?.endsWith("😀")).toBe(true);
+    }
+  });
+
+  it("leaves notes at or under the limit untouched", () => {
+    const note = "x".repeat(1000);
+    expect(parseHday(`2026/01/05 # ${note}`)[0].title).toBe(note);
+  });
+});

@@ -254,3 +254,7 @@ The frontend `.hday` serializer applies the same normalisation to range and
 weekly titles, including older/local notes, so each exported entry occupies one
 line. `#` and Unicode text are preserved. Importing an export preserves the
 normalised title; the format has no multiline comment escape syntax.
+
+So that a rejected write can never be stranded in the web app, the event form caps
+the comment at 1,000 characters and the `.hday` importer caps imported notes at
+the same length (by Unicode character); only the server rejects rather than truncates.
