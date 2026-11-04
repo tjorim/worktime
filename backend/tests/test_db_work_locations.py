@@ -117,3 +117,21 @@ def test_cross_user_cannot_read_modify_or_delete_work_locations(
         ).status_code
         == 403
     )
+
+
+def test_work_location_upsert_rejects_non_iso_and_null(db_client, auth_headers, create_user_factory):
+    user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "country-update")
+    headers = auth_headers(user_id)
+    url = f"/api/work-locations?user_id={user_id}"
+    assert (
+        db_client.post(
+            f"/api/work-locations?user_id={user_id}", headers=headers, json={"date": "2026-02-02", "country_code": "us"}
+        ).status_code
+        == 201
+    )
+    for code in ["XX", "ZZ", "UK", "USA", None]:
+        response = db_client.post(url, headers=headers, json={"date": "2026-02-02", "country_code": code})
+        assert response.status_code == 422
+    response = db_client.post(url, headers=headers, json={"date": "2026-02-02", "country_code": "gb"})
+    assert response.status_code == 201
+    assert response.json()["country_code"] == "GB"

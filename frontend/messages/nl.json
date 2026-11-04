@@ -427,10 +427,10 @@
   "calendar_time_off": "Verlof",
   "calendar_location_day_off_notice": "Let op: deze dag staat als verlof genoteerd.",
   "calendar_public_holiday": "Feestdag",
-  "other_location_country_code": "Landcode",
+  "other_location_country_code": "Land",
   "other_location_country_placeholder": "bijv. DE",
   "other_location_country_feedback": "Voer een geldige 2-letterige ISO-landcode in (bijv. DE, NL, FR).",
-  "other_location_country_help": "ISO 3166-1 alpha-2 code (2 hoofdletters)",
+  "other_location_country_help": "Zoek en selecteer een land.",
   "other_location_label_optional": "(optioneel)",
   "other_location_label_placeholder": "bijv. Berlijn kantoor, Klantbezoek",
   "location_clipboard_unavailable": "Klembord niet beschikbaar",
@@ -1563,5 +1563,7 @@
   "tt_duration_limit": "Taken mogen maximaal 24 verstreken uren duren. Kies een stoptijd binnen die limiet.",
   "error_code_username_invalid": "Gebruik 1–64 letters (A–Z), cijfers, punten, underscores, @, plus of koppeltekens voor de gebruikersnaam, beginnend met een letter of cijfer.",
   "error_code_username_reserved": "Deze gebruikersnaam is gereserveerd. Kies een andere gebruikersnaam.",
-  "error_code_display_name_invalid": "Gebruik maximaal 150 tekens voor de weergavenaam."
+  "error_code_display_name_invalid": "Gebruik maximaal 150 tekens voor de weergavenaam.",
+  "other_location_legacy_country": "Huidige waarde: {code}. Selecteer een land om dit te corrigeren.",
+  "work_location_setup_prompt": "Stel Thuis en Kantoor in via Instellingen → Functies → Grensoverschrijdende instellingen."
 }

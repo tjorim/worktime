@@ -1,17 +1,37 @@
 import { SearchSelect } from "@/components/shared/SearchSelect";
-import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "@/types/countries";
+import {
+  type CountryCode,
+  isValidCountryCode,
+  SUPPORTED_COUNTRIES,
+  getIsoCountries,
+  isIsoCountryCode,
+  type IsoAlpha2,
+} from "@/types/countries";
 
 type CountryOption = { value: string; label: string };
 
 interface CountrySelectProps {
+  worldwide?: false;
+  required?: boolean;
+  describedBy?: string;
   value: CountryCode | null;
   onChange: (v: CountryCode | null) => void;
   ariaLabel: string;
   inputId?: string;
 }
 
-export function CountrySelect({ value, onChange, ariaLabel, inputId }: CountrySelectProps) {
-  const COUNTRY_OPTIONS: CountryOption[] = SUPPORTED_COUNTRIES.map((c) => ({
+type WorldwideCountrySelectProps = Omit<CountrySelectProps, "value" | "onChange" | "worldwide"> & {
+  worldwide: true;
+  value: string | null;
+  onChange: (value: IsoAlpha2 | null) => void;
+};
+
+export function CountrySelect(props: CountrySelectProps | WorldwideCountrySelectProps) {
+  const { value, ariaLabel, inputId } = props;
+  const worldwide = "worldwide" in props && props.worldwide;
+  const COUNTRY_OPTIONS: CountryOption[] = (
+    worldwide ? getIsoCountries() : SUPPORTED_COUNTRIES
+  ).map((c) => ({
     value: c.code,
     label: c.name,
   }));
@@ -19,13 +39,19 @@ export function CountrySelect({ value, onChange, ariaLabel, inputId }: CountrySe
 
   return (
     <SearchSelect
+      required={props.required}
+      aria-describedby={props.describedBy}
       inputId={inputId}
       aria-label={ariaLabel}
       options={COUNTRY_OPTIONS}
       value={selected}
       onChange={(s) => {
         const code = s?.value ?? null;
-        onChange(isValidCountryCode(code) ? code : null);
+        if (props.worldwide) {
+          props.onChange(isIsoCountryCode(code) ? code : null);
+        } else {
+          props.onChange(isValidCountryCode(code) ? code : null);
+        }
       }}
     />
   );

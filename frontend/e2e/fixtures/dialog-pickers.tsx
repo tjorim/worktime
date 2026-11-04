@@ -1,3 +1,6 @@
+import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { toCountryCode } from "@/types/workLocation";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
@@ -29,6 +32,18 @@ function Fixture() {
     includesBreak: false,
   });
   const mode = params.get("mode");
+  if (mode === "work-location") {
+    return (
+      <OtherLocationModal
+        show={open}
+        date={dayjs("2026-11-04")}
+        showSetupHint
+        existing={{ location: "other", countryCode: toCountryCode("UK")!, label: "Legacy office" }}
+        onHide={() => setOpen(false)}
+        onConfirm={() => setOpen(false)}
+      />
+    );
+  }
   if (mode === "wizard") {
     return (
       <OidcAuthProvider {...oidcConfig}>
