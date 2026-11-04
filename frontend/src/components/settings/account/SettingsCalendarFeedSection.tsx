@@ -24,12 +24,14 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState<string | null>(null);
   const [configured, setConfigured] = useState(false);
+  const [tokenPreview, setTokenPreview] = useState<string | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
@@ -41,12 +43,14 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
         if (!response.ok) throw await ApiError.fromResponse(response);
         const payload = (await response.json()) as {
           configured: boolean;
+          token_preview?: string | null;
           last_used_at?: string | null;
         };
         if (active) {
           setLoadFailed(false);
           onLoadError?.(false);
           setConfigured(payload.configured);
+          setTokenPreview(payload.token_preview ?? null);
           setLastFetchedAt(payload.last_used_at ?? null);
         }
       })
@@ -77,6 +81,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
       const payload = (await response.json()) as { url_path: string };
       setUrl(new URL(payload.url_path, window.location.origin).toString());
       setConfigured(true);
+      setTokenPreview(null);
       setLastFetchedAt(null);
     } catch (caught) {
       logger.error("Failed to rotate calendar feed:", caught);
@@ -96,6 +101,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
       if (!response.ok) throw await ApiError.fromResponse(response);
       setUrl(null);
       setConfigured(false);
+      setTokenPreview(null);
       setLastFetchedAt(null);
       toast?.showSuccess(m.calendar_feed_revoked());
     } catch (caught) {
@@ -127,7 +133,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
     </Button>
   );
   const revokeButton = (
-    <Button variant="destructive" size="sm" disabled={busy} onClick={() => void revoke()}>
+    <Button variant="destructive" size="sm" disabled={busy} onClick={() => setConfirmRevoke(true)}>
       {m.calendar_feed_revoke()}
     </Button>
   );
@@ -172,6 +178,9 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
           <div className="flex flex-col items-start gap-2">
             <Alert variant="success">
               <div>{m.calendar_feed_configured()}</div>
+              {tokenPreview ? (
+                <div>{m.calendar_feed_active_preview({ preview: tokenPreview })}</div>
+              ) : null}
               <div className="font-medium">
                 {lastFetchedAt
                   ? m.calendar_feed_last_fetched({
@@ -193,6 +202,20 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
           </div>
         )}
       </div>
+      <ConfirmationDialog
+        isOpen={confirmRevoke}
+        title={m.calendar_feed_revoke_confirm_title()}
+        message={m.calendar_feed_revoke_confirm_message()}
+        confirmLabel={m.calendar_feed_revoke()}
+        cancelLabel={m.cancel()}
+        onConfirm={() => {
+          setConfirmRevoke(false);
+          void revoke();
+        }}
+        onCancel={() => setConfirmRevoke(false)}
+        variant="danger"
+        icon={CalendarIcon}
+      />
       <ConfirmationDialog
         isOpen={confirmRegenerate}
         title={m.calendar_feed_regenerate_confirm_title()}

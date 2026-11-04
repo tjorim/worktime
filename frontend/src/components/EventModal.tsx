@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { RefObject } from "react";
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -273,6 +273,17 @@ export function EventModal({
         ? { ...metadata, entryKind: "range", start, end }
         : null;
   const overlaps = candidate ? getOverlappingEntries(candidate, entries) : [];
+
+  // The validation errors are set by `onSubmit`; once they have rendered, move focus to the first
+  // invalid field so keyboard and screen-reader users land on the error instead of the button.
+  const [submitAttempt, setSubmitAttempt] = useState(0);
+  const handledSubmitAttempt = useRef(0);
+  useEffect(() => {
+    if (submitAttempt === handledSubmitAttempt.current) return;
+    handledSubmitAttempt.current = submitAttempt;
+    const firstInvalid = startDateError ? "eventStart" : endDateError ? "eventEnd" : null;
+    if (firstInvalid) document.getElementById(firstInvalid)?.focus();
+  }, [submitAttempt, startDateError, endDateError]);
   return (
     <Dialog
       open={show}
@@ -502,7 +513,12 @@ export function EventModal({
               <Button variant="outline" onClick={onResetForm}>
                 {m.event_modal_reset_form()}
               </Button>
-              <Button onClick={onSubmit}>
+              <Button
+                onClick={() => {
+                  onSubmit();
+                  setSubmitAttempt((attempt) => attempt + 1);
+                }}
+              >
                 {mode === "edit" ? m.event_modal_update_btn() : m.event_modal_add_btn()}
               </Button>
             </>

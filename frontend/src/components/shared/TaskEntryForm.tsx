@@ -91,6 +91,10 @@ export function TaskEntryForm({
   );
   const primaryFieldWidth = showGanttPicker ? 2 : 3;
 
+  const addReason = !canSubmit ? addDisabledReason : undefined;
+  const startReason =
+    showTimerControls && !isTimerRunning && !canStartNow ? startDisabledReason : undefined;
+
   const renderDisabledTooltipButton = (
     buttonKey: string,
     reason: string | undefined,
@@ -100,10 +104,11 @@ export function TaskEntryForm({
       return button;
     }
 
-    const tooltipId = `${buttonKey}-tooltip`;
+    // The same reason is also printed below the form, so it is visible without hovering; the
+    // focusable wrapper points at that persistent text instead of the transient tooltip.
     return (
-      <Hint content={<div id={tooltipId}>{reason}</div>}>
-        <span className="w-full inline-block" tabIndex={0} aria-describedby={tooltipId}>
+      <Hint content={reason}>
+        <span className="w-full inline-block" tabIndex={0} aria-describedby={`${buttonKey}-reason`}>
           {button}
         </span>
       </Hint>
@@ -245,7 +250,7 @@ export function TaskEntryForm({
               !isTimerRunning &&
               renderDisabledTooltipButton(
                 "start-now",
-                !canStartNow ? startDisabledReason : undefined,
+                startReason,
                 <Button
                   variant="default"
                   className="w-full"
@@ -258,7 +263,7 @@ export function TaskEntryForm({
               )}
             {renderDisabledTooltipButton(
               "add-task",
-              !canSubmit ? addDisabledReason : undefined,
+              addReason,
               <Button className="w-full" onClick={onSubmit} disabled={!canSubmit}>
                 {m.tt_add_task()}
               </Button>,
@@ -266,6 +271,20 @@ export function TaskEntryForm({
           </div>
         </GridItem>
       </Grid>
+      {startReason || addReason ? (
+        <div className="mt-2 flex flex-col gap-1">
+          {startReason ? (
+            <FieldDescription id="start-now-reason">
+              {m.tt_disabled_reason_for({ action: m.tt_start_now(), reason: startReason })}
+            </FieldDescription>
+          ) : null}
+          {addReason ? (
+            <FieldDescription id="add-task-reason">
+              {m.tt_disabled_reason_for({ action: m.tt_add_task(), reason: addReason })}
+            </FieldDescription>
+          ) : null}
+        </div>
+      ) : null}
       <FieldDescription id="timeTrackerOvernight" className="mt-2">
         {m.tt_overnight_hint()}
       </FieldDescription>

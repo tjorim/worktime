@@ -6,7 +6,10 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
 import { SettingsPage, SettingsContent } from "@/pages/SettingsPage";
-import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import {
+  SettingsAccountDangerSection,
+  SettingsAccountSection,
+} from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -165,27 +168,31 @@ function renderSettingsAccountHarness({
     });
 
     return (
-      <SettingsAccountSection
-        isValidating={false}
-        isAuthenticated={true}
-        resolvedDisplayName={resolvedDisplayName}
-        username={accountProfile?.username ?? null}
-        accountId={accountProfile?.id ?? null}
-        userId={null}
-        isAdmin={accountProfile?.is_admin ?? false}
-        profileError={profileError}
-        isProfileLoading={isProfileLoading}
-        profileDraft={profileDraft}
-        isProfileSaving={isProfileSaving}
-        hasProfileChanges={hasProfileChanges}
-        isDeletingAccount={isDeletingAccount}
-        deleteAccountError={deleteAccountError}
-        onProfileDraftChange={setProfileDraft}
-        onSaveProfile={() => void handleSaveProfile()}
-        onDeleteAccount={() => void handleDeleteAccount()}
-        onLogout={vi.fn()}
-        onLogin={vi.fn()}
-      />
+      <>
+        <SettingsAccountSection
+          isValidating={false}
+          isAuthenticated={true}
+          resolvedDisplayName={resolvedDisplayName}
+          username={accountProfile?.username ?? null}
+          accountId={accountProfile?.id ?? null}
+          userId={null}
+          isAdmin={accountProfile?.is_admin ?? false}
+          profileError={profileError}
+          isProfileLoading={isProfileLoading}
+          profileDraft={profileDraft}
+          isProfileSaving={isProfileSaving}
+          hasProfileChanges={hasProfileChanges}
+          onProfileDraftChange={setProfileDraft}
+          onSaveProfile={() => void handleSaveProfile()}
+          onLogout={vi.fn()}
+          onLogin={vi.fn()}
+        />
+        <SettingsAccountDangerSection
+          isDeletingAccount={isDeletingAccount}
+          deleteAccountError={deleteAccountError}
+          onDeleteAccount={() => void handleDeleteAccount()}
+        />
+      </>
     );
   }
 
@@ -721,6 +728,48 @@ describe("SettingsPage API Tokens Section", () => {
     },
   );
 
+  it("limits the token name to the API maximum and explains why Generate token is disabled", async () => {
+    const fetchFn = vi.fn(async (input: string) => {
+      if (input === "/api/access-tokens") return jsonResponse({ items: [], total: 0 });
+      throw new Error(`Unexpected request: ${input}`);
+    });
+    const user = userEvent.setup();
+    renderSettingsApiTokensHarness({ fetchFn });
+
+    await screen.findByText("No API tokens yet.");
+    const input = screen.getByLabelText("Token name");
+    const button = screen.getByRole("button", { name: "Generate token" });
+    const help = screen.getByText("Enter a name of up to 100 characters to generate a token.");
+
+    expect(input).toHaveAttribute("maxlength", "100");
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(help.textContent ?? "");
+    expect(input).toHaveAccessibleDescription(help.textContent ?? "");
+
+    await user.type(input, "Pebble watch");
+    expect(button).toBeEnabled();
+  });
+
+  it("shows a specific message when the API rejects the token name", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/access-tokens" && init?.method === "POST") {
+        return jsonResponse({ detail: [{ type: "string_too_long" }] }, { status: 422 });
+      }
+      if (input === "/api/access-tokens") return jsonResponse({ items: [], total: 0 });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const user = userEvent.setup();
+    renderSettingsApiTokensHarness({ fetchFn });
+
+    await screen.findByText("No API tokens yet.");
+    await user.type(screen.getByLabelText("Token name"), "Pebble watch");
+    await user.click(screen.getByRole("button", { name: "Generate token" }));
+
+    const message = await screen.findByText("The token name must be between 1 and 100 characters.");
+    expect(message).toHaveAttribute("role", "alert");
+    expect(screen.queryByText(m.api_tokens_create_failed())).not.toBeInTheDocument();
+  });
+
   it("generates a token, reveals it once, and copies it to the clipboard", async () => {
     let tokenCreated = false;
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
@@ -764,8 +813,11 @@ describe("SettingsPage API Tokens Section", () => {
     await user.type(screen.getByLabelText("Token name"), "Pebble watch");
     await user.click(screen.getByRole("button", { name: "Generate token" }));
 
-    expect(await screen.findByText("Token created")).toBeInTheDocument();
+    // The result is announced through a status region; the secret itself is never inside a live region.
+    expect(await screen.findAllByText("Token created")).toHaveLength(2);
+    expect(screen.getByRole("status")).toHaveTextContent("Token created");
     expect(screen.getByText("wtpat_secret-value")).toBeInTheDocument();
+    expect(screen.getByText("wtpat_secret-value").closest("[role=alert],[role=status]")).toBeNull();
     expect(screen.getByText("Scopes: pebble:read, pebble:write")).toBeInTheDocument();
     expect(fetchFn).toHaveBeenCalledWith(
       "/api/access-tokens",
@@ -782,7 +834,7 @@ describe("SettingsPage API Tokens Section", () => {
     expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith("wtpat_secret-value");
 
     await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.queryByText("Token created")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("Token created")).toHaveLength(0);
     expect(await screen.findByText("Pebble watch")).toBeInTheDocument();
   });
 

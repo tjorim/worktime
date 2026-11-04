@@ -4,7 +4,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import {
@@ -23,6 +23,9 @@ import type {
 } from "@/pages/settings/hooks/useSettingsIntegrationClients";
 import { formatDisplayDate } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
+
+/** Matches `IntegrationClientCreate.name` (`max_length=120`) in the backend schema. */
+const INTEGRATION_CLIENT_NAME_MAX_LENGTH = 120;
 
 interface Props {
   clients: IntegrationClient[] | null;
@@ -75,8 +78,12 @@ export function SettingsIntegrationClientsSection(props: Props) {
   return (
     <SettingsSection icon={PlugIcon} title={m.integration_clients_section_title()}>
       <SettingsHint className="mb-3">{m.integration_clients_description()}</SettingsHint>
+      {/* Announce the result without putting the secret itself in a live region. */}
+      <div role="status" className="sr-only">
+        {props.createdClient ? m.integration_clients_created_title() : ""}
+      </div>
       {props.createdClient ? (
-        <Alert variant="success" className="mb-3 gap-2">
+        <Alert role="note" variant="success" className="mb-3 gap-2">
           <div className="font-medium">{m.integration_clients_created_title()}</div>
           <div>{m.integration_clients_created_warning()}</div>
           <SettingsSecret>{props.createdClient.key}</SettingsSecret>
@@ -97,6 +104,8 @@ export function SettingsIntegrationClientsSection(props: Props) {
           </FieldLabel>
           <Input
             id="integration-client-name"
+            maxLength={INTEGRATION_CLIENT_NAME_MAX_LENGTH}
+            aria-describedby="integration-client-name-help"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder={m.integration_clients_name_placeholder()}
@@ -104,9 +113,17 @@ export function SettingsIntegrationClientsSection(props: Props) {
           />
         </Field>
         <Field orientation="horizontal">
-          <Checkbox id="integration-client-mcp-scope" checked readOnly />
+          <Checkbox
+            id="integration-client-mcp-scope"
+            checked
+            readOnly
+            aria-describedby="integration-client-mcp-scope-help"
+          />
           <FieldLabel htmlFor="integration-client-mcp-scope">worktime:mcp</FieldLabel>
         </Field>
+        <FieldDescription id="integration-client-mcp-scope-help" className="-mt-2">
+          {m.integration_clients_mcp_scope_help()}
+        </FieldDescription>
         {props.isAdmin ? (
           <Field orientation="horizontal">
             <Checkbox
@@ -114,15 +131,22 @@ export function SettingsIntegrationClientsSection(props: Props) {
               checked={adminScope}
               disabled={formLocked}
               onCheckedChange={setAdminScope}
+              aria-describedby="integration-client-admin-scope-help"
             />
             <FieldLabel htmlFor="integration-client-admin-scope">
               {m.integration_clients_admin_scope_label()}
             </FieldLabel>
           </Field>
         ) : null}
+        {props.isAdmin ? (
+          <FieldDescription id="integration-client-admin-scope-help" className="-mt-2">
+            {m.integration_clients_admin_scope_help()}
+          </FieldDescription>
+        ) : null}
         <div>
           <Button
             size="sm"
+            aria-describedby="integration-client-name-help"
             disabled={formLocked || !name.trim()}
             onClick={() =>
               props.onCreateClient(
@@ -136,6 +160,9 @@ export function SettingsIntegrationClientsSection(props: Props) {
               : m.integration_clients_create_btn()}
           </Button>
         </div>
+        <FieldDescription id="integration-client-name-help" className="-mt-2">
+          {m.integration_clients_name_help({ max: INTEGRATION_CLIENT_NAME_MAX_LENGTH })}
+        </FieldDescription>
       </div>
       {props.error ? (
         <Alert role={props.onRetry ? "note" : "alert"} variant="destructive" className="mb-3">
@@ -227,7 +254,7 @@ export function SettingsIntegrationClientsSection(props: Props) {
           setConfirmation(null);
         }}
         onCancel={() => setConfirmation(null)}
-        variant={confirmation?.action === "revoke" ? "danger" : "primary"}
+        variant="danger"
         icon={PlugIcon}
       />
     </SettingsSection>

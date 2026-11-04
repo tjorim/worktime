@@ -178,11 +178,13 @@ export function TimeTrackingDailyView({
         : undefined;
   const addDisabledReason = !text.trim()
     ? m.tt_reason_enter_task_name()
-    : !start.trim() || !stop.trim()
-      ? m.tt_reason_enter_start_stop()
-      : !isValidRange(start, stop)
-        ? m.tt_reason_stop_after_start()
-        : undefined;
+    : !selectedLabel.trim()
+      ? m.tt_reason_select_label()
+      : !start.trim() || !stop.trim()
+        ? m.tt_reason_enter_start_stop()
+        : !isValidRange(start, stop)
+          ? m.tt_reason_stop_after_start()
+          : undefined;
 
   const handleAddTask = async () => {
     setError("");

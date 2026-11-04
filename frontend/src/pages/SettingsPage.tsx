@@ -38,7 +38,11 @@ import { type ScheduleOption } from "@/data/rosters";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
 import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
-import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import { SettingsAccountExportSection } from "@/components/settings/account/SettingsAccountExportSection";
+import {
+  SettingsAccountDangerSection,
+  SettingsAccountSection,
+} from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsCalendarFeedSection } from "@/components/settings/account/SettingsCalendarFeedSection";
 import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
@@ -517,9 +521,6 @@ export function SettingsContent({
           hasProfileChanges={hasProfileChanges}
           onProfileDraftChange={setProfileDraft}
           onSaveProfile={() => void handleSaveProfile()}
-          isDeletingAccount={isDeletingAccount}
-          deleteAccountError={deleteAccountError}
-          onDeleteAccount={() => void handleDeleteAccount()}
           onLogout={logout}
           onLogin={triggerLogin}
         />
@@ -537,11 +538,6 @@ export function SettingsContent({
         />
         {isAuthenticated ? (
           <>
-            <SettingsAuditTrailSection
-              {...personalAuditTrail}
-              users={accountProfile ? [accountProfile] : []}
-              onLoadMore={() => void personalAuditTrail.loadMore()}
-            />
             <SettingsApiTokensSection
               onRetry={retryApiTokens}
               apiTokens={apiTokens}
@@ -570,6 +566,20 @@ export function SettingsContent({
               onCreateClient={integrationClients.createClient}
               onRotateClient={integrationClients.rotateClient}
               onRevokeClient={integrationClients.revokeClient}
+            />
+            <SettingsAccountExportSection
+              accountId={accountProfile?.id ?? null}
+              fetchFn={fetchFn}
+            />
+            <SettingsAuditTrailSection
+              {...personalAuditTrail}
+              users={accountProfile ? [accountProfile] : []}
+              onLoadMore={() => void personalAuditTrail.loadMore()}
+            />
+            <SettingsAccountDangerSection
+              isDeletingAccount={isDeletingAccount}
+              deleteAccountError={deleteAccountError}
+              onDeleteAccount={() => void handleDeleteAccount()}
             />
           </>
         ) : null}

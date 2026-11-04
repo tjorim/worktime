@@ -115,6 +115,56 @@ describe("Settings integration clients", () => {
     );
   });
 
+  it("explains scopes and why Create client is disabled", async () => {
+    renderHarness(async () => jsonResponse({ items: [], total: 0 }), true);
+    await screen.findByText("No integration clients yet.");
+
+    const input = screen.getByLabelText("Client name");
+    const button = screen.getByRole("button", { name: "Create client" });
+    expect(input).toHaveAttribute("maxlength", "120");
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(
+      "Enter a name of up to 120 characters to create a client.",
+    );
+    expect(screen.getByRole("checkbox", { name: "worktime:mcp" })).toHaveAccessibleDescription(
+      m.integration_clients_mcp_scope_help(),
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "worktime:admin (team-wide administration)" }),
+    ).toHaveAccessibleDescription(m.integration_clients_admin_scope_help());
+  });
+
+  it("announces a created key without placing the secret in a live region", async () => {
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/integration-clients" && init?.method === "POST") {
+        return jsonResponse(
+          {
+            id: 7,
+            name: "Home hub",
+            key: "wtic_secret",
+            scopes: ["worktime:mcp"],
+            rate_limit_per_minute: 120,
+            created_at: "2026-08-22T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      }
+      if (input === "/api/integration-clients") return jsonResponse({ items: [], total: 0 });
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
+    });
+    const user = userEvent.setup();
+    renderHarness(fetchFn);
+    await screen.findByText("No integration clients yet.");
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
+    await user.type(screen.getByLabelText("Client name"), "Home hub");
+    await user.click(screen.getByRole("button", { name: "Create client" }));
+
+    const secret = await screen.findByText("wtic_secret");
+    expect(secret.closest("[role=alert],[role=status],[aria-live]")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(m.integration_clients_created_title());
+  });
+
   it("shows the translated fallback, not the server's detail, when loading fails", async () => {
     renderHarness(async () => jsonResponse({ detail: "database exploded" }, { status: 500 }));
 
@@ -180,8 +230,9 @@ describe("Settings integration clients", () => {
     const user = userEvent.setup();
     renderHarness(fetchFn);
     await user.click(await screen.findByRole("button", { name: "Rotate" }));
+    // Rotate and revoke are both destructive, so both confirm through an alertdialog.
     await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Rotate" }),
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Rotate" }),
     );
     expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
     await waitFor(() =>
@@ -298,8 +349,9 @@ describe("Settings integration clients", () => {
     const user = userEvent.setup();
     renderHarness(fetchFn);
     await user.click(await screen.findByRole("button", { name: "Rotate" }));
+    // Rotate and revoke are both destructive, so both confirm through an alertdialog.
     await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Rotate" }),
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Rotate" }),
     );
     expect(await screen.findByText("wtic_replacement")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Revoke" }));

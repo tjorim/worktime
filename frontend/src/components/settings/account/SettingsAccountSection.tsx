@@ -39,11 +39,8 @@ interface SettingsAccountSectionProps {
   profileDraft: string;
   isProfileSaving: boolean;
   hasProfileChanges: boolean;
-  isDeletingAccount: boolean;
-  deleteAccountError: string | null;
   onProfileDraftChange: (value: string) => void;
   onSaveProfile: () => void;
-  onDeleteAccount: () => void;
   onLogout: () => void;
   onLogin: () => void;
 }
@@ -62,16 +59,11 @@ export function SettingsAccountSection({
   profileDraft,
   isProfileSaving,
   hasProfileChanges,
-  isDeletingAccount,
-  deleteAccountError,
   onProfileDraftChange,
   onSaveProfile,
-  onDeleteAccount,
   onLogout,
   onLogin,
 }: SettingsAccountSectionProps) {
-  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
-
   return (
     <SettingsSection icon={CircleUserIcon} title={m.account_section_title()}>
       {isValidating ? (
@@ -164,27 +156,6 @@ export function SettingsAccountSection({
                   {isProfileSaving ? m.account_profile_saving_btn() : m.account_profile_save_btn()}
                 </Button>
               </div>
-
-              <div className="flex flex-col gap-2 border-t border-border pt-4">
-                <h3 className="m-0 text-base font-medium text-danger-text">
-                  {m.account_delete_section_title()}
-                </h3>
-                <SettingsHint>{m.account_delete_description()}</SettingsHint>
-                {deleteAccountError ? (
-                  <Alert variant="destructive">{deleteAccountError}</Alert>
-                ) : null}
-                <div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={isDeletingAccount}
-                    onClick={() => setShowDeleteAccountConfirm(true)}
-                  >
-                    <Icon icon={TrashIcon} />
-                    {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
-                  </Button>
-                </div>
-              </div>
             </>
           )}
         </div>
@@ -214,6 +185,44 @@ export function SettingsAccountSection({
           </div>
         </div>
       )}
+    </SettingsSection>
+  );
+}
+
+interface SettingsAccountDangerSectionProps {
+  isDeletingAccount: boolean;
+  deleteAccountError: string | null;
+  onDeleteAccount: () => void;
+}
+
+/** Account deletion, rendered last on the Account page so it is never mistaken for a routine action. */
+export function SettingsAccountDangerSection({
+  isDeletingAccount,
+  deleteAccountError,
+  onDeleteAccount,
+}: SettingsAccountDangerSectionProps) {
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
+
+  return (
+    <SettingsSection
+      icon={TrashIcon}
+      title={<span className="text-danger-text">{m.account_delete_section_title()}</span>}
+    >
+      <div className="flex flex-col gap-2">
+        <SettingsHint>{m.account_delete_description()}</SettingsHint>
+        {deleteAccountError ? <Alert variant="destructive">{deleteAccountError}</Alert> : null}
+        <div>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={isDeletingAccount}
+            onClick={() => setShowDeleteAccountConfirm(true)}
+          >
+            <Icon icon={TrashIcon} />
+            {isDeletingAccount ? m.account_delete_busy() : m.account_delete_btn()}
+          </Button>
+        </div>
+      </div>
       <ConfirmationDialog
         isOpen={showDeleteAccountConfirm}
         title={m.account_delete_confirm_title()}

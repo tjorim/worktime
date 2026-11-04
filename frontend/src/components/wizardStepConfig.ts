@@ -170,11 +170,26 @@ export function getStepConfig(stepId: WizardStep): StepConfig {
 }
 
 /**
- * Get 1-based index of a step within visible steps.
+ * Steps counted in the progress indicator.
+ *
+ * In onboarding the team picker only exists for rosters with several teams, so counting it as its
+ * own step would change the total ("of 8" to "of 9") after the schedule is chosen. It is treated as
+ * the second half of the schedule step instead, which keeps the total fixed from the first screen.
+ */
+function getCountedSteps(context: WizardContext): StepConfig[] {
+  const visible = getVisibleSteps(context);
+  return context.mode === "onboarding"
+    ? visible.filter((step) => step.id !== "team-selection")
+    : visible;
+}
+
+/**
+ * Get 1-based index of a step within the counted steps.
  */
 export function getStepIndex(stepId: WizardStep, context: WizardContext): number {
-  const visibleSteps = getVisibleSteps(context);
-  const index = visibleSteps.findIndex((s) => s.id === stepId);
+  const countedStepId =
+    context.mode === "onboarding" && stepId === "team-selection" ? "schedule-selection" : stepId;
+  const index = getCountedSteps(context).findIndex((s) => s.id === countedStepId);
   if (index === -1) {
     throw new Error(
       `Unknown WizardStep: "${stepId}" is not visible in the current wizard context (mode: ${context.mode})`,
@@ -184,8 +199,8 @@ export function getStepIndex(stepId: WizardStep, context: WizardContext): number
 }
 
 /**
- * Get total number of visible steps for current context.
+ * Get the total number of counted steps; stable throughout onboarding.
  */
 export function getTotalSteps(context: WizardContext): number {
-  return getVisibleSteps(context).length;
+  return getCountedSteps(context).length;
 }

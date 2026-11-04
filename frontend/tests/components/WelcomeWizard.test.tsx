@@ -105,7 +105,7 @@ const findModalTitle = async (text: RegExp) => {
   return modalHeading;
 };
 
-const waitForStep = async (stepNumber: number, totalSteps: number = 9, timeout = 3000) => {
+const waitForStep = async (stepNumber: number, totalSteps: number = 8, timeout = 3000) => {
   await waitFor(
     () => {
       expect(
@@ -347,8 +347,8 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      const progress = screen.getByRole("progressbar", { name: /Step 5 of 9/i });
-      expect(progress).toHaveAttribute("aria-valuenow", "55.6");
+      const progress = screen.getByRole("progressbar", { name: /Step 4 of 8/i });
+      expect(progress).toHaveAttribute("aria-valuenow", "50");
     });
 
     it("labels the work location country pickers once cross-border tracking is enabled", async () => {
@@ -395,7 +395,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      expect(screen.getByText(/Step 5 of 9/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 4 of 8/i)).toBeInTheDocument();
     });
   });
 
@@ -596,24 +596,27 @@ describe("WelcomeWizard", () => {
 
       // Verify welcome wizard appears with correct initial step
       await findModalTitle(/Welcome to Worktime/i);
-      expect(screen.getByText(/Step 1 of 9/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 1 of 8/i)).toBeInTheDocument();
 
       // Navigate to features step
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      await waitForStep(2, 9);
+      await waitForStep(2, 8);
 
       // Navigate to schedule selection step
       await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
-      await waitForStep(3, 9);
+      await waitForStep(3, 8);
 
-      // Choose 5-shift to reveal team selection
+      // Choose 5-shift to reveal team selection: the total must not grow from 8 to 9, and the
+      // team picker counts as the second half of the schedule step.
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
+      expect(screen.getByText(/Step 3 of 8/i)).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: /Continue/i }));
-      await waitForStep(4, 9);
+      await screen.findByLabelText(/Select Team 1/i);
+      expect(screen.getByText(/Step 3 of 8/i)).toBeInTheDocument();
 
       // Select a team to go to time off setup step
       await user.click(screen.getByLabelText(/Select Team 1/i));
-      await waitForStep(5, 9);
+      await waitForStep(4, 8);
     }, 15000);
 
     it("should navigate directly to schedule selection in change-schedule mode", async () => {
@@ -802,13 +805,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 9);
+      await waitForStep(2, 8);
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 9);
+      await waitForStep(3, 8);
 
       // Select a valid schedule
       const fiveShiftButton = screen.getByRole("button", { name: /5-shift/i });
@@ -895,6 +898,13 @@ describe("WelcomeWizard", () => {
 
       // Button should be disabled without explicit schedule selection
       expect(continueButton).toBeDisabled();
+
+      // ...and the reason is printed and associated with it, then disappears once chosen.
+      const reason = screen.getByText("Choose a schedule to continue.");
+      expect(continueButton).toHaveAttribute("aria-describedby", reason.id);
+      await user.click(screen.getByRole("button", { name: /9-5/i }));
+      expect(screen.queryByText("Choose a schedule to continue.")).not.toBeInTheDocument();
+      expect(continueButton).toBeEnabled();
     });
 
     it("should not implicitly default to 5-shift when navigating to schedule selection", async () => {
