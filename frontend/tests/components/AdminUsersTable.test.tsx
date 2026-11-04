@@ -98,9 +98,8 @@ describe("AdminUsersTable", () => {
   it("requests deletion, but never for the current account", async () => {
     const user = userEvent.setup();
     const { onRequestDelete } = renderTable();
-    const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
-    expect(deleteButtons[0]).toBeDisabled();
-    await user.click(deleteButtons[1]!);
+    expect(screen.getByRole("button", { name: "Delete Zoe Admin" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Delete Adam Member" }));
     expect(onRequestDelete).toHaveBeenCalledWith(2);
   });
 

@@ -397,6 +397,7 @@ export function TimelineProgressBar({
             className="pointer-events-none absolute top-0 bottom-0 left-(--now-pos) w-0.5 -translate-x-1/2 bg-destructive"
             style={{ "--now-pos": percent(nowPct) } as CSSProperties}
             data-testid="now-line"
+            role="img"
             aria-label={m.tt_current_time_label({ time: liveTime.format("HH:mm") })}
           />
         )}

@@ -96,6 +96,7 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
   const [addStop, setAddStop] = useState("");
   const { isHintDismissed, setHintDismissed } = useDevicePreferences();
   const showHelp = !isHintDismissed("unifiedCalendar");
+  const calendarElementRef = useRef<HTMLElement>(null);
   const eventRef = useRef(events);
   const taskRef = useRef(tasks);
   const updateTaskTimesRef = useRef(updateTaskTimes);
@@ -245,6 +246,30 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
     return () => observer.disconnect();
   }, [calendarApp]);
 
+  useEffect(() => {
+    const element = calendarElementRef.current;
+    if (!element) return;
+    // Schedule-X owns these controls and can replace them on navigation.
+    const nameControls = () => {
+      element.querySelectorAll(".sx__date-input-wrapper").forEach((wrapper) => {
+        const label = wrapper.querySelector("label");
+        if (label?.id) wrapper.querySelector("input")?.setAttribute("aria-labelledby", label.id);
+      });
+      // The all-day row is named by the vendor but otherwise has a generic role.
+      element.querySelectorAll(".sx__date-grid").forEach((grid) => {
+        grid.setAttribute("role", "group");
+      });
+      // The visible view name (e.g. Month) must be part of the accessible name.
+      element.querySelectorAll(".sx__view-selection-selected-item").forEach((button) => {
+        button.removeAttribute("aria-label");
+      });
+    };
+    nameControls();
+    const observer = new MutationObserver(nameControls);
+    observer.observe(element, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   const saveTaskEdit = () => {
     if (!selectedTask || !editForm.text.trim() || !editForm.label || !editForm.start) {
       setEditError(m.calendar_task_fill_required());
@@ -284,6 +309,7 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
 
   return (
     <section
+      ref={calendarElementRef}
       data-slot="unified-calendar"
       className="px-0 py-4 sm:px-4"
       aria-label={m.calendar_unified_label()}
