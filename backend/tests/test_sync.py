@@ -3803,3 +3803,97 @@ class TestBulkDeleteGuard:
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
+
+
+def test_rejected_gantt_link_does_not_abort_batch(db_client, auth_headers):
+    user_id = _create_user(db_client, auth_headers(1, is_admin=True), "rejected-gantt-link")
+    headers = auth_headers(user_id)
+    gantt_id, entry_id = str(uuid4()), str(uuid4())
+    response = db_client.post(
+        "/api/sync/push",
+        headers=headers,
+        json={
+            "gantt_tasks": [
+                {
+                    "id": gantt_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    "name": "Rejected",
+                    "start_date": "2026-01-01",
+                    "end_date": "2026-01-02",
+                    "dependencies": gantt_id,
+                    "label_id": label_id_for(db_client, headers),
+                }
+            ],
+            "tasks": [
+                {
+                    "id": entry_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    "gantt_task_id": gantt_id,
+                    "label_id": label_id_for(db_client, headers),
+                    "text": "Linked",
+                    "start_time": "2026-01-01T09:00:00Z",
+                    "stop_time": "2026-01-01T10:00:00Z",
+                }
+            ],
+            "work_locations": [
+                {
+                    "date": "2026-01-01",
+                    "country_code": "BE",
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                }
+            ],
+        },
+    )
+    assert response.status_code == 200, response.text
+    results = response.json()["results"]
+    assert results["tasks"][0]["status"] == "conflict"
+    assert results["tasks"][0]["code"] == "gantt_dependency_unknown"
+    assert results["work_locations"][0]["status"] == "ok"
+
+
+def test_gantt_cleanup_preserves_queued_edit(db_client, auth_headers):
+    user_id = _create_user(db_client, auth_headers(1, is_admin=True), "gantt-cleanup-edit")
+    headers = auth_headers(user_id)
+    a, b = str(uuid4()), str(uuid4())
+    label = label_id_for(db_client, headers)
+    response = db_client.post(
+        "/api/sync/push",
+        headers=headers,
+        json={
+            "gantt_tasks": [
+                {
+                    "id": task_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-20),
+                    "name": task_id,
+                    "start_date": "2026-01-01",
+                    "end_date": "2026-01-02",
+                    "label_id": label,
+                    "dependencies": dependencies,
+                }
+                for task_id, dependencies in [(a, None), (b, a)]
+            ]
+        },
+    )
+    assert response.status_code == 200, response.text
+    before = _ts(-1)
+    response = db_client.post(
+        "/api/sync/push",
+        headers=headers,
+        json={
+            "gantt_tasks": [
+                {"id": a, "action": "delete", "client_updated_at": _ts(-5)},
+                {"id": b, "action": "update", "name": "Queued rename", "client_updated_at": _ts(-4)},
+            ]
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert [r["status"] for r in response.json()["results"]["gantt_tasks"]] == ["ok", "ok"]
+    pulled = db_client.get("/api/sync/pull", headers=headers, params={"since": before}).json()
+    task = next(t for t in pulled["gantt_tasks"] if t["id"] == b)
+    assert task["name"] == "Queued rename"
+    assert task["dependencies"] is None
+    assert task["updated_at"] > before

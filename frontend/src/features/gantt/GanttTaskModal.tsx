@@ -1,3 +1,5 @@
+import { ganttDependencyError } from "@/utils/ganttDependencies";
+import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
 import { CircleXIcon, PencilIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
@@ -28,7 +30,7 @@ interface GanttTaskModalProps {
   onHide: () => void;
   onSave: (task: GanttTaskFormInput) => void;
   task?: GanttTask;
-  existingTasks: Array<Pick<GanttTask, "id" | "name">>;
+  existingTasks: Array<Pick<GanttTask, "id" | "name" | "dependencies">>;
   onDelete?: () => void;
   /** Navigate to Time Tracking with the given logged entry pre-selected for editing. */
   onNavigateToEntry?: (entryId: string) => void;
@@ -96,9 +98,16 @@ export function GanttTaskModal({
     updateTaskTimes,
   } = useTimeTrackingStorage();
 
+  const dependencyError = ganttDependencyError(
+    existingTasks,
+    task?.id ?? "",
+    selectedDeps.join(","),
+  );
+
   const form = useForm({
     defaultValues: createInitialValue(task),
     onSubmit: ({ value }) => {
+      if (dependencyError) return;
       onSave({
         ...value,
         name: value.name.trim(),
@@ -106,7 +115,7 @@ export function GanttTaskModal({
         // reliably overwrites an existing one — updateTask only applies a
         // field when it is present, and this form always submits full state.
         label: value.label ?? "",
-        dependencies: selectedDeps.length > 0 ? selectedDeps.join(", ") : undefined,
+        dependencies: selectedDeps.length > 0 ? selectedDeps.join(", ") : "",
         notes: value.notes?.trim() || undefined,
         progress: value.progress ?? 0,
       });
@@ -378,12 +387,19 @@ export function GanttTaskModal({
               <FieldLabel htmlFor="ganttTaskDependencies">{m.gantt_task_deps_label()}</FieldLabel>
               <MultiSearchSelect
                 inputId="ganttTaskDependencies"
+                aria-describedby={dependencyError ? "ganttTaskDependencies-error" : undefined}
                 placeholder={m.gantt_task_deps_placeholder()}
                 options={depOptions}
                 value={depValue}
                 onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
               />
             </Field>
+
+            {dependencyError && (
+              <FieldError id="ganttTaskDependencies-error" role="alert">
+                {ganttDependencyErrorMessages[dependencyError]?.()}
+              </FieldError>
+            )}
 
             <form.Field name="notes">
               {(field) => (

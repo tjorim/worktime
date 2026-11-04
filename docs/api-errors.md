@@ -100,3 +100,19 @@ its interval again. Accepting server state refreshes the snapshot before removin
 conflicted tasks that are still absent, including rejected creates later edited
 locally, while preserving unrelated local edits.
 Labels remain optional (#1678).
+
+## Gantt dependencies
+
+Gantt dependencies remain comma-separated task IDs for compatibility. REST writes
+return 400 with `gantt_dependency_unknown` (missing, deleted or another user's
+target), `gantt_dependency_self`, or `gantt_dependency_cycle`. Sync returns the same
+codes as per-record conflicts and accepts other valid records. Forward references
+within a sync batch are retried after their targets are accepted; unresolved
+cyclic creates are rejected without storing either row. Writes are serialized per
+user on PostgreSQL to prevent concurrent updates from creating a cycle.
+
+Deleting a task removes its ID from active dependencies in the same transaction,
+with timestamps advanced so other devices receive the cleanup. Unchanged legacy
+invalid dependencies remain readable and editable through REST and sync; restoring
+a deleted task validates its dependencies again. The modal requires repairing bad
+links, the table shows translated warnings, and the chart omits invalid arrows.

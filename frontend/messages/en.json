@@ -1523,5 +1523,8 @@
   "stats_holidays_loading": "Loading public holidays. Totals and targets may change.",
   "stats_holidays_unavailable": "Public holidays could not be loaded. Totals and targets may be too high until they are.",
   "tt_hidden_tasks_notice_other": "{count} stored time entries are hidden because their data is invalid or their label is missing. Your stored data has been kept.",
-  "tt_hidden_tasks_notice_one": "{count} stored time entry is hidden because its data is invalid or its label is missing. Your stored data has been kept."
+  "tt_hidden_tasks_notice_one": "{count} stored time entry is hidden because its data is invalid or its label is missing. Your stored data has been kept.",
+  "error_code_gantt_dependency_unknown": "Choose dependencies that still exist.",
+  "error_code_gantt_dependency_self": "A task cannot depend on itself.",
+  "error_code_gantt_dependency_cycle": "These dependencies create a cycle."
 }

@@ -328,7 +328,11 @@ export function setSyncTaskRejectionHandler(handler: ((code: string) => void) | 
 /** Notify once per validation code; diagnostic conflict reasons never reach the UI. */
 export function reportTaskRejections(response: SyncPushResponse): void {
   const codes = new Set(
-    [...(response.results?.tasks ?? []), ...(response.results?.templates ?? [])]
+    [
+      ...(response.results?.tasks ?? []),
+      ...(response.results?.templates ?? []),
+      ...(response.results?.gantt_tasks ?? []),
+    ]
       .filter((record) => record.status === "conflict" && record.code)
       .map((record) => record.code!),
   );

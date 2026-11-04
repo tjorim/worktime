@@ -1651,6 +1651,7 @@ describe("syncClient", () => {
     reportTaskRejections({
       results: {
         tasks: [{ id: "t1", status: "conflict", code: "label_required" }],
+        gantt_tasks: [{ id: "g1", status: "conflict", code: "gantt_dependency_cycle" }],
         templates: [
           { id: "tpl1", status: "conflict", code: "label_required" },
           { id: "tpl2", status: "conflict", code: "task_overlap" },
@@ -1659,7 +1660,8 @@ describe("syncClient", () => {
       },
     } as never);
     setSyncTaskRejectionHandler(null);
-    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenCalledTimes(3);
+    expect(handler).toHaveBeenCalledWith("gantt_dependency_cycle");
     expect(handler).toHaveBeenCalledWith("label_required");
     expect(handler).toHaveBeenCalledWith("task_overlap");
   });

@@ -46,6 +46,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from app.core.errors import ErrorCode
 from app.database.models import (
     GanttTask,
     Label,
@@ -79,8 +80,12 @@ from app.services.db_service import (
     TaskValidationError,
     _validate_task_gantt_reference,
     apply_time_off_shape,
+    dependency_ids,
     lock_task_writes,
+    remove_gantt_references,
     require_task_label,
+    validate_gantt_dependencies,
+    validate_gantt_dependency_graph,
 )
 from app.utils.datetime import as_utc
 
@@ -835,6 +840,7 @@ async def _push_time_off_entry(session: AsyncSession, user_id: int, item: TimeOf
 
 async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskSyncItem) -> SyncRecordResult:
     now = _now()
+    await lock_task_writes(session, user_id)
     task: GanttTask | None = await session.get(GanttTask, item.id)
 
     if item.action == "delete":
@@ -876,6 +882,7 @@ async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskS
 
             raise ValidationError("end_date cannot be earlier than start_date")
         await _validate_task_label_reference(session, user_id, item.label_id)
+        await validate_gantt_dependencies(session, user_id, item.id, item.dependencies)
         task = GanttTask(
             id=item.id,
             user_id=user_id,
@@ -915,6 +922,10 @@ async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskS
         from app.services.db_service import ValidationError
 
         raise ValidationError("end_date cannot be earlier than start_date")
+    if task.deleted_at is not None or ("dependencies" in provided_fields and item.dependencies != task.dependencies):
+        await validate_gantt_dependencies(
+            session, user_id, item.id, item.dependencies if "dependencies" in provided_fields else task.dependencies
+        )
     if "name" in provided_fields and item.name is not None:
         task.name = item.name
     if "label_id" in provided_fields:
@@ -996,11 +1007,61 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
     for item in changes.labels:
         results["labels"].append(await _push_label(session, user_id, item))
 
-    for item in changes.gantt_tasks:
-        results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
+    # Retry unavailable targets after other records have been accepted, so a
+    # first upload does not depend on the client's array order. Rejected creates
+    # never become valid dependency targets for another record.
+    pending_gantt = list(enumerate(changes.gantt_tasks))
+    gantt_results: dict[int, SyncRecordResult] = {}
+    while pending_gantt:
+        retry = []
+        for index, item in pending_gantt:
+            try:
+                result = await _push_gantt_task(session, user_id, item)
+            except TaskValidationError as error:
+                result = SyncRecordResult(
+                    id=item.id, status="conflict", conflict_reason=str(error), code=error.code.value
+                )
+                if error.code == ErrorCode.GANTT_DEPENDENCY_UNKNOWN:
+                    retry.append((index, item))
+            gantt_results[index] = result
+        if len(retry) == len(pending_gantt):
+            # No forward reference can now be accepted. Classify cycles among
+            # unresolved creates without ever persisting those candidate rows.
+            rows = (
+                await session.scalars(
+                    select(GanttTask).where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None))
+                )
+            ).all()
+            graph = {row.id: dependency_ids(row.dependencies) for row in rows}
+            graph.update({item.id: dependency_ids(item.dependencies) for _, item in retry})
+            for index, item in retry:
+                try:
+                    validate_gantt_dependency_graph(graph, item.id, item.dependencies)
+                except TaskValidationError as error:
+                    gantt_results[index] = SyncRecordResult(
+                        id=item.id, status="conflict", conflict_reason=str(error), code=error.code.value
+                    )
+            break
+        pending_gantt = retry
+    results["gantt_tasks"] = [gantt_results[index] for index in range(len(changes.gantt_tasks))]
+
+    # Apply cleanup after queued graph edits, so its server timestamp cannot
+    # make another edit in this same batch appear stale.
+    for index, item in enumerate(changes.gantt_tasks):
+        if item.action == "delete" and gantt_results[index].status == "ok":
+            await remove_gantt_references(session, user_id, item.id, _now())
+    rejected_gantt_ids = {
+        item.id for index, item in enumerate(changes.gantt_tasks) if gantt_results[index].status == "conflict"
+    }
 
     for item in changes.tasks:
         try:
+            if (
+                item.action != "delete"
+                and item.gantt_task_id in rejected_gantt_ids
+                and await session.get(GanttTask, item.gantt_task_id) is None
+            ):
+                raise TaskValidationError(ErrorCode.GANTT_DEPENDENCY_UNKNOWN, "linked Gantt task was rejected")
             result = await _push_task(session, user_id, item)
         except TaskValidationError as error:
             result = SyncRecordResult(

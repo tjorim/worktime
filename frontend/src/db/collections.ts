@@ -544,6 +544,15 @@ export function acceptTaskConflictServerState(
   payload: SyncPushPayload,
   data: SyncPullResponse,
 ): void {
+  const serverGanttIds = new Set(
+    data.gantt_tasks.filter((task) => task.deleted_at === null).map((task) => task.id),
+  );
+  const discardedGanttIds = payload.gantt_tasks
+    .filter((task) => !serverGanttIds.has(task.id) && ganttTasksCollection.has(task.id))
+    .map((task) => task.id);
+  runWriteBatch(ganttTasksCollection, discardedGanttIds.length > 0, () =>
+    ganttTasksCollection.utils.writeDelete(discardedGanttIds),
+  );
   const serverIds = new Set(
     data.tasks.filter((task) => task.deleted_at === null).map((task) => task.id),
   );

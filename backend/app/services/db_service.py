@@ -838,6 +838,51 @@ async def delete_work_location(
 # Gantt task operations
 
 
+def dependency_ids(value: str | None) -> list[str]:
+    return list(dict.fromkeys(part.strip() for part in (value or "").split(",") if part.strip()))
+
+
+async def validate_gantt_dependencies(
+    session: AsyncSession, user_id: int, task_id: str, dependencies: str | None
+) -> None:
+    """Validate the changed edges only; tolerate unrelated legacy corruption."""
+    rows = (
+        await session.scalars(select(GanttTask).where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None)))
+    ).all()
+    graph = {row.id: dependency_ids(row.dependencies) for row in rows}
+    validate_gantt_dependency_graph(graph, task_id, dependencies)
+
+
+def validate_gantt_dependency_graph(graph: dict[str, list[str]], task_id: str, dependencies: str | None) -> None:
+    targets = dependency_ids(dependencies)
+    if task_id in targets:
+        raise TaskValidationError(ErrorCode.GANTT_DEPENDENCY_SELF, "task cannot depend on itself")
+    if any(target not in graph for target in targets):
+        raise TaskValidationError(ErrorCode.GANTT_DEPENDENCY_UNKNOWN, "dependency target is unavailable")
+    pending = list(targets)
+    visited: set[str] = set()
+    while pending:
+        current = pending.pop()
+        if current == task_id:
+            raise TaskValidationError(ErrorCode.GANTT_DEPENDENCY_CYCLE, "dependencies create a cycle")
+        if current not in visited:
+            visited.add(current)
+            pending.extend(graph.get(current, []))
+
+
+async def remove_gantt_references(session: AsyncSession, user_id: int, task_id: str, now: datetime) -> None:
+    rows = (
+        await session.scalars(select(GanttTask).where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None)))
+    ).all()
+    for row in rows:
+        ids = dependency_ids(row.dependencies)
+        if task_id in ids:
+            row.dependencies = ", ".join(value for value in ids if value != task_id) or None
+            row.client_updated_at = now
+            row.updated_at = now
+            session.add(row)
+
+
 async def create_gantt_task(
     session: AsyncSession, user_id: int, payload: GanttTaskCreate, *, actor: AuditActor | None = None
 ) -> GanttTask:
@@ -846,6 +891,8 @@ async def create_gantt_task(
     if payload.end_date < payload.start_date:
         raise ValidationError("end_date cannot be earlier than start_date")
 
+    await lock_task_writes(session, user_id)
+    await validate_gantt_dependencies(session, user_id, "", payload.dependencies)
     task = GanttTask(user_id=user_id, **payload.model_dump())
     session.add(task)
     await session.flush()
@@ -915,6 +962,7 @@ async def update_gantt_task(
     *,
     actor: AuditActor | None = None,
 ) -> GanttTask:
+    await lock_task_writes(session, user_id)
     task = await get_gantt_task(session, user_id, task_id)
 
     data = payload.model_dump(exclude_unset=True)
@@ -925,6 +973,8 @@ async def update_gantt_task(
     if candidate_end < candidate_start:
         raise ValidationError("end_date cannot be earlier than start_date")
 
+    if "dependencies" in data and data["dependencies"] != task.dependencies:
+        await validate_gantt_dependencies(session, user_id, task_id, data["dependencies"])
     for field, value in data.items():
         setattr(task, field, value)
     # Bump the LWW timestamp so a later sync push carrying stale data cannot
@@ -941,8 +991,10 @@ async def update_gantt_task(
 async def delete_gantt_task(
     session: AsyncSession, user_id: int, task_id: str, *, actor: AuditActor | None = None
 ) -> None:
+    await lock_task_writes(session, user_id)
     task = await get_gantt_task(session, user_id, task_id)
     now = datetime.now(UTC)
+    await remove_gantt_references(session, user_id, task_id, now)
     task.deleted_at = now
     task.client_updated_at = now
     session.add(task)
