@@ -6,6 +6,7 @@ import {
   setSyncCollectionAuth,
   setSyncCollectionTriggerPull,
   tasksCollection,
+  ganttTasksCollection,
 } from "@/db/collections";
 import { USER_STATE_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
 import { useOngoingSync } from "@/hooks/useOngoingSync";
@@ -55,6 +56,9 @@ afterEach(async () => {
   for (const id of ["rejected", "unrelated"]) {
     if (tasksCollection.has(id)) await tasksCollection.delete(id).isPersisted.promise;
   }
+  for (const id of ["rejected", "unrelated"]) {
+    if (ganttTasksCollection.has(id)) await ganttTasksCollection.delete(id).isPersisted.promise;
+  }
   localStorage.clear();
   setSyncCollectionTriggerPull(null);
   vi.restoreAllMocks();
@@ -62,59 +66,93 @@ afterEach(async () => {
 });
 
 describe("rejected task recovery", () => {
-  it.each([false, true])(
-    "accepts server state only after a successful pull (offline=%s)",
-    async (offline) => {
-      await tasksCollection.insert(localTask("rejected")).isPersisted.promise;
-      await tasksCollection.insert(localTask("unrelated")).isPersisted.promise;
-      storeSyncCursor("user-1", "2026-01-01T00:00:00Z");
-      let failPull = false;
-      const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-        if (url.startsWith("/api/sync/pull"))
-          return { ok: !failPull, json: async () => snapshot } as Response;
-        if (init?.method === "POST")
-          return {
-            ok: true,
-            json: async () => ({
-              results: { tasks: [{ id: "rejected", status: "conflict", code: "task_overlap" }] },
-            }),
-          } as Response;
-        return { ok: false, json: async () => null } as Response;
-      });
-      const { result, unmount } = renderHook(() =>
-        useOngoingSync(
-          true,
-          "user-1",
-          fetch,
-          applyIncrementalPullToCollections,
-          acceptTaskConflictServerState,
-        ),
-      );
-      await waitFor(() => expect(result.current.lastSyncedAt).toBe(snapshot.server_timestamp));
-      act(() => result.current.enqueueChange(payload));
-      await waitFor(() => expect(result.current.conflictCount).toBe(1));
-      // Wait for the initial reconciliation before changing the simulated network.
-      await waitFor(() =>
-        expect(
-          fetch.mock.calls.filter(([url]) => url.startsWith("/api/preferences")).length,
-        ).toBeGreaterThanOrEqual(2),
-      );
-      failPull = offline;
-      act(() => result.current.resolveOngoingConflicts("keep-server"));
-      if (offline) {
-        await waitFor(() => expect(result.current.hasSyncError).toBe(true));
-        expect(result.current.conflictCount).toBe(1);
-        expect(tasksCollection.has("rejected")).toBe(true);
-        failPull = false;
-        act(() => result.current.resolveOngoingConflicts("keep-server"));
+  it.each([
+    { offline: false, gantt: false },
+    { offline: true, gantt: false },
+    { offline: false, gantt: true },
+    { offline: true, gantt: true },
+  ])("accepts server state only after a successful pull (%j)", async ({ offline, gantt }) => {
+    const collection = gantt ? ganttTasksCollection : tasksCollection;
+    const rejectedPayload: SyncPushPayload = gantt
+      ? {
+          ...payload,
+          tasks: [],
+          gantt_tasks: [
+            {
+              id: "rejected",
+              action: "create",
+              name: "Rejected",
+              start_date: "2026-01-01",
+              end_date: "2026-01-02",
+              client_updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+        }
+      : payload;
+    for (const id of ["rejected", "unrelated"]) {
+      if (gantt) {
+        await ganttTasksCollection.insert({
+          id,
+          name: id,
+          start: "2026-01-01",
+          end: "2026-01-02",
+          progress: 0,
+        }).isPersisted.promise;
+      } else {
+        await tasksCollection.insert(localTask(id)).isPersisted.promise;
       }
-      await waitFor(() => expect(result.current.conflictCount).toBe(0));
-      expect(tasksCollection.has("rejected")).toBe(false);
-      expect(tasksCollection.has("unrelated")).toBe(true);
-      expect(fetch.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
-      unmount();
-    },
-  );
+    }
+    storeSyncCursor("user-1", "2026-01-01T00:00:00Z");
+    let failPull = false;
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/sync/pull"))
+        return { ok: !failPull, json: async () => snapshot } as Response;
+      if (init?.method === "POST")
+        return {
+          ok: true,
+          json: async () => ({
+            results: {
+              [gantt ? "gantt_tasks" : "tasks"]: [
+                { id: "rejected", status: "conflict", code: "gantt_dependency_self" },
+              ],
+            },
+          }),
+        } as Response;
+      return { ok: false, json: async () => null } as Response;
+    });
+    const { result, unmount } = renderHook(() =>
+      useOngoingSync(
+        true,
+        "user-1",
+        fetch,
+        applyIncrementalPullToCollections,
+        acceptTaskConflictServerState,
+      ),
+    );
+    await waitFor(() => expect(result.current.lastSyncedAt).toBe(snapshot.server_timestamp));
+    act(() => result.current.enqueueChange(rejectedPayload));
+    await waitFor(() => expect(result.current.conflictCount).toBe(1));
+    // Wait for the initial reconciliation before changing the simulated network.
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.filter(([url]) => url.startsWith("/api/preferences")).length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    failPull = offline;
+    act(() => result.current.resolveOngoingConflicts("keep-server"));
+    if (offline) {
+      await waitFor(() => expect(result.current.hasSyncError).toBe(true));
+      expect(result.current.conflictCount).toBe(1);
+      expect(collection.has("rejected")).toBe(true);
+      failPull = false;
+      act(() => result.current.resolveOngoingConflicts("keep-server"));
+    }
+    await waitFor(() => expect(result.current.conflictCount).toBe(0));
+    expect(collection.has("rejected")).toBe(false);
+    expect(collection.has("unrelated")).toBe(true);
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+    unmount();
+  });
 
   it("discards a rejected new task after an edit coalesces its queued create into an update", async () => {
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {

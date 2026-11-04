@@ -680,7 +680,7 @@ export function useOngoingSync(
       if (
         choice === "keep-server" &&
         payload &&
-        payload.tasks.length > 0 &&
+        (payload.tasks.length > 0 || payload.gantt_tasks.length > 0) &&
         onAcceptServerRef.current &&
         fetchFn
       ) {

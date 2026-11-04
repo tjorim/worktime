@@ -853,7 +853,6 @@ async def _push_gantt_task(session: AsyncSession, user_id: int, item: GanttTaskS
                 server_updated_at=task.updated_at,
                 conflict_reason="server version is newer",
             )
-        await remove_gantt_references(session, user_id, item.id, now)
         task.client_updated_at = _clamp_client_timestamp(item.client_updated_at)
         task.deleted_at = now
         task.updated_at = now
@@ -1046,8 +1045,23 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
         pending_gantt = retry
     results["gantt_tasks"] = [gantt_results[index] for index in range(len(changes.gantt_tasks))]
 
+    # Apply cleanup after queued graph edits, so its server timestamp cannot
+    # make another edit in this same batch appear stale.
+    for index, item in enumerate(changes.gantt_tasks):
+        if item.action == "delete" and gantt_results[index].status == "ok":
+            await remove_gantt_references(session, user_id, item.id, _now())
+    rejected_gantt_ids = {
+        item.id for index, item in enumerate(changes.gantt_tasks) if gantt_results[index].status == "conflict"
+    }
+
     for item in changes.tasks:
         try:
+            if (
+                item.action != "delete"
+                and item.gantt_task_id in rejected_gantt_ids
+                and await session.get(GanttTask, item.gantt_task_id) is None
+            ):
+                raise TaskValidationError(ErrorCode.GANTT_DEPENDENCY_UNKNOWN, "linked Gantt task was rejected")
             result = await _push_task(session, user_id, item)
         except TaskValidationError as error:
             result = SyncRecordResult(
