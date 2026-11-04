@@ -51,6 +51,9 @@ class ErrorCode(StrEnum):
     NO_RUNNING_TASK = "no_running_task"
 
     # Conflicts / validation
+    USERNAME_INVALID = "username_invalid"
+    USERNAME_RESERVED = "username_reserved"
+    DISPLAY_NAME_INVALID = "display_name_invalid"
     USERNAME_TAKEN = "username_taken"
     ADMIN_SELF_DELETE_FORBIDDEN = "admin_self_delete_forbidden"
     VALIDATION_FAILED = "validation_failed"

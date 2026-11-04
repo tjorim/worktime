@@ -1560,5 +1560,8 @@
   "auth_retry_signin": "Try signing in again",
   "date_code_label": "Date code:",
   "tt_overnight_hint": "An earlier stop time means the next day. Hours count towards the start day.",
-  "tt_duration_limit": "Tasks can last up to 24 elapsed hours. Set a stop time within that limit."
+  "tt_duration_limit": "Tasks can last up to 24 elapsed hours. Set a stop time within that limit.",
+  "error_code_username_invalid": "Use 1–64 letters (A–Z), digits, dots, underscores, @, plus or hyphens for the username, starting with a letter or digit.",
+  "error_code_username_reserved": "This username is reserved. Choose another username.",
+  "error_code_display_name_invalid": "Use no more than 150 characters for the display name."
 }

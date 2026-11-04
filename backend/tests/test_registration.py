@@ -79,35 +79,35 @@ def test_register_duplicate_username_conflict(db_client: TestClient, auth_header
 
 
 def test_register_empty_username_rejected(db_client: TestClient, auth_headers) -> None:
-    """Empty username is rejected with 422."""
+    """Empty username is rejected with 400."""
     response = db_client.post(
         "/api/users/register",
         json={"username": ""},
         headers=auth_headers(1, is_admin=True),
     )
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_register_username_too_long_rejected(db_client: TestClient, auth_headers) -> None:
-    """Usernames longer than 150 characters are rejected with 422."""
+    """Usernames longer than 150 characters are rejected with 400."""
     response = db_client.post(
         "/api/users/register",
         json={"username": "x" * 151},
         headers=auth_headers(1, is_admin=True),
     )
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_register_username_with_whitespace_rejected(db_client: TestClient, auth_headers) -> None:
-    """Usernames containing whitespace or control characters are rejected with 422."""
+    """Usernames containing whitespace or control characters are rejected with 400."""
     admin_h = auth_headers(1, is_admin=True)
-    for bad_username in ("has space", " leading", "tab\tchar", "new\nline"):
+    for bad_username in ("has space", "tab\tchar", "new\nline"):
         response = db_client.post(
             "/api/users/register",
             json={"username": bad_username},
             headers=admin_h,
         )
-        assert response.status_code == 422, bad_username
+        assert response.status_code == 400, bad_username
 
 
 def test_register_username_email_style_accepted(db_client: TestClient, auth_headers) -> None:

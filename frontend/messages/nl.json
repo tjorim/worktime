@@ -1560,5 +1560,8 @@
   "auth_retry_signin": "Opnieuw aanmelden",
   "date_code_label": "Datumcode:",
   "tt_overnight_hint": "Een eerdere stoptijd betekent de volgende dag. Uren tellen mee op de startdag.",
-  "tt_duration_limit": "Taken mogen maximaal 24 verstreken uren duren. Kies een stoptijd binnen die limiet."
+  "tt_duration_limit": "Taken mogen maximaal 24 verstreken uren duren. Kies een stoptijd binnen die limiet.",
+  "error_code_username_invalid": "Gebruik 1–64 letters (A–Z), cijfers, punten, underscores, @, plus of koppeltekens voor de gebruikersnaam, beginnend met een letter of cijfer.",
+  "error_code_username_reserved": "Deze gebruikersnaam is gereserveerd. Kies een andere gebruikersnaam.",
+  "error_code_display_name_invalid": "Gebruik maximaal 150 tekens voor de weergavenaam."
 }

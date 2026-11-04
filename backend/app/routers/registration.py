@@ -28,6 +28,7 @@ from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.schemas import UserCreate, UserRead, UserRegister
 from app.services.db_service import ConflictError, create_user
+from app.services.user_validation import validate_user_fields
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,9 @@ async def register_user(
         display_name=payload.display_name or payload.username,
         settings={},
     )
+    data = user_create.model_dump()
+    validate_user_fields(data)
+    user_create = UserCreate(**data)
     try:
         user = await create_user(session, user_create)
     except ConflictError as error:

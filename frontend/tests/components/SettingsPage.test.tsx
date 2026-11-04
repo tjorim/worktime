@@ -1,5 +1,5 @@
 import { type LucideIcon, TrashIcon } from "lucide-react";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
@@ -541,6 +541,42 @@ describe("SettingsPage Account Section", () => {
     await user.click(screen.getByText("Save profile"));
 
     expect(await screen.findByDisplayValue("Alice Updated")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["display_name_invalid", "Use no more than 150 characters for the display name."],
+    ["unknown_code", "Could not save your profile changes."],
+  ])("translates profile error %s without server diagnostics", async (code, message) => {
+    server.use(
+      http.put("*/api/users/:id", () =>
+        HttpResponse.json({ code, detail: "private server diagnostic" }, { status: 400 }),
+      ),
+    );
+    mockAuthenticatedUser("Alice");
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+    const input = await screen.findByDisplayValue("Dev User");
+    await user.clear(input);
+    await user.type(input, "Changed");
+    await user.click(screen.getByText("Save profile"));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.queryByText("private server diagnostic")).not.toBeInTheDocument();
+  });
+
+  it("rejects an overlong display name before sending it", async () => {
+    const save = vi.fn();
+    server.use(http.put("*/api/users/:id", save));
+    mockAuthenticatedUser("Alice");
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+    const input = await screen.findByDisplayValue("Dev User");
+    await user.clear(input);
+    fireEvent.change(input, { target: { value: "x".repeat(151) } });
+    await user.click(screen.getByText("Save profile"));
+    expect(
+      await screen.findByText("Use no more than 150 characters for the display name."),
+    ).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
   });
 
   it("renders account section title regardless of auth state", () => {

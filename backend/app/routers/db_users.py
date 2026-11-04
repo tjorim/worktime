@@ -13,6 +13,7 @@ from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
+    audit_actor_for,
     get_authenticated_principal,
     require_oidc_principal,
     require_user_or_admin_match,
@@ -44,6 +45,7 @@ from app.services.db_service import (
     list_users,
     update_user,
 )
+from app.services.user_validation import validate_user_fields
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,9 @@ async def create_user_endpoint(
     if not principal.is_admin:
         raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.ADMIN_REQUIRED, "Forbidden")
 
+    data = payload.model_dump()
+    validate_user_fields(data)
+    payload = UserCreate(**data)
     try:
         user = await create_user(session, payload)
     except ConflictError as error:
@@ -171,7 +176,10 @@ async def update_user_endpoint(
 ) -> UserRead:
     require_user_or_admin_match(user_id, principal)
     try:
-        user = await update_user(session, user_id, payload)
+        current = await get_user(session, user_id)
+        data = payload.model_dump(exclude_unset=True)
+        validate_user_fields(data, current=current, is_admin=principal.is_admin)
+        user = await update_user(session, user_id, UserUpdate(**data), actor=audit_actor_for(principal))
     except NotFoundError as error:
         raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.USER_NOT_FOUND, str(error)) from error
     except ConflictError as error:
