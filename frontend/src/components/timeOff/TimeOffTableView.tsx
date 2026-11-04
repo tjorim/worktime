@@ -120,9 +120,11 @@ export function TimeOffTableView({
   onApplyRawEditor,
   onResetRawEditor,
 }: TimeOffTableViewProps) {
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(width < 640px)").matches);
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 639.98px)").matches,
+  );
   useEffect(() => {
-    const query = window.matchMedia("(width < 640px)");
+    const query = window.matchMedia("(max-width: 639.98px)");
     const update = () => setIsMobile(query.matches);
     update();
     query.addEventListener("change", update);
