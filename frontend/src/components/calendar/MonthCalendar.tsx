@@ -1,4 +1,4 @@
-import { getOverlappingEntries } from "@/lib/timeOff/overlap";
+import { entriesOverlap } from "@/lib/timeOff/overlap";
 import {
   BuildingIcon,
   ChevronLeftIcon,
@@ -200,6 +200,19 @@ export function MonthCalendar({
   // Track which element triggered the context menu for focus return
   const triggerRef = useRef<HTMLElement | null>(null);
 
+  // One boolean per entry, computed once per data change rather than per visible day.
+  const overlappingIds = useMemo(
+    () =>
+      new Set(
+        sourceEntries
+          .filter((entry) =>
+            sourceEntries.some((other) => other.id !== entry.id && entriesOverlap(entry, other)),
+          )
+          .map((entry) => entry.id),
+      ),
+    [sourceEntries],
+  );
+
   const dayEvents = useMemo(() => {
     const map = new Map<string, DayEvent[]>();
 
@@ -218,7 +231,7 @@ export function MonthCalendar({
       const list = map.get(key) ?? [];
       list.push({
         ...entry,
-        overlapping: getOverlappingEntries(entry.entry, sourceEntries).length > 0,
+        overlapping: overlappingIds.has(entry.entry.id),
       });
       map.set(key, list);
     };
@@ -275,7 +288,7 @@ export function MonthCalendar({
     }
 
     return map;
-  }, [days, sourceEntries]);
+  }, [days, sourceEntries, overlappingIds]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
