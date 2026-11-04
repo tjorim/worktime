@@ -79,6 +79,14 @@ function renderTable(overrides: Partial<Parameters<typeof TimeOffTableView>[0]> 
 const bodyRows = () => within(screen.getAllByRole("rowgroup")[1]!).getAllByRole("row");
 
 describe("TimeOffTableView", () => {
+  it("marks overlapping rows with visible text, including when the other row is filtered out", async () => {
+    renderTable();
+    expect(within(bodyRows()[0]!).getByText("Overlapping entry")).toBeVisible();
+    expect(within(bodyRows()[2]!).getByText("Overlapping entry")).toBeVisible();
+    expect(within(bodyRows()[1]!).queryByText("Overlapping entry")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole("searchbox"), "Ski trip");
+    expect(screen.getByText("Overlapping entry")).toBeVisible();
+  });
   it("opens sorted by start date with weekly entries last", () => {
     renderTable();
     const rows = bodyRows();

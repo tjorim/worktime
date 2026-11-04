@@ -956,6 +956,8 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
 
       {/* Event Modal */}
       <EventModal
+        entries={entries}
+        editEntryId={editEntryId}
         show={showEventModal}
         mode={modalMode}
         formRef={formRef}

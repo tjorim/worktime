@@ -1,3 +1,5 @@
+import { getOverlappingEntries } from "@/lib/timeOff/overlap";
+import { TriangleAlertIcon } from "lucide-react";
 import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
@@ -317,6 +319,12 @@ export function TimeOffTableView({
                           <TableCell>{renderEntryDisplayDate(entry)}</TableCell>
                           <TableCell>
                             {entry.note || <span className="text-muted-foreground">—</span>}
+                            {getOverlappingEntries(entry, entries).length > 0 && (
+                              <span className="flex items-center gap-1 text-sm text-warning">
+                                <Icon icon={TriangleAlertIcon} />
+                                {m.timeoff_overlap()}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {flags.length ? (

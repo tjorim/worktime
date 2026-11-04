@@ -1,3 +1,4 @@
+import { getOverlappingEntries } from "@/lib/timeOff/overlap";
 import {
   BuildingIcon,
   ChevronLeftIcon,
@@ -215,7 +216,10 @@ export function MonthCalendar({
       const key = date.format(DAY_FORMAT);
       if (!dayKeys.has(key)) return;
       const list = map.get(key) ?? [];
-      list.push(entry);
+      list.push({
+        ...entry,
+        overlapping: getOverlappingEntries(entry.entry, sourceEntries).length > 0,
+      });
       map.set(key, list);
     };
 

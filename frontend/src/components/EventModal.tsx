@@ -1,3 +1,10 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TriangleAlertIcon } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { getOverlappingEntries } from "@/lib/timeOff/overlap";
+import { getEntryFlagsForDisplay, getEntryTimeFlagFromDisplayFlags } from "@/lib/timeOff/codecs";
+import { isValidDate } from "@/lib/hday/validation";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +168,8 @@ function FlagSection<Flag extends EventFlag | "none">({
 }
 
 type EventModalProps = {
+  entries?: readonly TimeOffEntry[];
+  editEntryId?: string | null;
   show: boolean;
   mode?: "add" | "edit" | "view";
   formRef: RefObject<HTMLDivElement | null>;
@@ -242,6 +251,8 @@ type EventModalProps = {
  * @returns The rendered EventModal component (a dialog containing the editor)
  */
 export function EventModal({
+  entries = [],
+  editEntryId,
   show,
   mode = "add",
   formRef,
@@ -272,6 +283,21 @@ export function EventModal({
   onSwitchToEdit,
   onCancelEditMode,
 }: EventModalProps) {
+  const metadata = {
+    id: editEntryId ?? "",
+    entryType: "vacation" as const,
+    entryFlag: getEntryTimeFlagFromDisplayFlags([...eventFlags]),
+    note: eventTitle,
+  };
+  const start = eventStart.replaceAll("/", "-");
+  const end = (eventEnd || eventStart).replaceAll("/", "-");
+  const candidate: TimeOffEntry | null =
+    eventType === "weekly"
+      ? { ...metadata, entryKind: "weekly", weekday: eventWeekday }
+      : isValidDate(eventStart) && (!eventEnd || isValidDate(eventEnd)) && start <= end
+        ? { ...metadata, entryKind: "range", start, end }
+        : null;
+  const overlaps = candidate ? getOverlappingEntries(candidate, entries) : [];
   return (
     <Dialog
       open={show}
@@ -282,7 +308,7 @@ export function EventModal({
         if (open) onEntered();
       }}
     >
-      <DialogContent size="lg">
+      <DialogContent size="lg" scrollable>
         <DialogHeader>
           <DialogTitle>
             {mode === "view"
@@ -295,6 +321,29 @@ export function EventModal({
         <div className="min-h-0 overflow-y-auto p-4" ref={formRef} tabIndex={-1}>
           <form onSubmit={(event) => event.preventDefault()}>
             <Grid>
+              {overlaps.length > 0 && (
+                <GridItem span={12}>
+                  <Alert variant="warning" role="status">
+                    <Icon icon={TriangleAlertIcon} />
+                    <AlertDescription>
+                      {overlaps.map((entry) => (
+                        <div key={entry.id}>
+                          {m.timeoff_overlap_with({
+                            name: entry.note || getEventTypeLabel(getEntryFlagsForDisplay(entry)),
+                            dates:
+                              entry.entryKind === "weekly"
+                                ? m.timeoff_every_weekday({ day: getWeekdayName(entry.weekday) })
+                                : entry.entryKind === "date"
+                                  ? entry.date
+                                  : `${entry.start} – ${entry.end}`,
+                          })}
+                        </div>
+                      ))}
+                      {mode !== "view" && <div>{m.timeoff_overlap_allowed()}</div>}
+                    </AlertDescription>
+                  </Alert>
+                </GridItem>
+              )}
               {mode !== "view" && (
                 <GridItem span={12}>
                   <Card className="bg-muted py-2 ring-0">

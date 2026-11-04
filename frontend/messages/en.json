@@ -1537,5 +1537,8 @@
   "tt_json_in_use": "These labels are still in use and cannot be removed: {names}.",
   "tt_json_invalid_entries": "Invalid entries: {count}. Check required fields, unique IDs, names, colours, time ranges and existing labels. Nothing was applied.",
   "tt_json_leave": "Discard your unapplied JSON draft and leave this page?",
-  "tt_json_current": "Current saved JSON"
+  "tt_json_current": "Current saved JSON",
+  "timeoff_overlap": "Overlapping entry",
+  "timeoff_overlap_with": "Overlaps with {name} ({dates})",
+  "timeoff_overlap_allowed": "You can still save this entry."
 }

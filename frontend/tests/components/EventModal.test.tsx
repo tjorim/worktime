@@ -51,6 +51,37 @@ function renderModal(props: Partial<React.ComponentProps<typeof EventModal>> = {
 }
 
 describe("EventModal", () => {
+  it("warns about overlap while allowing submission", async () => {
+    const entry = {
+      id: "existing",
+      entryKind: "date",
+      date: "2026-03-02",
+      entryType: "vacation",
+      entryFlag: "full_day",
+      note: "Autumn break",
+    } as const;
+    const handlers = renderModal({ entries: [entry] });
+    expect(screen.getByRole("status")).toHaveTextContent("Overlaps with Autumn break (2026-03-02)");
+    expect(screen.getByRole("status")).toHaveTextContent("You can still save this entry.");
+    await userEvent.click(screen.getByRole("button", { name: /^Add$/ }));
+    expect(handlers.onSubmit).toHaveBeenCalledOnce();
+  });
+  it("does not warn about the entry itself", () => {
+    renderModal({
+      editEntryId: "existing",
+      entries: [
+        {
+          id: "existing",
+          entryKind: "date",
+          date: "2026-03-02",
+          entryType: "vacation",
+          entryFlag: "full_day",
+          note: null,
+        },
+      ],
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
   it("exposes each flag section as a labelled radio group with the current flag selected", () => {
     renderModal({ eventFlags: ["business", "onsite"] });
 
