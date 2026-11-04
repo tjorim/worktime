@@ -43,9 +43,12 @@ async def create_or_update_time_off_endpoint(
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    entry, created = await create_or_update_time_off_entry(
-        session, principal.user_id, payload, actor=audit_actor_for(principal)
-    )
+    try:
+        entry, created = await create_or_update_time_off_entry(
+            session, principal.user_id, payload, actor=audit_actor_for(principal)
+        )
+    except ValidationError as error:
+        raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
     response = TimeOffEntryRead.model_validate(entry, from_attributes=True)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,

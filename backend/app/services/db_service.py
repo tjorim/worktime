@@ -58,6 +58,20 @@ class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
 
 
+TIME_OFF_NOTE_MAX_LENGTH = 1000
+
+
+def normalize_time_off_note(note: str | None) -> str | None:
+    """Keep notes on one .hday line and bound storage without truncating content."""
+    if note is None:
+        return None
+    if len(note) > TIME_OFF_NOTE_MAX_LENGTH:
+        raise ValidationError("Time-off note must be at most 1000 characters")
+    return "".join(
+        " " if ord(char) < 32 or 127 <= ord(char) <= 159 or char in "\u2028\u2029" else char for char in note
+    ).strip()
+
+
 class TaskValidationError(ValidationError):
     """A task rejection with a stable client-facing code."""
 
@@ -1151,6 +1165,7 @@ async def create_or_update_time_off_entry(
     row was inserted (i.e. no prior row — active or soft-deleted — existed for
     this entry_id).
     """
+    note = normalize_time_off_note(payload.note)
     entry_id = payload.entry_id or str(uuid4())
     result = await session.execute(
         select(TimeOffEntry).where(
@@ -1166,7 +1181,7 @@ async def create_or_update_time_off_entry(
             user_id=user_id,
             entry_type=payload.entry_type,
             entry_flag=payload.entry_flag,
-            note=payload.note,
+            note=note,
         )
         apply_time_off_shape(
             entry,
@@ -1189,7 +1204,7 @@ async def create_or_update_time_off_entry(
         )
         entry.entry_type = payload.entry_type
         entry.entry_flag = payload.entry_flag
-        entry.note = payload.note
+        entry.note = note
         entry.deleted_at = None
         now = datetime.now(UTC)
         entry.updated_at = now
@@ -1223,7 +1238,7 @@ async def create_or_update_time_off_entry(
         )
         entry.entry_type = payload.entry_type
         entry.entry_flag = payload.entry_flag
-        entry.note = payload.note
+        entry.note = note
         entry.deleted_at = None
         now = datetime.now(UTC)
         entry.updated_at = now
@@ -1253,6 +1268,8 @@ async def update_time_off_entry(
 ) -> TimeOffEntry:
     entry = await get_time_off_entry(session, user_id, entry_id)
     data = payload.model_dump(exclude_unset=True)
+    if "note" in data:
+        data["note"] = normalize_time_off_note(data["note"])
     non_nullable_fields = _get_non_nullable_model_fields(TimeOffEntry)
     for field, value in data.items():
         if field in non_nullable_fields and value is None:

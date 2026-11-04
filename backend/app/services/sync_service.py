@@ -776,6 +776,16 @@ async def _push_time_off_entry(session: AsyncSession, user_id: int, item: TimeOf
         session.add(entry)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
+    # Validate before mutating a row; invalid records must not abort the batch.
+    from app.services.db_service import ValidationError, normalize_time_off_note
+
+    try:
+        note = normalize_time_off_note(item.note) if "note" in provided_fields else None
+    except ValidationError as error:
+        return SyncRecordResult(
+            id=item.id, status="conflict", code=ErrorCode.VALIDATION_FAILED, conflict_reason=str(error)
+        )
+
     if entry is None:
         if item.action == "update" and item.entry_kind is None:
             return SyncRecordResult(
@@ -794,7 +804,7 @@ async def _push_time_off_entry(session: AsyncSession, user_id: int, item: TimeOf
             user_id=user_id,
             entry_type=item.entry_type or "vacation",
             entry_flag=item.entry_flag or "full_day",
-            note=item.note,
+            note=note,
         )
         apply_time_off_shape(
             entry,
@@ -829,7 +839,7 @@ async def _push_time_off_entry(session: AsyncSession, user_id: int, item: TimeOf
     if "entry_flag" in provided_fields and item.entry_flag is not None:
         entry.entry_flag = item.entry_flag
     if "note" in provided_fields:
-        entry.note = item.note
+        entry.note = note
     if entry.deleted_at is not None:
         entry.deleted_at = None
     entry.client_updated_at = _clamp_client_timestamp(item.client_updated_at)

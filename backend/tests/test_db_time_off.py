@@ -355,3 +355,48 @@ class TestGetPatchDeleteTimeOff:
         assert recreate.status_code == 200
         assert recreate.json()["entry_id"] == entry_id
         assert recreate.json()["entry_type"] == "ill"
+
+
+def test_note_validation_and_sync_isolation(db_client, auth_headers, create_user_factory):
+    from datetime import UTC, datetime
+
+    user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "note-validation")
+    headers = auth_headers(user_id)
+    awkward = "  café # 🏖\r\n2026/12/31 injected\ttext\x00\x85\u2028\u2029  "
+    expected = "café # 🏖  2026/12/31 injected text"
+    entry = _create_entry(db_client, headers, {"date": "2026-06-01", "note": awkward})
+    assert entry["note"] == expected
+    url = f"/api/time-off/{entry['entry_id']}"
+    for method, endpoint, payload in [
+        ("post", "/api/time-off", {"date": "2026-06-02"}),
+        ("post", "/api/time-off", {"entry_id": entry["entry_id"], "date": "2026-06-01"}),
+        ("patch", url, {}),
+    ]:
+        response = getattr(db_client, method)(endpoint, json={**payload, "note": "x" * 1001}, headers=headers)
+        assert response.status_code == 400
+        assert response.json()["code"] == "validation_failed"
+    assert db_client.get(url, headers=headers).json()["note"] == expected
+    assert db_client.patch(url, json={"note": "x" * 1000}, headers=headers).json()["note"] == "x" * 1000
+    assert db_client.patch(url, json={"note": awkward}, headers=headers).json()["note"] == expected
+    timestamp = datetime.now(UTC).isoformat()
+    items = [
+        {"id": "bad-note", "note": "x" * 1001},
+        {"id": "good-note", "note": awkward},
+        {"id": entry["entry_id"], "note": "x" * 1001, "action": "update"},
+    ]
+    response = db_client.post(
+        "/api/sync/push",
+        headers=headers,
+        json={
+            "time_off_entries": [
+                {"action": "create", "entry_kind": "date", "date": "2026-06-03", "client_updated_at": timestamp, **item}
+                for item in items
+            ]
+        },
+    )
+    assert response.status_code == 200, response.text
+    results = response.json()["results"]["time_off_entries"]
+    assert [item["status"] for item in results] == ["conflict", "ok", "conflict"]
+    assert results[0]["code"] == results[2]["code"] == "validation_failed"
+    assert db_client.get("/api/time-off/good-note", headers=headers).json()["note"] == expected
+    assert db_client.get(url, headers=headers).json()["note"] == expected

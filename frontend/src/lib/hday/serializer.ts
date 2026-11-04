@@ -41,9 +41,24 @@ function serializeFlags(flags?: ReadonlyArray<EventFlag>): string {
     .join("");
 }
 
+// .hday has no multiline comment syntax. Keep legacy/local notes on one line.
+function serializeTitle(title: string | undefined): string {
+  const normalized = title
+    ? Array.from(title, (character) => {
+        const code = character.codePointAt(0)!;
+        return code < 32 || (code >= 127 && code <= 159) || code === 0x2028 || code === 0x2029
+          ? " "
+          : character;
+      })
+        .join("")
+        .trim()
+    : "";
+  return normalized ? ` # ${normalized}` : "";
+}
+
 function serializeRangeEvent(event: HdayRangeEvent): string {
   const prefix = serializeFlags(event.flags);
-  const title = event.title ? ` # ${event.title}` : "";
+  const title = serializeTitle(event.title);
   if (!event.end || event.end === event.start) {
     return `${prefix}${event.start}${title}`;
   }
@@ -52,7 +67,7 @@ function serializeRangeEvent(event: HdayRangeEvent): string {
 
 function serializeWeeklyEvent(event: HdayWeeklyEvent): string {
   const prefix = serializeFlags(event.flags);
-  const title = event.title ? ` # ${event.title}` : "";
+  const title = serializeTitle(event.title);
   return `d${event.weekday}${prefix}${title}`;
 }
 
