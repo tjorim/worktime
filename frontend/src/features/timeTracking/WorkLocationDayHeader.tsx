@@ -1,14 +1,21 @@
 import { BuildingIcon, HouseIcon, MapPinIcon, XIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import { Hint } from "@/components/ui/tooltip";
-import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
 import { IconButton } from "@/components/shared/IconButton";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
+
+// Loaded on first open: it pulls in the country combobox, which would otherwise
+// land in the initial bundle.
+const OtherLocationModal = lazy(() =>
+  import("@/components/calendar/OtherLocationModal").then((module) => ({
+    default: module.OtherLocationModal,
+  })),
+);
 
 interface WorkLocationDayHeaderProps {
   date: string;
@@ -22,6 +29,8 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
     useWorkLocationStorage(year);
   const toast = useToast();
   const [showOtherModal, setShowOtherModal] = useState(false);
+  // Stay mounted after the first open so the dialog can animate closed.
+  const [otherModalOpened, setOtherModalOpened] = useState(false);
 
   const dayjsDate = dayjs(date);
   const dateKey = dayjsDate.format("YYYY-MM-DD");
@@ -50,7 +59,10 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           onChange={(location) => {
             if (location === "home") handleHome();
             else if (location === "office") handleOffice();
-            else setShowOtherModal(true);
+            else {
+              setOtherModalOpened(true);
+              setShowOtherModal(true);
+            }
           }}
           options={[
             ...(settings.homeCountry
@@ -82,21 +94,25 @@ export function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           <a href="/settings?section=features">{m.work_location_setup_prompt()}</a>
         </p>
       )}
-      <OtherLocationModal
-        showSetupHint={!settings.homeCountry || !settings.officeCountry}
-        show={showOtherModal}
-        date={dayjsDate}
-        existing={stored}
-        onHide={() => setShowOtherModal(false)}
-        onConfirm={(countryCode, label) => {
-          const ok = setLocationForDate(dayjsDate, "other", { countryCode, label });
-          if (ok) {
-            setShowOtherModal(false);
-          } else {
-            toast.showError(m.tt_could_not_save_location());
-          }
-        }}
-      />
+      {otherModalOpened && (
+        <Suspense fallback={null}>
+          <OtherLocationModal
+            showSetupHint={!settings.homeCountry || !settings.officeCountry}
+            show={showOtherModal}
+            date={dayjsDate}
+            existing={stored}
+            onHide={() => setShowOtherModal(false)}
+            onConfirm={(countryCode, label) => {
+              const ok = setLocationForDate(dayjsDate, "other", { countryCode, label });
+              if (ok) {
+                setShowOtherModal(false);
+              } else {
+                toast.showError(m.tt_could_not_save_location());
+              }
+            }}
+          />
+        </Suspense>
+      )}
     </>
   );
 }
