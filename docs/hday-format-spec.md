@@ -240,3 +240,21 @@ The `.hday` format maintains compatibility with legacy ASML holiday overview sys
 - Weekly recurring patterns use ISO weekday: `dN[flags]` where N is 1-7 (Mon-Sun)
 - Optional `# title` comments are supported
 - Existing overview pages continue working since files and structure remain unchanged
+
+
+### Time-off note safety
+
+Time-off notes are limited to 1,000 Unicode characters by server writes (REST,
+MCP and sync). Longer input is rejected before normalisation, never truncated;
+REST returns `400` with `validation_failed`, and sync returns a per-record
+`conflict` with that code while continuing the batch. Existing rows remain
+readable. Notes are trimmed, and each C0/C1 control character (including CR, LF
+and tabs) and Unicode line/paragraph separator is replaced with a space.
+The frontend `.hday` serializer applies the same normalisation to range and
+weekly titles, including older/local notes, so each exported entry occupies one
+line. `#` and Unicode text are preserved. Importing an export preserves the
+normalised title; the format has no multiline comment escape syntax.
+
+So that a rejected write can never be stranded in the web app, the event form caps
+the comment at 1,000 characters and the `.hday` importer caps imported notes at
+the same length (by Unicode character); only the server rejects rather than truncates.

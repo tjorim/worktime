@@ -10,6 +10,7 @@ import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { MAX_TIME_OFF_NOTE_LENGTH } from "@/constants/timeOff";
 import { Field, FieldError, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Grid, GridItem } from "@/components/ui/grid";
 import { Input } from "@/components/ui/input";
@@ -358,6 +359,7 @@ export function EventModal({
                     id="eventTitle"
                     value={eventTitle}
                     onChange={(event) => onEventTitleChange(event.target.value)}
+                    maxLength={MAX_TIME_OFF_NOTE_LENGTH}
                     placeholder={m.event_modal_comment_placeholder()}
                     disabled={mode === "view"}
                   />

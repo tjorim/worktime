@@ -1293,3 +1293,39 @@ describe("getEventClass", () => {
     expect(getEventClass(["half_am", "course", "in"])).toBe("event-course-half");
   });
 });
+
+describe("single-line note export", () => {
+  it.each(["range", "weekly"] as const)(
+    "round-trips awkward %s notes without injecting entries",
+    (type) => {
+      const title = "  café # 🏖\r\n2026/12/31 injected\ttext\u0000\u0085\u2028\u2029  ";
+      const event: HdayEvent =
+        type === "range"
+          ? { type, start: "2026/06/01", end: "2026/06/02", title, raw: "" }
+          : { type, weekday: 1, title, raw: "" };
+      const exported = toLine(event);
+      expect(exported.split(/\r?\n/)).toHaveLength(1);
+      const imported = parseHday(exported);
+      expect(imported).toHaveLength(1);
+      expect(imported[0]?.title).toBe("café # 🏖  2026/12/31 injected text");
+      expect(toLine(imported[0]!)).toBe(exported);
+    },
+  );
+});
+
+describe("parseHday note limit", () => {
+  it("caps imported notes at the server limit by Unicode characters", () => {
+    const note = `${"a".repeat(999)}😀${"b".repeat(50)}`;
+    const events = parseHday(`2026/01/05 # ${note}\nd1 # ${note}`);
+    expect(events).toHaveLength(2);
+    for (const event of events) {
+      expect(Array.from(event.title ?? "")).toHaveLength(1000);
+      expect(event.title?.endsWith("😀")).toBe(true);
+    }
+  });
+
+  it("leaves notes at or under the limit untouched", () => {
+    const note = "x".repeat(1000);
+    expect(parseHday(`2026/01/05 # ${note}`)[0]?.title).toBe(note);
+  });
+});

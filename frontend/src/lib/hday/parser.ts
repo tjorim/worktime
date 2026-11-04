@@ -64,6 +64,8 @@
 import { normalizeEventFlags } from "./flags";
 import { isValidHdayDate } from "./dateValidation";
 import type { EventFlag, HdayEvent } from "./types";
+// Relative path: hday-helper (bun) imports this file directly and has no "@" alias.
+import { clampTimeOffNote } from "../../constants/timeOff";
 
 /**
  * Convert a string of single-character flags into the corresponding event flags.
@@ -204,7 +206,7 @@ export function parseHday(
         start: normalizedStart,
         end: normalizedEnd,
         flags,
-        title: title.trim(),
+        title: clampTimeOffNote(title.trim()),
         raw: originalLine,
       });
       continue;
@@ -229,7 +231,7 @@ export function parseHday(
         type: "weekly",
         weekday: weekdayNum,
         flags,
-        title: comment.trim(),
+        title: clampTimeOffNote(comment.trim()),
         raw: originalLine,
       });
       continue;
