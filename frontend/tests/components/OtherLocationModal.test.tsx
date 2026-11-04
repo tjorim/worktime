@@ -45,6 +45,36 @@ describe("OtherLocationModal", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/settings?section=features");
     expect(onConfirm).not.toHaveBeenCalled();
   });
+  it("renders the modal title with the formatted date", () => {
+    setup();
+    expect(screen.getByText(/Other Location — Wednesday, Feb 18, 2026/)).toBeInTheDocument();
+  });
+  it("pre-fills the country and label from an existing other-location entry", async () => {
+    const { onConfirm } = setup("DE");
+    expect(screen.getByLabelText(/^Label/)).toHaveValue("Legacy label");
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toBeEnabled();
+    await userEvent.click(save);
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith("DE", "Legacy label"));
+  });
+  it("does not pre-fill the country from a home or office entry", () => {
+    render(
+      <OtherLocationModal
+        show
+        date={dayjs("2026-02-18")}
+        onHide={vi.fn()}
+        onConfirm={vi.fn()}
+        existing={{ location: "home", countryCode: toCountryCode("NL")! }}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Country" })).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+  it("calls onHide when Cancel is clicked", async () => {
+    const { props } = setup();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(props.onHide).toHaveBeenCalled();
+  });
   it("preserves a draft through background updates and resets on a new date", () => {
     const { props, rerender } = setup("DE");
     fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: "Draft" } });
