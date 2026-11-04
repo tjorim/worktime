@@ -24,6 +24,7 @@ from app.schemas import (
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
+    TaskValidationError,
     ValidationError,
     create_gantt_task,
     delete_gantt_task,
@@ -42,6 +43,8 @@ def _handle_error(error: Exception) -> None:
         raise api_error(status.HTTP_404_NOT_FOUND, ErrorCode.NOT_FOUND, str(error)) from error
     if isinstance(error, ConflictError):
         raise api_error(status.HTTP_409_CONFLICT, ErrorCode.CONFLICT, str(error)) from error
+    if isinstance(error, TaskValidationError):
+        raise api_error(status.HTTP_400_BAD_REQUEST, error.code, str(error)) from error
     if isinstance(error, ValidationError):
         raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
     raise error

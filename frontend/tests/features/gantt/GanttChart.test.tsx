@@ -10,6 +10,8 @@ class MockFrappeGantt {
     mockInstances.length = 0;
   }
 
+  tasks: unknown[];
+
   options: {
     view_mode: "Day" | "Week" | "Month" | "Year";
     view_mode_select: boolean;
@@ -37,6 +39,7 @@ class MockFrappeGantt {
       on_progress_change?: (task: unknown, progress: number) => void;
     },
   ) {
+    this.tasks = _tasks;
     this.options = {
       view_mode: "Day",
       view_mode_select: false,
@@ -58,11 +61,39 @@ class MockFrappeGantt {
 vi.mock("frappe-gantt", () => ({ default: MockFrappeGantt }));
 
 describe("GanttChart", () => {
+  it("omits invalid legacy arrows from the vendor chart", async () => {
+    const base = { name: "Task", start: "2026-11-01", end: "2026-11-02", progress: 0 };
+    render(
+      <GanttChart
+        tasks={[
+          { ...base, id: "a", dependencies: "missing" },
+          { ...base, id: "b", dependencies: "b" },
+          { ...base, id: "c", dependencies: "d" },
+          { ...base, id: "d", dependencies: "c" },
+          { ...base, id: "e", dependencies: "a" },
+        ]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(mockInstances).toHaveLength(1));
+    expect(mockInstances[0]!.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "a", dependencies: "" }),
+        expect.objectContaining({ id: "b", dependencies: "" }),
+        expect.objectContaining({ id: "c", dependencies: "" }),
+        expect.objectContaining({ id: "d", dependencies: "" }),
+        expect.objectContaining({ id: "e", dependencies: "a" }),
+      ]),
+    );
+  });
+
   afterEach(() => {
     MockFrappeGantt.reset();
   });
 
-  it("scopes the vendor styling to a token-based scroll container", () => {
+  it("scopes the vendor styling to a token-based scroll container", async () => {
     render(
       <GanttChart
         tasks={[
@@ -78,6 +109,7 @@ describe("GanttChart", () => {
     expect(container).toHaveAttribute("data-slot", "gantt-scroll");
     expect(container).toHaveClass("overflow-x-auto", "overflow-y-hidden", "bg-background");
     expect(container).not.toHaveClass("gantt-scroll-container", "border", "bg-body");
+    await waitFor(() => expect(mockInstances).toHaveLength(1));
   });
 
   it("passes time-off dates to frappe-gantt as a separate holiday color", async () => {

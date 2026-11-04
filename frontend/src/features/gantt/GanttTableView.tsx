@@ -1,3 +1,5 @@
+import { ganttDependencyError } from "@/utils/ganttDependencies";
+import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { CSSProperties } from "react";
@@ -395,7 +397,16 @@ export function GanttTableView({ tasks, onTaskClick, onDeleteTask }: GanttTableV
                   <TableCell className="whitespace-nowrap">
                     {loggedMinutes > 0 ? formatLoggedDuration(loggedMinutes) : "—"}
                   </TableCell>
-                  <TableCell>{renderTaskLinks(dependsOn)}</TableCell>
+                  <TableCell>
+                    {renderTaskLinks(dependsOn)}
+                    {ganttDependencyError(tasks, task.id, task.dependencies) && (
+                      <span className="block text-destructive">
+                        {ganttDependencyErrorMessages[
+                          ganttDependencyError(tasks, task.id, task.dependencies)!
+                        ]?.()}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{renderTaskLinks(requiredBy)}</TableCell>
                   <TableCell title={task.notes}>{task.notes || "—"}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">

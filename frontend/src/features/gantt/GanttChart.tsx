@@ -1,3 +1,4 @@
+import { ganttDependencyError } from "@/utils/ganttDependencies";
 import { NetworkIcon } from "lucide-react";
 import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
@@ -74,6 +75,9 @@ export function GanttChart({
     () =>
       tasks.map((task) => ({
         ...task,
+        dependencies: ganttDependencyError(tasks, task.id, task.dependencies)
+          ? ""
+          : task.dependencies,
         color: task.label ? labelColorById[task.label] : undefined,
       })),
     [tasks, labelColorById],

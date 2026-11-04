@@ -6,6 +6,36 @@ import { GanttTaskModal } from "@/features/gantt/GanttTaskModal";
 import { labelsCollection, tasksCollection } from "@/db/collections";
 
 describe("GanttTaskModal", () => {
+  it.each([
+    ["missing", "Choose dependencies that still exist."],
+    ["a", "A task cannot depend on itself."],
+    ["b", "These dependencies create a cycle."],
+  ])("blocks invalid dependency %s with a translated reason", async (dependencies, message) => {
+    const onSave = vi.fn();
+    render(
+      <GanttTaskModal
+        show
+        onHide={vi.fn()}
+        onSave={onSave}
+        task={{
+          id: "a",
+          name: "Design",
+          start: "2026-11-01",
+          end: "2026-11-02",
+          progress: 0,
+          dependencies,
+        }}
+        existingTasks={[
+          { id: "a", name: "Design", dependencies },
+          { id: "b", name: "Build", dependencies: "a" },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it("shows validation feedback for required fields", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
@@ -243,7 +273,7 @@ describe("GanttTaskModal", () => {
     expect(screen.getByRole("button", { name: "Delete Task" })).toBeInTheDocument();
   });
 
-  it("preserves orphaned dependency ID on save", async () => {
+  it("requires repairing an orphaned dependency before saving", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
 
@@ -266,11 +296,11 @@ describe("GanttTaskModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dependencies: "orphaned-id",
-      }),
-    );
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Choose dependencies that still exist.");
+    await user.click(screen.getByRole("button", { name: /Remove Unknown/ }));
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ dependencies: "" }));
   });
 
   it("handles non-string dependency payloads without crashing", async () => {

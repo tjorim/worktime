@@ -35,7 +35,14 @@ export const pebblePairErrorMessages: ErrorCodeMessages = {
   oidc_session_required: () => m.error_code_oidc_session_required(),
 };
 
+export const ganttDependencyErrorMessages: ErrorCodeMessages = {
+  gantt_dependency_unknown: () => m.error_code_gantt_dependency_unknown(),
+  gantt_dependency_self: () => m.error_code_gantt_dependency_self(),
+  gantt_dependency_cycle: () => m.error_code_gantt_dependency_cycle(),
+};
+
 export const taskValidationErrorMessages: ErrorCodeMessages = {
+  ...ganttDependencyErrorMessages,
   task_overlap: () => m.error_code_task_overlap(),
   label_required: () => m.tt_error_configure_label(),
   task_text_invalid: () => m.error_code_task_text_invalid(),
