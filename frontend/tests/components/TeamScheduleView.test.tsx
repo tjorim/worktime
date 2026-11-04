@@ -12,6 +12,29 @@ import * as m from "@/paraglide/messages.js";
 import { TestProviders } from "@tests/utils/testProviders";
 import { dayjs } from "@/utils/dateTimeUtils";
 
+// Stub <Link> so tests don't need a RouterProvider context.
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    Link: ({
+      to,
+      search,
+      className,
+      children,
+    }: {
+      to: string;
+      search?: { section?: string };
+      className?: string;
+      children: React.ReactNode;
+    }) => (
+      <a href={`${to}?section=${search?.section ?? ""}`} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
+
 const HELPER_URL = "http://localhost:8080";
 const OTHER_HELPER_URL = "http://localhost:9090";
 
@@ -101,24 +124,58 @@ describe("TeamScheduleView", () => {
     expect(screen.queryByText(m.team_helper_required_heading())).not.toBeInTheDocument();
   });
 
-  it("shows a translated error, not the helper's English detail, when the fetch fails", async () => {
-    seedHelperUrl(HELPER_URL);
-    server.use(
-      http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
-        HttpResponse.json({ detail: "share unreachable" }, { status: 503 }),
-      ),
-    );
+  describe("load failures", () => {
+    function renderFailing(response: () => Response | Promise<Response>) {
+      seedHelperUrl(HELPER_URL);
+      server.use(http.get(`${HELPER_URL}/team/:teamId/hday`, response));
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+    }
 
-    render(
-      <TestProviders>
-        <TeamScheduleView />
-      </TestProviders>,
-    );
+    it("tells a wrong team ID apart: 404 names the ID and says to check it", async () => {
+      renderFailing(() => HttpResponse.json({ detail: "Team not found" }, { status: 404 }));
 
-    expect(
-      await screen.findByText(m.team_fetch_failed({ error: m.team_unknown_error() })),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/share unreachable/)).not.toBeInTheDocument();
+      expect(await screen.findByText(m.team_error_not_found({ id: "eng" }))).toBeInTheDocument();
+      expect(screen.queryByText(/Team not found/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: m.team_error_open_settings() })).toBeNull();
+    });
+
+    it("asks for a valid ID when the helper rejects the format", async () => {
+      renderFailing(() => HttpResponse.json({ detail: "Invalid team_id format" }, { status: 400 }));
+
+      expect(await screen.findByText(m.team_error_invalid_id({ id: "eng" }))).toBeInTheDocument();
+      expect(screen.queryByText(/Invalid team_id format/)).not.toBeInTheDocument();
+    });
+
+    it("says the helper failed on a 5xx, without the helper's English detail", async () => {
+      renderFailing(() => HttpResponse.json({ detail: "share unreachable" }, { status: 503 }));
+
+      expect(await screen.findByText(m.team_error_helper())).toBeInTheDocument();
+      expect(screen.queryByText(/share unreachable/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: m.team_error_open_settings() })).toBeNull();
+    });
+
+    it("says the helper is unreachable on a network failure and links to its settings", async () => {
+      renderFailing(() => HttpResponse.error());
+
+      expect(await screen.findByText(m.team_error_unreachable())).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: m.team_error_open_settings() })).toHaveAttribute(
+        "href",
+        "/settings?section=scheduleTeam",
+      );
+    });
+
+    it("falls back to the generic message for other statuses", async () => {
+      renderFailing(() => HttpResponse.json({ detail: "teapot" }, { status: 418 }));
+
+      expect(
+        await screen.findByText(m.team_fetch_failed({ error: m.team_unknown_error() })),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/teapot/)).not.toBeInTheDocument();
+    });
   });
 
   it("shows a translated reason for a recognised status when the fetch fails", async () => {
@@ -191,6 +248,158 @@ describe("TeamScheduleView", () => {
     await user.click(screen.getByRole("button", { name: "switch helper" }));
 
     expect(await screen.findByText("Team from helper B")).toBeInTheDocument();
+  });
+
+  describe("empty team", () => {
+    function renderTeam(payload: Record<string, unknown>) {
+      seedHelperUrl(HELPER_URL);
+      server.use(http.get(`${HELPER_URL}/team/:teamId/hday`, () => HttpResponse.json(payload)));
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+    }
+
+    it("explains a team with no members instead of showing an empty grid", async () => {
+      renderTeam({ team_id: "eng", name: "Engineering", sections: [], members: [] });
+
+      expect(await screen.findByText(m.team_no_members_heading())).toBeInTheDocument();
+      expect(screen.getByText(m.team_no_members_body())).toBeInTheDocument();
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+      expect(document.querySelector("[data-team-grid]")).toBeNull();
+      expect(screen.queryByText(m.team_legend_heading())).not.toBeInTheDocument();
+    });
+
+    it("still shows the grid for a team with members", async () => {
+      renderTeam(teamHdayPayload("eng"));
+
+      await screen.findByText("Engineering");
+      expect(document.querySelector("[data-team-grid]")).not.toBeNull();
+      expect(screen.queryByText(m.team_no_members_heading())).not.toBeInTheDocument();
+    });
+  });
+
+  describe("recent team IDs", () => {
+    const storedPreferences = () =>
+      JSON.parse(window.localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}");
+
+    it("remembers an ID once it loads, most recent first and without duplicates", async () => {
+      window.localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: HELPER_URL }, recentHdayTeamIds: ["ops", "eng"] }),
+      );
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
+          HttpResponse.json(teamHdayPayload(params.teamId as string)),
+        ),
+      );
+      const user = userEvent.setup();
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+
+      await user.type(screen.getByLabelText(m.team_id_label()), "eng");
+      await user.click(screen.getByRole("button", { name: m.team_load_btn() }));
+      await screen.findByText("Engineering");
+
+      await waitFor(() => expect(storedPreferences().recentHdayTeamIds).toEqual(["eng", "ops"]));
+      expect(storedPreferences().lastHdayTeamId).toBe("eng");
+    });
+
+    it("requests only the submitted ID while the user types, never a half-typed one", async () => {
+      window.localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ hdayHelper: { url: HELPER_URL } }),
+      );
+      const requested: string[] = [];
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) => {
+          requested.push(params.teamId as string);
+          return HttpResponse.json(teamHdayPayload(params.teamId as string));
+        }),
+      );
+      const user = userEvent.setup();
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+
+      await user.type(screen.getByLabelText(m.team_id_label()), "eng");
+      expect(requested).toEqual([]);
+      await user.click(screen.getByRole("button", { name: m.team_load_btn() }));
+      await screen.findByText("Engineering");
+
+      expect(requested).toEqual(["eng"]);
+    });
+
+    it("does not remember an ID that failed to load", async () => {
+      seedHelperUrl(HELPER_URL);
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
+          HttpResponse.json({ detail: "Team not found" }, { status: 404 }),
+        ),
+      );
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+
+      await screen.findByText(m.team_error_not_found({ id: "eng" }));
+      expect(storedPreferences().recentHdayTeamIds).toBeUndefined();
+    });
+
+    it("offers other recent IDs as one-click suggestions that load that team", async () => {
+      window.localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({
+          hdayHelper: { url: HELPER_URL },
+          lastHdayTeamId: "eng",
+          recentHdayTeamIds: ["eng", "ops"],
+        }),
+      );
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
+          HttpResponse.json(
+            teamHdayPayload(params.teamId as string, `Team ${params.teamId as string}`),
+          ),
+        ),
+      );
+      const user = userEvent.setup();
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+
+      await screen.findByText("Team eng");
+      // The loaded team is not suggested to itself.
+      expect(screen.queryByRole("button", { name: "eng" })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "ops" }));
+
+      expect(await screen.findByText("Team ops")).toBeInTheDocument();
+    });
+
+    it("shows no suggestions before anything has loaded", () => {
+      seedHelperUrl(HELPER_URL);
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, async () => {
+          await delay("infinite");
+          return HttpResponse.json({});
+        }),
+      );
+      render(
+        <TestProviders>
+          <TeamScheduleView />
+        </TestProviders>,
+      );
+
+      expect(screen.queryByText(m.team_recent_ids_label())).not.toBeInTheDocument();
+    });
   });
 
   describe("grid rendering", () => {

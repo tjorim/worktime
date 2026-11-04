@@ -9,6 +9,8 @@ export interface DevicePreferences {
   flexStartOverride?: { date: string; time: string } | null;
   hdayHelper?: { url: string | null };
   lastHdayTeamId?: string;
+  /** Team IDs that loaded from the helper, most recent first, offered as suggestions. */
+  recentHdayTeamIds?: string[];
   /**
    * The etag of the .hday file this device last saw from the helper (via a pull
    * or push), keyed to the username it belongs to so a username change doesn't
