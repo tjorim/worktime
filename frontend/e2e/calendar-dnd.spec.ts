@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { WorktimeTestHooks } from "./testHooks";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 test("Unified Calendar persists a task dragged to another day and time", async ({ page }) => {
@@ -22,12 +23,8 @@ test("Unified Calendar persists a task dragged to another day and time", async (
   const calendar = page.locator('[data-slot="unified-calendar"]');
   await expect(calendar).toBeVisible({ timeout: 15_000 });
   await page.evaluate(async () => {
-    const modulePath =
-      performance
-        .getEntriesByType("resource")
-        .map((entry) => entry.name)
-        .find((name) => /\/src\/db\/collections\.ts(\?|$)/.test(name)) ?? "/src/db/collections.ts";
-    const { tasksCollection } = await import(/* @vite-ignore */ modulePath);
+    const { tasksCollection } = (window as unknown as { __worktimeTest: WorktimeTestHooks })
+      .__worktimeTest;
     tasksCollection.insert({
       id: "calendar-dnd-793",
       text: "Drag regression",
@@ -60,13 +57,8 @@ test("Unified Calendar persists a task dragged to another day and time", async (
   await expect
     .poll(async () =>
       page.evaluate(async () => {
-        const modulePath =
-          performance
-            .getEntriesByType("resource")
-            .map((entry) => entry.name)
-            .find((name) => /\/src\/db\/collections\.ts(\?|$)/.test(name)) ??
-          "/src/db/collections.ts";
-        const { tasksCollection } = await import(/* @vite-ignore */ modulePath);
+        const { tasksCollection } = (window as unknown as { __worktimeTest: WorktimeTestHooks })
+          .__worktimeTest;
         const task = tasksCollection.toArray.find(
           (item: { id: string }) => item.id === "calendar-dnd-793",
         );
