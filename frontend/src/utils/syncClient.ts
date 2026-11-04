@@ -1572,6 +1572,18 @@ export function dequeueAndMergeSyncOutbox(
   };
 }
 
+/** Detect stored rows omitted by upload validation before replacing local collections. */
+export function localSyncPayloadIsComplete(payload: SyncPushPayload): boolean {
+  return [
+    [labelsCollection.toArray, payload.labels],
+    [tasksCollection.toArray, payload.tasks],
+    [templatesCollection.toArray, payload.templates],
+    [workLocationsCollection.toArray, payload.work_locations],
+    [timeOffCollection.toArray, payload.time_off_entries],
+    [ganttTasksCollection.toArray, payload.gantt_tasks],
+  ].every(([stored, pushed]) => stored!.length === pushed!.length);
+}
+
 /** Compare identities and all pushed content, including tombstones; counts alone are insufficient. */
 export function syncDatasetsMatch(local: SyncPushPayload, server: SyncPullResponse): boolean {
   const keys = [
@@ -1599,6 +1611,12 @@ export function syncDatasetsMatch(local: SyncPushPayload, server: SyncPullRespon
         return Object.entries(item).every(([field, value]) => {
           if (field === "action" || field === "client_updated_at" || field === identityField)
             return true;
+          if (key === "tasks" && (field === "start_time" || field === "stop_time")) {
+            const remoteValue = (match as unknown as Record<string, unknown>)[field];
+            if (typeof value === "string" && typeof remoteValue === "string") {
+              return Date.parse(value) === Date.parse(remoteValue);
+            }
+          }
           return (
             JSON.stringify(value) ===
             JSON.stringify((match as unknown as Record<string, unknown>)[field])

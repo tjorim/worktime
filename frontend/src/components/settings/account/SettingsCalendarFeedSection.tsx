@@ -69,6 +69,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
   const rotate = async () => {
     setBusy(true);
     setLoadFailed(false);
+    onLoadError?.(false);
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "POST" });
@@ -88,6 +89,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
   const revoke = async () => {
     setBusy(true);
     setLoadFailed(false);
+    onLoadError?.(false);
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "DELETE" });

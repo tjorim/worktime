@@ -16,6 +16,33 @@ describe("syncDatasetsMatch", () => {
     ...local,
     labels: [{ id: "one", name: "Work", color: "blue", deleted_at: null }],
   } as unknown as SyncPullResponse;
+  it("compares task instants using the server's datetime format", () => {
+    const task = {
+      id: "task",
+      action: "create" as const,
+      client_updated_at: "now",
+      start_time: "2026-08-01T09:00:00.000Z",
+      stop_time: "2026-08-01T10:00:00.000Z",
+    };
+    const remoteTask = {
+      ...task,
+      deleted_at: null,
+      start_time: "2026-08-01T09:00:00Z",
+      stop_time: "2026-08-01T10:00:00Z",
+    };
+    const remote = { ...server, tasks: [remoteTask] } as unknown as SyncPullResponse;
+    expect(syncDatasetsMatch({ ...local, tasks: [task] }, remote)).toBe(true);
+    expect(syncDatasetsMatch({ ...local, tasks: [{ ...task, stop_time: null }] }, remote)).toBe(
+      false,
+    );
+    expect(
+      syncDatasetsMatch(
+        { ...local, tasks: [{ ...task, start_time: "2026-08-01T09:01:00Z" }] },
+        remote,
+      ),
+    ).toBe(false);
+  });
+
   it("recognises matching identities and content", () =>
     expect(syncDatasetsMatch(local, server)).toBe(true));
   it("does not equate equal counts with different identities", () =>

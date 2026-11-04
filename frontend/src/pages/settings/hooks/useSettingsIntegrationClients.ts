@@ -110,6 +110,7 @@ export function useSettingsIntegrationClients({
 
   const createClient = async (name: string, scopes: IntegrationClientScope[]) => {
     if (mutationInFlight.current || createdClient) return;
+    setLoadFailed(false);
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError(m.integration_clients_name_required());
@@ -153,6 +154,7 @@ export function useSettingsIntegrationClients({
     mutationInFlight.current = true;
     const generation = sessionGeneration.current;
     setBusyClientId(clientId);
+    setLoadFailed(false);
     setError(null);
     try {
       const response = await fetchFn(`/api/integration-clients/${clientId}/rotate`, {
@@ -186,6 +188,7 @@ export function useSettingsIntegrationClients({
     mutationInFlight.current = true;
     const generation = sessionGeneration.current;
     setBusyClientId(clientId);
+    setLoadFailed(false);
     setError(null);
     try {
       const response = await fetchFn(`/api/integration-clients/${clientId}`, { method: "DELETE" });

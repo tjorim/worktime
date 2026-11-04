@@ -84,6 +84,34 @@ describe("useFirstSyncFlow", () => {
     localStorage.clear();
   });
 
+  it.each([true, false])(
+    "preserves excluded stored tasks (matching label: %s)",
+    async (withLabel) => {
+      tasksCollection.insert({
+        id: "invalid",
+        text: "Keep me",
+        label: "",
+        startTime: "unreadable",
+      });
+      if (withLabel)
+        collections.labelsCollection.insert({ id: "one", name: "Work", color: "blue" });
+      const payload = buildLocalSyncPushPayload();
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            ...emptyPullResponse,
+            labels: payload.labels.map((label) => ({ ...label, deleted_at: null })),
+          }),
+        });
+      const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
+      await waitFor(() => expect(result.current.phase).toBe("conflict"));
+      expect(tasksCollection.toArray).toEqual([expect.objectContaining({ id: "invalid" })]);
+      expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBeNull();
+    },
+  );
+
   it("starts in idle phase when not authenticated", () => {
     const { result } = renderHook(() => useFirstSyncFlow(false, null, null), { wrapper });
     expect(result.current.phase).toBe("idle");

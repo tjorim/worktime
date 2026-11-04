@@ -44,6 +44,7 @@ import {
   reconcilePreferences,
   storeSyncCursor,
   syncStatusHasEntityData,
+  localSyncPayloadIsComplete,
   type FetchFn,
   type PreferencesResponse,
   type SyncPullResponse,
@@ -419,7 +420,8 @@ export function useFirstSyncFlow(
         setPhase("error");
         return;
       }
-      const localHasData = payloadHasData(localPayload);
+      const localPayloadComplete = localSyncPayloadIsComplete(localPayload);
+      const localHasData = payloadHasData(localPayload) || !localPayloadComplete;
 
       // Branch D — no entities anywhere. Preferences may still exist on either
       // side, so reconcile them rather than leaving local settings unsynced.
@@ -519,7 +521,7 @@ export function useFirstSyncFlow(
         setPhase("error");
         return;
       }
-      if (syncDatasetsMatch(localPayload, serverData)) {
+      if (localPayloadComplete && syncDatasetsMatch(localPayload, serverData)) {
         applyPullToCollections(serverData);
         await reconcilePreferences(syncFetch, uid);
         if (!mountedRef.current || flowStartedForUser.current !== uid) return;
