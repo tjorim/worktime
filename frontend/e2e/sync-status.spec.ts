@@ -74,7 +74,13 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
         );
       return new Response(null, { status: 503 });
     };
-    const modulePath = "/src/db/collections.ts";
+    // Import the exact URL the app loaded (Vite may append ?t=…), otherwise this
+    // would create a second copy of the module that the app never sees.
+    const modulePath =
+      performance
+        .getEntriesByType("resource")
+        .map((entry) => entry.name)
+        .find((name) => /\/src\/db\/collections\.ts(\?|$)/.test(name)) ?? "/src/db/collections.ts";
     const { tasksCollection } = await import(/* @vite-ignore */ modulePath);
     tasksCollection.insert({
       id: "offline-task-1681",
@@ -142,7 +148,13 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
   ).toBe(0);
   expect(
     await page.evaluate(async () => {
-      const modulePath = "/src/db/collections.ts";
+      // Same URL the app loaded (Vite may append ?t=…), so this is the app's instance.
+      const modulePath =
+        performance
+          .getEntriesByType("resource")
+          .map((entry) => entry.name)
+          .find((name) => /\/src\/db\/collections\.ts(\?|$)/.test(name)) ??
+        "/src/db/collections.ts";
       const { tasksCollection } = await import(/* @vite-ignore */ modulePath);
       return tasksCollection.toArray.filter(
         (task: { id: string }) => task.id === "offline-task-1681",

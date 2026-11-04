@@ -7,7 +7,7 @@ import {
   AlertDialogTitle,
   AlertDialogFooter,
 } from "@/components/ui/alert-dialog";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +20,11 @@ import {
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
+  finalFocus?: RefObject<HTMLElement | null>;
   title: string;
   message: ReactNode;
   confirmLabel?: string;
+  confirmDisabled?: boolean;
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -47,9 +49,11 @@ interface ConfirmationDialogProps {
  */
 export function ConfirmationDialog({
   isOpen,
+  finalFocus,
   title,
   message,
   confirmLabel = "Confirm",
+  confirmDisabled,
   cancelLabel = "Cancel",
   onConfirm,
   onCancel,
@@ -72,6 +76,7 @@ export function ConfirmationDialog({
       }}
     >
       <Content
+        finalFocus={finalFocus}
         aria-describedby={bodyId}
         overlayProps={variant === "danger" ? { onClick: onCancel } : undefined}
       >
@@ -92,6 +97,7 @@ export function ConfirmationDialog({
             variant={
               variant === "danger" ? "destructive" : variant === "warning" ? "warning" : "default"
             }
+            disabled={confirmDisabled}
             onClick={onConfirm}
           >
             {confirmLabel}

@@ -58,6 +58,17 @@ export class ApiError extends Error {
   }
 }
 
+/** A settings push acknowledged some changes before the replacement stopped. */
+export class SettingsReplacementError extends ApiError {
+  readonly applied: number;
+  readonly conflicts: number;
+  constructor(applied: number, conflicts: number) {
+    super({ status: 409, code: "SETTINGS_PARTIAL" });
+    this.applied = applied;
+    this.conflicts = conflicts;
+  }
+}
+
 /** Translated messages for stable error codes, supplied per surface. */
 export type ErrorCodeMessages = Readonly<Record<string, () => string>>;
 
@@ -73,6 +84,8 @@ export function describeError(error: unknown, codeMessages?: ErrorCodeMessages):
       ? codeMessages[error.code]
       : undefined;
   if (codeMessage) return codeMessage();
+  if (error instanceof SettingsReplacementError)
+    return m.tt_json_partial({ applied: error.applied, conflicts: error.conflicts });
   if (error.status === 401) return m.auth_session_expired();
   if (error.status === 403) return m.auth_error_forbidden();
   if (error.status === 429) return m.error_rate_limited();

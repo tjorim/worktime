@@ -1,3 +1,5 @@
+import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
+import { getErrorMessage } from "@/utils/apiError";
 import { ClipboardCheckIcon, FileTextIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
@@ -19,7 +21,10 @@ type TemplatesPanelProps = {
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
-  onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void;
+  onUpdateTemplates: (
+    templates: TimeTrackingTemplate[],
+    confirmedRemoval?: boolean,
+  ) => void | Promise<void>;
 };
 
 const EXAMPLE_TEMPLATES: TimeTrackingTemplate[] = [
@@ -30,7 +35,7 @@ const EXAMPLE_TEMPLATES: TimeTrackingTemplate[] = [
 ];
 const EXAMPLE_TEMPLATES_JSON = JSON.stringify({ templates: EXAMPLE_TEMPLATES }, null, 2);
 
-function validateTemplatesImportPayload(parsed: unknown): parsed is { templates?: unknown[] } {
+function validateTemplatesImportPayload(parsed: unknown): parsed is { templates: unknown[] } {
   if (!parsed || typeof parsed !== "object") {
     return false;
   }
@@ -48,7 +53,9 @@ function sanitizeTemplates(templates: unknown[]): TimeTrackingTemplate[] {
     const payload = template as Record<string, unknown>;
     const label = typeof payload.label === "string" ? payload.label : undefined;
     if (
+      (payload.id !== undefined && (typeof payload.id !== "string" || !payload.id.trim())) ||
       typeof payload.text !== "string" ||
+      !payload.text.trim() ||
       !isValidTimeString(payload.start) ||
       !isValidTimeString(payload.stop) ||
       !isValidRange(payload.start, payload.stop) ||
@@ -78,7 +85,10 @@ export function TemplatesPanel({
 }: TemplatesPanelProps) {
   const [error, setError] = useState("");
   const toast = useToast();
-  const [templatesJson, setTemplatesJson] = useState(JSON.stringify({ templates }, null, 2));
+  const draft = useJsonDraft(JSON.stringify({ templates }, null, 2));
+  const { value: templatesJson, setValue: setTemplatesJson } = draft;
+  const [pendingJson, setPendingJson] = useState<TimeTrackingTemplate[] | null>(null);
+  const [saving, setSaving] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TimeTrackingTemplate | null>(
@@ -104,15 +114,6 @@ export function TemplatesPanel({
 
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
-  // Re-sync the raw JSON editor whenever `templates` changes externally, as a
-  // same-render response rather than a follow-up effect. The editor still
-  // owns its value the rest of the time (see the onChange handler below).
-  const [prevTemplates, setPrevTemplates] = useState(templates);
-  if (prevTemplates !== templates) {
-    setPrevTemplates(templates);
-    setTemplatesJson(JSON.stringify({ templates }, null, 2));
-  }
-
   const [prevModalMode, setPrevModalMode] = useState(modalMode);
   if (prevModalMode !== modalMode) {
     setPrevModalMode(modalMode);
@@ -131,18 +132,44 @@ export function TemplatesPanel({
     }
   };
 
+  const saveJson = async (next: TimeTrackingTemplate[], confirmedRemoval = false) => {
+    if (saving || draft.conflict) return;
+    setSaving(true);
+    try {
+      await onUpdateTemplates(next, confirmedRemoval);
+      draft.saved();
+      toast.showSuccess(m.tt_templates_updated());
+      setPendingJson(null);
+    } catch (error) {
+      setError(getErrorMessage(error, m.tt_json_save_failed()));
+      setPendingJson(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleApplyJson = () => {
     setError("");
-
+    if (saving || draft.conflict) return;
     try {
       const parsed = JSON.parse(templatesJson);
       if (!validateTemplatesImportPayload(parsed)) {
         setError(m.tt_invalid_templates_structure());
         return;
       }
+      const next = sanitizeTemplates(parsed.templates);
+      const invalid =
+        parsed.templates.length -
+        next.length +
+        next.filter((item) => !labels.some((label) => label.id === item.label)).length;
+      if (invalid || new Set(next.map((item) => item.id)).size !== next.length) {
+        setError(m.tt_json_invalid_entries({ count: invalid || 1 }));
+        return;
+      }
 
-      onUpdateTemplates(sanitizeTemplates(parsed.templates ?? []));
-      toast.showSuccess(m.tt_templates_updated());
+      if (templates.some((item) => !next.some((entry) => entry.id === item.id)))
+        setPendingJson(next);
+      else void saveJson(next);
     } catch {
       setError(m.tt_invalid_templates_format());
     }
@@ -276,7 +303,21 @@ export function TemplatesPanel({
           </div>
         )}
 
+        {draft.conflict && (
+          <Alert aria-live="polite">
+            {m.tt_json_conflict()}
+            <JsonExample
+              summaryLabel={m.tt_json_current()}
+              json={JSON.stringify({ templates }, null, 2)}
+            />
+            <Button variant="outline" onClick={draft.reconcile}>
+              {m.tt_json_keep_draft()}
+            </Button>
+          </Alert>
+        )}
         <RawJsonEditor
+          disabled={saving}
+          applyDisabled={draft.conflict}
           summaryLabel={m.tt_raw_json_summary({ label: m.tt_templates_heading().toLowerCase() })}
           headingLabel={m.tt_json_heading({ label: m.tt_templates_heading() })}
           copyButtonLabel={m.tt_copy_json({ label: m.tt_templates_heading() })}
@@ -310,6 +351,29 @@ export function TemplatesPanel({
         onSubmit={handleSave}
       />
 
+      <ConfirmationDialog
+        isOpen={pendingJson !== null}
+        title={m.tt_json_confirm()}
+        message={m.tt_json_removals({
+          remove: templates.filter((item) => !pendingJson?.some((next) => next.id === item.id))
+            .length,
+          add:
+            pendingJson?.filter((item) => !templates.some((old) => old.id === item.id)).length ?? 0,
+          change:
+            pendingJson?.filter((item) =>
+              templates.some(
+                (old) => old.id === item.id && JSON.stringify(old) !== JSON.stringify(item),
+              ),
+            ).length ?? 0,
+        })}
+        onConfirm={() => {
+          if (pendingJson) {
+            setPendingJson(null);
+            void saveJson(pendingJson, true);
+          }
+        }}
+        onCancel={() => setPendingJson(null)}
+      />
       <ConfirmationDialog
         isOpen={pendingDeleteTemplate !== null}
         title={m.tt_delete_template_title()}

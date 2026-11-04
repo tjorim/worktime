@@ -1527,5 +1527,15 @@
   "error_code_gantt_dependency_unknown": "Choose dependencies that still exist.",
   "error_code_gantt_dependency_self": "A task cannot depend on itself.",
   "error_code_gantt_dependency_cycle": "These dependencies create a cycle.",
-  "account_load_errors": "Some account sections could not be loaded. Your local data is safe. Retry the affected sections below."
+  "account_load_errors": "Some account sections could not be loaded. Your local data is safe. Retry the affected sections below.",
+  "tt_json_conflict": "The saved data changed. Your draft has been kept. Review the current data using Copy JSON, then keep your draft to allow replacement.",
+  "tt_json_keep_draft": "Keep draft against current data",
+  "tt_json_removals": "Remove {remove}, add {add}, change {change}. Apply this replacement?",
+  "tt_json_confirm": "Confirm JSON replacement",
+  "tt_json_partial": "Saving stopped. Server results: {applied} accepted, {conflicts} conflicted. Your draft is kept. Compare it with the current saved JSON before trying again.",
+  "tt_json_save_failed": "Could not save changes. Your draft has been kept. Try again.",
+  "tt_json_in_use": "These labels are still in use and cannot be removed: {names}.",
+  "tt_json_invalid_entries": "Invalid entries: {count}. Check required fields, unique IDs, names, colours, time ranges and existing labels. Nothing was applied.",
+  "tt_json_leave": "Discard your unapplied JSON draft and leave this page?",
+  "tt_json_current": "Current saved JSON"
 }
