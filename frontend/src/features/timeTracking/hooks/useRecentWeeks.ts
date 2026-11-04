@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { effectiveDurationHours } from "@/lib/timeTracking/timeUtils";
+import { actualTaskDurationHours } from "@/lib/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 
 export const RECENT_WEEKS_COUNT = 8;
@@ -41,12 +41,7 @@ export function buildRecentWeeks(
   for (const task of tasks) {
     const date = task.startTime.substring(0, 10);
     if (date < rangeStart || date > rangeEnd) continue;
-    const stop = task.stopTime ? dayjs(task.stopTime) : now;
-    const rawHours = Math.max(stop.diff(dayjs(task.startTime), "hour", true), 0);
-    hoursByDay.set(
-      date,
-      (hoursByDay.get(date) ?? 0) + effectiveDurationHours(rawHours, task.includesBreak),
-    );
+    hoursByDay.set(date, (hoursByDay.get(date) ?? 0) + actualTaskDurationHours(task, now));
   }
 
   return Array.from({ length: count }, (_, weekIndex) => {

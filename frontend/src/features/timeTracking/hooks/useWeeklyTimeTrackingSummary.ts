@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { buildLabelNameMap, type Label } from "@/lib/timeTracking/constants";
-import { effectiveDurationHours } from "@/lib/timeTracking/timeUtils";
+import { actualTaskDurationHours } from "@/lib/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import * as m from "@/paraglide/messages.js";
 
@@ -76,14 +76,11 @@ export function useWeeklyTimeTrackingSummary({
           return taskDate >= start && taskDate <= end;
         })
         .map((task) => {
-          const startDayjs = dayjs(task.startTime);
-          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : liveTime;
-          const rawHours = Math.max(stopDayjs.diff(startDayjs, "hour", true), 0);
           const labelName = labelNameById[task.label] ?? m.tt_unknown_label();
           return {
             date: task.startTime.substring(0, 10),
             label: labelName,
-            hours: effectiveDurationHours(rawHours, task.includesBreak),
+            hours: actualTaskDurationHours(task, liveTime),
           };
         }),
     [tasks, start, end, labelNameById, liveTime],

@@ -8,7 +8,7 @@ import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 describe("TimeTrackingWeeklyView Component", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2025-01-06T00:00:00Z"));
+    vi.setSystemTime(new Date("2025-01-10T23:00:00Z"));
     vi.clearAllMocks();
   });
 
@@ -325,7 +325,7 @@ describe("TimeTrackingWeeklyView Component", () => {
   describe("ISO Week Year Boundary", () => {
     it("shows correct ISO week year when week 1 crosses into the previous calendar year", () => {
       // Dec 29, 2025 (Monday) is ISO week 1 of 2026
-      vi.setSystemTime(new Date("2025-12-29T12:00:00Z"));
+      vi.setSystemTime(new Date("2026-01-04T23:00:00Z"));
       const tasks = [createTaskForDate("2025-12-29", "Support", "09:00", "12:00")];
 
       renderPanel({ tasks, selectedDate: "2025-12-29" });
@@ -334,7 +334,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     });
 
     it("groups tasks correctly when ISO week spans two calendar years", () => {
-      vi.setSystemTime(new Date("2025-12-29T12:00:00Z"));
+      vi.setSystemTime(new Date("2026-01-04T23:00:00Z"));
       const tasks = [
         createTaskForDate("2025-12-29", "Support", "09:00", "12:00"),
         createTaskForDate("2025-12-31", "Meeting", "14:00", "16:00"),

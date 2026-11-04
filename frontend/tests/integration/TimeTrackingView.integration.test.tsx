@@ -133,7 +133,7 @@ describe("TimeTrackingView Integration Tests", () => {
   describe("Weekly Summary Updates", () => {
     it("displays correct weekly totals for multiple tasks across the week", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00Z")); // Monday
+      vi.setSystemTime(new Date("2025-01-10T18:00:00Z")); // Friday, after all tasks
 
       // Set up tasks across the week
       mockTasks = [
@@ -373,7 +373,7 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("updates Weekly Summary content when header week navigation changes week", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-13T09:00:00Z"));
+      vi.setSystemTime(new Date("2025-01-13T12:00:00Z"));
       mockTasks = [
         {
           id: "current-week-task",
