@@ -85,7 +85,11 @@ identifies the conflicting task. Text must contain non-whitespace content and be
 most 1,000 characters (`task_text_invalid`, 400). Completed task duration must be
 between zero and 24 elapsed hours (`task_duration_invalid`, 400), and start/stop
 values must include a timezone (`task_timezone_required`, 400). Adjacent intervals
-are allowed. Midnight crossing remains allowed pending #1700. Running timers are
+are allowed. Midnight crossings are stored as one task with complete start and stop timestamps (#1700).
+The web forms interpret an earlier stop clock time as the next calendar day; equal clock
+times are invalid. Daily and weekly reports attribute the full elapsed duration to the
+local start day, including Sunday nights, with one optional break deduction. Templates
+use the same next-day interpretation. No linked split records or schema migration are needed. Running timers are
 compared through the current instant, so future planned tasks remain possible;
 the existing single-running-task rule also applies.
 
@@ -99,7 +103,7 @@ invalid rows remain readable and editable. Restoring a deleted row always valida
 its interval again. Accepting server state refreshes the snapshot before removing
 conflicted tasks that are still absent, including rejected creates later edited
 locally, while preserving unrelated local edits.
-Labels remain optional (#1678).
+Labels are required for new tasks and templates.
 
 ## Gantt dependencies
 

@@ -148,7 +148,10 @@ def _format_task_line(task: TimeTrackingTask, label_name: str | None) -> str:
     start_local = task.start_time.astimezone(_WORKTIME_TIMEZONE)
     stop_local = task.stop_time.astimezone(_WORKTIME_TIMEZONE)
     suffix = f" ({label_name})" if label_name else ""
-    return f"{start_local:%H:%M}–{stop_local:%H:%M} {task.text}{suffix}"
+    stop_label = stop_local.strftime("%H:%M")
+    if stop_local.date() != start_local.date():
+        stop_label += f" ({stop_local:%Y-%m-%d})"
+    return f"{start_local:%H:%M}–{stop_label} {task.text}{suffix}"
 
 
 async def _public_holiday_dates(session: AsyncSession, country: str, years: Iterable[int]) -> set[date]:

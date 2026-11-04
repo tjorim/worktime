@@ -76,6 +76,42 @@ describe("TimeTrackingDailyView", () => {
     );
   };
 
+  it("adds an overnight shift as one task and checks the following day for overlaps", async () => {
+    const { rerender } = renderView({ selectedDate: "2026-10-24" });
+    fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Night shift" } });
+    fireEvent.change(screen.getByLabelText(/^Start$/i), { target: { value: "23:00" } });
+    fireEvent.change(screen.getByLabelText(/^Stop$/i), { target: { value: "06:30" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Add Task$/i }));
+    await vi.waitFor(() =>
+      expect(mockProps.onAddTask).toHaveBeenCalledWith(
+        expect.objectContaining({ startTime: "2026-10-24T23:00", stopTime: "2026-10-25T06:30" }),
+      ),
+    );
+    rerender(
+      <TestProviders>
+        <TimeTrackingDailyView
+          {...mockProps}
+          selectedDate="2026-10-24"
+          tasks={[
+            {
+              id: "next",
+              text: "Morning",
+              label: "Support",
+              startTime: "2026-10-25T06:00",
+              stopTime: "2026-10-25T07:00",
+            },
+          ]}
+        />
+      </TestProviders>,
+    );
+    fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Night shift" } });
+    fireEvent.change(screen.getByLabelText(/^Start$/i), { target: { value: "23:00" } });
+    fireEvent.change(screen.getByLabelText(/^Stop$/i), { target: { value: "06:30" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Add Task$/i }));
+    expect(screen.getByText(/overlaps/i)).toBeInTheDocument();
+    expect(mockProps.onAddTask).toHaveBeenCalledTimes(1);
+  });
+
   describe("Quick Timer", () => {
     it("puts the idle state and single helper sentence on the form without a wrapper card", () => {
       renderView();
@@ -256,6 +292,59 @@ describe("TimeTrackingDailyView", () => {
       });
     });
 
+    it("resolves an overnight timer conflict on the following day", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-02T06:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "running",
+          text: "Current work",
+          label: "Development",
+          startTime: "2025-01-01T23:00",
+        },
+        {
+          id: "planned",
+          text: "Prepare report",
+          label: "Meeting",
+          startTime: "2025-01-02T06:00",
+          stopTime: "2025-01-02T07:00",
+        },
+      ];
+
+      renderView({ tasks, selectedDate: "2025-01-01", onUpdateTaskTimes });
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByLabelText("Stop time")).toHaveValue("06:05");
+      expect(within(dialog).getByText(/Prepare report will be shortened/)).toHaveTextContent(
+        "06:00–07:00 to 06:05–07:00",
+      );
+      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
+
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "16:00" },
+      });
+      expect(within(dialog).queryByText(/Prepare report will be/)).not.toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: /Stop & apply changes/i })).toBeDisabled();
+      fireEvent.change(within(dialog).getByLabelText("Stop time"), {
+        target: { value: "06:05" },
+      });
+
+      fireEvent.click(within(dialog).getByRole("button", { name: /Stop & apply changes/i }));
+
+      expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(1, {
+        id: "planned",
+        newStartTime: "2025-01-02T06:05",
+        newStopTime: "2025-01-02T07:00",
+      });
+      expect(onUpdateTaskTimes).toHaveBeenNthCalledWith(2, {
+        id: "running",
+        newStartTime: "2025-01-01T23:00",
+        newStopTime: "2025-01-02T06:05",
+      });
+    });
+
     it("keeps the plan unchanged when an earlier stop time is chosen", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-01T18:05:00"));
@@ -388,7 +477,7 @@ describe("TimeTrackingDailyView", () => {
       expect(screen.getByRole("button", { name: /Start Now/i })).toBeDisabled();
     });
 
-    it("opens edit modal for a cross-day running task with info message", async () => {
+    it("stops a cross-day running task in one action", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-02T00:05:00"));
       const onUpdateTaskTimes = vi.fn();
@@ -404,16 +493,17 @@ describe("TimeTrackingDailyView", () => {
 
       fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
 
-      expect(screen.getByText(/Edit Task/i)).toBeInTheDocument();
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        /This task started on 2025-01-01 and spans midnight/i,
-      );
-      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "running-3",
+        newStartTime: runningTask.startTime,
+        newStopTime: "2025-01-02T00:05",
+      });
     });
 
-    it("keeps a cross-day running task on its original start date when saving from edit modal", () => {
+    it("allows correcting an overlong timer on its original start date", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-02T00:05:00"));
+      vi.setSystemTime(new Date("2025-01-03T00:05:00"));
       const onUpdateTaskTimes = vi.fn();
       const runningTask: StoredTimeTrackingTask = {
         id: "running-4",

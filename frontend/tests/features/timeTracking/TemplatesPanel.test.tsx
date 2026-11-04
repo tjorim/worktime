@@ -155,7 +155,7 @@ describe("TemplatesPanel", () => {
       expect(onAddTemplate).not.toHaveBeenCalled();
     });
 
-    it("shows error when stop time is before start time", async () => {
+    it("allows templates that stop the next day", async () => {
       const user = userEvent.setup();
       const { onAddTemplate } = renderPanel();
 
@@ -175,10 +175,11 @@ describe("TemplatesPanel", () => {
 
       await user.click(within(dialog).getByRole("button", { name: /Save Template/i }));
 
-      expect(
-        await within(dialog).findByText(/stop time must be after start time/i),
-      ).toBeInTheDocument();
-      expect(onAddTemplate).not.toHaveBeenCalled();
+      await vi.waitFor(() =>
+        expect(onAddTemplate).toHaveBeenCalledWith(
+          expect.objectContaining({ start: "14:00", stop: "08:00" }),
+        ),
+      );
     });
 
     it("disables submit when template references a deleted label", async () => {

@@ -230,6 +230,7 @@ export function TaskEntryForm({
           <Field>
             <FieldLabel htmlFor="timeTrackerStop">{m.form_stop()}</FieldLabel>
             <Input
+              aria-describedby="timeTrackerOvernight"
               id="timeTrackerStop"
               type="time"
               value={stop}
@@ -265,6 +266,9 @@ export function TaskEntryForm({
           </div>
         </GridItem>
       </Grid>
+      <FieldDescription id="timeTrackerOvernight" className="mt-2">
+        {m.tt_overnight_hint()}
+      </FieldDescription>
     </>
   );
 }

@@ -107,7 +107,7 @@ export function timeToMinutes(time: string): number {
 
 export function isValidRange(start: string, stop: string): boolean {
   try {
-    return timeToMinutes(stop) > timeToMinutes(start);
+    return timeToMinutes(stop) !== timeToMinutes(start);
   } catch {
     return false;
   }
@@ -116,8 +116,8 @@ export function isValidRange(start: string, stop: string): boolean {
 export function calculateDurationHours(start: string, stop: string): number {
   const startMin = timeToMinutes(start);
   const stopMin = timeToMinutes(stop);
-  if (stopMin <= startMin) return 0;
-  return (stopMin - startMin) / 60;
+  if (stopMin === startMin) return 0;
+  return ((stopMin - startMin + 1440) % 1440) / 60;
 }
 
 /**
@@ -165,4 +165,36 @@ export function overlaps(
       return false;
     }
   });
+}
+
+/** Resolve an earlier stop clock time on the following calendar day, including DST. */
+export function taskStopTime(date: string, start: string, stop: string): string {
+  const stopDate = stop < start ? dayjs(date).add(1, "day").format("YYYY-MM-DD") : date;
+  return `${stopDate}T${stop}`;
+}
+
+/** Compare complete intervals across day boundaries; adjacent tasks are allowed. */
+export function overlapsTaskInterval(
+  start: string,
+  stop: string,
+  tasks: StoredTimeTrackingTask[],
+  skipId?: string,
+  now = dayjs(),
+): boolean {
+  const from = dayjs(start).valueOf();
+  const until = dayjs(stop).valueOf();
+  return tasks.some((task) => {
+    if (task.id === skipId) return false;
+    const taskStart = dayjs(task.startTime).valueOf();
+    const taskStop = task.stopTime
+      ? dayjs(task.stopTime).valueOf()
+      : Math.max(taskStart, now.valueOf());
+    return from < until && taskStart < taskStop && from < taskStop && until > taskStart;
+  });
+}
+
+/** Keep local writes within the server's elapsed-duration limit. */
+export function isValidTaskInterval(start: string, stop: string): boolean {
+  const duration = dayjs(stop).diff(dayjs(start), "hour", true);
+  return duration > 0 && duration <= 24;
 }

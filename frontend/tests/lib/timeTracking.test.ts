@@ -66,10 +66,10 @@ describe("Time Tracking Utils", () => {
       expect(isValidRange("12:00", "12:01")).toBe(true);
     });
 
-    it("should return false for overnight ranges", () => {
-      expect(isValidRange("17:00", "08:00")).toBe(false);
-      expect(isValidRange("23:00", "07:00")).toBe(false);
-      expect(isValidRange("12:30", "12:00")).toBe(false);
+    it("should accept overnight ranges", () => {
+      expect(isValidRange("17:00", "08:00")).toBe(true);
+      expect(isValidRange("23:00", "07:00")).toBe(true);
+      expect(isValidRange("12:30", "12:00")).toBe(true);
     });
 
     it("should return false when start equals stop", () => {
@@ -82,8 +82,8 @@ describe("Time Tracking Utils", () => {
       expect(isValidRange("25:61", "26:70")).toBe(false);
     });
 
-    it("should reject midnight crossings into next day", () => {
-      expect(isValidRange("23:59", "00:01")).toBe(false);
+    it("should accept midnight crossings into the next day", () => {
+      expect(isValidRange("23:59", "00:01")).toBe(true);
     });
   });
 
@@ -108,9 +108,9 @@ describe("Time Tracking Utils", () => {
       expect(calculateDurationHours("12:00", "12:01")).toBeCloseTo(1 / 60, 5);
     });
 
-    it("should return 0 for overnight-like durations (stop before start)", () => {
-      expect(calculateDurationHours("17:00", "08:00")).toBe(0);
-      expect(calculateDurationHours("23:00", "07:00")).toBe(0);
+    it("should count overnight clock durations", () => {
+      expect(calculateDurationHours("17:00", "08:00")).toBe(15);
+      expect(calculateDurationHours("23:00", "07:00")).toBe(8);
     });
   });
 

@@ -187,7 +187,7 @@ export function TimelineProgressBar({
 
       if (task.includesBreak && rawDurationHours > 0) {
         const taskStartMinutes = startDayjs.hour() * 60 + startDayjs.minute();
-        const taskStopMinutes = stopDayjs.hour() * 60 + stopDayjs.minute();
+        const taskStopMinutes = taskStartMinutes + rawDurationHours * 60;
         const pos = calculateBreakPosition(taskStartMinutes, taskStopMinutes);
         segment.beforeBreakHours = pos.beforeHours;
         segment.breakHours = pos.breakHours;

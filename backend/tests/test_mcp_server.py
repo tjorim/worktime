@@ -1514,3 +1514,40 @@ async def test_integration_client_rate_limit_middleware_ignores_non_integration_
         await middleware({"type": "http", "method": "POST", "path": "/"}, receive, send)
 
     assert downstream_called is True
+
+
+@pytest.mark.parametrize(
+    ("start", "stop", "hours"),
+    [
+        ("2026-03-28T23:00:00+01:00", "2026-03-29T07:00:00+02:00", 7),
+        ("2026-10-24T23:00:00+02:00", "2026-10-25T07:00:00+01:00", 9),
+    ],
+)
+async def test_overnight_summary_uses_elapsed_hours_and_start_date(test_db, monkeypatch, start, stop, hours):
+    session_factory = _make_factory(test_db)
+    backend = WorktimeMcpBackend(session_factory)
+    async with session_factory() as session:
+        user = await db_service.create_user(session, UserCreate(username="overnight-mcp", display_name="Night worker"))
+        created = await db_service.create_task(
+            session,
+            user.id,
+            await task_payload(
+                session,
+                user.id,
+                text="Night",
+                start_time=datetime.fromisoformat(start),
+                stop_time=datetime.fromisoformat(stop),
+            ),
+        )
+    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    summary = await backend.get_time_tracking_summary(
+        start_at=datetime.fromisoformat(start),
+        end_at=datetime.fromisoformat(stop),
+    )
+    assert summary["task_count"] == 1
+    assert summary["tasks"][0]["id"] == created.id
+    assert summary["tracked_seconds"] == hours * 3600
+    # A range starting at the next midnight excludes this start-day-attributed entry.
+    next_day = datetime.fromisoformat(start).replace(hour=0, minute=0) + timedelta(days=1)
+    following = await backend.get_time_tracking_summary(start_at=next_day, end_at=datetime.fromisoformat(stop))
+    assert following["task_count"] == 0

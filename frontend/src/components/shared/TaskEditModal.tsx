@@ -153,7 +153,7 @@ export function TaskEditModal({
                   onChange={(event) => onChange({ ...value, stop: event.target.value })}
                 />
                 <FieldDescription className="text-muted-foreground">
-                  {m.tt_stop_empty_hint()}
+                  {m.tt_stop_empty_hint()}. {m.tt_overnight_hint()}
                 </FieldDescription>
               </Field>
             </div>
