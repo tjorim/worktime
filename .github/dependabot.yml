@@ -72,27 +72,36 @@ updates:
         patterns:
           - "vite-plugin-pwa"
           - "workbox-window"
-      # Group TanStack packages (DB pipelines must update together or they fail;
-      # react-query, router, table, form and charts are one family too)
-      tanstack:
+      # Group TanStack DB packages (must update together or pipelines fail)
+      tanstack-db:
         patterns:
-          - "@tanstack/*"
+          - "@tanstack/db"
+          - "@tanstack/query-db-collection"
+          - "@tanstack/react-db"
       # Group Schedule-X packages (calendar component + its plugins)
       schedule-x:
         patterns:
           - "@schedule-x/*"
-      # Group d3 micro-packages (transitive chart dependencies, released individually)
-      d3:
+      # Group TanStack Charts with the d3 modules it pulls in (d3-scale, d3-brush,
+      # d3-zoom, ...), which release individually and must move with it
+      charts:
         patterns:
+          - "@tanstack/charts"
           - "d3-*"
-      # Group the UI kit: Base UI runtime, shadcn CLI/lint and its Lucide icons
-      # (see docs/ui-maintenance.md; run `pnpm ui:check` on these PRs)
-      ui:
+          - "@types/d3-*"
+      # Base UI runtime (see docs/ui-maintenance.md; run `pnpm ui:check` on these PRs)
+      base-ui:
         patterns:
           - "@base-ui/*"
           - "@base-ui-components/*"
+      # shadcn CLI and its lint package (pinned in docs/ui-maintenance.md)
+      shadcn:
+        patterns:
           - "shadcn"
           - "@shadcn/*"
+      # Lucide icon set
+      lucide:
+        patterns:
           - "lucide-react"
 
   # Monitor uv-managed Python dependencies for backend API
