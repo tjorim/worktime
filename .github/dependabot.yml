@@ -22,34 +22,28 @@ updates:
       - "platform:frontend"
     versioning-strategy: "increase"
     groups:
-      # Group React core with its types (tightly coupled)
       react:
         patterns:
           - "react"
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
-      # Group Vite with its React plugin (build tool + framework plugin)
       vite:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
-      # Group testing tools together (all dev dependencies)
-      testing:
+      # tailwindcss and its Vite plugin share one release train
+      tailwind:
         patterns:
-          - "@testing-library/*"
-          - "@vitest/*"
-          - "vitest"
-      # Group Day.js with plugins (date handling)
-      dayjs:
-        patterns:
-          - "dayjs"
-      # Group OXC toolchain (Rust-based linting and formatting)
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      # OXC toolchain: linter, formatter and parser
       oxc:
         patterns:
           - "oxlint"
           - "oxfmt"
           - "oxc-parser"
+      # Inlang i18n packages
       i18n:
         patterns:
           - "@inlang/*"
@@ -58,51 +52,108 @@ updates:
         patterns:
           - "oidc-client-ts"
           - "react-oidc-context"
-      # tailwindcss and its Vite plugin share one release train
-      tailwind:
+      # Vitest, Testing Library and the test-environment helpers
+      # tinybench is vitest's benchmark runner; it is a transitive dependency
+      testing:
         patterns:
-          - "tailwindcss"
-          - "@tailwindcss/*"
+          - "@testing-library/*"
+          - "@vitest/*"
+          - "vitest"
+          - "happy-dom"
+          - "fake-indexeddb"
+          - "tinybench"
+      # msw's own stack: msw, its @msw/@mswjs packages, and the helpers and cookie/URL packages it ships with.
+      # Generic utilities it reaches (yargs, wrap-ansi, type-fest, graphql, ...) stay ungrouped.
+      msw:
+        patterns:
+          - "msw"
+          - "@msw/*"
+          - "@mswjs/*"
+          - "@open-draft/until"
+          - "@inquirer/*"
+          - "tldts"
+          - "tldts-core"
+          - "tough-cookie"
+          - "outvariant"
+          - "rettime"
+          - "headers-polyfill"
+          - "until-async"
+          - "is-node-process"
+      # Playwright and the axe-core integration used by the e2e suite
       playwright:
         patterns:
           - "@playwright/*"
-          - "@axe-core/playwright"
-      # vite-plugin-pwa generates the service worker that workbox-window registers
-      pwa:
+          - "@axe-core/*"
+      # TanStack Query packages must share one @tanstack/query-core; duplicate copies break QueryClient types
+      tanstack-query:
         patterns:
-          - "vite-plugin-pwa"
-          - "workbox-window"
-      # Group TanStack DB packages (must update together or pipelines fail)
+          - "@tanstack/react-query"
+          - "@tanstack/react-query-devtools"
+          - "@tanstack/query-persist-client-core"
+      # TanStack Router with its internals; seroval is router-core's serializer
+      tanstack-router:
+        patterns:
+          - "@tanstack/react-router"
+          - "@tanstack/router-*"
+          - "@tanstack/history"
+          - "isbot"
+          - "seroval"
+          - "seroval-plugins"
+      # TanStack Table adapter and core must update together or pipelines fail
+      tanstack-table:
+        patterns:
+          - "@tanstack/react-table"
+          - "@tanstack/table-core"
+      # TanStack DB packages all depend on @tanstack/db; mismatched versions cause type errors
       tanstack-db:
         patterns:
           - "@tanstack/db"
-          - "@tanstack/query-db-collection"
           - "@tanstack/react-db"
-      # Group Schedule-X packages (calendar component + its plugins)
-      schedule-x:
-        patterns:
-          - "@schedule-x/*"
-      # Group TanStack Charts with the d3 modules it pulls in (d3-scale, d3-brush,
-      # d3-zoom, ...), which release individually and must move with it
+          - "@tanstack/query-db-collection"
+      # @tanstack/charts pulls in the d3-* modules (d3-scale, d3-brush, d3-zoom, ...) as runtime
+      # dependencies; they release individually and must move with it. svelte stays ungrouped:
+      # inlang and oxfmt also depend on it
       charts:
         patterns:
           - "@tanstack/charts"
           - "d3-*"
           - "@types/d3-*"
-      # Base UI runtime (see docs/ui-maintenance.md; run `pnpm ui:check` on these PRs)
+      # Babel packages are transitive and must resolve to one version per major line
+      babel:
+        patterns:
+          - "@babel/*"
+      # TypeScript and its runtime helpers
+      typescript:
+        patterns:
+          - "typescript"
+          - "tslib"
+      # Base UI is the shipped runtime (@base-ui/react and its pinned @base-ui/utils);
+      # its behaviour changes get their own PR
       base-ui:
         patterns:
           - "@base-ui/*"
-          - "@base-ui-components/*"
-      # shadcn CLI and its lint package (pinned in docs/ui-maintenance.md)
+      # shadcn CLI and its registry tooling (dev-only). Kept apart from the Base UI runtime group so a
+      # regression is attributable to one of them (docs/ui-maintenance.md)
       shadcn:
         patterns:
           - "shadcn"
           - "@shadcn/*"
-      # Lucide icon set
+      # Icon set kept in its own group so icon releases are reviewed separately
       lucide:
         patterns:
           - "lucide-react"
+      dayjs:
+        patterns:
+          - "dayjs"
+      # vite-plugin-pwa generates the service worker that workbox-window registers
+      pwa:
+        patterns:
+          - "vite-plugin-pwa"
+          - "workbox-window"
+      # Schedule-X calendar component and its plugins
+      schedule-x:
+        patterns:
+          - "@schedule-x/*"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
@@ -125,7 +176,7 @@ updates:
       - "platform:backend"
       - "python"
     groups:
-      # fastmcp pulls in mcp, mcp-types and cyclopts; keep them moving together
+      # fastmcp pulls in mcp and mcp-types; cyclopts is its CLI dependency. Keep them moving together
       fastmcp:
         patterns:
           - "fastmcp"
@@ -133,22 +184,6 @@ updates:
           - "mcp"
           - "mcp-types"
           - "cyclopts"
-      # OIDC/JWT libraries on the auth path; update together
-      auth:
-        patterns:
-          - "authlib"
-          - "joserfc"
-          - "google-auth"
-          - "pyjwt"
-          - "cryptography"
-      # Postgres driver, SQLAlchemy/Alembic and the SQLite driver for dev/tests
-      database:
-        patterns:
-          - "psycopg*"
-          - "asyncpg"
-          - "sqlalchemy"
-          - "alembic"
-          - "aiosqlite"
       # Keep Pydantic, its validation core, and settings integration together
       pydantic:
         patterns:
@@ -161,6 +196,37 @@ updates:
           - "ty"
           - "pytest"
           - "pytest-asyncio"
+      # Postgres drivers (psycopg[binary] installs psycopg-binary), SQLAlchemy/Alembic and the
+      # SQLite driver used for dev and tests
+      database:
+        patterns:
+          - "psycopg*"
+          - "asyncpg"
+          - "sqlalchemy"
+          - "alembic"
+          - "aiosqlite"
+      # Token, OIDC and JOSE libraries are security-sensitive; review them together.
+      # cachetools is a transitive google-auth dependency
+      auth:
+        patterns:
+          - "authlib"
+          - "joserfc"
+          - "pyjwt"
+          - "google-auth"
+          - "cachetools"
+          - "cryptography"
+      # FastAPI request stack and its async/multipart dependencies
+      fastapi-stack:
+        patterns:
+          - "fastapi"
+          - "starlette"
+          - "python-multipart"
+          - "anyio"
+      # markdown-it plugins are pinned against their core release
+      markdown:
+        patterns:
+          - "markdown-it-py"
+          - "mdit-py-plugins"
 
   # Monitor Android Gradle dependencies and wrapper versions
   - package-ecosystem: "gradle"
@@ -179,6 +245,13 @@ updates:
     labels:
       - "dependencies"
       - "platform:android"
+    groups:
+      # AGP, Kotlin and KSP must match each other; a split update breaks the build
+      android-build:
+        patterns:
+          - "com.android.*"
+          - "org.jetbrains.kotlin*"
+          - "com.google.devtools.ksp"
 
   # Monitor Docker images
   - package-ecosystem: "docker"
