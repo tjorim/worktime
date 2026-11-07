@@ -72,16 +72,28 @@ updates:
         patterns:
           - "vite-plugin-pwa"
           - "workbox-window"
-      # Group TanStack DB packages (must update together or pipelines fail)
-      tanstack-db:
+      # Group TanStack packages (DB pipelines must update together or they fail;
+      # react-query, router, table, form and charts are one family too)
+      tanstack:
         patterns:
-          - "@tanstack/db"
-          - "@tanstack/query-db-collection"
-          - "@tanstack/react-db"
+          - "@tanstack/*"
       # Group Schedule-X packages (calendar component + its plugins)
       schedule-x:
         patterns:
           - "@schedule-x/*"
+      # Group d3 micro-packages (transitive chart dependencies, released individually)
+      d3:
+        patterns:
+          - "d3-*"
+      # Group the UI kit: Base UI runtime, shadcn CLI/lint and its Lucide icons
+      # (see docs/ui-maintenance.md; run `pnpm ui:check` on these PRs)
+      ui:
+        patterns:
+          - "@base-ui/*"
+          - "@base-ui-components/*"
+          - "shadcn"
+          - "@shadcn/*"
+          - "lucide-react"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
@@ -104,13 +116,30 @@ updates:
       - "platform:backend"
       - "python"
     groups:
-      # fastmcp pulls in mcp and mcp-types; keep them moving together
+      # fastmcp pulls in mcp, mcp-types and cyclopts; keep them moving together
       fastmcp:
         patterns:
           - "fastmcp"
           - "fastmcp-slim"
           - "mcp"
           - "mcp-types"
+          - "cyclopts"
+      # OIDC/JWT libraries on the auth path; update together
+      auth:
+        patterns:
+          - "authlib"
+          - "joserfc"
+          - "google-auth"
+          - "pyjwt"
+          - "cryptography"
+      # Postgres driver, SQLAlchemy/Alembic and the SQLite driver for dev/tests
+      database:
+        patterns:
+          - "psycopg*"
+          - "asyncpg"
+          - "sqlalchemy"
+          - "alembic"
+          - "aiosqlite"
       # Keep Pydantic, its validation core, and settings integration together
       pydantic:
         patterns:
