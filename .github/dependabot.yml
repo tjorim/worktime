@@ -178,6 +178,7 @@ updates:
       - "dependencies"
       - "platform:backend"
       - "python"
+    versioning-strategy: "increase"
     groups:
       # fastmcp pulls in mcp and mcp-types; cyclopts is its CLI dependency. Keep them moving together
       fastmcp:
@@ -252,6 +253,26 @@ updates:
           - "com.android.*"
           - "org.jetbrains.kotlin*"
           - "com.google.devtools.ksp"
+
+  # Monitor npm dependencies for the Pebble watch app
+  - package-ecosystem: "npm"
+    directory: "/pebble"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "18:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 20
+    assignees:
+      - "tjorim"
+    commit-message:
+      prefix: "deps(pebble)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "platform:pebble"
+    versioning-strategy: "increase"
 
   # Monitor Docker images
   - package-ecosystem: "docker"
