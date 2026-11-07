@@ -21,15 +21,12 @@ updates:
       - "npm"
       - "platform:frontend"
     versioning-strategy: "increase"
-    # Transitive-only packages pnpm 12 cannot bump to a requested version: "pnpm update <pkg>@<ver>"
-    # refuses a package that is not a direct dependency, and a fresh-install resolve ends up on
-    # another version (or another major line, as with semver 6/7). Every run reported these as
-    # dependency_file_not_resolvable. They still move whenever a direct dependency that pulls them
-    # in is updated. Revisit if Dependabot learns to use overrides for pnpm.
-    ignore:
-      - dependency-name: "@babel/*"
-      - dependency-name: "semver"
-      - dependency-name: "undici"
+    # Dependabot runs pnpm with --config.minimum-release-age=4320 (3 days). Without a matching
+    # cooldown it proposes releases younger than that, pnpm refuses them for transitive
+    # dependencies (@babel/*, undici, ...) and the job fails with dependency_file_not_resolvable.
+    # Security updates ignore the cooldown.
+    cooldown:
+      default-days: 3
     groups:
       react:
         patterns:
@@ -130,6 +127,10 @@ updates:
           - "@tanstack/charts"
           - "d3-*"
           - "@types/d3-*"
+      # Babel packages are transitive and must resolve to one version per major line
+      babel:
+        patterns:
+          - "@babel/*"
       # TypeScript and its runtime helpers
       typescript:
         patterns:
