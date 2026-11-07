@@ -27,7 +27,7 @@ dependencies = [
   "uvicorn[standard]==0.54.0",
   "limits==5.8.0",
   "aiosqlite>=0.22.1",
-  "pywebpush>=2.4.0",
+  "pywebpush>=2.5.0",
   "firebase-admin==7.7.0",
 ]
 

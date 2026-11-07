@@ -2098,7 +2098,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "==2.16.2" },
     { name = "pyjwt", extras = ["crypto"], specifier = "==2.15.1" },
     { name = "python-dotenv", specifier = "==1.2.4" },
-    { name = "pywebpush", specifier = ">=2.4.0" },
+    { name = "pywebpush", specifier = ">=2.5.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.1.8" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.54.0" },
 ]
