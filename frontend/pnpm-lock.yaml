@@ -248,7 +248,7 @@ importers:
         specifier: ^4.3.4
         version: 4.3.5
       temporal-polyfill:
-        specifier: ^1.0.7
+        specifier: ^1.0.8
         version: 1.0.8
       uuid:
         specifier: ^14.0.3
