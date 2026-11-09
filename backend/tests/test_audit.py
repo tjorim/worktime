@@ -201,7 +201,7 @@ def test_audit_append_permission_error_is_swallowed(temp_audit_dir, monkeypatch)
     assert not audit_file.exists()
 
 
-def test_audit_append_dispatches_to_thread_inside_event_loop(temp_audit_dir):
+def test_audit_append_dispatches_to_thread_inside_event_loop(temp_audit_dir, monkeypatch):
     """Inside a running event loop, the write happens on a background thread.
 
     append() itself is synchronous, so this drives it from an async test and
@@ -222,18 +222,11 @@ def test_audit_append_dispatches_to_thread_inside_event_loop(temp_audit_dir):
             futures.append(future)
             return future
 
-        # capturing_run_in_executor's plain (executor, func, *args) signature
-        # doesn't match AbstractEventLoop.run_in_executor's overloaded generic
-        # bound-method type — real at runtime (Python allows rebinding an
-        # instance attribute over a bound method freely), just not something
-        # worth modeling precisely for a test-only monkeypatch-and-restore.
-        loop.run_in_executor = capturing_run_in_executor  # ty: ignore[invalid-assignment]
-        try:
+        with monkeypatch.context() as patch:
+            patch.setattr(loop, "run_in_executor", capturing_run_in_executor)
             audit_logger.append("async.hday", "read", "via loop")
             assert futures, "append() did not dispatch to run_in_executor"
             await futures[0]
-        finally:
-            loop.run_in_executor = original_run_in_executor  # ty: ignore[invalid-assignment]
 
     asyncio.run(_run())
 
