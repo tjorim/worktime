@@ -21,9 +21,9 @@ const DIST = resolve(import.meta.dirname, "..", "dist");
 // 392 kB gzip, total 2391 kB raw; #1569 measured 1477 / 441 / 2375). Lower them
 // when the numbers improve; raise them only with a reason.
 const BUDGETS = {
-  initialRawKb: 1_360,
-  initialGzipKb: 412,
-  totalJsRawKb: 2_510,
+  initialRawKb: 1_185,
+  initialGzipKb: 367,
+  totalJsRawKb: 2_350,
 } as const;
 
 function listJs(dir: string): string[] {
