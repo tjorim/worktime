@@ -35,6 +35,7 @@ below predate that switch.
 
 ### Fixed
 
+- **Android:** OIDC discovery now rejects endpoints that are not plain HTTPS (cleartext only for `localhost`, `127.0.0.1`, `::1` and the emulator's `10.0.2.2`), carry credentials, a query or a fragment, or whose token/end-session endpoint is on a different host than the sign-in page. Redirects are no longer followed, and the success response is size-bounded.
 - Event type names (Holiday, Business trip, Sick leave …) in the Time Off table, month calendar and event dialog are now translated instead of always being English
 - Time Off entries are now ordered strictly by start date — single days used to be listed first and every date range after them
 - Team schedule: "In office" days were invisible in dark mode, days with more than one event only showed the first, and the legend swatches for Available and Weekend didn't match the grid
