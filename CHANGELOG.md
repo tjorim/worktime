@@ -27,6 +27,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Internal
 
 - Mock holiday reads in browser tests that cannot use MSW so they run without a backend.
+- Mock account and background sync requests in authenticated route-loading tests that block service workers.
 
 ### Planned
 
