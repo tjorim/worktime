@@ -102,7 +102,7 @@ jobs:
 
       - name: Check bundle budget
         working-directory: frontend
-        run: pnpm run check-bundle-budget
+        run: pnpm bundle:test && pnpm bundle:check
 
   e2e:
     name: E2E Tests (Chromium)
