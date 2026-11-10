@@ -1,4 +1,5 @@
 import com.worktime.buildlogic.CertPinning
+import com.worktime.buildlogic.GenerateChangelog
 import java.util.Properties
 
 plugins {
@@ -331,4 +332,19 @@ detekt {
 
 ktlint {
     android.set(true)
+}
+
+// Bundle the platform-filtered release notes offline for every variant.
+val generateChangelog = tasks.register<GenerateChangelog>("generateChangelog") {
+    script.set(layout.projectDirectory.file("../../scripts/release.mjs"))
+    changelog.set(layout.projectDirectory.file("../../CHANGELOG.md"))
+    releaseConfig.set(layout.projectDirectory.file("../../release.config.json"))
+    version.set(layout.projectDirectory.file("../../VERSION"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/changelogAssets"))
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(generateChangelog, GenerateChangelog::outputDirectory)
+    }
 }

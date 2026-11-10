@@ -16,6 +16,10 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ## [Unreleased]
 
+### Added
+
+- **Android:** Read release notes offline from “What’s new” in Settings.
+
 ### Planned
 
 - Calendar export (.ics format)
