@@ -26,6 +26,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Report the built source commit alongside the app version in the health response; VPS builds receive the full commit from the shared deployment tooling (tjorim/apps#345).
 - Mock holiday reads in browser tests that cannot use MSW so they run without a backend.
 - Mock account and background sync requests in authenticated route-loading tests that block service workers.
 
