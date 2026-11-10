@@ -20,9 +20,14 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 - **Android:** Read release notes offline from “What’s new” in Settings.
 
+### Fixed
+
+- Release notes hide internal and Android-only changes from the web app and translate all standard category headings.
+
 ### Internal
 
 - Mock holiday reads in browser tests that cannot use MSW so they run without a backend.
+- Mock account and background sync requests in authenticated route-loading tests that block service workers.
 
 ### Planned
 
@@ -40,33 +45,38 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 - Team schedule: specific load errors, an empty-team state and recent team IDs
 - Settings: labels can be reassigned before they are deleted, unavailable settings explain why, and a team reset can be undone
 - Month grid: a keyboard navigation model, and the timer now starts at zero
-- Backend: stable error codes alongside the error detail on every router
-- Local development: local member identities for testing roles
 
 ### Changed
 
 - The interface moved off Bootstrap and Sass to shared Base UI and shadcn components across the calendar, time tracking, Time Off, Gantt, settings, account and onboarding screens
 - Pickers use owned Base UI comboboxes instead of react-select
 - Faster loading: secondary routes, the welcome wizard and the schedule tab load on demand
-- Backend and containers run on Python 3.15; the toolchain is aligned on Node 26 and pnpm 12
 - Account page order is clearer and its disabled actions are explained inline
 - Weekly Summary is folded into the existing view
-- Slow requests are logged with per-request timing
 
 ### Fixed
 
 - Time tracking: overnight tasks are recorded without manual splits, weekly reports count only elapsed hours, labels are required on every task entry point, and validation is enforced in the API
 - Time off: notes are bounded and cannot inject hday lines, and imported entries are previewed and merged
-- Sign-in: concurrent and proactive 401 token renewal is shared, preferences are isolated on shared browsers, and Android keeps sessions through transient token refresh failures
-- Sign-out revokes Web Push subscriptions, and account deletion runs inside the existing transaction
+- Sign-in: concurrent and proactive 401 token renewal is shared, preferences are isolated on shared browsers
+- Sign-out revokes Web Push subscriptions
 - Sync: queued writes are shown, account load failures are grouped, and undated preferences are no longer re-pushed
-- Rate limits are shared across route IDs and methods and apply to included routers; mounted ASGI apps no longer fail with a 500
 - Stats count scheduled leave and reduce weekly hour targets
 - Gantt dependencies are validated and cleaned up when their targets are deleted
 - Calendar and Schedule-X: local times and display preferences are respected, and task dragging stays compatible with v4
 - Local backup replacements are validated and links are preserved
-- Android validates OIDC discovery endpoints and refuses redirects
+- **Android:** Keeps sessions through transient token refresh failures
+- **Android:** Validates OIDC discovery endpoints and refuses redirects
 - Accessibility failures in the calendar, Gantt and daily tracking views are fixed
+
+### Internal
+
+- Backend: stable error codes alongside the error detail on every router
+- Local development: local member identities for testing roles
+- Backend and containers run on Python 3.15; the toolchain is aligned on Node 26 and pnpm 12
+- Slow requests are logged with per-request timing
+- Rate limits are shared across route IDs and methods and apply to included routers; mounted ASGI apps no longer fail with a 500
+- Account deletion runs inside the existing transaction
 
 ## [2026.9.3] - 2026-09-29
 

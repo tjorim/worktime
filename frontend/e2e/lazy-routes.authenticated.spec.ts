@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mockAccount } from "./mockAccount";
 import { mockHolidays } from "./mockHolidays";
 
 /**
@@ -17,6 +18,7 @@ test.describe("lazy settings route", () => {
 
   test.beforeEach(async ({ context }) => {
     await mockHolidays(context);
+    await mockAccount(context);
   });
 
   test("back and forward move between home and settings", async ({ page }) => {
