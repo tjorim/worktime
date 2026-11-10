@@ -21,4 +21,6 @@ internal data class ChangelogCategory(val name: String, val entries: List<Change
 @Serializable
 internal data class ChangelogEntry(val text: String)
 
-internal fun parseChangelog(source: String): Changelog = Json { ignoreUnknownKeys = true }.decodeFromString(source)
+private val changelogJson = Json { ignoreUnknownKeys = true }
+
+internal fun parseChangelog(source: String): Changelog = changelogJson.decodeFromString(source)
