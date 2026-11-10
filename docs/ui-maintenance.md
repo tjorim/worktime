@@ -197,3 +197,63 @@ pnpm 12.16.1; CI must read the package declaration rather than keeping a second
 hard-coded pnpm version. Frontend Node setup reads `.node-version`. Keep tool
 changes in reviewable PRs and preserve runtime-version/bundle investigations as
 separate work.
+
+## Redact runtime (2026-11-09)
+
+The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset and explicit feature exclusions,
+registered before the React plugin. Keep React, React DOM and their types installed
+for library peers and TypeScript. No application imports need changing.
+Vitest stays on native React. Redact aliases application imports, but CommonJS
+entries in testing-library, Lucide and react-error-boundary can still load native
+React and cause invalid hook calls. Browser E2E tests exercise Redact instead;
+keep this distinction when interpreting unit test coverage.
+
+Redact renders synchronously. Review input responsiveness, portals, focus return,
+external stores and calendar/map interactions when upgrading it. Renovate groups
+Redact separately and disables automerge.
+
+Rollback: remove the Redact plugin call/import from Vite and remove its dev
+dependency with pnpm.
+
+Bundle limits now follow the measured full-preset build: initial 1126.6 KiB raw / 348.5 KiB gzip, total 2237.4 KiB raw. Limits retain about 5% headroom.
+
+Implementation validation uses base `e8ecb59bb16187ba55ecd0cdcbbcfb5bfd703e3d`. `pnpm build` passed with Redact;
+TypeScript runs in that command. Unit tests deliberately use native React as
+explained above. No INP trace or Firefox/WebKit compatibility claim is made.
+
+Production PWA E2E: all 4 checks passed, including offline lazy routes, missing chunk recovery and no write replay. `pnpm typecheck:tests` passed.
+
+Native unit suite: all 2493 tests passed.
+
+Focused Chromium calendar drag-and-drop, dialog pickers and sync-status suite:
+all 22 checks passed, including offline/retry recovery and grouped load failures.
+
+### Unused feature exclusions (2026-11-10)
+
+Disable `hydration`, `activity` and `fragmentRefs` in the browser runtime.
+The entry points mount with `createRoot`; the production module graph has no
+React Activity boundaries or Fragment DOM refs in app code or dependencies.
+Base UI's Activity mentions are comments explaining effect cleanup, not usage.
+Query/router cache hydration and Preact's internal hydration are separate APIs
+and do not require Redact DOM hydration.
+
+Keep portals, context, memo, forwardRef, lazy, Suspense and class components
+(including error-boundary lifecycles). Native view-transition animation remains
+off by default. Re-enable the relevant flag before introducing SSR hydration,
+Activity boundaries or Fragment refs, including through a dependency update.
+
+Same-config production chunk audit: disabling these three features removes
+15,684 raw bytes and 5,476 gzip bytes beyond the full-preset build.
+The audit found no native React/React DOM modules in the emitted browser chunks.
+
+Validation with these exclusions: build, lint and bundle checks passed; 26 Chromium calendar/dialog/sync/PWA checks passed.
+
+## Aligned bundle budgets (2026-11-10)
+
+All five apps now use the same measurement script, fixture tests, byte-based
+configuration and report/check commands. See [the shared contract](bundle-budgets.md).
+Existing ceilings are preserved; previously unguarded measurements use about
+5% headroom. The JSON config is the source of truth for limits. CI runs
+`pnpm bundle:test && pnpm bundle:check` after building.
+
+See [Redact compatibility checks](redact-compatibility.md) for repeatable runtime/browser commands, recorded results and unresolved coverage.

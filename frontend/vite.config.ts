@@ -1,3 +1,4 @@
+import { redact } from "@tanstack/redact/vite";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
@@ -23,6 +24,12 @@ export default defineConfig({
       project: "./project.inlang",
       outdir: "./src/paraglide",
       strategy: ["localStorage", "preferredLanguage", "baseLocale"],
+    }),
+    redact({
+      preset: "full",
+      environments: ["client"],
+      // Client-only mount; no Activity boundaries or Fragment DOM refs are used.
+      features: { hydration: false, activity: false, fragmentRefs: false },
     }),
     reactPlugin(),
     // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,
@@ -137,7 +144,11 @@ export default defineConfig({
         manualChunks(id) {
           const normalizedId = id.replaceAll("\\", "/");
           if (normalizedId.includes("/node_modules/")) {
-            if (/\/node_modules\/(react|react-dom|scheduler)\//.test(normalizedId)) {
+            if (
+              /\/node_modules\/(react|react-dom|scheduler|@tanstack[/\\]redact)\//.test(
+                normalizedId,
+              )
+            ) {
               return "vendor-react";
             }
             if (
