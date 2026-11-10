@@ -1,7 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { mockHolidays } from "./mockHolidays";
 
 // Verify the real cascade and keyboard behavior without an account or helper process.
 test.use({ serviceWorkers: "block" });
+
+test.beforeEach(async ({ context }) => {
+  await mockHolidays(context);
+});
 const events = [
   { type: "range", start: "2026/09/14", end: "2026/09/15", flags: [], title: "Annual leave" },
   { type: "range", start: "2026/09/16", end: "2026/09/16", flags: ["half_pm"], title: "Dentist" },

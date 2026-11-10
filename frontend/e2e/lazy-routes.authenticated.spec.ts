@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mockHolidays } from "./mockHolidays";
 
 /**
  * Settings is a code-split route (#1513). These run against the dev server, where
@@ -13,6 +14,10 @@ const sectionHeading = (page: Page, name: string) =>
 test.describe("lazy settings route", () => {
   // The MSW worker would otherwise intercept the module request before page.route sees it.
   test.use({ serviceWorkers: "block" });
+
+  test.beforeEach(async ({ context }) => {
+    await mockHolidays(context);
+  });
 
   test("back and forward move between home and settings", async ({ page }) => {
     await page.goto("/");

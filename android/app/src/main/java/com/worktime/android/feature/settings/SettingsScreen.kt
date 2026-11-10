@@ -70,6 +70,7 @@ fun SettingsScreen(
     onDeleteTemplate: (String) -> Unit = {}
 ) {
     val uriHandler = LocalUriHandler.current
+    var showChangelog by rememberSaveable { mutableStateOf(false) }
     var showDeleteAccountConfirm by rememberSaveable { mutableStateOf(false) }
 
     ScreenList(title = "Settings") {
@@ -201,6 +202,9 @@ fun SettingsScreen(
                         "or set a runtime API override above.",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Button(onClick = { showChangelog = true }) {
+                    Text("What’s new")
+                }
                 Button(onClick = onLogout) {
                     Text("Sign out")
                 }
@@ -235,6 +239,10 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (showChangelog) {
+        ChangelogDialog(onDismiss = { showChangelog = false })
     }
 
     if (showDeleteAccountConfirm) {

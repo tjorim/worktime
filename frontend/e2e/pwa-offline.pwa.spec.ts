@@ -1,5 +1,7 @@
 import { expect, test, type Route } from "@playwright/test";
 
+import { mockHolidays } from "./mockHolidays";
+
 /**
  * Code-split routes against the production build and its real service worker (#1513).
  * Settings, Privacy and Pebble pairing are separate chunks; Workbox must precache them
@@ -8,6 +10,10 @@ import { expect, test, type Route } from "@playwright/test";
 const ROUTE_CHUNKS = ["SettingsPage", "PrivacyPage", "PebblePairPage"];
 
 test.describe("lazy routes and the service worker", () => {
+  test.beforeEach(async ({ context }) => {
+    await mockHolidays(context);
+  });
+
   test("route chunks are precached and open offline without ever being fetched online", async ({
     page,
     context,
@@ -48,6 +54,7 @@ test.describe("lazy routes and the service worker", () => {
       // Browsers remember a failed module fetch for the life of the document, so recovery is a
       // reload (which also fetches the current index.html), not another import().
       const context = await browser.newContext({ serviceWorkers: "block" });
+      await mockHolidays(context);
       const page = await context.newPage();
       const chunk = "**/assets/js/PrivacyPage-*.js";
       await page.route(chunk, fail);
