@@ -29,6 +29,7 @@ from ..config import settings
 from ..config.oidc_config import OIDCTokenError, _resolve_jwks_uri
 from ..database.engine import get_session
 from ..middleware.rate_limit import limiter
+from ..version import APP_COMMIT, APP_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +168,8 @@ async def health_summary() -> JSONResponse:
         status_code=status.HTTP_200_OK,
         content={
             "status": "ok",
+            "version": APP_VERSION,
+            "commit": APP_COMMIT,
             "links": {
                 "liveness": "/api/health/liveness",
                 "readiness": "/api/health/readiness",

@@ -57,12 +57,15 @@ def test_liveness_returns_200(client):
 # ---------------------------------------------------------------------------
 
 
-def test_health_summary_returns_200_with_links(client):
+def test_health_summary_returns_200_with_links(client, monkeypatch):
     """GET /api/health returns 200 with links to liveness and readiness."""
+    monkeypatch.setattr(health_router, "APP_COMMIT", "b" * 40)
     response = client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
+    assert data["version"] == health_router.APP_VERSION
+    assert data["commit"] == "b" * 40
     assert data["links"]["liveness"] == "/api/health/liveness"
     assert data["links"]["readiness"] == "/api/health/readiness"
 
