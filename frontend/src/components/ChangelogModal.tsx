@@ -86,6 +86,24 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
           textClass: "text-muted-foreground",
           label: m.changelog_section_planned(),
         };
+      case "removed":
+        return {
+          icon: InfoIcon,
+          textClass: "text-muted-foreground",
+          label: m.changelog_section_removed(),
+        };
+      case "security":
+        return {
+          icon: InfoIcon,
+          textClass: "text-muted-foreground",
+          label: m.changelog_section_security(),
+        };
+      case "deprecated":
+        return {
+          icon: InfoIcon,
+          textClass: "text-muted-foreground",
+          label: m.changelog_section_deprecated(),
+        };
       default:
         return { icon: InfoIcon, textClass: "text-muted-foreground", label: name };
     }
