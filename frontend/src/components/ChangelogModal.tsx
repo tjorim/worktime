@@ -27,7 +27,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { type ChangelogVersion, changelogData, futurePlans } from "@/data/changelog";
+import {
+  type ChangelogCategory,
+  type ChangelogVersion,
+  changelogData,
+  futurePlans,
+} from "@/data/changelog";
 import * as m from "@/paraglide/messages.js";
 
 interface ChangelogModalProps {
@@ -49,8 +54,6 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     switch (status) {
       case "current":
         return <Badge variant="default">{m.changelog_status_current()}</Badge>;
-      case "planned":
-        return <Badge variant="secondary">{m.changelog_status_planned()}</Badge>;
       case "released":
         return <Badge variant="success">{m.changelog_status_released()}</Badge>;
       default:
@@ -58,49 +61,91 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     }
   };
 
-  const getIconForSection = (title: string): LucideIcon => {
-    switch (title) {
+  /** Icon, colour and (translated, where we have one) label for a changelog `###` heading. */
+  const getCategoryStyle = (
+    name: string,
+  ): { icon: LucideIcon; textClass: string; label: string } => {
+    switch (name.toLowerCase()) {
       case "added":
-        return CirclePlusIcon;
+        return {
+          icon: CirclePlusIcon,
+          textClass: "text-success",
+          label: m.changelog_section_added(),
+        };
       case "changed":
-        return RefreshCwIcon;
+        return {
+          icon: RefreshCwIcon,
+          textClass: "text-info",
+          label: m.changelog_section_changed(),
+        };
       case "fixed":
-        return BugIcon;
+        return { icon: BugIcon, textClass: "text-warning", label: m.changelog_section_fixed() };
       case "planned":
-        return CalendarClockIcon;
+        return {
+          icon: CalendarClockIcon,
+          textClass: "text-muted-foreground",
+          label: m.changelog_section_planned(),
+        };
       default:
-        return InfoIcon;
+        return { icon: InfoIcon, textClass: "text-muted-foreground", label: name };
     }
   };
 
-  const renderChangeSection = (
-    key: "added" | "changed" | "fixed" | "planned",
-    label: string,
-    items: string[],
-    textClass: string,
-  ) => {
-    if (items.length === 0) return null;
+  const renderCategory = (category: ChangelogCategory) => {
+    if (category.entries.length === 0) return null;
     const seen = new Map<string, number>();
+    const style = category.name ? getCategoryStyle(category.name) : null;
 
     return (
-      <div className="mb-4">
-        <h6 className={cn(textClass, "mb-2")}>
-          <Icon icon={getIconForSection(key)} className="me-2" />
-          {label}
-        </h6>
+      <div className="mb-4" key={category.name ?? "uncategorized"}>
+        {style && (
+          <h6 className={cn(style.textClass, "mb-2")}>
+            <Icon icon={style.icon} className="me-2" />
+            {style.label}
+          </h6>
+        )}
         <ul className="list-none pl-0">
-          {items.map((item) => {
-            const occurrence = (seen.get(item) ?? 0) + 1;
-            seen.set(item, occurrence);
+          {category.entries.map((entry) => {
+            const occurrence = (seen.get(entry.text) ?? 0) + 1;
+            seen.set(entry.text, occurrence);
             return (
-              <li key={`${key}-${item}-${occurrence}`} className="mb-1">
-                <small className="text-muted-foreground">•</small> {item}
+              <li key={`${category.name}-${entry.text}-${occurrence}`} className="mb-1">
+                <small className="text-muted-foreground">•</small>{" "}
+                {entry.scope && <strong>{entry.scope}: </strong>}
+                {entry.text}
               </li>
             );
           })}
         </ul>
       </div>
     );
+  };
+
+  /** A `#### Title` note under a version becomes "Title: description"; other prose is shown as is. */
+  const renderNotes = (version: ChangelogVersion) => {
+    const notes = version.categories.flatMap((category) =>
+      category.prose ? [category.prose] : [],
+    );
+    if (notes.length === 0) return null;
+    return notes.map((note) => {
+      const match = /^#### (.+?)\s*\n+([\s\S]*)$/.exec(note.trim());
+      return (
+        <Card className="mt-4 border-0 bg-secondary" key={note}>
+          <CardContent className="py-2">
+            <small className="text-muted-foreground">
+              <Icon icon={InfoIcon} className="me-1" />
+              {match ? (
+                <>
+                  <strong>{match[1]}:</strong> {match[2]!.trim()}
+                </>
+              ) : (
+                note
+              )}
+            </small>
+          </CardContent>
+        </Card>
+      );
+    });
   };
 
   return (
@@ -138,43 +183,8 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  {renderChangeSection(
-                    "added",
-                    m.changelog_section_added(),
-                    version.added,
-                    "text-success",
-                  )}
-                  {renderChangeSection(
-                    "changed",
-                    m.changelog_section_changed(),
-                    version.changed,
-                    "text-info",
-                  )}
-                  {renderChangeSection(
-                    "fixed",
-                    m.changelog_section_fixed(),
-                    version.fixed,
-                    "text-warning",
-                  )}
-                  {version.planned &&
-                    renderChangeSection(
-                      "planned",
-                      m.changelog_section_planned(),
-                      version.planned,
-                      "text-muted-foreground",
-                    )}
-
-                  {version.technicalDetails && (
-                    <Card className="mt-4 border-0 bg-secondary">
-                      <CardContent className="py-2">
-                        <small className="text-muted-foreground">
-                          <Icon icon={InfoIcon} className="me-1" />
-                          <strong>{version.technicalDetails.title}:</strong>{" "}
-                          {version.technicalDetails.description}
-                        </small>
-                      </CardContent>
-                    </Card>
-                  )}
+                  {version.categories.map(renderCategory)}
+                  {renderNotes(version)}
                 </AccordionContent>
               </AccordionItem>
             ))}

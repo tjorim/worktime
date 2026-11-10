@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChangelogModal } from "@/components/ChangelogModal";
-import { changelogData, futurePlans } from "@/data/changelog";
+import { type ChangelogVersion, changelogData, futurePlans } from "@/data/changelog";
+
+const hasEntries = (version: ChangelogVersion, category: string) =>
+  version.categories.some((c) => c.name === category && c.entries.length > 0);
 
 describe("ChangelogModal", () => {
   const defaultProps = {
@@ -75,14 +78,14 @@ describe("ChangelogModal", () => {
       render(<ChangelogModal {...defaultProps} />);
 
       // Test that Added sections exist for versions that have added items
-      const versionsWithAdded = changelogData.filter((v) => v.added.length > 0);
+      const versionsWithAdded = changelogData.filter((v) => hasEntries(v, "Added"));
       if (versionsWithAdded.length > 0) {
         const addedSections = screen.getAllByText("Added");
         expect(addedSections.length).toBeGreaterThan(0);
       }
 
       // Test that Changed sections exist for versions that have changed items
-      const versionsWithChanged = changelogData.filter((v) => v.changed.length > 0);
+      const versionsWithChanged = changelogData.filter((v) => hasEntries(v, "Changed"));
       if (versionsWithChanged.length > 0) {
         const changedSections = screen.getAllByText("Changed");
         expect(changedSections.length).toBeGreaterThan(0);
@@ -96,11 +99,7 @@ describe("ChangelogModal", () => {
       const sectionTypes = ["Added", "Changed", "Fixed"];
 
       sectionTypes.forEach((sectionType) => {
-        const hasThisSection = changelogData.some((version) => {
-          const key = sectionType.toLowerCase() as keyof typeof version;
-          const items = version[key];
-          return Array.isArray(items) ? items.length > 0 : false;
-        });
+        const hasThisSection = changelogData.some((version) => hasEntries(version, sectionType));
 
         if (hasThisSection) {
           const sectionElements = screen.getAllByText(sectionType);
@@ -111,14 +110,17 @@ describe("ChangelogModal", () => {
 
     it("renders technical details when their version is expanded", async () => {
       render(<ChangelogModal {...defaultProps} />);
-      const version = changelogData.find((v) => v.technicalDetails);
+      const withNote = (v: ChangelogVersion) =>
+        v.categories.find((c) => c.prose?.startsWith("#### "));
+      const version = changelogData.find((v) => withNote(v));
       expect(version).toBeDefined();
+      const match = /^#### (.+?)\s*\n+([\s\S]*)$/.exec(withNote(version!)!.prose!.trim())!;
       const trigger = screen.getByRole("button", {
         name: new RegExp(`Version ${version!.version}`),
       });
       if (trigger.getAttribute("aria-expanded") !== "true") fireEvent.click(trigger);
-      expect(await screen.findByText(`${version!.technicalDetails!.title}:`)).toBeInTheDocument();
-      expect(screen.getByText(version!.technicalDetails!.description)).toBeInTheDocument();
+      expect(await screen.findByText(`${match[1]}:`)).toBeInTheDocument();
+      expect(screen.getByText(match[2]!.trim(), { exact: false })).toBeInTheDocument();
     });
 
     it("displays version content in collapsible accordion format", () => {
@@ -200,6 +202,23 @@ describe("ChangelogModal", () => {
       // These should exist for some versions
       expect(changedHeaders.length).toBeGreaterThan(0);
       expect(fixedHeaders.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Audience filtering", () => {
+    it("never shows entries from the Internal category", () => {
+      expect(
+        changelogData.some((version) => version.categories.some((c) => c.name === "Internal")),
+      ).toBe(false);
+    });
+
+    it("shows an entry's scope before its text", () => {
+      const scoped = changelogData
+        .flatMap((v) => v.categories.flatMap((c) => c.entries))
+        .find((entry) => entry.scope);
+      if (!scoped) return; // no scoped entries in the changelog yet
+      render(<ChangelogModal {...defaultProps} />);
+      expect(screen.getAllByText(`${scoped.scope}:`, { exact: false }).length).toBeGreaterThan(0);
     });
   });
 

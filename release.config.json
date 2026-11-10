@@ -1,0 +1,6 @@
+{
+  "repo": "tjorim/worktime",
+  "targets": [{ "file": "frontend/package.json", "pattern": "\"version\": \"([^\"]+)\"" }],
+  "scopes": ["Web", "Android", "Pebble", "Backend", "MCP"],
+  "platforms": ["Web", "Android", "Pebble"]
+}

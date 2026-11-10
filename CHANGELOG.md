@@ -1,20 +1,64 @@
 # Changelog
 
-All notable changes to Worktime will be documented in this file.
+All notable changes to Worktime are documented in this file. It is written by hand and is the source
+for the GitHub release notes and the in-app "What's New" dialog.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases use CalVer
+(`YYYY.M.MICRO`); entries before 2026.7.2 are SemVer. The root `VERSION` file is the single source of
+truth: `node scripts/release.mjs bump` writes it everywhere and turns `[Unreleased]` into the next
+release, and `node scripts/release.mjs check` (run by CI and by the release workflow) verifies that the
+two agree. See "Versioning" in `AGENTS.md`.
 
-Starting with the first `YYYY.MM.MICRO` release, the version scheme is CalVer
-rather than SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries
-below predate that switch.
+Entries under `### Internal` (backend, infrastructure, CI, dependencies) are left out of the app's
+dialog. Start a bullet with a scope such as `**Android:**` to limit it to one client or area; the
+allowed scopes are listed in `release.config.json`, and `check` validates `[Unreleased]`. The dialog
+shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
-## [Unreleased] - Future Enhancements
+## [Unreleased]
 
 ### Planned
 
 - Calendar export (.ics format)
 - Cross-schedule transfer overlap detection
 - Mobile carousel for team browsing
+
+## [2026.11.1] - 2026-11-10
+
+### Added
+
+- Appearance: device appearance controls and a global reduced-motion setting
+- Time off: you are warned about overlapping entries, without blocking the save
+- Work location: choose and validate ISO countries
+- Team schedule: specific load errors, an empty-team state and recent team IDs
+- Settings: labels can be reassigned before they are deleted, unavailable settings explain why, and a team reset can be undone
+- Month grid: a keyboard navigation model, and the timer now starts at zero
+- Backend: stable error codes alongside the error detail on every router
+- Local development: local member identities for testing roles
+
+### Changed
+
+- The interface moved off Bootstrap and Sass to shared Base UI and shadcn components across the calendar, time tracking, Time Off, Gantt, settings, account and onboarding screens
+- Pickers use owned Base UI comboboxes instead of react-select
+- Faster loading: secondary routes, the welcome wizard and the schedule tab load on demand
+- Backend and containers run on Python 3.15; the toolchain is aligned on Node 26 and pnpm 12
+- Account page order is clearer and its disabled actions are explained inline
+- Weekly Summary is folded into the existing view
+- Slow requests are logged with per-request timing
+
+### Fixed
+
+- Time tracking: overnight tasks are recorded without manual splits, weekly reports count only elapsed hours, labels are required on every task entry point, and validation is enforced in the API
+- Time off: notes are bounded and cannot inject hday lines, and imported entries are previewed and merged
+- Sign-in: concurrent and proactive 401 token renewal is shared, preferences are isolated on shared browsers, and Android keeps sessions through transient token refresh failures
+- Sign-out revokes Web Push subscriptions, and account deletion runs inside the existing transaction
+- Sync: queued writes are shown, account load failures are grouped, and undated preferences are no longer re-pushed
+- Rate limits are shared across route IDs and methods and apply to included routers; mounted ASGI apps no longer fail with a 500
+- Stats count scheduled leave and reduce weekly hour targets
+- Gantt dependencies are validated and cleaned up when their targets are deleted
+- Calendar and Schedule-X: local times and display preferences are respected, and task dragging stays compatible with v4
+- Local backup replacements are validated and links are preserved
+- Android validates OIDC discovery endpoints and refuses redirects
+- Accessibility failures in the calendar, Gantt and daily tracking views are fixed
 
 ## [2026.9.3] - 2026-09-29
 
@@ -35,7 +79,6 @@ below predate that switch.
 
 ### Fixed
 
-- **Android:** OIDC discovery now rejects endpoints that are not plain HTTPS (cleartext only for `localhost`, `127.0.0.1`, `::1` and the emulator's `10.0.2.2`), carry credentials, a query or a fragment, or whose token/end-session endpoint is on a different host than the sign-in page. Redirects are no longer followed, and the success response is size-bounded.
 - Event type names (Holiday, Business trip, Sick leave …) in the Time Off table, month calendar and event dialog are now translated instead of always being English
 - Time Off entries are now ordered strictly by start date — single days used to be listed first and every date range after them
 - Team schedule: "In office" days were invisible in dark mode, days with more than one event only showed the first, and the legend swatches for Available and Weekend didn't match the grid
@@ -774,37 +817,9 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.3...HEAD
-[2026.9.3]: https://github.com/tjorim/worktime/compare/v2026.9.2...v2026.9.3
-[2026.9.2]: https://github.com/tjorim/worktime/compare/v2026.9.1...v2026.9.2
-[2026.9.1]: https://github.com/tjorim/worktime/compare/v2026.8.9...v2026.9.1
-[2026.8.9]: https://github.com/tjorim/worktime/compare/v2026.8.8...v2026.8.9
-[2026.8.8]: https://github.com/tjorim/worktime/compare/v2026.8.7...v2026.8.8
-[2026.8.7]: https://github.com/tjorim/worktime/compare/v2026.8.6...v2026.8.7
-[2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6
-[2026.8.5]: https://github.com/tjorim/worktime/compare/v2026.8.4...v2026.8.5
-[2026.8.4]: https://github.com/tjorim/worktime/compare/v2026.8.3...v2026.8.4
-[2026.8.3]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.8.3
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.11.1...HEAD
+[2026.11.1]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.11.1
 [2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2
 [2026.8.1]: https://github.com/tjorim/worktime/compare/v2026.7.2...v2026.8.1
-[2026.7.2]: https://github.com/tjorim/worktime/compare/v2026.7.1...v2026.7.2
-[2026.7.1]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.1
-[4.7.1]: https://github.com/tjorim/worktime/compare/v4.7.0...v4.7.1
-[4.7.0]: https://github.com/tjorim/worktime/compare/v4.6.1...v4.7.0
-[4.6.1]: https://github.com/tjorim/worktime/compare/v4.6.0...v4.6.1
-[4.6.0]: https://github.com/tjorim/worktime/compare/v4.5.2...v4.6.0
-[4.5.2]: https://github.com/tjorim/worktime/compare/v4.5.1...v4.5.2
-[4.5.1]: https://github.com/tjorim/worktime/compare/v4.5.0...v4.5.1
-[4.5.0]: https://github.com/tjorim/worktime/compare/v4.4.1...v4.5.0
-[4.4.1]: https://github.com/tjorim/worktime/compare/v4.4.0...v4.4.1
-[4.4.0]: https://github.com/tjorim/worktime/compare/v4.3.0...v4.4.0
-[4.3.0]: https://github.com/tjorim/worktime/compare/v4.2.0...v4.3.0
-[4.2.0]: https://github.com/tjorim/worktime/compare/v4.1.0...v4.2.0
-[4.1.0]: https://github.com/tjorim/worktime/compare/v4.0.0...v4.1.0
-[4.0.0]: https://github.com/tjorim/worktime/compare/v3.4.0...v4.0.0
-[3.4.0]: https://github.com/tjorim/worktime/compare/v3.3.0...v3.4.0
-[3.3.0]: https://github.com/tjorim/worktime/compare/v3.2.0...v3.3.0
-[3.2.0]: https://github.com/tjorim/worktime/compare/v3.1.0...v3.2.0
-[3.1.0]: https://github.com/tjorim/worktime/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/tjorim/worktime/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/tjorim/worktime/releases/tag/v2.0.0
+[2026.7.2]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.2
+[4.7.1]: https://github.com/tjorim/worktime/releases/tag/v4.7.1

@@ -39,10 +39,6 @@ jobs:
           node scripts/ui-maintenance.mjs check
           node scripts/ui-imports.mjs
 
-      - name: Validate release version consistency
-        working-directory: frontend
-        run: pnpm run check-version-consistency
-
       - name: Audit interface strings and catalogues
         working-directory: frontend
         run: pnpm run locale:audit
