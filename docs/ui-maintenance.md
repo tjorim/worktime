@@ -200,7 +200,7 @@ separate work.
 
 ## Redact runtime (2026-11-09)
 
-The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset,
+The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset and explicit feature exclusions,
 registered before the React plugin. Keep React, React DOM and their types installed
 for library peers and TypeScript. No application imports need changing.
 Vitest stays on native React. Redact aliases application imports, but CommonJS
@@ -227,3 +227,23 @@ Native unit suite: all 2493 tests passed.
 
 Focused Chromium calendar drag-and-drop, dialog pickers and sync-status suite:
 all 22 checks passed, including offline/retry recovery and grouped load failures.
+
+### Unused feature exclusions (2026-11-10)
+
+Disable `hydration`, `activity` and `fragmentRefs` in the browser runtime.
+The entry points mount with `createRoot`; the production module graph has no
+React Activity boundaries or Fragment DOM refs in app code or dependencies.
+Base UI's Activity mentions are comments explaining effect cleanup, not usage.
+Query/router cache hydration and Preact's internal hydration are separate APIs
+and do not require Redact DOM hydration.
+
+Keep portals, context, memo, forwardRef, lazy, Suspense and class components
+(including error-boundary lifecycles). Native view-transition animation remains
+off by default. Re-enable the relevant flag before introducing SSR hydration,
+Activity boundaries or Fragment refs, including through a dependency update.
+
+Same-config production chunk audit: disabling these three features removes
+15,684 raw bytes and 5,476 gzip bytes beyond the full-preset build.
+The audit found no native React/React DOM modules in the emitted browser chunks.
+
+Validation with these exclusions: build, lint and bundle checks passed; 26 Chromium calendar/dialog/sync/PWA checks passed.
