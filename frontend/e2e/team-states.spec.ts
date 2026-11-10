@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { mockHolidays } from "./mockHolidays";
 
 test.use({ serviceWorkers: "block" });
+
+test.beforeEach(async ({ context }) => {
+  await mockHolidays(context);
+});
 
 // The Team view's feedback states, driven by a stubbed .hday helper.
 for (const theme of ["light", "dark"]) {

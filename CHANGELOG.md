@@ -20,6 +20,10 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 - **Android:** Read release notes offline from “What’s new” in Settings.
 
+### Internal
+
+- Mock holiday reads in browser tests that cannot use MSW so they run without a backend.
+
 ### Planned
 
 - Calendar export (.ics format)
