@@ -81,7 +81,7 @@ def reset_rate_limiter() -> Generator[None]:
     yield
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def _schema_engine() -> AsyncGenerator[AsyncEngine]:
     """Session-scoped engine: create schema once, drop it after all tests."""
     _assert_test_database_url(_TEST_DATABASE_URL)
