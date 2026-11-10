@@ -255,3 +255,5 @@ configuration and report/check commands. See [the shared contract](bundle-budget
 Existing ceilings are preserved; previously unguarded measurements use about
 5% headroom. The JSON config is the source of truth for limits. CI runs
 `pnpm bundle:test && pnpm bundle:check` after building.
+
+See [Redact compatibility checks](redact-compatibility.md) for repeatable runtime/browser commands, recorded results and unresolved coverage.
