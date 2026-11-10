@@ -4,6 +4,8 @@ import reactPlugin from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
+import { changelogPlugin } from "./vite-plugin-changelog.ts";
+
 // Read version from package.json for injection in tests
 import packageJson from "./package.json" with { type: "json" };
 
@@ -12,6 +14,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
   plugins: [
+    changelogPlugin(),
     // oxlint-disable-next-line @typescript-eslint/no-explicit-any -- paraglide plugin types don't match vitest's plugin type
     paraglideVitePlugin({
       project: "./project.inlang",

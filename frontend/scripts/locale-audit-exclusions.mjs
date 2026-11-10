@@ -1,7 +1,7 @@
 // Whole files that hold no interface copy: authored data and development fixtures. Keep this list short and
 // give each entry a reason; a trailing slash matches a directory.
 export const excludedFiles = {
-  "data/changelog.ts": "authored release notes, not interface copy",
+  "data/changelog.ts": "adapter over CHANGELOG.md, whose entries are release notes, not interface copy",
   "mocks/": "MSW development fixtures, loaded only when VITE_MSW is set",
 };
 // Functions that only log for developers; their string arguments are not interface copy.

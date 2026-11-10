@@ -1,14 +1,20 @@
 # Changelog
 
-All notable changes to Worktime will be documented in this file.
+All notable changes to Worktime are documented in this file. It is written by hand and is the source
+for the GitHub release notes and the in-app "What's New" dialog.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases use CalVer
+(`YYYY.M.MICRO`); entries before 2026.7.2 are SemVer. The root `VERSION` file is the single source of
+truth: `node scripts/release.mjs bump` writes it everywhere and turns `[Unreleased]` into the next
+release, and `node scripts/release.mjs check` (run by CI and by the release workflow) verifies that the
+two agree. See "Versioning" in `AGENTS.md`.
 
-Starting with the first `YYYY.MM.MICRO` release, the version scheme is CalVer
-rather than SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries
-below predate that switch.
+Entries under `### Internal` (backend, infrastructure, CI, dependencies) are left out of the app's
+dialog. Start a bullet with a scope such as `**Android:**` to limit it to one client or area; the
+allowed scopes are listed in `release.config.json`, and `check` validates `[Unreleased]`. The dialog
+shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
-## [Unreleased] - Future Enhancements
+## [Unreleased]
 
 ### Planned
 
@@ -812,37 +818,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 ---
 
 [Unreleased]: https://github.com/tjorim/worktime/compare/v2026.11.1...HEAD
-[2026.11.1]: https://github.com/tjorim/worktime/compare/v2026.9.3...v2026.11.1
-[2026.9.3]: https://github.com/tjorim/worktime/compare/v2026.9.2...v2026.9.3
-[2026.9.2]: https://github.com/tjorim/worktime/compare/v2026.9.1...v2026.9.2
-[2026.9.1]: https://github.com/tjorim/worktime/compare/v2026.8.9...v2026.9.1
-[2026.8.9]: https://github.com/tjorim/worktime/compare/v2026.8.8...v2026.8.9
-[2026.8.8]: https://github.com/tjorim/worktime/compare/v2026.8.7...v2026.8.8
-[2026.8.7]: https://github.com/tjorim/worktime/compare/v2026.8.6...v2026.8.7
-[2026.8.6]: https://github.com/tjorim/worktime/compare/v2026.8.5...v2026.8.6
-[2026.8.5]: https://github.com/tjorim/worktime/compare/v2026.8.4...v2026.8.5
-[2026.8.4]: https://github.com/tjorim/worktime/compare/v2026.8.3...v2026.8.4
-[2026.8.3]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.8.3
+[2026.11.1]: https://github.com/tjorim/worktime/compare/v2026.8.2...v2026.11.1
 [2026.8.2]: https://github.com/tjorim/worktime/compare/v2026.8.1...v2026.8.2
 [2026.8.1]: https://github.com/tjorim/worktime/compare/v2026.7.2...v2026.8.1
-[2026.7.2]: https://github.com/tjorim/worktime/compare/v2026.7.1...v2026.7.2
-[2026.7.1]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.1
-[4.7.1]: https://github.com/tjorim/worktime/compare/v4.7.0...v4.7.1
-[4.7.0]: https://github.com/tjorim/worktime/compare/v4.6.1...v4.7.0
-[4.6.1]: https://github.com/tjorim/worktime/compare/v4.6.0...v4.6.1
-[4.6.0]: https://github.com/tjorim/worktime/compare/v4.5.2...v4.6.0
-[4.5.2]: https://github.com/tjorim/worktime/compare/v4.5.1...v4.5.2
-[4.5.1]: https://github.com/tjorim/worktime/compare/v4.5.0...v4.5.1
-[4.5.0]: https://github.com/tjorim/worktime/compare/v4.4.1...v4.5.0
-[4.4.1]: https://github.com/tjorim/worktime/compare/v4.4.0...v4.4.1
-[4.4.0]: https://github.com/tjorim/worktime/compare/v4.3.0...v4.4.0
-[4.3.0]: https://github.com/tjorim/worktime/compare/v4.2.0...v4.3.0
-[4.2.0]: https://github.com/tjorim/worktime/compare/v4.1.0...v4.2.0
-[4.1.0]: https://github.com/tjorim/worktime/compare/v4.0.0...v4.1.0
-[4.0.0]: https://github.com/tjorim/worktime/compare/v3.4.0...v4.0.0
-[3.4.0]: https://github.com/tjorim/worktime/compare/v3.3.0...v3.4.0
-[3.3.0]: https://github.com/tjorim/worktime/compare/v3.2.0...v3.3.0
-[3.2.0]: https://github.com/tjorim/worktime/compare/v3.1.0...v3.2.0
-[3.1.0]: https://github.com/tjorim/worktime/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/tjorim/worktime/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/tjorim/worktime/releases/tag/v2.0.0
+[2026.7.2]: https://github.com/tjorim/worktime/compare/v4.7.1...v2026.7.2
+[4.7.1]: https://github.com/tjorim/worktime/releases/tag/v4.7.1

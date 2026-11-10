@@ -25,7 +25,7 @@ pnpm test
 pnpm build
 ```
 
-Do not manually edit `CHANGELOG.md` or files under `public/assets/icons/`.
+Do not manually edit files under `public/assets/icons/`. `CHANGELOG.md` *is* hand-edited (see "Versioning").
 
 The frontend uses port 5173 (strict) and proxies `/api` to the backend on
 `127.0.0.1:8000`, including SSE. Start both servers; see README Quick Start for
@@ -71,7 +71,7 @@ endpoints — account deletion and token management itself — that a leaked tok
 
 ## Versioning
 
-The app uses CalVer: `YYYY.MM.MICRO` (e.g. `2026.7.1`), where `MICRO` is a counter
+The app uses CalVer: `YYYY.M.MICRO` (e.g. `2026.7.1`; months are not zero-padded), where `MICRO` is a counter
 that resets to `1` at the start of each new month.
 
 The root `VERSION` file is the single source of truth. Everything else derives
@@ -81,13 +81,28 @@ from it — nothing else should be hand-edited:
   `app/main.py`. `backend/pyproject.toml`'s `version` field is frozen at
   `0.0.0` — it's packaging metadata only, never read at runtime since the
   project is run from source, not installed as a wheel.
-- `frontend/package.json`'s `version` field is synced from it via
-  `pnpm run sync-version` (`frontend/scripts/sync-version.ts`); `check-version-consistency.ts`
-  fails CI if it drifts.
+- `frontend/package.json`'s `version` field is written by `node scripts/release.mjs bump` and
+  verified by `release.mjs check` (CI and the release workflow); `release.config.json` lists the
+  files that carry the version.
 - `android/app/build.gradle.kts` reads it directly to compute `versionName`/`versionCode`.
 
-After bumping `VERSION`, run `pnpm run sync-version`, add a `frontend/src/data/changelog.ts`
-entry for the new version, then `pnpm run generate-changelog` to regenerate `CHANGELOG.md`.
+`CHANGELOG.md` is the hand-edited source for release notes: the GitHub release body and the in-app
+"What's New" dialog both come from it (the dialog through `frontend/vite-plugin-changelog.ts`, which
+runs `node scripts/release.mjs export --audience app --platform web`).
+
+1. Add entries under `## [Unreleased]` while working (`### Added`, `### Changed`, `### Fixed`,
+   `### Removed`). Put backend, infrastructure, CI and dependency changes under `### Internal`: the
+   dialog hides that heading. Prefix a bullet with `**Android:**` (any scope in `release.config.json`)
+   when it only applies to one client; the web dialog then leaves it out. `### Planned` bullets under
+   `[Unreleased]` appear as "Coming soon" and stay there when a release is cut.
+2. `node scripts/release.mjs bump` writes the next version into `VERSION` and
+   `frontend/package.json` and turns `[Unreleased]` into the dated release section with compare links.
+   Review the diff, open the release PR and merge it.
+3. Push tag `vYYYY.M.MICRO`. `.github/workflows/release-draft.yml` re-checks the tag, versions and
+   changelog (`node scripts/release.mjs check --tag`) and creates a **draft** release whose notes are
+   the changelog section.
+
+`node scripts/release.mjs check` also runs in CI on every pull request.
 
 ## Source Of Truth
 
@@ -102,7 +117,7 @@ entry for the new version, then `pnpm run generate-changelog` to regenerate `CHA
   frontend CI's `check-roster-fixture` step catch drift between the two (#1107)
 - `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
-- `frontend/src/data/changelog.ts` for release notes input
+- `CHANGELOG.md` for release notes (`frontend/src/data/changelog.ts` only adapts it for the app)
 - `frontend/src/styles/event-palette.css` for event colors, in both themes.
   It is the only place they are defined: it defines `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
   `.event-*` classes at the bottom of that file apply them, and `getEventColor()` /

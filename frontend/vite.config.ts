@@ -7,6 +7,8 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+import { changelogPlugin } from "./vite-plugin-changelog.ts";
+
 // Read version from package.json for injection
 import packageJson from "./package.json" with { type: "json" };
 
@@ -20,6 +22,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
   plugins: [
+    changelogPlugin(),
     paraglideVitePlugin({
       project: "./project.inlang",
       outdir: "./src/paraglide",

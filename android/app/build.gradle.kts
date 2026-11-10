@@ -120,9 +120,9 @@ if (releaseArtifactRequested) {
 }
 
 // Single source of truth for the app version: the repo-root VERSION file
-// (CalVer YYYY.MM.MICRO), kept in lockstep with frontend/package.json and
-// backend/pyproject.toml (see frontend/scripts/check-version-consistency.ts
-// and backend/pyproject.toml's [tool.hatch.version]) instead of a
+// (CalVer YYYY.M.MICRO), kept in lockstep with frontend/package.json by
+// `node scripts/release.mjs bump` / `check` (backend/pyproject.toml reads it
+// through [tool.hatch.version]) instead of a
 // hand-maintained literal here. Read via providers.fileContents (not
 // File.readText()) so the file is tracked as a build configuration input and
 // this stays Configuration Cache-compatible.
