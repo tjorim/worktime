@@ -16,6 +16,44 @@ below predate that switch.
 - Cross-schedule transfer overlap detection
 - Mobile carousel for team browsing
 
+## [2026.11.1] - 2026-11-10
+
+### Added
+
+- Appearance: device appearance controls and a global reduced-motion setting
+- Time off: you are warned about overlapping entries, without blocking the save
+- Work location: choose and validate ISO countries
+- Team schedule: specific load errors, an empty-team state and recent team IDs
+- Settings: labels can be reassigned before they are deleted, unavailable settings explain why, and a team reset can be undone
+- Month grid: a keyboard navigation model, and the timer now starts at zero
+- Backend: stable error codes alongside the error detail on every router
+- Local development: local member identities for testing roles
+
+### Changed
+
+- The interface moved off Bootstrap and Sass to shared Base UI and shadcn components across the calendar, time tracking, Time Off, Gantt, settings, account and onboarding screens
+- Pickers use owned Base UI comboboxes instead of react-select
+- Faster loading: secondary routes, the welcome wizard and the schedule tab load on demand
+- Backend and containers run on Python 3.15; the toolchain is aligned on Node 26 and pnpm 12
+- Account page order is clearer and its disabled actions are explained inline
+- Weekly Summary is folded into the existing view
+- Slow requests are logged with per-request timing
+
+### Fixed
+
+- Time tracking: overnight tasks are recorded without manual splits, weekly reports count only elapsed hours, labels are required on every task entry point, and validation is enforced in the API
+- Time off: notes are bounded and cannot inject hday lines, and imported entries are previewed and merged
+- Sign-in: concurrent and proactive 401 token renewal is shared, preferences are isolated on shared browsers, and Android keeps sessions through transient token refresh failures
+- Sign-out revokes Web Push subscriptions, and account deletion runs inside the existing transaction
+- Sync: queued writes are shown, account load failures are grouped, and undated preferences are no longer re-pushed
+- Rate limits are shared across route IDs and methods and apply to included routers; mounted ASGI apps no longer fail with a 500
+- Stats count scheduled leave and reduce weekly hour targets
+- Gantt dependencies are validated and cleaned up when their targets are deleted
+- Calendar and Schedule-X: local times and display preferences are respected, and task dragging stays compatible with v4
+- Local backup replacements are validated and links are preserved
+- Android validates OIDC discovery endpoints and refuses redirects
+- Accessibility failures in the calendar, Gantt and daily tracking views are fixed
+
 ## [2026.9.3] - 2026-09-29
 
 ### Added
@@ -35,7 +73,6 @@ below predate that switch.
 
 ### Fixed
 
-- **Android:** OIDC discovery now rejects endpoints that are not plain HTTPS (cleartext only for `localhost`, `127.0.0.1`, `::1` and the emulator's `10.0.2.2`), carry credentials, a query or a fragment, or whose token/end-session endpoint is on a different host than the sign-in page. Redirects are no longer followed, and the success response is size-bounded.
 - Event type names (Holiday, Business trip, Sick leave …) in the Time Off table, month calendar and event dialog are now translated instead of always being English
 - Time Off entries are now ordered strictly by start date — single days used to be listed first and every date range after them
 - Team schedule: "In office" days were invisible in dark mode, days with more than one event only showed the first, and the legend swatches for Available and Weekend didn't match the grid
@@ -774,7 +811,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ---
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.9.3...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v2026.11.1...HEAD
+[2026.11.1]: https://github.com/tjorim/worktime/compare/v2026.9.3...v2026.11.1
 [2026.9.3]: https://github.com/tjorim/worktime/compare/v2026.9.2...v2026.9.3
 [2026.9.2]: https://github.com/tjorim/worktime/compare/v2026.9.1...v2026.9.2
 [2026.9.1]: https://github.com/tjorim/worktime/compare/v2026.8.9...v2026.9.1
