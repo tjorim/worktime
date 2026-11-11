@@ -89,10 +89,13 @@ jobs:
         run: uv sync --frozen
 
       - name: Lint (ruff check)
-        run: uv run ruff check app
+        run: uv run ruff check .
+
+      - name: Format (ruff format)
+        run: uv run ruff format --check .
 
       - name: Typecheck (ty)
-        run: uv run ty check app
+        run: uv run ty check .
 
       - name: Test
         env:
@@ -142,6 +145,9 @@ jobs:
 
       - name: Lint
         run: pnpm run lint
+
+      - name: Format check
+        run: pnpm run format:check
 
       - name: Test
         run: pnpm run test
