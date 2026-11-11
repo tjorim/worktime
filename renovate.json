@@ -8,108 +8,53 @@
   ],
   "packageRules": [
     {
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchPackageNames": [
-        "dayjs"
-      ],
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["dayjs"],
       "groupName": "dayjs"
     },
     {
-      "description": [
-        "vite-plugin-pwa generates the service worker that workbox-window registers"
-      ],
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchPackageNames": [
-        "vite-plugin-pwa",
-        "workbox-window"
-      ],
+      "description": ["vite-plugin-pwa generates the service worker that workbox-window registers"],
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["vite-plugin-pwa", "workbox-window"],
       "groupName": "pwa"
     },
     {
-      "description": [
-        "Schedule-X calendar component and its plugins"
-      ],
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchPackageNames": [
-        "@schedule-x/*"
-      ],
+      "description": ["Schedule-X calendar component and its plugins"],
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["@schedule-x/*"],
       "groupName": "schedule-x"
     },
     {
-      "description": [
-        "frontend/**"
-      ],
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchFileNames": [
-        "frontend/**"
-      ],
-      "addLabels": [
-        "platform:frontend"
-      ]
+      "description": ["frontend/**"],
+      "matchDatasources": ["npm"],
+      "matchFileNames": ["frontend/**"],
+      "addLabels": ["platform:frontend"]
     },
     {
-      "description": [
-        "pebble/**"
-      ],
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchFileNames": [
-        "pebble/**"
-      ],
-      "addLabels": [
-        "platform:pebble"
-      ],
+      "description": ["pebble/**"],
+      "matchDatasources": ["npm"],
+      "matchFileNames": ["pebble/**"],
+      "addLabels": ["platform:pebble"],
       "commitMessagePrefix": "deps(pebble):"
     },
     {
-      "description": [
-        "backend/**"
-      ],
-      "matchDatasources": [
-        "pypi"
-      ],
-      "matchFileNames": [
-        "backend/**"
-      ],
-      "addLabels": [
-        "platform:backend"
-      ],
+      "description": ["backend/**"],
+      "matchDatasources": ["pypi"],
+      "matchFileNames": ["backend/**"],
+      "addLabels": ["platform:backend"],
       "commitMessagePrefix": "deps(backend):"
     },
     {
-      "description": [
-        "android/**"
-      ],
-      "matchManagers": [
-        "gradle"
-      ],
-      "matchFileNames": [
-        "android/**"
-      ],
-      "addLabels": [
-        "platform:android"
-      ],
+      "description": ["android/**"],
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["android/**"],
+      "addLabels": ["platform:android"],
       "commitMessagePrefix": "deps(android):"
     },
     {
-      "description": [
-        "Review Redact runtime updates separately while its API is pre-1.0"
-      ],
-      "matchDatasources": [
-        "npm"
-      ],
-      "matchPackageNames": [
-        "@tanstack/redact"
-      ],
+      "description": ["Review Redact runtime updates separately while its API is pre-1.0"],
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["@tanstack/redact"],
       "groupName": "redact",
       "automerge": false
     }
