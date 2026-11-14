@@ -12,7 +12,7 @@ This document summarizes the alignment work completed to bring HdayPlanner's Dev
 
 #### Dependency Management
 
-- `.github/dependabot.yml` - Automated dependency updates for npm (frontend), pip (backend), and GitHub Actions
+- `renovate.json` - Automated dependency updates through Renovate (shared `tjorim/renovate-config` preset) for npm, uv, Gradle, Docker and GitHub Actions
   - Weekly schedule (Friday 18:00 UTC)
   - Grouped updates for related packages (React, Vite, testing tools)
   - Automatic assignee and labeling
