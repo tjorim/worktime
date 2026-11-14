@@ -5,6 +5,7 @@
 //
 // `check` needs no Python, so `pnpm typecheck` can run it anywhere. The backend tests fail when openapi.json
 // no longer matches the application, so the two checks together catch a stale type in either place.
+// `generate` runs the backend with `uv run --frozen`, so it never rewrites backend/uv.lock.
 // Orval (see `orval.config.mjs`) writes one file per schema plus an `index.ts`, so the `./api-schema` import resolves.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -49,7 +50,7 @@ function same(a, b) {
 
 const mode = process.argv[2];
 if (mode === "generate") {
-  run("uv", ["run", "--project", "../backend", "python", "-m", "app.openapi_export"]);
+  run("uv", ["run", "--frozen", "--project", "../backend", "python", "-m", "app.openapi_export"]);
   generate(generated);
 } else if (mode === "check") {
   const scratch = mkdtempSync(join(tmpdir(), "worktime-api-types-"));
