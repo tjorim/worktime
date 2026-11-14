@@ -40,7 +40,12 @@ uv run ruff check app
 uv run ty check app
 uv run pytest
 uv run alembic upgrade head
+uv run python -m app.openapi_export   # rewrite ../frontend/openapi.json after changing a route or schema
 ```
+
+`frontend/openapi.json` is the committed OpenAPI document the frontend generates its API types from (#2031).
+`tests/test_openapi_snapshot.py` fails when it is stale, and `tests/test_response_models.py` fails when a JSON
+route has no `response_model`. The snapshot pins `info.version`, so a release bump does not stale it.
 
 > **Prerequisites:** tests default to SQLite, so no container is needed. Local development
 > defaults to PostgreSQL unless `DATABASE_URL` is set to SQLite (see below). The suite takes about 15 seconds that way. Production runs on

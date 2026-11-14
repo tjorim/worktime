@@ -32,6 +32,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 - Mock holiday reads in browser tests that cannot use MSW so they run without a backend.
 - Mock account and background sync requests in authenticated route-loading tests that block service workers.
 - Declare a response model on every JSON route (health, metrics, the holiday proxies, the MCP capability manifest and the Web Push key were untyped) and fail the backend tests when a route lacks one, so the OpenAPI document can drive generated frontend types (#2031).
+- Commit the backend's OpenAPI document as `frontend/openapi.json` and fail the backend tests when it is stale; regenerate it with `uv run python -m app.openapi_export` (#2031).
 
 ### Planned
 
