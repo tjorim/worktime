@@ -26,6 +26,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Remove `.github/dependabot.yml`: Renovate (shared `tjorim/renovate-config` preset) is the only dependency updater now. Dependabot security alerts stay on.
 - Check the formatting of workflows, scripts and the root JSON files in CI (`pnpm format:repo:check`), as the other apps do; `renovate.json` was reformatted to match.
 - Rename the release workflow to `release.yml` and give it the shared job graph used by every app (`validate`, the backend and frontend checks, `draft`), with a read-only default token that only the draft job can write with.
 - Report the built source commit alongside the app version in the health response; VPS builds receive the full commit from the shared deployment tooling (tjorim/apps#345).
