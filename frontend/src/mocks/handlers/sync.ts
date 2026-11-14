@@ -15,6 +15,18 @@
  */
 
 import { http, HttpResponse } from "msw/http";
+import type {
+  AuditEntryListResponse,
+  PreferencesResponse,
+  SyncPullResponse,
+  SyncPushResponse,
+  SyncStatusResponse,
+  UserListResponse,
+  UserPreferencesWrite,
+  UserRead,
+  UserUpdate,
+  AccountProfile,
+} from "@/api-types";
 import { sseEmitter } from "@/mocks/data/sseEmitter";
 import { syncStore } from "@/mocks/data/syncStore";
 import { buildAuthFailureResponse } from "./auth";
@@ -47,7 +59,7 @@ export const syncHandlers = [
   }),
 
   // GET /api/sync/status
-  http.get("*/api/sync/status", () => {
+  http.get<never, never, SyncStatusResponse>("*/api/sync/status", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     if (syncStore.statusError !== null) {
@@ -57,7 +69,7 @@ export const syncHandlers = [
   }),
 
   // POST /api/sync/push
-  http.post("*/api/sync/push", () => {
+  http.post<never, never, SyncPushResponse>("*/api/sync/push", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     if (syncStore.pushError !== null) {
@@ -71,7 +83,7 @@ export const syncHandlers = [
   // method (defaulting to GET). This handler previously mocked it as POST, so any
   // test exercising the real fetch path (not the injected-fetch harness) would 404
   // here silently — see AccountSyncFlow.integration.test.tsx's full-App sync tests.
-  http.get("*/api/sync/pull", () => {
+  http.get<never, never, SyncPullResponse>("*/api/sync/pull", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     if (syncStore.pullError !== null) {
@@ -81,44 +93,47 @@ export const syncHandlers = [
   }),
 
   // GET /api/preferences
-  http.get("*/api/preferences", () => {
+  http.get<never, never, PreferencesResponse | null>("*/api/preferences", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     return HttpResponse.json(syncStore.preferences);
   }),
 
   // PUT /api/preferences
-  http.put("*/api/preferences", async ({ request }) => {
-    const authFailure = buildAuthFailureResponse();
-    if (authFailure) return authFailure;
-    const body = await request.json();
-    const now = new Date().toISOString();
-    syncStore.preferences = {
-      user_id: 1,
-      data: (body as { data: Record<string, unknown> }).data ?? {},
-      client_updated_at: (body as { client_updated_at: string }).client_updated_at ?? now,
-      created_at: syncStore.preferences?.created_at ?? now,
-      updated_at: now,
-    };
-    return HttpResponse.json(syncStore.preferences);
-  }),
+  http.put<never, UserPreferencesWrite, PreferencesResponse>(
+    "*/api/preferences",
+    async ({ request }) => {
+      const authFailure = buildAuthFailureResponse();
+      if (authFailure) return authFailure;
+      const body = await request.json();
+      const now = new Date().toISOString();
+      syncStore.preferences = {
+        user_id: 1,
+        data: body.data ?? {},
+        client_updated_at: body.client_updated_at ?? now,
+        created_at: syncStore.preferences?.created_at ?? now,
+        updated_at: now,
+      };
+      return HttpResponse.json(syncStore.preferences);
+    },
+  ),
 
   // GET /api/me
-  http.get("*/api/me", () => {
+  http.get<never, never, AccountProfile>("*/api/me", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     return HttpResponse.json(getMockScenario().auth.profile);
   }),
 
   // GET /api/audit
-  http.get("*/api/audit", () => {
+  http.get<never, never, AuditEntryListResponse>("*/api/audit", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     return HttpResponse.json({ items: [], total: 0 });
   }),
 
   // GET /api/users/
-  http.get("*/api/users/", () => {
+  http.get<never, never, UserListResponse>("*/api/users/", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     return HttpResponse.json({
@@ -128,10 +143,10 @@ export const syncHandlers = [
   }),
 
   // PUT /api/users/:id
-  http.put("*/api/users/:id", async ({ params, request }) => {
+  http.put<{ id: string }, UserUpdate, UserRead>("*/api/users/:id", async ({ params, request }) => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
-    const body = (await request.json()) as { display_name?: string };
+    const body = await request.json();
     return HttpResponse.json({
       id: Number(params.id),
       username: "dev-user",

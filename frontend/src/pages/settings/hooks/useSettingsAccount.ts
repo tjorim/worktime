@@ -4,16 +4,7 @@ import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { accountDeleteErrorMessages, accountProfileErrorMessages } from "@/utils/apiErrorCodes";
-
-interface AccountProfile {
-  id: number;
-  username: string;
-  display_name: string;
-  is_admin: boolean;
-  capabilities: {
-    backup_enabled: boolean;
-  };
-}
+import type { AccountProfile, UserRead } from "@/api-types";
 
 interface UseSettingsAccountParams {
   isAuthenticated: boolean;
@@ -123,11 +114,7 @@ export function useSettingsAccount({
       if (!response.ok) {
         throw await ApiError.fromResponse(response);
       }
-      const updatedProfile = (await response.json()) as {
-        id: number;
-        username: string;
-        display_name: string;
-      };
+      const updatedProfile = (await response.json()) as UserRead;
       setAccountProfile((current) =>
         current
           ? {

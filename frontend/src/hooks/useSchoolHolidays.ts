@@ -3,30 +3,9 @@ import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
+import type { SchoolHoliday } from "@/api-types";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import * as m from "@/paraglide/messages.js";
-
-export interface SchoolHolidayName {
-  language: string;
-  text: string;
-}
-
-export interface SchoolHolidaySubdivision {
-  code: string;
-  shortName?: string;
-}
-
-export interface SchoolHoliday {
-  id: string;
-  startDate: string;
-  endDate: string;
-  type: string;
-  name: SchoolHolidayName[];
-  regionalScope: string;
-  temporalScope: string;
-  nationwide: boolean;
-  subdivisions: SchoolHolidaySubdivision[];
-}
 
 const DEFAULT_LANGUAGE = "EN";
 const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands

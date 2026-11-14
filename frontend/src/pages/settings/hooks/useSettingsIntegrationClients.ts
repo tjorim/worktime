@@ -3,29 +3,14 @@ import * as m from "@/paraglide/messages.js";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { integrationClientErrorMessages } from "@/utils/apiErrorCodes";
 import { logger } from "@/utils/logger";
+import type {
+  CreatedIntegrationClient,
+  IntegrationClient,
+  IntegrationClientListResponse,
+} from "@/api-types";
 
-export type IntegrationClientScope = "worktime:mcp" | "worktime:admin";
-
-export interface IntegrationClient {
-  id: number;
-  name: string;
-  key_preview: string;
-  scopes: IntegrationClientScope[];
-  rate_limit_per_minute: number;
-  is_active: boolean;
-  created_at: string;
-  last_used_at: string | null;
-  revoked_at: string | null;
-}
-
-export interface CreatedIntegrationClient {
-  id: number;
-  name: string;
-  key: string;
-  scopes: IntegrationClientScope[];
-  rate_limit_per_minute: number;
-  created_at: string;
-}
+/** The scopes an integration client can hold, as the API defines them. */
+export type IntegrationClientScope = IntegrationClient["scopes"][number];
 
 interface Params {
   isAuthenticated: boolean;
@@ -61,7 +46,7 @@ export function useSettingsIntegrationClients({
       try {
         const response = await fetchFn("/api/integration-clients");
         if (!response.ok) throw await ApiError.fromResponse(response);
-        const payload = (await response.json()) as { items: IntegrationClient[] };
+        const payload = (await response.json()) as IntegrationClientListResponse;
         if (
           sessionGeneration.current !== expectedSession ||
           loadGeneration.current !== expectedLoad

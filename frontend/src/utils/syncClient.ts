@@ -36,217 +36,58 @@ import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorag
 import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
-// TypeScript representations of the backend sync wire schemas
+// The backend sync wire schemas are generated (`src/api-schema/`, named in `@/api-types`)
 // ---------------------------------------------------------------------------
 
-export type SyncAction = "create" | "update" | "delete";
+import type {
+  GanttTaskSyncItem,
+  GanttTaskSyncRead,
+  LabelSyncItem,
+  LabelSyncRead,
+  PreferencesResponse,
+  SyncPullResponse,
+  SyncPushPayload,
+  SyncPushResponse,
+  SyncRecordResult,
+  SyncStatusResponse,
+  TaskSyncItem,
+  TaskSyncRead,
+  TemplateSyncItem,
+  TemplateSyncRead,
+  TimeOffEntrySyncCreateItem,
+  TimeOffEntrySyncItem,
+  TimeOffEntrySyncRead,
+  WorkLocationSyncItem,
+  WorkLocationSyncRead,
+} from "@/api-types";
 
-export interface LabelSyncItem {
-  id: string;
-  action: SyncAction;
-  client_updated_at: string;
-  name?: string | null;
-  color?: string | null;
-}
+export type {
+  GanttTaskSyncItem,
+  GanttTaskSyncRead,
+  LabelSyncItem,
+  LabelSyncRead,
+  PreferencesResponse,
+  SyncPullResponse,
+  SyncPushPayload,
+  SyncPushResponse,
+  SyncRecordResult,
+  SyncStatusResponse,
+  TaskSyncItem,
+  TaskSyncRead,
+  TemplateSyncItem,
+  TemplateSyncRead,
+  TimeOffEntrySyncCreateItem,
+  TimeOffEntrySyncItem,
+  TimeOffEntrySyncRead,
+  WorkLocationSyncItem,
+  WorkLocationSyncRead,
+};
 
-export interface TaskSyncItem {
-  id: string;
-  action: SyncAction;
-  client_updated_at: string;
-  label_id?: string | null;
-  gantt_task_id?: string | null;
-  text?: string | null;
-  start_time?: string | null;
-  stop_time?: string | null;
-  includes_break?: boolean | null;
-}
-
-export interface TemplateSyncItem {
-  id: string;
-  action: SyncAction;
-  client_updated_at: string;
-  label_id?: string | null;
-  text?: string | null;
-  start_time?: string | null;
-  stop_time?: string | null;
-}
-
-export interface WorkLocationSyncItem {
-  date: string;
-  action: SyncAction;
-  client_updated_at: string;
-  country_code?: string | null;
-  label?: string | null;
-}
-
-export interface TimeOffEntrySyncItem {
-  id: string;
-  action: SyncAction;
-  client_updated_at: string;
-  entry_kind?: "date" | "range" | "weekly" | null;
-  date?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  weekday?: number | null;
-  entry_type?: string | null;
-  entry_flag?: string | null;
-  note?: string | null;
-}
-
-export interface GanttTaskSyncItem {
-  id: string;
-  action: SyncAction;
-  client_updated_at: string;
-  name?: string | null;
-  label_id?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  progress?: number | null;
-  dependencies?: string | null;
-  notes?: string | null;
-}
-
-export interface SyncPushPayload {
-  /**
-   * Explicit acknowledgement that this batch is meant to remove most of the
-   * account's records.  Only the user-confirmed "keep local data" replace sets
-   * it; without it the server refuses batches that would wipe the account (see
-   * `BULK_DELETE_MIN_RECORDS` in the backend sync service).
-   */
-  allow_bulk_delete?: boolean;
-  /**
-   * Total delete actions in the logical push this request belongs to.
-   *
-   * Set automatically when a payload is split across requests. Each chunk is
-   * its own server transaction, so without this the bulk-delete guard sees
-   * only its own slice and lets the first chunk of a destructive batch commit
-   * before refusing a later one. Never set by hand.
-   */
-  declared_delete_total?: number;
-  labels: LabelSyncItem[];
-  tasks: TaskSyncItem[];
-  templates: TemplateSyncItem[];
-  work_locations: WorkLocationSyncItem[];
-  time_off_entries: TimeOffEntrySyncItem[];
-  gantt_tasks: GanttTaskSyncItem[];
-}
-
-export interface SyncRecordResult {
-  id: string;
-  status: "ok" | "conflict";
-  server_updated_at?: string | null;
-  conflict_reason?: string | null;
-  code?: string | null;
-  conflicting_task_id?: string | null;
-}
-
-export interface SyncPushResponse {
-  results: Record<string, SyncRecordResult[]>;
-}
-
-export interface LabelSyncRead {
-  id: string;
-  user_id: number;
-  name: string;
-  color: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface TaskSyncRead {
-  id: string;
-  user_id: number;
-  label_id: string | null;
-  gantt_task_id: string | null;
-  text: string;
-  start_time: string;
-  stop_time: string | null;
-  includes_break: boolean;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface TemplateSyncRead {
-  id: string;
-  user_id: number;
-  label_id: string | null;
-  text: string;
-  start_time: string;
-  stop_time: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface WorkLocationSyncRead {
-  id: number;
-  user_id: number;
-  date: string;
-  country_code: string;
-  label: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface TimeOffEntrySyncRead {
-  id: number;
-  entry_id: string;
-  user_id: number;
-  entry_kind: "date" | "range" | "weekly";
-  date: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  weekday: number | null;
-  entry_type: string;
-  entry_flag: string;
-  note: string | null;
-  client_updated_at: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface GanttTaskSyncRead {
-  id: string;
-  user_id: number;
-  name: string;
-  label_id: string | null;
-  start_date: string;
-  end_date: string;
-  progress: number;
-  dependencies: string | null;
-  notes: string | null;
-  client_updated_at: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface SyncPullResponse {
-  labels: LabelSyncRead[];
-  tasks: TaskSyncRead[];
-  templates: TemplateSyncRead[];
-  work_locations: WorkLocationSyncRead[];
-  time_off_entries: TimeOffEntrySyncRead[];
-  gantt_tasks: GanttTaskSyncRead[];
-  server_timestamp: string;
-  /** Client-only marker: the server rejected an expired cursor and this is the replacement pull. */
+/** A pull as the client hands it on: the server's response plus a marker only the client sets. */
+export type SyncPullResult = SyncPullResponse & {
+  /** The server rejected an expired cursor and this is the replacement pull. */
   full_resync_required?: boolean;
-}
-
-export interface SyncStatusResponse {
-  labels_updated_at: string | null;
-  tasks_updated_at: string | null;
-  templates_updated_at: string | null;
-  work_locations_updated_at: string | null;
-  time_off_entries_updated_at: string | null;
-  gantt_tasks_updated_at: string | null;
-  preferences_updated_at: string | null;
-  server_timestamp: string;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Fetch wrappers
@@ -687,10 +528,7 @@ export async function pushSyncPayload(
  * Call GET /db/sync/pull (full pull when `since` is omitted).
  * Returns the pull response, or null on failure.
  */
-export async function pullSyncData(
-  fetch: FetchFn,
-  since?: string,
-): Promise<SyncPullResponse | null> {
+export async function pullSyncData(fetch: FetchFn, since?: string): Promise<SyncPullResult | null> {
   try {
     const url = since ? `/api/sync/pull?since=${encodeURIComponent(since)}` : "/api/sync/pull";
     const response = await fetch(url);
@@ -709,15 +547,6 @@ export async function pullSyncData(
 // ---------------------------------------------------------------------------
 // Preferences sync helpers
 // ---------------------------------------------------------------------------
-
-/** Shape returned by GET /db/preferences */
-export interface PreferencesResponse {
-  user_id: number;
-  data: Record<string, unknown>;
-  client_updated_at: string;
-  created_at: string;
-  updated_at: string;
-}
 
 /**
  * Call GET /db/preferences.
@@ -1120,7 +949,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 export function timeOffEntriesToSyncItems(
   entries: TimeOffEntry[],
   clientUpdatedAt: string,
-): TimeOffEntrySyncItem[] {
+): TimeOffEntrySyncCreateItem[] {
   return entries.map((entry) => ({
     id: entry.id,
     action: "create",

@@ -10,6 +10,7 @@ import {
   urlBase64ToUint8Array,
 } from "@/utils/pushNotifications";
 import { logger } from "@/utils/logger";
+import type { VapidPublicKeyResponse } from "@/api-types";
 
 export interface UsePushSubscriptionReturn {
   /** The browser supports both the service worker and Push APIs. */
@@ -69,7 +70,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
     try {
       const keyResponse = await apiFetch("/api/push/vapid-public-key");
       if (!keyResponse.ok) return false;
-      const { publicKey } = (await keyResponse.json()) as { publicKey: string | null };
+      const { publicKey } = (await keyResponse.json()) as VapidPublicKeyResponse;
       if (!publicKey || revoked()) return false;
 
       const registration = await navigator.serviceWorker.ready;

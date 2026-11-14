@@ -13,26 +13,27 @@
  */
 
 import { http, HttpResponse } from "msw/http";
+import type { LongWeekend, PublicHoliday, SchoolHoliday } from "@/api-types";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export const holidayHandlers = [
   // GET /api/holidays/public
-  http.get("*/api/holidays/public", () => {
+  http.get<never, never, PublicHoliday[]>("*/api/holidays/public", () => {
     return HttpResponse.json(getMockScenario().holidays.public);
   }),
 
   // GET /api/holidays/longweekend
-  http.get("*/api/holidays/longweekend", () => {
+  http.get<never, never, LongWeekend[]>("*/api/holidays/longweekend", () => {
     return HttpResponse.json(getMockScenario().holidays.longweekend);
   }),
 
   // GET /api/holidays/school
-  http.get("*/api/holidays/school", () => {
+  http.get<never, never, SchoolHoliday[]>("*/api/holidays/school", () => {
     return HttpResponse.json(getMockScenario().holidays.school);
   }),
 
   // GET /api/holidays/paydates
-  http.get("*/api/holidays/paydates", () => {
+  http.get<never, never, string[]>("*/api/holidays/paydates", () => {
     return HttpResponse.json(getMockScenario().holidays.paydates);
   }),
 ];

@@ -5,7 +5,12 @@
  * states, assert on side-effects, and reset between runs.
  */
 
-import type { SyncPullResponse, SyncPushResponse, SyncStatusResponse } from "@/utils/syncClient";
+import type {
+  PreferencesResponse,
+  SyncPullResponse,
+  SyncPushResponse,
+  SyncStatusResponse,
+} from "@/api-types";
 
 // ---------------------------------------------------------------------------
 // Seed status variants
@@ -59,15 +64,7 @@ export interface SyncStore {
   pushError: number | null;
   /** When non-null, the pull endpoint returns this HTTP error code. */
   pullError: number | null;
-  preferences: PreferencesPayload | null;
-}
-
-export interface PreferencesPayload {
-  user_id: number;
-  data: Record<string, unknown>;
-  client_updated_at: string;
-  created_at: string;
-  updated_at: string;
+  preferences: PreferencesResponse | null;
 }
 
 function createInitialSyncStore(): SyncStore {
