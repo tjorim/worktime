@@ -31,6 +31,7 @@ from .routers.auth import router as auth_router
 from .routers.health import router as health_router
 from .routers.holidays import router as holidays_router
 from .routers.metrics import router as metrics_router
+from .schemas import McpCapabilities
 from .utils.sse_manager import sync_event_manager
 from .version import APP_VERSION
 
@@ -269,8 +270,9 @@ if _mcp_app is not None:
     logger.info("✓ MCP server mounted at /mcp")
 
 
-@app.get("/api/mcp/capabilities", tags=["Info"])
-async def mcp_capabilities() -> dict[str, object]:
+# ``exclude_unset`` keeps the wire shape exactly as built below: ``effect_detail`` only on write tools.
+@app.get("/api/mcp/capabilities", tags=["Info"], response_model=McpCapabilities, response_model_exclude_unset=True)
+async def mcp_capabilities() -> dict[str, Any]:
     """Authoritative MCP capability manifest (issue #1054).
 
     Sourced directly from ``app.mcp_server.MCP_TOOL_CAPABILITIES`` — the same
