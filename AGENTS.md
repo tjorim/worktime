@@ -20,8 +20,10 @@ pnpm lint
 pnpm format          # rewrites files in place (Oxfmt)
 pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm format:repo     # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm typecheck
+pnpm typecheck         # also runs pnpm api:check
 pnpm typecheck:tests   # test files; CI runs this too
+pnpm api:generate      # rewrite openapi.json from the backend (needs uv) and src/api-schema/ (Orval)
+pnpm api:check         # fail when src/api-schema/ is not what openapi.json generates
 pnpm test
 pnpm build
 ```
@@ -46,6 +48,13 @@ uv run python -m app.openapi_export   # rewrite ../frontend/openapi.json after c
 `frontend/openapi.json` is the committed OpenAPI document the frontend generates its API types from (#2031).
 `tests/test_openapi_snapshot.py` fails when it is stale, and `tests/test_response_models.py` fails when a JSON
 route has no `response_model`. The snapshot pins `info.version`, so a release bump does not stale it.
+
+`frontend/src/api-schema/` (one file per schema) is generated from the snapshot with the pinned Orval
+(`frontend/orval.config.mjs`: schemas only, `useTypeOverInterfaces`, no client; do not use `openapi-typescript`
+or `@hey-api/openapi-ts`, which need the TypeScript 5 compiler API, and do not add a `.pnpmfile.cjs`). After
+changing the backend API run `pnpm api:generate` and commit `openapi.json` and `src/api-schema/`; `pnpm typecheck`
+runs `pnpm api:check` and fails when `src/api-schema/` is stale. Name a generated record for the screens in
+`frontend/src/api-types.ts`; do not declare an API record by hand. Never edit `src/api-schema/`.
 
 > **Prerequisites:** tests default to SQLite, so no container is needed. Local development
 > defaults to PostgreSQL unless `DATABASE_URL` is set to SQLite (see below). The suite takes about 15 seconds that way. Production runs on

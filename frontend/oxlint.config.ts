@@ -4,6 +4,7 @@ export default defineConfig({
   plugins: ["react"],
   ignorePatterns: [
     "dist/**",
+    "src/api-schema/**",
     "build/**",
     "coverage/**",
     "node_modules/**",
