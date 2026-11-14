@@ -13,8 +13,8 @@ import type { SyncRecordResultStatus } from './syncRecordResultStatus';
 export type SyncRecordResult = {
   id: string;
   status: SyncRecordResultStatus;
-  server_updated_at?: string | null;
-  conflict_reason?: string | null;
-  code?: string | null;
-  conflicting_task_id?: string | null;
+  server_updated_at: string | null;
+  conflict_reason: string | null;
+  code: string | null;
+  conflicting_task_id: string | null;
 };

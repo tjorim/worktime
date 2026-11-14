@@ -9,8 +9,25 @@ import type {
   PreferencesResponse,
   SyncPullResponse,
   SyncPushResponse,
+  SyncRecordResult,
   SyncStatusResponse,
 } from "@/api-types";
+
+/**
+ * One push result as the server sends it: every field is present, `null` when it does not apply
+ * (a conflict has no `server_updated_at` until the server wins, an ok has no `conflict_reason`).
+ */
+export function syncRecordResult(
+  result: Pick<SyncRecordResult, "id" | "status"> & Partial<SyncRecordResult>,
+): SyncRecordResult {
+  return {
+    server_updated_at: null,
+    conflict_reason: null,
+    code: null,
+    conflicting_task_id: null,
+    ...result,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Seed status variants

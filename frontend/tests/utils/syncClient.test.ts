@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { syncRecordResult } from "@/mocks/data/syncStore";
 import {
   applyPreferencesPull,
   reconcilePreferences,
@@ -220,8 +221,8 @@ describe("syncClient", () => {
         countPushConflicts({
           results: {
             labels: [
-              { id: "l1", status: "ok" },
-              { id: "l2", status: "ok" },
+              syncRecordResult({ id: "l1", status: "ok" }),
+              syncRecordResult({ id: "l2", status: "ok" }),
             ],
           },
         }),
@@ -233,10 +234,20 @@ describe("syncClient", () => {
         countPushConflicts({
           results: {
             labels: [
-              { id: "l1", status: "ok" },
-              { id: "l2", status: "conflict", conflict_reason: "server is newer" },
+              syncRecordResult({ id: "l1", status: "ok" }),
+              syncRecordResult({
+                id: "l2",
+                status: "conflict",
+                conflict_reason: "server is newer",
+              }),
             ],
-            tasks: [{ id: "t1", status: "conflict", conflict_reason: "server is newer" }],
+            tasks: [
+              syncRecordResult({
+                id: "t1",
+                status: "conflict",
+                conflict_reason: "server is newer",
+              }),
+            ],
             templates: [],
           },
         }),
@@ -274,10 +285,10 @@ describe("syncClient", () => {
       const result = extractConflictedItems(makePayload(), {
         results: {
           labels: [
-            { id: "l1", status: "ok" },
-            { id: "l2", status: "ok" },
+            syncRecordResult({ id: "l1", status: "ok" }),
+            syncRecordResult({ id: "l2", status: "ok" }),
           ],
-          tasks: [{ id: "t1", status: "ok" }],
+          tasks: [syncRecordResult({ id: "t1", status: "ok" })],
         },
       });
       expect(result.labels).toHaveLength(0);
@@ -289,10 +300,10 @@ describe("syncClient", () => {
       const result = extractConflictedItems(makePayload(), {
         results: {
           labels: [
-            { id: "l1", status: "ok" },
-            { id: "l2", status: "conflict", conflict_reason: "server is newer" },
+            syncRecordResult({ id: "l1", status: "ok" }),
+            syncRecordResult({ id: "l2", status: "conflict", conflict_reason: "server is newer" }),
           ],
-          tasks: [{ id: "t1", status: "ok" }],
+          tasks: [syncRecordResult({ id: "t1", status: "ok" })],
         },
       });
       expect(result.labels).toHaveLength(1);
@@ -304,7 +315,11 @@ describe("syncClient", () => {
       const result = extractConflictedItems(makePayload(), {
         results: {
           work_locations: [
-            { id: "2026-01-05", status: "conflict", conflict_reason: "server is newer" },
+            syncRecordResult({
+              id: "2026-01-05",
+              status: "conflict",
+              conflict_reason: "server is newer",
+            }),
           ],
         },
       });
@@ -465,7 +480,7 @@ describe("syncClient", () => {
       expect(
         maxConflictServerTimestamp({
           results: {
-            labels: [{ id: "l1", status: "ok" }],
+            labels: [syncRecordResult({ id: "l1", status: "ok" })],
           },
         }),
       ).toBeUndefined();
@@ -475,7 +490,13 @@ describe("syncClient", () => {
       expect(
         maxConflictServerTimestamp({
           results: {
-            labels: [{ id: "l1", status: "conflict", conflict_reason: "server is newer" }],
+            labels: [
+              syncRecordResult({
+                id: "l1",
+                status: "conflict",
+                conflict_reason: "server is newer",
+              }),
+            ],
           },
         }),
       ).toBeUndefined();
@@ -486,12 +507,12 @@ describe("syncClient", () => {
         maxConflictServerTimestamp({
           results: {
             labels: [
-              {
+              syncRecordResult({
                 id: "l1",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "2026-03-01T00:00:00.000Z",
-              },
+              }),
             ],
           },
         }),
@@ -503,26 +524,26 @@ describe("syncClient", () => {
         maxConflictServerTimestamp({
           results: {
             labels: [
-              {
+              syncRecordResult({
                 id: "l1",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "2026-03-01T00:00:00.000Z",
-              },
-              {
+              }),
+              syncRecordResult({
                 id: "l2",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "2026-01-01T00:00:00.000Z",
-              },
+              }),
             ],
             tasks: [
-              {
+              syncRecordResult({
                 id: "t1",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "2026-06-01T00:00:00.000Z",
-              },
+              }),
             ],
           },
         }),
@@ -534,13 +555,17 @@ describe("syncClient", () => {
         maxConflictServerTimestamp({
           results: {
             labels: [
-              { id: "l1", status: "ok", server_updated_at: "2099-01-01T00:00:00.000Z" },
-              {
+              syncRecordResult({
+                id: "l1",
+                status: "ok",
+                server_updated_at: "2099-01-01T00:00:00.000Z",
+              }),
+              syncRecordResult({
                 id: "l2",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "2026-03-01T00:00:00.000Z",
-              },
+              }),
             ],
           },
         }),
@@ -552,18 +577,18 @@ describe("syncClient", () => {
         maxConflictServerTimestamp({
           results: {
             labels: [
-              {
+              syncRecordResult({
                 id: "l1",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "not-a-date",
-              },
-              {
+              }),
+              syncRecordResult({
                 id: "l2",
                 status: "conflict",
                 conflict_reason: "server is newer",
                 server_updated_at: "2026-03-01T00:00:00.000Z",
-              },
+              }),
             ],
           },
         }),

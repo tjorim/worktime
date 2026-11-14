@@ -4,6 +4,7 @@ import {
   emptyPushResponse,
   emptyStatus,
   resetSyncStore,
+  syncRecordResult,
   syncStore,
 } from "@/mocks/data/syncStore";
 
@@ -16,7 +17,7 @@ describe("syncStore", () => {
 
   it("resets nested state with fresh clones", () => {
     syncStore.pullData.labels = [{} as never];
-    syncStore.pushResponse.results.labels = [{ id: "label-1", status: "ok" }];
+    syncStore.pushResponse.results.labels = [syncRecordResult({ id: "label-1", status: "ok" })];
 
     resetSyncStore();
 

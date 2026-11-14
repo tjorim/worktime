@@ -11,7 +11,7 @@
  */
 export type IcalFeedStatus = {
   configured: boolean;
-  token_preview?: string | null;
-  created_at?: string | null;
-  last_used_at?: string | null;
+  token_preview: string | null;
+  created_at: string | null;
+  last_used_at: string | null;
 };

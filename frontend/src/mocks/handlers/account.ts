@@ -23,7 +23,14 @@ export const accountHandlers = [
 
   http.get<never, never, IcalFeedStatus>(
     "*/api/ical",
-    () => buildAuthFailureResponse() ?? HttpResponse.json({ configured: false }),
+    () =>
+      buildAuthFailureResponse() ??
+      HttpResponse.json({
+        configured: false,
+        token_preview: null,
+        created_at: null,
+        last_used_at: null,
+      }),
   ),
 
   http.get<never, never, AccessTokenListResponse>(

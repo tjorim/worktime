@@ -1,4 +1,9 @@
-import { emptyPullResponse, emptyPushResponse, populatedStatus } from "@/mocks/data/syncStore";
+import {
+  emptyPullResponse,
+  emptyPushResponse,
+  populatedStatus,
+  syncRecordResult,
+} from "@/mocks/data/syncStore";
 import {
   seedLongWeekends,
   seedPaydates,
@@ -385,12 +390,12 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
       pushResponse: {
         results: {
           tasks: [
-            {
+            syncRecordResult({
               id: "task-001",
               status: "conflict",
               conflict_reason: "server is newer",
               server_updated_at: "2026-05-18T06:00:00.000Z",
-            },
+            }),
           ],
         },
       },

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any
 
@@ -77,6 +78,68 @@ def test_every_json_route_declares_a_response_model():
         "`unknown`. Declare response_model=<Model> (the route may still return a JSONResponse):\n  "
         + "\n  ".join(unmodelled)
     )
+
+
+# Response properties the wire really omits, so the generated type may keep them optional. Every other
+# response field is always sent: a model with defaults must derive from ``ResponseModel`` (see
+# ``app.schemas``), which marks them required in the document. A new entry needs a reason.
+OPTIONAL_ON_THE_WIRE = {
+    ("ReadinessResponse", "database"): "left out when no database is configured",
+    ("McpToolCapability", "effect_detail"): "left out of read tools (response_model_exclude_unset)",
+    ("PublicHolidayRead", "counties"): "upstream JSON is forwarded as is",
+    ("PublicHolidayRead", "fixed"): "upstream JSON is forwarded as is",
+    ("PublicHolidayRead", "launchYear"): "upstream JSON is forwarded as is",
+    ("SchoolHolidayRead", "subdivisions"): "the upstream omits it for nationwide holidays",
+    ("SchoolHolidaySubdivision", "shortName"): "upstream JSON is forwarded as is",
+}
+
+
+def _response_schema_names() -> set[str]:
+    """Names of every component schema reachable from a response body."""
+    document = app.openapi()
+    schemas = document["components"]["schemas"]
+
+    def refs(node: Any) -> set[str]:
+        if isinstance(node, dict):
+            found = {node["$ref"].rsplit("/", 1)[-1]} if "$ref" in node else set()
+            for value in node.values():
+                found |= refs(value)
+            return found
+        if isinstance(node, list):
+            return set().union(*(refs(item) for item in node)) if node else set()
+        return set()
+
+    pending = set()
+    for item in document["paths"].values():
+        for operation in item.values():
+            for code, response in operation["responses"].items():
+                if code.startswith("2") or code == "503":
+                    pending |= refs(response)
+    reached: set[str] = set()
+    while pending:
+        name = pending.pop()
+        if name not in reached:
+            reached.add(name)
+            pending |= refs(schemas[name])
+    return reached
+
+
+def test_response_fields_with_defaults_are_required_in_the_schema():
+    schemas = app.openapi()["components"]["schemas"]
+    optional = {
+        (name, prop)
+        for name in _response_schema_names()
+        for prop in schemas[name].get("properties", {})
+        if prop not in schemas[name].get("required", [])
+    }
+    unexpected = sorted(optional - OPTIONAL_ON_THE_WIRE.keys())
+    assert not unexpected, (
+        "These response fields are optional in the OpenAPI document, so the frontend type is `field?:` "
+        "although the route always sends them. Derive the model from ResponseModel (app.schemas), or list "
+        f"the field in OPTIONAL_ON_THE_WIRE with the reason the wire omits it:\n  {unexpected}"
+    )
+    stale = sorted(OPTIONAL_ON_THE_WIRE.keys() - optional)
+    assert not stale, f"These are no longer optional; remove them from OPTIONAL_ON_THE_WIRE: {stale}"
 
 
 def test_not_json_exemptions_are_still_needed():
@@ -166,3 +229,66 @@ def test_holiday_models_accept_the_upstream_samples_the_proxies_forward():
             }
         ]
     )
+
+
+# --- fields with defaults are still sent: the schema change must not touch the wire ------------
+
+
+def test_oidc_config_still_sends_a_null_end_session_url(monkeypatch):
+    from app.routers import auth as auth_routes
+
+    monkeypatch.setattr(
+        auth_routes,
+        "_discover",
+        lambda issuer: _async_value(
+            auth_routes.OidcDiscoveryConfig(issuer=issuer, authorization_url="https://a", token_url="https://t")
+        ),
+    )
+    monkeypatch.setattr(auth_routes.settings, "OIDC_ISSUER_URL", "https://auth.example.test")
+    monkeypatch.setattr(auth_routes, "_config_cache", {})
+
+    body = TestClient(app).get("/api/auth/oidc-config").json()
+
+    assert body == {
+        "issuer": "https://auth.example.test",
+        "authorization_url": "https://a",
+        "token_url": "https://t",
+        "end_session_url": None,
+    }
+
+
+async def _async_value(value):
+    return value
+
+
+def test_sync_push_results_still_send_every_field(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+):
+    from uuid import uuid4
+
+    admin_headers = auth_headers(1, is_admin=True)
+    headers = auth_headers(create_user_factory(db_client, admin_headers, "response-defaults-owner"))
+    label_id = str(uuid4())
+
+    response = db_client.post(
+        "/api/sync/push",
+        json={
+            "labels": [
+                {
+                    "id": label_id,
+                    "action": "create",
+                    "client_updated_at": "2026-01-01T00:00:00Z",
+                    "name": "Wire",
+                    "color": "#AABBCC",
+                }
+            ]
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    (result,) = response.json()["results"]["labels"]
+    assert set(result) == {"id", "status", "server_updated_at", "conflict_reason", "code", "conflicting_task_id"}
+    assert result["conflict_reason"] is None

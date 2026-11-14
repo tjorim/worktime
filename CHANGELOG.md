@@ -35,6 +35,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 - Commit the backend's OpenAPI document as `frontend/openapi.json` and fail the backend tests when it is stale; regenerate it with `uv run python -m app.openapi_export` (#2031).
 - Generate the frontend API types from that document with a pinned Orval (schemas only, one file per schema in `frontend/src/api-schema/`), named for the screens in `frontend/src/api-types.ts`. `pnpm api:generate` rewrites them and `pnpm typecheck` runs `pnpm api:check`, so a stale generated type fails CI (#2031).
 - Replace the hand-written API record types (sync wire format, account, API tokens, integration clients, audit trail, holiday proxies, read models) with the generated ones, and type the mock server handlers against them. Doing so corrected mock fixtures that had drifted from the API: sync labels and tasks without `client_updated_at`, public holidays without `countryCode`, and an undefined date in the dashboard read model (#2031).
+- Mark response fields that have a default as required in the OpenAPI document (`ResponseModel`, `json_schema_serialization_defaults_required`), so a generated client type is `token_preview: string | null` instead of `token_preview?: string | null` for a field the API always sends. Only the schema changes: the responses are byte-identical, and a test lists the few fields the wire really omits (#2031).
 
 ### Planned
 
