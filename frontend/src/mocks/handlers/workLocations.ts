@@ -1,9 +1,10 @@
 import { http, HttpResponse } from "msw/http";
+import type { WorkLocationListResponse, WorkLocationRead } from "@/api-types";
 import { buildAuthFailureResponse } from "./auth";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export const workLocationHandlers = [
-  http.get("*/api/work-locations", () => {
+  http.get<never, never, WorkLocationListResponse>("*/api/work-locations", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
@@ -16,46 +17,49 @@ export const workLocationHandlers = [
     });
   }),
 
-  http.post("*/api/work-locations", async ({ request }) => {
-    const authFailure = buildAuthFailureResponse();
-    if (authFailure) return authFailure;
-    const scenario = getMockScenario();
-    let body: Record<string, unknown>;
-    try {
-      body = (await request.json()) as Record<string, unknown>;
-    } catch {
-      return HttpResponse.json({ detail: "Invalid JSON body" }, { status: 400 });
-    }
-    if (
-      typeof body?.date !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(body.date) ||
-      typeof body?.country_code !== "string"
-    ) {
-      return HttpResponse.json(
-        {
-          detail:
-            "Invalid or missing required fields: date (YYYY-MM-DD) and country_code must be strings.",
-        },
-        { status: 400 },
-      );
-    }
-    const userId = scenario.auth.profile.id;
-    const item = {
-      id: Number(body.date.replaceAll("-", "")),
-      user_id: userId,
-      date: body.date,
-      country_code: body.country_code,
-      label: typeof body.label === "string" ? body.label : null,
-      created_at: new Date("2026-01-01T00:00:00.000Z").toISOString(),
-    };
-    const existing = scenario.workLocations.items.findIndex((entry) => entry.date === body.date);
-    if (existing >= 0) {
-      scenario.workLocations.items[existing] = item;
-    } else {
-      scenario.workLocations.items.push(item);
-    }
-    return HttpResponse.json(item, { status: 201 });
-  }),
+  http.post<never, Record<string, unknown>, WorkLocationRead | { detail: string }>(
+    "*/api/work-locations",
+    async ({ request }) => {
+      const authFailure = buildAuthFailureResponse();
+      if (authFailure) return authFailure;
+      const scenario = getMockScenario();
+      let body: Record<string, unknown>;
+      try {
+        body = await request.json();
+      } catch {
+        return HttpResponse.json({ detail: "Invalid JSON body" }, { status: 400 });
+      }
+      if (
+        typeof body?.date !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(body.date) ||
+        typeof body?.country_code !== "string"
+      ) {
+        return HttpResponse.json(
+          {
+            detail:
+              "Invalid or missing required fields: date (YYYY-MM-DD) and country_code must be strings.",
+          },
+          { status: 400 },
+        );
+      }
+      const userId = scenario.auth.profile.id;
+      const item = {
+        id: Number(body.date.replaceAll("-", "")),
+        user_id: userId,
+        date: body.date,
+        country_code: body.country_code,
+        label: typeof body.label === "string" ? body.label : null,
+        created_at: new Date("2026-01-01T00:00:00.000Z").toISOString(),
+      };
+      const existing = scenario.workLocations.items.findIndex((entry) => entry.date === body.date);
+      if (existing >= 0) {
+        scenario.workLocations.items[existing] = item;
+      } else {
+        scenario.workLocations.items.push(item);
+      }
+      return HttpResponse.json(item, { status: 201 });
+    },
+  ),
 
   http.delete("*/api/work-locations/:valueDate", ({ params }) => {
     const authFailure = buildAuthFailureResponse();

@@ -16,11 +16,8 @@ import {
   SettingsSecret,
 } from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
-import type {
-  CreatedIntegrationClient,
-  IntegrationClient,
-  IntegrationClientScope,
-} from "@/pages/settings/hooks/useSettingsIntegrationClients";
+import type { CreatedIntegrationClient, IntegrationClient } from "@/api-types";
+import type { IntegrationClientScope } from "@/pages/settings/hooks/useSettingsIntegrationClients";
 import { formatDisplayDate } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 

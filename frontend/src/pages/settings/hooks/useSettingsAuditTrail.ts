@@ -3,21 +3,10 @@ import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { tasksCollection, ganttTasksCollection, labelsCollection } from "@/db/collections";
 import { ApiError } from "@/utils/apiError";
+import type { AuditEntryListResponse, AuditEntryRead } from "@/api-types";
 
-export interface AuditEntry {
-  id: number;
-  actor_user_id: number | null;
-  actor_label: string;
-  subject: string | null;
-  auth_source: string;
-  action: string;
-  resource_type: string;
-  resource_id: string;
-  resource_display_name?: string;
-  request_id: string | null;
-  details: Record<string, unknown>;
-  created_at: string;
-}
+/** An audit entry plus the name of its resource, which the client looks up in its own collections. */
+export type AuditEntry = AuditEntryRead & { resource_display_name?: string };
 
 const PAGE_SIZE = 25;
 
@@ -49,7 +38,7 @@ export function useSettingsAuditTrail({
 
       const response = await fetchFn(`/api/audit?${params.toString()}`);
       if (!response.ok) throw await ApiError.fromResponse(response);
-      const payload = (await response.json()) as { items?: AuditEntry[] };
+      const payload = (await response.json()) as AuditEntryListResponse;
       return (payload.items ?? []).map((entry) => {
         // Local collections belong to the signed-in account. Never resolve another
         // user's ids against them in the team-wide trail; deleted items retain ids.

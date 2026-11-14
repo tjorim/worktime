@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 import * as m from "@/paraglide/messages.js";
-import type { LongWeekend, LongWeekendDayInfo } from "@/types/longWeekend";
+import type { LongWeekend } from "@/api-types";
+import type { LongWeekendDayInfo } from "@/types/longWeekend";
 import { ApiError } from "@/utils/apiError";
 import { dayjs } from "@/utils/dateTimeUtils";
 

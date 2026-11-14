@@ -4,14 +4,7 @@ import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { adminUserDeleteErrorMessages } from "@/utils/apiErrorCodes";
-
-interface ManagedUser {
-  id: number;
-  username: string;
-  display_name: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { UserRead, UserListResponse } from "@/api-types";
 
 interface UseSettingsAdminUsersParams {
   isAuthenticated: boolean;
@@ -28,7 +21,7 @@ export function useSettingsAdminUsers({
   fetchFn,
   showSuccessToast,
 }: UseSettingsAdminUsersParams) {
-  const [adminUsers, setAdminUsers] = useState<ManagedUser[]>([]);
+  const [adminUsers, setAdminUsers] = useState<UserRead[]>([]);
   const [isAdminUsersLoading, setIsAdminUsersLoading] = useState(false);
   const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
   const [adminUsersDeleteError, setAdminUsersDeleteError] = useState<string | null>(null);
@@ -66,11 +59,9 @@ export function useSettingsAdminUsers({
         if (!response.ok) {
           throw await ApiError.fromResponse(response);
         }
-        const payload = (await response.json()) as {
-          items?: ManagedUser[];
-        };
+        const payload = (await response.json()) as UserListResponse;
         if (isCancelled) return;
-        setAdminUsers(payload.items ?? []);
+        setAdminUsers(payload.items);
       })
       .catch((error) => {
         if (isCancelled) return;

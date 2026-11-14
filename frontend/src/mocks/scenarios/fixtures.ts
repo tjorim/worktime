@@ -5,7 +5,8 @@ import {
   seedPublicHolidays,
   seedSchoolHolidays,
 } from "@/mocks/data/holidayStore";
-import type { MockScenarioFixture, MockScenarioId, TeamShiftStatusReadModel } from "./types";
+import type { TeamShiftStatusReadModel } from "@/api-types";
+import type { MockScenarioFixture, MockScenarioId } from "./types";
 import type {
   LabelSyncRead,
   SyncPullResponse,
@@ -39,6 +40,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
       name: "Deep work",
       color: "#2563eb",
       created_at: CREATED_AT,
+      client_updated_at: CREATED_AT,
       updated_at: CREATED_AT,
       deleted_at: null,
     },
@@ -48,6 +50,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
       name: "Meetings",
       color: "#f97316",
       created_at: CREATED_AT,
+      client_updated_at: CREATED_AT,
       updated_at: CREATED_AT,
       deleted_at: null,
     },
@@ -83,6 +86,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
         stop_time: deepWorkStop.toISOString(),
         includes_break: false,
         created_at: deepWorkStart.toISOString(),
+        client_updated_at: deepWorkStop.toISOString(),
         updated_at: deepWorkStop.toISOString(),
         deleted_at: null,
       });
@@ -101,6 +105,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
         stop_time: meetingStop.toISOString(),
         includes_break: false,
         created_at: meetingStart.toISOString(),
+        client_updated_at: meetingStop.toISOString(),
         updated_at: meetingStop.toISOString(),
         deleted_at: null,
       });

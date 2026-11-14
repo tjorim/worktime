@@ -1,10 +1,12 @@
 import { expect, it } from "vitest";
-import { isNationwideHoliday, type PublicHoliday } from "@/hooks/usePublicHolidays";
+import type { PublicHoliday } from "@/api-types";
+import { isNationwideHoliday } from "@/hooks/usePublicHolidays";
 
 const base: PublicHoliday = {
   date: "2026-01-06",
   name: "Epiphany",
   localName: "Heilige Drei Könige",
+  countryCode: "NL",
   global: true,
   counties: null,
   types: ["Public"],

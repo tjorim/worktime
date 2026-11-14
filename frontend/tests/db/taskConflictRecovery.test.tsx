@@ -213,6 +213,7 @@ describe("rejected task recovery", () => {
           stop_time: "2026-01-01T10:00:00Z",
           includes_break: false,
           deleted_at: null,
+          client_updated_at: "2026-01-01T00:00:00Z",
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
         },

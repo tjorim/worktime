@@ -15,11 +15,8 @@ import {
   SettingsSecret,
 } from "@/components/settings/SettingsParts";
 import { useToast } from "@/contexts/ToastContext";
-import {
-  API_TOKEN_NAME_MAX_LENGTH,
-  type ApiToken,
-  type CreatedApiToken,
-} from "@/pages/settings/hooks/useSettingsApiTokens";
+import type { ApiToken, CreatedApiToken } from "@/api-types";
+import { API_TOKEN_NAME_MAX_LENGTH } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { formatDisplayDate } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
