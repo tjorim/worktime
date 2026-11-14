@@ -11,7 +11,13 @@ from app.config.settings import settings
 from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
-from app.schemas import FcmTokenCreate, FcmTokenRead, PushSubscriptionCreate, PushSubscriptionRead
+from app.schemas import (
+    FcmTokenCreate,
+    FcmTokenRead,
+    PushSubscriptionCreate,
+    PushSubscriptionRead,
+    VapidPublicKeyResponse,
+)
 from app.services.db_service import NotFoundError
 from app.services.fcm_device_token_service import delete_token, upsert_token
 from app.services.push_subscription_service import delete_subscription, upsert_subscription
@@ -19,10 +25,10 @@ from app.services.push_subscription_service import delete_subscription, upsert_s
 router = APIRouter(prefix="/push", tags=["Push Notifications"])
 
 
-@router.get("/vapid-public-key")
+@router.get("/vapid-public-key", response_model=VapidPublicKeyResponse)
 async def get_vapid_public_key_endpoint(
     principal: AuthenticatedPrincipal = Depends(require_oidc_principal),
-) -> dict[str, str | None]:
+) -> VapidPublicKeyResponse:
     """Return the public key the frontend needs for PushManager.subscribe().
 
     Not a secret, but kept behind auth for consistency with the rest of the
@@ -30,7 +36,7 @@ async def get_vapid_public_key_endpoint(
     frontend can skip offering push entirely rather than attempt a
     subscription that will never receive anything.
     """
-    return {"publicKey": settings.VAPID_PUBLIC_KEY or None}
+    return VapidPublicKeyResponse(publicKey=settings.VAPID_PUBLIC_KEY or None)
 
 
 @router.post("/subscribe", response_model=PushSubscriptionRead, status_code=status.HTTP_201_CREATED)

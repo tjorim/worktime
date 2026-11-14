@@ -36,6 +36,7 @@ from app.core.errors import ErrorCode, api_error
 from ..cache.store import get_cache
 from ..database.engine import get_session
 from ..database.models import CachedHoliday
+from ..schemas import LongWeekendRead, PublicHolidayRead, SchoolHolidayRead
 
 logger = logging.getLogger(__name__)
 
@@ -349,7 +350,7 @@ def compute_paydates(year: int, holidays: list[Any]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/holidays/public")
+@router.get("/holidays/public", response_model=list[PublicHolidayRead])
 async def get_public_holidays(
     year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code")] = HOLIDAY_COUNTRY_CODE,
@@ -385,7 +386,7 @@ async def get_public_holidays(
     return JSONResponse(content=data)
 
 
-@router.get("/holidays/school")
+@router.get("/holidays/school", response_model=list[SchoolHolidayRead])
 async def get_school_holidays(
     year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
@@ -422,7 +423,7 @@ async def get_school_holidays(
     return JSONResponse(content=data)
 
 
-@router.get("/holidays/longweekend")
+@router.get("/holidays/longweekend", response_model=list[LongWeekendRead])
 async def get_long_weekends(
     year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
@@ -488,7 +489,7 @@ async def get_long_weekends(
     return JSONResponse(content=data)
 
 
-@router.get("/holidays/paydates")
+@router.get("/holidays/paydates", response_model=list[dt_date])
 async def get_paydates(
     year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,

@@ -1040,3 +1040,146 @@ class SyncStatusResponse(BaseModel):
     gantt_tasks_updated_at: dt_datetime | None
     preferences_updated_at: dt_datetime | None
     server_timestamp: dt_datetime
+
+
+# ---------------------------------------------------------------------------
+# Operational endpoints (health, metrics, MCP capability manifest, Web Push key)
+# ---------------------------------------------------------------------------
+
+
+class HealthLinks(BaseModel):
+    """Paths of the dependency probes, relative to the host."""
+
+    liveness: str
+    readiness: str
+
+
+class HealthSummary(BaseModel):
+    """Static overview returned by ``GET /api/health``."""
+
+    status: Literal["ok"]
+    version: str
+    commit: str
+    links: HealthLinks
+
+
+class LivenessResponse(BaseModel):
+    """Process-level alive signal; never touches a dependency."""
+
+    status: Literal["alive"]
+
+
+DependencyStatus = Literal["ok", "unreachable"]
+
+
+class ReadinessResponse(BaseModel):
+    """Result of the dependency checks; returned with HTTP 200 (``ok``) or 503 (``degraded``)."""
+
+    status: Literal["ok", "degraded"]
+    auth: DependencyStatus
+    # Absent (not null) when DATABASE_ENABLED is false, so the database was not checked.
+    database: DependencyStatus | None = None
+
+
+class RequestMetricsSnapshot(BaseModel):
+    """Rolling-window request metrics from ``GET /api/metrics``."""
+
+    uptime_seconds: float
+    request_rate_per_second: float
+    error_rate: float
+    latency_p50_ms: float
+    latency_p99_ms: float
+    window_seconds: int
+    request_count_in_window: int
+
+
+class VapidPublicKeyResponse(BaseModel):
+    """Public key for ``PushManager.subscribe()``; null when Web Push is not configured."""
+
+    publicKey: str | None
+
+
+class McpToolAccess(BaseModel):
+    tier: str
+
+
+class McpToolCapability(BaseModel):
+    """One tool in the MCP capability manifest (contract v1)."""
+
+    name: str
+    effect: Literal["read", "write"]
+    # Present only for non-read tools.
+    effect_detail: str | None = None
+    requires_confirmation: bool
+    access: McpToolAccess
+
+
+class McpCapabilities(BaseModel):
+    """Authoritative MCP capability manifest."""
+
+    contract_version: int
+    enabled: bool
+    mount_path: str
+    version: str | None
+    tools: list[McpToolCapability]
+    # Always empty in contract v1.
+    resources: list[object]
+    prompts: list[object]
+
+
+# ---------------------------------------------------------------------------
+# Holiday proxies
+#
+# These routes pass the upstream JSON through unchanged (``JSONResponse``), so the
+# models below document the fields Worktime relies on rather than validate them.
+# Fields the upstream may omit are optional; unknown upstream fields pass through.
+# ---------------------------------------------------------------------------
+
+
+class PublicHolidayRead(BaseModel):
+    """One entry from date.nager.at ``/PublicHolidays``, already filtered to ``types`` containing ``Public``."""
+
+    date: dt_date
+    localName: str
+    name: str
+    countryCode: str
+    is_global: bool = Field(alias="global")
+    counties: list[str] | None = None
+    types: list[str]
+    fixed: bool | None = None
+    launchYear: int | None = None
+
+
+class SchoolHolidayName(BaseModel):
+    language: str
+    text: str
+
+
+class SchoolHolidaySubdivision(BaseModel):
+    code: str
+    shortName: str | None = None
+
+
+class SchoolHolidayRead(BaseModel):
+    """One entry from openholidaysapi.org ``/SchoolHolidays``."""
+
+    id: str
+    startDate: dt_date
+    endDate: dt_date
+    type: str
+    name: list[SchoolHolidayName]
+    regionalScope: str
+    temporalScope: str
+    nationwide: bool
+    # The upstream omits this for nationwide holidays.
+    subdivisions: list[SchoolHolidaySubdivision] | None = None
+
+
+class LongWeekendRead(BaseModel):
+    """One period from date.nager.at ``/LongWeekend``."""
+
+    startDate: dt_date
+    endDate: dt_date
+    dayCount: int
+    needBridgeDay: bool
+    bridgeDays: list[dt_date]
