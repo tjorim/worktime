@@ -111,7 +111,7 @@
     "fake-indexeddb": "6.2.8",
     "happy-dom": "^21.0.4",
     "lightningcss": "^1.33.0",
-    "msw": "^3.0.4",
+    "msw": "^3.0.5",
     "oxc-parser": "^0.158.0",
     "oxfmt": "^0.78.0",
     "oxlint": "^1.93.0",
