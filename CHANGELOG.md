@@ -26,6 +26,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Document existing running-task 204 and time-off upsert 200 responses, and validate successful backend test responses against OpenAPI.
+
 - Enforce generated API contracts in shared, test-local and browser fixtures; typecheck E2E fixtures and remove obsolete mock-only endpoints.
 
 

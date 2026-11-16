@@ -1983,18 +1983,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/TaskRead"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "title": "Response Get Running Task Endpoint Api Time Tracking Tasks Running Get"
+                  "$ref": "#/components/schemas/TaskRead"
                 }
               }
             }
+          },
+          "204": {
+            "description": "No task is running"
           },
           "422": {
             "description": "Validation Error",
@@ -3890,6 +3885,16 @@
         "responses": {
           "201": {
             "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeOffEntryRead"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Existing entry updated",
             "content": {
               "application/json": {
                 "schema": {

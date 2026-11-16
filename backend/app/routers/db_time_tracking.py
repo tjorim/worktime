@@ -219,7 +219,11 @@ async def list_tasks_endpoint(
     )
 
 
-@router.get("/tasks/running", response_model=TaskRead | None)
+@router.get(
+    "/tasks/running",
+    response_model=TaskRead,
+    responses={204: {"description": "No task is running"}},
+)
 async def get_running_task_endpoint(
     user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),

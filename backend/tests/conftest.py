@@ -252,3 +252,18 @@ def create_user_factory() -> Callable[..., int]:
         return response.json()["id"]
 
     return _create_user
+
+
+@pytest.fixture(autouse=True)
+def validate_successful_wire_contracts(monkeypatch):
+    """Check ordinary fixtures too, including JSONResponse paths bypassing FastAPI validation."""
+    from tests.wire_contracts import assert_success_contract
+
+    original = TestClient.send
+
+    def send(client, request, **kwargs):
+        response = original(client, request, **kwargs)
+        assert_success_contract(response)
+        return response
+
+    monkeypatch.setattr(TestClient, "send", send)
