@@ -119,7 +119,7 @@ export * from './syncEntityCounts';
 export * from './syncPullResponse';
 export * from './syncPushRequest';
 export * from './syncPushResponse';
-export * from './syncPushResponseResults';
+export * from './syncPushResults';
 export * from './syncRecordResult';
 export * from './syncRecordResultStatus';
 export * from './syncStatusResponse';

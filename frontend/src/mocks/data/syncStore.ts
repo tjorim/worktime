@@ -64,7 +64,7 @@ export const emptyPullResponse: SyncPullResponse = {
 
 /** An empty push response — no conflicts or errors from the server. */
 export const emptyPushResponse: SyncPushResponse = {
-  results: {},
+  results: syncPushResults({}),
 };
 
 // ---------------------------------------------------------------------------
@@ -101,4 +101,19 @@ export const syncStore: SyncStore = createInitialSyncStore();
 /** Reset the store to its initial seed state. */
 export function resetSyncStore(): void {
   Object.assign(syncStore, createInitialSyncStore());
+}
+
+/** The real push always sends every collection; tests override only those they exercise. */
+export function syncPushResults(
+  overrides: Partial<SyncPushResponse["results"]> = {},
+): SyncPushResponse["results"] {
+  return {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+    gantt_tasks: [],
+    ...overrides,
+  };
 }

@@ -108,7 +108,7 @@ async def push_endpoint(
         raise api_error(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, str(error)) from error
 
     await notify_sync_changed(authenticated_user_id)
-    if any(record.status == "ok" for record in result.results.get("tasks", [])):
+    if any(record.status == "ok" for record in result.results.tasks):
         # Best-effort: a task in this batch was created/updated/rescheduled, which
         # may have changed the soonest-starting planned task -- prod any registered
         # Android device to reconcile now rather than waiting for it to next be

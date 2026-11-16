@@ -6932,14 +6932,7 @@
       "SyncPushResponse": {
         "properties": {
           "results": {
-            "additionalProperties": {
-              "items": {
-                "$ref": "#/components/schemas/SyncRecordResult"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Results"
+            "$ref": "#/components/schemas/SyncPushResults"
           }
         },
         "type": "object",
@@ -6948,6 +6941,63 @@
         ],
         "title": "SyncPushResponse",
         "description": "Per-record results for a sync push batch."
+      },
+      "SyncPushResults": {
+        "properties": {
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRecordResult"
+            },
+            "type": "array",
+            "title": "Labels"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRecordResult"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRecordResult"
+            },
+            "type": "array",
+            "title": "Templates"
+          },
+          "work_locations": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRecordResult"
+            },
+            "type": "array",
+            "title": "Work Locations"
+          },
+          "time_off_entries": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRecordResult"
+            },
+            "type": "array",
+            "title": "Time Off Entries"
+          },
+          "gantt_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRecordResult"
+            },
+            "type": "array",
+            "title": "Gantt Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labels",
+          "tasks",
+          "templates",
+          "work_locations",
+          "time_off_entries",
+          "gantt_tasks"
+        ],
+        "title": "SyncPushResults",
+        "description": "The six entity collections always returned by a sync push, including empty ones."
       },
       "SyncRecordResult": {
         "properties": {

@@ -368,7 +368,17 @@ function mergePushResponses(responses: SyncPushResponse[]): SyncPushResponse {
       (results[entityType] ??= []).push(...(records ?? []));
     }
   }
-  return { results };
+  return {
+    results: {
+      labels: [],
+      tasks: [],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      gantt_tasks: [],
+      ...results,
+    },
+  };
 }
 
 /** A push that the server accepted. */

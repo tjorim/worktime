@@ -5,11 +5,11 @@
  * API server for Worktime shift tracker and time-off management
  * OpenAPI spec version: 0.0.0
  */
-import type { SyncPushResponseResults } from './syncPushResponseResults';
+import type { SyncPushResults } from './syncPushResults';
 
 /**
  * Per-record results for a sync push batch.
  */
 export type SyncPushResponse = {
-  results: SyncPushResponseResults;
+  results: SyncPushResults;
 };

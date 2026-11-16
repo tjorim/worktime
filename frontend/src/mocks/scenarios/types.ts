@@ -21,30 +21,6 @@ export type SyncScenarioState =
   | "retryable_failure"
   | "offline";
 
-export type TimeTrackingScenarioState =
-  | "active"
-  | "paused"
-  | "completed"
-  | "correction_needed"
-  | "validation_failure";
-
-export interface TimeTrackingFixture {
-  state: TimeTrackingScenarioState;
-  active_entry_id: string | null;
-  seconds_elapsed: number;
-  validation_errors: string[];
-}
-
-export interface TimeOffRequestFixture {
-  id: string;
-  status: "pending" | "approved" | "rejected";
-  starts_on: string;
-  ends_on: string;
-  note: string;
-  overlap_with: string[];
-  quota_days_remaining: number;
-}
-
 export interface MockScenarioFixture {
   id: MockScenarioId;
   auth: {
@@ -66,11 +42,6 @@ export interface MockScenarioFixture {
     timeOffSummary: TimeOffSummaryReadModel;
     statusCode: number;
   };
-  timeTracking: TimeTrackingFixture;
-  timeOffRequests: {
-    statusCode: number;
-    requests: TimeOffRequestFixture[];
-  };
   holidays: {
     public: PublicHoliday[];
     longweekend: LongWeekend[];
@@ -89,16 +60,6 @@ export type MockScenarioId =
   | "current-shift-night"
   | "current-shift-off"
   | "current-shift-handover"
-  | "time-tracking-active"
-  | "time-tracking-paused"
-  | "time-tracking-completed"
-  | "time-tracking-correction-needed"
-  | "time-tracking-validation-failure"
-  | "time-off-pending"
-  | "time-off-approved"
-  | "time-off-rejected"
-  | "time-off-overlap"
-  | "time-off-quota-edge"
   | "sync-clean"
   | "sync-pending-local"
   | "sync-conflict"

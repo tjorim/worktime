@@ -13,7 +13,7 @@ import { buildAuthFailureResponse } from "./auth";
  */
 export const accountHandlers = [
   http.get<never, never, HealthSummary>("*/api/health", () =>
-    HttpResponse.json({
+    HttpResponse.json<HealthSummary>({
       status: "ok",
       version: "0.0.0",
       commit: "unknown",
@@ -25,7 +25,7 @@ export const accountHandlers = [
     "*/api/ical",
     () =>
       buildAuthFailureResponse() ??
-      HttpResponse.json({
+      HttpResponse.json<IcalFeedStatus>({
         configured: false,
         token_preview: null,
         created_at: null,
@@ -35,11 +35,15 @@ export const accountHandlers = [
 
   http.get<never, never, AccessTokenListResponse>(
     "*/api/access-tokens",
-    () => buildAuthFailureResponse() ?? HttpResponse.json({ items: [], total: 0 }),
+    () =>
+      buildAuthFailureResponse() ??
+      HttpResponse.json<AccessTokenListResponse>({ items: [], total: 0 }),
   ),
 
   http.get<never, never, IntegrationClientListResponse>(
     "*/api/integration-clients",
-    () => buildAuthFailureResponse() ?? HttpResponse.json({ items: [], total: 0 }),
+    () =>
+      buildAuthFailureResponse() ??
+      HttpResponse.json<IntegrationClientListResponse>({ items: [], total: 0 }),
   ),
 ];

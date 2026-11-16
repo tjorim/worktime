@@ -1024,10 +1024,21 @@ class SyncPushRequest(RequestModel):
     gantt_tasks: list[GanttTaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
 
 
+class SyncPushResults(ResponseModel):
+    """The six entity collections always returned by a sync push, including empty ones."""
+
+    labels: list[SyncRecordResult]
+    tasks: list[SyncRecordResult]
+    templates: list[SyncRecordResult]
+    work_locations: list[SyncRecordResult]
+    time_off_entries: list[SyncRecordResult]
+    gantt_tasks: list[SyncRecordResult]
+
+
 class SyncPushResponse(ResponseModel):
     """Per-record results for a sync push batch."""
 
-    results: dict[str, list[SyncRecordResult]]
+    results: SyncPushResults
 
 
 class SyncPullResponse(ResponseModel):

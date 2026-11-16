@@ -19,11 +19,13 @@ export type {
   IntegrationClientListResponse,
   IntegrationClientRead as IntegrationClient,
   HealthSummary,
+  PushSubscriptionRead,
   UserListResponse,
   UserPreferencesWrite,
   UserUpdate,
   UserPreferencesRead as PreferencesResponse,
   UserRead,
+  UserDataExport,
   VapidPublicKeyResponse,
   // Read models (`/api/read-models/*`) and work locations
   CurrentStatusReadModel,
@@ -34,6 +36,7 @@ export type {
   TimeOffSummaryReadModel,
   WorkLocationListResponse,
   WorkLocationRead,
+  WorkLocationCreate,
   // Sync wire format (`/api/sync/*`)
   GanttTaskSyncItem,
   GanttTaskSyncRead,

@@ -16,7 +16,7 @@ export const readModelHandlers = [
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json(scenario.readModels.currentStatus);
+    return HttpResponse.json<CurrentStatusReadModel>(scenario.readModels.currentStatus);
   }),
 
   http.get<never, never, TeamStatusReadModel>("*/api/read-models/team-status", () => {
@@ -26,7 +26,7 @@ export const readModelHandlers = [
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json(scenario.readModels.teamStatus);
+    return HttpResponse.json<TeamStatusReadModel>(scenario.readModels.teamStatus);
   }),
 
   http.get<never, never, TimeOffSummaryReadModel>("*/api/read-models/time-off-summary", () => {
@@ -36,7 +36,7 @@ export const readModelHandlers = [
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json(scenario.readModels.timeOffSummary);
+    return HttpResponse.json<TimeOffSummaryReadModel>(scenario.readModels.timeOffSummary);
   }),
 
   http.get<never, never, DashboardReadModel>("*/api/read-models/dashboard", () => {
@@ -46,7 +46,7 @@ export const readModelHandlers = [
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json({
+    return HttpResponse.json<DashboardReadModel>({
       as_of: scenario.readModels.currentStatus.as_of,
       identity: scenario.auth.profile,
       work_context: {

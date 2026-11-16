@@ -1,3 +1,6 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type { SyncPushResponse, SyncStatusResponse, PreferencesResponse } from "@/api-types";
+import { jsonBody } from "@/mocks/response";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { syncRecordResult } from "@/mocks/data/syncStore";
 import {
@@ -72,7 +75,10 @@ describe("syncClient", () => {
       time_off_entries: [],
       allow_bulk_delete: true,
     };
-    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+    });
     await pushSyncPayload(mockFetch, payload);
     const bodies = mockFetch.mock.calls.map((call) => JSON.parse(call[1].body));
     expect(bodies).toHaveLength(3);
@@ -107,12 +113,18 @@ describe("syncClient", () => {
       allow_bulk_delete: true,
     };
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+      })
       .mockResolvedValueOnce({ ok: false, status: 500 });
     expect(await pushSyncPayload(mockFetch, payload)).toBeNull();
     appendToSyncOutbox("user-1", payload);
     const queued = dequeueAndMergeSyncOutbox("user-1")!;
-    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+    });
     expect(await pushSyncPayload(mockFetch, queued.merged)).not.toBeNull();
     const bodies = mockFetch.mock.calls.map((call) => JSON.parse(call[1].body));
     expect(bodies).toHaveLength(4);
@@ -213,18 +225,18 @@ describe("syncClient", () => {
 
   describe("countPushConflicts", () => {
     it("returns 0 when results object is empty", () => {
-      expect(countPushConflicts({ results: {} })).toBe(0);
+      expect(countPushConflicts({ results: syncPushResults({}) })).toBe(0);
     });
 
     it("returns 0 when all records have status ok", () => {
       expect(
         countPushConflicts({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({ id: "l1", status: "ok" }),
               syncRecordResult({ id: "l2", status: "ok" }),
             ],
-          },
+          }),
         }),
       ).toBe(0);
     });
@@ -232,7 +244,7 @@ describe("syncClient", () => {
     it("counts conflict records across all entity types", () => {
       expect(
         countPushConflicts({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({ id: "l1", status: "ok" }),
               syncRecordResult({
@@ -249,7 +261,7 @@ describe("syncClient", () => {
               }),
             ],
             templates: [],
-          },
+          }),
         }),
       ).toBe(2);
     });
@@ -283,13 +295,13 @@ describe("syncClient", () => {
 
     it("returns empty payload when no conflicts", () => {
       const result = extractConflictedItems(makePayload(), {
-        results: {
+        results: syncPushResults({
           labels: [
             syncRecordResult({ id: "l1", status: "ok" }),
             syncRecordResult({ id: "l2", status: "ok" }),
           ],
           tasks: [syncRecordResult({ id: "t1", status: "ok" })],
-        },
+        }),
       });
       expect(result.labels).toHaveLength(0);
       expect(result.tasks).toHaveLength(0);
@@ -298,13 +310,20 @@ describe("syncClient", () => {
 
     it("extracts only conflicted labels", () => {
       const result = extractConflictedItems(makePayload(), {
-        results: {
+        results: syncPushResults({
           labels: [
             syncRecordResult({ id: "l1", status: "ok" }),
-            syncRecordResult({ id: "l2", status: "conflict", conflict_reason: "server is newer" }),
+            syncRecordResult({
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
+              id: "l2",
+              status: "conflict",
+              conflict_reason: "server is newer",
+            }),
           ],
           tasks: [syncRecordResult({ id: "t1", status: "ok" })],
-        },
+        }),
       });
       expect(result.labels).toHaveLength(1);
       expect(result.labels[0]!.id).toBe("l2");
@@ -313,22 +332,25 @@ describe("syncClient", () => {
 
     it("extracts conflicted work_locations matched by date", () => {
       const result = extractConflictedItems(makePayload(), {
-        results: {
+        results: syncPushResults({
           work_locations: [
             syncRecordResult({
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
               id: "2026-01-05",
               status: "conflict",
               conflict_reason: "server is newer",
             }),
           ],
-        },
+        }),
       });
       expect(result.work_locations).toHaveLength(1);
       expect(result.work_locations[0]!.date).toBe("2026-01-05");
     });
 
     it("returns empty arrays for entity types absent from response results", () => {
-      const result = extractConflictedItems(makePayload(), { results: {} });
+      const result = extractConflictedItems(makePayload(), { results: syncPushResults({}) });
       expect(result.labels).toHaveLength(0);
       expect(result.tasks).toHaveLength(0);
       expect(result.templates).toHaveLength(0);
@@ -473,15 +495,15 @@ describe("syncClient", () => {
 
   describe("maxConflictServerTimestamp", () => {
     it("returns undefined when results object is empty", () => {
-      expect(maxConflictServerTimestamp({ results: {} })).toBeUndefined();
+      expect(maxConflictServerTimestamp({ results: syncPushResults({}) })).toBeUndefined();
     });
 
     it("returns undefined when no records have status conflict", () => {
       expect(
         maxConflictServerTimestamp({
-          results: {
+          results: syncPushResults({
             labels: [syncRecordResult({ id: "l1", status: "ok" })],
-          },
+          }),
         }),
       ).toBeUndefined();
     });
@@ -489,7 +511,7 @@ describe("syncClient", () => {
     it("returns undefined when conflicted records have no server_updated_at", () => {
       expect(
         maxConflictServerTimestamp({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({
                 id: "l1",
@@ -497,7 +519,7 @@ describe("syncClient", () => {
                 conflict_reason: "server is newer",
               }),
             ],
-          },
+          }),
         }),
       ).toBeUndefined();
     });
@@ -505,7 +527,7 @@ describe("syncClient", () => {
     it("returns the single conflict server_updated_at", () => {
       expect(
         maxConflictServerTimestamp({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({
                 id: "l1",
@@ -514,7 +536,7 @@ describe("syncClient", () => {
                 server_updated_at: "2026-03-01T00:00:00.000Z",
               }),
             ],
-          },
+          }),
         }),
       ).toBe("2026-03-01T00:00:00.000Z");
     });
@@ -522,7 +544,7 @@ describe("syncClient", () => {
     it("returns the maximum server_updated_at across multiple conflict records", () => {
       expect(
         maxConflictServerTimestamp({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({
                 id: "l1",
@@ -545,7 +567,7 @@ describe("syncClient", () => {
                 server_updated_at: "2026-06-01T00:00:00.000Z",
               }),
             ],
-          },
+          }),
         }),
       ).toBe("2026-06-01T00:00:00.000Z");
     });
@@ -553,7 +575,7 @@ describe("syncClient", () => {
     it("ignores non-conflict records when computing the max", () => {
       expect(
         maxConflictServerTimestamp({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({
                 id: "l1",
@@ -567,7 +589,7 @@ describe("syncClient", () => {
                 server_updated_at: "2026-03-01T00:00:00.000Z",
               }),
             ],
-          },
+          }),
         }),
       ).toBe("2026-03-01T00:00:00.000Z");
     });
@@ -575,7 +597,7 @@ describe("syncClient", () => {
     it("ignores entries with invalid server_updated_at values", () => {
       expect(
         maxConflictServerTimestamp({
-          results: {
+          results: syncPushResults({
             labels: [
               syncRecordResult({
                 id: "l1",
@@ -590,7 +612,7 @@ describe("syncClient", () => {
                 server_updated_at: "2026-03-01T00:00:00.000Z",
               }),
             ],
-          },
+          }),
         }),
       ).toBe("2026-03-01T00:00:00.000Z");
     });
@@ -603,13 +625,19 @@ describe("syncClient", () => {
   describe("fetchSyncStatus", () => {
     it("returns parsed status on success", async () => {
       const status = {
+        time_off_entries_updated_at: null,
+        gantt_tasks_updated_at: null,
+        preferences_updated_at: null,
         labels_updated_at: null,
         tasks_updated_at: null,
         templates_updated_at: null,
         work_locations_updated_at: null,
         server_timestamp: "2026-01-01T00:00:00Z",
       };
-      mockFetch.mockResolvedValue({ ok: true, json: async () => status });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(status),
+      });
 
       const result = await fetchSyncStatus(mockFetch);
       expect(result).toEqual(status);
@@ -633,8 +661,11 @@ describe("syncClient", () => {
 
   describe("pushSyncPayload", () => {
     it("POSTs the payload and returns the response", async () => {
-      const response = { results: { tasks: [] } };
-      mockFetch.mockResolvedValue({ ok: true, json: async () => response });
+      const response = { results: syncPushResults({ tasks: [] }) };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(response),
+      });
 
       const payload: SyncPushPayload = {
         labels: [],
@@ -687,16 +718,20 @@ describe("syncClient", () => {
 
       mockFetch.mockImplementation(async (_url: string, init?: RequestInit) => {
         const body = JSON.parse(String(init?.body)) as SyncPushPayload;
-        const results: Record<string, { id: string; status: string }[]> = {};
+        const results: SyncPushResponse["results"] = syncPushResults();
         for (const [key, items] of Object.entries(body)) {
           if (Array.isArray(items) && items.length > 0) {
-            results[key] = items.map((item) => ({
+            results[key as keyof SyncPushResponse["results"]] = items.map((item) => ({
+              server_updated_at: null,
+              conflict_reason: null,
+              code: null,
+              conflicting_task_id: null,
               id: "id" in item ? (item.id as string) : (item as { date: string }).date,
               status: "ok",
             }));
           }
         }
-        return { ok: true, json: async () => ({ results }) };
+        return { ok: true, json: async () => jsonBody<SyncPushResponse>({ results }) };
       });
 
       const result = await pushSyncPayload(mockFetch, {
@@ -735,7 +770,10 @@ describe("syncClient", () => {
       }));
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+        })
         .mockResolvedValueOnce({ ok: false });
 
       const result = await pushSyncPayload(mockFetch, {
@@ -753,13 +791,18 @@ describe("syncClient", () => {
   describe("pullSyncData", () => {
     it("calls the pull endpoint without since param by default", async () => {
       const pullResp = {
+        time_off_entries: [],
+        gantt_tasks: [],
         labels: [],
         tasks: [],
         templates: [],
         work_locations: [],
         server_timestamp: "2026-01-01T00:00:00Z",
       };
-      mockFetch.mockResolvedValue({ ok: true, json: async () => pullResp });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(pullResp),
+      });
 
       const result = await pullSyncData(mockFetch);
       expect(result).toEqual(pullResp);
@@ -768,13 +811,18 @@ describe("syncClient", () => {
 
     it("includes since param when provided", async () => {
       const pullResp = {
+        time_off_entries: [],
+        gantt_tasks: [],
         labels: [],
         tasks: [],
         templates: [],
         work_locations: [],
         server_timestamp: "2026-01-01T00:00:00Z",
       };
-      mockFetch.mockResolvedValue({ ok: true, json: async () => pullResp });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(pullResp),
+      });
 
       await pullSyncData(mockFetch, "2026-01-01T00:00:00Z");
       expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("since="));
@@ -790,9 +838,10 @@ describe("syncClient", () => {
         gantt_tasks: [],
         server_timestamp: "2026-04-01T00:00:00Z",
       };
-      mockFetch
-        .mockResolvedValueOnce({ ok: false, status: 410 })
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResp });
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 410 }).mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(pullResp),
+      });
 
       const result = await pullSyncData(mockFetch, "2025-01-01T00:00:00Z");
 
@@ -1108,6 +1157,8 @@ describe("syncClient", () => {
     });
 
     const makeServerTemplate = (id: string, deletedAt: string | null = null) => ({
+      gantt_task_id: null,
+      includes_break: false,
       id,
       user_id: 1,
       label_id: null,
@@ -1280,7 +1331,10 @@ describe("syncClient", () => {
       };
       expect(countPayloadDeletes(payload)).toBe(MAX_SYNC_PUSH_ITEMS + 200);
 
-      mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+      });
       await pushSyncPayload(mockFetch, payload);
 
       const bodies = (mockFetch.mock.calls as [string, RequestInit][])
@@ -1305,7 +1359,10 @@ describe("syncClient", () => {
         })),
       };
 
-      mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+      });
       await pushSyncPayload(mockFetch, payload);
 
       const bodies = (mockFetch.mock.calls as [string, RequestInit][])
@@ -1575,7 +1632,10 @@ describe("syncClient", () => {
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
       };
-      mockFetch.mockResolvedValue({ ok: true, json: async () => prefs });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse>(prefs),
+      });
       const result = await fetchPreferences(mockFetch);
       expect(result).toEqual(prefs);
       expect(mockFetch).toHaveBeenCalledWith("/api/preferences");
@@ -1587,7 +1647,10 @@ describe("syncClient", () => {
     });
 
     it("returns null when server returns JSON null", async () => {
-      mockFetch.mockResolvedValue({ ok: true, json: async () => null });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse | null>(null),
+      });
       expect(await fetchPreferences(mockFetch)).toBeNull();
     });
 
@@ -1679,15 +1742,54 @@ describe("syncClient", () => {
     const handler = vi.fn();
     setSyncTaskRejectionHandler(handler);
     reportTaskRejections({
-      results: {
-        tasks: [{ id: "t1", status: "conflict", code: "label_required" }],
-        gantt_tasks: [{ id: "g1", status: "conflict", code: "gantt_dependency_cycle" }],
-        templates: [
-          { id: "tpl1", status: "conflict", code: "label_required" },
-          { id: "tpl2", status: "conflict", code: "task_overlap" },
-          { id: "tpl3", status: "ok" },
+      results: syncPushResults({
+        tasks: [
+          {
+            server_updated_at: null,
+            conflict_reason: null,
+            conflicting_task_id: null,
+            id: "t1",
+            status: "conflict",
+            code: "label_required",
+          },
         ],
-      },
+        gantt_tasks: [
+          {
+            server_updated_at: null,
+            conflict_reason: null,
+            conflicting_task_id: null,
+            id: "g1",
+            status: "conflict",
+            code: "gantt_dependency_cycle",
+          },
+        ],
+        templates: [
+          {
+            server_updated_at: null,
+            conflict_reason: null,
+            conflicting_task_id: null,
+            id: "tpl1",
+            status: "conflict",
+            code: "label_required",
+          },
+          {
+            server_updated_at: null,
+            conflict_reason: null,
+            conflicting_task_id: null,
+            id: "tpl2",
+            status: "conflict",
+            code: "task_overlap",
+          },
+          {
+            server_updated_at: null,
+            conflict_reason: null,
+            code: null,
+            conflicting_task_id: null,
+            id: "tpl3",
+            status: "ok",
+          },
+        ],
+      }),
     } as never);
     setSyncTaskRejectionHandler(null);
     expect(handler).toHaveBeenCalledTimes(3);
@@ -1699,10 +1801,19 @@ describe("syncClient", () => {
   it("uploads undated preferences once, then only after a synced setting changes", async () => {
     const data = { hasCompletedOnboarding: true };
     localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(data));
-    let server: { data: Record<string, unknown>; client_updated_at: string } | null = null;
+    let server: PreferencesResponse | null = null;
     const fetch = vi.fn(async (_url: string, init?: RequestInit) => {
-      if (init?.method === "PUT") server = JSON.parse(init.body as string);
-      return { ok: true, json: async () => server } as Response;
+      if (init?.method === "PUT")
+        server = {
+          user_id: 1,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...JSON.parse(init.body as string),
+        };
+      return {
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse | null>(server),
+      } as Response;
     });
     await reconcilePreferences(fetch);
     await reconcilePreferences(fetch);
@@ -1730,10 +1841,14 @@ describe("syncClient", () => {
       async (_url: string, _init?: RequestInit) =>
         ({
           ok: true,
-          json: async () => ({
-            data: { hasCompletedOnboarding: true, scheduleType: "server" },
-            client_updated_at: "1970-01-01T00:00:00.000Z",
-          }),
+          json: async () =>
+            jsonBody<PreferencesResponse>({
+              user_id: 1,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              data: { hasCompletedOnboarding: true, scheduleType: "server" },
+              client_updated_at: "1970-01-01T00:00:00.000Z",
+            }),
         }) as Response,
     );
     await reconcilePreferences(fetch);
@@ -1766,10 +1881,14 @@ describe("syncClient", () => {
     );
     release({
       ok: true,
-      json: async () => ({
-        data: { scheduleType: "3-shift" },
-        client_updated_at: "2099-01-01T00:00:00Z",
-      }),
+      json: async () =>
+        jsonBody<PreferencesResponse>({
+          user_id: 1,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          data: { scheduleType: "3-shift" },
+          client_updated_at: "2099-01-01T00:00:00Z",
+        }),
     } as Response);
     await expect(pending).resolves.toBeNull();
     expect(fetch).toHaveBeenCalledTimes(1);

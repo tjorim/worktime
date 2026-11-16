@@ -67,3 +67,39 @@ viewport, and fail on any violation. The shared helper and the (empty)
 allow-list live in `axe.ts`; an allow-list entry needs a reason. Add new routes
 to the route lists in those specs. Screen-reader behaviour and anything axe
 cannot compute still needs a manual review.
+
+## API fixture contracts
+
+`pnpm typecheck:tests` includes all E2E specs, fixture pages and Playwright configs.
+Use `jsonResponse<GeneratedResponse>(body)` for test-local fetch/MSW responses,
+`jsonBody<GeneratedResponse>(body)` for injected `json()` doubles, and
+`routeJson<GeneratedResponse>(body)` for Playwright fulfilment. Import records
+from `@/api-types`. These helpers deliberately prevent type inference from
+accepting an arbitrary successful body. Browser-evaluated functions cannot
+capture runtime imports: use `satisfies GeneratedResponse` inside them instead.
+Shared MSW handlers retain their generated response generics and also name the
+response type at `HttpResponse.json`.
+
+`syncPushResults(overrides)` supplies the six collections the backend always
+sends; `syncRecordResult(overrides)` supplies required nullable result metadata.
+Preferences envelopes and account fixtures must include their response metadata;
+request bodies may still omit fields with defaults.
+
+Use `uncheckedJson(reason, body, init)` or `uncheckedBody(reason, body)` only for
+intentional errors, malformed inputs, unconsumed control responses, or the
+separate hday-helper service. Keep the reason visible beside the fixture and
+retain the assertions testing the exceptional behaviour. SSE framing and raw
+non-JSON diagnostic constructors have local `fixture-contract` comments. Local
+storage, IndexedDB, backup files and OIDC provider sessions are persistence or
+external-service contracts, not this backend's API records.
+
+`tests/mocks/fixtureContracts.test.ts` scans shared handlers, unit/integration
+tests and E2E sources for unchecked response constructors, `json()` doubles and
+browser fulfilment. Its synthetic regressions check the guard itself; compile-only
+negative cases in `tests/types/apiFixtures.ts` check generated required fields and
+nested shapes. This is static enforcement, not runtime JSON-schema validation,
+and does not infer which endpoint a developer intended a fixture to represent.
+
+The obsolete `/api/time-tracking/state` and `/api/time-off/requests` mocks and
+mock-only scenarios were removed: the app has no callers or backend routes for
+them. Tracking and time off use local collections and the real sync handlers.

@@ -1,3 +1,11 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type {
+  SyncStatusResponse,
+  SyncPullResponse,
+  PreferencesResponse,
+  SyncPushResponse,
+} from "@/api-types";
+import { jsonBody } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -56,7 +64,7 @@ const emptyPullResponse = {
   server_timestamp: "2026-01-02T00:00:00.000Z",
 };
 
-const emptyPushResponse = { results: {} };
+const emptyPushResponse = { results: syncPushResults({}) };
 
 function seedTasks() {
   tasksCollection.insert({ id: "t1", text: "Test", label: "", startTime: "2026-01-01T09:00" });
@@ -97,13 +105,25 @@ describe("useFirstSyncFlow", () => {
         collections.labelsCollection.insert({ id: "one", name: "Work", color: "blue" });
       const payload = buildLocalSyncPushPayload();
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
-            ...emptyPullResponse,
-            labels: payload.labels.map((label) => ({ ...label, deleted_at: null })),
-          }),
+          json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () =>
+            jsonBody<SyncPullResponse>({
+              ...emptyPullResponse,
+              labels: payload.labels.map((label) => ({
+                ...label,
+                name: label.name ?? "",
+                color: label.color ?? "",
+                user_id: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                deleted_at: null,
+              })),
+            }),
         });
       const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
       await waitFor(() => expect(result.current.phase).toBe("conflict"));
@@ -136,7 +156,10 @@ describe("useFirstSyncFlow", () => {
   });
 
   it("Branch D: completes immediately when neither side has data", async () => {
-    mockFetch.mockResolvedValue({ ok: true, json: async () => emptyStatus });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+    });
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -154,7 +177,10 @@ describe("useFirstSyncFlow", () => {
       localStorage.setItem(USER_STATE_OWNER_STORAGE_KEY, "user-a");
       mockFetch.mockImplementation(async (url: string) => ({
         ok: true,
-        json: async () => (url === "/api/preferences" ? null : emptyStatus),
+        json: async () =>
+          jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+            url === "/api/preferences" ? null : emptyStatus,
+          ),
       }));
       const { result, rerender } = renderHook(
         ({ signedIn, uid }) => useFirstSyncFlow(signedIn, uid, mockFetch),
@@ -217,7 +243,17 @@ describe("useFirstSyncFlow", () => {
     mockFetch.mockImplementation(async (url: string) => ({
       ok: true,
       json: async () =>
-        url === "/api/preferences" ? { data, client_updated_at: data._updatedAt } : emptyStatus,
+        jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+          url === "/api/preferences"
+            ? {
+                user_id: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                data,
+                client_updated_at: data._updatedAt,
+              }
+            : emptyStatus,
+        ),
     }));
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
     await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
@@ -250,7 +286,10 @@ describe("useFirstSyncFlow", () => {
       if (returning) localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
       mockFetch.mockImplementation(async (url: string) => ({
         ok: true,
-        json: async () => (url === "/api/preferences" ? null : emptyStatus),
+        json: async () =>
+          jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+            url === "/api/preferences" ? null : emptyStatus,
+          ),
       }));
       const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
       await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
@@ -272,7 +311,14 @@ describe("useFirstSyncFlow", () => {
       localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
       mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => ({ data: { scheduleType: "3-shift" } }),
+        json: async () =>
+          jsonBody<PreferencesResponse>({
+            user_id: 1,
+            client_updated_at: "2026-01-01T00:00:00Z",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            data: { scheduleType: "3-shift" },
+          }),
       });
       const original = localStorage.setItem;
       const write = vi.spyOn(localStorage, "setItem").mockImplementation(function (
@@ -311,7 +357,14 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { scheduleType: "3-shift" } }),
+      json: async () =>
+        jsonBody<PreferencesResponse>({
+          user_id: 1,
+          client_updated_at: "2026-01-01T00:00:00Z",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          data: { scheduleType: "3-shift" },
+        }),
     });
     const original = localStorage.setItem;
     const write = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
@@ -360,7 +413,14 @@ describe("useFirstSyncFlow", () => {
           : { scheduleType: "5-shift", _updatedAt: emptyStatus.server_timestamp };
       mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => ({ data: prefsB, client_updated_at: prefsB._updatedAt }),
+        json: async () =>
+          jsonBody<PreferencesResponse>({
+            user_id: 1,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            data: prefsB,
+            client_updated_at: prefsB._updatedAt,
+          }),
       });
       const original = localStorage.setItem;
       const write = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
@@ -383,7 +443,14 @@ describe("useFirstSyncFlow", () => {
         async () =>
           ({
             ok: true,
-            json: async () => ({ data: prefsNext, client_updated_at: prefsNext._updatedAt }),
+            json: async () =>
+              jsonBody<PreferencesResponse>({
+                user_id: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                data: prefsNext,
+                client_updated_at: prefsNext._updatedAt,
+              }),
           }) as Response,
       );
       const next = renderHook(() => useFirstSyncFlow(true, returning, fetchNext), { wrapper });
@@ -408,7 +475,14 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { scheduleType: "3-shift" } }),
+      json: async () =>
+        jsonBody<PreferencesResponse>({
+          user_id: 1,
+          client_updated_at: "2026-01-01T00:00:00Z",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          data: { scheduleType: "3-shift" },
+        }),
     });
     const remove = localStorage.removeItem;
     const cleanup = vi.spyOn(localStorage, "removeItem").mockImplementation((key) => {
@@ -453,7 +527,14 @@ describe("useFirstSyncFlow", () => {
     const dataB = { scheduleType: "3-shift", _updatedAt: emptyStatus.server_timestamp };
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: dataB, client_updated_at: dataB._updatedAt }),
+      json: async () =>
+        jsonBody<PreferencesResponse>({
+          user_id: 1,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          data: dataB,
+          client_updated_at: dataB._updatedAt,
+        }),
     });
     const set = localStorage.setItem;
     const remove = localStorage.removeItem;
@@ -495,7 +576,14 @@ describe("useFirstSyncFlow", () => {
       async (_url: string, _init?: RequestInit) =>
         ({
           ok: true,
-          json: async () => ({ data: dataNext, client_updated_at: dataNext._updatedAt }),
+          json: async () =>
+            jsonBody<PreferencesResponse>({
+              user_id: 1,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              data: dataNext,
+              client_updated_at: dataNext._updatedAt,
+            }),
         }) as Response,
     );
     const next = renderHook(() => useFirstSyncFlow(true, nextUser, fetchNext), { wrapper });
@@ -521,7 +609,14 @@ describe("useFirstSyncFlow", () => {
     let release!: (response: Response) => void;
     const response = {
       ok: true,
-      json: async () => ({ data: { scheduleType: "3-shift" } }),
+      json: async () =>
+        jsonBody<PreferencesResponse>({
+          user_id: 1,
+          client_updated_at: "2026-01-01T00:00:00Z",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          data: { scheduleType: "3-shift" },
+        }),
     } as Response;
     mockFetch
       .mockImplementationOnce(
@@ -558,7 +653,14 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem(getSyncCursorKey("user-b"), emptyStatus.server_timestamp);
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { scheduleType: "3-shift" } }),
+      json: async () =>
+        jsonBody<PreferencesResponse>({
+          user_id: 1,
+          client_updated_at: "2026-01-01T00:00:00Z",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          data: { scheduleType: "3-shift" },
+        }),
     });
     const set = localStorage.setItem;
     const write = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
@@ -622,7 +724,17 @@ describe("useFirstSyncFlow", () => {
     await waitFor(() => expect(fetchC).toHaveBeenCalledTimes(1));
     localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ scheduleType: "edited-a" }));
     await act(async () =>
-      releaseB({ ok: true, json: async () => ({ data: { scheduleType: "3-shift" } }) } as Response),
+      releaseB({
+        ok: true,
+        json: async () =>
+          jsonBody<PreferencesResponse>({
+            user_id: 1,
+            client_updated_at: "2026-01-01T00:00:00Z",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            data: { scheduleType: "3-shift" },
+          }),
+      } as Response),
     );
     await waitFor(() => expect(first.result.current.isSyncEstablished).toBe(true));
     localStorage.setItem(
@@ -633,7 +745,17 @@ describe("useFirstSyncFlow", () => {
       }),
     );
     await act(async () =>
-      releaseC({ ok: true, json: async () => ({ data: { scheduleType: "5-shift" } }) } as Response),
+      releaseC({
+        ok: true,
+        json: async () =>
+          jsonBody<PreferencesResponse>({
+            user_id: 1,
+            client_updated_at: "2026-01-01T00:00:00Z",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            data: { scheduleType: "5-shift" },
+          }),
+      } as Response),
     );
     await waitFor(() => expect(second.result.current.isSyncEstablished).toBe(true));
     expect(JSON.parse(localStorage.getItem(getAccountPreferencesKey("user-a"))!)).toMatchObject({
@@ -661,12 +783,18 @@ describe("useFirstSyncFlow", () => {
       async (url: string, _init?: RequestInit) =>
         ({
           ok: true,
-          json: async () => (url === "/api/preferences" ? null : emptyStatus),
+          json: async () =>
+            jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+              url === "/api/preferences" ? null : emptyStatus,
+            ),
         }) as Response,
     );
     mockFetch.mockImplementation(async (url: string) => ({
       ok: true,
-      json: async () => (url === "/api/preferences" ? null : emptyStatus),
+      json: async () =>
+        jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+          url === "/api/preferences" ? null : emptyStatus,
+        ),
     }));
     const { result, rerender } = renderHook(
       ({ signedIn, uid, fetch }) => useFirstSyncFlow(signedIn, uid, fetch),
@@ -704,7 +832,10 @@ describe("useFirstSyncFlow", () => {
       );
       mockFetch.mockImplementation(async (url: string) => ({
         ok: true,
-        json: async () => (url === "/api/preferences" ? null : emptyStatus),
+        json: async () =>
+          jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+            url === "/api/preferences" ? null : emptyStatus,
+          ),
       }));
       const { result } = renderHook(() => useFirstSyncFlow(true, "user-b", mockFetch), { wrapper });
       await waitFor(() => expect(result.current.isSyncEstablished).toBe(true));
@@ -721,8 +852,14 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
-      .mockResolvedValueOnce({ ok: true, json: async () => null }) // GET /api/preferences (none yet)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }) // status check
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse | null>(null),
+      }) // GET /api/preferences (none yet)
       .mockResolvedValueOnce({ ok: true }); // PUT /api/preferences
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -745,9 +882,18 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // status: server has labels
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull entities
-      .mockResolvedValueOnce({ ok: true, json: async () => null }) // GET /api/preferences
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      }) // status: server has labels
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      }) // pull entities
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse | null>(null),
+      }) // GET /api/preferences
       .mockResolvedValueOnce({ ok: true }); // PUT /api/preferences
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -762,9 +908,18 @@ describe("useFirstSyncFlow", () => {
     seedTasks();
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }) // status check
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      }) // push
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }); // re-fetch status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -784,9 +939,18 @@ describe("useFirstSyncFlow", () => {
     seedTimeOff(); // only time-off, no tasks
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }) // status check
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      }) // push
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }); // re-fetch status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -808,8 +972,14 @@ describe("useFirstSyncFlow", () => {
 
   it("Branch B: pulls server data when local is empty", async () => {
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // status
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      }) // status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      }) // pull
       .mockResolvedValueOnce({ ok: false }); // GET /api/preferences — no prefs on server
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -830,7 +1000,10 @@ describe("useFirstSyncFlow", () => {
   it("Branch C: enters conflict phase when both have data", async () => {
     seedTasks();
 
-    mockFetch.mockResolvedValue({ ok: true, json: async () => populatedStatus });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+    });
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -843,10 +1016,22 @@ describe("useFirstSyncFlow", () => {
     seedTasks();
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // initial status → conflict
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull server data
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push replace payload
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // post-push status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      }) // initial status → conflict
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      }) // pull server data
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      }) // push replace payload
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }); // post-push status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -872,8 +1057,14 @@ describe("useFirstSyncFlow", () => {
     seedTasks();
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // initial status
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      }) // initial status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      }) // pull
       .mockResolvedValueOnce({ ok: false }); // GET /api/preferences — no prefs on server
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -912,16 +1103,34 @@ describe("useFirstSyncFlow", () => {
       seedTimeOff();
       const payload = buildLocalSyncPushPayload();
       const item = payload.time_off_entries[0]!;
-      const snapshot = {
+      if (item.action !== "create") throw new Error("Expected a live time-off fixture");
+      const snapshot: SyncPullResponse = {
         ...emptyPullResponse,
         time_off_entries: [
-          { ...item, id: 1, entry_id: different ? "different-id" : item.id, deleted_at: null },
+          {
+            user_id: 1,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            date: null,
+            start_date: null,
+            end_date: null,
+            weekday: null,
+            note: null,
+            ...item,
+            entry_type: item.entry_type ?? "vacation",
+            entry_flag: item.entry_flag ?? "full_day",
+            id: 1,
+            entry_id: different ? "different-id" : item.id,
+            deleted_at: null,
+          },
         ],
       };
       mockFetch.mockImplementation(async (url: string) => ({
         ok: true,
         json: async () =>
-          url.includes("/status") ? populatedStatus : url.includes("/pull") ? snapshot : null,
+          jsonBody<SyncStatusResponse | SyncPullResponse | PreferencesResponse | null>(
+            url.includes("/status") ? populatedStatus : url.includes("/pull") ? snapshot : null,
+          ),
       }));
       const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
       await waitFor(() => expect(result.current.phase).toBe(different ? "conflict" : "done"));
@@ -930,7 +1139,10 @@ describe("useFirstSyncFlow", () => {
 
   it("dismiss resets phase to idle and survives a remount for this session", async () => {
     seedTasks();
-    mockFetch.mockResolvedValue({ ok: true, json: async () => populatedStatus });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+    });
 
     const { result, unmount } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), {
       wrapper,
@@ -951,10 +1163,19 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }) // status check
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      }) // push entities
       .mockResolvedValueOnce({ ok: true }) // PUT /api/preferences
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }); // re-fetch status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -973,11 +1194,23 @@ describe("useFirstSyncFlow", () => {
     localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities
-      .mockResolvedValueOnce({ ok: true, json: async () => null }) // GET /api/preferences
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }) // status check
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      }) // push entities
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse | null>(null),
+      }) // GET /api/preferences
       .mockResolvedValueOnce({ ok: false }) // PUT /api/preferences fails
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(emptyStatus),
+      }); // re-fetch status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -997,7 +1230,10 @@ describe("useFirstSyncFlow", () => {
       .spyOn(collections, "preloadSyncCollections")
       .mockRejectedValue(new Error("collections unavailable"));
 
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => populatedStatus });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+    });
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -1021,9 +1257,18 @@ describe("useFirstSyncFlow", () => {
     };
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // status
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull entities
-      .mockResolvedValueOnce({ ok: true, json: async () => serverPrefs }); // GET /api/preferences
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      }) // status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      }) // pull entities
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse>(serverPrefs),
+      }); // GET /api/preferences
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 

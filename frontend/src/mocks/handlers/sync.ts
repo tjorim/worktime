@@ -49,7 +49,7 @@ export const syncHandlers = [
       },
     });
 
-    return new HttpResponse(stream, {
+    return new HttpResponse(/* fixture-contract: sse (notify-then-pull stream) */ stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -65,7 +65,7 @@ export const syncHandlers = [
     if (syncStore.statusError !== null) {
       return new HttpResponse(null, { status: syncStore.statusError });
     }
-    return HttpResponse.json(syncStore.status);
+    return HttpResponse.json<SyncStatusResponse>(syncStore.status);
   }),
 
   // POST /api/sync/push
@@ -75,7 +75,7 @@ export const syncHandlers = [
     if (syncStore.pushError !== null) {
       return new HttpResponse(null, { status: syncStore.pushError });
     }
-    return HttpResponse.json(syncStore.pushResponse);
+    return HttpResponse.json<SyncPushResponse>(syncStore.pushResponse);
   }),
 
   // GET /api/sync/pull — matches the real backend (backend/app/routers/db_sync.py's
@@ -89,14 +89,14 @@ export const syncHandlers = [
     if (syncStore.pullError !== null) {
       return new HttpResponse(null, { status: syncStore.pullError });
     }
-    return HttpResponse.json(syncStore.pullData);
+    return HttpResponse.json<SyncPullResponse>(syncStore.pullData);
   }),
 
   // GET /api/preferences
   http.get<never, never, PreferencesResponse | null>("*/api/preferences", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
-    return HttpResponse.json(syncStore.preferences);
+    return HttpResponse.json<PreferencesResponse | null>(syncStore.preferences);
   }),
 
   // PUT /api/preferences
@@ -114,7 +114,7 @@ export const syncHandlers = [
         created_at: syncStore.preferences?.created_at ?? now,
         updated_at: now,
       };
-      return HttpResponse.json(syncStore.preferences);
+      return HttpResponse.json<PreferencesResponse>(syncStore.preferences);
     },
   ),
 
@@ -122,21 +122,21 @@ export const syncHandlers = [
   http.get<never, never, AccountProfile>("*/api/me", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
-    return HttpResponse.json(getMockScenario().auth.profile);
+    return HttpResponse.json<AccountProfile>(getMockScenario().auth.profile);
   }),
 
   // GET /api/audit
   http.get<never, never, AuditEntryListResponse>("*/api/audit", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
-    return HttpResponse.json({ items: [], total: 0 });
+    return HttpResponse.json<AuditEntryListResponse>({ items: [], total: 0 });
   }),
 
   // GET /api/users/
   http.get<never, never, UserListResponse>("*/api/users/", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
-    return HttpResponse.json({
+    return HttpResponse.json<UserListResponse>({
       items: [],
       total: 0,
     });
@@ -147,7 +147,7 @@ export const syncHandlers = [
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const body = await request.json();
-    return HttpResponse.json({
+    return HttpResponse.json<UserRead>({
       id: Number(params.id),
       username: "dev-user",
       display_name: body.display_name ?? "Dev User",

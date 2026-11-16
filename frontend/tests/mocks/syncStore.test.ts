@@ -5,6 +5,7 @@ import {
   emptyStatus,
   resetSyncStore,
   syncRecordResult,
+  syncPushResults,
   syncStore,
 } from "@/mocks/data/syncStore";
 
@@ -22,10 +23,10 @@ describe("syncStore", () => {
     resetSyncStore();
 
     expect(syncStore.pullData.labels).toEqual([]);
-    expect(syncStore.pushResponse.results).toEqual({});
+    expect(syncStore.pushResponse.results).toEqual(syncPushResults());
     expect(syncStore.pullData).not.toBe(emptyPullResponse);
     expect(syncStore.pushResponse).not.toBe(emptyPushResponse);
     expect(emptyPullResponse.labels).toEqual([]);
-    expect(emptyPushResponse.results).toEqual({});
+    expect(emptyPushResponse.results).toEqual(syncPushResults());
   });
 });

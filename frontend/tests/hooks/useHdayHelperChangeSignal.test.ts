@@ -135,7 +135,10 @@ function sseController() {
 }
 
 function sseResponse(stream: ReadableStream<Uint8Array>, status = 200): Response {
-  return new Response(stream, { status, headers: { "content-type": "text/event-stream" } });
+  return new Response(/* fixture-contract: sse (stream framing, not JSON) */ stream, {
+    status,
+    headers: { "content-type": "text/event-stream" },
+  });
 }
 
 describe("createHdayHelperChangeTransport", () => {
@@ -232,10 +235,13 @@ describe("createHdayHelperChangeTransport", () => {
       cancel: cancelSpy,
     });
     // Wrong content-type — fails the transport's response validation.
-    const badResponse = new Response(stream, {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-    });
+    const badResponse = new Response(
+      /* fixture-contract: sse (stream framing, not JSON) */ stream,
+      {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      },
+    );
     vi.spyOn(console, "debug").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(badResponse));
 

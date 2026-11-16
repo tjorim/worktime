@@ -1,3 +1,4 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
 import {
   emptyPullResponse,
   emptyPushResponse,
@@ -208,26 +209,6 @@ function createBaseFixture(id: MockScenarioId): MockScenarioFixture {
       },
       statusCode: 200,
     },
-    timeTracking: {
-      state: "active",
-      active_entry_id: "task-001",
-      seconds_elapsed: 5400,
-      validation_errors: [],
-    },
-    timeOffRequests: {
-      statusCode: 200,
-      requests: [
-        {
-          id: "req-pending",
-          status: "pending",
-          starts_on: "2026-06-10",
-          ends_on: "2026-06-12",
-          note: "Summer trip",
-          overlap_with: [],
-          quota_days_remaining: 8,
-        },
-      ],
-    },
     holidays: {
       public: structuredClone(seedPublicHolidays),
       longweekend: structuredClone(seedLongWeekends),
@@ -296,83 +277,6 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
       },
     },
   })),
-  "time-tracking-active": createBaseFixture("time-tracking-active"),
-  "time-tracking-paused": withFixture("time-tracking-paused", (fixture) => ({
-    ...fixture,
-    timeTracking: { ...fixture.timeTracking, state: "paused", active_entry_id: null },
-  })),
-  "time-tracking-completed": withFixture("time-tracking-completed", (fixture) => ({
-    ...fixture,
-    timeTracking: { ...fixture.timeTracking, state: "completed", active_entry_id: null },
-  })),
-  "time-tracking-correction-needed": withFixture("time-tracking-correction-needed", (fixture) => ({
-    ...fixture,
-    timeTracking: {
-      ...fixture.timeTracking,
-      state: "correction_needed",
-      validation_errors: ["Tracked time is shorter than required shift target."],
-    },
-  })),
-  "time-tracking-validation-failure": withFixture(
-    "time-tracking-validation-failure",
-    (fixture) => ({
-      ...fixture,
-      timeTracking: {
-        ...fixture.timeTracking,
-        state: "validation_failure",
-        validation_errors: ["start_time must be before end_time"],
-      },
-    }),
-  ),
-  "time-off-pending": createBaseFixture("time-off-pending"),
-  "time-off-approved": withFixture("time-off-approved", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({
-        ...request,
-        status: "approved",
-      })),
-    },
-  })),
-  "time-off-rejected": withFixture("time-off-rejected", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({
-        ...request,
-        status: "rejected",
-      })),
-    },
-  })),
-  "time-off-overlap": withFixture("time-off-overlap", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: [
-        ...fixture.timeOffRequests.requests,
-        {
-          id: "req-overlap",
-          status: "pending",
-          starts_on: "2026-06-11",
-          ends_on: "2026-06-14",
-          note: "Overlapping request",
-          overlap_with: ["req-pending"],
-          quota_days_remaining: 3,
-        },
-      ],
-    },
-  })),
-  "time-off-quota-edge": withFixture("time-off-quota-edge", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({
-        ...request,
-        quota_days_remaining: 0,
-      })),
-    },
-  })),
   "sync-clean": createBaseFixture("sync-clean"),
   "sync-pending-local": withFixture("sync-pending-local", (fixture) => ({
     ...fixture,
@@ -388,7 +292,7 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
       ...fixture.sync,
       state: "conflict",
       pushResponse: {
-        results: {
+        results: syncPushResults({
           tasks: [
             syncRecordResult({
               id: "task-001",
@@ -397,7 +301,7 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
               server_updated_at: "2026-05-18T06:00:00.000Z",
             }),
           ],
-        },
+        }),
       },
     },
   })),
@@ -442,7 +346,6 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
     ...fixture,
     sync: { ...fixture.sync, statusError: 500, pullError: 500, pushError: 500 },
     readModels: { ...fixture.readModels, statusCode: 500 },
-    timeOffRequests: { ...fixture.timeOffRequests, statusCode: 500 },
     workLocations: { ...fixture.workLocations, statusCode: 500 },
   })),
 };

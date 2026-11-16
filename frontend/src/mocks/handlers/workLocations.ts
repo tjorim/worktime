@@ -1,5 +1,6 @@
+import { uncheckedJson } from "@/mocks/response";
 import { http, HttpResponse } from "msw/http";
-import type { WorkLocationListResponse, WorkLocationRead } from "@/api-types";
+import type { WorkLocationListResponse, WorkLocationRead, WorkLocationCreate } from "@/api-types";
 import { buildAuthFailureResponse } from "./auth";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
@@ -11,13 +12,13 @@ export const workLocationHandlers = [
     if (scenario.workLocations.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.workLocations.statusCode });
     }
-    return HttpResponse.json({
+    return HttpResponse.json<WorkLocationListResponse>({
       items: scenario.workLocations.items,
       total: scenario.workLocations.items.length,
     });
   }),
 
-  http.post<never, Record<string, unknown>, WorkLocationRead | { detail: string }>(
+  http.post<never, WorkLocationCreate, WorkLocationRead | { detail: string }>(
     "*/api/work-locations",
     async ({ request }) => {
       const authFailure = buildAuthFailureResponse();
@@ -27,14 +28,15 @@ export const workLocationHandlers = [
       try {
         body = await request.json();
       } catch {
-        return HttpResponse.json({ detail: "Invalid JSON body" }, { status: 400 });
+        return uncheckedJson("error", { detail: "Invalid JSON body" }, { status: 400 });
       }
       if (
         typeof body?.date !== "string" ||
         !/^\d{4}-\d{2}-\d{2}$/.test(body.date) ||
         typeof body?.country_code !== "string"
       ) {
-        return HttpResponse.json(
+        return uncheckedJson(
+          "error",
           {
             detail:
               "Invalid or missing required fields: date (YYYY-MM-DD) and country_code must be strings.",
@@ -57,7 +59,7 @@ export const workLocationHandlers = [
       } else {
         scenario.workLocations.items.push(item);
       }
-      return HttpResponse.json(item, { status: 201 });
+      return HttpResponse.json<WorkLocationRead>(item, { status: 201 });
     },
   ),
 
@@ -68,7 +70,7 @@ export const workLocationHandlers = [
     const target = String(params.valueDate);
     const index = scenario.workLocations.items.findIndex((item) => item.date === target);
     if (index === -1) {
-      return HttpResponse.json({ detail: "Not Found" }, { status: 404 });
+      return uncheckedJson("error", { detail: "Not Found" }, { status: 404 });
     }
     scenario.workLocations.items.splice(index, 1);
     return new HttpResponse(null, { status: 204 });

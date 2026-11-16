@@ -11,8 +11,6 @@ import { holidayHandlers } from "./holidays";
 import { readModelHandlers } from "./readModels";
 import { scenarioControlHandlers } from "./scenarioControl";
 import { syncHandlers } from "./sync";
-import { timeOffRequestHandlers } from "./timeOffRequests";
-import { timeTrackingHandlers } from "./timeTracking";
 import { workLocationHandlers } from "./workLocations";
 
 export const handlers = [
@@ -21,7 +19,5 @@ export const handlers = [
   ...syncHandlers,
   ...holidayHandlers,
   ...readModelHandlers,
-  ...timeTrackingHandlers,
-  ...timeOffRequestHandlers,
   ...workLocationHandlers,
 ];

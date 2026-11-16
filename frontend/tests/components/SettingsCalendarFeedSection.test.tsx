@@ -1,3 +1,5 @@
+import type { IcalFeedCreated, IcalFeedStatus } from "@/api-types";
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsCalendarFeedSection } from "@/components/settings/account/SettingsCalendarFeedSection";
@@ -16,8 +18,10 @@ describe("SettingsCalendarFeedSection", () => {
     const onLoadError = vi.fn();
     const fetchFn = vi
       .fn()
-      .mockResolvedValueOnce(new Response("{}", { status: 500 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ url_path: "/api/ical/new.ics" })));
+      .mockResolvedValueOnce(
+        new Response(/* fixture-contract: error (body is not consumed) */ "{}", { status: 500 }),
+      )
+      .mockResolvedValueOnce(jsonResponse<IcalFeedCreated>({ url_path: "/api/ical/new.ics" }));
     render(
       <ToastProvider>
         <SettingsCalendarFeedSection fetchFn={fetchFn} onLoadError={onLoadError} />
@@ -31,10 +35,13 @@ describe("SettingsCalendarFeedSection", () => {
 
   it("shows an existing subscription without rotating its secret", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ configured: true, last_used_at: null }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse<IcalFeedStatus>(
+        { token_preview: null, created_at: null, configured: true, last_used_at: null },
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     renderSection(fetchFn);
@@ -48,9 +55,17 @@ describe("SettingsCalendarFeedSection", () => {
 
   it("shows when the calendar provider last fetched the feed", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ configured: true, last_used_at: "2026-08-22T18:30:00Z" }), {
-        status: 200,
-      }),
+      jsonResponse<IcalFeedStatus>(
+        {
+          token_preview: null,
+          created_at: null,
+          configured: true,
+          last_used_at: "2026-08-22T18:30:00Z",
+        },
+        {
+          status: 200,
+        },
+      ),
     );
 
     renderSection(fetchFn);
@@ -61,11 +76,19 @@ describe("SettingsCalendarFeedSection", () => {
   it("warns before replacing an active subscription", async () => {
     const fetchFn = vi
       .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ configured: true }), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ url_path: "/api/ical/wtical_replacement.ics" }), {
-          status: 201,
-        }),
+        jsonResponse<IcalFeedStatus>(
+          { token_preview: null, created_at: null, last_used_at: null, configured: true },
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse<IcalFeedCreated>(
+          { url_path: "/api/ical/wtical_replacement.ics" },
+          {
+            status: 201,
+          },
+        ),
       );
 
     renderSection(fetchFn);
@@ -84,8 +107,8 @@ describe("SettingsCalendarFeedSection", () => {
 
   it("shows which link is active after a reload", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({ configured: true, token_preview: "f3a9", last_used_at: null }),
+      jsonResponse<IcalFeedStatus>(
+        { created_at: null, last_used_at: null, configured: true, token_preview: "f3a9" },
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -102,10 +125,13 @@ describe("SettingsCalendarFeedSection", () => {
     const fetchFn = vi.fn(async (_input: string, init?: RequestInit) =>
       init?.method === "DELETE"
         ? new Response(null, { status: 204 })
-        : new Response(JSON.stringify({ configured: true, token_preview: "f3a9" }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
+        : jsonResponse<IcalFeedStatus>(
+            { created_at: null, last_used_at: null, configured: true, token_preview: "f3a9" },
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
     );
     renderSection(fetchFn);
 
