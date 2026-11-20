@@ -1,8 +1,9 @@
+import { uncheckedJson } from "@/mocks/response";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
 import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
 import { server } from "@/mocks/server";
@@ -56,7 +57,11 @@ describe("SettingsHdayHelper", () => {
 
   it("allows and health-checks an HTTP localhost helper", async () => {
     vi.stubGlobal("location", { ...window.location, protocol: "https:" });
-    server.use(http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })));
+    server.use(
+      http.get("http://localhost:8080/health", () =>
+        uncheckedJson("hday-helper", { status: "ok" }),
+      ),
+    );
     const user = userEvent.setup();
     renderHelper();
 
@@ -106,14 +111,18 @@ describe("SettingsHdayHelper", () => {
     await waitFor(() => expect(resolvers.has("http://helper-b:8080/health")).toBe(true));
 
     await act(async () => {
-      resolvers.get("http://helper-a:8080/health")?.(HttpResponse.json({ status: "ok" }));
+      resolvers.get("http://helper-a:8080/health")?.(
+        uncheckedJson("hday-helper", { status: "ok" }),
+      );
     });
 
     expect(screen.getByText("http://helper-b:8080")).toBeInTheDocument();
     expect(screen.queryByText("connected")).not.toBeInTheDocument();
 
     await act(async () => {
-      resolvers.get("http://helper-b:8080/health")?.(HttpResponse.json({ status: "ok" }));
+      resolvers.get("http://helper-b:8080/health")?.(
+        uncheckedJson("hday-helper", { status: "ok" }),
+      );
     });
     expect(await screen.findByText("connected")).toBeInTheDocument();
   });

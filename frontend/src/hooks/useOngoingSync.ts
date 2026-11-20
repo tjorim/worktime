@@ -44,6 +44,7 @@ import {
   storeSyncCursor,
   type PushOutcome,
   type SyncPullResponse,
+  type SyncPullResult,
   type SyncPushPayload,
 } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
@@ -130,7 +131,7 @@ export function useOngoingSync(
   isSyncEstablished: boolean,
   userId: string | null,
   fetchFn: FetchFn | null,
-  onIncrementalPull?: (data: SyncPullResponse) => void,
+  onIncrementalPull?: (data: SyncPullResult) => void,
   onAcceptServer?: (payload: SyncPushPayload, data: SyncPullResponse) => void,
 ): OngoingSyncState & {
   enqueueChange: EnqueueChangeFn;
@@ -587,7 +588,7 @@ export function useOngoingSync(
             conflictServerTimestampRef.current = maxConflictServerTimestamp(result);
             setConflictedPayload(extracted);
             setConflictCount(conflicts);
-            let pullResult: SyncPullResponse | null = null;
+            let pullResult: SyncPullResult | null = null;
             try {
               pullResult = await pullSyncData(fetchFn);
             } catch (err) {
@@ -635,7 +636,7 @@ export function useOngoingSync(
             // that new timestamp — a pull is required here, not a status
             // check, even though this device's own push already applied
             // locally.
-            let pullResult: SyncPullResponse | null = null;
+            let pullResult: SyncPullResult | null = null;
             try {
               pullResult = await pullSyncData(fetchFn, cursorBeforePush);
             } catch (err) {

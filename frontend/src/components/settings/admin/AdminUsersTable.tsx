@@ -10,16 +10,14 @@ import {
   DATA_TABLE_DEFAULT_PAGE_SIZE,
   useDataTable,
 } from "@/hooks/useDataTable";
+import type { UserRead } from "@/api-types";
 import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime as formatTimestamp } from "@/utils/dateTimeUtils";
 
-export interface AdminUserRow {
-  id: number;
-  username: string;
-  display_name: string;
-  created_at: string;
-  updated_at: string;
-}
+export type AdminUserRow = Pick<
+  UserRead,
+  "id" | "username" | "display_name" | "created_at" | "updated_at"
+>;
 
 interface AdminUsersTableProps {
   users: AdminUserRow[];

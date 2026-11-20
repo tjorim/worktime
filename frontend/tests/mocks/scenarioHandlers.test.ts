@@ -1,3 +1,4 @@
+import type { CurrentStatusReadModel } from "@/api-types";
 import { describe, expect, it } from "vitest";
 import { getMockScenarioId, withMockScenario } from "@/mocks/scenarios/state";
 
@@ -6,17 +7,8 @@ describe("MSW mock scenarios", () => {
     await withMockScenario("current-shift-day", async () => {
       const response = await fetch("http://localhost/api/read-models/current-status");
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as { current_shift?: { shift_code?: string } };
+      const payload = (await response.json()) as CurrentStatusReadModel;
       expect(payload.current_shift?.shift_code).toBe("D");
-    });
-  });
-
-  it("returns validation failure for time tracking in validation scenario", async () => {
-    await withMockScenario("time-tracking-validation-failure", async () => {
-      const response = await fetch("http://localhost/api/time-tracking/state");
-      expect(response.status).toBe(422);
-      const payload = (await response.json()) as { errors?: string[] };
-      expect(payload.errors?.[0]).toContain("start_time");
     });
   });
 

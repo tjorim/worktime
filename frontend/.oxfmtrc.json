@@ -5,6 +5,8 @@
     "**/dist",
     "**/build",
     "**/coverage",
+    "openapi.json",
+    "src/api-schema/**",
     "NextShift/**",
     "HdayPlanner/**"
   ]

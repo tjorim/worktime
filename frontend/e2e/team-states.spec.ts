@@ -34,12 +34,19 @@ for (const theme of ["light", "dark"]) {
       const requestedTeamIds: string[] = [];
       await page.route("http://helper.test/**", async (route) => {
         if (!route.request().url().includes("/team/")) {
-          await route.fulfill({ json: { status: "ok" } });
+          await route.fulfill(
+            /* fixture-contract: hday-helper (separate service) */ { json: { status: "ok" } },
+          );
         } else if (state === "network") {
           await route.abort("connectionrefused");
         } else if (state === "404" || state === "500") {
           requestedTeamIds.push(route.request().url().split("/team/")[1]?.split("/")[0] ?? "");
-          await route.fulfill({ status: Number(state), json: { detail: "private share path" } });
+          await route.fulfill(
+            /* fixture-contract: hday-helper (separate service) */ {
+              status: Number(state),
+              json: { detail: "private share path" },
+            },
+          );
         } else {
           const teamId = route.request().url().split("/team/")[1]?.split("/")[0] ?? "demo";
           requestedTeamIds.push(teamId);
@@ -55,14 +62,16 @@ for (const theme of ["light", "dark"]) {
                   },
                 ]
               : [];
-          await route.fulfill({
-            json: {
-              team_id: teamId,
-              name: `Team ${teamId}`,
-              sections: [{ title: null, members }],
-              members,
+          await route.fulfill(
+            /* fixture-contract: hday-helper (separate service) */ {
+              json: {
+                team_id: teamId,
+                name: `Team ${teamId}`,
+                sections: [{ title: null, members }],
+                members,
+              },
             },
-          });
+          );
         }
       });
       for (const next of ["empty", "404", "500", "network", "success"]) {

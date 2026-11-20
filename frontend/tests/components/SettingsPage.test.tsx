@@ -1,3 +1,13 @@
+import type {
+  AccountProfile,
+  IcalFeedStatus,
+  AccessTokenListResponse,
+  IntegrationClientListResponse,
+  UserRead,
+  CreatedApiToken,
+  UserListResponse,
+} from "@/api-types";
+import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { type LucideIcon, TrashIcon } from "lucide-react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
@@ -129,13 +139,6 @@ function mockAuthenticatedUser(displayName = "Alice") {
   } as any);
 }
 
-function jsonResponse(body: unknown, init?: ResponseInit) {
-  return new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-}
-
 function renderSettingsAccountHarness({
   fetchFn,
   showSuccessToast = vi.fn(),
@@ -260,7 +263,7 @@ describe("Settings section URLs", () => {
     server.use(
       http.get("*/api/me", () => {
         profileRequests += 1;
-        return HttpResponse.json({ detail: "down" }, { status: 500 });
+        return uncheckedJson("error", { detail: "down" }, { status: 500 });
       }),
     );
     routeState.section = "admin";
@@ -296,7 +299,7 @@ describe("Settings section URLs", () => {
     mockAuthenticatedUser();
     server.use(
       http.get("*/api/me", () =>
-        HttpResponse.json({
+        jsonResponse<AccountProfile>({
           id: 1,
           username: "admin",
           display_name: "Admin",
@@ -365,14 +368,24 @@ describe("SettingsPage Account Section", () => {
           http.get(path, () =>
             unavailable
               ? new HttpResponse(null, { status: 503 })
-              : HttpResponse.json({
-                  id: 1,
-                  display_name: "Recovered",
-                  username: "alice",
-                  capabilities: { backup_enabled: false },
-                  items: [],
-                  configured: false,
-                }),
+              : path === "*/api/me"
+                ? jsonResponse<AccountProfile>({
+                    id: 1,
+                    display_name: "Recovered",
+                    username: "alice",
+                    is_admin: false,
+                    capabilities: { backup_enabled: false },
+                  })
+                : path === "*/api/ical"
+                  ? jsonResponse<IcalFeedStatus>({
+                      configured: false,
+                      token_preview: null,
+                      created_at: null,
+                      last_used_at: null,
+                    })
+                  : path === "*/api/access-tokens"
+                    ? jsonResponse<AccessTokenListResponse>({ items: [], total: 0 })
+                    : jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 }),
           ),
       ),
     );
@@ -412,7 +425,7 @@ describe("SettingsPage Account Section", () => {
   it("renders a self-service account deletion danger zone", async () => {
     const fetchFn = vi.fn(async (input: string) => {
       if (input === "/api/me") {
-        return jsonResponse({
+        return jsonResponse<AccountProfile>({
           id: 1,
           username: "member-user",
           display_name: "Member User",
@@ -432,7 +445,7 @@ describe("SettingsPage Account Section", () => {
   it("does not delete the account when the confirmation dialog is cancelled", async () => {
     const fetchFn = vi.fn(async (input: string) => {
       if (input === "/api/me") {
-        return jsonResponse({
+        return jsonResponse<AccountProfile>({
           id: 1,
           username: "member-user",
           display_name: "Member User",
@@ -465,7 +478,7 @@ describe("SettingsPage Account Section", () => {
         return new Response(null, { status: 204 });
       }
       if (input === "/api/me") {
-        return jsonResponse({
+        return jsonResponse<AccountProfile>({
           id: 1,
           username: "member-user",
           display_name: "Member User",
@@ -495,13 +508,14 @@ describe("SettingsPage Account Section", () => {
   it("shows an inline error when self-service account deletion fails", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/me" && init?.method === "DELETE") {
-        return jsonResponse(
+        return uncheckedJson(
+          "error",
           { detail: "Could not delete your account right now." },
           { status: 500 },
         );
       }
       if (input === "/api/me") {
-        return jsonResponse({
+        return jsonResponse<AccountProfile>({
           id: 1,
           username: "member-user",
           display_name: "Member User",
@@ -528,7 +542,7 @@ describe("SettingsPage Account Section", () => {
     server.use(
       http.put("*/api/users/:id", async ({ params, request }) => {
         const body = (await request.json()) as { display_name?: string };
-        return HttpResponse.json({
+        return jsonResponse<UserRead>({
           id: Number(params.id),
           username: "dev-user",
           display_name: body.display_name ?? "Dev User",
@@ -558,7 +572,7 @@ describe("SettingsPage Account Section", () => {
   ])("translates profile error %s without server diagnostics", async (code, message) => {
     server.use(
       http.put("*/api/users/:id", () =>
-        HttpResponse.json({ code, detail: "private server diagnostic" }, { status: 400 }),
+        uncheckedJson("error", { code, detail: "private server diagnostic" }, { status: 400 }),
       ),
     );
     mockAuthenticatedUser("Alice");
@@ -694,7 +708,7 @@ describe("SettingsPage API Tokens Section", () => {
   it("shows an empty state when there are no tokens", async () => {
     const fetchFn = vi.fn(async (input: string) => {
       if (input === "/api/access-tokens") {
-        return jsonResponse({ items: [], total: 0 });
+        return jsonResponse<AccessTokenListResponse>({ items: [], total: 0 });
       }
       throw new Error(`Unexpected request: ${input}`);
     });
@@ -712,9 +726,10 @@ describe("SettingsPage API Tokens Section", () => {
     async (_label, body, status, messageKey) => {
       const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
         if (input === "/api/access-tokens" && init?.method === "POST") {
-          return jsonResponse(body, { status });
+          return uncheckedJson("error", body, { status });
         }
-        if (input === "/api/access-tokens") return jsonResponse({ items: [], total: 0 });
+        if (input === "/api/access-tokens")
+          return jsonResponse<AccessTokenListResponse>({ items: [], total: 0 });
         throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
       });
 
@@ -732,7 +747,8 @@ describe("SettingsPage API Tokens Section", () => {
 
   it("limits the token name to the API maximum and explains why Generate token is disabled", async () => {
     const fetchFn = vi.fn(async (input: string) => {
-      if (input === "/api/access-tokens") return jsonResponse({ items: [], total: 0 });
+      if (input === "/api/access-tokens")
+        return jsonResponse<AccessTokenListResponse>({ items: [], total: 0 });
       throw new Error(`Unexpected request: ${input}`);
     });
     const user = userEvent.setup();
@@ -755,9 +771,10 @@ describe("SettingsPage API Tokens Section", () => {
   it("shows a specific message when the API rejects the token name", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/access-tokens" && init?.method === "POST") {
-        return jsonResponse({ detail: [{ type: "string_too_long" }] }, { status: 422 });
+        return uncheckedJson("error", { detail: [{ type: "string_too_long" }] }, { status: 422 });
       }
-      if (input === "/api/access-tokens") return jsonResponse({ items: [], total: 0 });
+      if (input === "/api/access-tokens")
+        return jsonResponse<AccessTokenListResponse>({ items: [], total: 0 });
       throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
     });
     const user = userEvent.setup();
@@ -777,7 +794,7 @@ describe("SettingsPage API Tokens Section", () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/access-tokens" && init?.method === "POST") {
         tokenCreated = true;
-        return jsonResponse(
+        return jsonResponse<CreatedApiToken>(
           {
             id: "tok-1",
             name: "Pebble watch",
@@ -789,7 +806,7 @@ describe("SettingsPage API Tokens Section", () => {
         );
       }
       if (input === "/api/access-tokens") {
-        return jsonResponse({
+        return jsonResponse<AccessTokenListResponse>({
           items: tokenCreated
             ? [
                 {
@@ -848,7 +865,7 @@ describe("SettingsPage API Tokens Section", () => {
         return new Response(null, { status: 204 });
       }
       if (input === "/api/access-tokens") {
-        return jsonResponse({
+        return jsonResponse<AccessTokenListResponse>({
           items: tokenRevoked
             ? []
             : [
@@ -897,7 +914,7 @@ describe("SettingsPage Admin Section", () => {
     server.use(
       http.get("*/api/users/", () => {
         adminUsersRequestCount += 1;
-        return HttpResponse.json({ items: [], total: 0 });
+        return jsonResponse<UserListResponse>({ items: [], total: 0 });
       }),
     );
 
@@ -916,7 +933,7 @@ describe("SettingsPage Admin Section", () => {
     let usersCalled = false;
     server.use(
       http.get("*/api/me", () =>
-        HttpResponse.json({
+        jsonResponse<AccountProfile>({
           id: 1,
           username: "admin-user",
           display_name: "Admin User",
@@ -926,7 +943,7 @@ describe("SettingsPage Admin Section", () => {
       ),
       http.get(/.*\/api\/users\/?$/, () => {
         usersCalled = true;
-        return HttpResponse.json({ items: [], total: 0 });
+        return jsonResponse<UserListResponse>({ items: [], total: 0 });
       }),
     );
 
@@ -943,12 +960,13 @@ describe("SettingsPage Admin Section", () => {
   it("deletes another user from the admin user management table after confirmation", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/users/?limit=100") {
-        return jsonResponse({
+        return jsonResponse<UserListResponse>({
           items: [
             {
               id: 1,
               username: "admin-user",
               display_name: "Admin User",
+              settings: {},
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-02T00:00:00Z",
             },
@@ -956,6 +974,7 @@ describe("SettingsPage Admin Section", () => {
               id: 2,
               username: "member-user",
               display_name: "Member User",
+              settings: {},
               created_at: "2026-01-03T00:00:00Z",
               updated_at: "2026-01-04T00:00:00Z",
             },
@@ -998,12 +1017,13 @@ describe("SettingsPage Admin Section", () => {
   it("shows an inline error when deleting a managed user fails", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/users/?limit=100") {
-        return jsonResponse({
+        return jsonResponse<UserListResponse>({
           items: [
             {
               id: 1,
               username: "admin-user",
               display_name: "Admin User",
+              settings: {},
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-02T00:00:00Z",
             },
@@ -1011,6 +1031,7 @@ describe("SettingsPage Admin Section", () => {
               id: 2,
               username: "member-user",
               display_name: "Member User",
+              settings: {},
               created_at: "2026-01-03T00:00:00Z",
               updated_at: "2026-01-04T00:00:00Z",
             },
@@ -1019,7 +1040,7 @@ describe("SettingsPage Admin Section", () => {
         });
       }
       if (input === "/api/users/2" && init?.method === "DELETE") {
-        return jsonResponse({ detail: "Could not delete user." }, { status: 500 });
+        return uncheckedJson("error", { detail: "Could not delete user." }, { status: 500 });
       }
       throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
     });
@@ -1042,12 +1063,13 @@ describe("SettingsPage Admin Section", () => {
   it("disables self-delete for the current admin in the user management table", async () => {
     const fetchFn = vi.fn(async (input: string) => {
       if (input === "/api/users/?limit=100") {
-        return jsonResponse({
+        return jsonResponse<UserListResponse>({
           items: [
             {
               id: 1,
               username: "admin-user",
               display_name: "Admin User",
+              settings: {},
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-02T00:00:00Z",
             },
@@ -1055,6 +1077,7 @@ describe("SettingsPage Admin Section", () => {
               id: 2,
               username: "member-user",
               display_name: "Member User",
+              settings: {},
               created_at: "2026-01-03T00:00:00Z",
               updated_at: "2026-01-04T00:00:00Z",
             },

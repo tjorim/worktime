@@ -1,46 +1,52 @@
 import { http, HttpResponse } from "msw/http";
+import type {
+  CurrentStatusReadModel,
+  DashboardReadModel,
+  TeamStatusReadModel,
+  TimeOffSummaryReadModel,
+} from "@/api-types";
 import { buildAuthFailureResponse } from "./auth";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export const readModelHandlers = [
-  http.get("*/api/read-models/current-status", () => {
+  http.get<never, never, CurrentStatusReadModel>("*/api/read-models/current-status", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json(scenario.readModels.currentStatus);
+    return HttpResponse.json<CurrentStatusReadModel>(scenario.readModels.currentStatus);
   }),
 
-  http.get("*/api/read-models/team-status", () => {
+  http.get<never, never, TeamStatusReadModel>("*/api/read-models/team-status", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json(scenario.readModels.teamStatus);
+    return HttpResponse.json<TeamStatusReadModel>(scenario.readModels.teamStatus);
   }),
 
-  http.get("*/api/read-models/time-off-summary", () => {
+  http.get<never, never, TimeOffSummaryReadModel>("*/api/read-models/time-off-summary", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json(scenario.readModels.timeOffSummary);
+    return HttpResponse.json<TimeOffSummaryReadModel>(scenario.readModels.timeOffSummary);
   }),
 
-  http.get("*/api/read-models/dashboard", () => {
+  http.get<never, never, DashboardReadModel>("*/api/read-models/dashboard", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     const scenario = getMockScenario();
     if (scenario.readModels.statusCode !== 200) {
       return new HttpResponse(null, { status: scenario.readModels.statusCode });
     }
-    return HttpResponse.json({
+    return HttpResponse.json<DashboardReadModel>({
       as_of: scenario.readModels.currentStatus.as_of,
       identity: scenario.auth.profile,
       work_context: {
@@ -58,7 +64,7 @@ export const readModelHandlers = [
           baseDate.setUTCDate(baseDate.getUTCDate() + index);
           return {
             team_number: 1,
-            date: baseDate.toISOString().split("T")[0],
+            date: baseDate.toISOString().slice(0, 10),
             shift_code: item.shift_code,
             shift: item.shift,
           };

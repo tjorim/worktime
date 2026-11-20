@@ -1,3 +1,5 @@
+import type { VapidPublicKeyResponse, PushSubscriptionRead } from "@/api-types";
+import { jsonResponse } from "@/mocks/response";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invalidatePushRegistration } from "@/utils/pushNotifications";
@@ -14,13 +16,6 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
   return { ...actual, useSettings: vi.fn() };
 });
-
-function jsonResponse(body: unknown, init?: ResponseInit): Response {
-  return new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-}
 
 function mockAuth(userId: string | null): void {
   vi.mocked(useAuth).mockReturnValue({
@@ -129,8 +124,19 @@ describe("usePushSubscription", () => {
   it("subscribes and registers with the backend", async () => {
     const apiFetch = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
-      .mockResolvedValueOnce(jsonResponse({ id: "sub-1" }, { status: 201 }));
+      .mockResolvedValueOnce(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }))
+      .mockResolvedValueOnce(
+        jsonResponse<PushSubscriptionRead>(
+          {
+            id: "sub-1",
+            endpoint: "https://push.example.test/sub-1",
+            timezone: "Europe/Amsterdam",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        ),
+      );
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
@@ -157,8 +163,19 @@ describe("usePushSubscription", () => {
     getSubscription.mockResolvedValue(mockSubscription);
     const apiFetch = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
-      .mockResolvedValueOnce(jsonResponse({ id: "sub-1" }, { status: 201 }));
+      .mockResolvedValueOnce(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }))
+      .mockResolvedValueOnce(
+        jsonResponse<PushSubscriptionRead>(
+          {
+            id: "sub-1",
+            endpoint: "https://push.example.test/sub-1",
+            timezone: "Europe/Amsterdam",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        ),
+      );
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
@@ -169,7 +186,9 @@ describe("usePushSubscription", () => {
   });
 
   it("returns false when the server doesn't have push configured (null key)", async () => {
-    const apiFetch = vi.fn().mockResolvedValueOnce(jsonResponse({ publicKey: null }));
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse<VapidPublicKeyResponse>({ publicKey: null }));
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
     const { result } = renderHook(() => usePushSubscription());
@@ -182,7 +201,7 @@ describe("usePushSubscription", () => {
   it("returns false and rolls back a freshly created subscription when the backend rejects it", async () => {
     const apiFetch = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
+      .mockResolvedValueOnce(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }))
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
@@ -199,7 +218,7 @@ describe("usePushSubscription", () => {
     getSubscription.mockResolvedValue(mockSubscription);
     const apiFetch = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
+      .mockResolvedValueOnce(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }))
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
@@ -225,7 +244,7 @@ describe("usePushSubscription", () => {
     const { result } = renderHook(() => usePushSubscription());
     const pending = result.current.subscribeToPush();
     invalidatePushRegistration(); // explicit logout, shared across hook instances
-    finishKeyRequest(jsonResponse({ publicKey: "test-vapid-key" }));
+    finishKeyRequest(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
     expect(await pending).toBe(false);
     expect(subscribe).not.toHaveBeenCalled();
     expect(apiFetch).toHaveBeenCalledOnce();
@@ -239,7 +258,9 @@ describe("usePushSubscription", () => {
           finishSubscribe = resolve;
         }),
     );
-    const apiFetch = vi.fn().mockResolvedValue(jsonResponse({ publicKey: "test-vapid-key" }));
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
     vi.mocked(useApiClient).mockReturnValue(apiFetch);
     const { result } = renderHook(() => usePushSubscription());
     const pending = result.current.subscribeToPush();
@@ -292,8 +313,21 @@ describe("usePushSubscription", () => {
       mockSettings({ notifications: "on" });
       const apiFetch = vi
         .fn()
-        .mockResolvedValueOnce(jsonResponse({ publicKey: "test-vapid-key" }))
-        .mockResolvedValueOnce(jsonResponse({ id: "sub-1" }, { status: 201 }));
+        .mockResolvedValueOnce(
+          jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }),
+        )
+        .mockResolvedValueOnce(
+          jsonResponse<PushSubscriptionRead>(
+            {
+              id: "sub-1",
+              endpoint: "https://push.example.test/sub-1",
+              timezone: "Europe/Amsterdam",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            { status: 201 },
+          ),
+        );
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
       const { result } = renderHook(() => usePushSubscription());
@@ -362,7 +396,9 @@ describe("usePushSubscription", () => {
     it("revokes locally when an active session ends remotely or expires", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
       mockSettings({ notifications: "on" });
-      const apiFetch = vi.fn().mockResolvedValue(jsonResponse({ publicKey: "test-vapid-key" }));
+      const apiFetch = vi
+        .fn()
+        .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
       const { result, rerender } = renderHook(() => usePushSubscription());
       await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));
@@ -389,7 +425,9 @@ describe("usePushSubscription", () => {
     it("revokes A's subscription when B signs in with notifications off", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
       mockSettings({ notifications: "on" });
-      const apiFetch = vi.fn().mockResolvedValue(jsonResponse({ publicKey: "test-vapid-key" }));
+      const apiFetch = vi
+        .fn()
+        .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
       const { result, rerender } = renderHook(() => usePushSubscription());
       await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));
@@ -416,7 +454,9 @@ describe("usePushSubscription", () => {
     it("re-reconciles when the signed-in account changes", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
       mockSettings({ notifications: "on" });
-      const apiFetch = vi.fn().mockResolvedValue(jsonResponse({ publicKey: "test-vapid-key" }));
+      const apiFetch = vi
+        .fn()
+        .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
       const { rerender } = renderHook(() => usePushSubscription());

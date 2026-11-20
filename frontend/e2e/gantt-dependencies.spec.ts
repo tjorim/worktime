@@ -15,7 +15,7 @@ for (const theme of ["light", "dark"]) {
       ["unknown", "Choose dependencies that still exist."],
       ["self", "A task cannot depend on itself."],
       ["cycle", "These dependencies create a cycle."],
-    ]) {
+    ] as const) {
       test(`${reason} dependency (${theme}, ${width})`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(`/e2e/fixtures/gantt-dependencies.html?theme=${theme}&reason=${reason}`);

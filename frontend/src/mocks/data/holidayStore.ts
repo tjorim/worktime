@@ -5,9 +5,7 @@
  * and paydates for use in dev mode and integration tests.
  */
 
-import type { PublicHoliday } from "@/hooks/usePublicHolidays";
-import type { SchoolHoliday } from "@/hooks/useSchoolHolidays";
-import type { LongWeekend } from "@/types/longWeekend";
+import type { LongWeekend, PublicHoliday, SchoolHoliday } from "@/api-types";
 
 // ---------------------------------------------------------------------------
 // Public holidays — Dutch national holidays for 2026
@@ -18,6 +16,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-01-01",
     name: "New Year's Day",
     localName: "Nieuwjaarsdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -26,6 +25,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-04-03",
     name: "Good Friday",
     localName: "Goede Vrijdag",
+    countryCode: "NL",
     global: false,
     counties: null,
     types: ["Optional"],
@@ -34,6 +34,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-04-05",
     name: "Easter Sunday",
     localName: "Eerste Paasdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -42,6 +43,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-04-06",
     name: "Easter Monday",
     localName: "Tweede Paasdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -50,6 +52,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-04-27",
     name: "King's Day",
     localName: "Koningsdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -58,6 +61,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-05-05",
     name: "Liberation Day",
     localName: "Bevrijdingsdag",
+    countryCode: "NL",
     global: false,
     counties: null,
     types: ["Public"],
@@ -66,6 +70,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-05-14",
     name: "Ascension Day",
     localName: "Hemelvaartsdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -74,6 +79,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-05-24",
     name: "Whit Sunday",
     localName: "Eerste Pinksterdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -82,6 +88,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-05-25",
     name: "Whit Monday",
     localName: "Tweede Pinksterdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -90,6 +97,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-12-25",
     name: "Christmas Day",
     localName: "Eerste Kerstdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],
@@ -98,6 +106,7 @@ export const seedPublicHolidays: PublicHoliday[] = [
     date: "2026-12-26",
     name: "Second Day of Christmas",
     localName: "Tweede Kerstdag",
+    countryCode: "NL",
     global: true,
     counties: null,
     types: ["Public"],

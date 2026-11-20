@@ -26,12 +26,19 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Document existing running-task 204 and time-off upsert 200 responses, and validate successful backend test responses against OpenAPI.
+- Enforce generated API contracts in shared, test-local and browser fixtures; typecheck E2E fixtures and remove obsolete mock-only endpoints.
 - Remove `.github/dependabot.yml`: Renovate (shared `tjorim/renovate-config` preset) is the only dependency updater now. Dependabot security alerts stay on.
 - Check the formatting of workflows, scripts and the root JSON files in CI (`pnpm format:repo:check`), as the other apps do; `renovate.json` was reformatted to match.
 - Rename the release workflow to `release.yml` and give it the shared job graph used by every app (`validate`, the backend and frontend checks, `draft`), with a read-only default token that only the draft job can write with.
 - Report the built source commit alongside the app version in the health response; VPS builds receive the full commit from the shared deployment tooling (tjorim/apps#345).
 - Mock holiday reads in browser tests that cannot use MSW so they run without a backend.
 - Mock account and background sync requests in authenticated route-loading tests that block service workers.
+- Declare a response model on every JSON route (health, metrics, the holiday proxies, the MCP capability manifest and the Web Push key were untyped) and fail the backend tests when a route lacks one, so the OpenAPI document can drive generated frontend types (#2031).
+- Commit the backend's OpenAPI document as `frontend/openapi.json` and fail the backend tests when it is stale; regenerate it with `uv run python -m app.openapi_export` (#2031).
+- Generate the frontend API types from that document with a pinned Orval (schemas only, one file per schema in `frontend/src/api-schema/`), named for the screens in `frontend/src/api-types.ts`. `pnpm api:generate` rewrites them and `pnpm typecheck` runs `pnpm api:check`, so a stale generated type fails CI (#2031).
+- Replace the hand-written API record types (sync wire format, account, API tokens, integration clients, audit trail, holiday proxies, read models) with the generated ones, and type the mock server handlers against them. Doing so corrected mock fixtures that had drifted from the API: sync labels and tasks without `client_updated_at`, public holidays without `countryCode`, and an undefined date in the dashboard read model (#2031).
+- Mark response fields that have a default as required in the OpenAPI document (`ResponseModel`, `json_schema_serialization_defaults_required`), so a generated client type is `token_preview: string | null` instead of `token_preview?: string | null` for a field the API always sends. Only the schema changes: the responses are byte-identical, and a test lists the few fields the wire really omits (#2031).
 
 ### Planned
 

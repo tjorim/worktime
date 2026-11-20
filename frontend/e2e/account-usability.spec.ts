@@ -1,3 +1,4 @@
+import type { IcalFeedStatus } from "@/api-types";
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { expectNoAccessibilityViolations } from "./axe";
@@ -62,7 +63,12 @@ for (const theme of ["light", "dark"] as const) {
             ).toUpperCase();
             return method === "GET" && new URL(url, location.origin).pathname === "/api/ical"
               ? Promise.resolve(
-                  Response.json({ configured: true, token_preview: "f3a9", last_used_at: null }),
+                  Response.json({
+                    configured: true,
+                    token_preview: "f3a9",
+                    created_at: null,
+                    last_used_at: null,
+                  } satisfies IcalFeedStatus),
                 )
               : realFetch(input, init);
           };

@@ -15,19 +15,19 @@ import "@/styles/tailwind.css";
 const params = new URLSearchParams(location.search);
 document.documentElement.setAttribute("data-theme", params.get("theme") ?? "light");
 function Fixture() {
-  const router = useRouter();
+  const fixtureRouter = useRouter<typeof router>();
   const [labels, setLabels] = useState([{ id: "a", name: "Support", color: "#123456" }]);
   return (
     <main className="p-4">
       <ToastProvider>
         <button
           onClick={() => {
-            void router.navigate({ to: "/away" });
+            void fixtureRouter.navigate({ href: "/away" });
           }}
         >
           Leave editors
         </button>
-        <button onClick={() => router.history.back()}>Go back</button>
+        <button onClick={() => fixtureRouter.history.back()}>Go back</button>
         <button onClick={() => setLabels([{ id: "b", name: "Updated", color: "#123456" }])}>
           Simulate refresh
         </button>
@@ -58,13 +58,13 @@ function Fixture() {
   );
 }
 function OtherPage() {
-  const router = useRouter();
+  const fixtureRouter = useRouter<typeof router>();
   return (
     <>
       <p>Other page</p>
       <button
         onClick={() => {
-          void router.navigate({ to: "/e2e/fixtures/label-editors.html" });
+          void fixtureRouter.navigate({ href: "/e2e/fixtures/label-editors.html" });
         }}
       >
         Return editors

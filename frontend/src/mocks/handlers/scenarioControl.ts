@@ -1,3 +1,4 @@
+import { uncheckedJson } from "@/mocks/response";
 import { http, HttpResponse } from "msw/http";
 import {
   getMockScenarioId,
@@ -9,7 +10,7 @@ import type { MockScenarioId } from "@/mocks/scenarios/types";
 
 export const scenarioControlHandlers = [
   http.get("*/api/mock/scenario", () => {
-    return HttpResponse.json({
+    return uncheckedJson("control", {
       active: getMockScenarioId(),
       available: listMockScenarioIds(),
     });
@@ -21,10 +22,11 @@ export const scenarioControlHandlers = [
       const body = (await request.json()) as { id?: string };
       requested = body.id;
     } catch {
-      return HttpResponse.json({ detail: "Invalid or missing JSON body" }, { status: 400 });
+      return uncheckedJson("control", { detail: "Invalid or missing JSON body" }, { status: 400 });
     }
     if (!requested || !listMockScenarioIds().includes(requested as MockScenarioId)) {
-      return HttpResponse.json(
+      return uncheckedJson(
+        "control",
         {
           detail: "Unknown scenario id",
           available: listMockScenarioIds(),
@@ -33,7 +35,7 @@ export const scenarioControlHandlers = [
       );
     }
     setMockScenario(requested as MockScenarioId);
-    return HttpResponse.json({ active: getMockScenarioId() });
+    return uncheckedJson("control", { active: getMockScenarioId() });
   }),
 
   http.post("*/api/mock/reset", () => {

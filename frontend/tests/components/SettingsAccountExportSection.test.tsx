@@ -1,3 +1,5 @@
+import type { UserDataExport } from "@/api-types";
+import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,8 +15,19 @@ describe("SettingsAccountExportSection", () => {
   });
 
   it("downloads the account export as a JSON file", async () => {
-    const payload = JSON.stringify({ user: { id: 42 }, labels: [] });
-    const fetchFn = vi.fn(async () => new Response(payload, { status: 200 }));
+    const exportData: UserDataExport = {
+      exported_at: "2026-01-01T00:00:00Z",
+      user: { id: 42, username: "alice", display_name: "Alice" },
+      labels: [],
+      time_tracking_tasks: [],
+      time_tracking_templates: [],
+      work_locations: [],
+      gantt_tasks: [],
+      time_off_entries: [],
+      preferences: {},
+    };
+    const payload = JSON.stringify(exportData);
+    const fetchFn = vi.fn(async () => jsonResponse<UserDataExport>(exportData));
     const createObjectURL = vi.fn(() => "blob:account-export");
     const revokeObjectURL = vi.fn();
     URL.createObjectURL = createObjectURL;
@@ -34,8 +47,8 @@ describe("SettingsAccountExportSection", () => {
   });
 
   it("shows a translated error, not the server's detail, when the export fails", async () => {
-    const fetchFn = vi.fn(
-      async () => new Response(JSON.stringify({ detail: "database exploded" }), { status: 500 }),
+    const fetchFn = vi.fn(async () =>
+      uncheckedJson("error", { detail: "database exploded" }, { status: 500 }),
     );
     const user = userEvent.setup();
 

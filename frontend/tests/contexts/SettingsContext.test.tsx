@@ -1,3 +1,5 @@
+import type { PreferencesResponse } from "@/api-types";
+import { jsonBody } from "@/mocks/response";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -188,12 +190,17 @@ describe("SettingsContext unified user state", () => {
         ({
           ok: true,
           json: async () =>
-            init?.method === "PUT"
-              ? null
-              : {
-                  data: { myTeam: 1, settings: { timeFormat: "24h" } },
-                  client_updated_at: serverAt,
-                },
+            jsonBody<PreferencesResponse | null>(
+              init?.method === "PUT"
+                ? null
+                : {
+                    user_id: 1,
+                    created_at: "2026-01-01T00:00:00Z",
+                    updated_at: "2026-01-01T00:00:00Z",
+                    data: { myTeam: 1, settings: { timeFormat: "24h" } },
+                    client_updated_at: serverAt,
+                  },
+            ),
         }) as Response,
     );
     await act(async () => {

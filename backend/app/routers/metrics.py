@@ -30,6 +30,7 @@ from fastapi.responses import JSONResponse
 
 from ..config import settings
 from ..core.observability import request_metrics
+from ..schemas import RequestMetricsSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def _verify_token(token: str, secret: str) -> bool:
     return hmac.compare_digest(expected_sig, provided_sig)
 
 
-@router.get("/metrics")
+@router.get("/metrics", response_model=RequestMetricsSnapshot)
 async def get_metrics(
     x_metrics_token: str | None = Header(default=None),
 ) -> JSONResponse:

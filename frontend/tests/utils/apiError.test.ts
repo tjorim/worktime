@@ -1,9 +1,10 @@
+import { uncheckedJson } from "@/mocks/response";
 import { describe, expect, it } from "vitest";
 import * as m from "@/paraglide/messages.js";
 import { ApiError, describeError, getErrorMessage, isUnauthorizedError } from "@/utils/apiError";
 
-function jsonResponse(body: unknown, status: number, headers: Record<string, string> = {}) {
-  return new Response(JSON.stringify(body), {
+function errorResponse(body: unknown, status: number, headers: Record<string, string> = {}) {
+  return uncheckedJson("error", body, {
     status,
     headers: { "Content-Type": "application/json", ...headers },
   });
@@ -12,7 +13,7 @@ function jsonResponse(body: unknown, status: number, headers: Record<string, str
 describe("ApiError.fromResponse", () => {
   it("reads the status, code and request id, keeping detail only as the diagnostic message", async () => {
     const error = await ApiError.fromResponse(
-      jsonResponse({ code: "token_limit", detail: "Too many tokens" }, 409, {
+      errorResponse({ code: "token_limit", detail: "Too many tokens" }, 409, {
         "X-Request-ID": "req-1",
       }),
     );
@@ -25,12 +26,14 @@ describe("ApiError.fromResponse", () => {
   });
 
   it("copes with a body that is not JSON or has blank fields", async () => {
-    const html = await ApiError.fromResponse(new Response("<html>", { status: 502 }));
+    const html = await ApiError.fromResponse(
+      new Response(/* fixture-contract: error (non-JSON diagnostic) */ "<html>", { status: 502 }),
+    );
     expect(html.status).toBe(502);
     expect(html.code).toBeNull();
     expect(html.message).toBe("502");
 
-    const blank = await ApiError.fromResponse(jsonResponse({ code: " ", detail: "" }, 500));
+    const blank = await ApiError.fromResponse(errorResponse({ code: " ", detail: "" }, 500));
     expect(blank.code).toBeNull();
     expect(blank.message).toBe("500");
   });

@@ -1,3 +1,6 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type { SyncPushResponse } from "@/api-types";
+import { jsonBody, uncheckedBody } from "@/mocks/response";
 /**
  * Regression coverage for the pushAndQueue -> triggerPull wiring: a
  * successful direct collection push (e.g. from adding a time-tracking task)
@@ -48,7 +51,10 @@ describe("db/collections pushAndQueue triggerPull wiring", () => {
   it("calls the registered triggerPull after a successful push", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: {} }) }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+      }),
     );
     const triggerPull = vi.fn();
     setSyncCollectionTriggerPull(triggerPull);
@@ -65,18 +71,21 @@ describe("db/collections pushAndQueue triggerPull wiring", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({
-          results: {
-            tasks: [
-              {
-                id: "task-rejected-1",
-                status: "conflict",
-                code: "task_overlap",
-                conflict_reason: "Private diagnostic",
-              },
-            ],
-          },
-        }),
+        json: async () =>
+          jsonBody<SyncPushResponse>({
+            results: syncPushResults({
+              tasks: [
+                {
+                  server_updated_at: null,
+                  conflicting_task_id: null,
+                  id: "task-rejected-1",
+                  status: "conflict",
+                  code: "task_overlap",
+                  conflict_reason: "Private diagnostic",
+                },
+              ],
+            }),
+          }),
       }),
     );
     const triggerPull = vi.fn();
@@ -91,7 +100,11 @@ describe("db/collections pushAndQueue triggerPull wiring", () => {
   it("does not call triggerPull when the push fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }),
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => uncheckedBody("control", {}),
+      }),
     );
     const triggerPull = vi.fn();
     setSyncCollectionTriggerPull(triggerPull);

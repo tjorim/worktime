@@ -197,7 +197,7 @@ async def test_legacy_invalid_rows_still_pull_and_sync_metadata(db_session):
             ]
         ),
     )
-    assert result.results["tasks"][0].status == "ok"
+    assert result.results.tasks[0].status == "ok"
 
 
 def test_rest_reopening_prioritizes_running_task_conflict(db_client, auth_headers, create_user_factory):
@@ -348,4 +348,4 @@ async def test_concurrent_sync_batches_with_child_inserts_do_not_deadlock(test_d
             return await sync_service.push_changes(session, user_id, payload)
 
     results = await asyncio.wait_for(asyncio.gather(push(0), push(1)), timeout=10)
-    assert all(result.results["tasks"][0].status == "ok" for result in results)
+    assert all(result.results.tasks[0].status == "ok" for result in results)

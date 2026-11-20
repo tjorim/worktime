@@ -29,6 +29,7 @@ from ..config import settings
 from ..config.oidc_config import OIDCTokenError, _resolve_jwks_uri
 from ..database.engine import get_session
 from ..middleware.rate_limit import limiter
+from ..schemas import HealthSummary, LivenessResponse, ReadinessResponse
 from ..version import APP_COMMIT, APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ async def _jwks_reachable() -> bool:
         return reachable
 
 
-@router.get("/health/liveness")
+@router.get("/health/liveness", response_model=LivenessResponse)
 @limiter.exempt
 async def liveness() -> JSONResponse:
     """Liveness probe — returns 200 immediately with no external I/O.
@@ -92,7 +93,13 @@ async def liveness() -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "alive"})
 
 
-@router.get("/health/readiness")
+@router.get(
+    "/health/readiness",
+    response_model=ReadinessResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ReadinessResponse, "description": "A dependency is unreachable"}
+    },
+)
 @limiter.exempt
 async def readiness(
     db: Annotated[AsyncSession | None, Depends(_get_db_if_enabled)],
@@ -154,7 +161,7 @@ async def readiness(
     )
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthSummary)
 async def health_summary() -> JSONResponse:
     """Health summary — lightweight overview with links to sub-endpoints.
 

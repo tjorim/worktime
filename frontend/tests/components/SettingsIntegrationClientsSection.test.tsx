@@ -1,3 +1,5 @@
+import type { CreatedIntegrationClient, IntegrationClientListResponse } from "@/api-types";
+import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -5,9 +7,6 @@ import { SettingsIntegrationClientsSection } from "@/components/settings/account
 import { ToastProvider } from "@/contexts/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";
-
-const jsonResponse = (body: unknown, init?: ResponseInit) =>
-  new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" }, ...init });
 
 function renderHarness(
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>,
@@ -45,7 +44,7 @@ function renderHarness(
 
 describe("Settings integration clients", () => {
   it("announces a create failure after a load failure", async () => {
-    renderHarness(async () => jsonResponse({}, { status: 500 }));
+    renderHarness(async () => uncheckedJson("error", {}, { status: 500 }));
     expect(await screen.findByText(m.integration_clients_load_failed())).toHaveAttribute(
       "role",
       "note",
@@ -65,7 +64,7 @@ describe("Settings integration clients", () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/integration-clients" && init?.method === "POST") {
         created = true;
-        return jsonResponse(
+        return jsonResponse<CreatedIntegrationClient>(
           {
             id: 7,
             name: "Home hub",
@@ -78,7 +77,7 @@ describe("Settings integration clients", () => {
         );
       }
       if (input === "/api/integration-clients")
-        return jsonResponse({
+        return jsonResponse<IntegrationClientListResponse>({
           items: created
             ? [
                 {
@@ -116,7 +115,10 @@ describe("Settings integration clients", () => {
   });
 
   it("explains scopes and why Create client is disabled", async () => {
-    renderHarness(async () => jsonResponse({ items: [], total: 0 }), true);
+    renderHarness(
+      async () => jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 }),
+      true,
+    );
     await screen.findByText("No integration clients yet.");
 
     const input = screen.getByLabelText("Client name");
@@ -137,7 +139,7 @@ describe("Settings integration clients", () => {
   it("announces a created key without placing the secret in a live region", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/integration-clients" && init?.method === "POST") {
-        return jsonResponse(
+        return jsonResponse<CreatedIntegrationClient>(
           {
             id: 7,
             name: "Home hub",
@@ -149,7 +151,8 @@ describe("Settings integration clients", () => {
           { status: 201 },
         );
       }
-      if (input === "/api/integration-clients") return jsonResponse({ items: [], total: 0 });
+      if (input === "/api/integration-clients")
+        return jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 });
       throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
     });
     const user = userEvent.setup();
@@ -166,14 +169,16 @@ describe("Settings integration clients", () => {
   });
 
   it("shows the translated fallback, not the server's detail, when loading fails", async () => {
-    renderHarness(async () => jsonResponse({ detail: "database exploded" }, { status: 500 }));
+    renderHarness(async () =>
+      uncheckedJson("error", { detail: "database exploded" }, { status: 500 }),
+    );
 
     expect(await screen.findByText(m.integration_clients_load_failed())).toBeInTheDocument();
     expect(screen.queryByText(/database exploded/)).not.toBeInTheDocument();
   });
 
   it("shows a translated reason when loading is rate limited", async () => {
-    renderHarness(async () => jsonResponse({ detail: "slow down" }, { status: 429 }));
+    renderHarness(async () => uncheckedJson("error", { detail: "slow down" }, { status: 429 }));
 
     expect(await screen.findByText(m.error_rate_limited())).toBeInTheDocument();
     expect(screen.queryByText(/slow down/)).not.toBeInTheDocument();
@@ -181,7 +186,8 @@ describe("Settings integration clients", () => {
 
   it("shows the translated reason for a recognised error code", async () => {
     renderHarness(async () =>
-      jsonResponse(
+      uncheckedJson(
+        "error",
         { code: "admin_scope_required", detail: "admin privileges are required" },
         { status: 403 },
       ),
@@ -192,7 +198,7 @@ describe("Settings integration clients", () => {
   });
 
   it("hides admin scope from non-admin users", async () => {
-    renderHarness(async () => jsonResponse({ items: [], total: 0 }));
+    renderHarness(async () => jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 }));
     await screen.findByText("No integration clients yet.");
     expect(screen.queryByLabelText(/worktime:admin/)).not.toBeInTheDocument();
   });
@@ -200,7 +206,7 @@ describe("Settings integration clients", () => {
   it("rotates a key after confirmation and reveals the replacement once", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/integration-clients/7/rotate" && init?.method === "POST")
-        return jsonResponse({
+        return jsonResponse<CreatedIntegrationClient>({
           id: 7,
           name: "Home hub",
           key: "wtic_replacement",
@@ -209,7 +215,7 @@ describe("Settings integration clients", () => {
           created_at: "2026-08-22T00:00:00Z",
         });
       if (input === "/api/integration-clients")
-        return jsonResponse({
+        return jsonResponse<IntegrationClientListResponse>({
           items: [
             {
               id: 7,
@@ -247,7 +253,8 @@ describe("Settings integration clients", () => {
     });
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/integration-clients" && init?.method === "POST") return createResponse;
-      if (input === "/api/integration-clients") return jsonResponse({ items: [], total: 0 });
+      if (input === "/api/integration-clients")
+        return jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 });
       if (input === "/api/integration-clients/7/rotate")
         throw new Error("overlapping rotation was issued");
       throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${input}`);
@@ -281,7 +288,7 @@ describe("Settings integration clients", () => {
     );
 
     resolveCreate?.(
-      jsonResponse(
+      jsonResponse<CreatedIntegrationClient>(
         {
           id: 7,
           name: "Home hub",
@@ -300,7 +307,7 @@ describe("Settings integration clients", () => {
     let revoked = false;
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/integration-clients/7/rotate" && init?.method === "POST")
-        return jsonResponse({
+        return jsonResponse<CreatedIntegrationClient>({
           id: 7,
           name: "Home hub",
           key: "wtic_replacement",
@@ -313,7 +320,7 @@ describe("Settings integration clients", () => {
         return new Response(null, { status: 204 });
       }
       if (input === "/api/integration-clients")
-        return jsonResponse({
+        return jsonResponse<IntegrationClientListResponse>({
           items: revoked
             ? [
                 {
@@ -376,7 +383,7 @@ describe("Settings integration clients", () => {
         return response;
       }
       if (input === "/api/integration-clients")
-        return jsonResponse({
+        return jsonResponse<IntegrationClientListResponse>({
           items:
             currentAccount === "user-a"
               ? []
@@ -426,7 +433,7 @@ describe("Settings integration clients", () => {
     rerender(<AccountHarness accountIdentity="user-b" />);
     expect(await screen.findByText("Account B client")).toBeInTheDocument();
     resolveCreate?.(
-      jsonResponse(
+      jsonResponse<CreatedIntegrationClient>(
         {
           id: 7,
           name: "Account A client",

@@ -4,6 +4,8 @@ import {
   emptyPushResponse,
   emptyStatus,
   resetSyncStore,
+  syncRecordResult,
+  syncPushResults,
   syncStore,
 } from "@/mocks/data/syncStore";
 
@@ -16,15 +18,15 @@ describe("syncStore", () => {
 
   it("resets nested state with fresh clones", () => {
     syncStore.pullData.labels = [{} as never];
-    syncStore.pushResponse.results.labels = [{ id: "label-1", status: "ok" }];
+    syncStore.pushResponse.results.labels = [syncRecordResult({ id: "label-1", status: "ok" })];
 
     resetSyncStore();
 
     expect(syncStore.pullData.labels).toEqual([]);
-    expect(syncStore.pushResponse.results).toEqual({});
+    expect(syncStore.pushResponse.results).toEqual(syncPushResults());
     expect(syncStore.pullData).not.toBe(emptyPullResponse);
     expect(syncStore.pushResponse).not.toBe(emptyPushResponse);
     expect(emptyPullResponse.labels).toEqual([]);
-    expect(emptyPushResponse.results).toEqual({});
+    expect(emptyPushResponse.results).toEqual(syncPushResults());
   });
 });

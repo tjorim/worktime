@@ -1,4 +1,4 @@
-import { HttpResponse } from "msw/http";
+import { uncheckedJson } from "@/mocks/response";
 import { getMockScenario } from "@/mocks/scenarios/state";
 
 export function buildAuthFailureResponse(): Response | null {
@@ -8,12 +8,12 @@ export function buildAuthFailureResponse(): Response | null {
   }
 
   if (authState === "forbidden") {
-    return HttpResponse.json({ detail: "Forbidden" }, { status: 403 });
+    return uncheckedJson("error", { detail: "Forbidden" }, { status: 403 });
   }
 
   const detail =
     authState === "expired_session"
       ? "Session expired, please sign in again."
       : "Authentication required.";
-  return HttpResponse.json({ detail }, { status: 401 });
+  return uncheckedJson("error", { detail }, { status: 401 });
 }

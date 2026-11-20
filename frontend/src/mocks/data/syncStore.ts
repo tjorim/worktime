@@ -5,7 +5,29 @@
  * states, assert on side-effects, and reset between runs.
  */
 
-import type { SyncPullResponse, SyncPushResponse, SyncStatusResponse } from "@/utils/syncClient";
+import type {
+  PreferencesResponse,
+  SyncPullResponse,
+  SyncPushResponse,
+  SyncRecordResult,
+  SyncStatusResponse,
+} from "@/api-types";
+
+/**
+ * One push result as the server sends it: every field is present, `null` when it does not apply
+ * (a conflict has no `server_updated_at` until the server wins, an ok has no `conflict_reason`).
+ */
+export function syncRecordResult(
+  result: Pick<SyncRecordResult, "id" | "status"> & Partial<SyncRecordResult>,
+): SyncRecordResult {
+  return {
+    server_updated_at: null,
+    conflict_reason: null,
+    code: null,
+    conflicting_task_id: null,
+    ...result,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Seed status variants
@@ -42,7 +64,7 @@ export const emptyPullResponse: SyncPullResponse = {
 
 /** An empty push response — no conflicts or errors from the server. */
 export const emptyPushResponse: SyncPushResponse = {
-  results: {},
+  results: syncPushResults({}),
 };
 
 // ---------------------------------------------------------------------------
@@ -59,15 +81,7 @@ export interface SyncStore {
   pushError: number | null;
   /** When non-null, the pull endpoint returns this HTTP error code. */
   pullError: number | null;
-  preferences: PreferencesPayload | null;
-}
-
-export interface PreferencesPayload {
-  user_id: number;
-  data: Record<string, unknown>;
-  client_updated_at: string;
-  created_at: string;
-  updated_at: string;
+  preferences: PreferencesResponse | null;
 }
 
 function createInitialSyncStore(): SyncStore {
@@ -87,4 +101,19 @@ export const syncStore: SyncStore = createInitialSyncStore();
 /** Reset the store to its initial seed state. */
 export function resetSyncStore(): void {
   Object.assign(syncStore, createInitialSyncStore());
+}
+
+/** The real push always sends every collection; tests override only those they exercise. */
+export function syncPushResults(
+  overrides: Partial<SyncPushResponse["results"]> = {},
+): SyncPushResponse["results"] {
+  return {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+    gantt_tasks: [],
+    ...overrides,
+  };
 }

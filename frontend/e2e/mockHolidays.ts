@@ -1,3 +1,5 @@
+import { routeJson } from "@/mocks/response";
+import type { PublicHoliday, SchoolHoliday, LongWeekend } from "@/api-types";
 import type { BrowserContext } from "@playwright/test";
 import {
   seedPublicHolidays,
@@ -10,7 +12,12 @@ import {
 // Intercept only holiday reads in Playwright; navigation and asset requests still
 // exercise the production service worker and the real offline/cache behaviour.
 export async function mockHolidays(context: BrowserContext) {
-  const responses: Record<string, unknown> = {
+  const responses: {
+    public: PublicHoliday[];
+    longweekend: LongWeekend[];
+    school: SchoolHoliday[];
+    paydates: string[];
+  } = {
     public: seedPublicHolidays,
     longweekend: seedLongWeekends,
     school: seedSchoolHolidays,
@@ -22,6 +29,10 @@ export async function mockHolidays(context: BrowserContext) {
       await route.fallback();
       return;
     }
-    await route.fulfill({ json: responses[endpoint] });
+    await route.fulfill(
+      routeJson<(typeof responses)[keyof typeof responses]>(
+        responses[endpoint as keyof typeof responses],
+      ),
+    );
   });
 }

@@ -65,6 +65,7 @@ from app.schemas import (
     SyncPullResponse,
     SyncPushRequest,
     SyncPushResponse,
+    SyncPushResults,
     SyncRecordResult,
     SyncStatusResponse,
     TaskSyncItem,
@@ -1112,7 +1113,7 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
         results["time_off_entries"].append(await _push_time_off_entry(session, user_id, item))
 
     await session.commit()
-    return SyncPushResponse(results=results)
+    return SyncPushResponse(results=SyncPushResults(**results))
 
 
 async def pull_changes(session: AsyncSession, user_id: int, since: datetime) -> SyncPullResponse:
