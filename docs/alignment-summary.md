@@ -117,12 +117,11 @@ This document summarizes the alignment work completed to bring HdayPlanner's Dev
 Split configuration for better organization:
 
 - `tsconfig.json` - Root config with project references
-- `tsconfig.app.json` - Application code config
+- `tsconfig.app.json` - Application code, unit tests and E2E specs
   - Target: ES2022
   - Strict mode with additional checks
   - `noUnusedLocals`, `noUnusedParameters`, `noUncheckedIndexedAccess`
-- `tsconfig.node.json` - Build tool config (Vite, Vitest)
-- `tsconfig.test.json` - Test file config
+- `tsconfig.node.json` - Build tool, Playwright and script config (Vite, Vitest)
 
 #### Package.json Scripts
 

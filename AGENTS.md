@@ -20,8 +20,7 @@ pnpm lint
 pnpm format          # rewrites files in place (Oxfmt)
 pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm format:repo     # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm typecheck         # also runs pnpm api:check
-pnpm typecheck:tests   # test files; CI runs this too
+pnpm typecheck         # paraglide + api:check + tsc -b (app, tests, e2e, configs)
 pnpm api:generate      # rewrite openapi.json from the backend (needs uv) and src/api-schema/ (Orval)
 pnpm api:check         # fail when src/api-schema/ is not what openapi.json generates
 pnpm test

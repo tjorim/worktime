@@ -47,7 +47,7 @@ export default defineConfig({
       "**/e2e/**",
     ],
     typecheck: {
-      tsconfig: "./tsconfig.test.json",
+      tsconfig: "./tsconfig.app.json",
     },
     coverage: {
       provider: "v8",

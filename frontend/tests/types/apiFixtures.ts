@@ -1,4 +1,4 @@
-// Compile-only assertions, included by typecheck:tests (also covers e2e/).
+// Compile-only assertions, included by `pnpm typecheck` (tsconfig.app.json also covers e2e/).
 import type {
   DashboardReadModel,
   IcalFeedStatus,

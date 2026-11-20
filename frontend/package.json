@@ -31,7 +31,6 @@
     "typecheck": "pnpm paraglide:compile && pnpm api:check && tsc -b --noEmit",
     "api:generate": "node scripts/api-types.mjs generate",
     "api:check": "node scripts/api-types.mjs check",
-    "typecheck:tests": "pnpm paraglide:compile && tsc -p tsconfig.test.json --noEmit",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "lint": "oxlint",
     "format": "oxfmt .",
