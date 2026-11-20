@@ -86,7 +86,7 @@ jobs:
           working-directory: backend
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Lint (ruff check)
         run: uv run ruff check .

@@ -38,15 +38,18 @@ jobs:
           filters: |
             android:
               - 'android/**'
+              - 'VERSION'
               - '.github/workflows/android.yml'
               - '.github/workflows/ci.yml'
             backend:
               - 'backend/**'
               - 'frontend/openapi.json'
+              - 'VERSION'
               - '.github/workflows/backend-ci.yml'
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
+              - 'VERSION'
               - 'CHANGELOG.md'
               - 'scripts/release.mjs'
               - '.github/workflows/frontend-ci.yml'
