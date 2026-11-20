@@ -17,7 +17,7 @@ dependencies = [
   "fastapi==0.162.4",
   "fastmcp==4.1.8",
   "httpx==0.28.1",
-  "psycopg[binary]==3.3.8",
+  "psycopg[binary]==3.3.9",
   "pycountry==26.2.16",
   "pydantic==2.14.3",
   "pydantic-settings==2.16.2",
