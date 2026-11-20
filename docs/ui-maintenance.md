@@ -118,7 +118,7 @@ pnpm format:check
 pnpm typecheck
 pnpm test --maxWorkers=2
 pnpm build
-pnpm check-bundle-budget
+pnpm bundle:check
 pnpm test:e2e
 ```
 

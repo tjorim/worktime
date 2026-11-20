@@ -85,7 +85,7 @@ _OFF_SHIFT = _ShiftDefinition(name="Off", start=None, end=None, display_code="O"
 # that tradeoff was made). tests/test_roster_golden_fixture.py cross-checks
 # this dict, and the algorithms below it, against a fixture generated from
 # rosters.ts/shiftCalculations.ts — after editing a schedule here, also edit
-# rosters.ts and run "pnpm run generate-roster-fixture" in frontend/.
+# rosters.ts and run "pnpm run fixtures:generate" in frontend/.
 _SCHEDULES: dict[ScheduleType, _ScheduleConfig] = {
     "9-5": _ScheduleConfig(
         team_count=1,
