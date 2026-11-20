@@ -2,7 +2,7 @@
 
 FastAPI backend for database-backed Worktime features.
 
-## Responsibilities
+## What it does
 
 - Provide database-backed APIs for users, time tracking, work locations, sync, and personal Gantt tasks
 - Run PostgreSQL schema migrations with Alembic
@@ -11,38 +11,93 @@ Legacy shared-`.hday`-file access (`/api/hday/*`, `/api/team/*`) has been remove
 backend — that's now handled entirely by a local helper each user runs themselves; see
 `hday-helper/README.md`.
 
+## Setup
+
+```bash
+cd backend
+
+# 1. Install dependencies (creates .venv automatically)
+uv sync
+
+# 2. Configure the environment (all variables have development defaults)
+cp .env.example .env
+
+# 3. Optional: PostgreSQL. SQLite works for development and tests.
+docker compose up db -d
+```
+
+For a local SQLite instance set `DATABASE_URL=sqlite+aiosqlite:///./dev.db` and run `uv run alembic upgrade head`
+once. Auth does not need an identity provider locally: `DEV_AUTH_BYPASS_TOKEN` is described in
+[QUICKSTART.md](QUICKSTART.md#local-api-users-without-an-identity-provider).
+
+## Run
+
+```bash
+uv run alembic upgrade head           # apply database migrations (see "Migrations")
+uv run uvicorn app.main:app --reload  # start the development server
+```
+
+The interactive API docs are at <http://localhost:8000/docs> (and `/redoc`). `run.sh` wraps the same steps.
+
+## Test
+
+```bash
+uv run pytest
+uv run pytest tests/test_health.py   # a single file
+```
+
+Tests run against a throwaway SQLite file by default, so they need no container (about 15 seconds). CI also runs the
+suite against PostgreSQL, the production database. To do the same locally, start one and point the tests at it:
+
+```bash
+docker compose up db -d
+export TEST_DATABASE_URL=postgresql+asyncpg://worktime:worktime@localhost/worktime_test
+```
+
+Two tests that simulate two sessions racing on an index entry need PostgreSQL's row-level locking and skip on SQLite.
+
+## Lint and type-check
+
+```bash
+uv run ruff check .          # lint
+uv run ruff format --check . # formatting (uv run ruff format . rewrites)
+uv run ty check .            # type check
+```
+
+## Migrations
+
+```bash
+uv run alembic upgrade head                       # apply
+uv run alembic revision --autogenerate -m "..."   # create a revision after a model change
+uv run alembic check                              # fail when the models and migrations disagree (CI runs this)
+```
+
+Only SQLAlchemy model or table changes need a new Alembic revision; scripts live in `migrations/`.
+
+## API contract
+
+The response models are the source of truth for the frontend's API types: `frontend/openapi.json` is generated from
+them (`uv run python -m app.openapi_export`, normally via `pnpm api:generate` in `frontend/`), Orval turns it into
+`frontend/src/api-schema/`, and `test_openapi_snapshot` fails when the snapshot is stale. See "API contract" in the
+root [AGENTS.md](../AGENTS.md).
+
 ## Layout
 
 ```text
 backend/
-├── app/           # FastAPI application package
-├── alembic/       # Alembic migration scripts
-├── tests/         # Backend test suite
+├── app/            # FastAPI application package
+├── migrations/     # Alembic migration scripts
+├── tests/          # Backend test suite
+├── docs/           # Observability, profiling, rate limiting and sync tombstone notes
+├── sql/            # Operational SQL
 ├── Dockerfile
 ├── alembic.ini
 ├── pyproject.toml
 └── uv.lock
 ```
 
-## Development
-
-```bash
-cd backend
-uv sync
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
-```
-
-Useful commands:
-
-```bash
-uv run ruff check app
-uv run ty check app
-uv run pytest
-uv run pytest tests/test_health.py
-uv run alembic revision --autogenerate -m "describe change"
-uv run alembic upgrade head
-```
+More guides: [QUICKSTART.md](QUICKSTART.md) (curl workflow without an IdP) and
+[BACKEND_GUIDE.md](BACKEND_GUIDE.md) (architecture and conventions).
 
 ## Runtime Configuration
 
@@ -64,7 +119,7 @@ Important variables:
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — Web Push planned-task-reminder notifications (feature is a no-op when unset)
 - `FCM_SERVICE_ACCOUNT_JSON` — Firebase service-account credential for waking the Android app in the background (feature is a no-op when unset)
 
-See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/config/settings.py` for the full list.
+See `.env.example`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/config/settings.py` for the full list.
 
 Optional `DEV_AUTH_MEMBER_TOKEN` and `DEV_AUTH_SECOND_MEMBER_TOKEN` provide two local
 member identities; see [Quick Start](QUICKSTART.md#local-api-users-without-an-identity-provider)
@@ -96,13 +151,12 @@ Typical production flow:
 
 ```bash
 cd backend
-uv sync --frozen
+uv sync --locked
 uv run alembic upgrade head
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 The repo also includes Docker support via `backend/Dockerfile`.
-
 
 ## Pydantic boundary conventions
 
