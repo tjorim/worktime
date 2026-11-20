@@ -330,7 +330,7 @@ importers:
         specifier: ^1.93.0
         version: 1.93.0
       postcss:
-        specifier: ^8.5.32
+        specifier: ^8.5.33
         version: 8.5.33
       shadcn:
         specifier: 4.23.0
