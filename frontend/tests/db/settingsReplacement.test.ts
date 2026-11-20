@@ -1,3 +1,6 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type { SyncPushResponse, SyncPullResponse } from "@/api-types";
+import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   labelsCollection,
@@ -38,15 +41,13 @@ for (const kind of ["labels", "templates"] as const) {
     expect(getSyncOutboxSize("replacement-user")).toBe(0);
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(new Response(JSON.stringify({ detail: "in use" }), { status: 409 })),
+      vi.fn().mockResolvedValue(uncheckedJson("error", { detail: "in use" }, { status: 409 })),
     );
     await expect(replaceTimeTrackingSettings(kind, [])).rejects.toThrow();
     expect(collection.has("kept")).toBe(true);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: {} }))),
+      vi.fn().mockResolvedValue(jsonResponse<SyncPushResponse>({ results: syncPushResults({}) })),
     );
     await replaceTimeTrackingSettings(kind, []);
     expect(collection.has("kept")).toBe(false);
@@ -67,7 +68,7 @@ it("keeps newly received rows that were not part of a pending replacement", asyn
   );
   const save = replaceTimeTrackingSettings("labels", []);
   labelsCollection.utils.writeUpsert({ id: "arrived", name: "New", color: "#123456" });
-  accept(new Response(JSON.stringify({ results: {} })));
+  accept(jsonResponse<SyncPushResponse>({ results: syncPushResults({}) }));
   await save;
   expect(labelsCollection.has("old")).toBe(false);
   expect(labelsCollection.has("arrived")).toBe(true);
@@ -114,7 +115,9 @@ it("sends only differences in capped chunks and carries explicit removal confirm
   setSyncCollectionAuth("replacement-user", "token");
   const fetch = vi
     .fn()
-    .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ results: {} }))));
+    .mockImplementation(() =>
+      Promise.resolve(jsonResponse<SyncPushResponse>({ results: syncPushResults({}) })),
+    );
   vi.stubGlobal("fetch", fetch);
   await replaceTimeTrackingSettings(
     "templates",
@@ -140,29 +143,39 @@ it("refreshes actual saved rows after a partially committed conflict", async () 
   const fetch = vi
     .fn()
     .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          results: {
-            labels: [
-              { id: "new", status: "conflict" },
-              { id: "old", status: "ok" },
-            ],
-          },
+      jsonResponse<SyncPushResponse>({
+        results: syncPushResults({
+          labels: [
+            {
+              id: "new",
+              status: "conflict",
+              server_updated_at: null,
+              conflict_reason: null,
+              code: null,
+              conflicting_task_id: null,
+            },
+            {
+              id: "old",
+              status: "ok",
+              server_updated_at: null,
+              conflict_reason: null,
+              code: null,
+              conflicting_task_id: null,
+            },
+          ],
         }),
-      ),
+      }),
     )
     .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          labels: [],
-          templates: [],
-          tasks: [],
-          gantt_tasks: [],
-          work_locations: [],
-          time_off_entries: [],
-          server_timestamp: "2026-11-04T00:00:00Z",
-        }),
-      ),
+      jsonResponse<SyncPullResponse>({
+        labels: [],
+        templates: [],
+        tasks: [],
+        gantt_tasks: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-11-04T00:00:00Z",
+      }),
     );
   vi.stubGlobal("fetch", fetch);
   await expect(

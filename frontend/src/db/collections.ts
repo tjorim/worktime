@@ -1147,9 +1147,8 @@ export function pushTimeOffImport(
     .map((entry) => ({ id: entry.id, action: "delete", client_updated_at: now }));
   for (const entry of target) {
     if (JSON.stringify(previous.get(entry.id)) === JSON.stringify(entry)) continue;
-    changes.push({
+    const fields = {
       id: entry.id,
-      action: previous.has(entry.id) ? "update" : "create",
       client_updated_at: now,
       entry_kind: entry.entryKind,
       date: entry.entryKind === "date" ? entry.date : null,
@@ -1159,7 +1158,11 @@ export function pushTimeOffImport(
       entry_type: entry.entryType,
       entry_flag: entry.entryFlag,
       note: entry.note,
-    });
+    };
+    // The API models a create and an update as separate request shapes, so the action picks one.
+    changes.push(
+      previous.has(entry.id) ? { ...fields, action: "update" } : { ...fields, action: "create" },
+    );
   }
   const deleteTotal = changes.filter((change) => change.action === "delete").length;
   void (async () => {

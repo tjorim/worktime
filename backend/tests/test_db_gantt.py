@@ -312,7 +312,7 @@ async def test_legacy_dependencies_remain_readable_and_editable(db_session):
             }
         ),
     )
-    assert result.results["gantt_tasks"][0].status == "ok"
+    assert result.results.gantt_tasks[0].status == "ok"
 
 
 async def test_concurrent_dependency_updates_cannot_create_cycle(db_session, test_db):

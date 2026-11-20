@@ -1,3 +1,4 @@
+import type { SyncPushResponse } from "@/api-types";
 import { expect, test } from "@playwright/test";
 import type { WorktimeTestHooks } from "./testHooks";
 import { mkdir } from "node:fs/promises";
@@ -103,7 +104,21 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
     });
     window.fetch = (input, init) => {
       if (String(input).includes("/api/sync/push"))
-        return Promise.resolve(new Response(JSON.stringify({ results: {} }), { status: 200 }));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              results: {
+                labels: [],
+                tasks: [],
+                templates: [],
+                work_locations: [],
+                time_off_entries: [],
+                gantt_tasks: [],
+              },
+            } satisfies SyncPushResponse),
+            { status: 200 },
+          ),
+        );
       if (
         accountUnavailable &&
         ["/api/me", "/api/access-tokens", "/api/ical", "/api/integration-clients"].some((path) =>

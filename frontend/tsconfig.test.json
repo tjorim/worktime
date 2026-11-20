@@ -10,5 +10,5 @@
       "@tests/*": ["./tests/*"]
     }
   },
-  "include": ["tests/**/*", "src/**/*"]
+  "include": ["tests/**/*", "src/**/*", "e2e/**/*", "playwright*.ts"]
 }

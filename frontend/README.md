@@ -28,8 +28,6 @@ VITE_MSW=true VITE_MSW_SCENARIO=sync-conflict pnpm dev
 Stable screenshot/dev switches are available through URL routing and query params:
 
 - `http://localhost:5173/__mock/current-shift-day`
-- `http://localhost:5173/__mock/time-tracking-validation-failure`
-- `http://localhost:5173/__mock/time-off-overlap`
 - `http://localhost:5173/__mock/sync-conflict`
 - `http://localhost:5173/__mock/server-error`
 - `http://localhost:5173/?mswScenario=sync-conflict`

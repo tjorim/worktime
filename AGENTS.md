@@ -20,8 +20,10 @@ pnpm lint
 pnpm format          # rewrites files in place (Oxfmt)
 pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm format:repo     # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm typecheck
+pnpm typecheck         # also runs pnpm api:check
 pnpm typecheck:tests   # test files; CI runs this too
+pnpm api:generate      # rewrite openapi.json from the backend (needs uv) and src/api-schema/ (Orval)
+pnpm api:check         # fail when src/api-schema/ is not what openapi.json generates
 pnpm test
 pnpm build
 ```
@@ -40,6 +42,7 @@ uv run ruff check app
 uv run ty check app
 uv run pytest
 uv run alembic upgrade head
+uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite ../frontend/openapi.json
 ```
 
 > **Prerequisites:** tests default to SQLite, so no container is needed. Local development
@@ -69,6 +72,37 @@ Besides OIDC sessions, non-interactive clients (currently just the Pebble compan
 a personal access token (`wtpat_...`, `/api/access-tokens`, managed from Settings > Account > API tokens).
 `get_authenticated_principal` (`backend/app/routers/auth.py`) accepts either; `require_oidc_principal` gates
 endpoints — account deletion and token management itself — that a leaked token must not be able to reach.
+
+## API Contract
+
+The backend's response models are the source of truth for the frontend's API types, and nothing in between is written by hand:
+
+```text
+backend response models -> uv run python -m app.openapi_export (pnpm api:generate)
+  -> frontend/openapi.json -> Orval (frontend/orval.config.mjs) -> frontend/src/api-schema/
+  -> frontend/src/api-types.ts (the one import point for API shapes)
+```
+
+- `frontend/openapi.json` is a committed snapshot of the backend's OpenAPI document with `info.version` pinned to
+  `"snapshot"`, so a release bump never stales it. `frontend/src/api-schema/` is generated from it, one file per
+  schema. Never hand-edit either, and do not declare an API record type anywhere else in the frontend.
+- To add or change an endpoint: give the route a `response_model` (a test enforces it; a response model derives from
+  `ResponseModel` in `backend/app/schemas.py` so a field with a default is required in the generated type), run
+  `pnpm api:generate` in `frontend/` (it needs `uv`), commit `openapi.json` and `src/api-schema/`, and alias the
+  generated record for the screens in `frontend/src/api-types.ts`.
+- `pnpm typecheck` runs `pnpm api:check` and fails when `src/api-schema/` is stale; the backend test
+  `test_openapi_snapshot` fails when `openapi.json` is stale. `backend/tests/test_response_models.py` fails on a JSON
+  route without a documented response schema, and on an optional response field without a per-field
+  wire-omission reason in `OPTIONAL_ON_THE_WIRE` (it rejects both new unexplained fields and stale exceptions).
+  Request optionality is a separate contract.
+- Success fixtures (MSW handlers, fetch doubles, Playwright route fulfils) must choose a generated response schema
+  explicitly: `HttpResponse.json<Model>(...)`, `jsonResponse<Model>(...)`, `jsonBody<Model>(...)`, `routeJson<Model>(...)`,
+  or `satisfies Model` at a browser response boundary. The generic JSON helpers in `frontend/src/mocks/response.ts` use
+  `NoInfer` and default to `never`, so a payload never infers its own contract. The source guard
+  `frontend/tests/mocks/fixtureContracts.test.ts` fails on a fixture that is unchecked or erased, and
+  `frontend/tests/types/apiFixtures.ts` holds compile-only negative checks.
+- A deliberately malformed, error, external-provider or control fixture is exempt only through the helper that names why
+  (`uncheckedJson("malformed", ...)`, `uncheckedBody(...)`) or a `fixture-contract: <reason>` comment at the call site.
 
 ## Versioning
 

@@ -55,53 +55,55 @@ for (const theme of ["light", "dark"] as const) {
         );
       }, theme);
       await page.route("http://helper.test/**", (route) =>
-        route.fulfill({
-          contentType: "application/json",
-          headers: { "Access-Control-Allow-Origin": "*" },
-          body: JSON.stringify(
-            route.request().url().includes("/team/")
-              ? {
-                  team_id: "demo",
-                  name: "Demo team",
-                  sections: [
-                    {
-                      title: "Engineering",
-                      members: [
-                        member,
-                        {
-                          ...member,
-                          username: "ben",
-                          display_name: "Benjamin De Smet",
-                          events: [],
-                        },
-                      ],
-                    },
-                    {
-                      title: "Operations",
-                      members: [
-                        {
-                          ...member,
-                          username: "charlotte",
-                          display_name: "Charlotte Janssens",
-                          events: [],
-                        },
-                      ],
-                    },
-                  ],
-                  members: [
-                    member,
-                    { ...member, username: "ben", display_name: "Benjamin De Smet", events: [] },
-                    {
-                      ...member,
-                      username: "charlotte",
-                      display_name: "Charlotte Janssens",
-                      events: [],
-                    },
-                  ],
-                }
-              : { status: "ok" },
-          ),
-        }),
+        route.fulfill(
+          /* fixture-contract: hday-helper (separate service) */ {
+            contentType: "application/json",
+            headers: { "Access-Control-Allow-Origin": "*" },
+            body: JSON.stringify(
+              route.request().url().includes("/team/")
+                ? {
+                    team_id: "demo",
+                    name: "Demo team",
+                    sections: [
+                      {
+                        title: "Engineering",
+                        members: [
+                          member,
+                          {
+                            ...member,
+                            username: "ben",
+                            display_name: "Benjamin De Smet",
+                            events: [],
+                          },
+                        ],
+                      },
+                      {
+                        title: "Operations",
+                        members: [
+                          {
+                            ...member,
+                            username: "charlotte",
+                            display_name: "Charlotte Janssens",
+                            events: [],
+                          },
+                        ],
+                      },
+                    ],
+                    members: [
+                      member,
+                      { ...member, username: "ben", display_name: "Benjamin De Smet", events: [] },
+                      {
+                        ...member,
+                        username: "charlotte",
+                        display_name: "Charlotte Janssens",
+                        events: [],
+                      },
+                    ],
+                  }
+                : { status: "ok" },
+            ),
+          },
+        ),
       );
       await page.goto("/");
       const grid = page.locator("[data-team-grid]");
@@ -157,22 +159,22 @@ for (const theme of ["light", "dark"] as const) {
       await page.screenshot({ path: gridScreenshot });
       await testInfo.attach("grid", { path: gridScreenshot, contentType: "image/png" });
       await today.hover();
-      await expect(page.getByRole("tooltip")).toContainText("Annual leave");
+      await expect(page.locator('[role="tooltip"][data-open]')).toContainText("Annual leave");
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("tooltip")).toHaveCount(0);
+      await expect(page.locator('[role="tooltip"][data-open]')).toHaveCount(0);
       await page.mouse.move(0, 0);
       await today.focus();
-      await expect(page.getByRole("tooltip")).toContainText("Annual leave");
+      await expect(page.locator('[role="tooltip"][data-open]')).toContainText("Annual leave");
       await expect(today).toBeFocused();
       const detailsScreenshot = testInfo.outputPath("details.png");
       await page.screenshot({ path: detailsScreenshot });
       await testInfo.attach("details", { path: detailsScreenshot, contentType: "image/png" });
       await page.keyboard.press("Tab");
       await expect(half).toBeFocused();
-      await expect(page.getByRole("tooltip")).toContainText("Dentist");
+      await expect(page.locator('[role="tooltip"][data-open]')).toContainText("Dentist");
       await page.keyboard.press("Escape");
       await half.click();
-      await expect(page.getByRole("tooltip")).toContainText("Dentist");
+      await expect(page.locator('[role="tooltip"][data-open]')).toContainText("Dentist");
     });
   }
 }

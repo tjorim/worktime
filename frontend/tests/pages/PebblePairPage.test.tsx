@@ -1,3 +1,5 @@
+import type { CreatedApiToken } from "@/api-types";
+import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,11 +30,18 @@ describe("PebblePairPage", () => {
   });
 
   it("allows retrying a transient token-creation failure", async () => {
-    apiFetch
-      .mockResolvedValueOnce(new Response(null, { status: 503 }))
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ token: "wtpat_retry-token" }), { status: 201 }),
-      );
+    apiFetch.mockResolvedValueOnce(new Response(null, { status: 503 })).mockResolvedValueOnce(
+      jsonResponse<CreatedApiToken>(
+        {
+          id: "token-1",
+          name: "Pebble",
+          scopes: ["pebble:read", "pebble:write"],
+          created_at: "2026-01-01T00:00:00Z",
+          token: "wtpat_retry-token",
+        },
+        { status: 201 },
+      ),
+    );
 
     const user = userEvent.setup();
     render(<PebblePairPage />);
@@ -47,9 +56,13 @@ describe("PebblePairPage", () => {
 
   it("shows a translated reason for a recognised status", async () => {
     apiFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ detail: "Rate limit exceeded: 5 per 1 minute" }), {
-        status: 429,
-      }),
+      uncheckedJson(
+        "error",
+        { detail: "Rate limit exceeded: 5 per 1 minute" },
+        {
+          status: 429,
+        },
+      ),
     );
 
     render(<PebblePairPage />);
@@ -60,8 +73,9 @@ describe("PebblePairPage", () => {
 
   it("shows the surface's translated reason for a recognised error code", async () => {
     apiFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ code: "oidc_session_required", detail: "This operation requires" }),
+      uncheckedJson(
+        "error",
+        { code: "oidc_session_required", detail: "This operation requires" },
         { status: 403 },
       ),
     );

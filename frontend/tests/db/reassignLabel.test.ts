@@ -1,3 +1,6 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type { SyncPushResponse } from "@/api-types";
+import { jsonResponse } from "@/mocks/response";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   ganttTasksCollection,
@@ -20,7 +23,9 @@ function stubServer(respond: (call: number) => Response | Promise<Response>) {
   const pushes: unknown[][] = [];
   const fetch = vi.fn((...args: unknown[]) => {
     if (!String(args[0]).includes("/api/sync/push")) {
-      return Promise.resolve(new Response("{}", { status: 500 }));
+      return Promise.resolve(
+        new Response(/* fixture-contract: error (body is not consumed) */ "{}", { status: 500 }),
+      );
     }
     pushes.push(args);
     return Promise.resolve(respond(pushes.length - 1));
@@ -28,7 +33,7 @@ function stubServer(respond: (call: number) => Response | Promise<Response>) {
   vi.stubGlobal("fetch", fetch);
   return { fetch, pushes };
 }
-const ok = () => new Response(JSON.stringify({ results: {} }));
+const ok = () => jsonResponse<SyncPushResponse>({ results: syncPushResults({}) });
 
 function seed(taskCount = 2) {
   runWriteBatch(tasksCollection, true, () =>
@@ -131,18 +136,29 @@ it("splits a large move into capped chunks before deleting", async () => {
 it("keeps the label when the server rejects part of the move", async () => {
   seed();
   setSyncCollectionAuth("reassign-user", "token");
-  const { pushes } = stubServer(
-    () =>
-      new Response(
-        JSON.stringify({
-          results: {
-            tasks: [
-              { id: "task-0", status: "ok" },
-              { id: "task-1", status: "conflict" },
-            ],
+  const { pushes } = stubServer(() =>
+    jsonResponse<SyncPushResponse>({
+      results: syncPushResults({
+        tasks: [
+          {
+            id: "task-0",
+            status: "ok",
+            server_updated_at: null,
+            conflict_reason: null,
+            code: null,
+            conflicting_task_id: null,
           },
-        }),
-      ),
+          {
+            id: "task-1",
+            status: "conflict",
+            server_updated_at: null,
+            conflict_reason: null,
+            code: null,
+            conflicting_task_id: null,
+          },
+        ],
+      }),
+    }),
   );
 
   await expect(reassignAndDeleteLabel("old", "new")).rejects.toMatchObject({

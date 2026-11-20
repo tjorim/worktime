@@ -1,3 +1,4 @@
+import { uncheckedJson } from "@/mocks/response";
 import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -34,7 +35,7 @@ function mockHdayChangeEventsStream() {
           if (ctrl) hdayChangeEmitter._remove(username, ctrl);
         },
       });
-      return new HttpResponse(stream, {
+      return new HttpResponse(/* fixture-contract: sse (helper change stream) */ stream, {
         headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
       });
     }),
@@ -51,7 +52,9 @@ function seedConnectedHelperWithUsername(username: string | null) {
     USER_STATE_STORAGE_KEY,
     JSON.stringify({ settings: { hdayUsername: username } }),
   );
-  server.use(http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })));
+  server.use(
+    http.get("http://localhost:8080/health", () => uncheckedJson("hday-helper", { status: "ok" })),
+  );
   mockHdayChangeEventsStream();
 }
 
@@ -124,7 +127,9 @@ describe("TimeOffView", () => {
         JSON.stringify({ hdayHelper: { url: "http://localhost:8080" } }),
       );
       server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+        http.get("http://localhost:8080/health", () =>
+          uncheckedJson("hday-helper", { status: "ok" }),
+        ),
       );
 
       render(
@@ -161,7 +166,7 @@ describe("TimeOffView", () => {
       expect(screen.getByText(m.team_viewer_title())).toBeInTheDocument();
 
       await act(async () => {
-        resolveHealth(HttpResponse.json({ status: "ok" }));
+        resolveHealth(uncheckedJson("hday-helper", { status: "ok" }));
       });
       expect(await screen.findByRole("button", { name: "Team" })).toHaveAttribute(
         "aria-pressed",
@@ -195,7 +200,9 @@ describe("TimeOffView", () => {
       );
       let healthy = true;
       const healthCheck = vi.fn(() =>
-        healthy ? HttpResponse.json({ status: "ok" }) : new HttpResponse(null, { status: 503 }),
+        healthy
+          ? uncheckedJson("hday-helper", { status: "ok" })
+          : new HttpResponse(null, { status: 503 }),
       );
       const intervalCallbacks: TimerHandler[] = [];
       vi.spyOn(window, "setInterval").mockImplementation((handler) => {
@@ -778,7 +785,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "jsmith",
             raw: "2025/01/15 # Day off\n",
             etag: "sha256:abc",
@@ -833,7 +840,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({ detail: "share unreachable" }, { status: 503 }),
+          uncheckedJson("error", { detail: "share unreachable" }, { status: 503 }),
         ),
       );
 
@@ -857,7 +864,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({ detail: "slow down" }, { status: 429 }),
+          uncheckedJson("error", { detail: "slow down" }, { status: 429 }),
         ),
       );
 
@@ -911,7 +918,7 @@ describe("TimeOffView", () => {
       server.use(
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
-          return HttpResponse.json({ etag: "sha256:first" });
+          return uncheckedJson("hday-helper", { etag: "sha256:first" });
         }),
       );
 
@@ -940,7 +947,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "jsmith",
             raw: "2025/01/15 # Day off\n",
             etag: "sha256:pulled",
@@ -952,7 +959,7 @@ describe("TimeOffView", () => {
       server.use(
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
-          return HttpResponse.json({ etag: "sha256:pushed" });
+          return uncheckedJson("hday-helper", { etag: "sha256:pushed" });
         }),
       );
 
@@ -997,7 +1004,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.put("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({ detail: "share unreachable" }, { status: 503 }),
+          uncheckedJson("error", { detail: "share unreachable" }, { status: 503 }),
         ),
       );
 
@@ -1018,7 +1025,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.put("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({ detail: "slow down" }, { status: 429 }),
+          uncheckedJson("error", { detail: "slow down" }, { status: 429 }),
         ),
       );
 
@@ -1049,7 +1056,9 @@ describe("TimeOffView", () => {
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
           callCount += 1;
-          return callCount === 1 ? firstPutResponse : HttpResponse.json({ etag: "sha256:second" });
+          return callCount === 1
+            ? firstPutResponse
+            : uncheckedJson("hday-helper", { etag: "sha256:second" });
         }),
       );
 
@@ -1082,7 +1091,7 @@ describe("TimeOffView", () => {
       expect(callCount).toBe(1);
 
       await act(async () => {
-        resolveFirstPut(HttpResponse.json({ etag: "sha256:first" }));
+        resolveFirstPut(uncheckedJson("hday-helper", { etag: "sha256:first" }));
       });
 
       await waitFor(() => expect(callCount).toBe(2), { timeout: 5000 });
@@ -1103,7 +1112,7 @@ describe("TimeOffView", () => {
       server.use(
         http.put("http://localhost:8080/hday/jsmith", () => {
           putCallCount += 1;
-          return HttpResponse.json({ etag: "sha256:queued" });
+          return uncheckedJson("hday-helper", { etag: "sha256:queued" });
         }),
       );
 
@@ -1138,7 +1147,7 @@ describe("TimeOffView", () => {
 
       await act(async () => {
         resolveGet(
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "jsmith",
             raw: "2025/01/01 # From share\n",
             etag: "sha256:from-share",
@@ -1161,7 +1170,7 @@ describe("TimeOffView", () => {
       server.use(
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
-          return HttpResponse.json({ etag: "sha256:auto" });
+          return uncheckedJson("hday-helper", { etag: "sha256:auto" });
         }),
       );
 
@@ -1198,7 +1207,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "jsmith",
             raw: "2025/09/01 # Day off\n",
             etag: "sha256:from-share",
@@ -1210,7 +1219,7 @@ describe("TimeOffView", () => {
       server.use(
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
-          return HttpResponse.json({ etag: "sha256:from-share" });
+          return uncheckedJson("hday-helper", { etag: "sha256:from-share" });
         }),
       );
 
@@ -1235,7 +1244,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "jsmith",
             raw: "2025/09/01 # Day off\n",
             etag: "sha256:from-share",
@@ -1247,7 +1256,7 @@ describe("TimeOffView", () => {
       server.use(
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
-          return HttpResponse.json({ etag: `sha256:v${receivedBodies.length}` });
+          return uncheckedJson("hday-helper", { etag: `sha256:v${receivedBodies.length}` });
         }),
       );
 
@@ -1293,14 +1302,16 @@ describe("TimeOffView", () => {
         JSON.stringify({ settings: { hdayUsername: "jsmith" } }),
       );
       server.use(
-        http.get("http://localhost:8080/health", () => HttpResponse.json({ status: "ok" })),
+        http.get("http://localhost:8080/health", () =>
+          uncheckedJson("hday-helper", { status: "ok" }),
+        ),
       );
       mockHdayChangeEventsStream();
       const receivedBodies: unknown[] = [];
       server.use(
         http.put("http://localhost:8080/hday/jsmith", async ({ request }) => {
           receivedBodies.push(await request.json());
-          return HttpResponse.json({ etag: "sha256:later" });
+          return uncheckedJson("hday-helper", { etag: "sha256:later" });
         }),
       );
 
@@ -1350,7 +1361,7 @@ describe("TimeOffView", () => {
 
       await act(async () => {
         resolveGet(
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "alice",
             raw: "2025/03/03 # Alice's day off\n",
             etag: "sha256:alice",
@@ -1385,7 +1396,7 @@ describe("TimeOffView", () => {
       await user.click(screen.getByRole("button", { name: "switch username" }));
 
       await act(async () => {
-        resolvePut(HttpResponse.json({ etag: "sha256:alice" }));
+        resolvePut(uncheckedJson("hday-helper", { etag: "sha256:alice" }));
       });
 
       expect(screen.queryByText(m.timeoff_pushed({ username: "alice" }))).not.toBeInTheDocument();
@@ -1414,7 +1425,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.put("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({ etag: "sha256:mine" }),
+          uncheckedJson("hday-helper", { etag: "sha256:mine" }),
         ),
       );
 
@@ -1455,7 +1466,7 @@ describe("TimeOffView", () => {
       seedConnectedHelperWithUsername("jsmith");
       server.use(
         http.get("http://localhost:8080/hday/jsmith", () =>
-          HttpResponse.json({
+          uncheckedJson("hday-helper", {
             username: "jsmith",
             raw: "2025/07/04 # Day off\n",
             etag: "sha256:new-on-share",

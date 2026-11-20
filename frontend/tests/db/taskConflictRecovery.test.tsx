@@ -1,3 +1,6 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type { SyncPushResponse } from "@/api-types";
+import { jsonBody, uncheckedBody } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -108,19 +111,30 @@ describe("rejected task recovery", () => {
     let failPull = false;
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.startsWith("/api/sync/pull"))
-        return { ok: !failPull, json: async () => snapshot } as Response;
+        return {
+          ok: !failPull,
+          json: async () => jsonBody<SyncPullResponse>(snapshot),
+        } as Response;
       if (init?.method === "POST")
         return {
           ok: true,
-          json: async () => ({
-            results: {
-              [gantt ? "gantt_tasks" : "tasks"]: [
-                { id: "rejected", status: "conflict", code: "gantt_dependency_self" },
-              ],
-            },
-          }),
+          json: async () =>
+            jsonBody<SyncPushResponse>({
+              results: syncPushResults({
+                [gantt ? "gantt_tasks" : "tasks"]: [
+                  {
+                    server_updated_at: null,
+                    conflict_reason: null,
+                    conflicting_task_id: null,
+                    id: "rejected",
+                    status: "conflict",
+                    code: "gantt_dependency_self",
+                  },
+                ],
+              }),
+            }),
         } as Response;
-      return { ok: false, json: async () => null } as Response;
+      return { ok: false, json: async () => uncheckedBody("control", null) } as Response;
     });
     const { result, unmount } = renderHook(() =>
       useOngoingSync(
@@ -159,15 +173,28 @@ describe("rejected task recovery", () => {
   it("discards a rejected new task after an edit coalesces its queued create into an update", async () => {
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
       const path = new URL(url, "http://localhost").pathname;
-      if (path === "/api/sync/pull") return { ok: true, json: async () => snapshot } as Response;
+      if (path === "/api/sync/pull")
+        return { ok: true, json: async () => jsonBody<SyncPullResponse>(snapshot) } as Response;
       if (path === "/api/sync/push" && init?.method === "POST")
         return {
           ok: true,
-          json: async () => ({
-            results: { tasks: [{ id: "rejected", status: "conflict", code: "task_overlap" }] },
-          }),
+          json: async () =>
+            jsonBody<SyncPushResponse>({
+              results: syncPushResults({
+                tasks: [
+                  {
+                    server_updated_at: null,
+                    conflict_reason: null,
+                    conflicting_task_id: null,
+                    id: "rejected",
+                    status: "conflict",
+                    code: "task_overlap",
+                  },
+                ],
+              }),
+            }),
         } as Response;
-      return { ok: false, json: async () => null } as Response;
+      return { ok: false, json: async () => uncheckedBody("control", null) } as Response;
     });
     vi.stubGlobal("fetch", fetch);
     setSyncCollectionAuth("user-1", "test-token");
@@ -213,6 +240,7 @@ describe("rejected task recovery", () => {
           stop_time: "2026-01-01T10:00:00Z",
           includes_break: false,
           deleted_at: null,
+          client_updated_at: "2026-01-01T00:00:00Z",
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
         },

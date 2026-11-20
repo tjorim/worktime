@@ -2,7 +2,8 @@ allowBuilds:
   "@parcel/watcher": true
   browser-tabs-lock: true
   canvas: true
-  esbuild: true
+  # Orval pulls in esbuild, whose install script only verifies a binary its platform package already ships.
+  esbuild: false
   msw: true
 
 # pnpm's minimumReleaseAge doesn't fall back to an older mature version for transitive

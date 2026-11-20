@@ -14,6 +14,7 @@ import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
 import { logger } from "@/utils/logger";
 import { ApiError } from "@/utils/apiError";
+import type { IcalFeedCreated, IcalFeedStatus } from "@/api-types";
 
 interface Props {
   onLoadError?: (failed: boolean) => void;
@@ -41,11 +42,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
     void fetchFn("/api/ical")
       .then(async (response) => {
         if (!response.ok) throw await ApiError.fromResponse(response);
-        const payload = (await response.json()) as {
-          configured: boolean;
-          token_preview?: string | null;
-          last_used_at?: string | null;
-        };
+        const payload = (await response.json()) as IcalFeedStatus;
         if (active) {
           setLoadFailed(false);
           onLoadError?.(false);
@@ -78,7 +75,7 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
     try {
       const response = await fetchFn("/api/ical", { method: "POST" });
       if (!response.ok) throw await ApiError.fromResponse(response);
-      const payload = (await response.json()) as { url_path: string };
+      const payload = (await response.json()) as IcalFeedCreated;
       setUrl(new URL(payload.url_path, window.location.origin).toString());
       setConfigured(true);
       setTokenPreview(null);

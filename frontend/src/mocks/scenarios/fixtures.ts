@@ -1,11 +1,18 @@
-import { emptyPullResponse, emptyPushResponse, populatedStatus } from "@/mocks/data/syncStore";
+import { syncPushResults } from "@/mocks/data/syncStore";
+import {
+  emptyPullResponse,
+  emptyPushResponse,
+  populatedStatus,
+  syncRecordResult,
+} from "@/mocks/data/syncStore";
 import {
   seedLongWeekends,
   seedPaydates,
   seedPublicHolidays,
   seedSchoolHolidays,
 } from "@/mocks/data/holidayStore";
-import type { MockScenarioFixture, MockScenarioId, TeamShiftStatusReadModel } from "./types";
+import type { TeamShiftStatusReadModel } from "@/api-types";
+import type { MockScenarioFixture, MockScenarioId } from "./types";
 import type {
   LabelSyncRead,
   SyncPullResponse,
@@ -39,6 +46,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
       name: "Deep work",
       color: "#2563eb",
       created_at: CREATED_AT,
+      client_updated_at: CREATED_AT,
       updated_at: CREATED_AT,
       deleted_at: null,
     },
@@ -48,6 +56,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
       name: "Meetings",
       color: "#f97316",
       created_at: CREATED_AT,
+      client_updated_at: CREATED_AT,
       updated_at: CREATED_AT,
       deleted_at: null,
     },
@@ -83,6 +92,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
         stop_time: deepWorkStop.toISOString(),
         includes_break: false,
         created_at: deepWorkStart.toISOString(),
+        client_updated_at: deepWorkStop.toISOString(),
         updated_at: deepWorkStop.toISOString(),
         deleted_at: null,
       });
@@ -101,6 +111,7 @@ function seedTimeTrackingWeek(): { labels: LabelSyncRead[]; tasks: TaskSyncRead[
         stop_time: meetingStop.toISOString(),
         includes_break: false,
         created_at: meetingStart.toISOString(),
+        client_updated_at: meetingStop.toISOString(),
         updated_at: meetingStop.toISOString(),
         deleted_at: null,
       });
@@ -198,26 +209,6 @@ function createBaseFixture(id: MockScenarioId): MockScenarioFixture {
       },
       statusCode: 200,
     },
-    timeTracking: {
-      state: "active",
-      active_entry_id: "task-001",
-      seconds_elapsed: 5400,
-      validation_errors: [],
-    },
-    timeOffRequests: {
-      statusCode: 200,
-      requests: [
-        {
-          id: "req-pending",
-          status: "pending",
-          starts_on: "2026-06-10",
-          ends_on: "2026-06-12",
-          note: "Summer trip",
-          overlap_with: [],
-          quota_days_remaining: 8,
-        },
-      ],
-    },
     holidays: {
       public: structuredClone(seedPublicHolidays),
       longweekend: structuredClone(seedLongWeekends),
@@ -286,83 +277,6 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
       },
     },
   })),
-  "time-tracking-active": createBaseFixture("time-tracking-active"),
-  "time-tracking-paused": withFixture("time-tracking-paused", (fixture) => ({
-    ...fixture,
-    timeTracking: { ...fixture.timeTracking, state: "paused", active_entry_id: null },
-  })),
-  "time-tracking-completed": withFixture("time-tracking-completed", (fixture) => ({
-    ...fixture,
-    timeTracking: { ...fixture.timeTracking, state: "completed", active_entry_id: null },
-  })),
-  "time-tracking-correction-needed": withFixture("time-tracking-correction-needed", (fixture) => ({
-    ...fixture,
-    timeTracking: {
-      ...fixture.timeTracking,
-      state: "correction_needed",
-      validation_errors: ["Tracked time is shorter than required shift target."],
-    },
-  })),
-  "time-tracking-validation-failure": withFixture(
-    "time-tracking-validation-failure",
-    (fixture) => ({
-      ...fixture,
-      timeTracking: {
-        ...fixture.timeTracking,
-        state: "validation_failure",
-        validation_errors: ["start_time must be before end_time"],
-      },
-    }),
-  ),
-  "time-off-pending": createBaseFixture("time-off-pending"),
-  "time-off-approved": withFixture("time-off-approved", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({
-        ...request,
-        status: "approved",
-      })),
-    },
-  })),
-  "time-off-rejected": withFixture("time-off-rejected", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({
-        ...request,
-        status: "rejected",
-      })),
-    },
-  })),
-  "time-off-overlap": withFixture("time-off-overlap", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: [
-        ...fixture.timeOffRequests.requests,
-        {
-          id: "req-overlap",
-          status: "pending",
-          starts_on: "2026-06-11",
-          ends_on: "2026-06-14",
-          note: "Overlapping request",
-          overlap_with: ["req-pending"],
-          quota_days_remaining: 3,
-        },
-      ],
-    },
-  })),
-  "time-off-quota-edge": withFixture("time-off-quota-edge", (fixture) => ({
-    ...fixture,
-    timeOffRequests: {
-      ...fixture.timeOffRequests,
-      requests: fixture.timeOffRequests.requests.map((request) => ({
-        ...request,
-        quota_days_remaining: 0,
-      })),
-    },
-  })),
   "sync-clean": createBaseFixture("sync-clean"),
   "sync-pending-local": withFixture("sync-pending-local", (fixture) => ({
     ...fixture,
@@ -378,16 +292,16 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
       ...fixture.sync,
       state: "conflict",
       pushResponse: {
-        results: {
+        results: syncPushResults({
           tasks: [
-            {
+            syncRecordResult({
               id: "task-001",
               status: "conflict",
               conflict_reason: "server is newer",
               server_updated_at: "2026-05-18T06:00:00.000Z",
-            },
+            }),
           ],
-        },
+        }),
       },
     },
   })),
@@ -432,7 +346,6 @@ export const mockScenarioFixtures: Record<MockScenarioId, MockScenarioFixture> =
     ...fixture,
     sync: { ...fixture.sync, statusError: 500, pullError: 500, pushError: 500 },
     readModels: { ...fixture.readModels, statusCode: 500 },
-    timeOffRequests: { ...fixture.timeOffRequests, statusCode: 500 },
     workLocations: { ...fixture.workLocations, statusCode: 500 },
   })),
 };

@@ -470,7 +470,10 @@ function sseController() {
 }
 
 function sseResponse(stream: ReadableStream<Uint8Array>, status = 200): Response {
-  return new Response(stream, { status, headers: { "content-type": "text/event-stream" } });
+  return new Response(/* fixture-contract: sse (stream framing, not JSON) */ stream, {
+    status,
+    headers: { "content-type": "text/event-stream" },
+  });
 }
 
 describe("createFetchSseTransport", () => {

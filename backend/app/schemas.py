@@ -17,13 +17,26 @@ ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 NonEmptyText = Annotated[str, Field(min_length=1)]
 
 
+class ResponseModel(BaseModel):
+    """Base for response models.
+
+    ``json_schema_serialization_defaults_required`` only changes the OpenAPI document: a field with a default
+    is always sent (a response is built from the whole model), so the generated client type must not mark it
+    optional. It does not touch validation or serialization, so the wire is unchanged. Models whose routes
+    really omit a field (an upstream pass-through, ``exclude_unset``, a hand-built dict) stay on ``BaseModel``
+    and say so.
+    """
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
 class RequestModel(BaseModel):
     """External write payload; unknown fields must not be silently discarded."""
 
     model_config = ConfigDict(extra="forbid")
 
 
-class ListResponse[T](BaseModel):
+class ListResponse[T](ResponseModel):
     """Generic paged list response."""
 
     items: list[T]
@@ -51,7 +64,7 @@ class UserCreate(RequestModel):
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
-class UserRead(BaseModel):
+class UserRead(ResponseModel):
     id: int
     username: str
     display_name: str
@@ -66,13 +79,13 @@ class UserUpdate(RequestModel):
     settings: dict[str, Any] | None = None
 
 
-class AccountCapabilities(BaseModel):
+class AccountCapabilities(ResponseModel):
     """Capability flags relevant for frontend feature enablement."""
 
     backup_enabled: bool
 
 
-class AccountProfile(BaseModel):
+class AccountProfile(ResponseModel):
     """Response schema for the authenticated account profile endpoint."""
 
     id: int
@@ -82,7 +95,7 @@ class AccountProfile(BaseModel):
     capabilities: AccountCapabilities
 
 
-class OidcDiscoveryConfig(BaseModel):
+class OidcDiscoveryConfig(ResponseModel):
     """Public OIDC endpoints discovered by native clients from the API."""
 
     issuer: str
@@ -117,7 +130,7 @@ class LabelCreate(RequestModel):
         return result
 
 
-class LabelRead(BaseModel):
+class LabelRead(ResponseModel):
     id: str
     user_id: int
     name: str
@@ -144,7 +157,7 @@ class TaskCreate(RequestModel):
     includes_break: bool = False
 
 
-class TaskRead(BaseModel):
+class TaskRead(ResponseModel):
     id: str
     user_id: int
     label_id: str | None
@@ -179,7 +192,7 @@ class TemplateCreate(RequestModel):
     stop_time: dt_time
 
 
-class TemplateRead(BaseModel):
+class TemplateRead(ResponseModel):
     id: str
     user_id: int
     label_id: str | None
@@ -217,7 +230,7 @@ class WorkLocationCreate(RequestModel):
         return normalized
 
 
-class WorkLocationRead(BaseModel):
+class WorkLocationRead(ResponseModel):
     id: int
     user_id: int
     date: dt_date
@@ -236,13 +249,13 @@ class WorkLocationUpdate(RequestModel):
 AccessTokenScope = Literal["pebble:read", "pebble:write"]
 
 
-class IcalFeedCreated(BaseModel):
+class IcalFeedCreated(ResponseModel):
     """New calendar subscription credential; the URL is only returned on rotation."""
 
     url_path: str
 
 
-class IcalFeedStatus(BaseModel):
+class IcalFeedStatus(ResponseModel):
     """Whether the user currently has an active calendar subscription."""
 
     configured: bool
@@ -265,7 +278,7 @@ class AccessTokenCreate(RequestModel):
         return list(dict.fromkeys(value))
 
 
-class AccessTokenCreated(BaseModel):
+class AccessTokenCreated(ResponseModel):
     """Response returned once, at creation time, including the raw token value."""
 
     id: str
@@ -275,7 +288,7 @@ class AccessTokenCreated(BaseModel):
     created_at: dt_datetime
 
 
-class AccessTokenRead(BaseModel):
+class AccessTokenRead(ResponseModel):
     """A previously issued token, without its raw secret value."""
 
     id: str
@@ -355,7 +368,7 @@ class PushSubscriptionCreate(RequestModel):
         return value
 
 
-class PushSubscriptionRead(BaseModel):
+class PushSubscriptionRead(ResponseModel):
     """A registered push subscription, without its auth secret."""
 
     id: str
@@ -373,7 +386,7 @@ class FcmTokenCreate(RequestModel):
     token: str = Field(min_length=1, max_length=4096)
 
 
-class FcmTokenRead(BaseModel):
+class FcmTokenRead(ResponseModel):
     """A registered FCM device token, without the token value itself."""
 
     id: str
@@ -407,7 +420,7 @@ class IntegrationClientCreate(RequestModel):
         return list(dict.fromkeys(value))
 
 
-class IntegrationClientCreated(BaseModel):
+class IntegrationClientCreated(ResponseModel):
     """Response returned once, at creation/rotation time, including the raw key value."""
 
     id: int
@@ -418,7 +431,7 @@ class IntegrationClientCreated(BaseModel):
     created_at: dt_datetime
 
 
-class IntegrationClientRead(BaseModel):
+class IntegrationClientRead(ResponseModel):
     """A previously issued integration client, without its raw key."""
 
     id: int
@@ -436,7 +449,7 @@ class IntegrationClientListResponse(ListResponse[IntegrationClientRead]):
     pass
 
 
-class AuditEntryRead(BaseModel):
+class AuditEntryRead(ResponseModel):
     """A single transactional audit-trail entry (issue #1054)."""
 
     id: int
@@ -492,7 +505,7 @@ class GanttTaskCreate(RequestModel):
         return self
 
 
-class GanttTaskRead(BaseModel):
+class GanttTaskRead(ResponseModel):
     id: str
     user_id: int
     label_id: str | None
@@ -530,7 +543,7 @@ class GanttTaskListResponse(ListResponse[GanttTaskRead]):
 # ---------------------------------------------------------------------------
 
 
-class UserPreferencesRead(BaseModel):
+class UserPreferencesRead(ResponseModel):
     """Response schema for the authenticated user's preferences blob."""
 
     user_id: int
@@ -606,7 +619,7 @@ class TimeOffEntryCreate(RequestModel):
         return self
 
 
-class TimeOffEntryRead(BaseModel):
+class TimeOffEntryRead(ResponseModel):
     """Response schema for a single time-off entry (REST endpoints).
 
     ``client_updated_at`` is intentionally excluded here — it is only surfaced
@@ -676,7 +689,7 @@ class TimeOffEntryListResponse(ListResponse[TimeOffEntryRead]):
 # ---------------------------------------------------------------------------
 
 
-class SyncRecordResult(BaseModel):
+class SyncRecordResult(ResponseModel):
     """Result for a single record in a sync push batch."""
 
     id: str
@@ -690,7 +703,7 @@ class SyncRecordResult(BaseModel):
 # Sync read schemas — include updated_at and deleted_at for pull responses.
 
 
-class LabelSyncRead(BaseModel):
+class LabelSyncRead(ResponseModel):
     id: str
     user_id: int
     name: str
@@ -701,7 +714,7 @@ class LabelSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
-class TaskSyncRead(BaseModel):
+class TaskSyncRead(ResponseModel):
     id: str
     user_id: int
     label_id: str | None
@@ -716,7 +729,7 @@ class TaskSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
-class TemplateSyncRead(BaseModel):
+class TemplateSyncRead(ResponseModel):
     id: str
     user_id: int
     label_id: str | None
@@ -729,7 +742,7 @@ class TemplateSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
-class WorkLocationSyncRead(BaseModel):
+class WorkLocationSyncRead(ResponseModel):
     id: int
     user_id: int
     date: dt_date
@@ -741,7 +754,7 @@ class WorkLocationSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
-class TimeOffEntrySyncRead(BaseModel):
+class TimeOffEntrySyncRead(ResponseModel):
     """Sync read shape for a time-off entry (includes soft-delete fields)."""
 
     id: int
@@ -932,7 +945,7 @@ class GanttTaskSyncItem(RequestModel):
         return self
 
 
-class GanttTaskSyncRead(BaseModel):
+class GanttTaskSyncRead(ResponseModel):
     id: str
     user_id: int
     label_id: str | None
@@ -948,13 +961,13 @@ class GanttTaskSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
-class UserExportSummary(BaseModel):
+class UserExportSummary(ResponseModel):
     id: int
     username: str
     display_name: str
 
 
-class UserDataExport(BaseModel):
+class UserDataExport(ResponseModel):
     exported_at: dt_datetime
     user: UserExportSummary
     labels: list[LabelSyncRead]
@@ -1011,13 +1024,24 @@ class SyncPushRequest(RequestModel):
     gantt_tasks: list[GanttTaskSyncItem] = Field(default_factory=list, max_length=MAX_SYNC_PUSH_ITEMS)
 
 
-class SyncPushResponse(BaseModel):
+class SyncPushResults(ResponseModel):
+    """The six entity collections always returned by a sync push, including empty ones."""
+
+    labels: list[SyncRecordResult]
+    tasks: list[SyncRecordResult]
+    templates: list[SyncRecordResult]
+    work_locations: list[SyncRecordResult]
+    time_off_entries: list[SyncRecordResult]
+    gantt_tasks: list[SyncRecordResult]
+
+
+class SyncPushResponse(ResponseModel):
     """Per-record results for a sync push batch."""
 
-    results: dict[str, list[SyncRecordResult]]
+    results: SyncPushResults
 
 
-class SyncPullResponse(BaseModel):
+class SyncPullResponse(ResponseModel):
     """All records (including soft-deleted) modified since a given timestamp."""
 
     labels: list[LabelSyncRead]
@@ -1029,7 +1053,7 @@ class SyncPullResponse(BaseModel):
     server_timestamp: dt_datetime
 
 
-class SyncStatusResponse(BaseModel):
+class SyncStatusResponse(ResponseModel):
     """Latest modification timestamps per entity type for the authenticated user."""
 
     labels_updated_at: dt_datetime | None
@@ -1040,3 +1064,151 @@ class SyncStatusResponse(BaseModel):
     gantt_tasks_updated_at: dt_datetime | None
     preferences_updated_at: dt_datetime | None
     server_timestamp: dt_datetime
+
+
+# ---------------------------------------------------------------------------
+# Operational endpoints (health, metrics, MCP capability manifest, Web Push key)
+# ---------------------------------------------------------------------------
+
+
+class HealthLinks(ResponseModel):
+    """Paths of the dependency probes, relative to the host."""
+
+    liveness: str
+    readiness: str
+
+
+class HealthSummary(ResponseModel):
+    """Static overview returned by ``GET /api/health``."""
+
+    status: Literal["ok"]
+    version: str
+    commit: str
+    links: HealthLinks
+
+
+class LivenessResponse(ResponseModel):
+    """Process-level alive signal; never touches a dependency."""
+
+    status: Literal["alive"]
+
+
+DependencyStatus = Literal["ok", "unreachable"]
+
+
+# Plain BaseModel: the route leaves ``database`` out when no database is configured.
+class ReadinessResponse(BaseModel):
+    """Result of the dependency checks; returned with HTTP 200 (``ok``) or 503 (``degraded``)."""
+
+    status: Literal["ok", "degraded"]
+    auth: DependencyStatus
+    # Absent (not null) when DATABASE_ENABLED is false, so the database was not checked.
+    database: DependencyStatus | None = None
+
+
+class RequestMetricsSnapshot(ResponseModel):
+    """Rolling-window request metrics from ``GET /api/metrics``."""
+
+    uptime_seconds: float
+    request_rate_per_second: float
+    error_rate: float
+    latency_p50_ms: float
+    latency_p99_ms: float
+    window_seconds: int
+    request_count_in_window: int
+
+
+class VapidPublicKeyResponse(ResponseModel):
+    """Public key for ``PushManager.subscribe()``; null when Web Push is not configured."""
+
+    publicKey: str | None
+
+
+class McpToolAccess(ResponseModel):
+    tier: str
+
+
+# Plain BaseModel: ``effect_detail`` is omitted from read tools (``response_model_exclude_unset``).
+class McpToolCapability(BaseModel):
+    """One tool in the MCP capability manifest (contract v1)."""
+
+    name: str
+    effect: Literal["read", "write"]
+    # Present only for non-read tools.
+    effect_detail: str | None = None
+    requires_confirmation: bool
+    access: McpToolAccess
+
+
+class McpCapabilities(ResponseModel):
+    """Authoritative MCP capability manifest."""
+
+    contract_version: int
+    enabled: bool
+    mount_path: str
+    version: str | None
+    tools: list[McpToolCapability]
+    # Always empty in contract v1.
+    resources: list[object]
+    prompts: list[object]
+
+
+# ---------------------------------------------------------------------------
+# Holiday proxies
+#
+# These routes pass the upstream JSON through unchanged (``JSONResponse``), so the
+# models below document the fields Worktime relies on rather than validate them.
+# Fields the upstream may omit are optional; unknown upstream fields pass through.
+# ---------------------------------------------------------------------------
+
+
+# Plain BaseModel: the holiday proxies forward the upstream JSON, which omits some of these fields.
+class PublicHolidayRead(BaseModel):
+    """One entry from date.nager.at ``/PublicHolidays``, already filtered to ``types`` containing ``Public``."""
+
+    date: dt_date
+    localName: str
+    name: str
+    countryCode: str
+    is_global: bool = Field(alias="global")
+    counties: list[str] | None = None
+    types: list[str]
+    fixed: bool | None = None
+    launchYear: int | None = None
+
+
+class SchoolHolidayName(ResponseModel):
+    language: str
+    text: str
+
+
+# Plain BaseModel: forwarded upstream JSON (see PublicHolidayRead).
+class SchoolHolidaySubdivision(BaseModel):
+    code: str
+    shortName: str | None = None
+
+
+# Plain BaseModel: forwarded upstream JSON (see PublicHolidayRead).
+class SchoolHolidayRead(BaseModel):
+    """One entry from openholidaysapi.org ``/SchoolHolidays``."""
+
+    id: str
+    startDate: dt_date
+    endDate: dt_date
+    type: str
+    name: list[SchoolHolidayName]
+    regionalScope: str
+    temporalScope: str
+    nationwide: bool
+    # The upstream omits this for nationwide holidays.
+    subdivisions: list[SchoolHolidaySubdivision] | None = None
+
+
+class LongWeekendRead(ResponseModel):
+    """One period from date.nager.at ``/LongWeekend``."""
+
+    startDate: dt_date
+    endDate: dt_date
+    dayCount: int
+    needBridgeDay: bool
+    bridgeDays: list[dt_date]

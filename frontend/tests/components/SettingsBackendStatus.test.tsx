@@ -1,3 +1,5 @@
+import type { HealthSummary } from "@/api-types";
+import { jsonResponse } from "@/mocks/response";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +15,16 @@ describe("SettingsBackendStatus", () => {
   });
 
   it("shows when the public backend is available", async () => {
-    server.use(http.get("*/api/health", () => HttpResponse.json({ status: "ok" })));
+    server.use(
+      http.get("*/api/health", () =>
+        jsonResponse<HealthSummary>({
+          status: "ok",
+          version: "0.0.0",
+          commit: "unknown",
+          links: { liveness: "/api/health/liveness", readiness: "/api/health/readiness" },
+        }),
+      ),
+    );
     render(<SettingsBackendStatus />);
     expect(await screen.findByText(m.backend_status_available())).toBeInTheDocument();
   });
@@ -21,7 +32,14 @@ describe("SettingsBackendStatus", () => {
   it("shows an unavailable state and allows retrying", async () => {
     let healthy = false;
     const healthCheck = vi.fn(() =>
-      healthy ? HttpResponse.json({ status: "ok" }) : new HttpResponse(null, { status: 503 }),
+      healthy
+        ? jsonResponse<HealthSummary>({
+            status: "ok",
+            version: "0.0.0",
+            commit: "unknown",
+            links: { liveness: "/api/health/liveness", readiness: "/api/health/readiness" },
+          })
+        : new HttpResponse(null, { status: 503 }),
     );
     server.use(http.get("*/api/health", healthCheck));
     const user = userEvent.setup();

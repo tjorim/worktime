@@ -3,17 +3,9 @@ import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
+import type { PublicHoliday } from "@/api-types";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import * as m from "@/paraglide/messages.js";
-
-export interface PublicHoliday {
-  date: string;
-  name: string;
-  localName: string;
-  global: boolean;
-  counties: string[] | null;
-  types: string[];
-}
 
 /** Regional holidays (`global: false` or limited to counties) only apply to part of a country. */
 export const isNationwideHoliday = (holiday: PublicHoliday) =>

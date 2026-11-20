@@ -1,3 +1,11 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type {
+  SyncStatusResponse,
+  SyncPushResponse,
+  SyncPullResponse,
+  PreferencesResponse,
+} from "@/api-types";
+import { uncheckedBody, jsonBody } from "@/mocks/response";
 /**
  * Integration tests for account-backed sync user journeys.
  *
@@ -81,13 +89,14 @@ const emptyStatus = {
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
 
-const emptyPushResponse = { results: {} };
+const emptyPushResponse = { results: syncPushResults({}) };
 
 /** A server side holding one live label, matching `populatedStatus`. */
 const populatedPullResponse = {
   ...emptyPullResponse,
   labels: [
     {
+      client_updated_at: "2026-01-01T00:00:00Z",
       id: "server-label-1",
       user_id: 1,
       name: "Server label",
@@ -129,7 +138,11 @@ function buildFetchMock(handlers: Record<string, unknown>): FetchFn {
         return resolved;
       }
     }
-    return { ok: false, status: 404, json: async () => ({ error: "not found" }) };
+    return {
+      ok: false,
+      status: 404,
+      json: async () => uncheckedBody("control", { error: "not found" }),
+    };
   }) as FetchFn;
 }
 
@@ -297,7 +310,7 @@ describe("Onboarding wizard closes once a signed-in user's data restores", () =>
 describe("§2 Branch D — both sides empty → cursor stored immediately", () => {
   it("transitions to done and stores cursor when neither local nor server has data", async () => {
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => emptyStatus },
+      "/api/sync/status": { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -325,7 +338,11 @@ describe("§2 Branch D — both sides empty → cursor stored immediately", () =
 
   it("enters error phase when the status call fails", async () => {
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: false, status: 500, json: async () => ({}) },
+      "/api/sync/status": {
+        ok: false,
+        status: 500,
+        json: async () => uncheckedBody("control", {}),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -360,8 +377,11 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => emptyStatus },
-      "/api/sync/push": { ok: true, json: async () => emptyPushResponse },
+      "/api/sync/status": { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) },
+      "/api/sync/push": {
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -385,8 +405,8 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => emptyStatus },
-      "/api/sync/push": { ok: false, status: 500, json: async () => ({}) },
+      "/api/sync/status": { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) },
+      "/api/sync/push": { ok: false, status: 500, json: async () => uncheckedBody("control", {}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -402,8 +422,11 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => emptyStatus },
-      "/api/sync/push": { ok: true, json: async () => emptyPushResponse },
+      "/api/sync/status": { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) },
+      "/api/sync/push": {
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -430,9 +453,19 @@ describe("§2 Branch B / §4 — second-device restore", () => {
   it("pulls server data when local is empty and stores cursor", async () => {
     // Local is empty (no seed)
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => populatedStatus },
-      "/api/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/api/preferences": { ok: false, status: 404, json: async () => ({}) },
+      "/api/sync/status": {
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      },
+      "/api/sync/pull": {
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      },
+      "/api/preferences": {
+        ok: false,
+        status: 404,
+        json: async () => uncheckedBody("control", {}),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -464,9 +497,18 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     };
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => populatedStatus },
-      "/api/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/api/preferences": { ok: true, json: async () => serverPrefs },
+      "/api/sync/status": {
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      },
+      "/api/sync/pull": {
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      },
+      "/api/preferences": {
+        ok: true,
+        json: async () => jsonBody<PreferencesResponse>(serverPrefs),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -502,10 +544,16 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/status": {
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      },
       // Branch C pulls the server side up front so the dialog can show how
       // many records each option would discard.
-      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
+      "/api/sync/pull": {
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(populatedPullResponse),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -537,17 +585,17 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       if (url.includes("/api/sync/status")) {
         statusCalls++;
         return statusCalls === 1
-          ? { ok: true, json: async () => populatedStatus }
-          : { ok: true, json: async () => emptyStatus };
+          ? { ok: true, json: async () => jsonBody<SyncStatusResponse>(populatedStatus) }
+          : { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) };
       }
       if (url.includes("/api/sync/push")) {
         pushBodies.push(String(init?.body ?? ""));
-        return { ok: true, json: async () => emptyPushResponse };
+        return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
       }
       if (url.includes("/api/sync/pull")) {
-        return { ok: true, json: async () => populatedPullResponse };
+        return { ok: true, json: async () => jsonBody<SyncPullResponse>(populatedPullResponse) };
       }
-      return { ok: false, status: 404, json: async () => ({}) };
+      return { ok: false, status: 404, json: async () => uncheckedBody("control", {}) };
     }) as unknown as FetchFn;
 
     renderSync(true, TEST_USER_ID, smartFetch);
@@ -583,22 +631,32 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/status": {
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      },
       "/api/sync/push": {
         ok: true,
-        json: async () => ({
-          results: {
-            tasks: [
-              {
-                id: "local-task-1",
-                status: "conflict",
-                server_updated_at: "2026-01-03T00:00:00.000Z",
-              },
-            ],
-          },
-        }),
+        json: async () =>
+          jsonBody<SyncPushResponse>({
+            results: syncPushResults({
+              tasks: [
+                {
+                  conflict_reason: null,
+                  code: null,
+                  conflicting_task_id: null,
+                  id: "local-task-1",
+                  status: "conflict",
+                  server_updated_at: "2026-01-03T00:00:00.000Z",
+                },
+              ],
+            }),
+          }),
       },
-      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
+      "/api/sync/pull": {
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(populatedPullResponse),
+      },
       "/api/client-diagnostics": { ok: true, status: 204 },
     });
 
@@ -620,10 +678,20 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => emptyStatus },
-      "/api/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/api/sync/push": { ok: true, json: async () => emptyPushResponse },
-      "/api/preferences": { ok: false, status: 404, json: async () => ({}) },
+      "/api/sync/status": { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) },
+      "/api/sync/pull": {
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+      },
+      "/api/sync/push": {
+        ok: true,
+        json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+      },
+      "/api/preferences": {
+        ok: false,
+        status: 404,
+        json: async () => uncheckedBody("control", {}),
+      },
     });
 
     // First status call → conflict; subsequent calls → empty (post-resolution).
@@ -632,8 +700,8 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       if (url.includes("/api/sync/status")) {
         statusCalls++;
         return statusCalls === 1
-          ? { ok: true, json: async () => populatedStatus }
-          : { ok: true, json: async () => emptyStatus };
+          ? { ok: true, json: async () => jsonBody<SyncStatusResponse>(populatedStatus) }
+          : { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) };
       }
       return mockFetch(url, init);
     }) as unknown as FetchFn;
@@ -675,19 +743,19 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       if (url.includes("/api/sync/status")) {
         statusCalls++;
         return statusCalls === 1
-          ? { ok: true, json: async () => populatedStatus }
-          : { ok: true, json: async () => emptyStatus };
+          ? { ok: true, json: async () => jsonBody<SyncStatusResponse>(populatedStatus) }
+          : { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) };
       }
       if (url.includes("/api/sync/pull")) {
-        return { ok: true, json: async () => emptyPullResponse };
+        return { ok: true, json: async () => jsonBody<SyncPullResponse>(emptyPullResponse) };
       }
       if (url.includes("/api/sync/push")) {
-        return { ok: false, status: 500, json: async () => ({}) };
+        return { ok: false, status: 500, json: async () => uncheckedBody("control", {}) };
       }
       if (url.includes("/api/client-diagnostics")) {
-        return { ok: true, status: 204, json: async () => ({}) };
+        return { ok: true, status: 204, json: async () => uncheckedBody("control", {}) };
       }
-      return { ok: false, status: 404, json: async () => ({}) };
+      return { ok: false, status: 404, json: async () => uncheckedBody("control", {}) };
     }) as unknown as FetchFn;
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -717,16 +785,16 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       if (url.includes("/api/sync/status")) {
         statusCalls++;
         return statusCalls === 1
-          ? { ok: true, json: async () => populatedStatus }
-          : { ok: true, json: async () => emptyStatus };
+          ? { ok: true, json: async () => jsonBody<SyncStatusResponse>(populatedStatus) }
+          : { ok: true, json: async () => jsonBody<SyncStatusResponse>(emptyStatus) };
       }
       if (url.includes("/api/sync/pull")) {
-        return { ok: true, json: async () => emptyPullResponse };
+        return { ok: true, json: async () => jsonBody<SyncPullResponse>(emptyPullResponse) };
       }
       if (url.includes("/api/preferences")) {
-        return { ok: false, status: 404, json: async () => ({}) };
+        return { ok: false, status: 404, json: async () => uncheckedBody("control", {}) };
       }
-      return { ok: false, json: async () => ({}) };
+      return { ok: false, json: async () => uncheckedBody("control", {}) };
     }) as unknown as FetchFn;
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -758,8 +826,14 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/api/sync/status": { ok: true, json: async () => populatedStatus },
-      "/api/sync/pull": { ok: true, json: async () => populatedPullResponse },
+      "/api/sync/status": {
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(populatedStatus),
+      },
+      "/api/sync/pull": {
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(populatedPullResponse),
+      },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);

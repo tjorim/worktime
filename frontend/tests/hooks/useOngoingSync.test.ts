@@ -1,3 +1,11 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type {
+  SyncPushResponse,
+  SyncPullResponse,
+  PreferencesResponse,
+  SyncStatusResponse,
+} from "@/api-types";
+import { uncheckedBody, jsonBody } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
@@ -27,8 +35,8 @@ const emptySyncPayload = (): SyncPushPayload => ({
   gantt_tasks: [],
 });
 
-const emptyPushResponse = { results: {} };
-const failedResponse = { ok: false, json: async () => null };
+const emptyPushResponse = { results: syncPushResults({}) };
+const failedResponse = { ok: false, json: async () => uncheckedBody("control", null) };
 
 const incrementalPullResponse = {
   labels: [],
@@ -76,11 +84,13 @@ describe("useOngoingSync", () => {
     mockFetch.mockImplementation(async (url: string) => ({
       ok: true,
       json: async () =>
-        url.includes("/push")
-          ? emptyPushResponse
-          : url.includes("/pull")
-            ? incrementalPullResponse
-            : {},
+        jsonBody<SyncPushResponse | SyncPullResponse | null>(
+          url.includes("/push")
+            ? emptyPushResponse
+            : url.includes("/pull")
+              ? incrementalPullResponse
+              : null,
+        ),
     }));
     act(() => result.current.triggerPull());
     await waitFor(() => expect(result.current.hasSyncError).toBe(false));
@@ -96,9 +106,17 @@ describe("useOngoingSync", () => {
     mockFetch.mockImplementation(async (url: string) => ({
       ok: true,
       json: async () =>
-        url === "/api/preferences"
-          ? { data, client_updated_at: "2026-01-01T00:00:00.000Z" }
-          : incrementalPullResponse,
+        jsonBody<SyncPullResponse | PreferencesResponse | null>(
+          url === "/api/preferences"
+            ? {
+                user_id: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                data,
+                client_updated_at: "2026-01-01T00:00:00.000Z",
+              }
+            : incrementalPullResponse,
+        ),
     }));
     const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
     for (let cycle = 0; cycle < 2; cycle++) {
@@ -192,10 +210,19 @@ describe("useOngoingSync", () => {
       //    (a status-only refresh would silently skip concurrent changes from
       //    other devices — see useOngoingSync.enqueueChange)
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
-        .mockResolvedValueOnce({ ok: true, json: async () => postPushPullResponse }); // post-push pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+        }) // enqueueChange push
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(postPushPullResponse),
+        }); // post-push pull
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -253,6 +280,7 @@ describe("useOngoingSync", () => {
         labels: [],
         tasks: [
           {
+            created_at: "2026-01-01T00:00:00Z",
             id: "task-from-other-device",
             user_id: 1,
             label_id: null,
@@ -274,10 +302,19 @@ describe("useOngoingSync", () => {
       };
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
-        .mockResolvedValueOnce({ ok: true, json: async () => concurrentChangeFromOtherDevice }); // post-push pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+        }) // enqueueChange push
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(concurrentChangeFromOtherDevice),
+        }); // post-push pull
 
       const onIncrementalPull = vi.fn();
       const { result } = renderHook(() =>
@@ -352,7 +389,10 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: false }); // enqueueChange push fails
 
@@ -405,7 +445,10 @@ describe("useOngoingSync", () => {
             };
           });
         }
-        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+        return Promise.resolve({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        });
       });
 
       const { result, unmount } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -465,7 +508,10 @@ describe("useOngoingSync", () => {
           return Promise.resolve({ ok: false, status: 410 });
         }
         if (url === "/api/sync/pull") {
-          return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+          return Promise.resolve({
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          });
         }
         return Promise.resolve(failedResponse);
       });
@@ -515,9 +561,16 @@ describe("useOngoingSync", () => {
 
       mockFetch.mockImplementation((url: string) => {
         if (url === "/api/sync/push") {
-          return Promise.resolve({ ok: false, status: 409, json: async () => null });
+          return Promise.resolve({
+            ok: false,
+            status: 409,
+            json: async () => uncheckedBody("control", null),
+          });
         }
-        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+        return Promise.resolve({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        });
       });
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -567,9 +620,16 @@ describe("useOngoingSync", () => {
 
       mockFetch.mockImplementation((url: string) => {
         if (url === "/api/sync/push") {
-          return Promise.resolve({ ok: false, status: 409, json: async () => null });
+          return Promise.resolve({
+            ok: false,
+            status: 409,
+            json: async () => uncheckedBody("control", null),
+          });
         }
-        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+        return Promise.resolve({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        });
       });
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -603,9 +663,16 @@ describe("useOngoingSync", () => {
 
       mockFetch.mockImplementation((url: string) => {
         if (url === "/api/sync/push") {
-          return Promise.resolve({ ok: false, status: 503, json: async () => null });
+          return Promise.resolve({
+            ok: false,
+            status: 503,
+            json: async () => uncheckedBody("control", null),
+          });
         }
-        return Promise.resolve({ ok: true, json: async () => incrementalPullResponse });
+        return Promise.resolve({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        });
       });
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -649,10 +716,13 @@ describe("useOngoingSync", () => {
             return { ok: false };
           }
           // Second push (visibility-change flush) — succeed
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
-          return { ok: true, json: async () => incrementalPullResponse };
+          return {
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          };
         }
         return { ok: false };
       });
@@ -695,8 +765,14 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
       // Outbox is empty for both flushes, so no push is made — only a pull each time.
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // online pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }); // online pull
 
       const pullCallback = vi.fn();
       renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
@@ -752,13 +828,21 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
-        results: {
+        results: syncPushResults({
           labels: [
-            { id: "label-1", status: "conflict", conflict_reason: "server version is newer" },
+            {
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
+              id: "label-1",
+              status: "conflict" as const,
+              conflict_reason: "server version is newer",
+            },
           ],
-        },
+        }),
       };
       const serverLabel = {
+        client_updated_at: "2026-01-01T00:00:00Z",
         id: "label-1",
         user_id: 1,
         name: "Server Label",
@@ -769,6 +853,7 @@ describe("useOngoingSync", () => {
       };
       // Full pull response (no `since`) used to reconcile conflicted records.
       const fullPullResponse = {
+        gantt_tasks: [],
         labels: [serverLabel],
         tasks: [],
         templates: [],
@@ -777,6 +862,7 @@ describe("useOngoingSync", () => {
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
       const initialPullResponse = {
+        gantt_tasks: [],
         labels: [],
         tasks: [],
         templates: [],
@@ -788,10 +874,19 @@ describe("useOngoingSync", () => {
       // Initial flush: outbox is empty so only a pull is made (no push).
       // enqueueChange: push (conflict) then full pull to reconcile.
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(initialPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push with conflict
-        .mockResolvedValueOnce({ ok: true, json: async () => fullPullResponse }) // full pull after conflict
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(conflictPushResponse),
+        }) // enqueueChange push with conflict
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(fullPullResponse),
+        }) // full pull after conflict
         .mockResolvedValueOnce(failedResponse); // reconciliation preferences fetch
 
       const pullCallback = vi.fn();
@@ -830,13 +925,21 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
-        results: {
+        results: syncPushResults({
           labels: [
-            { id: "label-1", status: "conflict", conflict_reason: "server version is newer" },
+            {
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
+              id: "label-1",
+              status: "conflict" as const,
+              conflict_reason: "server version is newer",
+            },
           ],
-        },
+        }),
       };
       const initialPullResponse = {
+        gantt_tasks: [],
         labels: [],
         tasks: [],
         templates: [],
@@ -846,9 +949,15 @@ describe("useOngoingSync", () => {
       };
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(initialPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push with conflict
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(conflictPushResponse),
+        }) // push with conflict
         .mockResolvedValueOnce({ ok: false }); // reconciliation full pull fails
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -878,19 +987,21 @@ describe("useOngoingSync", () => {
         callCount++;
         if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false };
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
           return {
             ok: true,
-            json: async () => ({
-              labels: [],
-              tasks: [],
-              templates: [],
-              work_locations: [],
-              time_off_entries: [],
-              server_timestamp: "2026-01-02T00:00:00.000Z",
-            }),
+            json: async () =>
+              jsonBody<SyncPullResponse | PreferencesResponse | null>({
+                gantt_tasks: [],
+                labels: [],
+                tasks: [],
+                templates: [],
+                work_locations: [],
+                time_off_entries: [],
+                server_timestamp: "2026-01-02T00:00:00.000Z",
+              }),
           };
         }
         return { ok: false };
@@ -926,11 +1037,21 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
-        results: {
-          labels: [{ id: "lbl-1", status: "conflict", conflict_reason: "server is newer" }],
-        },
+        results: syncPushResults({
+          labels: [
+            {
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
+              id: "lbl-1",
+              status: "conflict" as const,
+              conflict_reason: "server is newer",
+            },
+          ],
+        }),
       };
       const pullWithConflict = {
+        gantt_tasks: [],
         labels: [],
         tasks: [],
         templates: [],
@@ -939,6 +1060,7 @@ describe("useOngoingSync", () => {
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
       const cleanPull = {
+        gantt_tasks: [],
         labels: [],
         tasks: [],
         templates: [],
@@ -949,12 +1071,24 @@ describe("useOngoingSync", () => {
 
       // Initial pull → conflict push + full pull → clean pull (triggered by visibility).
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // initial pull (empty outbox)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullWithConflict),
+        }) // initial pull (empty outbox)
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push (conflict)
-        .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // reconciliation full pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(conflictPushResponse),
+        }) // enqueueChange push (conflict)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullWithConflict),
+        }) // reconciliation full pull
         .mockResolvedValueOnce(failedResponse) // reconciliation preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => cleanPull }) // visibility-change pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(cleanPull),
+        }) // visibility-change pull
         .mockResolvedValueOnce(failedResponse); // visibility-change preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -994,9 +1128,18 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
-        results: {
-          labels: [{ id: "lbl-1", status: "conflict", conflict_reason: "server is newer" }],
-        },
+        results: syncPushResults({
+          labels: [
+            {
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
+              id: "lbl-1",
+              status: "conflict" as const,
+              conflict_reason: "server is newer",
+            },
+          ],
+        }),
       };
       const pullResponse = {
         labels: [],
@@ -1015,10 +1158,19 @@ describe("useOngoingSync", () => {
       const changePayload = { ...emptySyncPayload(), labels: [labelItem] };
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push conflict
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // reconciliation pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(conflictPushResponse),
+        }) // push conflict
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullResponse),
+        }) // reconciliation pull
         .mockResolvedValueOnce(failedResponse); // reconciliation preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -1049,9 +1201,18 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
-        results: {
-          labels: [{ id: "lbl-1", status: "conflict", conflict_reason: "server is newer" }],
-        },
+        results: syncPushResults({
+          labels: [
+            {
+              server_updated_at: null,
+              code: null,
+              conflicting_task_id: null,
+              id: "lbl-1",
+              status: "conflict" as const,
+              conflict_reason: "server is newer",
+            },
+          ],
+        }),
       };
       const pullResponse = {
         labels: [],
@@ -1071,10 +1232,19 @@ describe("useOngoingSync", () => {
 
       // Initial pull + push conflict + reconciliation pull.
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullResponse),
+        })
         .mockResolvedValueOnce(failedResponse)
-        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse })
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(conflictPushResponse),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullResponse),
+        })
         .mockResolvedValueOnce(failedResponse);
 
       return { changePayload, pullResponse };
@@ -1109,12 +1279,38 @@ describe("useOngoingSync", () => {
       const { changePayload } = await setupConflict(mockFetch);
 
       // After conflict + reconciliation, one more call: successful re-push.
-      const statusResponse = { server_timestamp: "2026-01-03T00:00:00.000Z" };
+      const statusResponse = {
+        labels_updated_at: null,
+        tasks_updated_at: null,
+        templates_updated_at: null,
+        work_locations_updated_at: null,
+        time_off_entries_updated_at: null,
+        gantt_tasks_updated_at: null,
+        preferences_updated_at: null,
+        server_timestamp: "2026-01-03T00:00:00.000Z",
+      };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ results: { labels: [{ id: "lbl-1", status: "ok" }] } }),
+        json: async () =>
+          jsonBody<SyncPushResponse>({
+            results: syncPushResults({
+              labels: [
+                {
+                  server_updated_at: null,
+                  conflict_reason: null,
+                  code: null,
+                  conflicting_task_id: null,
+                  id: "lbl-1",
+                  status: "ok",
+                },
+              ],
+            }),
+          }),
       }); // re-push
-      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => statusResponse }); // status fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncStatusResponse>(statusResponse),
+      }); // status fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -1169,9 +1365,15 @@ describe("useOngoingSync", () => {
       // Initial mount flush (online): only pull (outbox is empty).
       // triggerPull: only pull (outbox still empty).
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // triggerPull pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // triggerPull pull
         .mockResolvedValueOnce(failedResponse); // triggerPull preferences fetch
 
       const pullCallback = vi.fn();
@@ -1205,9 +1407,15 @@ describe("useOngoingSync", () => {
       };
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial pull
         .mockResolvedValueOnce(failedResponse) // initial preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => laterPullResponse }) // triggerPull pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(laterPullResponse),
+        }) // triggerPull pull
         .mockResolvedValueOnce(failedResponse); // triggerPull preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -1227,7 +1435,10 @@ describe("useOngoingSync", () => {
 
     it("marks automatic pull requests as safe from unauthorized redirects", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
-      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+      });
 
       renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -1260,8 +1471,14 @@ describe("useOngoingSync", () => {
       };
       // triggerPull should flush outbox (push) then pull — caller just calls triggerPull().
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // outbox flush push
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPushResponse>(emptyPushResponse),
+        }) // outbox flush push
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(pullResponse),
+        }) // pull
         .mockResolvedValueOnce(failedResponse); // preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -1316,11 +1533,17 @@ describe("useOngoingSync", () => {
       };
 
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial mount pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        }) // initial mount pull
         .mockResolvedValueOnce(failedResponse) // initial mount preferences fetch
         .mockImplementationOnce(() => heldPull) // first triggerPull's pull — held open
         .mockResolvedValueOnce(failedResponse) // first triggerPull's preferences fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => queuedPullResponse }) // queued triggerPull's pull
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(queuedPullResponse),
+        }) // queued triggerPull's pull
         .mockResolvedValueOnce(failedResponse); // queued triggerPull's preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
@@ -1349,7 +1572,10 @@ describe("useOngoingSync", () => {
       // Let the first flush's pull resolve. The queued triggerPull should
       // now run on its own — no further action from the test.
       await act(async () => {
-        resolveHeldPull({ ok: true, json: async () => incrementalPullResponse });
+        resolveHeldPull({
+          ok: true,
+          json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+        });
       });
 
       await waitFor(() => {
@@ -1391,10 +1617,13 @@ describe("useOngoingSync", () => {
         callCount++;
         if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false }; // First push fails.
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
-          return { ok: true, json: async () => incrementalPullResponse };
+          return {
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          };
         }
         return { ok: false };
       });
@@ -1460,10 +1689,13 @@ describe("useOngoingSync", () => {
         callCount++;
         if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false }; // Initial flush fails.
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
-          return { ok: true, json: async () => incrementalPullResponse };
+          return {
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          };
         }
         return { ok: false };
       });
@@ -1522,10 +1754,13 @@ describe("useOngoingSync", () => {
         callCount++;
         if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false }; // Initial flush fails.
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
-          return { ok: true, json: async () => incrementalPullResponse };
+          return {
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          };
         }
         return { ok: false };
       });
@@ -1572,10 +1807,13 @@ describe("useOngoingSync", () => {
         callCount++;
         if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false }; // Initial flush fails.
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
-          return { ok: true, json: async () => incrementalPullResponse };
+          return {
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          };
         }
         return { ok: false };
       });
@@ -1612,10 +1850,13 @@ describe("useOngoingSync", () => {
         callCount++;
         if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false }; // Initial flush fails.
-          return { ok: true, json: async () => emptyPushResponse };
+          return { ok: true, json: async () => jsonBody<SyncPushResponse>(emptyPushResponse) };
         }
         if (url.startsWith("/api/sync/pull")) {
-          return { ok: true, json: async () => incrementalPullResponse };
+          return {
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(incrementalPullResponse),
+          };
         }
         return { ok: false };
       });

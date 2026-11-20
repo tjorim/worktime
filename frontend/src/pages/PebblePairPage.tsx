@@ -9,6 +9,7 @@ import * as m from "@/paraglide/messages.js";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { pebblePairErrorMessages } from "@/utils/apiErrorCodes";
 import { logger } from "@/utils/logger";
+import type { CreatedApiToken } from "@/api-types";
 
 export function PebblePairPage() {
   const { isAuthenticated, isValidating, triggerLogin } = useAuth();
@@ -35,7 +36,7 @@ export function PebblePairPage() {
           method: "POST",
         });
         if (!response.ok) throw await ApiError.fromResponse(response);
-        const result = (await response.json()) as { token?: string };
+        const result = (await response.json()) as CreatedApiToken;
         if (!result.token) throw new Error("Pairing response did not include a token");
         const payload = encodeURIComponent(JSON.stringify({ accessToken: result.token }));
         window.location.href = `pebblejs://close#${payload}`;

@@ -3,25 +3,10 @@ import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { accessTokenErrorMessages } from "@/utils/apiErrorCodes";
+import type { AccessTokenListResponse, ApiToken, CreatedApiToken } from "@/api-types";
 
 /** Matches `AccessTokenCreate.name` (`max_length=100`) in the backend schema. */
 export const API_TOKEN_NAME_MAX_LENGTH = 100;
-
-export interface ApiToken {
-  id: string;
-  name: string;
-  token_preview: string;
-  scopes: Array<"pebble:read" | "pebble:write">;
-  created_at: string;
-  last_used_at: string | null;
-}
-
-export interface CreatedApiToken {
-  id: string;
-  name: string;
-  token: string;
-  scopes: Array<"pebble:read" | "pebble:write">;
-}
 
 interface UseSettingsApiTokensParams {
   isAuthenticated: boolean;
@@ -46,7 +31,7 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
       if (!response.ok) {
         throw await ApiError.fromResponse(response);
       }
-      const payload = (await response.json()) as { items: ApiToken[] };
+      const payload = (await response.json()) as AccessTokenListResponse;
       setApiTokens(payload.items);
     } catch (error) {
       logger.error("Failed to load API tokens:", error);

@@ -1,3 +1,6 @@
+import { syncPushResults } from "@/mocks/data/syncStore";
+import type { SyncPullResponse, SyncPushResponse } from "@/api-types";
+import { jsonBody } from "@/mocks/response";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildBackupPayload,
@@ -545,6 +548,9 @@ describe("appBackup", () => {
             ...emptyPullResponse,
             labels: [
               {
+                user_id: 1,
+                client_updated_at: "2026-01-01T00:00:00Z",
+                created_at: "2026-01-01T00:00:00Z",
                 id: "server-only",
                 name: "Old",
                 color: "#198754",
@@ -552,11 +558,32 @@ describe("appBackup", () => {
                 updated_at: "2026-01-01T00:00:00Z",
               },
             ],
-            tasks: [{ id: "untouched", label_id: "server-only", deleted_at: null }],
+            tasks: [
+              {
+                user_id: 1,
+                client_updated_at: "2026-01-01T00:00:00Z",
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                gantt_task_id: null,
+                text: "",
+                start_time: "2026-01-01T00:00:00Z",
+                stop_time: null,
+                includes_break: false,
+                id: "untouched",
+                label_id: "server-only",
+                deleted_at: null,
+              },
+            ],
           };
           mockFetch
-            .mockResolvedValueOnce({ ok: true, json: async () => server })
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+            .mockResolvedValueOnce({
+              ok: true,
+              json: async () => jsonBody<SyncPullResponse>(server),
+            })
+            .mockResolvedValueOnce({
+              ok: true,
+              json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+            });
           const payload = {
             version: 1 as const,
             exportedAt: "",
@@ -565,7 +592,10 @@ describe("appBackup", () => {
               ? { tasks: [], templates: [], timeOff: [], workLocations: {}, ganttTasks: [] }
               : {}),
           };
-          mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+          mockFetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+          });
           await restoreAppBackup(payload, mockFetch);
           expect(mockFetch).toHaveBeenCalledTimes(all ? 3 : 2);
           const body = JSON.parse(mockFetch.mock.calls[1]![1].body);
@@ -584,8 +614,14 @@ describe("appBackup", () => {
       it("pulls, pushes a single keep-local replace payload, then reloads", async () => {
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // GET /api/sync/pull
-          .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) }); // POST /api/sync/push
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+          }) // GET /api/sync/pull
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+          }); // POST /api/sync/push
 
         await restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch);
 
@@ -610,8 +646,14 @@ describe("appBackup", () => {
         const preloadSpy = vi.spyOn(collectionsModule, "preloadSyncCollections");
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse })
-          .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+          });
 
         await restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch);
 
@@ -639,6 +681,9 @@ describe("appBackup", () => {
           ...emptyPullResponse,
           labels: [
             {
+              user_id: 1,
+              client_updated_at: "2026-01-01T00:00:00Z",
+              created_at: "2026-01-01T00:00:00Z",
               id: "server-only",
               name: "Old",
               color: "#000000",
@@ -648,7 +693,10 @@ describe("appBackup", () => {
           ],
         };
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => pullResponseWithExtraLabel }) // pull succeeds
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(pullResponseWithExtraLabel),
+          }) // pull succeeds
           .mockResolvedValueOnce({ ok: false, status: 500 }); // push fails
 
         await expect(
@@ -678,6 +726,12 @@ describe("appBackup", () => {
           ...emptyPullResponse,
           tasks: [
             {
+              user_id: 1,
+              client_updated_at: "2026-01-01T00:00:00Z",
+              created_at: "2026-01-01T00:00:00Z",
+              label_id: null,
+              gantt_task_id: null,
+              includes_break: false,
               id: "server-task",
               text: "Existing",
               start_time: "2026-01-01T08:00:00.000Z",
@@ -688,8 +742,14 @@ describe("appBackup", () => {
           ],
         };
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => pullResponseWithServerTask })
-          .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPullResponse>(pullResponseWithServerTask),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => jsonBody<SyncPushResponse>({ results: syncPushResults({}) }),
+          });
 
         await restoreAppBackup({ exportedAt: "", version: 1, labels }, mockFetch);
 
@@ -705,16 +765,27 @@ describe("appBackup", () => {
       it("throws and does not reload when the server reports a per-record conflict", async () => {
         const labels = [{ id: "l1", name: "Work", color: "#198754" }];
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse })
           .mockResolvedValueOnce({
             ok: true,
-            json: async () => ({
-              results: {
-                labels: [
-                  { id: "l1", status: "conflict", server_updated_at: "2026-01-03T00:00:00.000Z" },
-                ],
-              },
-            }),
+            json: async () => jsonBody<SyncPullResponse>(emptyPullResponse),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () =>
+              jsonBody<SyncPushResponse>({
+                results: syncPushResults({
+                  labels: [
+                    {
+                      conflict_reason: null,
+                      code: null,
+                      conflicting_task_id: null,
+                      id: "l1",
+                      status: "conflict",
+                      server_updated_at: "2026-01-03T00:00:00.000Z",
+                    },
+                  ],
+                }),
+              }),
           });
 
         await expect(

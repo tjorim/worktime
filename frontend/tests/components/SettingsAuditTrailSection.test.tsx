@@ -1,3 +1,5 @@
+import type { AuditEntryListResponse } from "@/api-types";
+import { jsonResponse } from "@/mocks/response";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -53,11 +55,13 @@ function Harness({
 
 describe("SettingsAuditTrailSection", () => {
   it("loads the personal trail with an explicit user scope and renders its client", async () => {
-    const fetchFn = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ items: [entry(30)], total: 1 }), {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse<AuditEntryListResponse>(
+        { items: [entry(30)], total: 1 },
+        {
           headers: { "Content-Type": "application/json" },
-        }),
+        },
+      ),
     );
 
     render(<Harness fetchFn={fetchFn} userId={7} />);
@@ -71,9 +75,12 @@ describe("SettingsAuditTrailSection", () => {
     const firstPage = Array.from({ length: 25 }, (_, index) => entry(100 - index));
     const fetchFn = vi.fn(async (input: string) => {
       const items = input.includes("before_id=76") ? [entry(75)] : firstPage;
-      return new Response(JSON.stringify({ items, total: items.length }), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse<AuditEntryListResponse>(
+        { items, total: items.length },
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     });
     const user = userEvent.setup();
 
@@ -92,13 +99,17 @@ describe("SettingsAuditTrailSection", () => {
     const firstPage = Array.from({ length: 25 }, (_, index) => entry(100 - index));
     const initialFetch = vi
       .fn<(input: string) => Promise<Response>>()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ items: firstPage })))
+      .mockResolvedValueOnce(
+        jsonResponse<AuditEntryListResponse>({ items: firstPage, total: firstPage.length }),
+      )
       .mockReturnValueOnce(stalePage.promise);
-    const renewedFetch = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ items: [entry(200)] }), {
+    const renewedFetch = vi.fn(async () =>
+      jsonResponse<AuditEntryListResponse>(
+        { items: [entry(200)], total: 1 },
+        {
           headers: { "Content-Type": "application/json" },
-        }),
+        },
+      ),
     );
     const user = userEvent.setup();
     const { rerender } = render(<Harness fetchFn={initialFetch} teamWide />);
@@ -109,9 +120,12 @@ describe("SettingsAuditTrailSection", () => {
 
     await act(async () => {
       stalePage.resolve(
-        new Response(JSON.stringify({ items: [entry(75)] }), {
-          headers: { "Content-Type": "application/json" },
-        }),
+        jsonResponse<AuditEntryListResponse>(
+          { items: [entry(75)], total: 1 },
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
       );
       await stalePage.promise;
     });
@@ -149,21 +163,19 @@ it("uses names and preserves fallback ids without CSS capitalisation", () => {
 });
 
 it("resolves existing personal task names and avoids cross-account name collisions", async () => {
-  const fetchFn = vi.fn(
-    async () =>
-      new Response(
-        JSON.stringify({
-          items: [
-            { ...entry(30), resource_type: "time_tracking_task" },
-            {
-              ...entry(31),
-              actor_user_id: 8,
-              resource_id: "entry-30",
-              resource_type: "time_tracking_task",
-            },
-          ],
-        }),
-      ),
+  const fetchFn = vi.fn(async () =>
+    jsonResponse<AuditEntryListResponse>({
+      total: 2,
+      items: [
+        { ...entry(30), resource_type: "time_tracking_task" },
+        {
+          ...entry(31),
+          actor_user_id: 8,
+          resource_id: "entry-30",
+          resource_type: "time_tracking_task",
+        },
+      ],
+    }),
   );
   render(<Harness fetchFn={fetchFn} userId={7} />);
   expect(await screen.findByText("Updated · Task Write report")).toBeVisible();

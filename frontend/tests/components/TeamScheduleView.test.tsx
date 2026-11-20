@@ -1,3 +1,4 @@
+import { uncheckedJson } from "@/mocks/response";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
@@ -75,8 +76,8 @@ describe("TeamScheduleView", () => {
     localStorage.clear();
     // The view probes the configured helper's health before it shows the team.
     server.use(
-      http.get(`${HELPER_URL}/health`, () => HttpResponse.json({ status: "ok" })),
-      http.get(`${OTHER_HELPER_URL}/health`, () => HttpResponse.json({ status: "ok" })),
+      http.get(`${HELPER_URL}/health`, () => uncheckedJson("hday-helper", { status: "ok" })),
+      http.get(`${OTHER_HELPER_URL}/health`, () => uncheckedJson("hday-helper", { status: "ok" })),
     );
   });
 
@@ -110,7 +111,7 @@ describe("TeamScheduleView", () => {
     seedHelperUrl(HELPER_URL);
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
-        HttpResponse.json(teamHdayPayload(params.teamId as string)),
+        uncheckedJson("hday-helper", teamHdayPayload(params.teamId as string)),
       ),
     );
 
@@ -136,7 +137,7 @@ describe("TeamScheduleView", () => {
     }
 
     it("tells a wrong team ID apart: 404 names the ID and says to check it", async () => {
-      renderFailing(() => HttpResponse.json({ detail: "Team not found" }, { status: 404 }));
+      renderFailing(() => uncheckedJson("error", { detail: "Team not found" }, { status: 404 }));
 
       expect(await screen.findByText(m.team_error_not_found({ id: "eng" }))).toBeInTheDocument();
       expect(screen.queryByText(/Team not found/)).not.toBeInTheDocument();
@@ -144,14 +145,16 @@ describe("TeamScheduleView", () => {
     });
 
     it("asks for a valid ID when the helper rejects the format", async () => {
-      renderFailing(() => HttpResponse.json({ detail: "Invalid team_id format" }, { status: 400 }));
+      renderFailing(() =>
+        uncheckedJson("error", { detail: "Invalid team_id format" }, { status: 400 }),
+      );
 
       expect(await screen.findByText(m.team_error_invalid_id({ id: "eng" }))).toBeInTheDocument();
       expect(screen.queryByText(/Invalid team_id format/)).not.toBeInTheDocument();
     });
 
     it("says the helper failed on a 5xx, without the helper's English detail", async () => {
-      renderFailing(() => HttpResponse.json({ detail: "share unreachable" }, { status: 503 }));
+      renderFailing(() => uncheckedJson("error", { detail: "share unreachable" }, { status: 503 }));
 
       expect(await screen.findByText(m.team_error_helper())).toBeInTheDocument();
       expect(screen.queryByText(/share unreachable/)).not.toBeInTheDocument();
@@ -169,7 +172,7 @@ describe("TeamScheduleView", () => {
     });
 
     it("falls back to the generic message for other statuses", async () => {
-      renderFailing(() => HttpResponse.json({ detail: "teapot" }, { status: 418 }));
+      renderFailing(() => uncheckedJson("error", { detail: "teapot" }, { status: 418 }));
 
       expect(
         await screen.findByText(m.team_fetch_failed({ error: m.team_unknown_error() })),
@@ -182,7 +185,7 @@ describe("TeamScheduleView", () => {
     seedHelperUrl(HELPER_URL);
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
-        HttpResponse.json({ detail: "slow down" }, { status: 429 }),
+        uncheckedJson("error", { detail: "slow down" }, { status: 429 }),
       ),
     );
 
@@ -201,10 +204,16 @@ describe("TeamScheduleView", () => {
     seedHelperUrl(HELPER_URL);
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
-        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper A")),
+        uncheckedJson(
+          "hday-helper",
+          teamHdayPayload(params.teamId as string, "Team from helper A"),
+        ),
       ),
       http.get(`${OTHER_HELPER_URL}/team/:teamId/hday`, ({ params }) =>
-        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper B")),
+        uncheckedJson(
+          "hday-helper",
+          teamHdayPayload(params.teamId as string, "Team from helper B"),
+        ),
       ),
     );
 
@@ -229,10 +238,13 @@ describe("TeamScheduleView", () => {
     server.use(
       http.get(`${HELPER_URL}/team/:teamId/hday`, async () => {
         await delay("infinite");
-        return HttpResponse.json(teamHdayPayload("eng", "Never shown"));
+        return uncheckedJson("hday-helper", teamHdayPayload("eng", "Never shown"));
       }),
       http.get(`${OTHER_HELPER_URL}/team/:teamId/hday`, ({ params }) =>
-        HttpResponse.json(teamHdayPayload(params.teamId as string, "Team from helper B")),
+        uncheckedJson(
+          "hday-helper",
+          teamHdayPayload(params.teamId as string, "Team from helper B"),
+        ),
       ),
     );
 
@@ -253,7 +265,9 @@ describe("TeamScheduleView", () => {
   describe("empty team", () => {
     function renderTeam(payload: Record<string, unknown>) {
       seedHelperUrl(HELPER_URL);
-      server.use(http.get(`${HELPER_URL}/team/:teamId/hday`, () => HttpResponse.json(payload)));
+      server.use(
+        http.get(`${HELPER_URL}/team/:teamId/hday`, () => uncheckedJson("hday-helper", payload)),
+      );
       render(
         <TestProviders>
           <TeamScheduleView />
@@ -291,7 +305,7 @@ describe("TeamScheduleView", () => {
       );
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
-          HttpResponse.json(teamHdayPayload(params.teamId as string)),
+          uncheckedJson("hday-helper", teamHdayPayload(params.teamId as string)),
         ),
       );
       const user = userEvent.setup();
@@ -318,7 +332,7 @@ describe("TeamScheduleView", () => {
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) => {
           requested.push(params.teamId as string);
-          return HttpResponse.json(teamHdayPayload(params.teamId as string));
+          return uncheckedJson("hday-helper", teamHdayPayload(params.teamId as string));
         }),
       );
       const user = userEvent.setup();
@@ -345,7 +359,7 @@ describe("TeamScheduleView", () => {
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) => {
           requested.push(params.teamId as string);
-          return HttpResponse.json(teamHdayPayload(params.teamId as string));
+          return uncheckedJson("hday-helper", teamHdayPayload(params.teamId as string));
         }),
       );
       const user = userEvent.setup();
@@ -367,7 +381,7 @@ describe("TeamScheduleView", () => {
       seedHelperUrl(HELPER_URL);
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
-          HttpResponse.json({ detail: "Team not found" }, { status: 404 }),
+          uncheckedJson("error", { detail: "Team not found" }, { status: 404 }),
         ),
       );
       render(
@@ -391,7 +405,8 @@ describe("TeamScheduleView", () => {
       );
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, ({ params }) =>
-          HttpResponse.json(
+          uncheckedJson(
+            "hday-helper",
             teamHdayPayload(params.teamId as string, `Team ${params.teamId as string}`),
           ),
         ),
@@ -416,7 +431,7 @@ describe("TeamScheduleView", () => {
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, async () => {
           await delay("infinite");
-          return HttpResponse.json({});
+          return uncheckedJson("hday-helper", {});
         }),
       );
       render(
@@ -453,7 +468,7 @@ describe("TeamScheduleView", () => {
       seedHelperUrl(HELPER_URL);
       server.use(
         http.get(`${HELPER_URL}/team/:teamId/hday`, () =>
-          HttpResponse.json(payloadWithEvents(events)),
+          uncheckedJson("hday-helper", payloadWithEvents(events)),
         ),
       );
       render(
