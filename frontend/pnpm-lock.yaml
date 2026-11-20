@@ -195,7 +195,7 @@ importers:
         version: 1.0.0-rc.1.4(typescript@7.0.2)
       '@tanstack/query-db-collection':
         specifier: ^1.5.1
-        version: 1.5.2(@tanstack/db@1.0.0-rc.1.4(typescript@7.0.2))(@tanstack/query-core@5.107.1)(typescript@7.0.2)
+        version: 1.5.2(@tanstack/db@1.0.0-rc.1.4(typescript@7.0.2))(@tanstack/query-core@5.108.1)(typescript@7.0.2)
       '@tanstack/react-db':
         specifier: 1.0.0-rc.1.4
         version: 1.0.0-rc.1.4(react@19.3.1)(typescript@7.0.2)
@@ -203,8 +203,8 @@ importers:
         specifier: 2.0.0-alpha.3
         version: 2.0.0-alpha.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
-        specifier: ^5.107.1
-        version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^5.108.0
+        version: 5.108.1(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -319,7 +319,7 @@ importers:
         version: 3.0.6(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       orval:
         specifier: 8.47.0
-        version: 8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.6(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)))(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
+        version: 8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.108.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.6(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)))(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
       oxc-parser:
         specifier: ^0.158.0
         version: 0.158.0
@@ -2636,8 +2636,8 @@ packages:
     resolution: {integrity: sha512-eQ1MyLKCHyXiH7NbdmB80W77OhiMgGBUb+qDx/8WMGbwg5Lf/NlfD0TfNYAqY77i8V3AxoDoYdICrQE5ADw4Yw==}
     engines: {node: '>=18'}
 
-  '@tanstack/query-core@5.107.1':
-    resolution: {integrity: sha512-PSyAik11oQBEVOiVy5hjZWHmoUqOXqK1WYy4v55mcxozEfKaQgpUMsgnXhWjuESzSht8JfzqMS1m6M/9CpNgvg==}
+  '@tanstack/query-core@5.108.1':
+    resolution: {integrity: sha512-GBX6Xsc9E+9eVLLxuM7orQNbssQjpruOCbocBYwT78MjxOWT5I+CWdvEo0N+UM6+oCZEKxuSud1oFLvE3OEmIg==}
 
   '@tanstack/query-db-collection@1.5.2':
     resolution: {integrity: sha512-N1We6WDnLy5nGctQjtCihc6xBy3nbLMeLLDebouNY3dB01AcsRWh1Cop0/xeJ/47pm9J9+BFz3q9k1NzfAu7VQ==}
@@ -2657,8 +2657,8 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
-  '@tanstack/react-query@5.107.1':
-    resolution: {integrity: sha512-udCOOLp3ZAheUrIHLCe+ZZge6nr2ZUrGMSWcCuXsjY1Bf2JeeE09oxst97PILiCY6N8xo/7bIo3Hvz13zh06FA==}
+  '@tanstack/react-query@5.108.1':
+    resolution: {integrity: sha512-8/p7fpIdmUiKIukQ5ddAMUUSKC7Z8CcgUOBR2r3WqRvMg9Lzc4CXeoFchjfATKvqi23SyYFvesDdOULrvyunNg==}
     peerDependencies:
       '@types/react': ^18 || ^19
       react: ^18 || ^19
@@ -6609,12 +6609,12 @@ snapshots:
       - '@faker-js/faker'
       - '@modelcontextprotocol/server'
 
-  '@orval/query@8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))':
+  '@orval/query@8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.108.1(@types/react@19.3.0)(react@19.3.1))':
     dependencies:
       '@orval/core': 8.47.0(@modelcontextprotocol/server@2.4.0)
       '@orval/fetch': 8.47.0(@modelcontextprotocol/server@2.4.0)
     optionalDependencies:
-      '@tanstack/react-query': 5.107.1(@types/react@19.3.0)(react@19.3.1)
+      '@tanstack/react-query': 5.108.1(@types/react@19.3.0)(react@19.3.1)
     transitivePeerDependencies:
       - '@faker-js/faker'
       - '@modelcontextprotocol/server'
@@ -7386,13 +7386,13 @@ snapshots:
 
   '@tanstack/pacer-lite@0.2.2': {}
 
-  '@tanstack/query-core@5.107.1': {}
+  '@tanstack/query-core@5.108.1': {}
 
-  '@tanstack/query-db-collection@1.5.2(@tanstack/db@1.0.0-rc.1.4(typescript@7.0.2))(@tanstack/query-core@5.107.1)(typescript@7.0.2)':
+  '@tanstack/query-db-collection@1.5.2(@tanstack/db@1.0.0-rc.1.4(typescript@7.0.2))(@tanstack/query-core@5.108.1)(typescript@7.0.2)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@tanstack/db': 1.0.0-rc.1.4(typescript@7.0.2)
-      '@tanstack/query-core': 5.107.1
+      '@tanstack/query-core': 5.108.1
       typescript: 7.0.2
 
   '@tanstack/react-db@1.0.0-rc.1.4(react@19.3.1)(typescript@7.0.2)':
@@ -7410,9 +7410,9 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1)':
+  '@tanstack/react-query@5.108.1(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@tanstack/query-core': 5.107.1
+      '@tanstack/query-core': 5.108.1
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -9042,7 +9042,7 @@ snapshots:
       string-width: 7.2.0
       strip-ansi: 7.2.0
 
-  orval@8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.6(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)))(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7):
+  orval@8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.108.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.6(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)))(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7):
     dependencies:
       '@commander-js/extra-typings': 15.1.0(commander@15.1.0)
       '@orval/angular': 8.47.0(@modelcontextprotocol/server@2.4.0)
@@ -9054,7 +9054,7 @@ snapshots:
       '@orval/mcp': 8.47.0(@modelcontextprotocol/server@2.4.0)(zod@4.6.7)
       '@orval/mock': 8.47.0(@modelcontextprotocol/server@2.4.0)(msw@3.0.6(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)))
       '@orval/pinia-colada': 8.47.0(@modelcontextprotocol/server@2.4.0)
-      '@orval/query': 8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))
+      '@orval/query': 8.47.0(@modelcontextprotocol/server@2.4.0)(@tanstack/react-query@5.108.1(@types/react@19.3.0)(react@19.3.1))
       '@orval/solid-start': 8.47.0(@modelcontextprotocol/server@2.4.0)
       '@orval/swr': 8.47.0(@modelcontextprotocol/server@2.4.0)
       '@orval/valibot': 8.47.0(@modelcontextprotocol/server@2.4.0)(valibot@1.5.0(typescript@7.0.2))
