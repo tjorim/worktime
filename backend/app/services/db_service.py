@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import AuditActor, write_audit_entry
 from app.core.errors import ErrorCode
-from app.database.models import (
+from app.models import (
     Base,
     GanttTask,
     Label,

@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import TimeOffEntry
+from app.models import TimeOffEntry
 from app.read_models import (
     CurrentStatusReadModel,
     DashboardReadModel,

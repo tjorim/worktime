@@ -12,7 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from app.database.models import (
+from app.models import (
     GanttTask,
     Label,
     TimeOffEntry,

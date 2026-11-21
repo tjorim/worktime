@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from app.database.models import TimeTrackingTask, User
+from app.models import TimeTrackingTask, User
 
 
 def _skip_unless_sqlite(engine: AsyncEngine) -> None:

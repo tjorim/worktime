@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import AuditActor, write_audit_entry
 from app.config import settings
-from app.database.models import IntegrationClient, User
+from app.models import IntegrationClient, User
 from app.services.db_service import NotFoundError
 
 KEY_PREFIX = "wtic_"

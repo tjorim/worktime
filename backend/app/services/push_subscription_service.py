@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import PushSubscription
+from app.models import PushSubscription
 from app.schemas import PushSubscriptionCreate
 from app.services.db_service import NotFoundError
 

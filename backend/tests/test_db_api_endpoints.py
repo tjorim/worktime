@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, time
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import (
+from app.models import (
     GanttTask,
     Label,
     TimeOffEntry,

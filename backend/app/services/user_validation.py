@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from app.core.errors import ErrorCode, api_error
-from app.database.models import User
+from app.models import User
 
 
 def validate_user_fields(data: dict[str, Any], *, current: User | None = None, is_admin: bool = True) -> None:

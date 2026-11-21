@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.requests import Request
 
 from app.core.errors import ApiHTTPException, ErrorCode
-from app.database.models import AccessToken
+from app.models import AccessToken
 from app.routers.auth import (
     PEBBLE_READ_SCOPE,
     PEBBLE_WRITE_SCOPE,

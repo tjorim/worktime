@@ -166,7 +166,7 @@ def test_sync_overlap_update_and_replay(db_client, auth_headers, create_user_fac
 
 @pytest.mark.asyncio
 async def test_legacy_invalid_rows_still_pull_and_sync_metadata(db_session):
-    from app.database.models import TimeTrackingTask
+    from app.models import TimeTrackingTask
     from app.schemas import SyncPushRequest, UserCreate
     from app.services.db_service import create_user
     from app.services.sync_service import pull_changes, push_changes
@@ -261,7 +261,7 @@ def test_sync_restore_checks_unchanged_interval_and_preserves_batch(db_client, a
 
 @pytest.mark.asyncio
 async def test_legacy_rest_updates_validate_only_changed_fields(db_session):
-    from app.database.models import TimeTrackingTask
+    from app.models import TimeTrackingTask
     from app.schemas import TaskUpdate, UserCreate
     from app.services.db_service import TaskValidationError, create_user, update_task
 

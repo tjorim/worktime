@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 from app.config.settings import settings
 from app.database.engine import get_session_factory
-from app.database.models import TimeTrackingTask
+from app.models import TimeTrackingTask
 from app.services.fcm_device_token_service import delete_token_by_id, list_tokens_for_user
 from app.services.fcm_service import FcmSendResult, send_wake_signal
 from app.services.push_service import PushSendResult, send_push

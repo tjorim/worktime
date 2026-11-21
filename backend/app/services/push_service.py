@@ -9,7 +9,7 @@ from enum import Enum, auto
 from pywebpush import WebPushException, webpush
 
 from app.config.settings import settings
-from app.database.models import PushSubscription
+from app.models import PushSubscription
 
 logger = logging.getLogger(__name__)
 

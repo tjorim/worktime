@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import AccessToken, User
+from app.models import AccessToken, User
 from app.schemas import AccessTokenCreate
 from app.services.db_service import NotFoundError
 

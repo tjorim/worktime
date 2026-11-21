@@ -22,7 +22,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
-from app.database.models import PushSubscription
+from app.models import PushSubscription
 from app.schemas import PushSubscriptionCreate, PushSubscriptionKeys, TaskUpdate, UserCreate
 from app.services.db_service import create_task, create_user, update_task
 from app.services.push_service import PushSendResult

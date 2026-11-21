@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
 from app.database.engine import get_session
-from app.database.models import Label, TimeTrackingTask
+from app.models import Label, TimeTrackingTask
 from app.read_models import CurrentStatusReadModel, NextShiftsReadModel
 from app.routers.auth import (
     AuthenticatedPrincipal,

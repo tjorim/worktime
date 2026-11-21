@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.database.models import TimeTrackingTask
+from app.models import TimeTrackingTask
 from app.services.ical_service import _format_task_line
 from tests.task_helpers import labeled_payload, labeled_sync_payload
 from tests.test_task_validation import owner

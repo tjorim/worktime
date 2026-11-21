@@ -1234,7 +1234,7 @@ async def test_write_tools_produce_transactional_db_audit_entries(
     best-effort file logger covered above."""
     from sqlalchemy import select
 
-    from app.database.models import AuditEntry
+    from app.models import AuditEntry
 
     session_factory = _make_factory(test_db)
     backend = WorktimeMcpBackend(session_factory)

@@ -47,7 +47,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from app.core.errors import ErrorCode
-from app.database.models import (
+from app.models import (
     GanttTask,
     Label,
     TimeOffEntry,

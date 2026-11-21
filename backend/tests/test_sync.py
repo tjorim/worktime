@@ -18,7 +18,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.database.models import TimeTrackingTask
+from app.models import TimeTrackingTask
 from app.schemas import LabelCreate, TaskSyncItem, UserCreate
 from app.services.db_service import create_label, create_user
 from app.services.sync_service import _push_task
@@ -3933,7 +3933,7 @@ def test_work_location_iso_validation_per_record(db_client: TestClient, auth_hea
 async def test_work_location_legacy_country_is_preserved_until_changed(db_session: AsyncSession) -> None:
     from datetime import date
 
-    from app.database.models import WorkLocation
+    from app.models import WorkLocation
     from app.schemas import WorkLocationSyncItem
     from app.services.sync_service import _push_work_location
 

@@ -257,7 +257,7 @@ async def _find_available_username(db_session, base_username: str, subject: str)
     """Return a unique local username candidate for an OIDC identity."""
     from sqlalchemy import select
 
-    from app.database.models import User
+    from app.models import User
 
     candidate = base_username
     attempt = 0
@@ -287,7 +287,7 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any], db_sess
     from sqlalchemy import select
     from sqlalchemy.exc import IntegrityError
 
-    from app.database.models import User
+    from app.models import User
     from app.schemas import UserCreate
 
     result = await db_session.execute(select(User).where(User.oidc_subject == subject))

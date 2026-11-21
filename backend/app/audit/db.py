@@ -18,7 +18,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import AuditEntry
+from app.models import AuditEntry
 
 # Bounded reads: mirrors champagnefestival's DEFAULT_AUDIT_LIMIT/MAX_AUDIT_LIMIT
 # so a caller can never pull an unbounded audit trail into memory/context.

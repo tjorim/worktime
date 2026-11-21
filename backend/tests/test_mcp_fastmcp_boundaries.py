@@ -17,8 +17,8 @@ from pydantic import AnyHttpUrl, BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.database.models import AuditEntry
 from app.mcp_server import WorktimeMcpBackend, create_mcp_http_app, create_mcp_server
+from app.models import AuditEntry
 from app.schemas import UserCreate
 from app.services import db_service, integration_client_service
 from tests.test_mcp_server import _make_factory, _token_for_user

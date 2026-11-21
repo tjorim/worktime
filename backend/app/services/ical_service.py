@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import TimeOffEntry, TimeTrackingTask
+from app.models import TimeOffEntry, TimeTrackingTask
 from app.routers.holidays import HOLIDAY_COUNTRY_CODE, NAGER_BASE_URL, _build_holiday_date_set, _get_or_fetch_holidays
 from app.services.db_service import (
     get_user_preferences,

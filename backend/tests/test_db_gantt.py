@@ -274,7 +274,7 @@ def test_sync_dependency_order_rejections_and_cleanup(db_client, auth_headers, c
 async def test_legacy_dependencies_remain_readable_and_editable(db_session):
     from datetime import date
 
-    from app.database.models import GanttTask
+    from app.models import GanttTask
     from app.schemas import GanttTaskUpdate, SyncPushRequest, UserCreate
     from app.services.db_service import create_user, get_gantt_task, update_gantt_task
     from app.services.sync_service import push_changes
@@ -322,7 +322,7 @@ async def test_concurrent_dependency_updates_cannot_create_cycle(db_session, tes
     import pytest
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
-    from app.database.models import GanttTask
+    from app.models import GanttTask
     from app.schemas import GanttTaskUpdate, UserCreate
     from app.services.db_service import TaskValidationError, create_user, update_gantt_task
 
