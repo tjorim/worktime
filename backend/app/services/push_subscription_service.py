@@ -1,4 +1,4 @@
-"""Service layer for Web Push subscriptions (see database/models.PushSubscription)."""
+"""Service layer for Web Push subscriptions (see app.models.push.PushSubscription)."""
 
 from __future__ import annotations
 

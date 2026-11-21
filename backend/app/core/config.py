@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     # DEV_AUTH_BYPASS_TOKEN: local-dev-only shortcut that skips real OIDC/JWKS
     # verification entirely — no Keycloak/IdP container needed. When set, a
     # request bearing this exact string as its Bearer token is treated as a
-    # fixed dev user (see oidc_config._DEV_BYPASS_CLAIMS). Empty by default;
+    # fixed dev user (see app.core.oidc._DEV_BYPASS_CLAIMS). Empty by default;
     # validate_production_no_dev_bypass() refuses to start if this is ever
     # set outside ENVIRONMENT=development.
     DEV_AUTH_BYPASS_TOKEN: str = ""

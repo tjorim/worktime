@@ -11,8 +11,8 @@ quick start.
 ## Repository layout
 
 - `frontend/` contains the web app
-- `backend/` contains the FastAPI service
-- `docs/ARCHITECTURE.md` describes the source layout shared by the four apps (`app/`, `features/<domain>/`, `components/`, `lib/` ...)
+- `backend/` contains the FastAPI service: `app/` has `routers/`, `services/`, `models/`, `schemas/`, `core/`, `db/`, `mcp/` and `middleware/`, and `tests/` mirrors it
+- `docs/ARCHITECTURE.md` describes the source layout shared by the four apps (frontend `app/`, `features/<domain>/`, `components/`, `lib/` ...; backend `routers/`, `services/`, `models/`, `schemas/`, `core/` ...)
 - `pebble/` contains the Pebble (Alloy) companion watch app — see `pebble/README.md`.
   CI installs the Pebble SDK, builds the package, boots it on Emery, checks a
   screenshot, and runs the watch-logic tests.
@@ -64,7 +64,7 @@ Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that 
 - **Proxy buffering** — set `X-Accel-Buffering: no` (already sent by the endpoint) so Nginx/Caddy does not buffer the stream.
 - **Timeouts** — ensure the proxy does not close idle SSE connections before the 15 s keepalive fires. Caddy's default idle timeout is fine; Nginx needs `proxy_read_timeout` ≥ 60 s.
 - **CORS** — cross-origin dev setups rely on the existing `CORSMiddleware` config (`Authorization` is already in `allow_headers`); same-origin production deployments (frontend and API behind the same Caddy host) need no CORS handling at all for this endpoint.
-- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the connections are unavailable at startup (e.g. `DATABASE_ENABLED=false`, tests), the manager falls back to in-process delivery within that worker automatically; no operator action is required. If a connection drops later (Postgres restart, failover, idle-connection reaper, network blip), an asyncpg termination listener schedules a background reconnect with exponential backoff and re-registers the channel listener — see `SyncEventManager._on_pg_conn_terminated` in `backend/app/utils/sse_manager.py`.
+- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the connections are unavailable at startup (e.g. `DATABASE_ENABLED=false`, tests), the manager falls back to in-process delivery within that worker automatically; no operator action is required. If a connection drops later (Postgres restart, failover, idle-connection reaper, network blip), an asyncpg termination listener schedules a background reconnect with exponential backoff and re-registers the channel listener — see `SyncEventManager._on_pg_conn_terminated` in `backend/app/services/sse.py`.
 
 #### Adding new live-update behaviour
 
@@ -138,7 +138,7 @@ uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite .
 >
 > For a local dev instance (`uv run uvicorn ...`), set
 > `DATABASE_URL=sqlite+aiosqlite:///./dev.db` and run `uv run alembic upgrade head` once
-> against it first. `app/database/sqlite.py` makes SQLite read timezone-aware datetimes back
+> against it first. `app/db/sqlite.py` makes SQLite read timezone-aware datetimes back
 > as UTC and enforce foreign keys, which are the two ways it differs from PostgreSQL here.
 >
 > Auth doesn't require a local Keycloak/IdP either — set `DEV_AUTH_BYPASS_TOKEN`
@@ -335,7 +335,7 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
   `"snapshot"`, so a release bump never stales it. `frontend/src/api-schema/` is generated from it, one file per
   schema. Never hand-edit either, and do not declare an API record type anywhere else in the frontend.
 - To add or change an endpoint: give the route a `response_model` (a test enforces it; a response model derives from
-  `ResponseModel` in `backend/app/schemas.py` so a field with a default is required in the generated type), run
+  `ResponseModel` in `backend/app/schemas/` so a field with a default is required in the generated type), run
   `pnpm api:generate` in `frontend/` (it needs `uv`), commit `openapi.json` and `src/api-schema/`, and alias the
   generated record for the screens in `frontend/src/api-types.ts`.
 - `pnpm typecheck` runs `pnpm api:check` and fails when `src/api-schema/` is stale; the backend test

@@ -91,6 +91,49 @@ and its tabs), `layout/` (app layout, header, about and keyboard-shortcut dialog
 
 ## Backend (`backend/app/`)
 
-The backend keeps its current layout for now (`routers/`, `services/`, `models/`, `schemas.py`, `mcp/`, `middleware/`,
-`core/` and a few flat modules). The shared target, applied to all four apps in a later step, is `main.py`, `core/`, `db/`,
-`models/`, `schemas/`, `routers/`, `services/`, `mcp/` and `middleware/`.
+```
+main.py                 app assembly: middleware, router registration, lifespan; nothing else (`app.main:app`)
+mcp_server.py           the FastMCP server assembly (`create_mcp_server`, `create_mcp_http_app`), documented in docs/integrations
+openapi_export.py       writes frontend/openapi.json (`uv run python -m app.openapi_export`)
+version.py              APP_VERSION, read from the root VERSION file
+routers/                the HTTP layer, one module per domain; thin: validate, call a service, return a response model
+services/               business logic, one module per domain
+  audit/                the DB audit trail (`db.py`) and the rotated audit file logger (`logger.py`)
+  cache/                the in-memory holiday cache (`FileCache`, `HolidayCacheEntry`); see its README.md
+  sse.py                the sync event manager (SSE fan-out, Postgres LISTEN/NOTIFY); used by `db_service` and `routers/db_sync`
+models/                 SQLAlchemy models, one module per domain (`base.py` has Base, the timestamp mixin and the UTC clock)
+schemas/                Pydantic request and response models, one module per domain (`base.py` has ResponseModel,
+                        RequestModel, ListResponse); `read_models.py` holds the read-model responses
+core/                   settings (`config.py`), CORS, OIDC/JWT validation (`oidc.py`), errors, observability, request limits,
+                        pagination, `datetime`/`timing` helpers
+db/                     engine and session factory, SQLite compatibility, `init_db` (auto-migrate)
+mcp/                    MCP tools and resources, one module per domain, assembled by `mcp_server.py`
+middleware/             ASGI middleware: rate limit, request id, `X-Total-Ms` timing, `Server-Timing` and slow-request log
+```
+
+Rules:
+
+- Every JSON route declares a response model; routers do not hold business logic. Code used by one domain stays in that
+  domain's modules.
+- `models/__init__.py` imports every model module and re-exports the model names. Alembic's `target_metadata` and the
+  mapper registry depend on every model being imported, so a new model module must be added there.
+- `schemas/__init__.py` re-exports every schema name, so `from app.schemas import TaskRead` and
+  `from app.schemas.tasks import TaskRead` are both valid; prefer the submodule in new code. Schema names become OpenAPI
+  component names, so a schema class is never renamed or moved to another module under a different name.
+- Import across packages with absolute `app.` paths. Nothing lives loose in `app/` except the four modules above.
+- The two timing middlewares are not duplicates: `middleware/timing.py` sets `X-Total-Ms` and feeds the `/api/metrics`
+  collector, `middleware/request_timing.py` sets `Server-Timing` and logs slow requests by route template. Both are
+  registered in `main.py`.
+- `core/statistics.py` has no production importer (only `tests/core/test_statistics.py`); it is kept rather than deleted.
+
+Tests live in `backend/tests/` and mirror `app/` (`tests/routers/`, `tests/services/`, `tests/core/`, `tests/db/`,
+`tests/middleware/`, `tests/mcp/`, `tests/schemas/`). `tests/conftest.py`, `tests/fixtures/` and the shared helpers
+(`task_helpers.py`, `wire_contracts.py`) stay at the top, next to the tests that span several layers (sync, MCP label
+rules, the OpenAPI snapshot and the response/wire contracts). The test subdirectories have no `__init__.py` (pytest's
+default import mode needs unique test file names; a package named `mcp` would shadow the `mcp` dependency).
+
+### Worktime domains
+
+Users and accounts, labels, tasks and templates (time tracking), work locations, time-off entries, gantt tasks,
+preferences, sync, iCal feeds, access tokens, integration clients, Web Push and FCM, audit, holidays, health and
+metrics, read models (Pebble/Android/MCP) and the MCP capability manifest.

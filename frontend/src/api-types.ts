@@ -1,6 +1,6 @@
 // The records the API sends and receives, named for the screens. Every one is the type FastAPI generated for
 // its response or request model in `api-schema/` (`pnpm api:generate`), so a field renamed or retyped in
-// `backend/app/schemas.py` stops `pnpm typecheck` here. Declare no API record by hand: add a response model
+// `backend/app/schemas/` stops `pnpm typecheck` here. Declare no API record by hand: add a response model
 // to the backend, regenerate, and alias it below. Frontend-only models (the camelCase time-off entries,
 // calendar events, view models) stay where they are.
 import type { SyncPushRequest } from "./api-schema";

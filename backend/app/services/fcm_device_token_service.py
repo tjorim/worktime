@@ -1,4 +1,4 @@
-"""Service layer for FCM device tokens (see database/models.FcmDeviceToken)."""
+"""Service layer for FCM device tokens (see app.models.push.FcmDeviceToken)."""
 
 from __future__ import annotations
 

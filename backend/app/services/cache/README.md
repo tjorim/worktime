@@ -9,10 +9,10 @@ TTL-based expiry.
 
 ### Components
 
-- **`app.cache.models`**: Pydantic models for cache entries
+- **`app.services.cache.models`**: Pydantic models for cache entries
   - `HolidayCacheEntry`: Caches a holiday API response (`data`) with `cached_at`
 
-- **`app.cache.store`**: `FileCache` singleton implementation
+- **`app.services.cache.store`**: `FileCache` singleton implementation
   - Singleton pattern ensures single cache instance across application
   - Dictionary-based storage for fast in-memory access
   - Automatic TTL-based expiry with stale entry removal
@@ -28,7 +28,7 @@ Cache behavior is controlled by settings:
 ## Usage
 
 ```python
-from app.cache import get_cache
+from app.services.cache import get_cache
 
 # Get the singleton cache instance
 cache = get_cache()

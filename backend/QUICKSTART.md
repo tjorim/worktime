@@ -125,12 +125,15 @@ backend/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # Application entry point
-│   ├── config/              # Configuration module
-│   │   ├── __init__.py
-│   │   └── settings.py      # Environment settings
+│   ├── mcp_server.py        # MCP server assembly
+│   ├── core/                # Settings (config.py), OIDC, errors, observability
+│   ├── db/                  # Engine/session, SQLite compatibility
+│   ├── models/              # SQLAlchemy models
+│   ├── schemas/             # Pydantic request/response models
 │   ├── routers/             # API route handlers
-│   ├── services/            # Business logic
-│   └── audit/               # Audit logging
+│   ├── services/            # Business logic (audit, cache, sync, ...)
+│   ├── mcp/                 # MCP tools and resources
+│   └── middleware/          # Rate limit, request id, timing
 ├── pyproject.toml           # Python dependencies and tool configuration
 ├── .env.example             # Example environment file
 └── run.sh                   # Quick start script
