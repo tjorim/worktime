@@ -110,10 +110,9 @@ needed job failed or was cancelled. Each workflow is scoped to the paths it vali
   SDK, builds the package, boots it on the Emery emulator, checks a screenshot, and runs the
   watch-logic tests
 - `PR Preview Build` — `frontend/**`, on PR open/sync/reopen
-- `CodeQL Python` — `backend/**`
-- `CodeQL JavaScript` — `frontend/**`, `hday-helper/**`
-- `CodeQL Actions` — `.github/workflows/**`
-- `CodeQL Android` — `android/**`
+
+CodeQL code scanning (Actions, Android, JavaScript, Python) runs through GitHub's default setup in the repository
+settings, so there are no `codeql-*.yml` workflow files.
 
 ### Release and artifact workflows
 

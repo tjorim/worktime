@@ -379,7 +379,7 @@ change is fine. The component workflows are reusable (`workflow_call`) and can a
   a separate `Frontend / E2E Tests (Chromium)` job runs Playwright. `ci.yml` also runs `format:repo:check`
   (workflows, scripts, root JSON) and `release.mjs check`.
 - `android.yml`, `pebble.yml`, `hday-helper-ci.yml` and `pr-preview.yml` are component workflows with their own
-  path filters; `codeql-actions.yml`, `codeql-javascript.yml`, `codeql-python.yml` and `codeql-android.yml` run CodeQL.
+  path filters. CodeQL runs through GitHub's default setup (repository settings), so there are no `codeql-*.yml` files here; do not add them while the default setup is on, because GitHub rejects advanced-workflow uploads in that case.
 - Actions are pinned to full commit SHAs with a version comment; Node comes from `frontend/.node-version` and pnpm from
   `frontend/package.json`'s `packageManager`. Renovate (`renovate.json`) groups and automerges dependency updates.
 
