@@ -14,34 +14,33 @@ requires-python = ">=3.15"
 dependencies = [
   "alembic==1.20.1",
   "asyncpg==0.32.0",
-  "fastapi==0.162.4",
+  "fastapi==0.162.5",
   "fastmcp==4.1.8",
   "httpx==0.28.1",
-  "psycopg[binary]==3.3.8",
+  "psycopg[binary]==3.3.9",
   "pycountry==26.2.16",
   "pydantic==2.14.3",
-  "pydantic-settings==2.16.2",
+  "pydantic-settings==2.16.3",
   "pyjwt[crypto]==2.15.1",
   "python-dotenv==1.2.4",
-  "sqlalchemy[asyncio]==2.1.8",
+  "sqlalchemy[asyncio]==2.1.9",
   "uvicorn[standard]==0.54.0",
   "limits==5.8.0",
-  "aiosqlite>=0.22.1",
-  "pywebpush>=2.5.0",
+  "aiosqlite==0.22.1",
+  "pywebpush==2.5.0",
   "firebase-admin==7.7.0",
 ]
 
 [dependency-groups]
 dev = [
   "anyio==4.16.0",
-  "httpx==0.28.1",
   "jsonschema==4.26.0",
   "pytest==9.2.0",
-  "pytest-asyncio==1.4.1.post1",
+  "pytest-asyncio==1.5.0",
   "rfc3339-validator==0.1.4",
-  "ruff==0.17.4",
+  "ruff==0.17.5",
   "sentry-sdk[fastapi]==2.74.0",
-  "ty==0.0.100",
+  "ty==0.0.105",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -50,7 +49,15 @@ packages = ["app"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-p no:anyio"
+markers = ["anyio: marks tests as anyio-compatible (no-op under asyncio_mode=auto)"]
 testpaths = ["tests"]
+# Third-party deprecations we cannot fix here; each entry is scoped to the emitting
+# module. Drop an entry once its upstream release stops warning.
+filterwarnings = [
+  # fastmcp's py-key-value-aio protocol is checked by beartype without @runtime_checkable.
+  "ignore:.*isn't explicitly decorated with @runtime_checkable:DeprecationWarning:beartype",
+]
 
 [tool.ruff]
 target-version = "py315"
@@ -62,3 +69,6 @@ ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.ty.environment]
+python-version = "3.15"

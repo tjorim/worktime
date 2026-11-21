@@ -1,6 +1,14 @@
 # AGENTS.md
 
-## Layout
+## Project overview
+
+Worktime is a shift-tracking and time-off management app: a React 19 + Vite + TypeScript web frontend
+(`frontend/`, pnpm), a FastAPI + SQLAlchemy backend (`backend/`, uv; PostgreSQL in production, SQLite for local
+development and tests), an Android app, a Pebble (Alloy) companion watch app and a local `.hday` helper. The
+frontend's API types are generated from the backend's OpenAPI document (see "API contract"). `README.md` has the
+quick start.
+
+## Repository layout
 
 - `frontend/` contains the web app
 - `backend/` contains the FastAPI service
@@ -10,22 +18,93 @@
 - Production hosting for `worktime.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
 - Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/worktime`
 
+### Source of truth
+
+- `VERSION` (repo root) for the app version — see "Versioning" above
+- `frontend/src/data/rosters.ts` for roster and schedule definitions
+- `frontend/src/utils/shiftCalculations.ts` for shift logic (frontend). The backend keeps its own
+  Python implementation — `backend/app/services/read_models_service.py` — that serves
+  Android/Pebble/MCP read-only clients. Changes flow frontend → backend: after editing
+  `rosters.ts`, update `_SCHEDULES` (and the resolution logic, if it changed) to match, then run
+  `pnpm run fixtures:generate` in `frontend/` and commit the regenerated
+  `backend/tests/fixtures/roster_golden.json`. `backend/tests/test_roster_golden_fixture.py` and
+  frontend `pnpm typecheck` (`fixtures:check`) catch drift between the two (#1107)
+- `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
+- `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
+- `CHANGELOG.md` for release notes (`frontend/src/data/changelog.ts` only adapts it for the app)
+- `frontend/src/styles/event-palette.css` for event colors, in both themes.
+  It is the only place they are defined: it defines `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
+  `.event-*` classes at the bottom of that file apply them, and `getEventColor()` /
+  `getEventTextColor()` in `lib/hday/presentation.ts` return `var(--wt-event-…)` references instead of hex.
+  Change a color there and update the table in `docs/hday-format-spec.md`; nothing else.
+  `tests/lib/eventPalette.test.ts` reads the CSS tokens and pins WCAG AA text contrast, that no two full-day
+  colors are near-identical, and that the helpers, `.event-*` classes and compiled Tailwind utilities
+  only use declared colors
+- User-facing event type names come from the `event_type_*` messages via `getEventTypeLabel()` in
+  `lib/hday/presentation.ts`, so they are translated; don't reintroduce English strings there
+
+### Live updates
+
+Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that fresh data is available; the client fetches it via the existing incremental pull path.
+
+#### SSE contract
+
+| Field | Value |
+|-------|-------|
+| Endpoint | `GET /api/sync/events` |
+| Auth | Bearer token via `Authorization` header, same as every other endpoint — the client opens the stream with `fetch()` (parsed via `eventsource-parser`), not native `EventSource`, since `EventSource` cannot send custom headers |
+| Event name | `sync_changed` |
+| Payload | `{ "type": "sync_changed", "server_timestamp": "<ISO-8601>" }` |
+| Keepalive | `: keepalive` comment every 15 s |
+| Client behaviour | Compare `server_timestamp` against stored sync cursor; skip pull if cursor is already at or ahead of the signal |
+
+#### Deployment notes
+
+- **Proxy buffering** — set `X-Accel-Buffering: no` (already sent by the endpoint) so Nginx/Caddy does not buffer the stream.
+- **Timeouts** — ensure the proxy does not close idle SSE connections before the 15 s keepalive fires. Caddy's default idle timeout is fine; Nginx needs `proxy_read_timeout` ≥ 60 s.
+- **CORS** — cross-origin dev setups rely on the existing `CORSMiddleware` config (`Authorization` is already in `allow_headers`); same-origin production deployments (frontend and API behind the same Caddy host) need no CORS handling at all for this endpoint.
+- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the connections are unavailable at startup (e.g. `DATABASE_ENABLED=false`, tests), the manager falls back to in-process delivery within that worker automatically; no operator action is required. If a connection drops later (Postgres restart, failover, idle-connection reaper, network blip), an asyncpg termination listener schedules a background reconnect with exponential backoff and re-registers the channel listener — see `SyncEventManager._on_pg_conn_terminated` in `backend/app/utils/sse_manager.py`.
+
+#### Adding new live-update behaviour
+
+- **Reuse `SyncSignalTransport`** when the update follows the same notify-then-pull shape: the live signal is just a freshness hint and the data arrives via a normal fetch. Implement a new `SyncSignalTransport` adapter (or reuse `createFetchSseTransport`) and pass it to `useSyncSignal`.
+- **Stay request/poll-based** for user-triggered actions, infrequent state changes, or anything that needs the full response payload inline (not a separate fetch). Adding SSE complexity for those cases is not worth it.
+- The transport abstraction also decouples the wire protocol: replacing SSE with WebSockets later only requires a new adapter — no changes to `useSyncSignal` or its callers.
+
+#### Android background wake (FCM)
+
+Android has no equivalent of an always-open SSE stream, so it uses the same notify-then-pull shape over
+FCM instead: the backend (`app/services/fcm_wake_service.py`, `app/services/fcm_service.py`) sends a
+silent data-only FCM message — no reminder content, just a wake signal — to a user's registered device
+tokens (`FcmDeviceToken`, registered via `/api/push/fcm-token`) whenever a planned time-tracking task is
+created, rescheduled, or synced. The app's `FirebaseMessagingService` reacts by re-running the same
+refresh-and-reconcile flow the foreground case already uses (`ReminderScheduler.reconcile()`), so there's
+one reminder-scheduling code path regardless of whether the app was open or woken. No-ops entirely when
+`FCM_SERVICE_ACCOUNT_JSON` is unset, matching how `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` gate Web Push.
+See #1205.
+
 ## Commands
 
 ### Frontend (`cd frontend`)
 
 ```bash
 pnpm dev
+pnpm build
+pnpm typecheck         # paraglide + api:check + fixtures:check + tsc -b (app, tests, e2e, configs)
 pnpm lint
-pnpm format          # rewrites files in place (Oxfmt)
-pnpm format:check    # what CI runs: fails on unformatted files, doesn't rewrite
-pnpm format:repo     # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm typecheck         # also runs pnpm api:check
-pnpm typecheck:tests   # test files; CI runs this too
+pnpm format            # rewrites files in place (Oxfmt)
+pnpm format:check      # what CI runs: fails on unformatted files, doesn't rewrite
+pnpm format:repo       # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
+pnpm test              # Vitest (happy-dom); test:watch for watch mode
+pnpm test:e2e          # Playwright; see e2e/README.md
+pnpm test:compatibility  # Vitest with Redact enabled plus the Playwright compatibility browsers
+pnpm bundle:check      # bundle budget (bundle:report prints it, bundle:test tests the script)
+pnpm locale:audit      # interface-string audit; also pnpm check-message-parity
+pnpm paraglide:compile
 pnpm api:generate      # rewrite openapi.json from the backend (needs uv) and src/api-schema/ (Orval)
 pnpm api:check         # fail when src/api-schema/ is not what openapi.json generates
-pnpm test
-pnpm build
+pnpm ui:check          # UI maintenance inventory and import policy (ui:test, ui:usage, ui:upstream, ui:diff, ui:record)
+pnpm fixtures:generate # regenerate the roster golden fixture; fixtures:check runs inside typecheck
 ```
 
 Do not manually edit files under `public/assets/icons/`. `CHANGELOG.md` *is* hand-edited (see "Versioning").
@@ -37,9 +116,11 @@ SQLite setup and OIDC callback URLs. `VITE_API_DOMAIN` is not supported.
 ### Backend (`cd backend`)
 
 ```bash
+uv sync --locked
 uv run uvicorn app.main:app --reload
-uv run ruff check app
-uv run ty check app
+uv run ruff check .
+uv run ruff format --check .
+uv run ty check .
 uv run pytest
 uv run alembic upgrade head
 uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite ../frontend/openapi.json
@@ -50,7 +131,8 @@ uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite .
 > PostgreSQL, and CI runs the whole suite against it too; two tests that simulate two
 > sessions racing on an index entry need PostgreSQL's row-level locking and skip on SQLite.
 > To run the suite against PostgreSQL, start one with
-> `docker compose -f backend/docker-compose.yml up db -d` and set
+> `docker compose up db -d` (from `backend/`), create the test database with
+> `docker compose exec db psql -U worktime -d worktime -c "CREATE DATABASE worktime_test;"` and set
 > `TEST_DATABASE_URL=postgresql+asyncpg://worktime:worktime@localhost/worktime_test`.
 >
 > For a local dev instance (`uv run uvicorn ...`), set
@@ -73,189 +155,33 @@ a personal access token (`wtpat_...`, `/api/access-tokens`, managed from Setting
 `get_authenticated_principal` (`backend/app/routers/auth.py`) accepts either; `require_oidc_principal` gates
 endpoints — account deletion and token management itself — that a leaked token must not be able to reach.
 
-## API Contract
-
-The backend's response models are the source of truth for the frontend's API types, and nothing in between is written by hand:
-
-```text
-backend response models -> uv run python -m app.openapi_export (pnpm api:generate)
-  -> frontend/openapi.json -> Orval (frontend/orval.config.mjs) -> frontend/src/api-schema/
-  -> frontend/src/api-types.ts (the one import point for API shapes)
-```
-
-- `frontend/openapi.json` is a committed snapshot of the backend's OpenAPI document with `info.version` pinned to
-  `"snapshot"`, so a release bump never stales it. `frontend/src/api-schema/` is generated from it, one file per
-  schema. Never hand-edit either, and do not declare an API record type anywhere else in the frontend.
-- To add or change an endpoint: give the route a `response_model` (a test enforces it; a response model derives from
-  `ResponseModel` in `backend/app/schemas.py` so a field with a default is required in the generated type), run
-  `pnpm api:generate` in `frontend/` (it needs `uv`), commit `openapi.json` and `src/api-schema/`, and alias the
-  generated record for the screens in `frontend/src/api-types.ts`.
-- `pnpm typecheck` runs `pnpm api:check` and fails when `src/api-schema/` is stale; the backend test
-  `test_openapi_snapshot` fails when `openapi.json` is stale. `backend/tests/test_response_models.py` fails on a JSON
-  route without a documented response schema, and on an optional response field without a per-field
-  wire-omission reason in `OPTIONAL_ON_THE_WIRE` (it rejects both new unexplained fields and stale exceptions).
-  Request optionality is a separate contract.
-- Success fixtures (MSW handlers, fetch doubles, Playwright route fulfils) must choose a generated response schema
-  explicitly: `HttpResponse.json<Model>(...)`, `jsonResponse<Model>(...)`, `jsonBody<Model>(...)`, `routeJson<Model>(...)`,
-  or `satisfies Model` at a browser response boundary. The generic JSON helpers in `frontend/src/mocks/response.ts` use
-  `NoInfer` and default to `never`, so a payload never infers its own contract. The source guard
-  `frontend/tests/mocks/fixtureContracts.test.ts` fails on a fixture that is unchecked or erased, and
-  `frontend/tests/types/apiFixtures.ts` holds compile-only negative checks.
-- A deliberately malformed, error, external-provider or control fixture is exempt only through the helper that names why
-  (`uncheckedJson("malformed", ...)`, `uncheckedBody(...)`) or a `fixture-contract: <reason>` comment at the call site.
-
-## Versioning
-
-The app uses CalVer: `YYYY.M.MICRO` (e.g. `2026.7.1`; months are not zero-padded), where `MICRO` is a counter
-that resets to `1` at the start of each new month.
-
-The root `VERSION` file is the single source of truth. Everything else derives
-from it — nothing else should be hand-edited:
-
-- `backend/app/version.py` reads it at runtime (`APP_VERSION`), used by
-  `app/main.py`. `backend/pyproject.toml`'s `version` field is frozen at
-  `0.0.0` — it's packaging metadata only, never read at runtime since the
-  project is run from source, not installed as a wheel.
-- `frontend/package.json`'s `version` field is written by `node scripts/release.mjs bump` and
-  verified by `release.mjs check` (CI and the release workflow); `release.config.json` lists the
-  files that carry the version.
-- `android/app/build.gradle.kts` reads it directly to compute `versionName`/`versionCode`.
-
-`CHANGELOG.md` is the hand-edited source for release notes: the GitHub release body and the in-app
-"What's New" dialog both come from it (the dialog through `frontend/vite-plugin-changelog.ts`, which
-runs `node scripts/release.mjs export --audience app --platform web`).
-
-1. Add entries under `## [Unreleased]` while working (`### Added`, `### Changed`, `### Fixed`,
-   `### Removed`). Put backend, infrastructure, CI and dependency changes under `### Internal`: the
-   dialog hides that heading. Prefix a bullet with `**Android:**` (any scope in `release.config.json`)
-   when it only applies to one client; the web dialog then leaves it out. `### Planned` bullets under
-   `[Unreleased]` appear as "Coming soon" and stay there when a release is cut.
-2. `node scripts/release.mjs bump` writes the next version into `VERSION` and
-   `frontend/package.json` and turns `[Unreleased]` into the dated release section with compare links.
-   Review the diff, open the release PR and merge it.
-3. Push tag `vYYYY.M.MICRO`. `.github/workflows/release.yml` re-checks the tag, versions and
-   changelog (`node scripts/release.mjs check --tag`) and creates a **draft** release whose notes are
-   the changelog section.
-
-`node scripts/release.mjs check` also runs in CI on every pull request.
-
-## Source Of Truth
-
-- `VERSION` (repo root) for the app version — see "Versioning" above
-- `frontend/src/data/rosters.ts` for roster and schedule definitions
-- `frontend/src/utils/shiftCalculations.ts` for shift logic (frontend). The backend keeps its own
-  Python implementation — `backend/app/services/read_models_service.py` — that serves
-  Android/Pebble/MCP read-only clients. Changes flow frontend → backend: after editing
-  `rosters.ts`, update `_SCHEDULES` (and the resolution logic, if it changed) to match, then run
-  `pnpm run generate-roster-fixture` in `frontend/` and commit the regenerated
-  `backend/tests/fixtures/roster_golden.json`. `backend/tests/test_roster_golden_fixture.py` and
-  frontend CI's `check-roster-fixture` step catch drift between the two (#1107)
-- `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
-- `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
-- `CHANGELOG.md` for release notes (`frontend/src/data/changelog.ts` only adapts it for the app)
-- `frontend/src/styles/event-palette.css` for event colors, in both themes.
-  It is the only place they are defined: it defines `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
-  `.event-*` classes at the bottom of that file apply them, and `getEventColor()` /
-  `getEventTextColor()` in `lib/hday/presentation.ts` return `var(--wt-event-…)` references instead of hex.
-  Change a color there and update the table in `docs/hday-format-spec.md`; nothing else.
-  `tests/lib/eventPalette.test.ts` reads the CSS tokens and pins WCAG AA text contrast, that no two full-day
-  colors are near-identical, and that the helpers, `.event-*` classes and compiled Tailwind utilities
-  only use declared colors
-- User-facing event type names come from the `event_type_*` messages via `getEventTypeLabel()` in
-  `lib/hday/presentation.ts`, so they are translated; don't reintroduce English strings there
-
-## Live Updates
-
-Worktime uses a **notify-then-pull** pattern over SSE. The backend signals that fresh data is available; the client fetches it via the existing incremental pull path.
-
-### SSE contract
-
-| Field | Value |
-|-------|-------|
-| Endpoint | `GET /api/sync/events` |
-| Auth | Bearer token via `Authorization` header, same as every other endpoint — the client opens the stream with `fetch()` (parsed via `eventsource-parser`), not native `EventSource`, since `EventSource` cannot send custom headers |
-| Event name | `sync_changed` |
-| Payload | `{ "type": "sync_changed", "server_timestamp": "<ISO-8601>" }` |
-| Keepalive | `: keepalive` comment every 15 s |
-| Client behaviour | Compare `server_timestamp` against stored sync cursor; skip pull if cursor is already at or ahead of the signal |
-
-### Deployment notes
-
-- **Proxy buffering** — set `X-Accel-Buffering: no` (already sent by the endpoint) so Nginx/Caddy does not buffer the stream.
-- **Timeouts** — ensure the proxy does not close idle SSE connections before the 15 s keepalive fires. Caddy's default idle timeout is fine; Nginx needs `proxy_read_timeout` ≥ 60 s.
-- **CORS** — cross-origin dev setups rely on the existing `CORSMiddleware` config (`Authorization` is already in `allow_headers`); same-origin production deployments (frontend and API behind the same Caddy host) need no CORS handling at all for this endpoint.
-- **Postgres LISTEN/NOTIFY** — the backend subscribes to the `worktime_sync_changed` channel for cross-process broadcast. If the connections are unavailable at startup (e.g. `DATABASE_ENABLED=false`, tests), the manager falls back to in-process delivery within that worker automatically; no operator action is required. If a connection drops later (Postgres restart, failover, idle-connection reaper, network blip), an asyncpg termination listener schedules a background reconnect with exponential backoff and re-registers the channel listener — see `SyncEventManager._on_pg_conn_terminated` in `backend/app/utils/sse_manager.py`.
-
-### Adding new live-update behaviour
-
-- **Reuse `SyncSignalTransport`** when the update follows the same notify-then-pull shape: the live signal is just a freshness hint and the data arrives via a normal fetch. Implement a new `SyncSignalTransport` adapter (or reuse `createFetchSseTransport`) and pass it to `useSyncSignal`.
-- **Stay request/poll-based** for user-triggered actions, infrequent state changes, or anything that needs the full response payload inline (not a separate fetch). Adding SSE complexity for those cases is not worth it.
-- The transport abstraction also decouples the wire protocol: replacing SSE with WebSockets later only requires a new adapter — no changes to `useSyncSignal` or its callers.
-
-### Android background wake (FCM)
-
-Android has no equivalent of an always-open SSE stream, so it uses the same notify-then-pull shape over
-FCM instead: the backend (`app/services/fcm_wake_service.py`, `app/services/fcm_service.py`) sends a
-silent data-only FCM message — no reminder content, just a wake signal — to a user's registered device
-tokens (`FcmDeviceToken`, registered via `/api/push/fcm-token`) whenever a planned time-tracking task is
-created, rescheduled, or synced. The app's `FirebaseMessagingService` reacts by re-running the same
-refresh-and-reconcile flow the foreground case already uses (`ReminderScheduler.reconcile()`), so there's
-one reminder-scheduling code path regardless of whether the app was open or woken. No-ops entirely when
-`FCM_SERVICE_ACCOUNT_JSON` is unset, matching how `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` gate Web Push.
-See #1205.
-
-## Git branches
-
-A branch you're handed to work from may already be stacked on another unmerged
-branch instead of `main` — this repo uses stacked PRs. Before touching an
-unfamiliar branch's existing commits:
-
-- Check what it's actually based on — `git merge-base --is-ancestor origin/main
-  origin/<branch>` (and the reverse) tells you whether `main` or something else
-  is the real parent. Existing commits are not stale leftovers to reset away;
-  assume they're an intentional stack until you've confirmed otherwise (e.g.
-  checking whether they match a PR already merged into a different base).
-- When opening a PR, set `base` to the branch's actual fork point, not `main`
-  by default.
-- If a PR shows a merge conflict or a base that looks wrong, find out *why*
-  before changing anything. Don't "fix" a conflict by repointing the base to
-  whatever branch happens to be conflict-free — that hides the mismatch
-  instead of resolving it.
-- A session's designated branch can already have commits and an open PR from
-  earlier, unrelated work (a different issue) when that PR hasn't merged yet.
-  This is expected, not a mistake to undo — but don't just pile new, unrelated
-  commits onto that same branch/PR. Instead stack: branch a new one off its
-  current tip, commit the new work there, and open a second PR based on it
-  (per "When opening a PR, set base to the branch's actual fork point"
-  above). That keeps the two issues' history and review separate while still
-  letting the new PR build on the unmerged one.
-
 ## Conventions
 
+### Code style
+
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
-- Prefer targeted tests first, then broader checks before handoff
-- Do not commit automatically unless explicitly asked
-- Always include screenshots in PR comments when making UI changes (all visible states)
-- Icons use named `lucide-react` imports and the decorative `components/shared/Icon.tsx` wrapper.
-  Shared icon props accept `LucideIcon` components; icon-only controls must have a text alternative.
-  The previous Bootstrap Icon mapping and fill choices are recorded in `docs/icon-migration.md`.
 - Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
 - Frontend product slices with their own view and supporting components belong under
   `frontend/src/features/<feature>/`, with matching tests under `frontend/tests/features/<feature>/`.
   Feature folders may import shared code, but must not import another feature directly; move code used
   by multiple features to `components/shared/`, `hooks/`, `lib/`, `types/`, or `utils/` as appropriate.
 - All storage keys live in `frontend/src/constants/storageKeys.ts`
-- Never render `error.message` or a server `detail` in the interface: they are English diagnostics. Throw
-  `ApiError.fromResponse(response)` and show `getErrorMessage(error, m.<operation>_failed())` — see `docs/api-errors.md`
+- Icons use named `lucide-react` imports and the decorative `components/shared/Icon.tsx` wrapper.
+  Shared icon props accept `LucideIcon` components; icon-only controls must have a text alternative.
+  The previous Bootstrap Icon mapping and fill choices are recorded in `docs/icon-migration.md`.
+- Styling is Tailwind v4 + Base UI (#1376, finished by #1384); there is no Bootstrap or Sass. Follow
+  "Tailwind + Base UI" below for generation, layers, tokens and lint. Keep logic in hooks/utils, use
+  classes instead of new inline styles and keep light and dark themes working.
 - List-style tables (search, click-to-sort headers, pagination) share `hooks/useDataTable.ts`,
   `components/shared/SortableHeaderCell.tsx` and `components/shared/TablePagination.tsx` — reuse them
   instead of hand-rolling sort/search/paging. Render body cells directly in the row markup rather than via
   column `cell` renderers: TanStack renders those as components, so a column list that changes identity
   remounts the buttons in every row and drops clicks. Join searchable fields with `\n` (not a space) so a
   query can't match across two columns
-- Styling is Tailwind v4 + Base UI (#1376, finished by #1384); there is no Bootstrap or Sass. Follow
-  "Tailwind + Base UI" below for generation, layers, tokens and lint. Keep logic in hooks/utils, use
-  classes instead of new inline styles and keep light and dark themes working.
+
+### Tests
+
+- Prefer targeted tests first, then broader checks before handoff
 - Visual review: UI that needs the .hday helper (the Team tab) can be checked without the real helper by
   seeding `worktime_device_preferences` (`{"hdayHelper":{"url":"http://localhost:<port>"}}`) and
   `worktime_user_state` (`enableTimeOff: true`, `lastUsed.timeOffView: "team"`, `hasCompletedOnboarding:
@@ -263,43 +189,14 @@ unfamiliar branch's existing commits:
   `/team/:id/hday?format=parsed`. Check light, dark and a ~390px viewport. Full-page screenshots draw
   `position: fixed` elements (e.g. the mobile "+" button) at the top of the page, so judge overlap in a
   normal viewport capture
-- Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
-  authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,
-  and a "potential issue" flagged as high-confidence still needs verifying against current code before
-  it's trusted. For each finding: verify it against the actual code, fix it if still valid (with tests
-  and mutation-testing them where the fix is non-trivial, to confirm the test would actually catch a
-  regression), or skip it with a one-line reason if it isn't. Keep fixes minimal and scoped to the
-  finding itself.
-- CodeRabbit's "nitpick" findings usually aren't posted as separate inline review-comment threads —
-  they're plain text inside the main review body/summary, under a heading like "🧹 Nitpick comments".
-  Fetching only inline review threads (e.g. `pull_request_read` with `get_review_comments`) will miss
-  them entirely; also read the review body itself (`get_reviews`, or the `pull_request_review.submitted`
-  webhook payload) to see the full finding set before deciding what to address.
 
-## Deferred work and repo scope
+### i18n
 
-If a gap fits inside the change already in progress — same repository, fixable now, nothing else it
-depends on is missing — fix it there instead of deferring it. Opening an issue for something you could
-just do is its own way of leaving it undone.
+- User-facing strings go through Paraglide messages in `frontend/messages/`; `pnpm locale:audit` and `pnpm check-message-parity` (both run in CI) fail on hard-coded interface strings and on catalogues that drift apart
+- Never render `error.message` or a server `detail` in the interface: they are English diagnostics. Throw
+  `ApiError.fromResponse(response)` and show `getErrorMessage(error, m.<operation>_failed())` — see `docs/api-errors.md`
 
-When a change surfaces work that is legitimately out of scope (it belongs in another repository, depends
-on work that doesn't exist yet, or was deliberately excluded by a product decision), open a concrete
-GitHub issue for it before considering the change done. A sentence in a comment, commit message or PR
-description is not the same as something that will actually happen. Check for an existing issue first,
-and link the originating issue/PR instead of copying its context.
-
-Route each issue to the repository that owns the work: `tjorim/worktime` owns this app (web, backend,
-Android, Pebble, hday-helper); shared VPS infrastructure (Caddy, Keycloak, scheduling, backups) lives in
-the separate infra stack noted under Layout; the sibling apps (`tjorim/travel`,
-`tjorim/champagnefestival`) own their own code even where they share this stack. Cross-app frontend
-decisions are recorded as issues in each repo (for example #1375 route loaders and #1376 Tailwind + Base
-UI here) — check them before adding new frontend infrastructure.
-
-GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new
-sub-issue links and corrections by editing the issue body (read it first, keep the original text, and
-add or adjust a clearly headed section). This applies to every repository above, including closed issues.
-
-## Tailwind + Base UI
+### Styling (Tailwind + Base UI)
 
 Tailwind v4 and Base UI are the whole styling stack: Bootstrap, react-bootstrap, Bootstrap Icons and
 Sass are gone (#1384). Generate new shared primitives on demand with
@@ -350,8 +247,182 @@ Verify new components in light and dark, and run lint, formatting, both type che
 `tests/lib/styleStack.test.ts` pins the layer order, token coverage, the `data-theme` dark variant and
 class merging; `e2e/theme-tokens.spec.ts` checks token resolution in a real browser in both themes.
 
-## UI dependency maintenance
+### UI dependency maintenance
 
 Follow [docs/ui-maintenance.md](docs/ui-maintenance.md) for Base UI/runtime updates and the pinned shadcn CLI, registry comparisons and review records. Run `pnpm ui:check` from `frontend/` after changing shared UI. Renovate does not update owned component source; preserve the documented customisations and validate interactions and bundle budgets.
 
 Application UI imports use `@/components/ui/<component>`. Direct Base UI subpath imports belong in inventoried UI adapters or exact documented composition exceptions. `pnpm ui:check` enforces the policy; `pnpm ui:test` tests it. Keep styles and application behaviour when aligning imports.
+
+### Workflow
+
+- Do not commit automatically unless explicitly asked
+- Always include screenshots in PR comments when making UI changes (all visible states)
+- Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
+  authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,
+  and a "potential issue" flagged as high-confidence still needs verifying against current code before
+  it's trusted. For each finding: verify it against the actual code, fix it if still valid (with tests
+  and mutation-testing them where the fix is non-trivial, to confirm the test would actually catch a
+  regression), or skip it with a one-line reason if it isn't. Keep fixes minimal and scoped to the
+  finding itself.
+- CodeRabbit's "nitpick" findings usually aren't posted as separate inline review-comment threads —
+  they're plain text inside the main review body/summary, under a heading like "🧹 Nitpick comments".
+  Fetching only inline review threads (e.g. `pull_request_read` with `get_review_comments`) will miss
+  them entirely; also read the review body itself (`get_reviews`, or the `pull_request_review.submitted`
+  webhook payload) to see the full finding set before deciding what to address.
+
+#### Git branches
+
+A branch you're handed to work from may already be stacked on another unmerged
+branch instead of `main` — this repo uses stacked PRs. Before touching an
+unfamiliar branch's existing commits:
+
+- Check what it's actually based on — `git merge-base --is-ancestor origin/main
+  origin/<branch>` (and the reverse) tells you whether `main` or something else
+  is the real parent. Existing commits are not stale leftovers to reset away;
+  assume they're an intentional stack until you've confirmed otherwise (e.g.
+  checking whether they match a PR already merged into a different base).
+- When opening a PR, set `base` to the branch's actual fork point, not `main`
+  by default.
+- If a PR shows a merge conflict or a base that looks wrong, find out *why*
+  before changing anything. Don't "fix" a conflict by repointing the base to
+  whatever branch happens to be conflict-free — that hides the mismatch
+  instead of resolving it.
+- A session's designated branch can already have commits and an open PR from
+  earlier, unrelated work (a different issue) when that PR hasn't merged yet.
+  This is expected, not a mistake to undo — but don't just pile new, unrelated
+  commits onto that same branch/PR. Instead stack: branch a new one off its
+  current tip, commit the new work there, and open a second PR based on it
+  (per "When opening a PR, set base to the branch's actual fork point"
+  above). That keeps the two issues' history and review separate while still
+  letting the new PR build on the unmerged one.
+
+#### Deferred work and repo scope
+
+If a gap fits inside the change already in progress — same repository, fixable now, nothing else it
+depends on is missing — fix it there instead of deferring it. Opening an issue for something you could
+just do is its own way of leaving it undone.
+
+When a change surfaces work that is legitimately out of scope (it belongs in another repository, depends
+on work that doesn't exist yet, or was deliberately excluded by a product decision), open a concrete
+GitHub issue for it before considering the change done. A sentence in a comment, commit message or PR
+description is not the same as something that will actually happen. Check for an existing issue first,
+and link the originating issue/PR instead of copying its context.
+
+Route each issue to the repository that owns the work: `tjorim/worktime` owns this app (web, backend,
+Android, Pebble, hday-helper); shared VPS infrastructure (Caddy, Keycloak, scheduling, backups) lives in
+the separate infra stack noted under Layout; the sibling apps (`tjorim/travel`,
+`tjorim/champagnefestival`) own their own code even where they share this stack. Cross-app frontend
+decisions are recorded as issues in each repo (for example #1375 route loaders and #1376 Tailwind + Base
+UI here) — check them before adding new frontend infrastructure.
+
+GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new
+sub-issue links and corrections by editing the issue body (read it first, keep the original text, and
+add or adjust a clearly headed section). This applies to every repository above, including closed issues.
+
+## API contract
+
+The backend's response models are the source of truth for the frontend's API types, and nothing in between is written by hand:
+
+```text
+backend response models -> uv run python -m app.openapi_export (pnpm api:generate)
+  -> frontend/openapi.json -> Orval (frontend/orval.config.mjs) -> frontend/src/api-schema/
+  -> frontend/src/api-types.ts (the one import point for API shapes)
+```
+
+- `frontend/openapi.json` is a committed snapshot of the backend's OpenAPI document with `info.version` pinned to
+  `"snapshot"`, so a release bump never stales it. `frontend/src/api-schema/` is generated from it, one file per
+  schema. Never hand-edit either, and do not declare an API record type anywhere else in the frontend.
+- To add or change an endpoint: give the route a `response_model` (a test enforces it; a response model derives from
+  `ResponseModel` in `backend/app/schemas.py` so a field with a default is required in the generated type), run
+  `pnpm api:generate` in `frontend/` (it needs `uv`), commit `openapi.json` and `src/api-schema/`, and alias the
+  generated record for the screens in `frontend/src/api-types.ts`.
+- `pnpm typecheck` runs `pnpm api:check` and fails when `src/api-schema/` is stale; the backend test
+  `test_openapi_snapshot` fails when `openapi.json` is stale. `backend/tests/test_response_models.py` fails on a JSON
+  route without a documented response schema, and on an optional response field without a per-field
+  wire-omission reason in `OPTIONAL_ON_THE_WIRE` (it rejects both new unexplained fields and stale exceptions).
+  Request optionality is a separate contract.
+- Success fixtures (MSW handlers, fetch doubles, Playwright route fulfils) must choose a generated response schema
+  explicitly: `HttpResponse.json<Model>(...)`, `jsonResponse<Model>(...)`, `jsonBody<Model>(...)`, `routeJson<Model>(...)`,
+  or `satisfies Model` at a browser response boundary. The generic JSON helpers in `frontend/src/mocks/response.ts` use
+  `NoInfer` and default to `never`, so a payload never infers its own contract. The source guard
+  `frontend/tests/mocks/fixtureContracts.test.ts` fails on a fixture that is unchecked or erased, and
+  `frontend/tests/types/apiFixtures.ts` holds compile-only negative checks.
+- A deliberately malformed, error, external-provider or control fixture is exempt only through the helper that names why
+  (`uncheckedJson("malformed", ...)`, `uncheckedBody(...)`) or a `fixture-contract: <reason>` comment at the call site.
+
+## Testing
+
+- Frontend unit and component tests are Vitest with happy-dom (`pnpm test`), in `frontend/tests/` mirroring
+  `frontend/src/`; shared helpers and MSW handlers are described in "API contract". `pnpm test:compatibility`
+  re-runs the suite with Redact enabled and runs the Playwright compatibility browsers.
+- Browser tests are Playwright specs in `frontend/e2e/` (`pnpm test:e2e`, see `frontend/e2e/README.md`);
+  `pnpm typecheck` type-checks them without running them.
+- Script tests (`pnpm bundle:test`, `pnpm ui:test`, `pnpm locale:audit`, `pnpm check-message-parity`) guard the tooling
+  and the catalogues; `pnpm typecheck` also fails on a stale API schema or roster fixture.
+- Backend tests are pytest (`uv run pytest`) in `backend/tests/`, running against SQLite by default and against
+  PostgreSQL in CI (see the prerequisites in "Commands"). `test_openapi_snapshot` fails when
+  `frontend/openapi.json` is stale.
+- Prefer a targeted test first, then the full checks of the area you touched before handing off.
+
+## CI
+
+`.github/workflows/ci.yml` detects what changed (path filters), calls the component workflows and ends in a
+`CI gate` job that fails when any needed job failed or was cancelled; a job skipped because its paths did not
+change is fine. The component workflows are reusable (`workflow_call`) and can also be run by hand:
+
+- `backend-ci.yml` (shown as `Backend / Checks`): `uv sync --locked`, `ruff check`, `ruff format --check`, `ty check`, `pytest`
+  against PostgreSQL and SQLite, then `alembic upgrade head` and `alembic check`.
+- `frontend-ci.yml` (shown as `Frontend / Checks`): `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`,
+  `test`, `build`, `bundle:test` + `bundle:check`, `locale:audit`, `check-message-parity`, `ui:test` + `ui:check`;
+  a separate `Frontend / E2E Tests (Chromium)` job runs Playwright. `ci.yml` also runs `format:repo:check`
+  (workflows, scripts, root JSON) and `release.mjs check`.
+- `android.yml`, `pebble.yml`, `hday-helper-ci.yml` and `pr-preview.yml` are component workflows with their own
+  path filters; `codeql-actions.yml`, `codeql-javascript.yml`, `codeql-python.yml` and `codeql-android.yml` run CodeQL.
+- Actions are pinned to full commit SHAs with a version comment; Node comes from `frontend/.node-version` and pnpm from
+  `frontend/package.json`'s `packageManager`. Renovate (`renovate.json`) groups and automerges dependency updates.
+
+## Release
+
+The app uses CalVer: `YYYY.M.MICRO` (e.g. `2026.7.1`; months are not zero-padded), where `MICRO` is a counter
+that resets to `1` at the start of each new month.
+
+The root `VERSION` file is the single source of truth. Everything else derives
+from it — nothing else should be hand-edited:
+
+- `backend/app/version.py` reads it at runtime (`APP_VERSION`), used by
+  `app/main.py`. `backend/pyproject.toml`'s `version` field is frozen at
+  `0.0.0` — it's packaging metadata only, never read at runtime since the
+  project is run from source, not installed as a wheel.
+- `frontend/package.json`'s `version` field is written by `node scripts/release.mjs bump` and
+  verified by `release.mjs check` (CI and the release workflow); `release.config.json` lists the
+  files that carry the version.
+- `android/app/build.gradle.kts` reads it directly to compute `versionName`/`versionCode`.
+
+`CHANGELOG.md` is the hand-edited source for release notes: the GitHub release body and the in-app
+"What's New" dialog both come from it (the dialog through `frontend/vite-plugin-changelog.ts`, which
+runs `node scripts/release.mjs export --audience app --platform web`).
+
+1. Add entries under `## [Unreleased]` while working (`### Added`, `### Changed`, `### Fixed`,
+   `### Removed`). Put backend, infrastructure, CI and dependency changes under `### Internal`: the
+   dialog hides that heading. Prefix a bullet with `**Android:**` (any scope in `release.config.json`)
+   when it only applies to one client; the web dialog then leaves it out. `### Planned` bullets under
+   `[Unreleased]` appear as "Coming soon" and stay there when a release is cut.
+2. `node scripts/release.mjs bump` writes the next version into `VERSION` and
+   `frontend/package.json` and turns `[Unreleased]` into the dated release section with compare links.
+   Review the diff, open the release PR and merge it.
+3. Push tag `vYYYY.M.MICRO`. `.github/workflows/release.yml` re-checks the tag, versions and
+   changelog (`node scripts/release.mjs check --tag`) and creates a **draft** release whose notes are
+   the changelog section.
+
+`node scripts/release.mjs check` also runs in CI on every pull request.
+
+## Pitfalls
+
+- Never hand-edit `frontend/openapi.json` or anything under `frontend/src/api-schema/`; run `pnpm api:generate`.
+- Do not manually edit files under `frontend/public/assets/icons/`; `pnpm generate-icons` produces them.
+- Event colors are defined only in `frontend/src/styles/event-palette.css`; do not hard-code hex values (see
+  "Source of truth").
+- Never render `error.message` or a server `detail` in the interface (see "Conventions").
+- `uv run alembic check` must stay clean: add a migration with every model change.
+- Run generation, tests and builds sequentially; Paraglide's compiled output is shared and parallel runs race on it.
+- Changing a roster in `rosters.ts` means updating the backend's `_SCHEDULES` and regenerating the golden fixture.

@@ -116,10 +116,9 @@ Run generation, tests and builds sequentially to avoid translation-file races.
 pnpm lint
 pnpm format:check
 pnpm typecheck
-pnpm typecheck:tests
 pnpm test --maxWorkers=2
 pnpm build
-pnpm check-bundle-budget
+pnpm bundle:check
 pnpm test:e2e
 ```
 
@@ -221,7 +220,7 @@ Implementation validation uses base `e8ecb59bb16187ba55ecd0cdcbbcfb5bfd703e3d`. 
 TypeScript runs in that command. Unit tests deliberately use native React as
 explained above. No INP trace or Firefox/WebKit compatibility claim is made.
 
-Production PWA E2E: all 4 checks passed, including offline lazy routes, missing chunk recovery and no write replay. `pnpm typecheck:tests` passed.
+Production PWA E2E: all 4 checks passed, including offline lazy routes, missing chunk recovery and no write replay. `pnpm typecheck` (which includes the tests and E2E specs) passed.
 
 Native unit suite: all 2493 tests passed.
 

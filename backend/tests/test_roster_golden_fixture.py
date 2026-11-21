@@ -8,8 +8,8 @@ change applied to rosters.ts alone (a new schedule, a corrected reference
 date, adjusted shift hours) would otherwise silently desync the Pebble
 dashboard and MCP schedule tools from the web UI, with no failing check
 anywhere. After changing frontend/src/data/rosters.ts, run
-"pnpm run generate-roster-fixture" in frontend/ and commit the regenerated
-fixture; frontend CI's check-roster-fixture step fails if that step was
+"pnpm run fixtures:generate" in frontend/ and commit the regenerated
+fixture; frontend `pnpm typecheck` (fixtures:check) fails if that step was
 skipped, and this test fails if the backend's copy in
 read_models_service.py wasn't updated to match.
 """

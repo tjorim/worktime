@@ -2,22 +2,18 @@
 
 Shift tracking and time-off management with a web frontend and a local/shared backend.
 
-## Project Structure
+## What it is
 
-```text
-worktime/
-├── frontend/      # Web app (Vite, pnpm)
-├── backend/       # FastAPI service (uv, PostgreSQL, Alembic)
-├── android/       # Android app
-├── pebble/        # Pebble (Alloy) companion watch app
-├── hday-helper/   # Local helper for shared `.hday` file access
-├── examples/      # Example `.hday` files and sample share data
-├── docs/          # Design docs, specs, and audit records
-├── infra/         # Example env file for the separate production infra stack
-└── AGENTS.md      # Repo-specific contributor guidance
-```
+- Shift and roster tracking across multiple schedule types, with Gantt and unified-calendar views
+- `.hday` import, export, and parsing for time-off management
+- OIDC accounts with cross-device sync (live updates over SSE) and shared team/time-off reads
+- Database-backed time tracking, work locations, and personal Gantt tasks
+- Public/school holidays, long weekends, and pay dates
+- An MCP server exposing schedule and status tools to LLM clients
+- Companion apps: Android and a Pebble (Alloy) watch app
+- Internationalized UI (English/Dutch)
 
-## Quick Start
+## Quick start
 
 ### Frontend
 
@@ -53,26 +49,58 @@ accounts alongside the existing `DEV_AUTH_BYPASS_TOKEN` admin. All require
 `ENVIRONMENT=development` and an explicitly configured admin bypass; see the
 [local API users workflow](backend/QUICKSTART.md#local-api-users-without-an-identity-provider).
 
-## What It Does
+## Development commands
 
-- Shift and roster tracking across multiple schedule types, with Gantt and unified-calendar views
-- `.hday` import, export, and parsing for time-off management
-- OIDC accounts with cross-device sync (live updates over SSE) and shared team/time-off reads
-- Database-backed time tracking, work locations, and personal Gantt tasks
-- Public/school holidays, long weekends, and pay dates
-- An MCP server exposing schedule and status tools to LLM clients
-- Companion apps: Android and a Pebble (Alloy) watch app
-- Internationalized UI (English/Dutch)
+```bash
+# Frontend (cd frontend)
+pnpm dev                 # Vite dev server on :5173, proxies /api to the backend
+pnpm typecheck           # Paraglide + API types + fixtures + tsc (app, tests, e2e, configs)
+pnpm lint && pnpm format:check
+pnpm build               # production build; then pnpm bundle:check
+pnpm api:generate        # regenerate frontend/openapi.json and src/api-schema/ from the backend
 
-## More Details
+# Backend (cd backend)
+uv run uvicorn app.main:app --reload
+uv run ruff check . && uv run ruff format --check . && uv run ty check .
+uv run alembic upgrade head
+```
 
-- [backend/README.md](backend/README.md) for backend architecture, API surface, and deployment
-- `frontend/` for the web app source
-- `examples/` for sample `.hday` and share-style data
+[AGENTS.md](AGENTS.md) lists every command and the conventions behind them.
 
-## CI Workflows
+## Testing
 
-Each workflow is scoped to the paths it validates:
+```bash
+(cd frontend && pnpm test)        # Vitest unit and component tests
+(cd frontend && pnpm test:e2e)    # Playwright (see frontend/e2e/README.md)
+(cd backend && uv run pytest)     # SQLite by default; CI also runs PostgreSQL
+```
+
+## Project layout
+
+```text
+worktime/
+├── frontend/      # Web app (Vite, pnpm)
+├── backend/       # FastAPI service (uv, PostgreSQL, Alembic)
+├── android/       # Android app
+├── pebble/        # Pebble (Alloy) companion watch app
+├── hday-helper/   # Local helper for shared `.hday` file access
+├── examples/      # Example `.hday` files and sample share data
+├── docs/          # Design docs, specs, and audit records
+├── infra/         # Example env file for the separate production infra stack
+└── AGENTS.md      # Repo-specific contributor guidance
+```
+
+## Deployment and release
+
+Production hosting for `worktime.tjor.im` is handled by the separate infra stack in
+`/opt/apps/infra` (see `AGENTS.md`) — there is no GitHub Pages deploy workflow in this repo. Releases are
+CalVer (`VERSION`, `CHANGELOG.md`, `node scripts/release.mjs`); pushing a `vYYYY.M.MICRO` tag creates a draft
+GitHub release. See "Release" in [AGENTS.md](AGENTS.md).
+
+### CI workflows
+
+`ci.yml` detects which paths changed, calls the workflows below and ends in a `CI gate` job that fails when any
+needed job failed or was cancelled. Each workflow is scoped to the paths it validates:
 
 - `Backend CI` — `backend/**`
 - `Frontend CI` — `frontend/**`
@@ -87,10 +115,7 @@ Each workflow is scoped to the paths it validates:
 - `CodeQL Actions` — `.github/workflows/**`
 - `CodeQL Android` — `android/**`
 
-Production hosting for `worktime.tjor.im` is handled by the separate infra stack in
-`/opt/apps/infra` (see `AGENTS.md`) — there is no GitHub Pages deploy workflow in this repo.
-
-### Release and Artifact Workflows
+### Release and artifact workflows
 
 These workflows are intentionally separated from normal CI:
 
@@ -98,8 +123,10 @@ These workflows are intentionally separated from normal CI:
 - `Build .hday Helper` (Windows EXE + Linux binary) remains scoped to `hday-helper/**`, `frontend/src/lib/hday/**`, and its workflow file.
 - `Android Release APK` is a manual (`workflow_dispatch`) artifact build, separate from Android CI. When signing secrets are unavailable, it skips artifact publishing gracefully instead of failing unrelated checks.
 
-## UI maintenance
+## Contributing and docs
 
-See [UI dependency and component maintenance](docs/ui-maintenance.md) for package updates, component provenance, upstream review commands and validation.
-
-Toolchain versions and coordinated rollout: [Node and pnpm toolchain](docs/toolchain.md).
+- [AGENTS.md](AGENTS.md) for repo conventions, commands, CI and release rules (`CLAUDE.md` points there)
+- [backend/README.md](backend/README.md) for backend setup, architecture, API surface and deployment
+- [frontend/README.md](frontend/README.md) and [frontend/e2e/README.md](frontend/e2e/README.md) for the web app and its browser tests
+- [docs/](docs/) for design docs, specs and audit records, including [UI dependency and component maintenance](docs/ui-maintenance.md) and the [Node and pnpm toolchain](docs/toolchain.md)
+- `examples/` for sample `.hday` and share-style data

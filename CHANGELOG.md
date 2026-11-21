@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Rel
 (`YYYY.M.MICRO`); entries before 2026.7.2 are SemVer. The root `VERSION` file is the single source of
 truth: `node scripts/release.mjs bump` writes it everywhere and turns `[Unreleased]` into the next
 release, and `node scripts/release.mjs check` (run by CI and by the release workflow) verifies that the
-two agree. See "Versioning" in `AGENTS.md`.
+two agree. See "Release" in `AGENTS.md`.
 
 Entries under `### Internal` (backend, infrastructure, CI, dependencies) are left out of the app's
 dialog. Start a bullet with a scope such as `**Android:**` to limit it to one client or area; the
@@ -26,6 +26,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Align tooling, CI and docs with the other apps: type-check tests and E2E specs in `pnpm typecheck` (`typecheck:tests` and `tsconfig.test.json` are gone), run the roster fixture guard from `typecheck` as `fixtures:check`, drop the duplicate `check-bundle-budget` script, share the Vitest, oxlint and oxfmt ignore lists, move frontend and backend dependencies to the newest versions the apps use (pnpm 12.21.0, TanStack Query 5.108, FastAPI 0.162.5, ruff 0.17.5, ty 0.0.105, SQLAlchemy 2.1.9), run `check-message-parity` and `ui:check` in one `Frontend / Checks` CI job, and give `AGENTS.md`, `README.md` and `backend/README.md` the same section skeleton.
 - Document existing running-task 204 and time-off upsert 200 responses, and validate successful backend test responses against OpenAPI.
 - Enforce generated API contracts in shared, test-local and browser fixtures; typecheck E2E fixtures and remove obsolete mock-only endpoints.
 - Remove `.github/dependabot.yml`: Renovate (shared `tjorim/renovate-config` preset) is the only dependency updater now. Dependabot security alerts stay on.

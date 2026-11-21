@@ -37,17 +37,9 @@ export default defineConfig({
     environment: "happy-dom",
     globals: true,
     setupFiles: ["./tests/setup.ts"],
-    exclude: [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/coverage/**",
-      "**/NextShift/**",
-      "**/HdayPlanner/**",
-      "**/e2e/**",
-    ],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/e2e/**"],
     typecheck: {
-      tsconfig: "./tsconfig.test.json",
+      tsconfig: "./tsconfig.app.json",
     },
     coverage: {
       provider: "v8",

@@ -29,7 +29,10 @@ class FakeBroadcastChannel {
   postMessage = vi.fn();
   close = vi.fn();
 
-  constructor(readonly name: string) {
+  readonly name: string;
+
+  constructor(name: string) {
+    this.name = name;
     FakeBroadcastChannel.instances.push(this);
   }
 }

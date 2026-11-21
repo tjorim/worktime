@@ -13,7 +13,7 @@ try {
   actual = readFileSync(fixturePath, "utf8");
 } catch {
   process.stderr.write(
-    `❌ ${ROSTER_FIXTURE_RELATIVE_PATH} does not exist. Run "pnpm run generate-roster-fixture" and commit the result.\n`,
+    `❌ ${ROSTER_FIXTURE_RELATIVE_PATH} does not exist. Run "pnpm run fixtures:generate" and commit the result.\n`,
   );
   process.exit(1);
 }
@@ -21,7 +21,7 @@ try {
 if (actual !== expected) {
   process.stderr.write(
     `❌ ${ROSTER_FIXTURE_RELATIVE_PATH} is out of date with frontend/src/data/rosters.ts and shiftCalculations.ts.\n` +
-      'Run "pnpm run generate-roster-fixture" and commit the result.\n',
+      'Run "pnpm run fixtures:generate" and commit the result.\n',
   );
   process.exit(1);
 }

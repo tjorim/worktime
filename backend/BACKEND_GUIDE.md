@@ -165,7 +165,7 @@ Under `/api/sync`:
 
 - `/api/push/*` — Web Push subscription management for planned-task-reminder notifications (no-ops unless
   `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` are set), plus FCM device-token registration for Android
-  push-wake — see `AGENTS.md`'s "Live Updates" section. Without `FCM_SERVICE_ACCOUNT_JSON` set, the
+  push-wake — see `AGENTS.md`'s "Live updates" section. Without `FCM_SERVICE_ACCOUNT_JSON` set, the
   register/unregister endpoints return 503 and no wake-pings are ever sent (the send side is a silent
   no-op; the endpoints themselves are simply unavailable)
 

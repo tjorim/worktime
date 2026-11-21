@@ -70,7 +70,7 @@ cannot compute still needs a manual review.
 
 ## API fixture contracts
 
-`pnpm typecheck:tests` includes all E2E specs, fixture pages and Playwright configs.
+`pnpm typecheck` includes all E2E specs, fixture pages and Playwright configs.
 Use `jsonResponse<GeneratedResponse>(body)` for test-local fetch/MSW responses,
 `jsonBody<GeneratedResponse>(body)` for injected `json()` doubles, and
 `routeJson<GeneratedResponse>(body)` for Playwright fulfilment. Import records

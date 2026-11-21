@@ -50,7 +50,7 @@ class WorktimeAppContainer(
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // A dedicated client, not the Retrofit one: the SSE connection is held open indefinitely
-    // between the server's 15s keepalive comments (see AGENTS.md "Live Updates"), which a normal
+    // between the server's 15s keepalive comments (see AGENTS.md "Live updates"), which a normal
     // finite read timeout would tear down as a stall.
     private val sseClient =
         OkHttpClient

@@ -7,7 +7,6 @@
     "**/coverage",
     "openapi.json",
     "src/api-schema/**",
-    "NextShift/**",
-    "HdayPlanner/**"
+    "project.inlang/cache"
   ]
 }

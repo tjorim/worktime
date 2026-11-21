@@ -1,15 +1,14 @@
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
-  plugins: ["react"],
+  plugins: ["typescript", "unicorn", "oxc", "react"],
   ignorePatterns: [
     "dist/**",
-    "src/api-schema/**",
     "build/**",
     "coverage/**",
     "node_modules/**",
-    "NextShift/**",
-    "HdayPlanner/**",
+    "src/paraglide/**",
+    "src/api-schema/**",
   ],
   jsPlugins: ["@shadcn/lint"],
   rules: {
