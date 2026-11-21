@@ -10,8 +10,10 @@ from fastapi import APIRouter, Depends, Header, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime import as_utc
 from app.core.errors import ApiHTTPException, ErrorCode, api_error
-from app.database.engine import get_session
+from app.core.timing import time_operation
+from app.db.engine import get_session
 from app.middleware.rate_limit import limiter
 from app.routers.auth import get_authenticated_user_id, get_authenticated_user_id_shortlived
 from app.schemas import (
@@ -21,15 +23,13 @@ from app.schemas import (
     SyncStatusResponse,
 )
 from app.services.db_service import NotFoundError, ValidationError
+from app.services.sse import notify_sync_changed, sync_event_manager
 from app.services.sync_service import (
     BulkDeleteGuardError,
     get_sync_status,
     pull_changes,
     push_changes,
 )
-from app.utils.datetime import as_utc
-from app.utils.sse_manager import notify_sync_changed, sync_event_manager
-from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
 

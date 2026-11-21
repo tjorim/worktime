@@ -9,17 +9,17 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
-from app.read_models import (
+from app.db.engine import get_session
+from app.routers.auth import (
+    AuthenticatedPrincipal,
+    get_authenticated_principal,
+)
+from app.schemas.read_models import (
     CurrentStatusReadModel,
     DashboardReadModel,
     NextShiftsReadModel,
     TeamStatusReadModel,
     TimeOffSummaryReadModel,
-)
-from app.routers.auth import (
-    AuthenticatedPrincipal,
-    get_authenticated_principal,
 )
 from app.services.db_service import NotFoundError
 from app.services.read_models_service import build_dashboard_read_model

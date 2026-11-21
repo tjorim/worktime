@@ -46,8 +46,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from app.core.datetime import as_utc
 from app.core.errors import ErrorCode
-from app.database.models import (
+from app.models import (
     GanttTask,
     Label,
     TimeOffEntry,
@@ -89,7 +90,6 @@ from app.services.db_service import (
     validate_gantt_dependencies,
     validate_gantt_dependency_graph,
 )
-from app.utils.datetime import as_utc
 
 
 def _now() -> datetime:
@@ -219,7 +219,7 @@ async def _assert_not_bulk_delete(session: AsyncSession, user_id: int, changes: 
     # Judge against the whole logical push when the client declared one. A
     # chunked destructive batch would otherwise slip its first chunk past the
     # guard and only be refused partway through, leaving the account partly
-    # erased — see declared_delete_total in app/schemas.py.
+    # erased — see declared_delete_total in app/schemas/.
     if changes.declared_delete_total is not None:
         deleted = max(deleted, changes.declared_delete_total)
 

@@ -7,10 +7,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import logger as audit
 from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.mcp.formatting import to_iso_date
 from app.schemas import GanttTaskCreate, GanttTaskRead, GanttTaskUpdate
+from app.services.audit import logger as audit
 from app.services.db_service import (
     create_gantt_task as create_gantt_task_service,
 )

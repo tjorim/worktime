@@ -12,9 +12,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.db import AuditActor, write_audit_entry
+from app.core.datetime import as_utc
 from app.core.errors import ErrorCode
-from app.database.models import (
+from app.models import (
     Base,
     GanttTask,
     Label,
@@ -42,8 +42,8 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationUpdate,
 )
-from app.utils.datetime import as_utc
-from app.utils.sse_manager import notify_sync_changed
+from app.services.audit.db import AuditActor, write_audit_entry
+from app.services.sse import notify_sync_changed
 
 
 class NotFoundError(Exception):
@@ -157,7 +157,7 @@ async def _audit(
     callers (including the large body of unit tests that call these
     functions directly) keep working unchanged. Production write paths —
     REST routers and MCP tools — always pass an actor; see
-    app.audit.db.write_audit_entry for the transactional contract (staged
+    app.services.audit.db.write_audit_entry for the transactional contract (staged
     here, committed by the caller as part of the same transaction).
     """
     if actor is None:

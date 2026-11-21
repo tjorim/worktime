@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
+from app.db.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, require_oidc_principal
 from app.schemas import (
     AccessTokenCreate,

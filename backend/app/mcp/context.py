@@ -23,7 +23,7 @@ from fastmcp.tools.base import ToolResult
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
 
-from app.audit.db import AuditActor
+from app.services.audit.db import AuditActor
 from app.services.db_service import ConflictError, NotFoundError, ValidationError
 
 if TYPE_CHECKING:

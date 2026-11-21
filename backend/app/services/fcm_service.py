@@ -17,7 +17,7 @@ from enum import Enum, auto
 import firebase_admin
 from firebase_admin import App, credentials, messaging
 
-from app.config.settings import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

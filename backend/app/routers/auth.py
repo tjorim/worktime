@@ -18,14 +18,14 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.db import AuditActor
-from app.config import settings
-from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
+from app.core.config import settings
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session, get_session_factory
+from app.core.oidc import OIDCTokenError, decode_token, get_or_create_local_user
+from app.db.engine import get_session, get_session_factory
 from app.schemas import OidcDiscoveryConfig
 from app.services.access_token_service import TOKEN_PREFIX as _PAT_PREFIX
 from app.services.access_token_service import authenticate_access_token
+from app.services.audit.db import AuditActor
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ PEBBLE_WRITE_SCOPE = "pebble:write"
 
 
 # Discovery results are stable for the lifetime of the process, like the JWKS
-# cache in app.config.oidc_config. Keyed by issuer so a config change is picked up.
+# cache in app.core.oidc. Keyed by issuer so a config change is picked up.
 _config_cache: dict[str, OidcDiscoveryConfig] = {}
 
 

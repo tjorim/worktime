@@ -63,7 +63,7 @@ Auth is OIDC/Keycloak-based, not session-cookie-based:
 
 - `GET /api/auth/oidc-config` — discovery info the frontend uses to talk to the OIDC provider directly
 - Every other authenticated endpoint accepts a Bearer token: either an OIDC access token (verified
-  against the provider's JWKS, see [oidc_config.py](app/config/oidc_config.py)) or a personal
+  against the provider's JWKS, see [oidc.py](app/core/oidc.py)) or a personal
   access token (`wtpat_...`, issued via `/api/access-tokens`)
 - `get_authenticated_principal` ([auth.py](app/routers/auth.py)) accepts either kind of token;
   `require_oidc_principal` additionally gates endpoints — account deletion, token management — that
@@ -178,7 +178,7 @@ Under `/api/sync`:
 ## Storage Model
 
 The database layer is PostgreSQL-backed and expects an async SQLAlchemy URL using the `asyncpg` driver
-(a `sqlite+aiosqlite://` URL is also accepted for local development and is the default for the test suite; see `app/database/sqlite.py`).
+(a `sqlite+aiosqlite://` URL is also accepted for local development and is the default for the test suite; see `app/db/sqlite.py`).
 
 Schema management is handled through Alembic. The backend can be started with DB routes disabled, but the current app is clearly designed to support DB-backed features as a first-class path.
 
@@ -189,8 +189,8 @@ non-interactive clients.
 
 Current configuration lives in:
 
-- [settings.py](app/config/settings.py)
-- [oidc_config.py](app/config/oidc_config.py)
+- [config.py](app/core/config.py)
+- [oidc.py](app/core/oidc.py)
 
 Important points:
 
@@ -205,7 +205,7 @@ Important points:
 
 ## Configuration
 
-Primary runtime settings live in [.env.example](.env.example) and [settings.py](app/config/settings.py).
+Primary runtime settings live in [.env.example](.env.example) and [config.py](app/core/config.py).
 
 Important variables:
 
@@ -263,7 +263,7 @@ Useful commands:
 
 ```bash
 uv run pytest
-uv run pytest tests/test_health.py
+uv run pytest tests/routers/test_health.py
 uv run ruff check app
 uv run ty check app
 uv run alembic upgrade head
@@ -326,8 +326,8 @@ When this guide and the code disagree, trust the code and tests.
 The most important files are:
 
 - [main.py](app/main.py)
-- [settings.py](app/config/settings.py)
-- [oidc_config.py](app/config/oidc_config.py)
+- [config.py](app/core/config.py)
+- [oidc.py](app/core/oidc.py)
 - [health.py](app/routers/health.py)
 - the `app/routers/db_*.py` modules
 - the `tests/` directory

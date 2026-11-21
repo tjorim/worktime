@@ -124,8 +124,8 @@ surfaces as a `ValueError` with the original, actionable message.
 
 Every write tool call (and its REST equivalent) writes a durable audit entry
 in the *same* database transaction as the mutation itself — see
-`backend/app/audit/db.py`. Read it back via `GET /api/audit` (bounded,
+`backend/app/services/audit/db.py`. Read it back via `GET /api/audit` (bounded,
 `(created_at, id)`-ordered, own trail for non-admins, any/all with admin
-scope). The rotated file logger from #984 (`backend/app/audit/logger.py`)
+scope). The rotated file logger from #984 (`backend/app/services/audit/logger.py`)
 keeps running as secondary, best-effort operational telemetry; it is not the
 authoritative record.

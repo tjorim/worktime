@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
+from app.db.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal, require_oidc_principal
 from app.schemas import AccountCapabilities, AccountProfile
 from app.services.db_service import NotFoundError, delete_user_uncommitted, get_user

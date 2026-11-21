@@ -34,8 +34,8 @@ from starlette.middleware import Middleware as ASGIMiddleware
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.config import settings
-from app.database.engine import get_session_factory
+from app.core.config import settings
+from app.db.engine import get_session_factory
 from app.mcp import account, gantt, holidays, identity, schedule, time_off, time_tracking, work_location
 from app.mcp.context import (
     McpAuthError,
@@ -225,7 +225,7 @@ class WorktimeMcpBackend:
             if is_service_account:
                 auth_type = "keycloak_service"
         elif subject and not is_service_account:
-            from app.config.oidc_config import get_or_create_local_user
+            from app.core.oidc import get_or_create_local_user
 
             user = await get_or_create_local_user(str(subject), claims, db)
             user_id = user.id

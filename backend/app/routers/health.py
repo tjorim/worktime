@@ -25,9 +25,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..config import settings
-from ..config.oidc_config import OIDCTokenError, _resolve_jwks_uri
-from ..database.engine import get_session
+from app.core.config import settings
+from app.core.oidc import OIDCTokenError, _resolve_jwks_uri
+from app.db.engine import get_session
+
 from ..middleware.rate_limit import limiter
 from ..schemas import HealthSummary, LivenessResponse, ReadinessResponse
 from ..version import APP_COMMIT, APP_VERSION

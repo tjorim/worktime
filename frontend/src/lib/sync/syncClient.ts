@@ -291,7 +291,7 @@ export function bumpClientTimestamps(
 
 /**
  * Maximum items per entity list accepted by POST /api/sync/push in a single
- * request (mirrors MAX_SYNC_PUSH_ITEMS in backend/app/schemas.py).  Larger
+ * request (mirrors MAX_SYNC_PUSH_ITEMS in backend/app/schemas/sync.py).  Larger
  * payloads are split transparently by pushSyncPayload.
  */
 export const MAX_SYNC_PUSH_ITEMS = 1000;

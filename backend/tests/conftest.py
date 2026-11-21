@@ -17,12 +17,12 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.cache.store import get_cache
-from app.database import sqlite
-from app.database.engine import get_session
-from app.database.models import Base
+from app.db import sqlite
+from app.db.engine import get_session
 from app.main import app
+from app.models import Base
 from app.routers.auth import AuthenticatedPrincipal, AuthType, get_bearer_principal, get_principal_shortlived
+from app.services.cache.store import get_cache
 
 _TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -68,6 +68,18 @@ def reset_cache() -> Generator[None]:
     cache = get_cache()
     cache._holiday_entries.clear()
     yield
+
+
+@pytest.fixture(autouse=True)
+def reset_oidc_discovery_cache(monkeypatch) -> None:
+    """Start every test without a discovered JWKS URI.
+
+    The readiness check resolves it through a mocked HTTP client in some tests; without this reset the mock's
+    value would leak into whichever test runs next, making the suite depend on file order.
+    """
+    from app.core import oidc
+
+    monkeypatch.setattr(oidc, "_jwks_uri_cache", None)
 
 
 @pytest.fixture(autouse=True)

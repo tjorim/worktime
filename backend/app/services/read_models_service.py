@@ -13,8 +13,10 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import TimeOffEntry
-from app.read_models import (
+from app.core.datetime import as_utc
+from app.models import TimeOffEntry
+from app.routers.auth import AuthenticatedPrincipal
+from app.schemas.read_models import (
     CurrentStatusReadModel,
     DashboardReadModel,
     NextShiftItemReadModel,
@@ -31,13 +33,11 @@ from app.read_models import (
     TimeOffSummaryItemReadModel,
     TimeOffSummaryReadModel,
 )
-from app.routers.auth import AuthenticatedPrincipal
 from app.services.db_service import (
     get_user,
     get_user_preferences,
     list_time_off_entries,
 )
-from app.utils.datetime import as_utc
 
 
 @dataclass(frozen=True)
@@ -82,7 +82,7 @@ _OFF_SHIFT = _ShiftDefinition(name="Off", start=None, end=None, display_code="O"
 # Hand-copied from frontend/src/lib/schedule/rosters.ts (the source of truth per
 # AGENTS.md) because the frontend and backend build/deploy independently and
 # neither serves its roster config to the other at runtime (see #1107 for why
-# that tradeoff was made). tests/test_roster_golden_fixture.py cross-checks
+# that tradeoff was made). tests/services/test_roster_golden_fixture.py cross-checks
 # this dict, and the algorithms below it, against a fixture generated from
 # rosters.ts/shiftCalculations.ts — after editing a schedule here, also edit
 # rosters.ts and run "pnpm run fixtures:generate" in frontend/.

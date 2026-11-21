@@ -17,12 +17,13 @@ from fastapi.responses import PlainTextResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware
+from app.core.config import settings
+from app.core.cors import get_cors_origins
+from app.core.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware
+from app.db import init_db
+from app.services.sse import sync_event_manager
 
-from .config import settings
-from .config.cors import get_cors_origins
 from .core.errors import ApiHTTPException, handle_api_http_exception, handle_label_validation_error
-from .database import init_db
 from .middleware.rate_limit import handle_rate_limit_exceeded, limiter, rate_limit
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.request_timing import RequestTimingMiddleware
@@ -32,7 +33,6 @@ from .routers.health import router as health_router
 from .routers.holidays import router as holidays_router
 from .routers.metrics import router as metrics_router
 from .schemas import McpCapabilities
-from .utils.sse_manager import sync_event_manager
 from .version import APP_VERSION
 
 # Configure logging
@@ -104,7 +104,7 @@ async def lifespan(app: FastAPI):
     # can't detect either case).
     jwks_refresh_task = None
     if settings.OIDC_ISSUER_URL:
-        from .config.oidc_config import start_periodic_jwks_refresh
+        from app.core.oidc import start_periodic_jwks_refresh
 
         jwks_refresh_task = start_periodic_jwks_refresh()
         logger.info("✓ Periodic OIDC JWKS refresh started in background")

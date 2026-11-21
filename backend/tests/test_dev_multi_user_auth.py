@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from app.config import oidc_config
-from app.config.settings import Settings
+from app.core import oidc as oidc_config
+from app.core.config import Settings
 from app.main import app
 from app.routers.auth import get_bearer_principal
 

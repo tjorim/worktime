@@ -7,7 +7,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
+from app.core.pagination import MAX_PAGE_LIMIT, paginate
+from app.core.timing import time_operation
+from app.db.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
     audit_actor_for,
@@ -32,8 +34,6 @@ from app.services.db_service import (
     list_gantt_tasks,
     update_gantt_task,
 )
-from app.utils.pagination import MAX_PAGE_LIMIT, paginate
-from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/gantt-tasks", tags=["Gantt Tasks"])
 

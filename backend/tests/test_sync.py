@@ -18,11 +18,11 @@ from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.database.models import TimeTrackingTask
+from app.models import TimeTrackingTask
 from app.schemas import LabelCreate, TaskSyncItem, UserCreate
 from app.services.db_service import create_label, create_user
+from app.services.sse import SyncEventManager, _redact_credentials
 from app.services.sync_service import _push_task
-from app.utils.sse_manager import SyncEventManager, _redact_credentials
 from tests.task_helpers import label_id_for, task_payload
 
 # ---------------------------------------------------------------------------
@@ -1795,7 +1795,7 @@ class TestSyncEventManager:
         is one long-lived connection, not one unit of request work), so this
         cap is what actually bounds one account's concurrent streams.
         """
-        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+        from app.services.sse import _MAX_QUEUES_PER_USER
 
         manager = SyncEventManager()
         queues = [asyncio.Queue() for _ in range(_MAX_QUEUES_PER_USER)]
@@ -1949,7 +1949,7 @@ class TestSyncEventManagerReconnect:
             patch.object(
                 manager, "_connect_listen", new_callable=AsyncMock, side_effect=[OSError("down"), None]
             ) as mock_connect,
-            patch("app.utils.sse_manager.asyncio.sleep", new_callable=AsyncMock),
+            patch("app.services.sse.asyncio.sleep", new_callable=AsyncMock),
         ):
             await manager._reconnect_with_backoff("listen")
 
@@ -1968,7 +1968,7 @@ class TestSyncEventManagerReconnect:
 
         with (
             patch.object(manager, "_connect_listen", new_callable=AsyncMock, side_effect=_fail_and_close),
-            patch("app.utils.sse_manager.asyncio.sleep", new_callable=AsyncMock),
+            patch("app.services.sse.asyncio.sleep", new_callable=AsyncMock),
         ):
             await manager._reconnect_with_backoff("listen")
 
@@ -2051,7 +2051,7 @@ class TestSyncEventsEndpoint:
         from fastapi import HTTPException, Request
 
         from app.routers.db_sync import events_endpoint
-        from app.utils.sse_manager import _MAX_QUEUES_PER_USER
+        from app.services.sse import _MAX_QUEUES_PER_USER
 
         mock_request = MagicMock(spec=Request)
         user_id = 987654321  # unique to this test to avoid cross-test interference
@@ -2153,7 +2153,7 @@ class TestSyncEventsConnectionPool:
         from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
         from sqlalchemy.pool import QueuePool
 
-        import app.database.engine as db_engine
+        import app.db.engine as db_engine
         from app.routers.auth import get_principal_shortlived
 
         pool_size, max_overflow = 1, 1  # total capacity: 2 pooled connections
@@ -2164,7 +2164,7 @@ class TestSyncEventsConnectionPool:
             pool_timeout=2,
         )
         small_factory = async_sessionmaker(small_engine, expire_on_commit=False)
-        # app.database.engine exposes no setter/override for the module-level
+        # app.db.engine exposes no setter/override for the module-level
         # engine and session factory, so swapping them in for this test means
         # patching the private globals directly.
         monkeypatch.setattr(db_engine, "_engine", small_engine)
@@ -3611,7 +3611,7 @@ class TestSyncCorrectnessFixes:
         headers = auth_headers(user_id)
 
         with patch(
-            "app.utils.sse_manager.sync_event_manager.broadcast_sync_changed",
+            "app.services.sse.sync_event_manager.broadcast_sync_changed",
             new_callable=AsyncMock,
         ) as mock_bc:
             mock_bc.return_value = 0
@@ -3933,7 +3933,7 @@ def test_work_location_iso_validation_per_record(db_client: TestClient, auth_hea
 async def test_work_location_legacy_country_is_preserved_until_changed(db_session: AsyncSession) -> None:
     from datetime import date
 
-    from app.database.models import WorkLocation
+    from app.models import WorkLocation
     from app.schemas import WorkLocationSyncItem
     from app.services.sync_service import _push_work_location
 

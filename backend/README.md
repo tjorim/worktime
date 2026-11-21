@@ -43,7 +43,7 @@ The interactive API docs are at <http://localhost:8000/docs> (and `/redoc`). `ru
 
 ```bash
 uv run pytest
-uv run pytest tests/test_health.py   # a single file
+uv run pytest tests/routers/test_health.py   # a single file
 ```
 
 Tests run against a throwaway SQLite file by default, so they need no container (about 15 seconds). CI also runs the
@@ -86,9 +86,18 @@ root [AGENTS.md](../AGENTS.md).
 
 ```text
 backend/
-├── app/            # FastAPI application package
+├── app/            # FastAPI application package (see ../docs/ARCHITECTURE.md)
+│   ├── main.py, mcp_server.py, openapi_export.py, version.py
+│   ├── routers/    # HTTP layer, one module per domain
+│   ├── services/   # business logic (audit/, cache/, sse.py ...)
+│   ├── models/     # SQLAlchemy models, one module per domain
+│   ├── schemas/    # Pydantic request/response models, one module per domain
+│   ├── core/       # settings, OIDC, errors, observability, request limits, pagination, timing
+│   ├── db/         # engine/session, SQLite compatibility, auto-migrate
+│   ├── mcp/        # MCP tools, assembled by mcp_server.py
+│   └── middleware/ # rate limit, request id, timing
 ├── migrations/     # Alembic migration scripts
-├── tests/          # Backend test suite
+├── tests/          # Backend test suite, mirrors app/ (routers/, services/, core/, db/ ...)
 ├── docs/           # Observability, profiling, rate limiting and sync tombstone notes
 ├── sql/            # Operational SQL
 ├── Dockerfile
@@ -120,7 +129,7 @@ Important variables:
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — Web Push planned-task-reminder notifications (feature is a no-op when unset)
 - `FCM_SERVICE_ACCOUNT_JSON` — Firebase service-account credential for waking the Android app in the background (feature is a no-op when unset)
 
-See `.env.example`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/config/settings.py` for the full list.
+See `.env.example`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details, and `app/core/config.py` for the full list.
 
 Optional `DEV_AUTH_MEMBER_TOKEN` and `DEV_AUTH_SECOND_MEMBER_TOKEN` provide two local
 member identities; see [Quick Start](QUICKSTART.md#local-api-users-without-an-identity-provider)
@@ -128,7 +137,7 @@ for configuration, guards and the curl workflow. Browser OIDC flows require an I
 
 ## API Groups
 
-Auth is OIDC/Keycloak-based (`app/config/settings.py`, `app/config/oidc_config.py`), plus personal
+Auth is OIDC/Keycloak-based (`app/core/config.py`, `app/core/oidc.py`), plus personal
 access tokens (`wtpat_...`) for non-interactive clients like the Pebble companion app — see
 `AGENTS.md` for how the two are gated.
 

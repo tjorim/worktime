@@ -11,9 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
-from app.database.models import Label, TimeTrackingTask
-from app.read_models import CurrentStatusReadModel, NextShiftsReadModel
+from app.db.engine import get_session
+from app.models import Label, TimeTrackingTask
 from app.routers.auth import (
     AuthenticatedPrincipal,
     audit_actor_for,
@@ -21,6 +20,7 @@ from app.routers.auth import (
     require_pebble_write_principal,
 )
 from app.schemas import TaskCreate, TaskRead, TaskUpdate
+from app.schemas.read_models import CurrentStatusReadModel, NextShiftsReadModel
 from app.services.db_service import (
     ConflictError,
     NotFoundError,

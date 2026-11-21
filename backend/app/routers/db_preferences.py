@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.engine import get_session
+from app.core.timing import time_operation
+from app.db.engine import get_session
 from app.routers.auth import get_authenticated_user_id
 from app.schemas import UserPreferencesRead, UserPreferencesWrite
 from app.services.db_service import get_user_preferences, upsert_user_preferences
-from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/preferences", tags=["Preferences"])
 

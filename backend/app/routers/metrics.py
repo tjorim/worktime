@@ -28,7 +28,8 @@ import time
 from fastapi import APIRouter, Header, status
 from fastapi.responses import JSONResponse
 
-from ..config import settings
+from app.core.config import settings
+
 from ..core.observability import request_metrics
 from ..schemas import RequestMetricsSnapshot
 
