@@ -37,7 +37,7 @@ uv run alembic upgrade head           # apply database migrations (see "Migratio
 uv run uvicorn app.main:app --reload  # start the development server
 ```
 
-The interactive API docs are at <http://localhost:8000/docs> (and `/redoc`). `run.sh` wraps the same steps.
+The interactive API docs are at <http://localhost:8000/docs> (and `/redoc`). `run.sh` installs dependencies and starts the server; it only applies migrations when `AUTO_MIGRATE=true`, so run `uv run alembic upgrade head` first (see above).
 
 ## Test
 
@@ -51,6 +51,7 @@ suite against PostgreSQL, the production database. To do the same locally, start
 
 ```bash
 docker compose up db -d
+docker compose exec db psql -U worktime -d worktime -c "CREATE DATABASE worktime_test;"   # the compose service only creates `worktime`
 export TEST_DATABASE_URL=postgresql+asyncpg://worktime:worktime@localhost/worktime_test
 ```
 

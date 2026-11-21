@@ -131,7 +131,8 @@ uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite .
 > PostgreSQL, and CI runs the whole suite against it too; two tests that simulate two
 > sessions racing on an index entry need PostgreSQL's row-level locking and skip on SQLite.
 > To run the suite against PostgreSQL, start one with
-> `docker compose -f backend/docker-compose.yml up db -d` and set
+> `docker compose up db -d` (from `backend/`), create the test database with
+> `docker compose exec db psql -U worktime -d worktime -c "CREATE DATABASE worktime_test;"` and set
 > `TEST_DATABASE_URL=postgresql+asyncpg://worktime:worktime@localhost/worktime_test`.
 >
 > For a local dev instance (`uv run uvicorn ...`), set
