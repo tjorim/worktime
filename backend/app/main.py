@@ -19,6 +19,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
 from app.core.cors import get_cors_origins
+from app.core.logging import LOG_FORMAT
 from app.core.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware
 from app.db import init_db
 from app.services.sse import sync_event_manager
@@ -36,7 +37,7 @@ from .schemas import McpCapabilities
 from .version import APP_VERSION
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 _worktime_mcp_base_url = os.environ.get("MCP_BASE_URL", "")
