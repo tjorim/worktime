@@ -39,9 +39,9 @@ DependencyStatus = Literal["ok", "unreachable"]
 
 # Plain BaseModel: the route leaves ``database`` out when no database is configured.
 class ReadinessResponse(BaseModel):
-    """Result of the dependency checks; returned with HTTP 200 (``ok``) or 503 (``degraded``)."""
+    """Result of the dependency checks; returned with HTTP 200 (``ready``) or 503 (``not_ready``)."""
 
-    status: Literal["ok", "degraded"]
+    status: Literal["ready", "not_ready"]
     auth: DependencyStatus
     # Absent (not null) when DATABASE_ENABLED is false, so the database was not checked.
     database: DependencyStatus | None = None

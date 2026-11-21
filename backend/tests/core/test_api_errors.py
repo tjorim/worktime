@@ -12,11 +12,9 @@ from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.errors import (
-    ApiHTTPException,
     ErrorCode,
     api_error,
     default_error_code,
-    handle_api_http_exception,
     handle_http_exception,
     handle_label_validation_error,
     handle_unhandled_exception,
@@ -37,7 +35,6 @@ class Labelled(BaseModel):
 @pytest.fixture
 def client() -> TestClient:
     app = FastAPI()
-    app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
     app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.add_exception_handler(Exception, handle_unhandled_exception)
 
@@ -134,8 +131,8 @@ def test_a_bodyless_status_stays_bodyless(client: TestClient) -> None:
 
 
 async def test_handle_http_exception_keeps_a_code_the_exception_carries() -> None:
-    # Reached directly: ApiHTTPException normally goes to handle_api_http_exception, but a subclass that falls
-    # through to the framework handler must keep its own code rather than the status default.
+    # ApiHTTPException is an HTTPException, so this one handler serves it: it must keep its own code rather than the
+    # status default.
     exc = api_error(409, ErrorCode.USERNAME_TAKEN, "username already exists")
     response = await handle_http_exception(Request({"type": "http", "headers": []}), exc)
 

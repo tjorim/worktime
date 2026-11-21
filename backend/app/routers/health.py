@@ -119,8 +119,8 @@ async def readiness(
 
     Returns:
         JSONResponse with health status:
-        - 200: ``{"status": "ok", ...}`` — all checked systems operational.
-        - 503: ``{"status": "degraded", ...}`` — one or more systems unavailable.
+        - 200: ``{"status": "ready", ...}`` — all checked systems operational.
+        - 503: ``{"status": "not_ready", ...}`` — one or more systems unavailable.
     """
     content: dict = {}
 
@@ -161,7 +161,7 @@ async def readiness(
         content["database"], db_degraded = db_status
         degraded = degraded or db_degraded
 
-    content["status"] = "degraded" if degraded else "ok"
+    content["status"] = "not_ready" if degraded else "ready"
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE if degraded else status.HTTP_200_OK,
         content=content,

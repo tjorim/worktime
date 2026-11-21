@@ -169,9 +169,9 @@ def test_health_responses_match_their_models(client):
 @pytest.mark.parametrize(
     "body",
     [
-        {"status": "ok", "auth": "ok", "database": "ok"},
-        {"status": "ok", "auth": "ok"},
-        {"status": "degraded", "auth": "unreachable", "database": "unreachable"},
+        {"status": "ready", "auth": "ok", "database": "ok"},
+        {"status": "ready", "auth": "ok"},
+        {"status": "not_ready", "auth": "unreachable", "database": "unreachable"},
     ],
 )
 def test_readiness_model_accepts_the_shapes_the_route_builds(body):

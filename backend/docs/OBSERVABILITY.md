@@ -63,7 +63,7 @@ Level: 5xx are logged as errors, 4xx as warnings, everything else as info. `curr
 | Endpoint | Auth | Behaviour |
 |---|---|---|
 | `GET /api/health/liveness` | None | Returns `{"status": "alive"}` immediately. |
-| `GET /api/health/readiness` | None | Checks the database (PostgreSQL gets a 2 s statement timeout) and the OIDC provider. Returns `ok` with 200 or `degraded` with 503, plus `auth` and `database` (`ok` or `unreachable`). |
+| `GET /api/health/readiness` | None | Checks the database (PostgreSQL gets a 2 s statement timeout) and the OIDC provider. Returns `ready` with 200 or `not_ready` with 503 (the same words as the other apps), plus `auth` and `database` (`ok` or `unreachable`). The OIDC provider is always checked: worktime cannot authenticate without it. |
 | `GET /api/health` | None | Returns `status`, `version`, `commit` and the two probe paths (`liveness_endpoint`, `readiness_endpoint`; `links` repeats them for older readers). Used by the image `HEALTHCHECK`. |
 
 Use `/api/health/readiness` for load-balancer health checks — not liveness.

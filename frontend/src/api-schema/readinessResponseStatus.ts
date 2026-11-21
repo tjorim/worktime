@@ -10,6 +10,6 @@ export type ReadinessResponseStatus = typeof ReadinessResponseStatus[keyof typeo
 
 
 export const ReadinessResponseStatus = {
-  ok: 'ok',
-  degraded: 'degraded',
+  ready: 'ready',
+  not_ready: 'not_ready',
 } as const;

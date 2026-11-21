@@ -83,12 +83,12 @@ def test_readiness_check_success(readiness_client):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "ok"
+    assert data["status"] == "ready"
     assert data["auth"] == "ok"
     assert data["database"] == "ok"
 
 
-def test_readiness_is_degraded_when_the_database_fails(readiness_client):
+def test_readiness_is_not_ready_when_the_database_fails(readiness_client):
     async def failing_db():
         db = AsyncMock()
         db.execute.side_effect = RuntimeError("password=hunter2")
@@ -99,11 +99,11 @@ def test_readiness_is_degraded_when_the_database_fails(readiness_client):
     response = readiness_client.get("/api/health/readiness")
 
     assert response.status_code == 503
-    assert response.json() == {"status": "degraded", "auth": "ok", "database": "unreachable"}
+    assert response.json() == {"status": "not_ready", "auth": "ok", "database": "unreachable"}
     assert "hunter2" not in response.text
 
 
-def test_readiness_is_degraded_when_the_identity_provider_is_unreachable(readiness_client, monkeypatch):
+def test_readiness_is_not_ready_when_the_identity_provider_is_unreachable(readiness_client, monkeypatch):
     async def unreachable() -> bool:
         raise OSError("connection refused")
 
@@ -112,7 +112,7 @@ def test_readiness_is_degraded_when_the_identity_provider_is_unreachable(readine
     response = readiness_client.get("/api/health/readiness")
 
     assert response.status_code == 503
-    assert response.json() == {"status": "degraded", "auth": "unreachable", "database": "ok"}
+    assert response.json() == {"status": "not_ready", "auth": "unreachable", "database": "ok"}
 
 
 def test_readiness_sets_the_statement_timeout_on_postgresql_only(readiness_client):

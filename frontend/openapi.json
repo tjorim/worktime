@@ -56,7 +56,7 @@
           "Health"
         ],
         "summary": "Readiness",
-        "description": "Readiness probe — checks that all required dependencies are healthy.\n\nChecks database connectivity when DATABASE_ENABLED is true, and OIDC\nprovider reachability always.\n\nUse this for Kubernetes/load-balancer readiness probes.  A failure here\nstops routing new traffic without restarting the pod.\n\nReturns:\n    JSONResponse with health status:\n    - 200: ``{\"status\": \"ok\", ...}`` — all checked systems operational.\n    - 503: ``{\"status\": \"degraded\", ...}`` — one or more systems unavailable.",
+        "description": "Readiness probe — checks that all required dependencies are healthy.\n\nChecks database connectivity when DATABASE_ENABLED is true, and OIDC\nprovider reachability always.\n\nUse this for Kubernetes/load-balancer readiness probes.  A failure here\nstops routing new traffic without restarting the pod.\n\nReturns:\n    JSONResponse with health status:\n    - 200: ``{\"status\": \"ready\", ...}`` — all checked systems operational.\n    - 503: ``{\"status\": \"not_ready\", ...}`` — one or more systems unavailable.",
         "operationId": "readiness_api_health_readiness_get",
         "responses": {
           "200": {
@@ -6554,8 +6554,8 @@
           "status": {
             "type": "string",
             "enum": [
-              "ok",
-              "degraded"
+              "ready",
+              "not_ready"
             ],
             "title": "Status"
           },
@@ -6589,7 +6589,7 @@
           "auth"
         ],
         "title": "ReadinessResponse",
-        "description": "Result of the dependency checks; returned with HTTP 200 (``ok``) or 503 (``degraded``)."
+        "description": "Result of the dependency checks; returned with HTTP 200 (``ready``) or 503 (``not_ready``)."
       },
       "RequestMetricsSnapshot": {
         "properties": {
