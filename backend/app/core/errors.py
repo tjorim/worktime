@@ -9,8 +9,8 @@ the reason; see ``docs/api-errors.md``. Body shape::
 Raise ``api_error(...)`` wherever a route would raise ``HTTPException`` for an error
 a user can reach. Errors raised as plain ``HTTPException`` (and the framework's own: an
 unknown route, a wrong method) keep their ``detail`` and get a ``code`` from the status
-(``handle_http_exception``); the client falls back to its generic message for the status
-unless it knows the code. An unhandled
+(``handle_http_exception``); a 422 keeps FastAPI's ``detail`` list without the submitted
+values and gets ``code: "validation_error"`` (``handle_validation_error``); an unhandled
 exception answers ``{"detail": "Internal server error", "code": "internal_error"}``
 (``handle_unhandled_exception``).
 """
@@ -23,7 +23,8 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 REQUEST_ID_HEADER = "X-Request-ID"
 INTERNAL_ERROR_DETAIL = "Internal server error"
 INTERNAL_ERROR_CODE = "internal_error"
+VALIDATION_ERROR_CODE = "validation_error"
 
 
 class ErrorCode(StrEnum):
@@ -188,14 +190,33 @@ async def handle_http_exception(request: Request, exc: Exception) -> Response:
     )
 
 
-async def handle_label_validation_error(request: Request, exc: Exception):
-    """Keep missing/empty create labels machine-readable alongside schema validation."""
-    from fastapi.exception_handlers import request_validation_exception_handler
-    from fastapi.exceptions import RequestValidationError
+# ``input`` (the submitted value) and ``ctx`` (constraint values, sometimes the raw cause) can echo secrets or PII.
+_UNSAFE_VALIDATION_KEYS = frozenset({"input", "ctx"})
 
+
+async def handle_validation_error(request: Request, exc: Exception) -> Response:
+    """Render a 422 as FastAPI's ``detail`` list (``type``, ``loc``, ``msg``) without the submitted values.
+
+    ``detail`` stays a list, as the frontend and the generated client read it; ``code`` is added next to it.
+    """
+    if not isinstance(exc, RequestValidationError):
+        raise exc
+    detail = [
+        {key: value for key, value in issue.items() if key not in _UNSAFE_VALIDATION_KEYS} for issue in exc.errors()
+    ]
+    return JSONResponse(
+        {"detail": detail, "code": VALIDATION_ERROR_CODE}, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
+    )
+
+
+async def handle_label_validation_error(request: Request, exc: Exception) -> Response:
+    """Keep missing/empty create labels machine-readable alongside schema validation."""
     assert isinstance(exc, RequestValidationError)
     if request.url.path.startswith("/api/time-tracking/") and any(
         error["loc"][:2] == ("body", "label_id") for error in exc.errors()
     ):
-        return JSONResponse(status_code=422, content={"code": "label_required", "detail": "A label is required"})
-    return await request_validation_exception_handler(request, exc)
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"code": "label_required", "detail": "A label is required"},
+        )
+    return await handle_validation_error(request, exc)

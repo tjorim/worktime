@@ -6,7 +6,9 @@ import json
 
 import pytest
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.testclient import TestClient
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.errors import (
@@ -16,8 +18,20 @@ from app.core.errors import (
     default_error_code,
     handle_api_http_exception,
     handle_http_exception,
+    handle_label_validation_error,
     handle_unhandled_exception,
+    handle_validation_error,
 )
+
+
+class Counted(BaseModel):
+    count: int = Field(ge=3)
+    name: str
+
+
+class Labelled(BaseModel):
+    label_id: int
+    note: str
 
 
 @pytest.fixture
@@ -143,3 +157,41 @@ def test_unhandled_exception_is_a_json_500_with_a_request_id(client: TestClient)
     assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
     assert response.headers["X-Request-ID"]
     assert "secret detail" not in response.text
+
+
+def test_validation_error_is_the_detail_list_without_input_or_ctx_plus_a_code() -> None:
+    app = FastAPI()
+    app.add_exception_handler(RequestValidationError, handle_validation_error)
+
+    @app.post("/validate")
+    async def validate(payload: Counted) -> None: ...
+
+    response = TestClient(app).post("/validate", json={"count": 1, "name": "secret"})
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "validation_error"
+    assert [entry["loc"] for entry in body["detail"]] == [["body", "count"]]
+    assert all(set(entry) == {"type", "loc", "msg"} for entry in body["detail"])
+    assert "secret" not in response.text
+
+
+def test_label_validation_handler_keeps_label_required_and_sanitises_the_rest() -> None:
+    app = FastAPI()
+    app.add_exception_handler(RequestValidationError, handle_label_validation_error)
+
+    @app.post("/api/time-tracking/things")
+    async def tracked(payload: Labelled) -> None: ...
+
+    @app.post("/api/other")
+    async def other(payload: Labelled) -> None: ...
+
+    client = TestClient(app)
+    label = client.post("/api/time-tracking/things", json={"note": "x"})
+    other_response = client.post("/api/other", json={"label_id": 1, "note": ["secret"]})
+
+    assert label.status_code == 422
+    assert label.json() == {"code": "label_required", "detail": "A label is required"}
+    assert other_response.status_code == 422
+    assert other_response.json()["code"] == "validation_error"
+    assert "secret" not in other_response.text

@@ -72,16 +72,36 @@ def test_framework_failures_keep_their_headers() -> None:
     assert client.get("/api/users/me").headers["WWW-Authenticate"] == "Bearer"
 
 
-def test_validation_failures_list_the_field_errors(
+def test_validation_failures_keep_the_detail_list_and_add_a_code(
     db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
 ) -> None:
     response = db_client.post("/api/users/", json={"username": "x"}, headers=auth_headers(1, is_admin=True))
 
     assert response.status_code == 422
-    errors = response.json()["detail"]
-    assert errors
-    assert all({"type", "loc", "msg"} <= set(entry) for entry in errors)
-    assert ["body", "display_name"] in [entry["loc"] for entry in errors]
+    body = response.json()
+    assert set(body) == {"code", "detail"}
+    assert body["code"] == "validation_error"
+    assert body["detail"]
+    assert all(set(entry) == {"type", "loc", "msg"} for entry in body["detail"])
+    assert ["body", "display_name"] in [entry["loc"] for entry in body["detail"]]
+
+
+def test_validation_failures_do_not_echo_the_submitted_values(
+    db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    secret = "secret-token-value"
+    response = db_client.post(
+        "/api/users/",
+        json={"username": secret, "display_name": 12345, "is_admin": secret},
+        headers=auth_headers(1, is_admin=True),
+    )
+
+    assert response.status_code == 422
+    assert secret not in response.text
+    assert "12345" not in response.text
+    for entry in response.json()["detail"]:
+        assert "input" not in entry
+        assert "ctx" not in entry
 
 
 def test_failures_never_carry_a_stack_trace_or_a_secret(
