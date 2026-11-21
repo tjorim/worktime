@@ -123,17 +123,6 @@ def api_error(
     return ApiHTTPException(status_code, code, detail, headers)
 
 
-async def handle_api_http_exception(request: Request, exc: Exception) -> JSONResponse:
-    """Render an ``ApiHTTPException`` as ``{"code": ..., "detail": ...}``."""
-    if not isinstance(exc, ApiHTTPException):
-        raise exc
-    return JSONResponse(
-        {"code": exc.code.value, "detail": exc.detail},
-        status_code=exc.status_code,
-        headers=exc.headers,
-    )
-
-
 def internal_error_response() -> JSONResponse:
     """The body of every unhandled exception: ``{"detail": "Internal server error", "code": "internal_error"}``.
 
