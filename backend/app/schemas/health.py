@@ -22,6 +22,9 @@ class HealthSummary(ResponseModel):
     status: Literal["ok"]
     version: str
     commit: str
+    liveness_endpoint: str
+    readiness_endpoint: str
+    # The same two paths, nested: kept for readers of the first version of this response.
     links: HealthLinks
 
 

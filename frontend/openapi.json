@@ -88,7 +88,7 @@
           "Health"
         ],
         "summary": "Health Summary",
-        "description": "Health summary — lightweight overview with links to sub-endpoints.\n\nReturns a static 200 response with ``links`` to the liveness and readiness\nprobes.  Use the individual probe endpoints for actual dependency checks.\n\nReturns:\n    JSONResponse: ``{\"status\": \"ok\", \"links\": {...}}`` with HTTP 200.",
+        "description": "Health summary — lightweight overview with the paths of the sub-endpoints.\n\nReturns a static 200 response with ``liveness_endpoint`` and ``readiness_endpoint``\n(and ``links``, the same paths nested, for older readers).  Use the individual\nprobe endpoints for actual dependency checks.\n\nReturns:\n    JSONResponse: ``{\"status\": \"ok\", \"version\", \"commit\", \"liveness_endpoint\",\n    \"readiness_endpoint\", \"links\": {...}}`` with HTTP 200.",
         "operationId": "health_summary_api_health_get",
         "responses": {
           "200": {
@@ -5429,6 +5429,14 @@
             "type": "string",
             "title": "Commit"
           },
+          "liveness_endpoint": {
+            "type": "string",
+            "title": "Liveness Endpoint"
+          },
+          "readiness_endpoint": {
+            "type": "string",
+            "title": "Readiness Endpoint"
+          },
           "links": {
             "$ref": "#/components/schemas/HealthLinks"
           }
@@ -5438,6 +5446,8 @@
           "status",
           "version",
           "commit",
+          "liveness_endpoint",
+          "readiness_endpoint",
           "links"
         ],
         "title": "HealthSummary",

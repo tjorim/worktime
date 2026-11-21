@@ -67,8 +67,8 @@ GET /api/health 200 12.345ms req_id=550e8400-e29b-41d4-a716-446655440000 user=42
 | Endpoint | Auth | Behaviour |
 |---|---|---|
 | `GET /api/health/liveness` | None | Returns `{"status": "alive"}` immediately. |
-| `GET /api/health/readiness` | None | Checks database, OIDC provider, and share directory. Returns 200 or 503. |
-| `GET /api/health` | None | Returns liveness status and links to readiness and metrics endpoints. |
+| `GET /api/health/readiness` | None | Checks the database (PostgreSQL gets a 2 s statement timeout) and the OIDC provider. Returns `ok` with 200 or `degraded` with 503, plus `auth` and `database` (`ok` or `unreachable`). |
+| `GET /api/health` | None | Returns `status`, `version`, `commit` and the two probe paths (`liveness_endpoint`, `readiness_endpoint`; `links` repeats them for older readers). Used by the image `HEALTHCHECK`. |
 
 Use `/api/health/readiness` for load-balancer health checks — not liveness.
 
