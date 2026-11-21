@@ -14,5 +14,7 @@ export type HealthSummary = {
   status: 'ok';
   version: string;
   commit: string;
+  liveness_endpoint: string;
+  readiness_endpoint: string;
   links: HealthLinks;
 };

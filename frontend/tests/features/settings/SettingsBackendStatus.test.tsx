@@ -21,6 +21,8 @@ describe("SettingsBackendStatus", () => {
           status: "ok",
           version: "0.0.0",
           commit: "unknown",
+          liveness_endpoint: "/api/health/liveness",
+          readiness_endpoint: "/api/health/readiness",
           links: { liveness: "/api/health/liveness", readiness: "/api/health/readiness" },
         }),
       ),
@@ -37,6 +39,8 @@ describe("SettingsBackendStatus", () => {
             status: "ok",
             version: "0.0.0",
             commit: "unknown",
+            liveness_endpoint: "/api/health/liveness",
+            readiness_endpoint: "/api/health/readiness",
             links: { liveness: "/api/health/liveness", readiness: "/api/health/readiness" },
           })
         : new HttpResponse(null, { status: 503 }),

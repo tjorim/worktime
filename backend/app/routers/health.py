@@ -10,7 +10,8 @@ Provides three endpoints that serve different consumers:
   (database, auth) are reachable.  A readiness failure stops traffic routing
   without restarting the pod.
 
-- ``GET /health`` — lightweight summary with ``links`` to both sub-endpoints.
+- ``GET /health`` — lightweight summary: version and commit, with the two probe paths (``liveness_endpoint`` and
+  ``readiness_endpoint``, the field names the other apps use; ``links`` holds the same paths for older readers).
 """
 
 import asyncio
@@ -36,6 +37,9 @@ from ..version import APP_COMMIT, APP_VERSION
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Health"])
+
+LIVENESS_PATH = "/api/health/liveness"
+READINESS_PATH = "/api/health/readiness"
 
 
 async def _get_db_if_enabled() -> AsyncGenerator[AsyncSession | None]:
@@ -139,7 +143,9 @@ async def readiness(
         try:
             # Use a statement timeout to protect against connection pool exhaustion
             # or hung queries silently blocking the readiness probe.
-            await db.execute(text("SET LOCAL statement_timeout = '2s'"))
+            # (PostgreSQL only: SQLite, the local-development database, has no such setting.)
+            if db.bind is not None and db.bind.dialect.name == "postgresql":
+                await db.execute(text("SET LOCAL statement_timeout = '2s'"))
             await db.execute(text("SELECT 1"))
             return "ok", False
         except Exception as e:
@@ -164,13 +170,15 @@ async def readiness(
 
 @router.get("/health", response_model=HealthSummary)
 async def health_summary() -> JSONResponse:
-    """Health summary — lightweight overview with links to sub-endpoints.
+    """Health summary — lightweight overview with the paths of the sub-endpoints.
 
-    Returns a static 200 response with ``links`` to the liveness and readiness
-    probes.  Use the individual probe endpoints for actual dependency checks.
+    Returns a static 200 response with ``liveness_endpoint`` and ``readiness_endpoint``
+    (and ``links``, the same paths nested, for older readers).  Use the individual
+    probe endpoints for actual dependency checks.
 
     Returns:
-        JSONResponse: ``{"status": "ok", "links": {...}}`` with HTTP 200.
+        JSONResponse: ``{"status": "ok", "version", "commit", "liveness_endpoint",
+        "readiness_endpoint", "links": {...}}`` with HTTP 200.
     """
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -178,9 +186,8 @@ async def health_summary() -> JSONResponse:
             "status": "ok",
             "version": APP_VERSION,
             "commit": APP_COMMIT,
-            "links": {
-                "liveness": "/api/health/liveness",
-                "readiness": "/api/health/readiness",
-            },
+            "liveness_endpoint": LIVENESS_PATH,
+            "readiness_endpoint": READINESS_PATH,
+            "links": {"liveness": LIVENESS_PATH, "readiness": READINESS_PATH},
         },
     )

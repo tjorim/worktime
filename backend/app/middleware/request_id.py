@@ -1,38 +1,54 @@
-"""Request ID middleware for per-request correlation and structured access logging.
+"""Request correlation: an ``X-Request-ID`` on every response and one structured access-log line per request.
 
-Each request receives a unique identifier — either forwarded from the incoming
-``X-Request-ID`` header (useful when a gateway already assigned one) or generated
-as a new UUID4.  The ID is stored on ``request.state.request_id`` so route
-handlers and dependencies can include it in error responses or downstream calls,
-and is echoed as ``X-Request-ID`` on every response.
+The id is the caller's ``X-Request-ID`` when it is a short token of letters, digits and ``._:-`` (a gateway or the
+frontend may already have assigned one), otherwise a new UUID4; anything else would let a caller forge log lines. It is
+stored on ``request.state.request_id`` and in ``current_request_id`` for code that logs below a request, and echoed as
+``X-Request-ID`` on every response, so backend logs can be correlated with frontend errors.
 
-A structured access log line is emitted after each response using the
-``worktime.access`` logger so that backend logs can be correlated with frontend
-errors using the shared request ID.
+The access line is JSON on the ``worktime.access`` logger with the field names the other apps use (``event``,
+``request_id``, ``user_id``, ``auth_type``, ``method``, ``route``, ``status_code``, ``latency_ms``)::
 
-Log format per request::
+    {"event":"http_request","request_id":"...","user_id":42,"auth_type":"keycloak_user","method":"GET",
+     "route":"/api/health","status_code":200,"latency_ms":1.23}
 
-    GET /api/health 200 12.345ms req_id=<uuid> user=-
+``route`` is the route template as FastAPI routes it, never the raw path or query string, which can carry calendar feed
+tokens and ids. 5xx log as errors, 4xx as warnings, the rest as info.
+
+Pure ASGI: no ``BaseHTTPMiddleware`` overhead, no context-var isolation (which breaks Sentry) and no buffering of
+streamed (SSE) responses. The 500 for an unhandled exception is sent by Starlette's outermost ``ServerErrorMiddleware``
+after this middleware has unwound, so that response carries no id; the access line still records it.
 """
 
+import json
 import logging
+import re
 import time
 import uuid
+from contextvars import ContextVar
 
 from starlette.datastructures import Headers, MutableHeaders
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from app.core.logging import ACCESS_LOGGER
+from app.middleware.request_timing import _route_template
 
 REQUEST_ID_HEADER = "X-Request-ID"
+_VALID_REQUEST_ID = re.compile(r"[A-Za-z0-9._:-]{1,128}")
 
-logger = logging.getLogger("worktime.access")
+logger = logging.getLogger(ACCESS_LOGGER)
+
+current_request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+
+def _request_id(headers: Headers) -> str:
+    supplied = headers.get(REQUEST_ID_HEADER)
+    if supplied is not None and _VALID_REQUEST_ID.fullmatch(supplied):
+        return supplied
+    return str(uuid.uuid4())
 
 
 class RequestIdMiddleware:
-    """Accept or generate a correlation ID; echo it; emit a structured access log.
-
-    Pure ASGI middleware — avoids BaseHTTPMiddleware overhead, contextvars
-    isolation (which breaks Sentry), and streaming response (SSE) buffering.
-    """
+    """Accept or generate a correlation ID; echo it; emit a structured access log."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -42,43 +58,42 @@ class RequestIdMiddleware:
             await self.app(scope, receive, send)
             return
 
-        headers = Headers(scope=scope)
-        request_id = headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
+        request_id = _request_id(Headers(scope=scope))
+        scope.setdefault("state", {})["request_id"] = request_id
+        token = current_request_id.set(request_id)
+        root_path = scope.get("root_path", "")
+        started = time.perf_counter()
+        status = 500  # an exception that escapes before a response starts is answered with a 500
 
-        scope.setdefault("state", {})
-        scope["state"]["request_id"] = request_id
-
-        start = time.perf_counter()
-        status_code = 500
-
-        async def send_wrapper(message):
-            nonlocal status_code
+        async def send_with_id(message: Message) -> None:
+            nonlocal status
             if message["type"] == "http.response.start":
-                status_code = message["status"]
-                headers = list(message.get("headers", []))
-                MutableHeaders(raw=headers)[REQUEST_ID_HEADER] = request_id
-                message["headers"] = headers
+                status = message["status"]
+                headers = MutableHeaders(raw=list(message.get("headers", [])))
+                headers[REQUEST_ID_HEADER] = request_id
+                message = {**message, "headers": headers.raw}
             await send(message)
 
         try:
-            await self.app(scope, receive, send_wrapper)
-        except Exception:
-            status_code = 500
-            raise
+            await self.app(scope, receive, send_with_id)
         finally:
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            user_id = scope["state"].get("user_id")
-            auth_type = scope["state"].get("auth_type")
-            request_path = scope["path"]
-            if request_path.startswith("/api/ical/"):
-                request_path = "/api/ical/[redacted].ics"
-            logger.info(
-                "%s %s %d %.3fms req_id=%s user=%s auth=%s",
-                scope["method"],
-                request_path,
-                status_code,
-                elapsed_ms,
-                request_id,
-                user_id if user_id is not None else "-",
-                auth_type if auth_type is not None else "-",
-            )
+            current_request_id.reset(token)
+            level = logging.ERROR if status >= 500 else logging.WARNING if status >= 400 else logging.INFO
+            if logger.isEnabledFor(level):
+                state = scope["state"]
+                logger.log(
+                    level,
+                    json.dumps(
+                        {
+                            "event": "http_request",
+                            "request_id": request_id,
+                            "user_id": state.get("user_id"),
+                            "auth_type": state.get("auth_type"),
+                            "method": scope["method"],
+                            "route": _route_template(scope, root_path),
+                            "status_code": status,
+                            "latency_ms": round((time.perf_counter() - started) * 1000, 2),
+                        },
+                        separators=(",", ":"),
+                    ),
+                )

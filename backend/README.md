@@ -44,6 +44,7 @@ The interactive API docs are at <http://localhost:8000/docs> (and `/redoc`). `ru
 ```bash
 uv run pytest
 uv run pytest tests/routers/test_health.py   # a single file
+uv run pytest --cov                          # with the coverage floor CI enforces (fail_under in pyproject.toml)
 ```
 
 Tests run against a throwaway SQLite file by default, so they need no container (about 15 seconds). CI also runs the

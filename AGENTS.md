@@ -96,7 +96,7 @@ pnpm lint
 pnpm format            # rewrites files in place (Oxfmt)
 pnpm format:check      # what CI runs: fails on unformatted files, doesn't rewrite
 pnpm format:repo       # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm test              # Vitest (happy-dom); test:watch for watch mode
+pnpm test              # Vitest (happy-dom); `pnpm run test --coverage` also checks the thresholds in vitest.config.ts; test:watch for watch mode
 pnpm test:e2e          # Playwright; see e2e/README.md
 pnpm test:compatibility  # Vitest with Redact enabled plus the Playwright compatibility browsers
 pnpm bundle:check      # bundle budget (bundle:report prints it, bundle:test tests the script)
@@ -122,7 +122,7 @@ uv run uvicorn app.main:app --reload
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check .
-uv run pytest
+uv run pytest --cov                   # the coverage floor (`fail_under` in pyproject.toml) is what CI enforces
 uv run alembic upgrade head
 uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite ../frontend/openapi.json
 ```
@@ -363,7 +363,12 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
   and the catalogues; `pnpm typecheck` also fails on a stale API schema or roster fixture.
 - Backend tests are pytest (`uv run pytest`) in `backend/tests/`, running against SQLite by default and against
   PostgreSQL in CI (see the prerequisites in "Commands"). `test_openapi_snapshot` fails when
-  `frontend/openapi.json` is stale.
+  `frontend/openapi.json` is stale. `test_error_contract.py` pins the error body shape and stable codes on the
+  assembled app (no stack traces or secrets), `test_security_headers.py` the privacy headers and CORS contract, and
+  `tests/middleware/test_request_id.py` the request id and the JSON access log.
+- Coverage floors sit just below the measured totals (backend `fail_under` in `backend/pyproject.toml`, frontend
+  `coverage.thresholds` in `frontend/vitest.config.ts`); CI enforces both. Raise them as tests are added, never lower
+  them to land a change.
 - Prefer a targeted test first, then the full checks of the area you touched before handing off.
 
 ## CI
@@ -372,14 +377,14 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
 `CI gate` job that fails when any needed job failed or was cancelled; a job skipped because its paths did not
 change is fine. The component workflows are reusable (`workflow_call`) and can also be run by hand:
 
-- `backend-ci.yml` (shown as `Backend / Checks`): `uv sync --locked`, `ruff check`, `ruff format --check`, `ty check`, `pytest`
-  against PostgreSQL and SQLite, then `alembic upgrade head` and `alembic check`.
+- `backend-ci.yml` (shown as `Backend / Checks`): `uv sync --locked`, `ruff check`, `ruff format --check`, `ty check`, `pytest --cov`
+  against PostgreSQL (with the coverage floor) and `pytest` against SQLite, then `alembic upgrade head` and `alembic check`.
 - `frontend-ci.yml` (shown as `Frontend / Checks`): `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`,
-  `test`, `build`, `bundle:test` + `bundle:check`, `locale:audit`, `check-message-parity`, `ui:test` + `ui:check`;
+  `test --coverage`, `build`, `bundle:test` + `bundle:check`, `locale:audit`, `check-message-parity`, `ui:test` + `ui:check`;
   a separate `Frontend / E2E Tests (Chromium)` job runs Playwright. `ci.yml` also runs `format:repo:check`
   (workflows, scripts, root JSON) and `release.mjs check`.
 - `android.yml`, `pebble.yml`, `hday-helper-ci.yml` and `pr-preview.yml` are component workflows with their own
-  path filters; `codeql-actions.yml`, `codeql-javascript.yml`, `codeql-python.yml` and `codeql-android.yml` run CodeQL.
+  path filters. CodeQL runs through GitHub's default setup (repository settings), so there are no `codeql-*.yml` files here; do not add them while the default setup is on, because GitHub rejects advanced-workflow uploads in that case.
 - Actions are pinned to full commit SHAs with a version comment; Node comes from `frontend/.node-version` and pnpm from
   `frontend/package.json`'s `packageManager`. Renovate (`renovate.json`) groups and automerges dependency updates.
 

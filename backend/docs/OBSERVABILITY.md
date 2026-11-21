@@ -31,28 +31,24 @@ RequestIdMiddleware   ← outermost: sets/echoes X-Request-ID, emits access log
 
 ## Structured Access Log
 
-Every request emits one log line via the `worktime.access` logger after the response is sent. Format:
+Every request emits one log line via the `worktime.access` logger after the response is sent. The line follows the layout shared by all apps, `asctime - logger - level - message`, and the message is a one-line JSON object:
 
 ```
-METHOD PATH STATUS_CODE DURATION_MS req_id=<uuid> user=<id|-> auth=<oidc|->
-```
-
-Example:
-
-```
-GET /api/health 200 12.345ms req_id=550e8400-e29b-41d4-a716-446655440000 user=42 auth=oidc
+2026-11-21 10:15:02,123 - worktime.access - INFO - {"event":"http_request","request_id":"550e8400-e29b-41d4-a716-446655440000","user_id":42,"auth_type":"keycloak_user","method":"GET","route":"/ical/{token}.ics","status_code":200,"latency_ms":12.35}
 ```
 
 ### Log fields
 
 | Field | Notes |
 |---|---|
-| Method, path, status, duration | Standard access log fields. |
-| `req_id` | UUID4 (generated or propagated). |
-| `user` | Local user ID when authenticated; `-` for unauthenticated requests. |
-| `auth` | `oidc` when a valid Bearer JWT was presented; `-` for unauthenticated requests. |
+| `event` | Always `http_request`. |
+| `request_id` | The caller's `X-Request-ID` when it is 1-128 characters of `A-Za-z0-9._:-`, otherwise a generated UUID4 (anything else could forge log lines). |
+| `user_id` | Local user ID when authenticated; `null` otherwise. |
+| `auth_type` | `keycloak_user`, `keycloak_service` or `delegated` (personal access token); `null` when unauthenticated. |
+| `method`, `status_code`, `latency_ms` | Standard access log fields. |
+| `route` | The route template (for example `/ical/{token}.ics`), never the raw path or the query string, so calendar feed tokens and ids stay out of the logs. It is the path as the router declares it, without the `/api` prefix. |
 
-**Path is logged without query parameters** to prevent token leakage.
+Level: 5xx are logged as errors, 4xx as warnings, everything else as info. `current_request_id` (a context variable in `app.middleware.request_id`) holds the id for code that logs below a request.
 
 ---
 
@@ -67,8 +63,8 @@ GET /api/health 200 12.345ms req_id=550e8400-e29b-41d4-a716-446655440000 user=42
 | Endpoint | Auth | Behaviour |
 |---|---|---|
 | `GET /api/health/liveness` | None | Returns `{"status": "alive"}` immediately. |
-| `GET /api/health/readiness` | None | Checks database, OIDC provider, and share directory. Returns 200 or 503. |
-| `GET /api/health` | None | Returns liveness status and links to readiness and metrics endpoints. |
+| `GET /api/health/readiness` | None | Checks the database (PostgreSQL gets a 2 s statement timeout) and the OIDC provider. Returns `ok` with 200 or `degraded` with 503, plus `auth` and `database` (`ok` or `unreachable`). |
+| `GET /api/health` | None | Returns `status`, `version`, `commit` and the two probe paths (`liveness_endpoint`, `readiness_endpoint`; `links` repeats them for older readers). Used by the image `HEALTHCHECK`. |
 
 Use `/api/health/readiness` for load-balancer health checks — not liveness.
 
