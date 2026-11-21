@@ -25,7 +25,7 @@ vi.mock("@/features/pebble/PebblePairPage", () => ({ PebblePairPage: () => null 
 
 // Each test needs a fresh "@/app/router/router": lazy routes remember what they loaded.
 async function makeRouter(path: string) {
-  vi.doMock("@/pages/SettingsPage", async () => {
+  vi.doMock("@/features/settings/SettingsPage", async () => {
     gate.imports += 1;
     if (gate.mode === "fail") throw new Error("Failed to fetch dynamically imported module");
     if (gate.mode === "slow") await new Promise<void>((resolve) => (gate.release = resolve));

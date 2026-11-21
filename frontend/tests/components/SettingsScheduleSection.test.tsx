@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { SettingsScheduleSection } from "@/components/settings/SettingsScheduleSection";
+import { SettingsScheduleSection } from "@/features/settings/SettingsScheduleSection";
 import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import type { ScheduleOption } from "@/lib/schedule/rosters";

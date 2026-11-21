@@ -4,7 +4,7 @@ import { toCountryCode } from "@/types/workLocation";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
-import { TemplateModal } from "@/features/timeTracking/TemplateModal";
+import { TemplateModal } from "@/features/settings/time-tracking/TemplateModal";
 import { TaskEditModal } from "@/components/TaskEditModal";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";

@@ -8,8 +8,8 @@ import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { cn } from "@/lib/utils";
 import { hasMultipleTeams } from "@/lib/schedule/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
-import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
-import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";
+import { SettingsHdayHelper } from "@/features/settings/SettingsHdayHelper";
+import { SettingsHint, SettingsSection } from "@/features/settings/SettingsParts";
 import { TeamSelector } from "@/components/TeamSelector";
 
 interface SettingsScheduleSectionProps {

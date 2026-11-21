@@ -7,15 +7,15 @@ import {
   SettingsList,
   SettingsLoading,
   SettingsSection,
-} from "@/components/settings/SettingsParts";
-import type { AuditEntry } from "@/pages/settings/hooks/useSettingsAuditTrail";
+} from "@/features/settings/SettingsParts";
+import type { AuditEntry } from "@/features/settings/hooks/useSettingsAuditTrail";
 import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";
 import {
   getAuditActionLabel,
   getAuditResourceLabel,
   getAuditActorLabel,
-} from "@/utils/auditPresentation";
+} from "@/features/settings/auditPresentation";
 
 interface SettingsAuditTrailSectionProps {
   entries: AuditEntry[];

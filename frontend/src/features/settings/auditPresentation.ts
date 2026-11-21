@@ -1,4 +1,4 @@
-import type { AuditEntry } from "@/pages/settings/hooks/useSettingsAuditTrail";
+import type { AuditEntry } from "@/features/settings/hooks/useSettingsAuditTrail";
 import * as m from "@/paraglide/messages.js";
 
 export function getAuditActionLabel(action: string): string {

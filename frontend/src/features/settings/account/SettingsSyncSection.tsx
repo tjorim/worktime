@@ -1,7 +1,7 @@
 import { CloudCheckIcon, type LucideIcon, RefreshCwIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
-import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";
+import { SettingsHint, SettingsSection } from "@/features/settings/SettingsParts";
 import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
 

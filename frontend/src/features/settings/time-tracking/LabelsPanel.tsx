@@ -1,4 +1,4 @@
-import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
+import { useJsonDraft } from "@/features/settings/time-tracking/useJsonDraft";
 import { getErrorMessage, type ErrorCodeMessages } from "@/lib/api/apiError";
 import { TagsIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";

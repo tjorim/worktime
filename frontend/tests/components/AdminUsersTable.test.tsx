@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AdminUsersTable, type AdminUserRow } from "@/components/settings/admin/AdminUsersTable";
+import { AdminUsersTable, type AdminUserRow } from "@/features/settings/admin/AdminUsersTable";
 
 const users: AdminUserRow[] = [
   {

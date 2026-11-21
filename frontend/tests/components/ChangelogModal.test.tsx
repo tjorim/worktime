@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ChangelogModal } from "@/components/ChangelogModal";
-import { type ChangelogVersion, changelogData, futurePlans } from "@/data/changelog";
+import { ChangelogModal } from "@/features/settings/ChangelogModal";
+import { type ChangelogVersion, changelogData, futurePlans } from "@/features/settings/changelog";
 
 const hasEntries = (version: ChangelogVersion, category: string) =>
   version.categories.some((c) => c.name === category && c.entries.length > 0);

@@ -17,7 +17,7 @@ import {
   checkBackupDataPresence,
   downloadAppBackup,
   type BackupDataPresence,
-} from "@/utils/appBackup";
+} from "@/features/settings/appBackup";
 import * as m from "@/paraglide/messages.js";
 
 interface BackupDialogProps {

@@ -1,4 +1,4 @@
-import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
+import { useJsonDraft } from "@/features/settings/time-tracking/useJsonDraft";
 import { getErrorMessage } from "@/lib/api/apiError";
 import { ClipboardCheckIcon, FileTextIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";

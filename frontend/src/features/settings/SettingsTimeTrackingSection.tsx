@@ -1,5 +1,5 @@
-import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
-import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
+import { LabelsPanel } from "@/features/settings/time-tracking/LabelsPanel";
+import { TemplatesPanel } from "@/features/settings/time-tracking/TemplatesPanel";
 import type { Label } from "@/lib/time-tracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import type { GanttTask } from "@/types/gantt";

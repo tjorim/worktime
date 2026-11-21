@@ -12,7 +12,7 @@ import { SilentRenewCallbackPage } from "@/features/auth/SilentRenewCallbackPage
 // account/admin sections and their dialogs. Home, the auth callbacks and the
 // layout stay in the entry chunk so sign-in and the first paint never wait on
 // a second download.
-const SettingsPage = lazyRoute(() => import("@/pages/SettingsPage"), "SettingsPage");
+const SettingsPage = lazyRoute(() => import("@/features/settings/SettingsPage"), "SettingsPage");
 const PrivacyPage = lazyRoute(() => import("@/features/legal/PrivacyPage"), "PrivacyPage");
 const PebblePairPage = lazyRoute(() => import("@/features/pebble/PebblePairPage"), "PebblePairPage");
 

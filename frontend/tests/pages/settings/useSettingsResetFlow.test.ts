@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
-import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
+import { useSettingsResetFlow } from "@/features/settings/hooks/useSettingsResetFlow";
 import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/lib/sync/syncClient";
 
 vi.mock("@/lib/sync/syncClient", async (importOriginal) => {

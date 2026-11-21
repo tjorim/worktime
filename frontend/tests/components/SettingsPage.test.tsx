@@ -15,13 +15,13 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
-import { SettingsPage, SettingsContent } from "@/pages/SettingsPage";
+import { SettingsPage, SettingsContent } from "@/features/settings/SettingsPage";
 import {
   SettingsAccountDangerSection,
   SettingsAccountSection,
-} from "@/components/settings/account/SettingsAccountSection";
-import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
-import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
+} from "@/features/settings/account/SettingsAccountSection";
+import { SettingsApiTokensSection } from "@/features/settings/account/SettingsApiTokensSection";
+import { SettingsAdminUsersSection } from "@/features/settings/admin/SettingsAdminUsersSection";
 import { AuthProvider } from "@/app/providers/AuthContext";
 import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
@@ -32,9 +32,9 @@ import { server } from "@/mocks/server";
 import { syncStore } from "@/mocks/data/syncStore";
 import { labelsCollection } from "@/lib/db/collections";
 import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
-import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
-import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
-import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
+import { useSettingsAccount } from "@/features/settings/hooks/useSettingsAccount";
+import { useSettingsApiTokens } from "@/features/settings/hooks/useSettingsApiTokens";
+import { useSettingsAdminUsers } from "@/features/settings/hooks/useSettingsAdminUsers";
 import * as m from "@/paraglide/messages.js";
 
 const routeState = vi.hoisted(() => ({ section: "scheduleTeam", navigate: vi.fn() }));

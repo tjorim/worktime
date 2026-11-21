@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";
+import { SettingsHint, SettingsSection } from "@/features/settings/SettingsParts";
 import { ApiError, getErrorMessage } from "@/lib/api/apiError";
 import { logger } from "@/lib/logger";
 import * as m from "@/paraglide/messages.js";

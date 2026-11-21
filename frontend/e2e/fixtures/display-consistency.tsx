@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
-import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
+import { SettingsAuditTrailSection } from "@/features/settings/account/SettingsAuditTrailSection";
 import { setLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
 const params = new URLSearchParams(location.search);

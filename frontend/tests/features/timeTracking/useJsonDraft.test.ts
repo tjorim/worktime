@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
+import { useJsonDraft } from "@/features/settings/time-tracking/useJsonDraft";
 const { block, unblock } = vi.hoisted(() => ({ block: vi.fn(), unblock: vi.fn() }));
 const router = { history: { block } };
 vi.mock("@tanstack/react-router", () => ({ useRouter: () => router }));

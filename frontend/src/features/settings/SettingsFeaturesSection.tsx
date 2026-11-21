@@ -6,7 +6,7 @@ import {
   SettingsRow,
   SettingsSection,
   SettingsSwitchRow,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 import type { CountryCode } from "@/types/countries";
 import * as m from "@/paraglide/messages.js";
 

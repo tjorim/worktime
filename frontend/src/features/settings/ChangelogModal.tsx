@@ -32,7 +32,7 @@ import {
   type ChangelogVersion,
   changelogData,
   futurePlans,
-} from "@/data/changelog";
+} from "@/features/settings/changelog";
 import * as m from "@/paraglide/messages.js";
 
 interface ChangelogModalProps {

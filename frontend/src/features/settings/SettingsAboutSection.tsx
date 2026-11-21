@@ -9,12 +9,12 @@ import {
   SparklesIcon,
 } from "lucide-react";
 import * as m from "@/paraglide/messages.js";
-import { SettingsBackendStatus } from "@/components/settings/SettingsBackendStatus";
+import { SettingsBackendStatus } from "@/features/settings/SettingsBackendStatus";
 import {
   SettingsActionRow,
   SettingsList,
   SettingsSection,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 
 interface SettingsAboutSectionProps {
   onShareApp: () => void;

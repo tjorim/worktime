@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
+import { LabelsPanel } from "@/features/settings/time-tracking/LabelsPanel";
 import { ToastProvider } from "@/app/providers/ToastContext";
 import { SettingsReplacementError } from "@/lib/api/apiError";
 import type { Label } from "@/lib/time-tracking/constants";

@@ -8,7 +8,7 @@ import {
   downloadAppBackup,
   restoreAppBackup,
   validateAppBackupPayload,
-} from "@/utils/appBackup";
+} from "@/features/settings/appBackup";
 import { getSyncOutboxKey, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import type { IsoAlpha2 } from "@/types/countries";

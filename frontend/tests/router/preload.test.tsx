@@ -17,7 +17,7 @@ vi.mock("@/app/providers/AppShellContext", () => ({
 vi.mock("@/features/sync/SyncStatusIndicator", () => ({ SyncStatusIndicator: () => null }));
 vi.mock("@/hooks/useKeyboardShortcuts", () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock("@/app/home/HomePage", () => ({ HomePage: () => null }));
-vi.mock("@/pages/SettingsPage", () => ({ SettingsPage: () => null }));
+vi.mock("@/features/settings/SettingsPage", () => ({ SettingsPage: () => null }));
 vi.mock("@/features/legal/PrivacyPage", () => ({ PrivacyPage: () => null }));
 vi.mock("@/features/pebble/PebblePairPage", () => ({ PebblePairPage: () => null }));
 vi.mock("@/features/auth/AuthCallbackPage", () => ({ AuthCallbackPage: () => null }));

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { TemplateModal } from "@/features/timeTracking/TemplateModal";
+import { TemplateModal } from "@/features/settings/time-tracking/TemplateModal";
 
 describe("TemplateModal", () => {
   const baseProps = {

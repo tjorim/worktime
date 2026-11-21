@@ -1,11 +1,11 @@
 import { ContrastIcon, MoonIcon, SlidersHorizontalIcon, SunIcon } from "lucide-react";
-import { ChoiceRadioGroup } from "@/components/shared/ChoiceRadioGroup";
+import { ChoiceRadioGroup } from "@/features/settings/ChoiceRadioGroup";
 import {
   SettingsList,
   SettingsRow,
   SettingsSection,
   SettingsSwitchRow,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsGeneralSectionProps {

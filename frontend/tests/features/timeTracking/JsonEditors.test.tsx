@@ -2,8 +2,8 @@ import { useState } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
-import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
+import { LabelsPanel } from "@/features/settings/time-tracking/LabelsPanel";
+import { TemplatesPanel } from "@/features/settings/time-tracking/TemplatesPanel";
 import { ToastProvider } from "@/app/providers/ToastContext";
 
 const labels = [{ id: "a", name: "Support", color: "#123456" }];

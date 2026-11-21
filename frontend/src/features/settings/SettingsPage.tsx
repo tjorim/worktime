@@ -29,43 +29,43 @@ import {
   preloadAppBackupCollections,
   validateAppBackupPayload,
   restoreAppBackup,
-} from "@/utils/appBackup";
+} from "@/features/settings/appBackup";
 import { logger } from "@/lib/logger";
-import { BackupDialog } from "@/components/BackupDialog";
+import { BackupDialog } from "@/features/settings/BackupDialog";
 import { CONFIG } from "@/config/app";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { useScheduleChange } from "@/hooks/useScheduleChange";
-import { shareApp } from "@/utils/share";
-import { ChangelogModal } from "@/components/ChangelogModal";
-import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
-import { SettingsAccountExportSection } from "@/components/settings/account/SettingsAccountExportSection";
+import { shareApp } from "@/features/settings/share";
+import { ChangelogModal } from "@/features/settings/ChangelogModal";
+import { ResetSettingsModal } from "@/features/settings/data/ResetSettingsModal";
+import { SettingsAccountExportSection } from "@/features/settings/account/SettingsAccountExportSection";
 import {
   SettingsAccountDangerSection,
   SettingsAccountSection,
-} from "@/components/settings/account/SettingsAccountSection";
-import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
-import { SettingsCalendarFeedSection } from "@/components/settings/account/SettingsCalendarFeedSection";
-import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
-import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
-import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
-import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
-import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
-import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
-import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSection";
-import { SettingsScheduleSection } from "@/components/settings/SettingsScheduleSection";
-import { SettingsTimeTrackingSection } from "@/components/settings/SettingsTimeTrackingSection";
-import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
+} from "@/features/settings/account/SettingsAccountSection";
+import { SettingsApiTokensSection } from "@/features/settings/account/SettingsApiTokensSection";
+import { SettingsCalendarFeedSection } from "@/features/settings/account/SettingsCalendarFeedSection";
+import { SettingsIntegrationClientsSection } from "@/features/settings/account/SettingsIntegrationClientsSection";
+import { SettingsAuditTrailSection } from "@/features/settings/account/SettingsAuditTrailSection";
+import { SettingsAdminUsersSection } from "@/features/settings/admin/SettingsAdminUsersSection";
+import { SettingsAboutSection } from "@/features/settings/SettingsAboutSection";
+import { SettingsDataSection } from "@/features/settings/data/SettingsDataSection";
+import { SettingsFeaturesSection } from "@/features/settings/SettingsFeaturesSection";
+import { SettingsGeneralSection } from "@/features/settings/SettingsGeneralSection";
+import { SettingsScheduleSection } from "@/features/settings/SettingsScheduleSection";
+import { SettingsTimeTrackingSection } from "@/features/settings/SettingsTimeTrackingSection";
+import { SettingsSyncSection } from "@/features/settings/account/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
-import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
-import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
-import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";
-import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUsers";
-import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
-import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
-import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
+import { useSettingsAccount } from "@/features/settings/hooks/useSettingsAccount";
+import { useSettingsApiTokens } from "@/features/settings/hooks/useSettingsApiTokens";
+import { useSettingsIntegrationClients } from "@/features/settings/hooks/useSettingsIntegrationClients";
+import { useSettingsAdminUsers } from "@/features/settings/hooks/useSettingsAdminUsers";
+import { useSettingsAuditTrail } from "@/features/settings/hooks/useSettingsAuditTrail";
+import { useSettingsSyncStatus } from "@/features/settings/hooks/useSettingsSyncStatus";
+import { useSettingsResetFlow } from "@/features/settings/hooks/useSettingsResetFlow";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 

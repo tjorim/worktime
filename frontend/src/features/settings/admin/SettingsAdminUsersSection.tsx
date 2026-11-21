@@ -6,7 +6,7 @@ import {
   SettingsHint,
   SettingsLoading,
   SettingsSection,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 import { AdminUsersTable } from "./AdminUsersTable";
 import * as m from "@/paraglide/messages.js";
 

@@ -8,7 +8,7 @@ import {
   SettingsHint,
   SettingsLoading,
   SettingsSection,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";

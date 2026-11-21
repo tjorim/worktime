@@ -4,7 +4,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
-import { SettingsBackendStatus } from "@/components/settings/SettingsBackendStatus";
+import { SettingsBackendStatus } from "@/features/settings/SettingsBackendStatus";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";
 

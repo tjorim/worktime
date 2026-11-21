@@ -3,7 +3,7 @@ import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsAccountExportSection } from "@/components/settings/account/SettingsAccountExportSection";
+import { SettingsAccountExportSection } from "@/features/settings/account/SettingsAccountExportSection";
 import * as m from "@/paraglide/messages.js";
 
 describe("SettingsAccountExportSection", () => {

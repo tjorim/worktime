@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http } from "msw/http";
-import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
+import { SettingsHdayHelper } from "@/features/settings/SettingsHdayHelper";
 import { HdayHelperProvider, useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { server } from "@/mocks/server";
 import * as m from "@/paraglide/messages.js";

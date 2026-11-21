@@ -2,7 +2,7 @@ import { SunIcon } from "lucide-react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
-import { ChoiceRadioGroup } from "@/components/shared/ChoiceRadioGroup";
+import { ChoiceRadioGroup } from "@/features/settings/ChoiceRadioGroup";
 
 const options = [
   { value: "a", label: "Alpha", icon: SunIcon },

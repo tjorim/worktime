@@ -14,10 +14,10 @@ import {
   SettingsLoading,
   SettingsSection,
   SettingsSecret,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 import { useToast } from "@/app/providers/ToastContext";
 import type { CreatedIntegrationClient, IntegrationClient } from "@/api-types";
-import type { IntegrationClientScope } from "@/pages/settings/hooks/useSettingsIntegrationClients";
+import type { IntegrationClientScope } from "@/features/settings/hooks/useSettingsIntegrationClients";
 import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 

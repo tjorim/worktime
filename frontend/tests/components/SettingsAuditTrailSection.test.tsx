@@ -3,8 +3,8 @@ import { jsonResponse } from "@/mocks/response";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
-import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
+import { SettingsAuditTrailSection } from "@/features/settings/account/SettingsAuditTrailSection";
+import { useSettingsAuditTrail } from "@/features/settings/hooks/useSettingsAuditTrail";
 
 vi.mock("@/lib/db/collections", () => ({
   tasksCollection: { toArray: [{ id: "entry-30", text: "Write report" }] },

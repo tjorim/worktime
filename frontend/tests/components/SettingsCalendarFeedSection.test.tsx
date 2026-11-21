@@ -2,7 +2,7 @@ import type { IcalFeedCreated, IcalFeedStatus } from "@/api-types";
 import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SettingsCalendarFeedSection } from "@/components/settings/account/SettingsCalendarFeedSection";
+import { SettingsCalendarFeedSection } from "@/features/settings/account/SettingsCalendarFeedSection";
 import { ToastProvider } from "@/app/providers/ToastContext";
 
 function renderSection(fetchFn: (input: string, init?: RequestInit) => Promise<Response>) {

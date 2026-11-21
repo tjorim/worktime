@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { SettingsRow } from "@/components/settings/SettingsParts";
+import { SettingsRow } from "@/features/settings/SettingsParts";
 import * as m from "@/paraglide/messages.js";
 
 type BackendStatus = "checking" | "available" | "unavailable";

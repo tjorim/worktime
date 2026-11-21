@@ -22,7 +22,7 @@ import {
   SettingsRowText,
   SettingsSection,
   SettingsHint,
-} from "@/components/settings/SettingsParts";
+} from "@/features/settings/SettingsParts";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsAccountSectionProps {
