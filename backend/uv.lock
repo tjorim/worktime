@@ -569,19 +569,20 @@ server = [
 
 [[package]]
 name = "firebase-admin"
-version = "7.7.0"
+version = "7.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachecontrol" },
+    { name = "cryptography" },
     { name = "google-api-core", extra = ["grpc"], marker = "platform_python_implementation != 'PyPy'" },
     { name = "google-cloud-firestore", marker = "platform_python_implementation != 'PyPy'" },
     { name = "google-cloud-storage" },
     { name = "httpx", extra = ["http2"] },
     { name = "pyjwt", extra = ["crypto"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ee/7a/9f36b504fc6d941d032820460da5710163aff58d80ecaaa68d118353f5c8/firebase_admin-7.7.0.tar.gz", hash = "sha256:2e823cc1d2c8b74f41346fb33298b2e01fc8ad208ea144cd099938c32367f169", size = 208680, upload-time = "2026-09-23T20:35:06.62Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/d4/5f4c466a706679f6023094fe1f950f0519d43affa029935fa55d127dfbf6/firebase_admin-7.8.0.tar.gz", hash = "sha256:3560733698619f1d77e2e0babc20fc24d9dcedbb96823d0f03cf1f2d21a30868", size = 210469, upload-time = "2026-11-12T03:13:03.26Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/d3/fe159efc61e57acccabc582d6072be77db1534303d823642cccfd0cf51f6/firebase_admin-7.7.0-py3-none-any.whl", hash = "sha256:0a341ebbd1f80301fa11034f5e86ab0d0f00dde19253d2ee50cf98be2a7a2f33", size = 144495, upload-time = "2026-09-23T20:35:05.283Z" },
+    { url = "https://files.pythonhosted.org/packages/26/a9/856d4faf037db4dc84b0273b3d0ca785688b3117f1eb2d4b9b1a82a83727/firebase_admin-7.8.0-py3-none-any.whl", hash = "sha256:1cb353371ad14c3233a2ddf86c85b665341123b6c5df73b3cb84e7def45397dc", size = 145772, upload-time = "2026-11-12T03:13:01.702Z" },
 ]
 
 [[package]]
@@ -2113,7 +2114,7 @@ requires-dist = [
     { name = "asyncpg", specifier = "==0.32.0" },
     { name = "fastapi", specifier = "==0.162.5" },
     { name = "fastmcp", specifier = "==4.1.8" },
-    { name = "firebase-admin", specifier = "==7.7.0" },
+    { name = "firebase-admin", specifier = "==7.8.0" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "limits", specifier = "==5.8.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.9" },
