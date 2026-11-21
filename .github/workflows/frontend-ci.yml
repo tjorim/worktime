@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   frontend:
-    name: Frontend
+    name: Checks
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,7 +62,7 @@ jobs:
         run: pnpm run ui:test && pnpm run ui:check
 
   e2e:
-    name: Frontend / E2E Tests (Chromium)
+    name: E2E Tests (Chromium)
     runs-on: ubuntu-latest
     defaults:
       run:

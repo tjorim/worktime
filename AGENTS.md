@@ -369,9 +369,9 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
 `CI gate` job that fails when any needed job failed or was cancelled; a job skipped because its paths did not
 change is fine. The component workflows are reusable (`workflow_call`) and can also be run by hand:
 
-- `backend-ci.yml` (job `Backend`): `uv sync --locked`, `ruff check`, `ruff format --check`, `ty check`, `pytest`
+- `backend-ci.yml` (shown as `Backend / Checks`): `uv sync --locked`, `ruff check`, `ruff format --check`, `ty check`, `pytest`
   against PostgreSQL and SQLite, then `alembic upgrade head` and `alembic check`.
-- `frontend-ci.yml` (job `Frontend`): `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`,
+- `frontend-ci.yml` (shown as `Frontend / Checks`): `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`,
   `test`, `build`, `bundle:test` + `bundle:check`, `locale:audit`, `check-message-parity`, `ui:test` + `ui:check`;
   a separate `Frontend / E2E Tests (Chromium)` job runs Playwright. `ci.yml` also runs `format:repo:check`
   (workflows, scripts, root JSON) and `release.mjs check`.
