@@ -4,7 +4,7 @@ import { dayjs, formatHdayDate } from "@/lib/dates/dateTimeUtils";
 import { useOpenHolidays } from "@/hooks/useOpenHolidays";
 
 import type { SchoolHoliday } from "@/api-types";
-import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
+import type { SchoolHolidayInfo } from "@/features/calendar/month/schoolHolidays";
 import * as m from "@/paraglide/messages.js";
 
 const DEFAULT_LANGUAGE = "EN";

@@ -16,8 +16,8 @@ import { useMemo, useState, useCallback, useRef, useEffect, useId } from "react"
 import { Button } from "@/components/ui/button";
 import { dayjs, getWeekdayName } from "@/lib/dates/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
-import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
-import type { PaydayInfo } from "@/types/paydays";
+import type { SchoolHolidayInfo } from "@/features/calendar/month/schoolHolidays";
+import type { PaydayInfo } from "@/features/calendar/month/paydays";
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import {

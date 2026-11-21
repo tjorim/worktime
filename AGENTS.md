@@ -12,6 +12,7 @@ quick start.
 
 - `frontend/` contains the web app
 - `backend/` contains the FastAPI service
+- `docs/ARCHITECTURE.md` describes the source layout shared by the four apps (`app/`, `features/<domain>/`, `components/`, `lib/` ...)
 - `pebble/` contains the Pebble (Alloy) companion watch app — see `pebble/README.md`.
   CI installs the Pebble SDK, builds the package, boots it on Emery, checks a
   screenshot, and runs the watch-logic tests.
@@ -37,7 +38,7 @@ quick start.
   `.event-*` classes at the bottom of that file apply them, and `getEventColor()` /
   `getEventTextColor()` in `lib/hday/presentation.ts` return `var(--wt-event-…)` references instead of hex.
   Change a color there and update the table in `docs/hday-format-spec.md`; nothing else.
-  `tests/lib/eventPalette.test.ts` reads the CSS tokens and pins WCAG AA text contrast, that no two full-day
+  `tests/lib/hday/eventPalette.test.ts` reads the CSS tokens and pins WCAG AA text contrast, that no two full-day
   colors are near-identical, and that the helpers, `.event-*` classes and compiled Tailwind utilities
   only use declared colors
 - User-facing event type names come from the `event_type_*` messages via `getEventTypeLabel()` in
@@ -163,17 +164,18 @@ endpoints — account deletion and token management itself — that a leaked tok
 - Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
 - Frontend product slices with their own view and supporting components belong under
   `frontend/src/features/<feature>/`, with matching tests under `frontend/tests/features/<feature>/`.
-  Feature folders may import shared code, but must not import another feature directly; move code used
-  by multiple features to `components/shared/`, `hooks/`, `lib/`, `types/`, or `utils/` as appropriate.
+  Feature folders may import shared code, but must not import another feature directly (`app/` composes them);
+  move code used by multiple features to `components/`, `hooks/`, `lib/<topic>/`, `config/` or `types/` as
+  appropriate. There is no `utils/`, `contexts/`, `pages/` or `components/shared/` folder; see `docs/ARCHITECTURE.md`.
 - All storage keys live in `frontend/src/config/storageKeys.ts`
-- Icons use named `lucide-react` imports and the decorative `components/shared/Icon.tsx` wrapper.
+- Icons use named `lucide-react` imports and the decorative `components/Icon.tsx` wrapper.
   Shared icon props accept `LucideIcon` components; icon-only controls must have a text alternative.
   The previous Bootstrap Icon mapping and fill choices are recorded in `docs/icon-migration.md`.
 - Styling is Tailwind v4 + Base UI (#1376, finished by #1384); there is no Bootstrap or Sass. Follow
   "Tailwind + Base UI" below for generation, layers, tokens and lint. Keep logic in hooks/utils, use
   classes instead of new inline styles and keep light and dark themes working.
 - List-style tables (search, click-to-sort headers, pagination) share `hooks/useDataTable.ts`,
-  `components/shared/SortableHeaderCell.tsx` and `components/shared/TablePagination.tsx` — reuse them
+  `components/SortableHeaderCell.tsx` and `components/TablePagination.tsx` — reuse them
   instead of hand-rolling sort/search/paging. Render body cells directly in the row markup rather than via
   column `cell` renderers: TanStack renders those as components, so a column list that changes identity
   remounts the buttons in every row and drops clicks. Join searchable fields with `\n` (not a space) so a
@@ -207,7 +209,7 @@ bulk-generate components.
 
 Before writing or extending a shared control or a repeated composition (selection groups, empty
 states, loading placeholders, pagination, navigation, feedback), check in this order: the existing
-component in `src/components/ui/` and `components/shared/`, then the configured registry
+component in `src/components/ui/` and `src/components/`, then the configured registry
 (`pnpm exec shadcn add <component> --dry-run`) and the official shadcn/Base UI docs and
 variants. Generate only a component that has a consumer, restyle it to our tokens and lint rules,
 and keep a custom implementation only for a real requirement (domain rendering, TanStack state,
@@ -231,7 +233,7 @@ Stylesheets live in `frontend/src/styles/`; `tailwind.css` is the only entry poi
   Tailwind's preflight: system font stack, 1.5 line height, heading scale, link/list/code spacing,
   pointer cursor on buttons, native button/date/colour input metrics. Change a global default there.
 - Schedule-X and Frappe Gantt CSS are imported into the `vendor` layer by
-  `features/calendar/calendar.css` and `features/gantt/gantt.css`, which also map the vendor palettes
+  `features/calendar/unified/calendar.css` and `features/gantt/gantt.css`, which also map the vendor palettes
   onto the `--wt-theme-*` tokens. Their classes are not ours; style them only in those files.
 - Behaviour that a single utility cannot express is declared with `@utility` (`app.css`,
   `month-calendar.css`, `team-grid.css`) and used like any other class. Day states on calendar cells

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
 import * as m from "@/paraglide/messages.js";
-import type { PaydayInfo } from "@/types/paydays";
+import type { PaydayInfo } from "@/features/calendar/month/paydays";
 import { ApiError } from "@/lib/api/apiError";
 import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 

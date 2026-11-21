@@ -4,7 +4,7 @@ import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
 import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 import * as m from "@/paraglide/messages.js";
 import type { LongWeekend } from "@/api-types";
-import type { LongWeekendDayInfo } from "@/types/longWeekend";
+import type { LongWeekendDayInfo } from "@/features/calendar/month/longWeekend";
 import { ApiError } from "@/lib/api/apiError";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 

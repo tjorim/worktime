@@ -9,8 +9,8 @@ import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import { timeOffCollection } from "@/lib/db/collections";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
-import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
-import type { PaydayInfo } from "@/types/paydays";
+import type { SchoolHolidayInfo } from "@/features/calendar/month/schoolHolidays";
+import type { PaydayInfo } from "@/features/calendar/month/paydays";
 
 // Mock the hooks that fetch external holiday and payday data
 vi.mock("@/hooks/usePublicHolidays");

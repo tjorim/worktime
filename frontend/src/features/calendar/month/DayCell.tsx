@@ -13,8 +13,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
-import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
-import type { PaydayInfo } from "@/types/paydays";
+import type { SchoolHolidayInfo } from "@/features/calendar/month/schoolHolidays";
+import type { PaydayInfo } from "@/features/calendar/month/paydays";
 import type { WorkLocationInfo } from "@/types/workLocation";
 import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { WORK_LOCATION_ICONS } from "@/config/workLocation";
