@@ -10,7 +10,7 @@ import {
   UsersIcon,
   WifiOffIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Grid, GridItem } from "@/components/ui/grid";

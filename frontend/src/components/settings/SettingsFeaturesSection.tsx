@@ -1,5 +1,5 @@
 import { GlobeIcon, LayoutGridIcon } from "lucide-react";
-import { CountrySelect } from "@/components/shared/CountrySelect";
+import { CountrySelect } from "@/components/CountrySelect";
 import {
   SettingsHint,
   SettingsList,

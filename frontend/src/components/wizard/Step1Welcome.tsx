@@ -1,5 +1,5 @@
 import { ArrowRightIcon, RotateCcwClockIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
 import { WizardActions } from "./WizardParts";
 import * as m from "@/paraglide/messages.js";

@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { RefObject } from "react";
 import { useMemo } from "react";
 import { Menu } from "@base-ui/react/menu";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 
 export type ContextMenuItem =

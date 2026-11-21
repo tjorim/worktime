@@ -1,5 +1,5 @@
 import { ClipboardIcon, KeyIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

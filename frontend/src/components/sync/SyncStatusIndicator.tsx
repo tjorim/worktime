@@ -6,7 +6,7 @@ import {
   RefreshCwIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Hint } from "@/components/ui/tooltip";

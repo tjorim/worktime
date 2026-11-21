@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { SearchXIcon } from "lucide-react";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 import * as m from "@/paraglide/messages.js";
 
 export function NotFoundPage() {

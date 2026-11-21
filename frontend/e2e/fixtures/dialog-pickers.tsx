@@ -1,11 +1,11 @@
-import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
+import { OtherLocationModal } from "@/components/OtherLocationModal";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { toCountryCode } from "@/types/workLocation";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
 import { TemplateModal } from "@/features/timeTracking/TemplateModal";
-import { TaskEditModal } from "@/components/shared/TaskEditModal";
+import { TaskEditModal } from "@/components/TaskEditModal";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
 import { WelcomeWizard } from "@/components/WelcomeWizard";

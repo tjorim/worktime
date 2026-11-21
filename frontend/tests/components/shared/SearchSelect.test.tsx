@@ -6,9 +6,9 @@ import {
   SearchSelect,
   MultiSearchSelect,
   type SelectOption,
-} from "@/components/shared/SearchSelect";
-import { CountrySelect } from "@/components/shared/CountrySelect";
-import { TeamSelector } from "@/components/shared/TeamSelector";
+} from "@/components/SearchSelect";
+import { CountrySelect } from "@/components/CountrySelect";
+import { TeamSelector } from "@/components/TeamSelector";
 
 const options = [
   { value: "one", label: "First" },

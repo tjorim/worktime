@@ -1,7 +1,7 @@
 import { ClockIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/badge";
-import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import { DayNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { WorkLocationDayHeader } from "./WorkLocationDayHeader";

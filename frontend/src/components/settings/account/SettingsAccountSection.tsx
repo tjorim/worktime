@@ -9,7 +9,7 @@ import {
   UserCheckIcon,
   UserXIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Alert } from "@/components/ui/alert";

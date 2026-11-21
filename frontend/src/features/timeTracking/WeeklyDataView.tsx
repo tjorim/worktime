@@ -6,7 +6,7 @@ import {
   TableIcon,
   type LucideIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import {
   Accordion,

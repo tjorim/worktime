@@ -1,5 +1,5 @@
 import { type LucideIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import { Button } from "@/components/ui/button";
 

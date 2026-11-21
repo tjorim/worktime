@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { SearchSelect } from "@/components/shared/SearchSelect";
+import { SearchSelect } from "@/components/SearchSelect";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { Label } from "@/lib/time-tracking/constants";
 import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";

@@ -6,13 +6,13 @@ import {
   HouseIcon,
   type LucideIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { IconButton } from "@/components/shared/IconButton";
+import { IconButton } from "@/components/IconButton";
 import * as m from "@/paraglide/messages.js";
 
 type NavigationButtonGroupProps = {

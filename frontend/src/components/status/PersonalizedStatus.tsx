@@ -8,7 +8,7 @@ import {
   TagIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useId, useMemo } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
@@ -29,8 +29,8 @@ import { getLocale } from "@/paraglide/runtime.js";
 import { FlexStartEditor } from "@/components/status/FlexStartEditor";
 import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
 import { CountdownBadge } from "@/components/shared/CountdownBadge";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { ShiftBadge } from "@/components/ShiftBadge";
+import { EmptyState } from "@/components/EmptyState";
 import * as m from "@/paraglide/messages.js";
 
 interface PersonalizedStatusContentProps {

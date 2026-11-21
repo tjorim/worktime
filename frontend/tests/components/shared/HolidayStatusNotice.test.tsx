@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
-import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
+import { HolidayStatusNotice } from "@/components/HolidayStatusNotice";
 
 it("renders nothing when holidays are ready", () => {
   const { container } = render(<HolidayStatusNotice status="ready" />);

@@ -1,7 +1,7 @@
 import { ChartNoAxesColumnIncreasingIcon, ListChecksIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/app/providers/LastUsedContext";
 import { useSettings } from "@/app/providers/SettingsContext";
@@ -9,7 +9,7 @@ import { useToast } from "@/app/providers/ToastContext";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { calculateAdjustedWeeklyTarget } from "@/lib/schedule/statisticsWorkingDays";
-import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
+import { HolidayStatusNotice } from "@/components/HolidayStatusNotice";
 import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";

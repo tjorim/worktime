@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { PencilIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { Dayjs } from "dayjs";

@@ -1,5 +1,5 @@
 import { CirclePlusIcon, type LucideIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {

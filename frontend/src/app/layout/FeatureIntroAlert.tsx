@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import * as m from "@/paraglide/messages";
 import { Alert } from "@/components/ui/alert";
 

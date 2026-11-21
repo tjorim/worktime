@@ -1,6 +1,6 @@
 import { ChartColumnStackedIcon } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { barY, defineChart, ruleY, stack } from "@tanstack/charts";
 import { controlledSignal } from "@tanstack/charts/interaction/signal";
 import { interactiveColorLegend } from "@tanstack/charts/legend";

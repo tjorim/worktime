@@ -1,4 +1,4 @@
-import { SearchSelect } from "@/components/shared/SearchSelect";
+import { SearchSelect } from "@/components/SearchSelect";
 import {
   type CountryCode,
   isValidCountryCode,

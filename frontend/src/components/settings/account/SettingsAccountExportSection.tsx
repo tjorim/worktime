@@ -1,6 +1,6 @@
 import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";

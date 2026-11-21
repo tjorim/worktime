@@ -1,5 +1,5 @@
 import { CalendarIcon, CircleIcon, PlaneIcon, PlayIcon, PlusIcon, TimerIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";

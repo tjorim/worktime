@@ -1,14 +1,14 @@
 import { getOverlappingEntries } from "@/lib/time-off/overlap";
 import { TriangleAlertIcon } from "lucide-react";
 import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TableSearchInput } from "@/components/shared/TableSearchInput";
+import { TableSearchInput } from "@/components/TableSearchInput";
 import {
   Table,
   TableHeader,
@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
-import { TablePagination } from "@/components/shared/TablePagination";
+import { EmptyState } from "@/components/EmptyState";
+import { SortableHeaderCell } from "@/components/SortableHeaderCell";
+import { TablePagination } from "@/components/TablePagination";
 import {
   createDataColumnHelper,
   DATA_TABLE_DEFAULT_PAGE_SIZE,

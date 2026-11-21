@@ -1,5 +1,5 @@
 import { ChartColumnIcon, CirclePlusIcon, TableIcon, TrashIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
@@ -18,7 +18,7 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "@/features/gantt/GanttChart";
 import { GanttTableView } from "@/features/gantt/GanttTableView";
 import { GanttTaskModal, type GanttTaskFormInput } from "@/features/gantt/GanttTaskModal";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 
 const EMPTY_ARRAY: string[] = [];

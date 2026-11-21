@@ -1,5 +1,5 @@
 import { CalendarXIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -17,10 +17,10 @@ import { DailyTaskList, type EditRequest } from "./DailyTaskList";
 import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
-import { TaskEntryForm } from "@/components/shared/TaskEntryForm";
+import { TaskEntryForm } from "@/components/TaskEntryForm";
 import { getTimerStart, rememberExactTimerStart } from "@/lib/time-tracking/timerStart";
 import { StopTimerConflictDialog } from "./StopTimerConflictDialog";
-import { LabelModal } from "./LabelModal";
+import { LabelModal } from "@/components/LabelModal";
 import {
   buildLabelColorMap,
   buildLabelNameMap,

@@ -1,5 +1,5 @@
 import { CalendarIcon, CalendarPlusIcon, KeyboardIcon, UsersIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +21,8 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
 import { calculateShift } from "@/lib/schedule/shiftCalculations";
 import { getLocale } from "@/paraglide/runtime.js";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import { ShiftBadge } from "@/components/ShiftBadge";
+import { WeekNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/lib/logger";
 

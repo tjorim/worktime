@@ -4,7 +4,7 @@ import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 import type { GanttViewMode } from "@/app/providers/SettingsContext";
 import { formatLoggedDuration } from "@/utils/ganttLoggedTime";
 import { getLocale } from "@/paraglide/runtime.js";

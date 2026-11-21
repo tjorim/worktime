@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface ChoiceRadioGroupProps<T extends string> {

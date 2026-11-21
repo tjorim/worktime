@@ -1,5 +1,5 @@
 import { CalendarDaysIcon, CheckIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +10,7 @@ import { hasMultipleTeams } from "@/lib/schedule/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
 import { SettingsHdayHelper } from "@/components/settings/SettingsHdayHelper";
 import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";
-import { TeamSelector } from "@/components/shared/TeamSelector";
+import { TeamSelector } from "@/components/TeamSelector";
 
 interface SettingsScheduleSectionProps {
   scheduleType: ScheduleOption | null;

@@ -1,12 +1,12 @@
 import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
 import { getErrorMessage } from "@/lib/api/apiError";
 import { ClipboardCheckIcon, FileTextIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/app/providers/ToastContext";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { JsonExample, RawJsonEditor } from "./RawJsonEditor";
 import { buildLabelNameMap, type Label } from "@/lib/time-tracking/constants";

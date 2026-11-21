@@ -1,5 +1,5 @@
 import { CalendarIcon, CalendarPlusIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
 import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatus";
 import { GenericStatusContent } from "@/components/status/GenericStatus";
-import { SetupActionButton } from "@/components/shared/SetupActionButton";
+import { SetupActionButton } from "@/components/SetupActionButton";
 import { ShiftTimeline } from "@/components/ShiftTimeline";
 import * as m from "@/paraglide/messages.js";
 

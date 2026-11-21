@@ -1,6 +1,6 @@
 import { CalendarRangeIcon } from "lucide-react";
 import { useMemo, type CSSProperties } from "react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { barY, cell, defineChart, lineY } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";

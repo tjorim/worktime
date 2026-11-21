@@ -1,4 +1,4 @@
-import { SearchSelect } from "@/components/shared/SearchSelect";
+import { SearchSelect } from "@/components/SearchSelect";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import * as m from "@/paraglide/messages.js";

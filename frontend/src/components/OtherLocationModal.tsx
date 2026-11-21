@@ -1,4 +1,4 @@
-import { CountrySelect } from "@/components/shared/CountrySelect";
+import { CountrySelect } from "@/components/CountrySelect";
 import { Input } from "@/components/ui/input";
 import { useLayoutEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";

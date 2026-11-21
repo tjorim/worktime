@@ -1,7 +1,7 @@
 import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
 import { getErrorMessage, type ErrorCodeMessages } from "@/lib/api/apiError";
 import { TagsIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,10 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useToast } from "@/app/providers/ToastContext";
 import { Hint } from "@/components/ui/tooltip";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { JsonExample, RawJsonEditor } from "./RawJsonEditor";
-import { LabelChip } from "./LabelChip";
+import { LabelChip } from "@/components/LabelChip";
 import {
   isHexColor,
   isLabelInput,
@@ -20,7 +20,7 @@ import {
   sanitizeLabels,
   type Label,
 } from "@/lib/time-tracking/constants";
-import { LabelModal } from "./LabelModal";
+import { LabelModal } from "@/components/LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";

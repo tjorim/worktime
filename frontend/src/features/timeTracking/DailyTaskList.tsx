@@ -9,19 +9,19 @@ import {
   RotateCcwClockIcon,
   TrashIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/tooltip";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
+import { EmptyState } from "@/components/EmptyState";
+import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { buildLabelNameMap, type Label } from "@/lib/time-tracking/constants";
-import { LabelChip } from "./LabelChip";
-import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
+import { LabelChip } from "@/components/LabelChip";
+import { TaskEditModal, type TaskEditForm } from "@/components/TaskEditModal";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import type { GanttTask } from "@/types/gantt";
 import {

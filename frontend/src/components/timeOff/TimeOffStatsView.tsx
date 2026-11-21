@@ -1,5 +1,5 @@
 import { TrendingUpIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
 } from "@/utils/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
 
-import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
+import { HolidayStatusNotice } from "@/components/HolidayStatusNotice";
 import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
 
 interface TimeOffStatsViewProps {

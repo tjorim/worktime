@@ -1,6 +1,6 @@
 import { useId, type ComponentProps, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";

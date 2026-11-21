@@ -8,7 +8,7 @@ import { useSettings } from "@/app/providers/SettingsContext";
 import { TransferView } from "@/components/TransferView";
 import { WeekView } from "@/components/schedule/WeekView";
 import { TodayView } from "@/components/schedule/TodayView";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 
 /**

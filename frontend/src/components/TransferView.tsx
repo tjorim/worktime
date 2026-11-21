@@ -16,7 +16,7 @@ import {
   UsersCollaborationIcon,
   UsersIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -49,10 +49,10 @@ import {
 } from "@/lib/dates/dateTimeUtils";
 import { getTeamCountForOption, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
 import { getShift, type ShiftWindow } from "@/lib/schedule/shiftCalculations";
-import { EmptyState } from "./shared/EmptyState";
-import { SetupActionButton } from "./shared/SetupActionButton";
-import { ShiftBadge } from "./shared/ShiftBadge";
-import { TeamSelector } from "./shared/TeamSelector";
+import { EmptyState } from "./EmptyState";
+import { SetupActionButton } from "./SetupActionButton";
+import { ShiftBadge } from "./ShiftBadge";
+import { TeamSelector } from "./TeamSelector";
 import { ErrorBoundary } from "./ErrorBoundary";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";

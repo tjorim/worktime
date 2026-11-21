@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TableSearchInput } from "@/components/shared/TableSearchInput";
+import { TableSearchInput } from "@/components/TableSearchInput";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
-import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
-import { TablePagination } from "@/components/shared/TablePagination";
+import { SortableHeaderCell } from "@/components/SortableHeaderCell";
+import { TablePagination } from "@/components/TablePagination";
 import {
   createDataColumnHelper,
   DATA_TABLE_DEFAULT_PAGE_SIZE,

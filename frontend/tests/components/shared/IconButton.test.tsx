@@ -1,6 +1,6 @@
 import { ChevronLeftIcon } from "lucide-react";
 import { render, screen } from "@testing-library/react";
-import { IconButton } from "@/components/shared/IconButton";
+import { IconButton } from "@/components/IconButton";
 
 describe("IconButton", () => {
   it("uses the label as the accessible name and hides the decorative icon", () => {

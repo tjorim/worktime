@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { LoaderCircleIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 export function Spinner({
   className,

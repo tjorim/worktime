@@ -6,7 +6,7 @@ import {
   PlaneIcon,
   TimerIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,7 +17,7 @@ import type { TabKey } from "@/app/providers/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
-import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
+import { ScheduleDetailModal } from "@/components/ScheduleDetailModal";
 import { MobileQuickActions } from "@/app/home/MobileQuickActions";
 
 // Kept mounted once visited (keepMounted), but loaded only then: its team

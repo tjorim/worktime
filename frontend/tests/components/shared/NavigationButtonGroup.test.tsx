@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import { DayNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 
 describe("DayNavigationButtonGroup", () => {
   it("stacks the selector and controls into full rows below the small breakpoint", () => {

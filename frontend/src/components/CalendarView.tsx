@@ -6,7 +6,7 @@ import {
   PencilIcon,
   TrashIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,12 +48,12 @@ import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { CalendarLegend } from "@/components/calendar/CalendarLegend";
 import { LongWeekendModal } from "@/components/calendar/LongWeekendModal";
 import { LocationYearSummary } from "@/components/calendar/LocationYearSummary";
-import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
+import { OtherLocationModal } from "@/components/OtherLocationModal";
 import * as m from "@/paraglide/messages.js";
 import { EventModal } from "@/components/EventModal";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { SetupActionButton } from "@/components/shared/SetupActionButton";
+import { EmptyState } from "@/components/EmptyState";
+import { SetupActionButton } from "@/components/SetupActionButton";
 import {
   getTypeFlagOptions,
   getTimeLocationFlagOptions,

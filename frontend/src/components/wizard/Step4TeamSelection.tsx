@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, EyeIcon, XIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import * as m from "@/paraglide/messages.js";

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
+import { TaskEditModal, type TaskEditForm } from "@/components/TaskEditModal";
 
 const initial: TaskEditForm = {
   text: "Review",

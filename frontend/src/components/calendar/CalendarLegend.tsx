@@ -1,10 +1,10 @@
 import { InfoIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DetailsPopover, PopoverHeader, PopoverBody } from "@/components/ui/popover";
 import * as m from "@/paraglide/messages.js";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { ShiftBadge } from "@/components/ShiftBadge";
 import type { Shift } from "@/lib/schedule/shiftCalculations";
 
 type CalendarLegendProps = {

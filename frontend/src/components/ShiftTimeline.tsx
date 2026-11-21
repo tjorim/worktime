@@ -1,12 +1,12 @@
 import { ClockIcon, RadioIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
-import { shiftColors, ShiftBadge } from "@/components/shared/ShiftBadge";
+import { shiftColors, ShiftBadge } from "@/components/ShiftBadge";
 import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { getAllTeamsShifts } from "@/lib/schedule/shiftCalculations";

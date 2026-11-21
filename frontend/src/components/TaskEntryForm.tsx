@@ -1,5 +1,5 @@
 import { CircleIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Hint } from "@/components/ui/tooltip";
 import { Grid, GridItem } from "@/components/ui/grid";
 import type { CSSProperties, ReactElement } from "react";
-import { SearchSelect } from "@/components/shared/SearchSelect";
+import { SearchSelect } from "@/components/SearchSelect";
 import {
   isHexColor,
   getDefaultLabelColor,

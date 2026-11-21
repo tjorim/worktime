@@ -1,10 +1,10 @@
 import { ChartColumnIcon, CirclePlusIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import { EmptyState } from "@/components/EmptyState";
+import { WeekNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";

@@ -1,6 +1,6 @@
 import { NativeSelect } from "@/components/ui/native-select";
 import { TriangleAlertIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { ChangeEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

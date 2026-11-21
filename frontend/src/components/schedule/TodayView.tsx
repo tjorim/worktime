@@ -7,7 +7,7 @@ import {
   ClipboardListIcon,
   UsersIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useId, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { TeamCarousel } from "@/components/shared/TeamCarousel";
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { ShiftBadge } from "@/components/ShiftBadge";
 import { hasMultipleTeams, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
 import { getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";

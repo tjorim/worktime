@@ -1,6 +1,6 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TriangleAlertIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import { getOverlappingEntries } from "@/lib/time-off/overlap";
 import { getEntryFlagsForDisplay, getEntryTimeFlagFromDisplayFlags } from "@/lib/time-off/codecs";

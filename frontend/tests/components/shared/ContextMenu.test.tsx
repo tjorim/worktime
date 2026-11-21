@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ContextMenu } from "@/components/shared/ContextMenu";
+import { ContextMenu } from "@/components/ContextMenu";
 
 function Example({ onSelect, onDismiss }: { onSelect: () => void; onDismiss?: () => void }) {
   const [open, setOpen] = useState(false);

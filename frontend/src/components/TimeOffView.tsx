@@ -13,11 +13,11 @@ import {
   UsersIcon,
   XIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/shared/IconButton";
+import { IconButton } from "@/components/IconButton";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
 import {
@@ -60,7 +60,7 @@ import {
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
 } from "@/lib/time-off/timeoffConstants";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/lib/logger";
 import { ApiError, describeError } from "@/lib/api/apiError";

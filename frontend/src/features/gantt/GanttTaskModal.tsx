@@ -1,13 +1,13 @@
 import { ganttDependencyError } from "@/utils/ganttDependencies";
 import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { CircleXIcon, PencilIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SearchSelect, MultiSearchSelect } from "@/components/shared/SearchSelect";
+import { SearchSelect, MultiSearchSelect } from "@/components/SearchSelect";
 import {
   Dialog,
   DialogContent,

@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, RotateCcwClockIcon, SettingsIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useAuth } from "@/app/providers/AuthContext";
 import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";

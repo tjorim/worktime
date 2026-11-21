@@ -1,8 +1,8 @@
 import { BuildingIcon, HouseIcon, MapPinIcon, XIcon } from "lucide-react";
 import { lazy, Suspense, useId, useState } from "react";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 import { Hint } from "@/components/ui/tooltip";
-import { IconButton } from "@/components/shared/IconButton";
+import { IconButton } from "@/components/IconButton";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
@@ -12,7 +12,7 @@ import * as m from "@/paraglide/messages.js";
 // Loaded on first open: it pulls in the country combobox, which would otherwise
 // land in the initial bundle.
 const OtherLocationModal = lazy(() =>
-  import("@/components/calendar/OtherLocationModal").then((module) => ({
+  import("@/components/OtherLocationModal").then((module) => ({
     default: module.OtherLocationModal,
   })),
 );

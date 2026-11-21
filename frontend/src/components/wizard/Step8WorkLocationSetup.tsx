@@ -1,11 +1,11 @@
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, GlobeIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { RefObject } from "react";
 import { type CountryCode } from "@/types/countries";
 import { FieldDescription, FieldLabel } from "@/components/ui/field";
-import { CountrySelect } from "@/components/shared/CountrySelect";
+import { CountrySelect } from "@/components/CountrySelect";
 import { WizardActions, WizardToggle } from "./WizardParts";
 import * as m from "@/paraglide/messages.js";
 

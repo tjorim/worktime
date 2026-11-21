@@ -1,6 +1,6 @@
 import { TriangleAlertIcon } from "lucide-react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";

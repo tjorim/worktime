@@ -1,5 +1,5 @@
 import { PlusIcon, TriangleAlertIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import {
   useId,
@@ -18,7 +18,7 @@ import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocationInfo } from "@/types/workLocation";
 import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { WORK_LOCATION_ICONS } from "@/config/workLocation";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { ShiftBadge } from "@/components/ShiftBadge";
 import {
   getEventColorClass,
   getEventTypeLabel,

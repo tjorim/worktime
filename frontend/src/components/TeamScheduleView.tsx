@@ -7,7 +7,7 @@ import {
   SearchIcon,
   UsersIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, SubmitEvent } from "react";
 import type { Dayjs } from "dayjs";
@@ -23,7 +23,7 @@ import type { HdayEvent } from "@/lib/hday/types";
 import { getPrimaryTypeFlag } from "@/lib/hday/flags";
 import { getEventColorUtilities } from "@/lib/hday/presentation";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
-import { MonthNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import { MonthNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/lib/logger";

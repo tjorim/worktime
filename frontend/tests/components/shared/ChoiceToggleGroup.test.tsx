@@ -2,7 +2,7 @@ import { HouseIcon } from "lucide-react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
-import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 
 const options = [
   { value: "a", label: "Alpha", icon: HouseIcon },

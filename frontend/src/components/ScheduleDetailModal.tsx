@@ -14,7 +14,7 @@ import {
   SunsetIcon,
   UsersIcon,
 } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { ShiftBadge } from "@/components/ShiftBadge";
 import type { ScheduleOption, ShiftCode } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";

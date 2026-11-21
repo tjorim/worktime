@@ -1,17 +1,17 @@
 import { ganttDependencyError } from "@/utils/ganttDependencies";
 import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { PencilIcon, TrashIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TableSearchInput } from "@/components/shared/TableSearchInput";
+import { TableSearchInput } from "@/components/TableSearchInput";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
-import { TablePagination } from "@/components/shared/TablePagination";
+import { SortableHeaderCell } from "@/components/SortableHeaderCell";
+import { TablePagination } from "@/components/TablePagination";
 import {
   createDataColumnHelper,
   DATA_TABLE_DEFAULT_PAGE_SIZE,

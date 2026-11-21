@@ -1,4 +1,4 @@
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
 import { useSetupAction } from "@/hooks/useSetupAction";
 import * as m from "@/paraglide/messages.js";
