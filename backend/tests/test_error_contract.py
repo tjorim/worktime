@@ -149,6 +149,9 @@ def test_an_unhandled_exception_answers_the_json_500_with_a_request_id(
     # The cause and the stack trace stay on the server, tied to the request id.
     record = next(record for record in caplog.records if record.name == "app.core.errors")
     assert "trace-me-1" in record.getMessage()
+    # It names the route template, never the raw path: a path can carry a credential (/ical/{token}.ics).
+    assert "/users/{user_id}" in record.getMessage()
+    assert "9999" not in record.getMessage()
     assert isinstance(record.exc_info, tuple)
     assert "secret-token" in str(record.exc_info[1])
 

@@ -150,7 +150,15 @@ async def handle_unhandled_exception(request: Request, exc: Exception) -> Respon
     used when the middleware never got that far. The stack trace goes to the server log only, never the body.
     """
     request_id = getattr(request.state, "request_id", None) or str(uuid.uuid4())
-    logger.error("Unhandled error: %s %s (request_id=%s)", request.method, request.url.path, request_id, exc_info=exc)
+    # Log the route template, never the raw path: it can carry a credential (the calendar feed token in /ical/{token}.ics).
+    route = getattr(request.scope.get("route"), "path", None)
+    logger.error(
+        "Unhandled error: %s %s (request_id=%s)",
+        request.method,
+        route if isinstance(route, str) else "unmatched",
+        request_id,
+        exc_info=exc,
+    )
     response = internal_error_response()
     response.headers[REQUEST_ID_HEADER] = request_id
     return response
